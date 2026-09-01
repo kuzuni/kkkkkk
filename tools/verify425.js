@@ -419,9 +419,23 @@ const RUN_OTHER = ([mode]) => {
     ['cine 연출 함수', /\bcine\b|\bcineBossIn\b|\bcineBossKill\b|\bcineBusy\b/g],
     ['CINE_* 상수', /\bCINE_[A-Z_]+\b/g],
     ['camTimeScale (슬로모)', /\bcamTimeScale\b/g],
-    ['ctx.scale (카메라 줌)', /ctx\s*\.\s*scale\s*\(\s*([A-Za-z_$][\w$]*|1\.\d+)\s*,\s*\1\s*\)/g],
   ];
   for (const [nm, re] of DEAD) is('[G] ' + nm + ' 참조', (code.match(re) || []).length, 0);
+  /* 636(2026-09-01) — «등방 배율이면 카메라 줌» 축은 **여기가 사본**이었다(원본은 verify108 71행).
+     541(스킬 ×2)·590(펫 ×2)이 `ctx.scale(SK_DRAW_SC, SK_DRAW_SC)` 를 렌더 규약으로 만들면서 둘 다
+     그리기 배율을 카메라 줌으로 읽고 빨개졌다 — 402 의 «표 두 벌» 그대로다. 원본과 **같은 축**으로
+     갈아 끼운다: 화이트리스트를 이름이 아니라 **선언(`const *_DRAW_SC = <숫자>`)에서 파생**하고,
+     옛 패턴이 못 보던 멤버 접근 꼴(`ctx.scale(cam.z, cam.z)`)까지 잡는다.
+     ⚠ 한쪽만 고치면 다음 세션이 같은 자리를 또 판다 — 사본을 남기지 않는 것이 402 의 교훈이다. */
+  const DRAW_SC = new Set(
+    [...code.matchAll(/\bconst\s+([A-Za-z_$][\w$]*_DRAW_SC)\s*=\s*-?\d+(?:\.\d+)?\s*[;,\n]/g)].map((x) => x[1]));
+  const ISO = /ctx\s*\.\s*scale\s*\(\s*([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*|-?\d+\.\d+)\s*,\s*\1\s*\)/g;
+  const isoOf = (s) => [...s.matchAll(ISO)].map((m) => m[1].replace(/\s+/g, ''));
+  is('[G] 그리기 배율 상수 선언이 있다(화이트리스트가 공허하지 않다)', DRAW_SC.size > 0, true);
+  is('[G] ctx.scale 등방 배율 중 «그리기 배율 상수» 로 설명 안 되는 자리',
+     isoOf(code).filter((a) => !DRAW_SC.has(a)).length, 0);
+  is('[G] 되돌림 — 멤버 접근 꼴 카메라 줌을 주입하면 잡힌다',
+     isoOf(code + '\n ctx.scale(cam.z, cam.z); \n').filter((a) => !DRAW_SC.has(a)).length, 1);
   const camConsts = [...code.matchAll(/\bconst\s+(CAM_[A-Z_]*)\s*=/g)].map((x) => x[1]);
   is('[G] CAM_* 상수 목록', camConsts.join(','), 'CAM_K');
   is('[G] cam.z 를 읽는 곳은 있어도 «쓰는» 곳은 없다(줌 부활 금지)', /\bcam\s*\.\s*z\s*=/.test(code), false);

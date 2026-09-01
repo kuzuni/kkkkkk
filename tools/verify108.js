@@ -67,13 +67,46 @@ const DEAD = [
   ['camTimeScale (처치 슬로모)',    /\bcamTimeScale\b/g],
   ['camEaseOut / camSm (연출 이징)',/\bcamEaseOut\b|\bcamSm\b/g],
   ['spriteHalf (연출 담기 상한)',   /\bspriteHalf\b/g],
-  /* 스프라이트 좌우 반전 `ctx.scale(-1,1)` 은 렌더 규약이라 정상이다 — «같은 배율 두 축» = 카메라 줌만 잡는다 */
-  ['ctx.scale (카메라 줌)',         /ctx\s*\.\s*scale\s*\(\s*([A-Za-z_$][\w$]*|1\.\d+)\s*,\s*\1\s*\)/g],
 ];
 for (const [name, re] of DEAD) {
   const n = (code.match(re) || []).length;
   ok(n === 0, `${name} 참조 ${n} 건` + (n ? ' — 남아 있다' : ''));
 }
+
+/* ── 636(2026-09-01) — «ctx.scale 카메라 줌» 축을 다시 세운다 ───────────────────
+   옛 항은 DEAD 목록의 한 줄이었고 «등방 배율(같은 값 두 축)이면 카메라 줌» 을 전제했다.
+   그 전제가 541(«스킬 ×2» — `ctx.scale(SK_DRAW_SC, SK_DRAW_SC)` 2자리)·590(펫 ×2)으로 깨져
+   그리기 배율을 카메라 줌으로 읽고 빨간 채 굳어 있었다(재현 `tools/probe636.js` [1-a]·[1-b]).
+   ⚠ **이름을 예외로 빼는 수리는 반려다** — 다음에 누가 같은 이름으로 카메라 줌을 되살려도 통과한다.
+   축을 «식별자 이름» 이 아니라 **«그 배율이 어디서 오는가»** 로 바꾼다:
+     · 화이트리스트를 **선언에서 파생**한다 — `const *_DRAW_SC = <숫자 리터럴>` 만 그리기 배율로 인정.
+       카메라에서 오는 값은 상수 숫자 선언일 수 없으므로 이 문은 이름이 아니라 **출처**를 묻는다.
+     · 손으로 박은 등방 리터럴(`ctx.scale(1.5, 1.5)`)은 여전히 빨강 — 541 규약(«표 값을 손으로 곱하지 마라»).
+     · 좌우 반전 `ctx.scale(-1, 1)` 은 비등방이라 애초에 안 걸린다(옛 주석의 렌더 규약 그대로).
+   ⚑ 옛 패턴이 **못 보던 구멍도 같이 닫는다** — 멤버 접근 꼴 `ctx.scale(cam.z, cam.z)`.
+      카메라 줌이 되살아난다면 그 꼴이 가장 그럴듯한데 옛 정규식은 식별자 하나만 봤다(probe636 [1-f]). */
+const DRAW_SC = new Map();
+for (const m of code.matchAll(/\bconst\s+([A-Za-z_$][\w$]*_DRAW_SC)\s*=\s*(-?\d+(?:\.\d+)?)\s*[;,\n]/g))
+  DRAW_SC.set(m[1], Number(m[2]));
+const ISO_SCALE = /ctx\s*\.\s*scale\s*\(\s*([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*|-?\d+\.\d+)\s*,\s*\1\s*\)/g;
+const isoOf = s => [...s.matchAll(ISO_SCALE)].map(m => m[1].replace(/\s+/g, ''));
+const zoomHits = isoOf(code).filter(a => !DRAW_SC.has(a));
+ok(DRAW_SC.size > 0,
+   `그리기 배율 상수 선언 ${DRAW_SC.size}건 — 화이트리스트가 공허하지 않다` +
+   (DRAW_SC.size ? ` [${[...DRAW_SC.keys()].join(', ')}]` : ''));
+ok(zoomHits.length === 0,
+   `ctx.scale 등방 배율 중 «그리기 배율 상수» 로 설명 안 되는 자리 ${zoomHits.length} 건` +
+   (zoomHits.length ? ` — [${zoomHits.join(', ')}] 남아 있다` : ''));
+/* 되돌림 시험 — 무르게 푼 것이 아님을 매 실행 다시 푼다(항이 공허하면 여기가 빨개진다).
+   임시 문자열에만 주입한다 — 제품은 한 글자도 안 건드린다. */
+ok(isoOf(code + '\n ctx.scale(camZoom, camZoom); \n').filter(a => !DRAW_SC.has(a)).length === 1,
+   '[R] 되돌림 — 식별자 꼴 카메라 줌을 주입하면 잡힌다');
+ok(isoOf(code + '\n ctx.scale(cam.z, cam.z); \n').filter(a => !DRAW_SC.has(a)).length === 1,
+   '[R] 되돌림 — **멤버 접근 꼴** 카메라 줌을 주입하면 잡힌다(옛 패턴이 놓치던 구멍)');
+ok(isoOf(code + '\n ctx.scale(1.5, 1.5); \n').filter(a => !DRAW_SC.has(a)).length === 1,
+   '[R] 되돌림 — 손으로 박은 등방 리터럴을 주입하면 잡힌다(541 «표 값을 손으로 곱하지 마라»)');
+ok(isoOf('ctx.scale(-1, 1);').length === 0,
+   '[R] 음성 — 좌우 반전 ctx.scale(-1, 1) 은 렌더 규약이라 안 잡는다');
 /* 카메라 상수는 CAM_K «하나» 여야 한다 */
 const camConsts = [...code.matchAll(/\bconst\s+(CAM_[A-Z_]*)\s*=/g)].map(m => m[1]);
 ok(camConsts.length === 1 && camConsts[0] === 'CAM_K', `카메라 상수 = [${camConsts.join(', ')}] (기대: CAM_K 하나)`);
@@ -103,15 +136,24 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
     n: 0, zBad: 0, zMin: Infinity, zMax: -Infinity,
     lagBad: 0, lagMax: 0, lagMaxFree: 0, clamped: 0, introFrames: 0,
     introLen: (typeof bossIntroLen === 'function' ? bossIntroLen() : 0),
+    /* 636 — 등장 국면을 **연속 구간(판)으로 끊어** 담는다. 옛 코드는 `introFrames` 합계만 들고
+       한 판을 전제한 상한과 견줬다(런에 보스가 2회 서면 곧바로 빨강). */
+    introWins: [], bossSeenSettled: 0,
     bossSeen: 0, bossKilled: 0, shakeMax: 0, nan: 0,
     keys: Object.keys(cam).sort().join(','),
   };
-  let hadBoss = false, bossLive = 0, didKill = false;
+  let hadBoss = false, bossLive = 0, didKill = false, introRun = 0;
   for (let f = 0; f < frames; f++) {
     window.__v108tick();
     const boss = enemies.find(e => e.tk === 'boss' && e.hp > 0);
     if (boss) {
-      if (!hadBoss) { r.bossSeen++; hadBoss = true; bossLive = 0; }
+      if (!hadBoss) {
+        r.bossSeen++; hadBoss = true; bossLive = 0;
+        /* 636 — 런 끝에 걸친 판은 등장 국면이 «잘려서» 짧게 잡힌다. 창 개수를 보스 수와 견줄 때
+           그런 판은 빼야 자가 플레이키해지지 않는다(344·372·632 교훈). 한 창이 통째로 들어갈
+           여유가 남아 있을 때 선 보스만 «정착» 으로 센다. */
+        if (f <= frames - (Math.round(r.introLen * 60) + 2)) r.bossSeenSettled++;
+      }
       /* 223 — 헤더 ④ 는 «보스 등장/처치를 1회 이상 지나도» 라고 적어 두었지만 처치 프레임은
          한 번도 지나간 적이 없다: 스테이지 10 보스는 체력 ×22 라 기본 스탯으로는 BOSS_SEC(30초)
          제한 안에 안 죽고, 그대로 시간 초과 → 파밍으로 빠진다. 그래서 «슬로모·줌·복귀가 폐기됐다»
@@ -134,7 +176,8 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
           레이드로 넓혔다). 항을 눌러서 상한을 올리지 않고 **그 창을 세어서** 따로 묻는다 —
           국면이 0프레임이면 아래 [457] 항이 빨개지므로 «이탈을 핑계로 넓힌 게이트» 가 되지 않는다. */
     const intro = (typeof bossIntro !== 'undefined' && bossIntro);
-    if (intro) r.introFrames++;
+    if (intro) { r.introFrames++; introRun++; }
+    else if (introRun) { r.introWins.push(introRun); introRun = 0; }
     const hw = VW / 2, hh = VH / 2;
     const tx = WORLD.w <= hw * 2 ? WORLD.w / 2 : Math.min(Math.max(player.x, hw), WORLD.w - hw);
     const ty = WORLD.h <= hh * 2 ? WORLD.h / 2 : Math.min(Math.max(player.y, hh), WORLD.h - hh);
@@ -146,6 +189,7 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
     r.n++;
     if (f % 900 === 0) await new Promise(res => setTimeout(res, 0));
   }
+  if (introRun) r.introWins.push(introRun);          /* 636 — 런 끝에 열린 채 끝난 창도 담는다 */
   r.zMin = r.zMin === Infinity ? null : r.zMin;
   return r;
 };
@@ -184,7 +228,9 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
   console.log(`\n[런타임] 전투 ${SEC}초(가상 ${r.n} 프레임) · cam 필드 = {${r.keys}}`);
   console.log(`  cam.z          : ${r.zMin} ~ ${r.zMax}   (1 이외 프레임 ${r.zBad})`);
   console.log(`  카메라 지연     : 클램프 밖 최대 ${r.lagMaxFree.toFixed(1)}px (상한 ${LAG_MAX}) · 전체 최대 ${r.lagMax.toFixed(1)}px · 클램프 프레임 ${r.clamped}`);
-  console.log(`  보스            : 등장 ${r.bossSeen}회 · 처치/소멸 ${r.bossKilled}회 · shake 최대 ${r.shakeMax.toFixed(1)}`);
+  console.log(`  보스            : 등장 ${r.bossSeen}회(정착 ${r.bossSeenSettled}) · 처치/소멸 ${r.bossKilled}회 · shake 최대 ${r.shakeMax.toFixed(1)}`);
+  console.log(`  등장 국면       : 창 ${r.introWins.length}개 [${r.introWins.join(', ')}] · 합계 ${r.introFrames}프레임 ` +
+              `· 판당 상한 ${Math.round(r.introLen * 60) + 2}`);
   console.log(`  NaN/Infinity    : ${r.nan} · pageerror ${errs.length}`);
   if (errs.length) console.log('    ' + errs.slice(0, 3).join(' | '));
 
@@ -194,9 +240,24 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
   /* 457 이관 — 위에서 «국면 프레임» 을 제외한 것이 무르게 푼 것이 아님을 여기서 못박는다:
      ① 그 창이 실제로 존재하고(457 이 사라지면 0 이 되어 빨개진다) ② 길이가 상수 그대로여서
      «카메라가 아무 때나 플레이어를 떠나는» 것이 아니다(상수 × 60 + 오차 2프레임). */
-  ok(r.introFrames > 0, `[457] 28 스테이지 보스전에 등장 국면이 있다 — ${r.introFrames}프레임`);
-  ok(r.introFrames <= Math.round(r.introLen * 60) + 2,
-     `[457] 그 국면이 상수 길이(${r.introLen}s ≈ ${Math.round(r.introLen * 60)}프레임)를 안 넘는다 — ${r.introFrames}프레임`);
+  /* 636(2026-09-01) — 이 두 항의 산수를 «런 전체 합» 에서 **«판당»** 으로 바꿨다.
+     옛 항은 한 런에 보스가 한 번만 선다고 전제하고 `introFrames`(합계)를 상한과 견줬는데,
+     223 이 세운 하네스는 보스를 죽이고도 60초를 계속 돌아 **다음 판의 등장 국면이 또 열린다**
+     (재현 probe636 [2-a]~[2-d]: 등장 2회 · 합계 115 > 86 인데 **창별로는 85·30 으로 전부 상한 안**).
+     ⚠ 상한을 올려서 푸는 것은 반려다 — 항이 지키려던 뜻(«카메라가 아무 때나 플레이어를 떠나지 않는다»)이
+     사라진다. 632 가 어제 `verify621` 에서 «런 전체 분모» 를 폐기하고 에피소드 축으로 간 그 처방을 그대로 쓴다.
+     뜻은 셋으로 갈라 각각 묻는다: ① 창이 **있다**(457 이 사라지면 0 → 빨강) ② **창마다** 길이가 상수 그대로다
+     ③ 판마다 하나씩 열린다(첫 판에만 열리고 마는 퇴행을 잡는다 — 옛 합계 축은 이걸 못 봤다). */
+  const introCap = Math.round(r.introLen * 60) + 2;
+  const introMax = r.introWins.length ? Math.max(...r.introWins) : 0;
+  ok(r.introWins.length > 0,
+     `[457] 28 스테이지 보스전에 등장 국면이 있다 — 창 ${r.introWins.length}개 (합계 ${r.introFrames}프레임)`);
+  ok(introMax <= introCap,
+     `[457] 그 국면이 **판당** 상수 길이(${r.introLen}s ≈ ${Math.round(r.introLen * 60)}프레임)를 안 넘는다 — ` +
+     `최장 ${introMax} ≤ ${introCap} · 창 [${r.introWins.join(', ')}]`);
+  ok(r.introWins.length >= r.bossSeenSettled,
+     `[457] 판마다 등장 국면이 하나씩 열린다 — 창 ${r.introWins.length} ≥ 정착 등장 ${r.bossSeenSettled}회 ` +
+     `(전체 등장 ${r.bossSeen}회 · 런 끝에 걸친 판은 창이 잘리므로 뺀다)`);
   ok(r.bossSeen >= 1, `보스 등장 ${r.bossSeen}회 (1회 이상 필요)`);
   ok(r.bossKilled >= 1, `보스 처치/소멸 ${r.bossKilled}회 (1회 이상 필요 — 처치 직후 카메라를 봐야 한다)`);
   ok(r.nan === 0, `NaN/Infinity ${r.nan} 건`);
