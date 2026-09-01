@@ -2,7 +2,10 @@
  *
  * 지키는 규칙 한 줄:
  *   **전장에서 적을 죽여 떨어지는 골드는 «연출 없이» 들어온다** — 코인도, `+n` 도, 알약 점등도 없다.
- *   보상(`S.gold`)·사망 파티클(`burst`)·스테이지 클리어 보너스 연출은 **한 값도 안 바뀐다.**
+ *   보상(`S.gold`)·사망 파티클(`burst`)은 **한 값도 안 바뀐다.**
+ *   ⚑ 654 정오표 — 종전 이 줄은 «스테이지 클리어 보너스 연출도 안 바뀐다» 였다. 654 에서 주인이
+ *     범위를 넓혀 그 연출도 껐으므로([A2]·[5b] 를 333 처방대로 뒤집었다), 지금 이 자를 통과하는
+ *     제품은 «클리어 보너스 코인도 0» 인 제품이다. 그 축의 본체는 `tools/verify654.js` 다.
  *
  * 왜 «발원 표시를 안 찍는다» 로는 안 되는가(`tools/probe592.js` 재현 근거):
  *   표시가 없는 증가분은 `fxSrc` 가 «마지막으로 누른 버튼»(창 1200ms)을 **추측**으로 집어 UI 발로
@@ -13,7 +16,7 @@
  * [2] 그동안 `S.gold` 는 정상 증가(연출만 사라졌지 보상은 그대로)
  * [3] 적 사망 파티클(`burst`, 적 색)은 수리 전과 동일 — 「같이 지우면 적이 소리 없이 사라진다」
  * [4] 보스 킬 `big` 분기(46개·330)도 동일
- * [5] 스테이지 클리어·파도 전멸 보너스 코인은 **기본값에서 그대로** — 스위치를 끄면 그것도 0
+ * [5] 스테이지 클리어·파도 전멸 보너스 코인은 **기본값에서 0**(654 이관 — 종전은 «그대로») · 스위치를 켜면 다시 난다
  * [6] HUD 골드 숫자가 초당 수십 킬에서 떨리지 않는다(홀드 0 · 역행 0 · 끝에 수렴)
  * [7] 죽은 코드 0 — 남은 소비처가 0 인 전투 발 선언이 소스에 없다
  * [8] `#fxlc` 동시 노드 수 전·후 표
@@ -149,9 +152,9 @@ const BOSSKILL = `async ({ killfx }) => {
 }`;
 
 /* ── 씬: ⑵ 스테이지 클리어 보너스 — 기본값에서 코인이 **그대로 난다** ─────────── */
-const CLEAR = `async ({ off }) => {
+const CLEAR = `async ({ on }) => {
   const raf = () => new Promise(r => requestAnimationFrame(r));
-  if (off) FX_COMBAT_FX.stageClear = false;            /* «스위치를 끄면 그것도 0» 을 재는 갈래 */
+  if (on) FX_COMBAT_FX.stageClear = true;              /* 654 — «스위치를 켜면 다시 난다» 를 재는 되돌림 갈래 */
   document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n2 => n2.remove());
   await new Promise(r => setTimeout(r, 700));
   document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n2 => n2.remove());
@@ -188,8 +191,14 @@ async function boot(browser) {
   /* ── [A] 정적 — 스위치가 «한 표» 이고 세 자리가 그것을 읽는다 ─────────── */
   const tbl = (src.match(/const FX_COMBAT_FX\s*=\s*\{[^}]*\}/) || [''])[0];
   ok(/kill\s*:\s*false/.test(tbl), '[A1] 스위치 표에서 ⑴ 킬 드랍이 꺼져 있다 — ' + tbl);
-  ok(/stageClear\s*:\s*true/.test(tbl) && /waveBonus\s*:\s*true/.test(tbl),
-     '[A2] ⑵ 스테이지 클리어 · ⑶ 파도 전멸은 **켜져 있다**(주인이 지목한 것은 ⑴ 하나다)');
+  /* ⚑⚑ 654 이관(2026-09-01, 주인 보고 «골드 획득 이펙트 하지말라했는데 보스 끝났더니 뜨더라») —
+     이 항은 종전에 «⑵⑶ 은 켜져 있어야 한다» 였다. 592 당시에는 그것이 «주인이 지목한 것은 ⑴ 하나»
+     라는 범위를 지키는 못이었지만, 654 에서 주인이 그 범위를 직접 넓혔다.
+     333 처방대로 **자리를 비우지 않고 방향만 뒤집는다** — 그냥 지웠으면 «⑵⑶ 이 아무 값이나 돼도
+     초록인 게이트» 가 되어 이 표가 표로서 하는 일이 없어진다. 지금은 «켜져 있으면 빨강» 이고,
+     «끄면 코인이 0 이 된다»·«다시 켜면 난다» 는 `verify654` [1]·[2]·[R1]·[R2] 가 실제로 잰다. */
+  ok(/stageClear\s*:\s*false/.test(tbl) && /waveBonus\s*:\s*false/.test(tbl),
+     '[A2] ⑵ 스테이지 클리어 · ⑶ 파도 전멸도 **꺼져 있다**(654 — 주인이 «보스 끝났더니» 로 범위를 넓혔다)');
   /* «한 표» 의 뜻 — `fxAt(…,'combat')` 이 찍히는 자리가 전부 이 표를 지난다.
      새 자리가 표를 안 지나고 생기면 이 항이 곧바로 빨개진다(402 «표가 두 벌» 부패 방지). */
   /* ⚠ 이 파일은 주석에도 `fxAt(…, 'combat')` 을 **인용**한다(위 스위치 설명 자신이 그렇다).
@@ -292,17 +301,23 @@ async function boot(browser) {
   const cl = await c1.p.evaluate(eval('(' + CLEAR + ')'), { off: false });
   console.log('  [i] 클리어 보너스(기본값) — ' + JSON.stringify(cl));
   ok(cl.gold > 0, '[5a] 스테이지 클리어 보너스 골드가 들어왔다 — +' + cl.gold);
-  ok(cl.fly > 0 && cl.layers.includes('fxlc'),
-     '[5b] 그 코인은 **기본값에서 그대로 난다**(전투 발 · #fxlc) — ' + cl.fly + '개 ' + JSON.stringify(cl.layers)
-     + ' (592 가 «적이 죽을 때» 만 껐다는 증거 — 여기까지 0 이면 범위를 넘긴 것이다)');
+  /* ⚑⚑ 654 이관 — [A2] 와 **같은 뒤집기**다. 종전 [5b] 는 «기본값에서 코인이 그대로 난다» 였고
+     그 줄에 «여기까지 0 이면 범위를 넘긴 것이다» 라고까지 적혀 있었는데, 654 에서 주인이 바로 그
+     범위를 넓혔다. 방향만 뒤집어 «기본값에서 0» 을 묻는다 — 보상 자체가 줄지 않았다는 것은
+     바로 위 [5a] 가 여전히 못박는다(연출만 사라졌지 골드는 그대로). */
+  ok(cl.fly === 0,
+     '[5b] 그 코인은 **기본값에서 0 이다**(654) — ' + cl.fly + '개 ' + JSON.stringify(cl.layers)
+     + ' (주인 보고 «보스 끝났더니 뜨더라» 의 그 자리. 보상은 위 [5a] 대로 그대로 들어온다)');
   await c1.ctx.close();
 
   const c2 = await boot(b);
-  const cl2 = await c2.p.evaluate(eval('(' + CLEAR + ')'), { off: true });
-  console.log('  [i] 클리어 보너스(스위치 끔) — ' + JSON.stringify(cl2));
-  ok(cl2.gold > 0 && cl2.fly === 0,
-     '[5c] 같은 표의 `stageClear` 를 끄면 그 코인도 0 이 된다(스위치가 «한 자리» 라는 증거) — 골드 +'
-     + cl2.gold + ' · 코인 ' + cl2.fly);
+  /* 654 — 스위치 인자의 뜻도 같이 뒤집었다(`on` = 되돌림으로 «켠다»). 종전 `off:true` 는
+     «기본값 true 를 끈다» 였는데 기본값이 false 가 됐으므로 그 갈래는 더 이상 잴 것이 없다. */
+  const cl2 = await c2.p.evaluate(eval('(' + CLEAR + ')'), { on: true });
+  console.log('  [i] 클리어 보너스(스위치 켬 = 되돌림) — ' + JSON.stringify(cl2));
+  ok(cl2.gold > 0 && cl2.fly > 0 && cl2.layers.includes('fxlc'),
+     '[5c] 같은 표의 `stageClear` 를 **켜면** 그 코인이 다시 난다(스위치가 «한 자리» 라는 증거 · [5b] 의 0 이 '
+     + '이 수리가 만든 값이라는 증거) — 골드 +' + cl2.gold + ' · 코인 ' + cl2.fly + ' ' + JSON.stringify(cl2.layers));
   await c2.ctx.close();
 
   /* ── [R] 되돌림 — 스위치를 되돌리면 수리 «전» 그림이 그대로 돌아온다 ────── */
