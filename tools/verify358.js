@@ -149,13 +149,23 @@ async function run(page, kind) {
     '1-ⓒ `stat.speed` 는 상수만 돌려준다(배수·보너스가 안 붙는다)',
     (CODE.match(/get speed\(\)\{[^}]*\}/) || ['(못 찾음)'])[0].trim());
   /* 양성항 — «UPG 를 통째로 비워서 초록» 을 막는다(347 교훈 ②: 끄기와 켜기는 짝으로) */
-  const KEEP = ['atk', 'aspd', 'crit', 'cdmg', 'pierce', 'hp', 'regen', 'def', 'gold'];
+  /* 703 이관(2026-09-02) — 훈련 «공격 속도» 행이 여기서 사라졌다(공속은 목걸이 전속).
+     ⚠ 항을 지우지 않고 **방향만** 줄였다(333 처방): 이 목록의 몫은 여전히 «358 이 이동 축 하나만
+     지웠고 나머지를 안 쓸어 갔다» 는 양성항이다. 8종은 703 뒤의 전수다. */
+  const KEEP = ['atk', 'crit', 'cdmg', 'pierce', 'hp', 'regen', 'def', 'gold'];
   const upgIds = (CODE.match(/\{ id:'([a-z]+)',\s*name:/g) || []).map(s => s.match(/id:'([a-z]+)'/)[1]);
-  eq('1-ⓑ 남은 UPG 는 9종', upgIds.length, 9);
+  eq('1-ⓑ 남은 UPG 는 8종(703 이 공격 속도 행을 목걸이로 옮겼다)', upgIds.length, 8);
   KEEP.forEach(id => ok(upgIds.includes(id), '1-ⓑ ' + id + ' 축은 그대로 산다'));
-  /* 358 이 «이동» 과 «공격» 을 안 헷갈렸다는 양성항 — 공격 속도 축 셋은 살아 있어야 한다 */
-  ok(/rate:'공격 속도'/.test(CODE), "1-ⓑ RELIC_EFF.rate = «공격 속도» 는 살아 있다(이동이 아니다)");
-  ok(/\{ k:'rate', n:'공격 속도'/.test(CODE), "1-ⓑ BLESS 3번째 축 = «공격 속도» 는 살아 있다");
+  /* 358 이 «이동» 과 «공격» 을 안 헷갈렸다는 양성항 — 703 이 공격 속도 축을 **옮겼지 없애지 않았다**.
+     세 자리(유물·도감·축복)에서 걷힌 그 축은 목걸이 한 곳에 살아 있고, 이 항이 그것을 못박는다.
+     ⚠ 이 항이 «아무 데도 없다» 로 바뀌면 358 의 뜻(이동만 지웠다)이 사라진다 — 그래서 «어디에
+     살아 있는가» 를 묻는다. 목걸이 밖 0건은 `verify703` 이 따로 센다. */
+  ok(/const EQ_AXES = \{[^}]*amulet:\[[^\]]*'rate'/.test(CODE),
+    "1-ⓑ 공격 속도 축은 목걸이(EQ_AXES.amulet)에 살아 있다(이동이 아니다 · 703 이관)",
+    (CODE.match(/const EQ_AXES = \{[^}]*\}/) || ['(못 찾음)'])[0]);
+  ok(/get rate\(\)\{\s*return Math\.min\(RATE_CAP, BASE_RATE \* mulRate\(\)\);\s*\}/.test(CODE),
+    "1-ⓑ `stat.rate` 는 «상수 바닥 × 목걸이 배수» 다(703 이관)",
+    (CODE.match(/get rate\(\)\{[^}]*\}/) || ['(못 찾음)'])[0].trim());
   /* 359 이관(2026-08-29) — 이 항은 원래 리터럴 `1.08` 을 물었다. 359 가 주인 지시
      («보스는 플레이어보다 살짝 느리지만 대시 공격») 로 그 값을 **0.94** 로 내리면서 리터럴이 죽었다.
      358 이 지킨 것은 «값» 이 아니라 **«보스 추격이 플레이어 이속 상수에 «비» 로 걸려 있다» 는 형태**다
@@ -199,7 +209,7 @@ async function run(page, kind) {
         .map(el => [el.querySelector('.nm').textContent.trim(), el.querySelector('.vl').textContent.trim()]);
       return { rows, spc };
     })()`);
-    eq('3-ⓐ «강화» 탭 행 수 = 9', r.rows.length, 9);
+    eq('3-ⓐ «강화» 탭 행 수 = 8 (703 이관 — 공격 속도 행이 목걸이로 갔다)', r.rows.length, 8);
     ok(!r.rows.includes('spd'), '3-ⓐ 그 중 이동 속도 행은 없다', r.rows.join(' · '));
     KEEP.forEach(id => ok(r.rows.includes(id), '3-ⓐ ' + id + ' 행은 화면에 그대로 선다'));
     /* 양성항 — «강화 탭이 통째로 죽어서 spd 가 안 보이는 것» 을 막는다(T2 실동작 규칙: 실제로 눌러 본다) */

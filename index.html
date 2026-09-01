@@ -18930,11 +18930,21 @@ const SKILLS = [
    같은 등급으로만 옮기므로 도감 세트(`skill:{g}`)의 «세트 최저 Lv» 가 이관 때문에 내려가지 않는다. */
 const SK193_MOVE = { vigor:'curve', mend:'whirl', haste:'rico', ward:'drone', rage:'laser' };
 
-/* ---- 장비 (무기 · 방패 · 목걸이) ---- */
+/* ---- 장비 (무기 · 방패 · 목걸이) ----
+   703·704 (2026-09-02, 저장소 주인 지시) — 부위가 올리는 축이 **부위마다 하나** 였던 것이
+   방패·목걸이는 **둘**이 됐다(무기는 그대로 하나):
+     · 704 «방패에는 골드획득량 증가를 추가로 넣기»      → 방패 = 최대 체력 **+ 골드 획득**
+     · 703 «목걸이에 공격속도 증가를 추가로 넣기»        → 목걸이 = 체력 재생 **+ 공격 속도**
+   ⚑ `stat` 은 «이 부위가 올리는 축의 이름» 이고 **표시 전용**이다 — 실제 축은 아래 `EQ_AXES` 가
+     정한다(두 벌 금지: 이름만 고치고 축을 안 고치면 표시가 거짓말을 한다. 724 가 07·26 에서
+     겪은 «표시가 합연산을 약속하고 실계산이 곱» 과 같은 병이다).
+   ⚠ 08 세부 팝업(`.sk-db` 750×290 고정)·05 장비 시트가 이 문자열을 **한 줄에** 적는다 —
+     길이를 늘릴 때는 줄 수가 늘지 않는지 확인할 것(485·664 규약). 지금 두 축 표기는
+     가운뎃점 한 자만 늘어 한 줄에 그대로 들어간다. */
 const SLOTS = [
   { k:'weapon', n:'무기',   ic:'⚔️', stat:'공격력' },
-  { k:'shield', n:'방패',   ic:'🛡️', stat:'최대 체력' },
-  { k:'amulet', n:'목걸이', ic:'📿', stat:'체력 재생' }
+  { k:'shield', n:'방패',   ic:'🛡️', stat:'최대 체력·골드 획득' },
+  { k:'amulet', n:'목걸이', ic:'📿', stat:'체력 재생·공격 속도' }
 ];
 /* 작업 75(2026-08-25, 주인 보고) — 등급당 1종 → 여러 종. 구조는 «부위 → 등급 → 항목 배열».
    작업 85(2026-08-26, 주인 지시) — 8등급 체계: 1~7등급 부위당 정확히 5종, 8(불멸)등급만 1종
@@ -19107,13 +19117,22 @@ const RELICS = [
   { id:'rl2', n:'광전사의 뿔',   g:2, ic:'🐂',  eff:'atk',   v:0.12 },
   { id:'rl3', n:'현자의 눈',     g:2, ic:'👁️', eff:'crit',  v:0.02 },
   { id:'rl4', n:'용의 심장',     g:3, ic:'🫀',  eff:'hp',    v:0.20 },
-  { id:'rl5', n:'폭풍의 인장',   g:3, ic:'🌪️', eff:'rate',  v:0.10 },
+  /* 703 (2026-09-02, 저장소 주인 지시 «유물에서 공속 바꾸게 하지말고 그거는 삭제하고») —
+     이 칸의 축이 «공격 속도» 였다. **동급 다른 옵션으로 교체 이관**(가치 보존)이 처방이고,
+     고른 축은 **공격력**이다: DPS 는 «피해 × 발동 횟수» 라 같은 % 의 공속과 공격력이
+     거의 같은 값이므로 `v` 를 **한 자리도 안 바꾸고** 축만 옮기면 보유분의 값이 보존된다
+     (세이브는 `S.own`·Lv 뿐이고 축은 이 표에서만 오므로 **이관 코드가 필요 없다** — KEY 안 올림).
+     이름·아이콘은 그대로 둔다(«폭풍» 은 피해로도 읽힌다 · 402 가 그린 아트를 안 버린다). */
+  { id:'rl5', n:'폭풍의 인장',   g:3, ic:'🌪️', eff:'atk',   v:0.10 },
   { id:'rl6', n:'황금 왕관',     g:4, ic:'👑',  eff:'gold',  v:0.35 },
   { id:'rl7', n:'세계수의 씨앗', g:4, ic:'🌳',  eff:'regen', v:0.40 },
   { id:'rl8', n:'창세의 파편',   g:5, ic:'✨',  eff:'all',   v:0.30 },
   { id:'rl9', n:'심판의 저울',   g:1, ic:'⚖️', eff:'cdmg',  v:0.06 }
 ];
-const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률', rate:'공격 속도',
+/* 703 — «공격 속도» 항을 **이름째 지웠다**(LESSONS 295-② · 456-① — 상수가 남으면 되살아난다).
+   유물에는 이제 그 축을 쓰는 칸이 0개이고, 남겨 두면 다음에 유물을 늘리는 손이 이 라벨을 보고
+   같은 축을 다시 만든다. `verify703` 이 소스 전체에서 «유물의 공속 축 0건» 을 단언한다. */
+const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률',
                     gold:'골드 획득', regen:'체력 재생', cdmg:'치명타 피해', all:'전 스탯' };
 
 /* ---- 코스튬(구 «아바타») 50종 — 보유 효과 영구 합산 · 강화석 강화 · 외형(틴트) 변경 ----
@@ -19454,7 +19473,8 @@ const sumNeedExpV196 = lv => SUM_EXP_TABLE_V196[Math.min(Math.max(lv | 0, 1), SU
        (레퍼런스 21 의 «단계 N» 표기와도 맞는다). 즉 `가능 단계 = min(세트 최저 Lv, 10)`.
    · **보너스** = 단계당 값 × 받은 단계 수. 단계당 값 = `기준값 × 세트 등급 mul`(지시 ② «등급 mul 에 비례»).
      지시 예시 «무기 · 일반 1단계 = 공격력 +2%» 가 그대로 기준값(weapon.atk = 0.02 × mul 1.0)이다.
-     축은 지시대로 무기→공격력 · 방패→최대 체력 · 목걸이→치명/골드 · 스킬→공격속도/스킬 피해 · 유물→모든 피해,
+     축은 지시대로 무기→공격력 · 방패→최대 체력 · 목걸이→치명/골드 · 스킬→스킬 피해(703 이 공속 축을
+     그 값째 피해로 접었다) · 유물→모든 피해,
      펫은 지시에 축이 없어 기존 펫 도감 성격대로 동료 피해/골드로 잡았다.
      ▸ 만단계 합계 상한(전투력 회귀 검산) 은 `docs/measure/91-도감세트.md` §3 에 표로 남긴다.
    · **저장** = `S.coll` 을 «세트 키 → 받은 단계 수» 맵으로 재정의. 구 세이브의 카테고리 카운터 4개는
@@ -19468,11 +19488,16 @@ const COLL_BASE = {
   weapon:{ atk:0.020 },
   shield:{ hp:0.020 },
   amulet:{ cdmg:0.005, gold:0.010 },
-  skill: { atk:0.012, rate:0.004 },
+  /* 703 — 스킬 세트의 축이 «공격력 + 공격 속도» 였다. 공속 축을 걷어내되 **값은 안 버린다** —
+     0.012 + 0.004 = **0.016 을 공격력 한 축에 접었다**(DPS 등가 · 도감 보너스 총량 보존).
+     ⚑ 축을 그냥 지웠으면 스킬 세트가 **조용히 25% 약해진다**(주인 지시는 «공속을 옮겨라» 지
+       «도감을 깎아라» 가 아니다). 계수 확정은 199 몫. */
+  skill: { atk:0.016 },
   pet:   { pet:0.020, gold:0.010 },
   relic: { atk:0.020 }
 };
-const COLL_EFFN = { atk:'공격력', hp:'최대 체력', gold:'골드 획득', rate:'공격 속도',
+/* 703 — 도감에도 공속 축을 쓰는 세트가 0개가 됐다 → 라벨도 같이 지운다(RELIC_EFF 와 같은 이유) */
+const COLL_EFFN = { atk:'공격력', hp:'최대 체력', gold:'골드 획득',
                     pet:'펫 피해', cdmg:'치명타 피해' };   /* 173 — «동료 피해» → «펫 피해» */
 const COLL_CATN = { skill:'스킬', equip:'장비', pet:'펫', relic:'유물' };
 /* 21 팝업 상단 탭(지시 ④) — 스킬 · 무기 · 방패 · 목걸이 · 펫 · 유물 */
@@ -20075,8 +20100,13 @@ const trainVal = (id, b) => l => b + TRAIN_VAL_K[id] * l;
 const UPG = [
   { id:'atk',   name:'공격력',      icon:'⚔️', cost:trainCost(45,1.19),
     val:trainVal('atk',18),     show:l => '피해 ' + fmtB(U.atk.val(l)*mulAtk()) },
-  { id:'aspd',  name:'공격 속도',   icon:'⚡', cost:l => 40*Math.pow(1.20,l),
-    val:l => Math.min(1.4 + 0.11*l, 14), show:l => '초당 ' + (U.aspd.val(l)*mulRate()).toFixed(2) + '회' },
+  /* 703(2026-09-02, 저장소 주인 지시 «목걸이 빼고는 어느곳에도 공격속도 관해서 있으면 안됨») —
+     구 «공격 속도» 훈련 행을 **여기서 지웠다**. 358 이 이동 속도 행을 지운 것과 같은 꼴이고
+     처방도 같다: 축의 **바닥값은 상수**(`BASE_RATE`)로 내려가고, 성장은 목걸이 한 곳에서만 온다.
+     (⚠ 이 주석에 그 행의 id 리터럴을 적지 마라 — `verify703` 이 «목걸이 밖 공속 축 0건» 을
+      주석까지 든 소스에서 세므로 한 줄이 게이트를 빨갛게 만든다. 358 이 남긴 함정과 같다.)
+     구 세이브의 그 레벨 값은 남아도 읽는 곳이 없어 **보상 없이 소멸**한다(88·358 선례) —
+     세이브 KEY 는 안 올린다(넘침이 없다). 골드 소비처가 하나 줄어드는 것은 **199 몫**이다. */
   { id:'crit',  name:'치명타 확률', icon:'🎯', cost:l => 90*Math.pow(1.23,l),
     val:l => Math.min(0.05 + 0.012*l, 0.85), show:l => pct(Math.min(0.95, U.crit.val(l) + bonus().crit)) },
   { id:'cdmg',  name:'치명타 피해', icon:'💥', cost:l => 130*Math.pow(1.21,l),
@@ -20093,9 +20123,10 @@ const UPG = [
      구 «spd — 이동 속도 · val = 115 + 4.5×Lv» 행을 **여기서 지웠다**
      (⚠ 이 주석에 그 행의 리터럴을 그대로 적지 마라 — verify112·168 이 «UPG 에 spd 행 0곳» 을
       주석까지 든 소스에서 세므로 주석 한 줄이 게이트를 빨갛게 만든다).
-     `probe358` 실측: 이것이 플레이어를 빠르게 만드는 **유일한 축**이었다(유물 RELIC_EFF.rate ·
-     도감 COLL_EFFN.rate · 축복 BLESS[2] 의 «속도» 는 전부 **공격 속도**이고, `bonus()` 에는 이동 축이
-     아예 없다). 지우기 전 Lv20 에서 115 → 205(+78.3%) 였다. 구 세이브의 `S.lv.spd` 는 남아도
+     `probe358` 실측: 이것이 플레이어를 빠르게 만드는 **유일한 축**이었다(그때 이름이 «속도» 이던
+     나머지 셋 — 유물 옵션 · 도감 스킬 세트 · 축복 3번 — 은 전부 **공격 속도**이고, `bonus()` 에는
+     이동 축이 아예 없다. ⚑ **703(2026-09-02)이 그 셋을 다 걷어내 공속 출처를 목걸이 하나로 모았다** —
+     이 문단의 «넷» 은 358 시점의 사실이다). 지우기 전 Lv20 에서 115 → 205(+78.3%) 였다. 구 세이브의 `S.lv.spd` 는 남아도
      읽는 곳이 없어 **보상 없이 소멸**한다(88 선례) — 세이브 KEY 는 안 올린다(넘침이 없다). */
   { id:'gold',  name:'골드 획득',   icon:curIc('gold'), cost:l => 150*Math.pow(1.24,l),
     val:l => 1 + 0.10*l, show:l => '×' + (U.gold.val(l)*mulGold()).toFixed(2) }
@@ -20751,11 +20782,20 @@ const PROMO_BASE = ETYPE.promo;
    ⚠ 이 줄이 원래 «…같은 사유로 **목업을 만들지 않는다**» 였다 — **589(2026-08-31)가 그 방침을
       번복했다**(주인 «개발중이니까 클릭시 걍 결제된거로 쳐주기»). 다만 번복 범위는 «원화 표기 상품»
       뿐이고, 광고는 여전히 상품이 아니라 무료다 — 여기는 안 바뀐다. */
+/* 703 — 세 번째 축이 «공격 속도» 였다. 공속은 목걸이 전속이 됐으므로 **효과 축을 체력 재생으로** 옮긴다.
+   ⚑ **`k` 는 축이 아니라 «저장·DOM 키» 다** — 그래서 안 바꿨다. `S.bless.exp[k]` 와 카드 id
+     `blsC_<k>` 가 세이브와 자 열 곳(`verify117`·`verify325`·`probe325`·`probe394`·`probe356r6`·
+     `cal356r6`·`probe471`·`cap471`·`probe602`·`func117`)에 굳어 있어, 키를 바꾸면 **켜 둔 축복이
+     로드에서 꺼지고** 그 자들이 한꺼번에 셀렉터를 잃는다. 축은 아래 `ax` 한 칸이 정한다
+     (`ax` 가 없으면 `k` 를 축으로 읽는다 — 앞 두 칸은 종전 그대로다).
+   ⚠ 아이콘·이름 폭은 34 채점(356·394)이 재는 자리다. 이름은 «공격 속도»→«체력 재생» 으로
+     **글자 수가 같고**(공백 포함 5자) 아이콘은 한 자도 안 건드렸다 — 잉크 기하 Δ0 이 되게 골랐다. */
 const BLESS = [
   { k:'atk',  n:'공격력',   ic:'⚔️', v:0.20 },
   { k:'hp',   n:'체력',     ic:'❤️', v:0.20 },
-  { k:'rate', n:'공격 속도', ic:'🌀', v:0.20 }   /* ⚡ 는 노랑 카드 위에서 잉크가 배경과 섞여 스캔에 안 잡힌다 */
+  { k:'rate', ax:'regen', n:'체력 재생', ic:'🌀', v:0.20 }   /* ⚡ 는 노랑 카드 위에서 잉크가 배경과 섞여 스캔에 안 잡힌다 */
 ];
+const blessAxis = x => x.ax || x.k;      /* 703 — 저장 키(k)와 효과 축(ax)을 가르는 유일한 자리 */
 /* 500 — 레벨업 «필요 경험치» 표(저장소 주인 지시 2026-08-30). 옛 «어느 레벨에서나 4» 상수는
    이름째 지웠다 — 상수가 남으면 되살아난다(LESSONS 295-② · 456-①). 그래서 이 주석도 그 이름을
    안 적는다: `verify500` 이 소스 전체에서 그 식별자 0건을 단언한다.
@@ -21455,8 +21495,17 @@ const CAT_AXES = ['atk', 'hp', 'regen', 'gold', 'rate', 'pet'];
 const catSum   = () => ({ atk:0, hp:0, regen:0, gold:0, rate:0, pet:0 });
 /* 장부 하나를 닫는다 — 축마다 **한 번만** 곱한다(0 인 축은 건드리지 않는다) */
 const catApply = (b, c) => { for(const k of CAT_AXES) if(c[k]) b[k] *= 1 + c[k]; };
-/* 장비 부위 → 그 부위가 올리는 축(보유·장착이 같은 표를 본다) */
-const eqAxis = slot => slot === 'weapon' ? 'atk' : slot === 'shield' ? 'hp' : 'regen';
+/* 장비 부위 → 그 부위가 올리는 축(보유·장착이 같은 표를 본다).
+   703·704 — 부위당 축이 **하나에서 배열로** 넓어졌다(방패 +골드 · 목걸이 +공속).
+   ⚑ **부축에 계수를 따로 안 뒀다** — 두 축에 **같은 값**을 준다. 이유 둘:
+     ① 표시가 한 줄·한 숫자로 남는다(`SLOTS[].stat` 이 «최대 체력·골드 획득» 한 라벨이고
+        08 팝업 `.sk-db` 750×290 은 줄이 하나만 늘어도 넘친다 — 485·664 규약).
+     ② 계수를 새로 만들면 그것도 **199 가 확정할 수치**가 되어 손잡이만 둘로 는다.
+        지금은 «부위가 올리는 축이 둘» 이라는 구조만 세우고 크기는 199 가 잡는다.
+   ⚠ 공속은 **비율이 아니라 초당 횟수**라 폭주하면 그림이 깨진다 → 천장은 `RATE_CAP` 이
+     받는다(구 훈련 행이 갖고 있던 값 그대로 — 축이 옮겨져도 천장은 불변). */
+const EQ_AXES = { weapon:['atk'], shield:['hp', 'gold'], amulet:['regen', 'rate'] };
+const eqAxes  = slot => EQ_AXES[slot] || ['atk'];
 
 function bonus(){
   if(!bonusDirty && bonusCache) return bonusCache;
@@ -21478,11 +21527,12 @@ function bonus(){
   /* ③ 장비 — 보유 + 장착(3부위)이 한 장부. 부위마다 축이 달라 축별로 따로 쌓인다 */
   {
     const c = catSum();
-    EQUIPS.forEach(e => { if(has(e.id)) c[eqAxis(e.slot)] += ownVal(e); });
+    EQUIPS.forEach(e => { if(has(e.id)){ const v = ownVal(e); eqAxes(e.slot).forEach(k => c[k] += v); } });
     SLOTS.forEach(s => {
       const id = S.eqSlot[s.k];
       if(!id || !has(id)) return;
-      c[eqAxis(s.k)] += equipVal(EQ[id]);
+      const v = equipVal(EQ[id]);
+      eqAxes(s.k).forEach(k => c[k] += v);
     });
     catApply(b, c);
   }
@@ -21550,9 +21600,10 @@ function bonus(){
        (축복이 늘어나는 날 이 자리만 규약 밖으로 남는 것을 막는다). */
   {
     const c = catSum(), bsc = blessScale();
-    if(blessOn('atk'))  c.atk  += BLESS[0].v * bsc;
-    if(blessOn('hp'))   c.hp   += BLESS[1].v * bsc;
-    if(blessOn('rate')) c.rate += BLESS[2].v * bsc;
+    /* 703 — 축은 `blessAxis()`(= ax ?? k) 하나에서만 온다. 세 줄이 각자 축 이름을 손으로 적고 있어
+       세 번째의 축을 옮기려면 이 자리도 같이 고쳐야 했다 → 표를 그대로 도는 한 줄로 접었다
+       (다음에 축복이 늘거나 축이 또 옮겨져도 여기는 안 고친다). */
+    BLESS.forEach(x => { if(blessOn(x.k)) c[blessAxis(x)] += x.v * bsc; });
     if(blessAll())      c.gold += BLESS_GOLD * bsc;
     catApply(b, c);
   }
@@ -21575,9 +21626,19 @@ const lv = id => S.lv[id] | 0;
      리터럴 115 는 «원본» 이라 남긴다 — 다음 조정에서 배수가 또 곱해지는 것을 막는다.
    66 `BOSS_CHASE` 는 이 값에 **비**로 걸리므로(× 1.08) 보스 추격은 상수 기준으로 그대로 성립한다. */
 const PLAYER_SPEED = 115 * SPD_SC;          /* 580 — 배수는 `SPD_SC` 한 상수에만 산다 */
+/* 703 — 공격 속도(초당 공격 횟수)의 **바닥과 천장**. 둘 다 구 훈련 «공격 속도» 행이 갖고 있던
+   값 그대로다(바닥 = 그 행의 Lv0, 천장 = 그 행의 캡). 축이 훈련에서 목걸이로 옮겨졌을 뿐
+   «안 키운 상태» 와 «최대» 는 한 자도 안 움직인다.
+   ⚑ `BASE_RATE` 는 **공속 배수의 기준자**이기도 하다 — 화면·전투 여섯 곳이 `rate / 기준` 으로
+     «×n 배» 를 뽑는다. 그 자리에 리터럴을 다시 적지 마라(상수 두 벌은 조용히 갈라진다 — 485·402). */
+const BASE_RATE = 1.4;
+const RATE_CAP  = 14;
 const stat = {
   get dmg(){ return U.atk.val(lv('atk')) * mulAtk(); },
-  get rate(){ return U.aspd.val(lv('aspd')) * mulRate(); },
+  /* 703 — 바닥값은 **상수**(구 훈련 행의 Lv0 값 그대로 = «안 키운 플레이어» 의 체감 불변, 358 선례)이고
+     성장은 `mulRate()` 하나 = **목걸이 한 곳**에서만 온다. 천장 `RATE_CAP` 도 그 행이 갖고 있던
+     값 그대로다 — 축이 옮겨져도 «초당 최대 몇 회» 는 안 바뀐다. */
+  get rate(){ return Math.min(RATE_CAP, BASE_RATE * mulRate()); },
   get crit(){ return Math.min(0.95, U.crit.val(lv('crit')) + bonus().crit); },
   get cdmg(){ return U.cdmg.val(lv('cdmg')) + bonus().cdmg; },
   get pierce(){ return U.pierce.val(lv('pierce')); },
@@ -21594,7 +21655,7 @@ const stat = {
       if(!s) return;
       if(s.sup) return;                 /* 86 — 보조(버프·회복)는 직접 피해가 없어 DPS 에 넣지 않는다 */
       const dmg = skillDmg(s), hits = skillHits(s);
-      d += s.cd > 0 ? dmg*hits/(s.cd/Math.max(0.35, this.rate/1.4)) : dmg*hits;
+      d += s.cd > 0 ? dmg*hits/(s.cd/Math.max(0.35, this.rate/BASE_RATE)) : dmg*hits;
     });
     S.eqPet.forEach(id => { const p = PT[id]; if(p) d += petDmg(p)/p.cd; });
     return d * this.critMul;
@@ -22823,14 +22884,17 @@ function areaDamage(x, y, r, dmg, col){
 /* ---------------- 86 — 스킬 자기 강화 버프(전투 중에만 사는 휘발 상태) ----------------
    저장하지 않는다(전투 시작 = 0). `bonus()` 캐시에 넣으면 전투력 표기가 초 단위로 요동치므로
    **전투력(stat.dps·cp)에는 넣지 않고** 실제 피해·발동속도·피격·재생 계산에만 곱한다.
-   sbAtk() 스킬 피해 배수 · sbRate() 발동 속도 배수 · sbDef() 받는 피해 배수 · sbRegen() 재생 배수 */
-const sbuf = { atk:0, rate:0, def:0, regen:0 };
+   sbAtk() 스킬 피해 배수 · sbDef() 받는 피해 배수 · sbRegen() 재생 배수
+   ⚑ 703 — «발동 속도» 축을 **선언째 걷어냈다**. 이 축을 채우는 `addSbuf` 호출부가 **소스 전체에 0곳**
+     이라 값은 내내 0 이었지만(죽은 축), 남겨 두면 «목걸이 밖 공속» 이 되살아날 자리가 된다
+     (LESSONS 295-② · 456-①). 곱하던 자리(`castGeneric` 의 발동 배수)는 축이 없으니 그대로 1 이다. */
+const sbuf = { atk:0, def:0, regen:0 };
 function addSbuf(k, v, t){
   if(!(k in sbuf)) return;
   sbuf[k] = Math.max(sbuf[k], v);              /* 같은 버프 재발동은 «겹치기» 가 아니라 «갱신» */
   sbufT[k] = Math.max(sbufT[k] || 0, t);
 }
-const sbufT = { atk:0, rate:0, def:0, regen:0 };
+const sbufT = { atk:0, def:0, regen:0 };
 function sbufTick(dt){
   for(const k in sbufT){
     if(sbufT[k] <= 0) continue;
@@ -22840,7 +22904,6 @@ function sbufTick(dt){
 }
 function sbufClear(){ for(const k in sbufT){ sbufT[k] = 0; sbuf[k] = 0; } }
 const sbAtk   = () => 1 + sbuf.atk;
-const sbRate  = () => 1 + sbuf.rate;
 const sbDef   = () => 1 - sbuf.def;
 const sbRegen = () => 1 + sbuf.regen;
 
@@ -23433,7 +23496,7 @@ function step(dt){
        는 대상 없이도 성공한다**(459 주석) — 보스가 터지는 동안 빈 바닥에 장판이 깔린다.
        감소와 시전이 같은 가드 안이라 «쿨이 지나지도, 발동되지도 않는다» 가 한꺼번에 지켜진다. */
     if(!preFight() && !bossClear){
-      const rateMul = stat.rate/1.4 * sbRate();   /* 86 — 신속의 축복·광란 */
+      const rateMul = stat.rate/BASE_RATE;   /* 703 — 공속 배수는 목걸이 한 축에서만 온다(구 자기 강화 버프 축은 폐기) */
       for(const id of S.eqSkill){
         const s = SK[id];
         if(!s || s.cd <= 0) continue;
@@ -23537,7 +23600,7 @@ function step(dt){
             587 은 «누구를 보는가» 를 안 바꾸고 «원본이 어느 쪽인가» 의 출처만 표로 옮긴다. */
       p.flip = faceFlip(p.akey, p.anim, tgt.x > p.x);
       if(p.cd <= 0){
-        p.cd = p.def.cd / Math.max(0.4, stat.rate/1.4);
+        p.cd = p.def.cd / Math.max(0.4, stat.rate/BASE_RATE);
         const ang = Math.atan2((tgt.y - tgt.r) - p.y, tgt.x - p.x);
         shots.push({ k:'pet', x:p.x, y:p.y, vx:Math.cos(ang)*560, vy:Math.sin(ang)*560, a:ang,
                      dmg: petDmg(p.def), life:1.1, pierce:1, hit:[], col:'#a6ffd8' });
@@ -25391,7 +25454,7 @@ function drawSlots(){
     const id = slotIds[i], sk = id && SK[id], b = slotBox[i];
     let r = 0;                                    // 0..1 남은 쿨타임 비율
     if(sk && sk.cd > 0){
-      const full = sk.cd / Math.max(0.35, stat.rate/1.4);
+      const full = sk.cd / Math.max(0.35, stat.rate/BASE_RATE);
       r = clamp(Math.max(0, skillCd[id] || 0) / full, 0, 1);
     }
     slotEls[i].style.height = r*100 + '%';
@@ -29066,7 +29129,7 @@ function renderSt(){
     + '<div class="sect"><h3>⚔️ 전투력 상세</h3><p>'
     + 'DPS <b>' + fmtB(stat.dps) + '</b> · 공격력 <b>' + fmtB(stat.dmg) + '</b><br>'
     + '체력 <b>' + fmtB(stat.maxHp) + '</b> · 재생 <b>' + fmtB(stat.regen) + '/s</b><br>'
-    + '치명타 <b>' + pct(stat.crit) + '</b> ×<b>' + stat.cdmg.toFixed(2) + '</b> · 공속 <b>×' + (stat.rate/1.4).toFixed(2) + '</b><br>'
+    + '치명타 <b>' + pct(stat.crit) + '</b> ×<b>' + stat.cdmg.toFixed(2) + '</b> · 공속 <b>×' + (stat.rate/BASE_RATE).toFixed(2) + '</b><br>'
     + '스킬 <b>' + S.eqSkill.length + '/' + skSlotCap() + '</b> · 펫 <b>' + S.eqPet.length + '/3</b> · 유물 Lv <b>' + relicLvSum() + '</b></p></div>'
     + '<div class="sect"><h3>🏆 누적 보너스</h3><p>'
     + '공격 <b>×' + fmt(b.atk) + '</b> · 체력 <b>×' + fmt(b.hp) + '</b><br>'
@@ -33281,7 +33344,7 @@ function renderSpec(){
     ['햄지 보스 피해량', '100%'],
     ['햄지 치명타 확률', pct(stat.crit)],
     ['햄지 치명타 피해량', Math.round(stat.cdmg * 100) + '%'],
-    ['햄지 공격 속도', fmtPct((stat.rate / 1.4 - 1) * 100, 2) + '%'],
+    ['햄지 공격 속도', fmtPct((stat.rate / BASE_RATE - 1) * 100, 2) + '%'],
     ['햄지 체력 재생', fmtB(stat.regen) + '/s'],
     ['햄지 골드 획득량', pc(b.gold)],
     /* 358 — 이 행은 «이동 속도 증가율» 이고 레퍼런스(측정표 20 §12 «매옹이 이동 속도 0.2%»)에 있는 줄이라

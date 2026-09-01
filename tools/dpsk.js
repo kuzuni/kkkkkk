@@ -50,15 +50,18 @@ module.exports = function readDpsK(SRC, tag){
   const one = (re, what) => { const m = SRC.match(re); if(!m) die(what); return parseFloat(m[1]); };
 
   const SK_REF = one(/const SK_DPS_REF\s*=\s*([\d.]+)/, 'SK_DPS_REF (504 — 등급 기준 DPS)');
-  const ASPD0  = one(/\{ id:'aspd'[\s\S]{0,300}?val:l => Math\.min\(([\d.]+)/, 'aspd Lv0');
+  /* 703 이관(2026-09-02) — 공속의 «훈련 Lv0 값» 이 **상수 `BASE_RATE`** 로 내려갔다
+     (축이 훈련 → 목걸이로 옮겨졌고 바닥값은 그 행의 Lv0 그대로다). 읽는 자리만 옮기고
+     쓰는 식은 한 줄도 안 바꿨다 — 이 자는 여전히 «성장 밖 상태의 공속» 을 소스에서 읽는다. */
+  const ASPD0  = one(/const BASE_RATE\s*=\s*([\d.]+)/, '공속 바닥 상수 BASE_RATE');
   const CRIT0  = one(/\{ id:'crit'[\s\S]{0,300}?val:l => Math\.min\(([\d.]+)/, 'crit Lv0');
   const CDMG0  = one(/\{ id:'cdmg'[\s\S]{0,300}?val:l => ([\d.]+)\s*\+/,       'cdmg Lv0');
 
   /* 공속 항의 바닥(0.35)과 기준 공속(1.4)도 **소스에서** 읽는다 — 상수를 여기 또 적으면
      그 순간 이 파일이 5번째 사본이 된다. */
-  const rt = SRC.match(/dmg\*hits\/\(s\.cd\/Math\.max\(([\d.]+),\s*this\.rate\/([\d.]+)\)\)/);
+  const rt = SRC.match(/dmg\*hits\/\(s\.cd\/Math\.max\(([\d.]+),\s*this\.rate\/(BASE_RATE|[\d.]+)\)\)/);
   if(!rt) die('stat.dps 의 공속 항 (s.cd / Math.max(FLOOR, this.rate/BASE))');
-  const RATE_FLOOR = parseFloat(rt[1]), RATE_BASE = parseFloat(rt[2]);
+  const RATE_FLOOR = parseFloat(rt[1]), RATE_BASE = rt[2] === 'BASE_RATE' ? ASPD0 : parseFloat(rt[2]);
 
   /* 일반 등급의 착용 계단이 1 이라는 전제 — 아니면 «g0 = 배수 1» 이 깨져 K 가 통째로 틀어진다. */
   const g0wear = one(/\{ n:'일반',[^}]*?wear:\s*([\d.]+)/, "GRADE[0].wear (일반 등급 착용 계단)");

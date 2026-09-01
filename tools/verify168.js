@@ -48,7 +48,13 @@ const B = { atk:18, hp:160, regen:4 };       /* 기저 = 현행 Lv0 값 유지 *
      끄기(음성)와 켜기(양성)는 짝으로 넣는다(347 교훈 ②) — 목록에서 빼기만 하면
      «358 이 통째로 되돌아와도 초록인 게이트» 가 된다. */
   eq("① UPG 에 이동 속도(spd) 행 0곳 — 358 이 지운 축", (src.match(/\{ id:'spd',/g) || []).length, 0);
-  ['aspd','crit','cdmg','pierce','def','gold'].forEach(id =>
+  /* 703 이관(2026-09-02) — «훈련 밖 6종» 이 **5종**. 공격 속도 축은 주인 지시로 목걸이 전속이 되어
+     이 표를 떠났고, 바닥값은 상수 `BASE_RATE` 로 내려갔다. 358 이 세운 «끄기·켜기 짝» 을 따라
+     음성항(표에 0곳)과 양성항(바닥 상수는 살아 있다)을 같이 세운다. */
+  eq("① UPG 에 공격 속도 행 0곳 — 703 이 목걸이로 옮긴 축",
+     (src.match(/name:'공격 속도'/g) || []).length, 0);
+  yes("① 그 축의 바닥값은 상수 BASE_RATE 로 살아 있다(703)", /const BASE_RATE\s*=\s*[\d.]+/.test(src));
+  ['crit','cdmg','pierce','def','gold'].forEach(id =>
     yes('① ' + id + ' 는 종전 val 식 유지',
         new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?val:l =>").test(src)));
 

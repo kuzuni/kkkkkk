@@ -92,7 +92,7 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
      으로 쏜다 — 핸들러 경로(#blsw 위임 → activateBless)는 그대로 검증된다. */
   const C = await page.evaluate(() => {
     S.bless = { lv: 1, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); renderBless();
-    const base = { atk: mulAtk(), hp: mulHp(), rate: mulRate(), gold: mulGold(), dmg: stat.dmg };
+    const base = { atk: mulAtk(), hp: mulHp(), rate: mulRate(), regen: mulRegen(), gold: mulGold(), dmg: stat.dmg };
 
     /* 1회차 — Lv1 이므로 종전과 같은 ×1.20 이어야 한다(회귀 방지: 34 게이트 C2/C3 와 같은 값) */
     document.getElementById('blsC_atk').click();
@@ -107,7 +107,7 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
     ['hp', 'rate'].forEach(k => document.getElementById('blsC_' + k).click());     /* 경험치 3 */
     S.bless.exp.atk = 0; markDirty(); document.getElementById('blsC_atk').click(); /* 4번째 → Lv2 */
     const c4 = { lv: S.bless.lv, prog: S.bless.prog, atk: mulAtk(), hp: mulHp(), rate: mulRate(),
-                 gold: mulGold(), dmg: stat.dmg };
+                 regen: mulRegen(), gold: mulGold(), dmg: stat.dmg };
 
     /* Lv6 → 1.30, 1종만 켜면 골드 보너스 없음 */
     S.bless.lv = 6; S.bless.exp = { atk: Date.now() + 6e5, hp: 0, rate: 0 }; markDirty();
@@ -123,8 +123,13 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
   ok(c3pred(C.c1), 'C3 카드 클릭 → 축복 경험치 +1 · 타이머 표시(시계 .ck + 숫자 .tm>i 두 부품)', c3say(C.c1));
   ok(C.c4.lv === 2 && C.c4.prog === 0, 'C4 4회 활성 → Lv2 · 경험치 되감기 0', C.c4.lv + '/' + C.c4.prog);
   ok(near(C.c4.atk / C.base.atk, 1.22, 1e-9), 'C5 Lv2 공격력 = ×1.22', (C.c4.atk / C.base.atk).toFixed(4));
-  ok(near(C.c4.hp / C.base.hp, 1.22, 1e-9) && near(C.c4.rate / C.base.rate, 1.22, 1e-9), 'C6 체력·공속도 ×1.22',
-     (C.c4.hp / C.base.hp).toFixed(4) + '/' + (C.c4.rate / C.base.rate).toFixed(4));
+  /* 703 이관(2026-09-02) — 축복 3번의 **효과 축**이 «공격 속도» → «체력 재생» 으로 옮겨졌다
+     (공속은 목걸이 전속). 저장·DOM 키(`rate`)는 세이브·자 열 곳이 읽어서 그대로 두었으므로
+     이 항은 «켠 카드가 올리는 축» 을 `blessAxis()` 로 물어야 한다 — 키를 축으로 읽으면
+     영영 빨갛다. 방향만 바꾸고 항은 남긴다(333 처방): 여기 몫은 여전히 «레벨 배율이
+     체력·세 번째 축에도 똑같이 걸린다» 다. */
+  ok(near(C.c4.hp / C.base.hp, 1.22, 1e-9) && near(C.c4.regen / C.base.regen, 1.22, 1e-9), 'C6 체력·3번째 축(체력 재생)도 ×1.22',
+     (C.c4.hp / C.base.hp).toFixed(4) + '/' + (C.c4.regen / C.base.regen).toFixed(4));
   ok(near(C.c4.gold / C.base.gold, 1.55, 1e-9), 'C7 3종 전부 활성 → 골드 ×1.55 (보너스도 레벨 곡선)',
      (C.c4.gold / C.base.gold).toFixed(4));
   ok(near(C.c4.dmg / C.base.dmg, 1.22, 1e-9), 'C8 stat.dmg 도 ×1.22 (HUD 전투력에 반영)',
