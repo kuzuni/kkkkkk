@@ -27,15 +27,20 @@ const p2 = n => Math.round(n * 100) / 100;
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d ? ' — ' + d : '')); };
 
-/* 자(`verify491` §7)가 쓰는 것과 **같은** 표적·같은 밴드 */
+/* 자(`verify491` §7)가 쓰는 것과 **같은** 표적·같은 밴드
+   ⚑ 626(2026-09-01) — `tempchg`(단련 [충전] → 헤더 `.tp-hd`) 항을 걷어냈다. 613 이 [충전]을
+   기능째 폐지해 그 선택자는 한 번도 안 맞고(`verify577` [1-a] 부재 게이트), 남아 있는 동안
+   `FAIL [tempchg-0] 버튼·호스트를 찾았다` 를 낸 뒤 판정 절에서 `S2.tempchg[500]` 이 undefined 라
+   **[C3] 이후가 통째로 안 돌았다**(626 재현). 이 자의 축은 «`verify491` §7 과 같은 표적» 이고
+   그쪽 `HOSTS` 는 613·614 이관 때 이미 rune·tempup 둘로 줄었다 — 짝을 맞춘다. */
 const HOSTS = [
   { id: 'rune',    tab: 'rune',   btn: '#trRunes .rbt.b1',        host: '#trRunes .tr-rn',     n: '룬 [강화] → 카드 `.tr-rn`' },
-  { id: 'tempup',  tab: 'temper', btn: '#trTemper .tr-tp.k0 .tb', host: '#trTemper .tr-tp.k0', n: '단련 [투자] → 행 `.tr-tp`' },
-  { id: 'tempchg', tab: 'temper', btn: '#trTemper .tp-hd .cg',    host: '#trTemper .tp-hd',    n: '단련 [충전] → 헤더 `.tp-hd`' },
+  { id: 'tempup',  tab: 'temper', btn: '#trTemper .tr-tp.k0 .tb', host: '#trTemper .tr-tp.k0', n: '단련 [단련] → 행 `.tr-tp`' },
 ];
 const HOST_S = 0.985, HOST_TOL = 0.004;      /* [7-*-b3] 의 밴드 */
 const BTN_LO = 0.90, BTN_HI = 0.965;         /* [7-*-b2] 의 밴드 */
 const REPS = 8;                              /* «200ms 한 점» 을 몇 번 눌러 볼 것인가 */
+const HOLD_DELAY = 350;                      /* 제품 `TR_HOLD_DELAY` — 홀드 «반복» 이 시작되는 시각 */
 
 async function boot(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -128,9 +133,16 @@ async function onePoint(page, t, g, ms) {
     const scs = [...new Set(settled.map(f => f.sc))];
     const inBand = rows.filter(f => Math.abs(f.r - HOST_S) <= HOST_TOL).length;
     const tfOn = rows.filter(f => f.tf && f.tf !== 'none').length;
+    /* ⚑ 626 — 맥박을 «홀드 반복 전/후» 로 갈라 센다. [C2b] 가 죽은 [충전]을 대조군으로 쓰던
+       자리를, 같은 뜻 그대로 **산 호스트 자신의 두 구간**으로 옮겨 묻기 위한 축이다
+       (열차는 `TR_HOLD_DELAY` 앞에서는 서지 않는다 — 그것이 «200ms 는 대개 초록» 의 기전이다). */
+    const early = rows.filter(f => f.t < HOLD_DELAY), late = rows.filter(f => f.t >= HOLD_DELAY);
+    const tfOf = a => a.length ? a.filter(f => f.tf && f.tf !== 'none').length / a.length : -1;
     S1[t.id] = { n: rows.length, min: Math.min(...rat), max: Math.max(...rat),
                  bmin: Math.min(...brat), bmax: Math.max(...brat), inBand, scs,
-                 pulse: tfOn / rows.length };
+                 pulse: tfOn / rows.length,
+                 pulseEarly: tfOf(early), pulseLate: tfOf(late),
+                 nEarly: early.length, nLate: late.length };
     console.log('      프레임 ' + rows.length + '개/1300ms · 호스트 폭 비 ' + p4(Math.min(...rat)) + '~' + p4(Math.max(...rat))
       + ' · 밴드(.985±.004) 안 ' + inBand + '개(' + p2(inBand / rows.length * 100) + '%)');
     console.log('      버튼 폭 비 ' + p4(Math.min(...brat)) + '~' + p4(Math.max(...brat))
@@ -156,7 +168,7 @@ async function onePoint(page, t, g, ms) {
       console.log('        └ 밴드 밖 ' + s.outH + '/' + REPS + ' · 버튼 밴드 밖 ' + s.outB + '/' + REPS
         + ' · computed `scale` ' + s.scs.map(x => '«' + x + '»').join(',')
         + ' · 실경과 ' + Math.min(...s.el) + '~' + Math.max(...s.el) + 'ms'
-        + ' (반복 시작 ' + 350 + 'ms 까지 여유 ' + (350 - Math.max(...s.el)) + 'ms)');
+        + ' (반복 시작 ' + HOLD_DELAY + 'ms 까지 여유 ' + (HOLD_DELAY - Math.max(...s.el)) + 'ms)');
     }
     console.log('');
   }
@@ -175,18 +187,26 @@ async function onePoint(page, t, g, ms) {
      '[C] 200ms 한 점은 **한가한 트리에서는** 세 자리 전부 밴드 안이다(그래서 대개는 초록이다)',
      ids.map(k => k + ' ' + S2[k][200].outH + '/' + REPS
        + ' 실경과≤' + Math.max(...S2[k][200].el) + 'ms').join(' · '));
-  /* ⚠ 자리를 뭉뚱그리지 않는다 — 등재문이 이름을 댄 것은 **rune·tempup 둘뿐**이고, 그게 맞다.
-     맥박 열차는 홀드 **반복**이 도는 자리에서만 서고(`TR_HOLD_DELAY` 350ms 뒤 60~160ms 마다),
-     [충전]은 반복이 안 돌아 열차가 없다 — 그래서 tempchg 는 500ms 에서도 고요하다. */
+  /* ⚠ 자리를 뭉뚱그리지 않는다 — 등재문이 이름을 댄 것은 **rune·tempup 둘뿐**이고, 그게 맞다. */
   ok(S2.rune[500].outH + S2.tempup[500].outH >= REPS,
      '[C2] ★ 등재문이 이름을 댄 두 자리는 시각만 500ms 로 옮기면 밴드 밖으로 쏟아진다 — 자를 지키는 것은 '
      + '«.985 가 맞다» 가 아니라 «읽는 점이 350ms 앞에 있다» 라는 우연이다',
      ['rune', 'tempup'].map(k => k + ' ' + S2[k][500].outH + '/' + REPS
        + ' ×' + p4(Math.max(...S2[k][500].hr))).join(' · '));
-  ok(S2.tempchg[500].outH === 0 && S1.tempchg.pulse < 0.3 && S1.tempup.pulse > 0.5,
-     '[C2b] 그리고 등재문이 tempchg 를 안 부른 이유가 여기 있다 — [충전]은 홀드 **반복**이 안 돌아 맥박 열차가 없다',
-     ids.map(k => k + ' 맥박 ' + p2(S1[k].pulse * 100) + '% → 500ms 밴드 밖 '
-       + S2[k][500].outH + '/' + REPS).join(' · '));
+  /* ⚑ 626 — 옛 [C2b](«등재문이 tempchg 를 안 부른 이유 — [충전]은 홀드 **반복**이 안 돌아 맥박
+     열차가 없다»)를 **판정에서 걷어냈다.** 그 항의 재료는 «홀드 반복이 안 도는 버튼» 하나뿐인데
+     613 이 [충전]을 폐지해 이 자의 표적에서 그런 버튼이 사라졌다.
+     ⚠ **산 자리로 옮기는 안을 먼저 시험했고, 재현이 기각했다**(338 규칙 — 재현이 아니라면 아니다):
+     대조군을 «같은 호스트의 반복 전 구간(t < TR_HOLD_DELAY)» 으로 옮겨 «350ms 앞은 고요하다» 를
+     물었더니 반복 전 맥박이 **41.7% / 41.2%** 로 나왔다 — 첫 발이 누른 그 순간 서기 때문이다
+     (619 «틱당 1회» 의 첫 틱). 즉 «열차가 없다» 는 [충전] 고유의 성질이지 «반복 전» 의 성질이
+     아니었다. 임계를 그 두 수에 맞춰 넓히는 것은 표본에 자를 맞추는 짓이라 안 했다
+     (624 판단과 같다: 333 «자리를 비우지 마라» 는 «살아 있는 대체 계약» 이 있을 때의 말이다).
+     재는 것 자체는 남긴다 — 판정이 아니라 **관측 한 줄**로. 다음 세션이 «반복 전/후» 를 다시
+     세울 때 밑값이 된다. [충전] 시절의 수치는 `docs/review/594-*.md` 에 그대로 있다. */
+  console.log('  ·  [관측] 맥박 밀도 — ' + ids.map(k => k + ' 반복전(t<' + HOLD_DELAY + 'ms) '
+    + p2(S1[k].pulseEarly * 100) + '% (' + S1[k].nEarly + '프레임) → 반복후 '
+    + p2(S1[k].pulseLate * 100) + '% (' + S1[k].nLate + '프레임)').join(' · '));
   /* ⚑ **기각된 가설**(338 규칙 — 재현이 아니라고 하면 아니다). 착수 때 세운 «맥박이 호스트를 통째로
      곱하니 안의 버튼 축([7-*-b2])도 같이 흔들릴 것» 은 **틀렸다**: 버튼은 호스트 **안**이라 밑값이
      .94 × .985 = .9259 로 이미 낮고, 이 세 호스트의 맥박은 `--hb-s` 1.02 라 최대가 .9444 —

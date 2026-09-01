@@ -285,8 +285,26 @@ async function diffPct(page2, a, b, tol) {
      그래서 `renderTrain` 을 감싸 **호출 시각마다 `jzDown` 의 생사**를 적는다(제품은 안 건드린다).
        · 자멸(누른 채) 호출 → `dn:true`  = 손 밑에서 갈아 끼우는 그 호출
        · 정상 release 호출 → `dn:false` = 종전대로 그 자리에서 돌아야 하는 호출
-     수리 전에는 앞의 것이 **있고**, 수리 뒤에는 **0건**이어야 한다(뒤의 것은 둘 다 있어야 한다). */
-  console.log('\n[G] [충전] 자멸 렌더 — 누른 손 밑에서 노드가 갈리는가');
+     수리 전에는 앞의 것이 **있고**, 수리 뒤에는 **0건**이어야 한다(뒤의 것은 둘 다 있어야 한다).
+
+     ⚑ 626(2026-09-01) — **표본을 [충전]에서 단련 [단련](`.tr-tp.k0 .tb`)으로 옮겼다.** 613 이
+     [충전]을 기능째 폐지해 이 절의 `#trTemper .tp-hd .cg` 는 한 번도 안 맞았고, 87행 TARGETS 는
+     613·614 때 따라왔는데 **여기만 안 따라와** `if(!b || !hd)` 가 받아 §G 본문이 통째로 생략됐다
+     (626 재현: 겉으로는 `FAIL [G] … 못 찾았다` 한 줄이지만 실제로 사라진 것은 **판정 10개**라
+     점수 자체가 49/50 으로 거짓말을 했다 — 조용한 쪽이 진짜 결함이다).
+     ⚠ **절을 통째로 옮기지는 않았다** — 626 이 산 버튼으로 시험해 보니 갈래가 둘이었다:
+       · [G1]~[G5](자멸 렌더 축 — 누른 노드 생존 · `jz-dn` 유지 · `.no` 미덮임 · `jzDown` 중 통짜
+         렌더 0)는 **호스트와 무관한 계약**이라 산 버튼에서 그대로 성립한다 ⇒ 옮겨서 지킨다.
+       · 옛 [G6]~[G10]은 **[충전] 고유의 재료**를 물고 있어 옮기면 뜻을 잃는다 ⇒ 걷어냈다
+         (624 가 `cap491` 장면을 걷어낸 것과 같은 판단): [G6] «회당 플로터 한 줄기» 는 전환비 1:1
+         이라 두 줄기가 한 줄기로 접힌 [충전] 전용 계약이고 산 버튼은 «+1 / −1» **두 줄기가 정상**
+         이다(626 실측 FAIL) · [G7] 은 대조 상대가 «형제(단련 [투자])» 인데 옮기면 **자기 자신과
+         비교**해 늘 100% 다 · [G8]·[G9]는 헤더 `.tp-hd`(998×88)와 «`.pv` 오른끝 ↔ 버튼 왼끝» 빈
+         칸의 기하인데, 옮기면 밴드가 `0..673` 으로 벌어져 **무엇을 넣어도 통과하는 헛초록**이 된다
+         (626 실측) · [G10] 은 그 플로터들의 fs 다. [충전] 시절의 실측·처방은
+         `docs/review/491-UI쥬시루프.md` 3~8회차에 그대로 있다. */
+  const G_BTN = '#trTemper .tr-tp.k0 .tb', G_HOST = '#trTemper .tr-tp.k0';
+  console.log('\n[G] 자멸 렌더 — 누른 손 밑에서 노드가 갈리는가 (단련 [단련] · 626 이관)');
   await front();
   await page.evaluate(() => {
     if(!$('trw').classList.contains('on')) openTrain();
@@ -302,17 +320,15 @@ async function diffPct(page2, a, b, tol) {
     };
   });
   await page.waitForTimeout(300);
-  const gRect = await page.evaluate(() => {
-    const b = document.querySelector('#trTemper .tp-hd .cg'), hd = document.querySelector('#trTemper .tp-hd');
-    const pv = document.querySelector('#trTemper .tp-hd .pv');
+  const gRect = await page.evaluate(([bs, hs]) => {
+    const b = document.querySelector(bs), hd = document.querySelector(hs);
     if(!b || !hd) return null;
     b.dataset.p491g = 'stamp';
-    return { b: b.getBoundingClientRect().toJSON(), hd: hd.getBoundingClientRect().toJSON(),
-             pv: pv ? pv.getBoundingClientRect().toJSON() : null };
-  });
+    return { b: b.getBoundingClientRect().toJSON(), hd: hd.getBoundingClientRect().toJSON() };
+  }, [G_BTN, G_HOST]);
   if (gRect) {
-    const gAt = async () => await page.evaluate(() => {
-      const el = document.querySelector('#trTemper .tp-hd .cg');
+    const gAt = async () => await page.evaluate(bs => {
+      const el = document.querySelector(bs);
       const fl = [...document.querySelectorAll('#fxl .fx-plus.hb')].map(n => {
         const r = n.getBoundingClientRect();
         return { t: n.textContent, a: +(+getComputedStyle(n).opacity).toFixed(2),
@@ -326,7 +342,7 @@ async function diffPct(page2, a, b, tol) {
                dn: !!(el && el.classList.contains('jz-dn')),
                no: !!(el && el.classList.contains('no')),
                bg: el ? getComputedStyle(el).backgroundColor : null, fl };
-    });
+    }, G_BTN);
     await page.mouse.move(gRect.b.x + gRect.b.width / 2, gRect.b.y + gRect.b.height / 2);
     await page.mouse.down();
     await page.waitForTimeout(60);  const g60  = await gAt();
@@ -353,52 +369,14 @@ async function diffPct(page2, a, b, tol) {
        JSON.stringify(calls.map(c => c.dn)));
     ok(calls.some(c => !c.dn), '[G5] 뗀 뒤에는 통짜 렌더가 돈다(정합 확인 · 밀린 것이 사라지지 않는다)',
        calls.length + '회');
-    /* 플로터 — 3회차 지적 «잉크 10~20px(형제 23~26 대비 −55%) · 상단 테두리 걸침» */
-    const fl = g60.fl.filter(n => n.a > 0.08);
-    const inHd = n => n.y >= gRect.hd.y && n.y + n.h <= gRect.hd.y + gRect.hd.height;
-    console.log('  · 60ms 플로터 ' + JSON.stringify(fl.map(n => n.t + '@' + n.x + ',' + n.y + ' rect '
-      + n.w + '×' + n.h + ' box ' + n.ow + '×' + n.oh + ' fs' + n.fs)));
-    /* 4회차 — 줄기는 **하나**다(전환비 1:1 이라 «−단련석» 이 «+포인트» 와 같은 수 · 488 5회차 교훈).
-       그 대가로 남은 한 줄기가 칸을 통째로 써서 형제와 같은 fs 34 를 지킨다. */
-    ok(fl.length === 1, '[G6] [충전] 한 발에 회당 플로터가 **한 줄기**다(중복 제거)', fl.length + '장');
-    /* 형제(단련 [투자] 행)를 **같은 실행에서** 재서 «같은 급인가» 를 상대값으로 묻는다 —
-       절대 임계는 문자열 길이에 따라 흔들리고(여기는 7자리, 형제는 2~4자리) 비교 없이는 수치가 안 된다. */
-    await page.mouse.up();
-    await page.waitForTimeout(500);
-    const sib = await (async () => {
-      const r = await page.evaluate(() => {
-        const b = document.querySelector('#trTemper .tr-tp.k0 .tb'); if (!b) return null;
-        const q = b.getBoundingClientRect(); return { x: q.x + q.width / 2, y: q.y + q.height / 2 };
-      });
-      if (!r) return [];
-      await page.mouse.move(r.x, r.y); await page.mouse.down();
-      await page.waitForTimeout(70);
-      const out = await page.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')]
-        .filter(n => +getComputedStyle(n).opacity > 0.08)
-        .map(n => ({ t: n.textContent, oh: n.offsetHeight, ow: n.offsetWidth,
-                     fs: Math.round(parseFloat(getComputedStyle(n).fontSize)) })));
-      await page.mouse.up(); await page.waitForTimeout(300);
-      return out;
-    })();
-    console.log('  · 형제(투자) 플로터 ' + JSON.stringify(sib.map(n => n.t + ' ' + n.ow + '×' + n.oh + ' fs' + n.fs)));
-    const sibH = sib.length ? Math.min(...sib.map(n => n.oh)) : 0;
-    const myH = fl.length ? Math.min(...fl.map(n => n.oh)) : 0;
-    ok(sibH > 0 && myH >= sibH * 0.85,
-       '[G7] ★ 잉크 세로가 형제(단련 [투자])의 85% 이상 — 3회차 지적 «−55%» 의 회수',
-       '충전 ' + myH + 'px(fs ' + fl.map(n => n.fs).join('·') + ') ↔ 투자 ' + sibH + 'px(fs '
-       + sib.map(n => n.fs).join('·') + ') = ' + (sibH ? Math.round(myH / sibH * 100) : 0) + '%');
-    ok(fl.every(inHd), '[G8] ★ 두 줄기가 헤더(998×88) 안이다 — 버튼 안이 아니다',
-       JSON.stringify(fl.map(n => n.y + '..' + (n.y + n.h))) + ' in '
-       + Math.round(gRect.hd.y) + '..' + Math.round(gRect.hd.y + gRect.hd.height));
-    ok(fl.every(n => n.x + n.w <= gRect.b.x - 4) && (!gRect.pv || fl.every(n => n.x >= gRect.pv.x + gRect.pv.width - 4)),
-       '[G9] 자리가 «`.pv` 오른끝 ↔ 버튼 왼끝» 빈 칸 안이다(글자를 안 덮는다)',
-       JSON.stringify(fl.map(n => n.x + '..' + (n.x + n.w))) + ' band '
-       + Math.round(gRect.pv ? gRect.pv.x + gRect.pv.width : 0) + '..' + Math.round(gRect.b.x));
-    ok(fl.every(n => n.fs >= 30), '[G10] 글자 크기가 눌리지 않았다(형제와 같은 fs 34 · 16px 하한이 아니다)',
-       fl.map(n => 'fs' + n.fs).join('·'));
+    /* ⚑ 626 — 옛 [G6]~[G10](회당 플로터 줄기 수 · 형제 대비 잉크 · 헤더 안 · `.pv` 빈 칸 · fs)은
+       [충전] 고유의 재료를 물고 있어 같이 옮기지 않고 걷어냈다 — 근거는 이 절 머리말에 있다.
+       플로터 자체의 산 계약은 위 [F1]~[F6](룬 [강화] 한 발)이 이미 지킨다. */
+    console.log('  · 60ms 플로터 ' + JSON.stringify(g60.fl.filter(n => n.a > 0.08)
+      .map(n => n.t + '@' + n.x + ',' + n.y + ' box ' + n.ow + '×' + n.oh + ' fs' + n.fs)));
     await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false); });
     await page.waitForTimeout(200);
-  } else ok(false, '[G] 단련 [충전] 버튼/헤더를 못 찾았다');
+  } else ok(false, '[G] 단련 [단련] 버튼/행을 못 찾았다');
 
   ok(errs.length === 0, '[Z] 콘솔 에러 0', errs.slice(0, 3).join(' | '));
 
