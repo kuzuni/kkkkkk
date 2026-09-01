@@ -120,7 +120,7 @@ const SWEEP = async (page, setupMap) => {
   const uses = (src.match(/battleBu(sy|sy\(\))|battleBlock\(/g) || []).length;
   ok(uses >= 12, 'A4 단일 판정 호출부가 12곳 이상 — 찍힘: ' + uses);
   ok(/\.ibtn\.busy \.si,\.tab\.busy \.ti\{opacity:\.5\}/.test(src),
-     'A5 딤 규칙이 선례(`.ibtn.lock .si`)와 **같은 .5** 이고 opacity 뿐이다(기하 0줄)');
+     'A5 딤 규칙이 선례(`.ibtn.lock .si` — 629 가 죽은 선언으로 걷어냈다)와 **같은 .5** 이고 opacity 뿐이다(기하 0줄)');
 
   const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
