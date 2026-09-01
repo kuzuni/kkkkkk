@@ -232,19 +232,44 @@ async function shotA(T, idx) {
   return { T, file, info, px, errs: errs.length };
 }
 
-/* 씬 B — 연속(홀드). 세대가 섞이므로 `currentTime` 을 안 감고 **실시간**으로 홀드하다 그 순간 얼린다. */
+/* 씬 B — 연속(홀드). **표본마다 0 부터 그 시각까지 «끊지 않고» 누른 뒤 얼려서 찍는다.**
+   ⚠⚠ **5회차에 비평가가 잡은 하네스 결함** — 종전 판은 표본마다 `open(SEED + idx)` 로 **시드까지
+     바꿔** 찍어서, B 네 장이 «한 홀드의 연속 네 틱» 이 아니라 **독립 네 장**이었다. 비당첨 칸 레벨이
+     장 사이에서 **오르내리는** 모순(왕관 0→0→2→0)으로 들켰고, 그 캡처로는 주인 지시의 후반
+     («연속소환일때도 그런식으로 되게»)도 규약(«한 세대가 다음 틱까지 안 산다»)도 **증명할 수 없다.**
+   ⚠ 그렇다고 «한 페이지에서 계속 누른 채 네 번 찍기» 로 가면 **얼리기를 잃는다** — 스크린샷 한 장에
+     1~2초가 걸려 그동안 홀드가 계속 돌고, 그러면 **DOM 을 센 표와 찍힌 그림이 어긋난다**(1회차에
+     비싸게 배운 바로 그 병이 반대편에서 되돌아온다 · 실측 Δpx 가 −5 로 나왔다).
+   ⇒ 둘을 다 지킨다: **시드는 전 표본 동일**(SEED)하고, 표본마다 0 → 그 시각까지 **끊지 않고 누른 뒤**
+     얼려서 찍는다. 프레임들이 «같은 홀드의 앞뒤» 가 되므로 보유 레벨 합이 **단조 증가**해야 하고,
+     그 값을 정답표 아래에 찍어 «정말 연속인가» 를 독자가 검산할 수 있게 한다.
+   ⚠ 러너 부하로 틱 수가 흔들리면 단조성이 깨질 수 있다 — 그때는 그 숫자가 그대로 드러난다
+     (58 38회차 «흐리게 잴 바에는 흐린 값을 밝혀라»). */
 async function shotB(T, idx) {
-  const { b, p, errs } = await open(SEED + idx);
+  const { b, p, errs } = await open(SEED);
   const el = await p.$('#rwBasin');
   const bb = await el.boundingBox();
   const cdp = await p.context().newCDPSession(p);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart',
-    touchPoints: [{ x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 }] });
-  await p.waitForTimeout(T);
+  const c = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 };
+  await p.evaluate(() => { window.__capT0 = performance.now(); });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
+  /* ⚠ 폴링(`evaluate` 반복)으로 기다리면 그 왕복이 페이지 이벤트 루프를 굶겨 **틱이 안 돈다**
+     (실측: 1208ms 눌렀는데 소환 2회 · B4 는 알 0개). 종전 `holdTouch` 처럼 **touchMove 를 흘리며
+     통째로 기다린다** — 이 대기 동안 홀드는 실제로 돈다. */
+  const t0 = Date.now();
+  while (Date.now() - t0 < T) {
+    await p.waitForTimeout(80);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove',
+      touchPoints: [{ x: c.x + (Math.random() * 4 - 2), y: c.y + (Math.random() * 4 - 2) }] }).catch(() => {});
+  }
   const info = await p.evaluate(({ tally, freeze }) => {
     eval('(' + freeze + ')')();
     try { document.getAnimations().forEach(a => a.pause()); } catch (e) {}
-    return Object.assign({ at: -1 }, eval('(' + tally + ')')());
+    const r = eval('(' + tally + ')')();
+    r.at = Math.round(performance.now() - window.__capT0);
+    r.lvSum = (typeof RELICS !== 'undefined')
+      ? RELICS.reduce((s, x) => s + (S.own[x.id] ? S.own[x.id].l : 0), 0) : -1;
+    return r;
   }, { tally: TALLY.toString(), freeze: FREEZE.toString() });
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '683-' + ROUND + '-B' + idx + '.png');
@@ -257,7 +282,7 @@ async function shotB(T, idx) {
 
 const row = (tag, i, r) => '| ' + tag + (i + 1) + ' | ' + r.T + ' | ' + r.info.name + ' ' + r.info.ic
   + ' | ' + JSON.stringify(r.info.card) + ' | ' + r.info.gain + ' | ' + r.info.onCard + ' | ' + r.info.other
-  + ' | ' + r.info.glyph + ' | ' + r.info.gsz + 'px | ' + r.info.gsp + 'px | ' + r.dpx
+  + ' | ' + r.info.glyph + ' | ' + (r.info.at != null && r.info.at >= 0 ? r.info.at : r.T) + ' | ' + r.info.gsz + 'px | ' + r.info.gsp + 'px | ' + r.dpx
   + ' | ' + r.info.pay + ' | ' + r.info.bead + ' | ' + r.info.text + ' | ' + r.info.flash + ' |';
 
 (async () => {
@@ -273,14 +298,16 @@ const row = (tag, i, r) => '| ' + tag + (i + 1) + ' | ' + r.T + ' | ' + r.info.n
   console.log('\n# 683 ' + ROUND + ' 정답표 (시드 ' + SEED + ')');
   console.log('\n«획득» = 683 이 신설한 획득 이미터(`.fx-rlic`, 원점 = 획득 유물 카드)');
   console.log('«지불» = 666 의 지불 이미터(`.fx-cic`, 원점 = 소환 버튼) — 이 작업이 안 건드린 축\n');
-  console.log('| # | t(ms) | 당첨 유물 | 당첨 카드 상자 | 획득 알 | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 평균 크기 | 최대 반경 | **찍힌 잉크 Δpx** | 지불 알 | 구슬 | 글자 | 플래시 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('| # | t(ms) | 당첨 유물 | 당첨 카드 상자 | 실측 t | 획득 알 | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 평균 크기 | 최대 반경 | **찍힌 잉크 Δpx** | 지불 알 | 구슬 | 글자 | 플래시 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   A.forEach((r, i) => console.log(row('A', i, r)));
   B.forEach((r, i) => console.log(row('B', i, r)));
   console.log('\nA = 단발(트리거 = 0ms · `currentTime` 으로 감은 정확한 시각) · B = 연속 홀드(실시간 ms)');
   const c = A[0].info.card;
   console.log('당첨 카드 상자(A씬): ' + JSON.stringify(c));
   console.log('기준선(연출 0인 정착 화면, 칸별 밝은 px): ' + JSON.stringify(BASE));
+  console.log('씬 B 보유 유물 레벨 합(한 홀드 = 단조 증가여야 한다): '
+    + B.map(r => r.info.lvSum).join(' → '));
   console.log('콘솔 에러: ' + A.concat(B).reduce((s, r) => s + r.errs, 0) + '건');
   console.log('캡처: ' + path.join(OUT, '683-' + ROUND + '-*.png'));
 })();
