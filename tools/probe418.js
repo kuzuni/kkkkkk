@@ -41,6 +41,8 @@ const DSF = Number((argv[argv.indexOf('--dsf') + 1]) || 2) || 2;
 const ONLY = argv.includes('--screen') ? argv[argv.indexOf('--screen') + 1] : null;
 const TOL = Number(process.env.PROBE418_TOL || 0.005);
 const PAD = 3;                    /* 잉크가 상자를 살짝 넘는 자리(그림자·획)를 위한 여유 */
+/* 판정 스코프의 `object-fit` — «늘리지 않는» 값만(아래 판정 절 머리말). 750 의 가림 보정도 이 집합을 쓴다 */
+const JUDGE_FIT = new Set(['contain', 'scale-down']);
 
 /* ---------- 페이지 안에서 도는 수집기 ---------- */
 const COLLECT = function () {
@@ -83,6 +85,70 @@ const COLLECT = function () {
 
 const SETOPA = (v) => { for (const e of document.querySelectorAll('[data-p418]')) e.style.opacity = v; };
 const SETONE = ([id, v]) => { const e = document.querySelector(`[data-p418="${id}"]`); if (e) e.style.opacity = v; };
+
+/* ---------- 750 ⓐ — «형제가 덮은 잉크» 를 문턱이 아니라 **되돌림**으로 가른다 ----------
+   ⚑ 이 자의 잉크는 «대상 노드 opacity 0» 두 장의 **차분**이다. 그래서 아이콘 **앞**에서 무언가를
+   칠하고 있으면 그 줄은 두 장이 똑같아 bbox 가 그만큼 짧아진다 — 아이콘 기하는 멀쩡한데
+   **종횡만** 어긋난 값이 나온다(750 1회차 실측: 35 패스 알약 176×176 → 176×172 = +2.33%).
+   기존 `occ`(예상 채움과 3% 넘게 어긋나면 판정 밖) 는 이걸 못 잡는다 — 손실이 **5 ÷ 176 = 2.84%**
+   로 문턱 **바로 아래**라 통과한다. 문턱을 내리는 것은 답이 아니다(정상 자리가 스코프 밖으로
+   나가 `judged` 가 줄고 [S3] ② 가 «스코프가 줄었다» 로 잡는다 — 750 review §5).
+   ⇒ **가리는 것을 치우고 다시 재서** 가른다. 가림이면 값이 돌아오고, 기하면 그대로다.
+   실측(750 3회차): 패스 알약 176×172 → **176×176** · 03 던전 `.pcb-d` −2.27% → **−2.27% 그대로**.
+
+   ⚠ **«겹치는 것» 을 다 숨기면 안 된다.** 뒤에 깔린 형제를 숨기면 아이콘 테두리 AA 가 얹히는
+     바탕색이 바뀌어 경계 칸의 diff 가 문턱(THR 12)을 들락거린다 — 실제로 `.pcb-d` 가 그 방식에서
+     129 → 130 으로 움직였다(«고쳐진» 것이 아니라 **자가 다른 것을 잰** 것이다).
+     ⇒ 숨기는 것은 **hit-test 로 «앞» 임이 확인된 것**뿐이다.
+   ⚠ **맞은 노드만 숨기면 모자란다.** 패스 알업의 hit 은 수량 라벨 `em` 인데 실제로 아이콘 하변을
+     덮는 것은 그 부모 `b` 의 배경이라, `em` 만 숨기면 176×172 그대로다(3회차 실측).
+     ⇒ 맞은 노드에서 **형제 가지의 뿌리**(= 대상의 조상 바로 아래 칸)까지 올라가 통째로 숨긴다.
+   ⚠ 표본은 상자 **끝줄을 반드시 포함**해야 한다 — 덮인 것이 마지막 2~3px 이라
+     0.5/N 로 안쪽만 찍는 격자는 그 줄을 통째로 건너뛴다(3회차에 한 번 그렇게 헛measure 했다). */
+const SCAN_COVER = function ([ids, N]) {
+  /* `pointer-events:none` 인 노드도 화면에는 칠한다 — hit-test 로 «앞» 을 물으려면 잠시 켠다 */
+  const st = document.createElement('style');
+  st.textContent = '*{pointer-events:auto!important}';
+  document.head.appendChild(st);
+  const out = {};
+  const IN = 0.3;                       /* 상자 모서리 안쪽 0.3px — 끝줄이 표본에 들게 */
+  for (const id of ids) {
+    const el = document.querySelector(`[data-p418="${id}"]`);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) continue;
+    const roots = new Set();
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const px = r.left + IN + (r.width - IN * 2) * i / (N - 1);
+      const py = r.top + IN + (r.height - IN * 2) * j / (N - 1);
+      if (px < 0 || py < 0 || px > innerWidth - 1 || py > innerHeight - 1) continue;
+      const h = document.elementFromPoint(px, py);
+      if (!h || h === el || el.contains(h) || h.contains(el)) continue;
+      let k = h;
+      while (k.parentElement && !k.parentElement.contains(el)) k = k.parentElement;
+      if (k !== el && !el.contains(k) && !k.contains(el)) roots.add(k);
+    }
+    if (!roots.size) continue;
+    for (const o of roots) {
+      const cur = o.getAttribute('data-p418c');
+      o.setAttribute('data-p418c', cur ? cur + ' ' + id : String(id));
+    }
+    out[id] = roots.size;
+  }
+  st.remove();
+  return out;
+};
+const HIDE_COVER = (id) => {
+  for (const o of document.querySelectorAll(`[data-p418c~="${id}"]`)) {
+    o.setAttribute('data-p418v', o.style.visibility || '');
+    o.style.visibility = 'hidden';
+  }
+};
+const SHOW_COVER = () => {
+  for (const o of document.querySelectorAll('[data-p418v]')) {
+    o.style.visibility = o.getAttribute('data-p418v'); o.removeAttribute('data-p418v');
+  }
+};
 
 /* ---------- 530 — «연출 중» 을 걷어 «상시» 상태로 정규화한다 ----------
    ⚑ **왜 «빼는 것» 이 아니라 «걷는 것» 인가.** 이 자가 지키려는 성질은 356 [A] 가 적은 그대로
@@ -231,6 +297,7 @@ async function sweep(opt) {
      같은 프레임을 문턱만 바꿔 읽으면 잉크 폭이 칸 단위로 들락거린다(16회차 −2.92% 의 정체).
      그 «걸침» 을 보이는 자가 필요해서 뚫었다. 게이트 실행에서 이 env 를 세팅하지 마라. */
   const THR = Number(process.env.PROBE418_THR || 12);
+  const NOCOV = process.env.PROBE418_NOCOV === '1' || opt.nocov === true;   /* 750 — 가림 보정 끄기(되돌림) */
   const browser = await launch(chromium);
   const calc = await browser.newPage();
   await calc.setContent('<body></body>');
@@ -320,6 +387,34 @@ async function sweep(opt) {
         n.ink = d[0]; n.solo = true;
       }
 
+      /* 750 ⓐ — 가림 보정. 판정 스코프가 될 수 있는 노드(=`img` + 늘리지 않는 `object-fit`)만
+         본다. 앞을 덮는 형제 가지가 하나도 없으면 **다시 재지 않는다**(재면 그 자체가 잡음이다). */
+      /* `PROBE418_NOCOV=1` 은 **되돌림 시험용**이다 — 보정을 끄고 같은 트리를 재면 750 이 닫은 칸이
+         그대로 되살아난다(게이트 [S3] ④ 가 그것으로 «이 보정이 일을 하는가» 를 못박는다).
+         ⚠ 게이트 실행에서 이 env 를 세팅하지 마라(THR knob 과 같은 규율). */
+      const cand = NOCOV ? [] : nodes.filter((n) => n.ink && n.tag === 'img' && JUDGE_FIT.has(n.fit));
+      const covMap = cand.length ? await page.evaluate(SCAN_COVER, [cand.map((n) => n.id), 12]) : {};
+      for (const n of cand) {
+        if (!covMap[n.id]) continue;
+        n.cov = covMap[n.id];
+        const clip = { x: Math.max(0, Math.floor((n.x - PAD))), y: Math.max(0, Math.floor((n.y - PAD))),
+          width: Math.ceil(n.w + PAD * 2), height: Math.ceil(n.h + PAD * 2) };
+        await page.evaluate(HIDE_COVER, n.id);
+        await page.waitForTimeout(80);
+        const a = (await page.screenshot({ clip })).toString('base64');
+        await page.evaluate(SETONE, [n.id, '0']);
+        await page.waitForTimeout(80);
+        const b = (await page.screenshot({ clip })).toString('base64');
+        await page.evaluate(SETONE, [n.id, '']);
+        await page.evaluate(SHOW_COVER);
+        await page.waitForTimeout(60);
+        const d = await calc.evaluate(DIFF_MANY, [a, b, [[0, 0, 1e9, 1e9]], THR]);
+        if (!d[0]) continue;                 /* 가리는 것을 치웠는데 잉크가 0 이면 못 믿는다 — 원값 유지 */
+        n.inkRaw = n.ink;
+        if (d[0].w !== n.ink.w || d[0].h !== n.ink.h) n.covFix = true;
+        n.ink = d[0];
+      }
+
       for (const n of nodes) rows.push(Object.assign({ screen: label }, n));
     } catch (e) {
       errs.push(label + ': ' + String(e.message || e).split('\n')[0]);
@@ -377,7 +472,7 @@ async function sweep(opt) {
      값(contain/scale-down/none). 캔버스는 «무엇을 그렸는지» 가 JS 안에 있어 원본 비율이 없다
      (70 출석의 `#porCv` 가 그 자리다 — 상자 88×92 에 사람 그림이라 잉크 168×180 이 정상이다).
      캔버스의 비균등 «변환» 은 `scan356` 이 이미 본다. */
-  const JUDGE = new Set(['contain', 'scale-down']);
+  const JUDGE = JUDGE_FIT;
   const OCC = Number(process.env.PROBE418_OCC || 0.03);
   const measured = rows.filter((r) => r.ink && r.ink.w >= 6 && r.ink.h >= 6);
   for (const r of measured) {
@@ -416,6 +511,8 @@ async function sweep(opt) {
   return { dsf: DSF, tol: TOL, revert: REVERT, screens: SCREENS.filter(([l]) => wanted(l)).length,
     measured: measured.length, judged: measured.filter((r) => r.judged).length,
     outside: outside.length, clipped: clipped.length, cells: bad.length, groups: list, errs,
+    /* 750 ⓐ — 가림 보정: 앞을 덮는 형제가 있어 다시 잰 노드 수 · 그중 값이 실제로 달라진 수 */
+    cov: measured.filter((r) => r.cov).length, covFix: measured.filter((r) => r.covFix).length,
     /* 530 — 정규화가 실제로 무엇을 걷었나. `fxLeft` 는 0 이어야 한다(verify356 [S3] ② 가 단언). */
     fx: fx.nodes, fxCls: fx.cls, fxLeft: fx.left, stillLost: fx.lost, anFin: fx.fin, anHeld: fx.held };
 }
@@ -433,6 +530,7 @@ if (require.main !== module) return;
     console.log(`[probe418]${R.revert ? ' «되돌림»' : ''} DSF${R.dsf} · 화면 ${R.screens}개 · 잉크를 잰 노드 ${R.measured}개 ` +
       `(판정 ${R.judged} · 원본비 없음 ${R.outside} · 가려짐·잘림 ${R.clipped}) · ` +
       `종횡 편차 >${(R.tol * 100).toFixed(1)}% 인 칸 ${R.cells}개 → ${R.groups.length}자리`);
+    console.log(`  [750] 가림 보정 — 앞을 덮는 형제가 있어 다시 잰 노드 ${R.cov}개 · 값이 달라진 노드 ${R.covFix}개`);
     console.log(`  [530] 연출 정규화 — 레이어 노드 ${R.fx}개 · fx- 클래스 ${R.fxCls}개를 걷고 «상시» 상태에서 쟀다 (잔여 ${R.fxLeft})`);
     console.log(`  [530] 애니 정지 — 유한 ${R.anFin}개 finish · 무한 ${R.anHeld}개 주기 0 · 타이머 창구 닫음 · 전이 차단 (스코프 손실 ${R.stillLost})`);
     for (const g of R.groups) {
