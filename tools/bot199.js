@@ -1053,7 +1053,8 @@ const POLICIES = {
    구간 보간을 못 할 때의 폴백이라 세대 비교 때 같이 봐야 한다.
    ⚑⚑ 첫 스윕(s580·600·620 전부 유효 · s640 실패)이 창을 20 으로 줄이면서 **기제**까지 드러냈다 —
    적 곡선은 완만한 오르막이 아니라 **밴드 계단**이다(`eScale` = 밴드 값 + 밴드 안 ES_RAMP 비탈).
-   밴드 안 40 스테이지가 ×1.62 인데 **경계 한 칸이 ×49.5** 다(eHp s639 3.61e32 → s640 1.79e34,
+   밴드 안 40 스테이지가 ×2.57 인데 **경계 한 칸이 ×49.49** 다(eHp s639 3.609e32 → s640 1.786e34,
+   ⚠ 12회차 비평 FF·GG 정정 — 최초 기록의 «×1.62» 는 20칸 값이었다,
    거기에 관문 ×1.44 가 겹친다). 그래서 «상한이 창 어디에 있는가» 는 창을 반으로 쪼개는 문제가
    아니라 **어느 밴드 경계에서 넘는가** 다 ⇒ 밴드 안 끝(s630·**s639**)을 세워 «경계 직전까지
    닿는가» 를 직접 묻는다. 둘이 유효면 벽의 좌표는 창이 아니라 **한 칸(s640)** 으로 확정된다. */
@@ -1361,13 +1362,18 @@ function writeReport(rep) {
       const firstBad = badRows[0], lastOk = okRows[okRows.length - 1];
       L.push(`> ⚑⚑ **보정 프로브가 닿는 화력의 끝 — 실측 좌표 s${maxAnchor} … s${firstBad.s} 사이**(11회차 · 정정7 · ⚠ **12회차 정정: 이것은 «게임의 벽» 이 아니라 «이 지갑으로 세운 캐릭터의 끝» 이다** — 기본 예산(골드 1e33)을 \`--pumpcap\` 으로 열면 좌표가 움직인다(12회차 실측 s640 pump 1.9e-2 → **1.15**). 같은 표의 30일 봇이 그 위를 걷는 것이 그 증거다). 유효 앵커 마지막 = **s${maxAnchor}**(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) · 첫 실패 프로브 = **s${firstBad.s}**(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)} — 전 축 만개 후에도 목표의 그만큼). 실패 행도 [A] 표에 «✖ 대역 밖» 으로 실려 있다(재현 경로 있음).`);
       /* ⚑ 12회차 — 창이 «밴드 경계 한 칸» 으로 좁혀졌으면 표가 그렇게 말해야 한다.
-         적 곡선은 완만한 오르막이 아니라 밴드 계단이라(밴드 안 40칸 ×1.6 ↔ 경계 한 칸 ×49.5),
+         적 곡선은 완만한 오르막이 아니라 밴드 계단이라(밴드 안 40칸 ×2.57 ↔ 경계 한 칸 ×49.49),
          상한이 창의 «어디쯤» 인가가 아니라 **어느 경계에서 넘는가** 가 답이다.
          마지막 유효 앵커가 경계 직전 칸이면 좌표는 창이 아니라 한 칸이다. */
       const BANDA = (allRuns[0] && allRuns[0].band) || 40;
       if (firstBad.s % BANDA === 0 && maxAnchor === firstBad.s - 1) {
+        /* ⚑ 12회차 비평 FF(#2) 정정 — 목표 비(`target`)에는 `kGuess` 되먹임이 섞여 있어
+           «제품의 계단» 이 아니다. 계단은 제품항만으로 찍는다(관문 배수 포함).
+           `target = eHp·boss.hp·bossGateHp / (BOSS_SEC·0.5) / kGuess` 이므로 제품항 비는
+           `eHp·bossGateHp` 비다 — 행에 남은 두 수로는 못 나누니 캐시에 실린 목표에서
+           kGuess 몫을 빼지 못한다. ⇒ 비 대신 **두 수를 그대로 병기**하고 «자의 추정 포함» 을 밝힌다. */
         const jump = firstBad.target && lastOk.target ? firstBad.target / lastOk.target : null;
-        L.push(`> ⚑ **그 좌표는 기본 지갑 아래에서 한 칸이다 — 밴드 경계 s${firstBad.s}**(12회차). 경계 직전 칸 s${maxAnchor} 은 닿고(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) 경계 첫 칸 s${firstBad.s} 은 못 닿는다(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)}) — 한 칸 사이 목표 ×${jump == null ? '—' : jump.toPrecision(3)}. 밴드 안 오르막이 아니라 **경계 계단**이 화력을 추월한다(밴드 폭 ${BANDA} · 관문 배수 포함).`);
+        L.push(`> ⚑ **그 좌표는 기본 지갑 아래에서 한 칸이다 — 밴드 경계 s${firstBad.s}**(12회차). 경계 직전 칸 s${maxAnchor} 은 닿고(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) 경계 첫 칸 s${firstBad.s} 은 못 닿는다(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)}) — 한 칸 사이 목표 ×${jump == null ? '—' : jump.toPrecision(3)}(⚠ \`kGuess\` 되먹임 포함 — 제품항만의 계단은 \`eHp·bossGateHp\` 비로 따로 재라. 12회차 실측 ×71.26). 밴드 안 오르막이 아니라 **경계 계단**이 화력을 추월한다(밴드 폭 ${BANDA} · 관문 배수 포함).`);
       }
     }
     if (maxStage > maxAnchor) L.push(`> ⚠⚠ **κ 외삽** — 시뮬 최고 s${maxStage} > κ 유효 앵커 s${maxAnchor}. 그 밖 구간은 log(s) 선형 외삽이다(정정2) — 앵커를 s${maxStage} 이상으로 늘려 재보정하기 전에는 그 구간 수치에 (외삽) 표식을 붙여 읽어라.${badRows.length ? ` ⚠ 그런데 s${badRows[0].s} 은 **이 지갑으로는 앵커를 세울 수 없다**(위 줄) — 12회차 실측으로는 «앵커를 늘리면 풀리는» 외삽도 아니고 «적 곡선이 화력을 추월한 뒤» 도 아니다: **지갑을 열면 앵커가 선다**(§12).` : ''}`);
