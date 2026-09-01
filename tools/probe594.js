@@ -29,7 +29,16 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
-const SRC = path.join(path.resolve(__dirname, '..'), 'index.html');
+/* ⚑ 627 — `--src <파일>` 로 **사본**을 물릴 수 있다(기본은 제품). 되돌림 시험 전용 손잡이다:
+   맥박(`jz-hb`)을 뺀 사본에서 [C2] 가, 621 왕복(`jzPressTick`)을 뺀 사본에서 [C3] 이 빨개지는지
+   물어야 두 항이 «이미 참인 것을 굳힌 헛초록» 이 아님을 말할 수 있다.
+   ⚠ 사본을 저장소 뿌리 **밖**에 두면 상대 경로 자산이 안 붙어 [Z](콘솔 에러 0)만 빨개진다 —
+     그 한 항은 사본 자리 탓이지 되돌림의 결과가 아니다(627 실측: rA·rB 둘 다 [Z] 만 곁들여 빨감). */
+const ARGV = process.argv.slice(2);
+const srcArg = ARGV.indexOf('--src');
+const SRC = srcArg >= 0 && ARGV[srcArg + 1]
+  ? path.resolve(ARGV[srcArg + 1])
+  : path.join(path.resolve(__dirname, '..'), 'index.html');
 
 const p4 = n => Math.round(n * 10000) / 10000;
 const p2 = n => Math.round(n * 100) / 100;
@@ -50,6 +59,11 @@ const HOST_S = 0.985, HOST_TOL = 0.004;      /* [7-*-b3] 의 밴드 */
 const BTN_LO = 0.90, BTN_HI = 0.965;         /* [7-*-b2] 의 밴드 */
 const REPS = 8;                              /* «200ms 한 점» 을 몇 번 눌러 볼 것인가 */
 const HOLD_DELAY = 350;                      /* 제품 `TR_HOLD_DELAY` — 홀드 «반복» 이 시작되는 시각 */
+const ROUNDS = 2;                            /* ⚑ 627 — 표본을 모을 홀드 판 수(위상 결 상쇄, 아래 ①) */
+const SWEEP = 2200;                          /* ⚑ 627 — rAF 전수 표본의 홀드 길이. 1300 에서 늘렸다:
+                                                반복 구간이 950 → 1850ms 가 되어 late 프레임이 19~25 → 40 안팎이 된다.
+                                                「한 점 ×8」과 달리 여기서는 **시간을 늘리면 위상이 늘어난다** —
+                                                판정이 표본 수에 쫓기지 않게 하는 유일한 손잡이다. */
 
 async function boot(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -135,11 +149,24 @@ async function onePoint(page, t, g, ms) {
 
   const S1 = {}, S2 = {};
   for (const t of HOSTS) {
-    /* ── ① 홀드 전 구간 rAF 전수 표본 ── */
-    const r = await sweep(page, t, 1300);
-    if (!r) { ok(false, '[' + t.id + '-0] 버튼·호스트를 찾았다'); continue; }
-    ok(true, '[' + t.id + '-0] ' + t.n + ' — 호스트 rest ' + p2(r.g.rw) + ' · 버튼 rest ' + p2(r.g.rb));
-    const rows = r.frames.map(f => ({ ...f, r: f.w / r.g.rw, br: r.g.rb ? f.bw / r.g.rb : 0 }));
+    /* ── ① 홀드 전 구간 rAF 전수 표본 — ⚑ 627: **홀드 두 판을 모아서** 본다.
+       rAF(≈60Hz, 헤드리스에서는 15~25Hz)와 맥박 열차(틱 60~160ms)는 **주기가 서로 물릴 수 있어서**
+       한 판만 보면 «맥박은 도는데 표본이 그 창을 계속 비껴가는» 결이 생긴다(실측: 같은 트리에서
+       rune 이 7% ~ 62% 사이를 오갔다). 판을 새로 시작하면 두 주기의 위상차가 새로 뽑히므로
+       두 판을 모으면 그 결이 상쇄된다 — 「한 점 ×8」이 **못 하는 일**이 이것이다(그쪽은 여덟 번이
+       같은 `mousedown` 지연에 서서 위상이 하나뿐이다). ── */
+    const rounds = [];
+    for (let i = 0; i < ROUNDS; i++) {
+      const one = await sweep(page, t, SWEEP);
+      if (!one) break;
+      rounds.push(one);
+    }
+    if (!rounds.length) { ok(false, '[' + t.id + '-0] 버튼·호스트를 찾았다'); continue; }
+    const r = rounds[0];
+    ok(true, '[' + t.id + '-0] ' + t.n + ' — 호스트 rest ' + p2(r.g.rw) + ' · 버튼 rest ' + p2(r.g.rb)
+      + ' · 홀드 ' + rounds.length + '판 × ' + SWEEP + 'ms');
+    const rows = [].concat(...rounds.map(rd =>
+      rd.frames.map(f => ({ ...f, r: f.w / rd.g.rw, br: rd.g.rb ? f.bw / rd.g.rb : 0 }))));
     const rat = rows.map(f => f.r), brat = rows.map(f => f.br);
     /* 들어가는 트랜지션(.07s)이 앉은 뒤의 프레임만 «정착» 으로 본다 */
     const settled = rows.filter(f => f.t >= 120);
@@ -174,7 +201,7 @@ async function onePoint(page, t, g, ms) {
                  latePressedMax: late.filter(pressed).length
                    ? Math.max(...late.filter(pressed).map(f => f.br)) : 0,
                  bscs: [...new Set(late.map(f => f.bsc))].slice(0, 6) };
-    console.log('      프레임 ' + rows.length + '개/1300ms · 호스트 폭 비 ' + p4(Math.min(...rat)) + '~' + p4(Math.max(...rat))
+    console.log('      프레임 ' + rows.length + '개/' + rounds.length + '판×' + SWEEP + 'ms · 호스트 폭 비 ' + p4(Math.min(...rat)) + '~' + p4(Math.max(...rat))
       + ' · 밴드(.985±.004) 안 ' + inBand + '개(' + p2(inBand / rows.length * 100) + '%)');
     console.log('      버튼 폭 비 ' + p4(Math.min(...brat)) + '~' + p4(Math.max(...brat))
       + ' · 밴드(' + BTN_LO + '~' + BTN_HI + ') 밖 프레임 '
