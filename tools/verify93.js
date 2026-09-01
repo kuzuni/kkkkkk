@@ -73,6 +73,21 @@ async function run(scene, span) {
   }, scene);
   if (scene === 'quest') { await p.evaluate(() => openQuest()); await p.waitForTimeout(450); }
   if (scene === 'upg') { await p.evaluate(() => openTrain()); await p.waitForTimeout(450); }
+  /* 694 — 씬 D(50 코스튬 [강화]). `fxDelta` 를 **아직 쓰는** 유일한 계열이다(`probe694` [3]:
+     `fxUpOk` 호출부 6곳 중 텍스트를 넘기는 곳은 33692·33818 두 자리뿐 · 둘 다 코스튬). */
+  if (scene === 'cos') {
+    await p.evaluate(() => {
+      S.stone = 1e12;
+      const a = AVATARS[0].id;
+      S.avatars = S.avatars || {}; S.avatars[a] = 1; S.avatar = a;
+      goTab('hero'); heroSubGo('cos');
+    });
+    await p.waitForTimeout(450);
+    /* 클릭은 한 번의 evaluate 안에서 query+click 한다 — `renderCos()` 가 `#bCos.innerHTML` 을
+       갈아끼우면 핸들이 detach 돼 위임 핸들러가 안 탄다(LESSONS 25-⑤ · func50 머리말). */
+    await p.evaluate(() => { const c = document.querySelector('#bCos [data-cosit]'); if (c) c.click(); });
+    await p.waitForTimeout(300);
+  }
   if (scene === 'gain') {
     await p.waitForFunction(() => typeof enemies !== 'undefined' && enemies.length > 0, null, { timeout: 8000 }).catch(() => {});
   }
@@ -97,6 +112,10 @@ async function run(scene, span) {
     /* 570 — `getComputedStyle` 로 알약 배율을 읽던 `scaleOf` 는 아래 `scaleInline` 이 대신한다
        (같은 값 · 레이아웃 강제 0회). 프레임마다 부르던 자리라 자 자신이 부하였다. */
     const cards = [...document.querySelectorAll('.tr-card')].map(rect);
+    /* 694 — 씬 D 의 호스트. **클릭 전에** 잡는다: `cosUpgrade()` 가 `renderUI()` 로 카드를
+       갈아끼우므로 뒤에 재면 «새 노드» 를 재게 된다(LESSONS 22 와 같은 규칙). */
+    const cosEl = document.querySelector('#bCos .sk-card.sel');
+    const cosR = cosEl ? rect(cosEl) : null;
 
     /* ── 570 — 제품 자신의 신호를 남긴다(표본이 아니다) ────────────────────────
        ⓐ `plog` : 제품의 틱(`fxPzTick`)이 **그린** 인라인 scale. 프레임마다 한 줄.
@@ -142,16 +161,23 @@ async function run(scene, span) {
     let p0 = null;
     const beat0 = (typeof fxBeatLog !== 'undefined') ? fxBeatLog.length : 0;
     const punch0 = (typeof fxPunchN === 'number') ? fxPunchN : 0;
+    /* 694 — «강화가 실제로 일어났나» 는 연출이 아니라 **판정**에서 읽는다(씬 C 골드 · 씬 D 강화석).
+       [7-a] 의 전제가 이 값이다 — 없으면 «델타 0장» 이 «씬이 안 났다» 와 구별되지 않는다. */
+    const pay0 = sc === 'cos' ? S.stone : S.gold;
     if (sc === 'quest') {
       const b = document.getElementById('qAll');
       if (b) { const r = b.getBoundingClientRect(); p0 = { x: r.left + r.width / 2, y: r.top + r.height / 2 }; b.click(); }
     } else if (sc === 'gain') {
       const e = (typeof enemies !== 'undefined' && enemies[0]) || null;
       fxAt(e ? fxWorld(e.x, e.y - e.r) : fxWorld(cam.x, cam.y), 'combat'); S.gold += 128000;
+    } else if (sc === 'cos') {
+      const b = document.querySelector('#bCos [data-cosup]');
+      if (b) b.click();
     } else {
       const c = document.querySelector('#trCards [data-tr="atk"]') || document.querySelector('#trCards .tr-card');
       if (c) { c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); }
     }
+    const cicSeen = new Set();
     const gp = pillEl('gold'), dp = pillEl('dia');
     await new Promise((res) => {
       const tick = () => {
@@ -177,6 +203,15 @@ async function run(scene, span) {
           const r = el.getBoundingClientRect();
           return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
         });
+        /* 694 — 660 의 버스트는 수명이 짧아 «끝난 뒤 세면» 이미 지워져 있다. 붙는 순간에
+           도장을 찍어 누적으로 센다(666·488 이 쓴 방법). 두 씬에서만 돈다 — 씬 A·B 의
+           타이밍 축은 샘플러 부하에 물리므로(570) 거기서는 한 줄도 더 안 돈다. */
+        if (sc === 'upg' || sc === 'cos') {
+          for (const el of document.querySelectorAll('.fx-cic')) {
+            if (el.__v93c === undefined) el.__v93c = (window.__v93cn = (window.__v93cn || 0) + 1);
+            cicSeen.add(el.__v93c);
+          }
+        }
         frames.push({
           t: Math.round(t), list, delta,
           sg: scaleInline(gp), sd: scaleInline(dp),
@@ -195,6 +230,8 @@ async function run(scene, span) {
       ? fxBeatLog.slice(beat0).map(b => [b[0] - t0, b[1]]).filter(v => v[0] >= -1) : [];
     return {
       frames, rows, cards, p0, leftover, beats, mism: mism.length,
+      /* 694 — [7] 이 읽는 셋: 호스트 상자 · 실제 지출 · 버스트 알 수 */
+      cosR, paid: pay0 - (sc === 'cos' ? S.stone : S.gold), cic: cicSeen.size,
       plog: plog.map(r => [Math.round(r[0] - t0), r[1], r[2], r[3], r[4]]), dlog,
       goldPill: pillC('gold'), diaPill: pillC('dia'),
       outX: (typeof fx3Out === 'function' && p0) ? fx3Out(p0) : 0,
@@ -239,7 +276,8 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
      끝난 뒤여야 한다. 2000ms 에서 세면 사양대로 살아 있는 플로터 1개가 잔여로 잡힌다. */
   const q = await run('quest', 2400);   /* 씬 B — 퀘스트 «모두 받기» (UI 발) */
   const g = await run('gain', 1400);    /* 씬 A — 전투 킬 (전투 발) */
-  const u = await run('upg', 1000);     /* 씬 C — 훈련 강화 델타 플로터 */
+  const u = await run('upg', 1000);     /* 씬 C — 훈련 강화(660 이후 델타 없음) */
+  const cs = await run('cos', 1000);    /* 씬 D — 50 코스튬 [강화] = `fxDelta` 가 아직 사는 자리(694) */
 
   const K = q.K;
 
@@ -420,27 +458,51 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
   ok(gLo > 0 && gUp === 0, `#fxlc(팝업 아래) ${gLo}개 · #fxl(팝업 위) ${gUp}개`);
   ok(gArr.last !== null && gArr.last < K.ARR1 * 1000, `전투 발 마지막 도착 ${gArr.last}ms < UI 발 선언 ${K.ARR1 * 1000}ms`);
 
-  /* ── [7] 씬 C 델타 회랑 (58 24·27·30회차) ───────────────── */
-  console.log('[7] 씬 C 델타 회랑 — 훈련 카드기준 y275~396 (58 24·27·30회차)');
-  const card = u.cards.length ? u.cards.reduce((a, b) => (b.y < a.y ? b : a)) : null;
-  const dys = [];
-  for (const f of u.frames) for (const d of f.delta) {
-    /* 플로터가 실제로 선 카드를 x 로 고른다 */
-    const c = u.cards.find(cc => d.x >= cc.x - 10 && d.x <= cc.x + cc.w + 10 && d.y >= cc.y - 140 && d.y <= cc.y + cc.h + 140);
-    if (c) dys.push(d.y - c.y);
-  }
-  if (!dys.length) {
-    ok(false, `델타 플로터 표본 0 — 씬 C 가 안 났다 (카드 ${u.cards.length}개${card ? ' 첫 카드 y' + Math.round(card.y) : ''})`);
+  /* ── [7] 델타 플로터 — 660 이관 (694, 333 처방) ──────────────────────────
+     종전 한 항: «씬 C(훈련) 델타가 훈련 카드기준 y275~396 회랑 안에 선다»(58 24·27·30회차).
+     **660**(주인 지시 «훈련·단련·룬 숫자 플로터 폐지»)이 그 플로터를 통째로 걷었다 —
+     `trHoldStart`/`trHoldStop` 의 `fxUpOk(…, null, cur, true)` 두 자리가 그 증거다
+     (`probe694` [3-b]). 그래서 종전 항은 **주인이 없애라고 한 것이 있어야 통과하는 자**가 됐다.
+     ⇒ 자리를 비우지 않고(333) 660 이 `verify488`·`verify583` 에서 쓴 규약 그대로 갈아 끼운다:
+        음성항으로 뒤집고, **그 자리를 이어받은 부품에 양성항**을 세운다.
+       [7-a] 전제 — 씬 C 는 **났다**(강화가 실제로 일어나 골드가 나갔다).
+             이것이 없으면 «델타 0장» 은 «씬이 안 났다» 와 구별되지 않는다(종전 실패문이 바로 그 말이었다).
+       [7-b] 음성 — 씬 C 에 델타 0장. 660 이 되돌아가면 빨개진다.
+       [7-c] 양성 — 그 자리를 «아이콘 버스트»가 대신한다. 없으면 «660 이 통째로 사라져도 초록» 이다.
+       [7-d] 부품 — `fxDelta` 자체는 안 죽었다: 아직 쓰는 계열(50 코스튬)에서 뜨고,
+             **호스트 안에서 출발해 선언된 여정만큼** 간다.
+     ⚑ 새 임계는 하나도 안 만들었다 — [7-d] 의 봉투는 ⓐ 호스트 카드 상자(제품이 그린 것)와
+        ⓑ `@keyframes fxDelta` 의 선언(−4px → +80px = 84px)에서 온다. 종전 훈련 회랑 275~396 은
+        훈련 카드(326×510)의 «아이콘 아래 ~ 버튼 위» 띠라 코스튬 카드(168×171)에 옮겨 적을 수 없다. */
+  console.log('[7] 델타 플로터 — 660 이관(훈련은 폐지 · 코스튬은 살아 있다)');
+  const uDelta = u.frames.reduce((n, f) => n + f.delta.length, 0);
+  ok(u.paid > 0, `[7-a] 전제 — 씬 C 가 났다: 훈련 강화로 골드 ${u.paid} 지출(연출이 아니라 판정에서 읽는다)`);
+  ok(uDelta === 0, `[7-b] ★ 660 — 훈련 «+n» 숫자 플로터가 0장이다 (${uDelta}프레임·표본)`);
+  ok(u.cic >= 3, `[7-c] ★ 그 자리를 아이콘 버스트가 대신한다 (${u.cic}알 · 660)`);
+
+  const cr = cs.cosR;
+  const cd = [];
+  for (const f of cs.frames) for (const d of f.delta) if (cr) cd.push({ dx: d.x - cr.x, dy: d.y - cr.y });
+  const DJ = 84;   /* 선언 — `@keyframes fxDelta` 0% −4px → 100% +80px */
+  if (!cr || !cd.length) {
+    ok(false, `[7-d] 씬 D 델타 표본 0 — 코스튬 [강화]가 안 났다 (호스트 ${cr ? '있음' : '없음'} · 강화석 지출 ${cs.paid})`);
   } else {
-    const dmin = Math.min(...dys), dmax = Math.max(...dys);
-    ok(dmin >= 265 && dmax <= 400, `델타 경로 카드기준 y ${dmin.toFixed(0)}~${dmax.toFixed(0)} (265~400 — 아이콘 275 위·버튼 396 아래)`);
+    const ys = cd.map(o => o.dy), xs = cd.map(o => o.dx);
+    const y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs);
+    ok(cs.paid > 0, `[7-d 전제] 코스튬 [강화]가 실제로 붙었다 — 강화석 ${cs.paid} 지출`);
+    ok(y0 >= 0 && y0 <= cr.h,
+      `[7-d] ★ 부품은 살아 있다 — 델타가 **호스트 안에서 출발한다** 카드기준 y ${y0.toFixed(0)} (0~${Math.round(cr.h)})`);
+    ok(y1 - y0 <= DJ + 8,
+      `[7-e] 그림 = 선언 — 세로 여정 ${(y1 - y0).toFixed(0)}px ≤ 선언 ${DJ}px(+표본 여유 8)`);
+    ok(x0 >= 0 && x1 <= cr.w,
+      `[7-f] 가로는 호스트 폭 안 — x ${x0.toFixed(0)}~${x1.toFixed(0)} (0~${Math.round(cr.w)})`);
   }
 
   /* ── [8] 잔여 DOM · 콘솔 ───────────────────────────────── */
   console.log('[8] 잔여 DOM · 콘솔 에러');
   ok(q.leftover === 0, `씬 B 종료 뒤 잔여 연출 노드 ${q.leftover}개 (0)`);
-  const e = q.errs.length + g.errs.length + u.errs.length;
-  ok(e === 0, `세 씬 콘솔 에러 합계 ${e}건`);
+  const e = q.errs.length + g.errs.length + u.errs.length + cs.errs.length;
+  ok(e === 0, `네 씬 콘솔 에러 합계 ${e}건`);
 
   console.log(`\nVERIFY93 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);
   process.exit(fail ? 1 : 0);
