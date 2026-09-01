@@ -267,11 +267,13 @@ async function paintedInk(page, band, H) {
     S.pass = { prem:{}, got:{}, noAds:false, autoBlessUntil:0, offPlus:false, dailyAt:{} };
     S.dia = 0; S.mailx = []; S.mailSeq = 0; S.mail = {};
     const p0 = S.cnt.paid | 0, r = buyPass('noads');
-    return { r, dia: S.dia, own: passOwned('noads'),
+    return { r, dia: S.dia, own: passOwned('noads'), once: (PASS_ITEMS.find(x => x.id === 'noads') || {}).once | 0,
              dPaid: (S.cnt.paid | 0) - p0, mails: (S.mailx || []).length };
   })()`);
-  ok(R3.r === true && R3.dia === 0 && R3.own === true && R3.dPaid === 1 && R3.mails === 1,
-    'R3 589 — 다이아 0 에서도 구매된다(결제 1건 · 우편 1통 · 권한 즉시)', JSON.stringify(R3));
+  /* 697 이관 — 지급이 우편 한 통에서 «그 틱의 즉시 보석» 으로 옮겨졌다. 588 축(«부족으로 안 막힌다»)은
+     다이아 0 에서 출발해 +once 로 끝나는 이 등식이 그대로 진다. */
+  ok(R3.r === true && R3.dia === R3.once && R3.own === true && R3.dPaid === 1 && R3.mails === 0,
+    'R3 589·697 — 다이아 0 에서도 구매된다(결제 1건 · 즉시 보석 +once · 새 우편 0 · 권한 즉시)', JSON.stringify(R3));
 
   ok(errs.length === 0, 'H1 콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | ') || '0건');
 

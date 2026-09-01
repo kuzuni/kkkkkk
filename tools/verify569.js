@@ -80,8 +80,15 @@ async function claim(file, prep, pick) {
 const cnt2Of = (r, cur) => { const c = (r.calls || []).find(x => x.cur === cur); return c ? c.cnt2 : null; };
 const spawn = (r, cur) => { const c = (r.calls || []).find(x => x.cur === cur); return c ? c.spawned : 0; };
 
-/* 497 팩 d4 = 다이아 90만 + 마일리지 쿠폰 1 → 153 경로대로 우편 한 통이 된다 */
-const PREP_PACK = () => { window.devBuyDia('d4'); };
+/* 497 팩 d4 = 다이아 90만 + 마일리지 쿠폰 1 짜리 우편 한 통.
+   ⚑ **697(2026-09-02) 이관** — 구매는 더는 우편을 만들지 않는다(즉시 지급). 569 가 재는 것은
+   «우편 한 통을 **수령**할 때 나는 비행 개수» 라 표본을 «사서 만든 통» 에서 **옛 세이브에 남아
+   있는 통**으로 옮긴다(주인 «소급 삭제 금지» — 그 통은 실재하고 그대로 수령된다).
+   내용은 d4 팩과 **같은 표**에서 뽑는다(값이 움직여도 표본이 따라온다). */
+const PREP_PACK = () => {
+  const p = DIA_PACKS.find(x => x.id === 'd4');
+  window.sendMail({ t:'🛒 ' + diaPackName(p), c:p.dia, m:p.cp || 0, src:'shop', b:'697 이전 발송분' });
+};
 const PICK_LAST = () => (S.mailx || []).filter(m => !S.mail[m.id]).map(m => m.id).pop();
 
 (async () => {

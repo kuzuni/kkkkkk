@@ -122,23 +122,22 @@ const openCoin = page => page.evaluate(() => {
     const d0 = S.dia, m0 = S.mileage || 0, n0 = (S.mailx || []).length;
     devBuyDia(id);
     const dMail = S.mailx.length - n0;
-    const immediate = S.dia - d0;                 /* 153 — 구매 직후에는 0 이어야 한다 */
-    claimMail(S.mailx[S.mailx.length - 1].id);
+    const immediate = S.dia - d0;                 /* 697 — 구매 직후에 상품 표대로 들어와야 한다 */
     return { id, immediate, dDia: S.dia - d0, dCp: (S.mileage || 0) - m0, dMail };
   }), ['d1', 'd2', 'd3', 'd4', 'd5']);
-  C.forEach((r, i) => ok(r.dDia === DIA[i], 'C' + (i + 1) + ' ' + r.id + ' 구매 → 우편 수령 시 S.dia +' + comma(DIA[i]), '+' + r.dDia));
-  ok(C.every(r => r.immediate === 0 && r.dMail === 1), 'C6 지급은 우편 경유(구매 직후 Δ0 · 우편 1통) — 153 회귀',
+  C.forEach((r, i) => ok(r.dDia === DIA[i], 'C' + (i + 1) + ' ' + r.id + ' 구매 그 틱에 S.dia +' + comma(DIA[i]), '+' + r.dDia));
+  /* 697 이관 — 497 이 지키는 것은 «수량» 이고 경로는 153 → 697 로 뒤집혔다(우편 0 · 즉시). */
+  ok(C.every((r, i) => r.immediate === DIA[i] && r.dMail === 0), 'C6 지급은 즉시(구매 직후 표대로 · 새 우편 0) — 697',
      C.map(r => r.immediate + '/' + r.dMail).join(' '));
   ok(JSON.stringify(C.map(r => r.dCp)) === JSON.stringify(CP), 'C7 쿠폰 지급 0/0/0/1/2 불변', C.map(r => r.dCp).join('/'));
   const E1 = await page.evaluate(() => {
     S.mileage = MILE_NEED;
     const d0 = S.dia, n0 = S.mailx.length, r = mileageExchange();
     const dMail = S.mailx.length - n0;
-    if (dMail) claimMail(S.mailx[S.mailx.length - 1].id);
     return { r, d: S.dia - d0, m: S.mileage, dMail };
   });
-  ok(E1.r === true && E1.d === MILE, 'C8 마일리지 10개 교환 → 우편 수령 시 다이아 +' + comma(MILE), '+' + E1.d);
-  ok(E1.m === 0 && E1.dMail === 1, 'C9 쿠폰 −10 · 보상 우편 1통', '쿠폰 ' + E1.m + ' · 우편 ' + E1.dMail);
+  ok(E1.r === true && E1.d === MILE, 'C8 마일리지 10개 교환 → 그 틱에 다이아 +' + comma(MILE), '+' + E1.d);
+  ok(E1.m === 0 && E1.dMail === 0, 'C9 쿠폰 −10 · 새 우편 0통(697)', '쿠폰 ' + E1.m + ' · 우편 ' + E1.dMail);
 
   /* ================= [D] 안 건드린 것 ================= */
   const D = await page.evaluate(() => ({

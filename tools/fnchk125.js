@@ -65,13 +65,18 @@ const ok = (b, act, effect, detail) => {
   ok(/gold/.test(mail.ic || '') && /dia/.test(mail.ic || '') && !mail.raw,
      '우편 수령 토스트', '아이콘 이미지 표시(태그 문자열 아님)', String(mail.ic));
 
-  /* 3. 유물조각 교환 — 다이아는 **즉시** 나가고 유물조각은 **우편으로** 온다
+  /* 3. 유물조각 교환 — 다이아가 나가고 유물조각이 **그 자리에서** 들어온다(697)
      ⚠ 405 이관(2026-08-29) — 옛 항목은 「다이아 감소·유물조각 증가」를 **한 물음에 묶어** 클릭 순간의
        `S.relic` 을 봤고 −1000/+0 으로 빨갛게 굳어 있었다. 제품은 옳다 — **153**(주인 지시 2026-08-26
        «상점 지급품은 우편으로»)이 그 사이에 지급 경로를 바꿨고, 자만 그 이전 세계에 남아 있었다.
        333 처방대로 **자리를 비우지 않고** 살아 있는 계약으로 갈아 끼우되, 247-ⓓ 대로 **물음을 가른다**:
        ⓐ 클릭 순간 = 다이아만 나가고 우편 한 통이 온다 · ⓑ 그 우편을 받으면 유물조각이 실제로 는다.
-       되묶으면 «어느 쪽이 죽었는지» 를 자가 말하지 못한다(153 이 되돌려져 즉시 지급이 돼도 초록이 된다). */
+     ⚠ **697 이관(2026-09-02)** — 주인 지시로 그 우편 단계가 사라졌다(«다이아를 다른재화로 바꾸는거는
+       즉각으로 … 우편으로 오지말고»). 가른 두 물음은 그대로 두되 방향을 뒤집는다:
+       ⓐ 클릭 순간 = 다이아 −n · 그 재화 +n · 우편 0 · ⓑ 수령 단계 없이 그 지급이 완결된다.
+     ⚠ 같이 고친 부패 1건 — `EXCHANGE.find(v => v.dia === …)` 는 **490**(주인 확정 «교환은 1:1» ·
+       `data-ex` 가 가격이 아니라 **재화 키**)에서 이미 죽어 `row` 가 늘 `undefined` 였다. 기대값이
+       `undefined` 라 «양쪽 다 undefined» 로 초록이던 자리다 — 키로 찾고 수량은 `exQtyN()` 에서 뽑는다. */
   const ex = await run(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     S.dia = 1e9; S.mailx = [];
@@ -81,22 +86,25 @@ const ok = (b, act, effect, detail) => {
     openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
     const btn = document.querySelector('#shopList .bt.buy[data-ex]');
     if (!btn) return { err: '교환 버튼 없음' };
-    /* 기대 수량은 리터럴이 아니라 **런타임 계산**이다(185-①) — EXCHANGE 표가 바뀌면 자도 따라간다 */
-    const row = EXCHANGE.find(v => v.dia === +btn.dataset.ex);
+    /* 기대 수량은 리터럴이 아니라 **런타임 계산**이다(185-①) — 490 이후 교환은 1:1 이고
+       수량은 수량 탭(`exQtyN()`)이 정한다. `data-ex` 는 재화 키다. */
+    const row = EXCHANGE.find(v => v.k === btn.dataset.ex);
+    const want = exQtyN();
     btn.click();
-    const m = (S.mailx || [])[0];
+    await sleep(60);
     const mid = { dd: S.dia - d0, dr: S.relic - r0, mailN: (S.mailx || []).length,
-                  mailR: m && m.r, want: row && row.rel };
+                  key: row && row.k, want: want };
     const ic = [...document.querySelectorAll('#fxl .fx-toast img.cic')].map(i => i.dataset.curIc);
+    /* ⓑ — 수령 단계가 없다는 것을 «받아 봐도 더 안 는다» 로 못박는다(697 이 그 단계를 없앴다) */
     const r1 = S.relic;
     openMail(); claimAllMail(); await sleep(150); closeModal();
-    return Object.assign(mid, { ic: ic.join(','), got: S.relic - r1 });
+    return Object.assign(mid, { ic: ic.join(','), after: S.relic - r1 });
   });
-  ok(!ex.err && ex.dd < 0 && ex.dr === 0 && ex.mailN === 1 && ex.mailR === ex.want,
-     '재화 탭 [유물조각 교환]', '다이아 즉시 감소 · 유물조각은 우편으로(153)',
-     (ex.dd || 0) + ' / 즉시 +' + (ex.dr || 0) + ' / 우편 ' + ex.mailN + '통 r=' + ex.mailR);
-  ok(!ex.err && ex.got >= (ex.want || 1),
-     '교환 우편 [수령]', '유물조각이 실제로 늘어난다(흐름 완결)', '+' + (ex.got || 0));
+  ok(!ex.err && ex.dd === -ex.want && ex.dr === ex.want && ex.mailN === 0,
+     '재화 탭 [유물조각 교환]', '다이아 −n · 유물조각 +n 이 같은 틱 · 새 우편 0(697)',
+     (ex.dd || 0) + ' / 즉시 +' + (ex.dr || 0) + ' / 우편 ' + ex.mailN + '통 (n=' + ex.want + ')');
+  ok(!ex.err && ex.after === 0,
+     '교환 지급 완결', '수령 단계가 없다 — 우편함을 열어 받아도 더 들어올 것이 없다', '+' + (ex.after || 0));
   ok(/relic/.test(ex.ic || '') && /dia/.test(ex.ic || ''),
      '교환 완료 통보', '두 재화 아이콘이 이미지', String(ex.ic));
 
@@ -130,9 +138,9 @@ const ok = (b, act, effect, detail) => {
       bad = !!document.querySelector('.cDia.jz-bad, #fxl .jz-badp');
       if (!bad) await sleep(20);
     }
-    /* 기대 문구는 리터럴이 아니라 **런타임 계산**이다(185-①) — 값이 바뀌면 자도 따라간다 */
-    const row = btn && EXCHANGE.find(v => v.dia === +btn.dataset.ex);
-    const want = row ? fmt(row.dia - S.dia) + ' 더 필요합니다' : null;
+    /* 기대 문구는 리터럴이 아니라 **런타임 계산**이다(185-①) — 값이 바뀌면 자도 따라간다.
+       ⚠ 490 이후 필요액은 «가격 필드» 가 아니라 고른 수량(`exQtyN()`)이다(1:1). */
+    const want = btn ? fmt(exQtyN() - S.dia) + ' 더 필요합니다' : null;
     return { title: t, want, leak: /img\s|cur-[a-z]+\.svg|[<>]/.test(t), modalOn,
              icons: tn ? [...tn.querySelectorAll('img.cic')].map(i => i.dataset.curIc).join(',') : '', bad };
   });
