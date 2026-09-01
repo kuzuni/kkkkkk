@@ -538,10 +538,15 @@
   /* 가운데 잔여 체력 «1.07D» — 잉크 ref (507,340,66,20) h20, 중심 x540 */
   #bossHp b{position:absolute;left:0;top:23px;width:700px;text-align:center;font-size:29px;line-height:24px;
     font-weight:900;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill}
-  /* 우측 끝 흰 두개골 — 잉크 ref (817,334,46,42) */
+  /* 우측 끝 흰 두개골 — 잉크 ref (817,334,46,42)
+     ⚑ 356 21회차 — 여기 있던 `scale(1.122,.824)`(종횡 **1.362**)는 356 이 폐기한 관행
+       («ref bbox 를 맞추려 세로로 긴 💀 를 가로로 편다»)의 마지막 잔재였다. 397 과 같은 꼴이고,
+       스무 회차를 살아남은 이유는 값이 아니라 **스코프**다 — 보스전 HUD 는 탭·사이드로 못 여는
+       화면이라 `scan356` 의 `SCREENS` 에 한 줄도 없었다(= 자가 한 번도 이 자리를 밟은 적이 없다).
+       §2 규칙 «작은 쪽으로»(s = min(sx, sy) = .824) 로 등방화한다. 상자(46×52)는 안 건드린다. */
   #bossHp u{position:absolute;left:621px;top:14px;width:46px;height:52px;text-decoration:none;
     font-size:46px;line-height:52px;text-align:center;
-    transform:scale(1.122,.824);
+    transform:scale(.824);
     filter:grayscale(1) brightness(3) drop-shadow(0 0 1px #000)}
 
   /* 액션 버튼 2종 — 39 «포기하기» (447,471,186,80) · 40 «스테이지 재도전» (402,482,276,82).
@@ -626,9 +631,12 @@
   #dunBar b{position:absolute;left:0;top:23px;width:700px;text-align:center;
     font-size:29px;line-height:24px;font-weight:900;color:#fff;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
-  /* 우측 보스 해골 — 잉크 ref (818,335,45,41) 중심 (840,355). 39 와 같은 에셋 */
+  /* 우측 보스 해골 — 잉크 ref (818,335,45,41) 중심 (840,355). 39 와 같은 에셋
+     ⚑ 356 21회차 — `#bossHp u` 와 **같은 값의 사본**이라 같이 등방화했다(위 주석이 본체다).
+       두 자리가 한 값을 따로 적고 있다는 것 자체가 다음 부패의 씨앗이지만, 상자·left·top 까지
+       전부 같은 리터럴이라 여기서 부품으로 접는 것은 356 의 작업 단위를 넘는다(선언 통합은 별건). */
   #dunBar u{position:absolute;left:621px;top:14px;width:46px;height:52px;text-decoration:none;
-    font-size:46px;line-height:52px;text-align:center;transform:scale(1.122,.824);
+    font-size:46px;line-height:52px;text-align:center;transform:scale(.824);
     filter:grayscale(1) brightness(3) drop-shadow(0 0 1px #000)}
 
   /* 뒤로가기(나가기) — ref (47,1999,207,132) · 검정 6 · radius 14 · 남보라 판 +
