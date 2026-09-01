@@ -15880,9 +15880,9 @@
     <button class="ofr-b b" id="ofrGet15"><i>1.5배 받기</i></button>
     <div class="ofr-ad"><em><b>AD</b></em></div>
     <div class="ofr-bn"><u></u><div class="ofr-art"><i>🐸</i></div><s></s><s></s><s></s></div>
-    <div class="ofr-t1 ot"><i>오프라인 보상 최대 시간</i></div>
-    <div class="ofr-t2 s"><i>4시간 증가</i></div>
-    <div class="ofr-t2"><i>4시간 증가</i></div>
+    <div class="ofr-t1 ot"><i>오프라인 보상 획득량</i></div>
+    <div class="ofr-t2 s"><i>20% 증가</i></div>
+    <div class="ofr-t2"><i>20% 증가</i></div>
     <button class="ofr-go" id="ofrGo"><i>이동</i></button>
     <div class="ofr-tag"><i>구매 즉시 반영!</i></div>
   </div></div>
@@ -38874,6 +38874,11 @@ loadAtlases(() => {
      164 — 그런데 그 [이동] 은 바로 위 «오프라인 보상 최대 시간 4시간 증가» 홍보(.ofr-t1/.ofr-t2)의
      버튼이다. 파는 곳은 **이용권 탭**(124 신설 · 151 이 그 탭에 «+4시간» 카드를 넣는다)인데
      소환 탭이 열려 사용자가 상품을 못 찾았다. 홍보 문구와 착지 지점을 한 벌로 맞춘다. */
+  /* ⚑ 199 21회차 — 이 홍보 문구는 164 가 «착지를 맞춘» 바로 그 문구다. 상품이 «+4시간» 에서
+     «×배율» 로 바뀌었으므로(결3 ⓑ) 문구도 **상수에서 파생**시킨다 — 마크업에 숫자를 또 적어 두면
+     배율을 돌릴 때 홍보만 옛 값으로 남는다(402 «표 두 벌» 부패). 마크업의 초기값은 같은 말이다. */
+  document.querySelectorAll('#offw .ofr-t2 i')
+    .forEach(e => { e.textContent = Math.round((PASS_OFF_MUL - 1) * 100) + '% 증가'; });
   $('ofrGo').onclick = () => { closeOfflineReward(); openShopTab('pass'); };
   /* 124 — 광고 표식 동기화 + 자동 축복 오프라인 정산. 정산을 **오프라인 보상보다 먼저** 돌려야
      «꺼 둔 동안 축복이 켜져 있던 것» 이 그 시간의 골드 배율에도 반영된다. */

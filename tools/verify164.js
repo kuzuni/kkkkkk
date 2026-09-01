@@ -52,7 +52,12 @@ const eq = (label, got, want) => (got === want ? ok(label + ' = ' + JSON.stringi
   /* 홍보 문구가 «이용권 상품» 을 가리키는지 — 착지 지점을 이 문구에 맞추는 것이 이 작업이다 */
   const promo = await page.evaluate(() => [...document.querySelectorAll('#offw .ofr-t1, #offw .ofr-t2')]
     .map(x => x.textContent.trim()).join(' '));
-  (/4시간/.test(promo) ? ok : fail)('  홍보 문구에 «4시간» 포함: ' + JSON.stringify(promo));
+  /* ⚑ 199 21회차 이관(333) — 상품이 «+4시간» 에서 «×배율» 로 바뀌었다(결3 ⓑ). 164 가 지키는 것은
+     «홍보 문구와 착지가 같은 상품을 가리키는가» 이므로, 문자열을 새로 박지 않고 **제품의 상수에서
+     기대값을 만든다**(문구만 옛 값으로 남는 부패를 이 항이 잡는다). */
+  const pct = await page.evaluate(() => Math.round((PASS_OFF_MUL - 1) * 100) + '% 증가');
+  (promo.includes(pct) && !/4시간/.test(promo) ? ok : fail)(
+    '  홍보 문구가 3번 카드의 배율과 같은 말을 한다(«' + pct + '» 포함 · 옛 «4시간» 없음): ' + JSON.stringify(promo));
   /* 애니메이션이 끝난 뒤 실제 좌표로 누른다(버튼이 아직 움직이는 중이면 헛클릭이 난다) */
   await page.evaluate(() => Promise.all(document.getAnimations({ subtree: true })
     .filter(a => { try { return a.effect && a.effect.getComputedTiming().iterations !== Infinity; } catch (e) { return false; } })
