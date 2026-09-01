@@ -1865,6 +1865,92 @@ async function sweep(browser, inject) {
     else bad(`[G-g] 비균등 컨텍스트 변환 ${now.ctxNU}회 — drawImage 인자가 등방이어도 화면에서는 늘어난다`);
   }
 
+  /* ── [H] 24회차 — **축 인구조사**: 자가 «안 보는» 그리기 경로가 생겼는가 ──────────
+     23회차가 다섯째 프런티어(축)를 닫으면서 자기 한계를 **글로** 적어 넘겼다:
+       « 0건은 언제나 자가 보는 축 안에서의 0건이다. 새 그림 경로가 들어오면
+         (WebGL·background-size:100% 100%·filter·CSS aspect-ratio 강제) 축을 먼저 세어라. »
+     그 당부는 **다음 세션의 기억**에 걸려 있었다. 356 이 스물세 회차 동안 되풀이해 증명한 것이
+     «기억에 거는 규율은 진다» 는 것이고(11·12·15회차 = 화면이 목록에 없어서 · 21·22회차 = 문이 없어서 ·
+     **616 = 축이 없어서 게이트가 스물두 회차 초록인 채 45% 찌그러짐과 공존**), 셋 다 실제로 잊혔다.
+     ⇒ [H] 는 그 당부를 **자로 바꾼다.** 감시 밖 구성물이 소스에 생기면 여기서 빨개지고,
+        빨간 줄이 다음 세션에게 «축을 먼저 세워라» 라고 말한다. 브라우저를 안 쓴다(소스 텍스트 자).
+     ⚑ 24회차가 여기서 23회차의 셈 하나를 **정정했다** — 아래 [H-b] 주석 참조. */
+  console.log('\n[H] 24회차 — 축 인구조사: 자가 안 보는 그리기 경로가 생겼는가');
+  {
+    const R24 = require('./probe356r24.js');
+    const rawHtml = fs.readFileSync(HTML, 'utf8');
+    const cen = R24.census(rawHtml);
+
+    /* ⓐ 감시 밖 구성물 — 하나라도 있으면 «축이 없는 그림» 이 화면에 있다는 뜻이다 */
+    if (!cen.bad.length) {
+      ok(`[H-a] 감시 밖 구성물 0건 (${cen.rows.map((r) => r.name.replace(/ .*/, '')).join(' · ')})`);
+    } else {
+      for (const r of cen.bad) {
+        bad(`[H-a] ${r.name} ${r.n}건(등재 ${r.base}) — 줄 ${r.lines.join(',')} · ${r.why}`
+          + ' ⇒ **축을 먼저 세우고** 그 다음에 0건을 말해라(616 전례)');
+      }
+    }
+
+    /* ⓑ 일곱째 출처 — url() 배경. **곳 수를 안 굳히고 곳마다 비를 잰다.**
+       ⚑ 23회차는 이 축을 «소스 전체에 한 곳뿐이고 세 값이 같으니 안 세운다» 로 넘겼는데,
+          그 «한 곳» 은 **13곳**이었다 — 셈이 `grep 'background[^;{]*url('` 꼴 **줄 단위**인데
+          배경 선언 열둘은 `background:` 와 `url(` 이 다른 줄에 있다(패턴 타일 텍스처가 그 꼴이다).
+          ⇒ **결론(0자리)은 옳았고 수(1)가 틀렸다.** 그래서 이 항은 수를 등재값으로 안 굳힌다 —
+             곳이 몇으로 늘든 비가 1 이면 초록이다(23회차 [G-c] 교훈: 적는 말과 재는 값이 어긋나면
+             다음 세션이 그 말을 믿는다). */
+    if (!cen.bg.bad.length) {
+      ok(`[H-b] url() 배경 ${cen.bg.rows.length}곳 전부 원본 종횡대로 (잰 곳 ${cen.bg.measured.length} · 어긴 자리 0)`);
+    } else {
+      bad(`[H-b] url() 배경이 원본 종횡을 어기는 자리 ${cen.bg.bad.length}: `
+        + cen.bg.bad.map((r) => `${r.line}행 원본 ${r.nat.w}×${r.nat.h} → 상자 ${r.size.w}×${r.size.h} ×${r.ratio}`).join(' · '));
+    }
+    /* 전제 — 한 곳도 못 읽었으면 위 초록은 «없어서 0» 이 아니라 «못 봐서 0» 이다 */
+    if (cen.bg.measured.length) ok(`[H-b2] 전제 — url() 배경 ${cen.bg.measured.length}곳을 실제로 읽었다 (0 이면 위 [H-b] 는 헛초록)`);
+    else bad('[H-b2] url() 배경을 한 곳도 못 읽었다 — [H-b] 의 0 은 «못 봐서 0» 이다');
+
+    /* ⓒ 되돌림 — 주입하면 정말 빨개지는가. 이 절의 본체다(21회차 교훈 · [G-c] 와 같은 규율) */
+    const inj = {
+      webgl: `<script>var __t=document.createElement('canvas').getContext('webgl');</script>`,
+      aspect: `<style>.__h{aspect-ratio:3/1}</style>`,
+      filterUrl: `<style>.__h{filter:url(#squash)}</style>`,
+      borderImage: `<style>.__h{border-image:url(a.png) 30 stretch}</style>`,
+    };
+    const missR = Object.keys(inj).filter((k) => !R24.census(rawHtml + '\n' + inj[k]).bad.some((r) => r.key === k));
+    if (!missR.length) ok(`[H-c] 되돌림 — 구성물 ${Object.keys(inj).length}종을 주입하면 전부 빨개진다`);
+    else bad(`[H-c] 되돌림 실패 ${missR.length}종(${missR.join(' · ')}) — 그 항은 아무것도 못 보는 자다`);
+
+    const SQ = `<style>.__h{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E") 0 0/140px 100px repeat}</style>`;
+    const sqBad = R24.census(rawHtml + '\n' + SQ).bg.bad;
+    if (sqBad.length === 1 && Math.abs(sqBad[0].ratio - 1.4) < 0.01) ok('[H-c2] 되돌림 — 원본 100×100 을 상자 140×100 으로 늘리면 [H-b] 가 ×1.4 로 빨개진다');
+    else bad(`[H-c2] 되돌림 실패 — 140×100 을 주입해도 [H-b] 가 안 잡는다(${sqBad.length}자리)`);
+
+    /* 측정 불가 축 — 크기를 단축이 아니라 **별도 프로퍼티**로 주면 이 자는 못 잰다.
+       그 꼴을 «단축에 크기가 없다 = auto = 안전» 으로 읽으면 헛초록이라, 조용히 넘기지 않고 빨개지게 했다.
+       (지금 제품에 그런 블록은 0개다 — «없어서 0» 을 «안전해서 0» 으로 적는 것이 23회차의 실수였다.) */
+    const sepCen = R24.census(rawHtml + `\n<style>.__h{background:url("data:image/svg+xml,%3Csvg width='100' height='100'%3E%3C/svg%3E") repeat;background-size:140px 100px}</style>`);
+    const sepU = (sepCen.bg.unknown || []).length;
+    if (sepU === 1 && sepCen.bg.bad.length === 1) ok('[H-c3] 되돌림 — 크기를 별도 `background-size:` 로 주면 «측정 불가» 로 빨개진다 (못 재는 꼴을 조용히 안 넘긴다)');
+    else bad(`[H-c3] 되돌림 실패 — 별도 background-size 를 주입해도 안 잡는다(측정 불가 ${sepU}자리)`);
+
+    /* ⓓ 음성항 — «있는 것을 전부 빨갛다» 고 하는 자는 꺼진 자와 같다 */
+    const isoOk = R24.census(rawHtml + `\n<style>.__h{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E") 0 0/40px 40px repeat}</style>`).bg.bad.length === 0;
+    const gradOk = R24.census(rawHtml + '\n<style>.__h{background:linear-gradient(#000,#fff);background-size:100% 100%}</style>').bg.bad.length === 0;
+    const negN = cen.neg.reduce((s, r) => s + r.n, 0);
+    if (isoOk && gradOk && negN > 0) ok(`[H-d] 음성항 — 등방 축소·그라디언트 배경·색 필터/등방 scale ${negN}건은 안 잡는다 (크기 변경은 결함이 아니다)`);
+    else bad(`[H-d] 음성항 실패 — 등방${isoOk ? 'OK' : 'X'} 그라디언트${gradOk ? 'OK' : 'X'} 표본 ${negN}건`);
+
+    /* ⓔ 주석 — 스물네 회차가 남긴 이력이 «현재 결함» 으로 읽히면 안 된다.
+       이 자를 처음 돌렸을 때 `object-fit:fill` 2건이 물렸는데 **둘 다 주석**이었다(5525·5528).
+       ⚠ 이 항을 «원문 n건 > 걷은 뒤 m건» 으로 적으면 표본이 사라지는 날 **조용히 초록**이 된다
+          (356 이 스물세 회차 동안 싸운 «못 봐서 0» 이 바로 그 꼴이다). 그래서 제품의 현재 표본에
+          기대지 않고 **주석을 직접 주입해** 안 세어지는지 묻는다 — 표본이 0 이 돼도 이 항은 산다. */
+    const cmtSrc = rawHtml + '\n/* background:url("x.png") 0 0/9px 1px repeat · filter:url(#q) · border-image:url(a.png) 30 stretch */';
+    const cmtCen = R24.census(cmtSrc);
+    const leaked = cmtCen.bad.map((r) => r.key).concat(cmtCen.bg.bad.length ? ['bgUrl'] : []);
+    if (!leaked.length) ok('[H-e] 주석 걷기 — 주석 안에 넣은 구성물 3종은 안 세어진다 (이력이 현재 결함으로 안 읽힌다)');
+    else bad(`[H-e] 주석 안의 구성물이 세어졌다(${leaked.join(' · ')}) — 스물네 회차의 주석이 결함으로 읽힌다`);
+  }
+
   await browser.close();
   const total = oks.length + fails.length;
   console.log(`\nVERIFY356 ${oks.length}/${total} ` + (fails.length ? 'FAIL' : 'PASS'));
