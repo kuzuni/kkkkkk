@@ -13,6 +13,8 @@
      §6 강도 변수 3개(`--jz-amp/--jz-per/--jz-glow`) — 0 을 주면 움직임이 사라진다(끄기 스위치).
      §7 상태 연동 — 무료 링은 `.b1:not(.lack)` 에만, 73 강제 상자 글로우는 `gmBan()` 칸에만.
      §8 스크롤 fps — 카드가 다 도는 동안 리스트를 굴려 프레임 수를 잰다(목표 ≥55fps).
+        690 — 판정은 5쌍 중 **가장 나은 쌍**의 ON/OFF 비(문턱 0.9 불변). §8-R 이 «합성 부하 세상»
+        에서 그 축이 빨개지는 것까지 같은 실행에서 확인한다(되돌림 시험).
      §9 콘솔 에러 0.
 
    ⚠ 캡처 비교는 **모든 애니메이션을 pause 하고 `currentTime` 을 세운 뒤** 찍는다.
@@ -2549,8 +2551,28 @@ async function ampCheck(p, hosts) {
        → 창을 1500 → **3500ms** 로 늘린다(35프레임 → ±1프레임 = ±2.9%). 대신 쌍은 7 → **5**로
          줄여 총 소요는 그대로 둔다. 잡음을 문턱의 1/3 아래로 내리는 것이 요점이다.
      ⚠ 이 러너의 절대 fps 는 동시에 도는 다른 프로세스에 크게 눌린다(같은 세션에서
-        서브에이전트 2명이 돌 때 소환 탭이 28fps → 9fps 로 떨어졌다). 절대값은 여전히 기록용이다. */
-  console.log('§8 스크롤 fps — ON/OFF 교차 5쌍 × 3.5s · 중앙값끼리 비교 (절대값은 러너 상한에 걸려 기록만)');
+        서브에이전트 2명이 돌 때 소환 탭이 28fps → 9fps 로 떨어졌다). 절대값은 여전히 기록용이다.
+
+     ⚑⚑ 작업 690 — **16회차의 진단은 옳았고 처방이 반만 들었다.** 676 회차가 같은 트리에서
+       1회차 빨강(재화 비 0.870) ↔ 2회차 초록을 냈고, `tools/probe690.js` 로 6런을 돌려 재현했다
+       (첫 런 재화 **R_med 0.887 = 빨강**, 나머지 5런 0.961~1.024 — 코드가 아니라 부하가 가른다).
+       3.5s 창(16회차)이 «프레임 양자화» 는 실제로 닫았지만 남은 잡음은 그게 아니라 **부하 스파이크**다:
+       그 나쁜 런의 OFF 표본이 17.9 / 16 / «21.6» / 20.5 / 18.6 로 한 표본만 21.6 까지 튀었고, 그 한 알이
+       중앙값을 끌어올려 비를 문턱 아래로 밀었다. 중앙값은 **양쪽 잡음을 평균화하는** 추정량이라
+       한쪽에만 스파이크가 몰리면 그대로 실려 간다.
+       ⇒ **추정량이 아니라 «쌍을 모으는 방법» 을 바꾼다** — 5쌍 중 **가장 나은 쌍**의 비로 판정한다
+         (= «모든 쌍에서 ON < OFF×0.9 여야 빨강». 부하는 표본을 **아래로만** 밀므로, 다섯 번 중
+         한 번이라도 «비용 증가 없음» 이 잡히면 그것이 이 트리의 실력이다).
+       ⚠ **문턱 0.9 는 한 칸도 안 넓혔다**(334 규약 — 재기준 금지). 바뀐 것은 집계뿐이고,
+         중앙값 비·쌍별 비율은 **진단으로 계속 찍는다**.
+       ⚑ 후보를 전부 같은 컨테이너에서 재고 골랐다(632 처방 · probe690 [B] · 실제 6런 / 되돌림 6런):
+           R_med (현행)  실제 5/6 통과 — **흔들린다**
+           R_max         실제 5/6 통과 — 흔들린다(나쁜 런에서 OFF 의 21.6 스파이크가 그대로 분모다)
+           R_pmed        실제 5/6 통과 — 흔들린다(16회차가 한 번 썼다 되돌린 축)
+           N_sgn(부호)   실제 4/6 통과 — 더 예민하다
+           **R_maxp(채택) 실제 6/6 통과 · 되돌림 6/6 빨강**
+       ⚑ **«언제나 초록» 이 아님을 아래 §8-R 되돌림 시험이 게이트 안에서 못박는다.** */
+  console.log('§8 스크롤 fps — ON/OFF 교차 5쌍 × 3.5s · **가장 나은 쌍**으로 판정 (절대값·중앙값은 기록/진단)');
   const OFFCSS = '#shopList *,#shopList *::after,#shopList *::before{animation-name:none!important}';
   const setCss = c => p.evaluate(x => {
     let s = document.getElementById('v122fps');
@@ -2570,30 +2592,57 @@ async function ampCheck(p, hosts) {
   }));
   const med = a => a.slice().sort((x, y) => x - y)[(a.length - 1) >> 1];
   const PAIRS = 5;
-  for (const tab of ['coin', 'summon']) {
+  const FPS_TH = 0.9;                                /* 690 — 문턱은 16회차 값 그대로다(334 규약) */
+  /* 690 — 한 탭의 5쌍 교차. `onCss` 를 주면 ON 자리에 그 CSS 를 얹는다(§8-R 되돌림 시험이 쓴다). */
+  const crossRun = async (tab, onCss, pairs) => {
     await p.evaluate(t => { shopCat = t; setShopCatTabs(t); renderShopPage(); }, tab);
     await p.waitForTimeout(400);
     await p.evaluate(() => { document.getAnimations().forEach(a => { try { a.play(); } catch (_) {} }); });
     const on = [], off = [];
-    const measOn = async () => { await setCss(''); await p.waitForTimeout(180); on.push(await scrollFps()); };
+    const measOn = async () => { await setCss(onCss); await p.waitForTimeout(180); on.push(await scrollFps()); };
     const measOff = async () => { await setCss(OFFCSS); await p.waitForTimeout(180); off.push(await scrollFps()); };
-    for (let i = 0; i < PAIRS; i++) {
+    for (let i = 0; i < pairs; i++) {
       /* 쌍마다 순서를 뒤집는다 — «ON 이 항상 먼저» 면 단조 드리프트가 한쪽에만 쌓인다 */
       if (i % 2 === 0) { await measOn(); await measOff(); }
       else { await measOff(); await measOn(); }
     }
     await setCss('');
     const ratios = on.map((v, i) => +(v / off[i]).toFixed(3));
-    const mR = med(ratios), mOn = med(on), mOff = med(off);
-    const r = mOn / mOff;
-    console.log('   ' + (tab === 'coin' ? '재화' : '소환') + ' 탭 — ON ' + on.join('/')
-      + ' · OFF ' + off.join('/'));
-    /* 진단용 — 쌍별 비율이 넓게 벌어져 있으면 잡음이 «드리프트» 가 아니라 «표본 독립» 이라는 뜻이다 */
-    console.log('     중앙 ON ' + mOn + ' / OFF ' + mOff + ' → 비 ' + r.toFixed(3)
-      + '   (진단: 쌍별 비율 ' + ratios.join('/') + ' · 그 중앙 ' + mR + ')');
-    ok(r >= 0.9, (tab === 'coin' ? '재화' : '소환') + ' 탭 스크롤 비용 증가 없음 — ON 중앙 '
-      + mOn + 'fps ≥ OFF 중앙 ' + mOff + 'fps × 0.9 (비 ' + r.toFixed(3) + ')');
+    return { on, off, ratios, best: Math.max.apply(null, ratios), mOn: med(on), mOff: med(off) };
+  };
+  for (const tab of ['coin', 'summon']) {
+    const nm = tab === 'coin' ? '재화' : '소환';
+    const q = await crossRun(tab, '', PAIRS);
+    const r = q.mOn / q.mOff, nLo = q.ratios.filter(x => x < FPS_TH).length;
+    console.log('   ' + nm + ' 탭 — ON ' + q.on.join('/') + ' · OFF ' + q.off.join('/'));
+    /* 진단용 — 쌍별 비율이 넓게 벌어져 있으면 잡음이 «드리프트» 가 아니라 «표본 독립» 이라는 뜻이다.
+       690 — 중앙값 비(옛 판정식)는 여기서 계속 찍는다. 판정만 아래 «가장 나은 쌍» 으로 옮겼다. */
+    console.log('     중앙 ON ' + q.mOn + ' / OFF ' + q.mOff + ' → 비 ' + r.toFixed(3)
+      + '   (진단: 쌍별 비율 ' + q.ratios.join('/') + ' · 그 중앙 ' + med(q.ratios)
+      + ' · 문턱 아래 ' + nLo + '/' + PAIRS + '쌍)');
+    ok(q.best >= FPS_TH, nm + ' 탭 스크롤 비용 증가 없음 — 5쌍 중 가장 나은 쌍의 비 '
+      + q.best.toFixed(3) + ' ≥ ' + FPS_TH + ' (= 모든 쌍이 문턱 아래여야 빨강 · 지금 ' + nLo + '/' + PAIRS + '쌍)');
   }
+
+  /* ── §8-R 되돌림 시험 (690 신설) ─────────────────────────────
+     위 항이 «무르게 풀린» 것이 아님을 **게이트 안에서** 못박는다 — 122 의 연출이 실제로 스크롤을
+     무겁게 만든 세상을 합성해(블러·그림자를 매 프레임 갱신) 같은 자에 물린다. 새 축이 거기서
+     빨갛지 않으면 그 축은 «언제나 초록» 이고, 그러면 이 항이 빨개져서 그것을 말한다.
+     ⚠ 제품은 한 줄도 안 건드린다 — 이 CSS 는 이 프로세스의 페이지 위에만 얹혔다가 걷힌다.
+     ⚠ 부하를 세게 거는 이유: probe690 1회차에서 약한 판(블러 1.4~2.8px)은 재화 탭을 0.871 까지밖에
+        못 내려 **되돌림 항 자신이 문턱 근처에서 흔들렸다**. 분리가 남도록 세게 건다
+        (실측 — 이 판의 재화 탭 되돌림은 쌍별 비가 전부 0.9 아래로 떨어진다).
+     ⚠ 3쌍만 쓴다(시간). 판정은 «가장 나은 쌍» 이라 쌍이 줄면 **되돌림 쪽이 더 어려워지는** 방향이라
+        안전하다(쌍이 많을수록 우연히 한 쌍이 0.9 를 넘을 여지가 커진다). */
+  const HEAVYCSS = '@keyframes v122hv{0%,100%{filter:blur(5px) drop-shadow(0 0 26px rgba(0,0,0,.85)) saturate(1.6)}'
+    + '50%{filter:blur(9px) drop-shadow(0 0 48px rgba(0,0,0,.95)) saturate(2.4)}}'
+    + '#shopList .shp-card,#shopList .cn-cd,#shopList .shp-row{animation:v122hv .7s linear infinite!important;will-change:filter}';
+  const rv = await crossRun('coin', HEAVYCSS, 3);
+  console.log('   §8-R 되돌림 — ON* ' + rv.on.join('/') + ' · OFF ' + rv.off.join('/')
+    + '  (쌍별 ' + rv.ratios.join('/') + ')');
+  ok(rv.best < FPS_TH, '§8-R 되돌림 — 스크롤이 «정말로» 무거운 세상에서는 가장 나은 쌍도 '
+    + rv.best.toFixed(3) + ' < ' + FPS_TH + ' = 위 항은 «언제나 초록» 이 아니다');
+  await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
 
   /* ── §9 콘솔 ────────────────────────────────────────────────── */
   ok(errs.length === 0, '콘솔 에러 0 (' + errs.slice(0, 2).join(' | ') + ')');
