@@ -51,6 +51,8 @@ const R30 = require('./probe356r30.js');
 /* [O] 31회차 — 같은 매체 축의 «한 주기». 접기(`foldScreen`)·합성 표본을 `probe356r31` 에서,
    위상 못박기(`PIN`)·주기 칸수(`PHASES`)는 그 파일을 거쳐 `probe356r25` 것을 받아 쓴다(13회차 [R12]). */
 const R31 = require('./probe356r31.js');
+/* 32회차 — 매체 축 × 시간 × 짧은 프레임([P]). 합성 표본 `SYN_FT` 와 두 프레임 짝짓기 `pairCycle` 을 받아 쓴다. */
+const R32 = require('./probe356r32.js');
 const { PIN: PIN_PHASE } = require('./probe356r25.js');
 const { COLLECT_PSEUDO } = R26;
 
@@ -242,6 +244,7 @@ async function sweep(browser, inject) {
   const rowsM = [];       /* [M] 매체 «내용 좌표계 ↔ 표시 상자» 축 — 같은 페이지에서 한 번 더 수집 (29회차) */
   const rowsMF = [];      /* [N] 같은 매체 축을 **리사이즈 뒤**(1080×1600)에 한 번 더 수집한 것 (30회차) */
   const seenO = [];       /* [O] 같은 매체 축을 **한 주기**(위상 16칸) 훑어 화면분으로 접은 것 (31회차) */
+  const seenP = [];       /* [P] 같은 «한 주기» 를 **리사이즈 뒤**(1080×1600)에 한 번 더 훑은 것 (32회차) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
@@ -348,10 +351,35 @@ async function sweep(browser, inject) {
          ⇒ «2280 에서 0» 은 «1600 에서 0» 의 근거가 못 된다. [F] 와 같은 손 — `evaluate` 한 번이다. */
       const gotMF = await page.evaluate(COLLECT_MEDIA);
       for (const g of gotMF) rowsMF.push(Object.assign({ screen: label }, g));
+
+      /* ── [P] 매체 축 × 시간 × 짧은 프레임 (32회차) — [O] 와 **같은 손**이되 프레임이 1600 이다.
+         31회차 인계문이 이름까지 적어 넘긴 자리다: «[N] 이 프레임을 열었고 [O] 가 시간을 열었지만
+         **둘의 곱은 아직 아무도 안 봤다**».
+         이 층이 곱에서만 보이는 이유는 [N]·[O] 어느 쪽의 이유와도 다르다 — **키프레임의 값 자체가
+         프레임에 매인 단위**(`vh`·`%`·`min()`)일 때다. 그런 노드는 2280 에서 주기를 다 훑어도
+         상자가 비트맵 비와 계속 맞을 수 있고([O] 초록), 1600 의 «가라앉은 한 점» 은 0%/100% 위상이라
+         역시 맞는다([N] 초록). 어긋나는 것은 **짧은 프레임의 주기 한복판** 하나뿐이다
+         (`probe356r32` [2]·[5] 가 합성으로 실측: 2280 한 주기 0자리 · 1600 한 점 0자리 ↔ 1600 한 주기 1자리).
+         ⚠ [N] 의 `gotMF` **뒤에** 돈다 — 못박기가 [N] 값을 물들이면 안 된다.
+         ⚠ 화면분을 **바로 접는다**(`R31.foldScreen`) — [O] 와 같은 규율. */
+      let foldP = null, pinnedP = 0;
+      try {
+        pinnedP = await page.evaluate(PIN_PHASE, 0);
+        const perPhaseP = [];
+        for (let k = 0; k < R31.PHASES; k++) {
+          await page.evaluate(PIN_PHASE, k / R31.PHASES);
+          const gotP2 = await page.evaluate(COLLECT_MEDIA);
+          const trP = await page.evaluate(R31.MEDIA_TR);
+          perPhaseP.push({ at: k / R31.PHASES, rows: gotP2.map((g) => Object.assign({ screen: label }, g)), tr: trP });
+        }
+        foldP = R31.foldScreen(perPhaseP, TOL);
+      } catch (e) { foldP = null; }
+      try { await page.evaluate(PIN_PHASE, null); } catch (e) { /* 페이지는 곧 닫힌다 */ }
+      seenP.push({ label, pinned: pinnedP, fold: foldP });
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO };
+  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP };
 }
 
 (async () => {
@@ -368,7 +396,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -2907,6 +2935,182 @@ async function sweep(browser, inject) {
           ok(`[O-f2] 같은 주입을 «이 절 전용»(배율 없이 움직인 상자) 으로도 ${f.boxMovedTrFree}자리 세었다 ⇒ [O-a2b] 의 분류기가 눈먼 0 을 찍는 자가 아니다`);
         else if (hit) bad(`[O-f2] 배율을 안 걸고 상자만 흔들었는데 «전용» 으로 0자리 — [O-a2b] 의 분류기가 이 갈래를 못 본다`);
       } catch (e) { bad('[O-f] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+  }
+
+  /* ── [P] 32회차 — **매체 축 × 시간 × 짧은 프레임**. 31회차 인계문 §38-8 의 «다음 자리 후보 ⓐ»:
+        > [O] 는 2280 에서만 주기를 훑는다. [N] 이 프레임을 열었고 [O] 가 시간을 열었지만
+        > **둘의 곱은 아직 아무도 안 봤다**.
+     24회차 규율이 그것을 이 회차의 일로 만든다 — «자기 한계를 글로 넘긴 회차는 그 한계를 안 닫은 것이다.»
+
+     ⚠ **이 절이 [N]·[O] 의 사본이 아닌 이유** — 셋이 보는 «어긋나는 순간» 이 다르다:
+        [N] 은 짧은 프레임의 **가라앉은 한 점**, [O] 는 2280 의 **한 주기**,
+        이 절은 **키프레임의 값 자체가 프레임에 매인 단위**(`vh`·`%`·`min()`)라
+        «짧은 프레임 × 주기 한복판» 에서만 어긋나는 자리를 본다.
+        그런 노드는 [O] 에게 «2280 에서는 내내 맞는 상자» 이고 [N] 에게 «0%/100% 위상의 한 점» 이라
+        **둘 다 구조적으로 초록**이다(`probe356r32` [2]·[5] 가 합성으로 실측 —
+        2280 한 주기 0자리 · 1600 한 점 0자리 ↔ **1600 한 주기 1자리** d=1.4156 @위상 50%).
+     ⚠ **«2280 한 주기에서 0» 도 «1600 한 점에서 0» 도 이 절의 0 의 근거가 못 된다** —
+        29·30·31회차가 되풀이한 규율(하나를 다른 하나의 근거로 인용하지 마라)의 **곱셈 판**이다.
+     ⚑ 값은 «evaluate 몇 번» 이다 — 스윕이 이미 1600 으로 줄여 놓은 그 페이지에서 위상만 옮긴다. */
+  console.log('\n[P] 32회차 — 매체 축 «한 주기» 를 짧은 프레임(1080×1600)에서도 훑는다: 키프레임 값이 프레임에 매인 층');
+  {
+    const okP = seenP.filter((s) => s.fold);
+    const sumP = (f) => okP.reduce((a, s) => a + f(s), 0);
+    const rowsPn = sumP((s) => s.fold.rows);
+    const pinnedP = sumP((s) => s.pinned || 0);
+    const movedP = sumP((s) => s.fold.boxMoved);
+    const restP = sumP((s) => s.fold.restBad);
+    const trFreeP = sumP((s) => s.fold.boxMovedTrFree);
+    const cycP = okP.reduce((a, s) => a.concat(s.fold.cycBad.map((x) => Object.assign({ screen: s.label }, x))), []);
+    const worstP = okP.reduce((m, s) => (s.fold.maxDev > (m ? m.fold.maxDev : -1) ? s : m), null);
+    /* [O] 의 같은 화면 주기와 짝지어 «1600 주기에서만» 을 가른다 — 키는 «화면|셀렉터»(R31 규약) */
+    const keyO = new Set(seenO.filter((s) => s.fold).flatMap((s) => s.fold.cycBad.map((x) => x.key)));
+    const onlyShortP = cycP.filter((x) => !keyO.has(x.key));
+
+    /* ⓐ 전제 — 아무것도 못 본 자는 언제나 0건이다(11·21·26·29·30·31회차) */
+    if (okP.length && rowsPn && pinnedP)
+      ok(`[P-a] 전제 — ${okP.length}/${SCREENS.length}화면 × 1600 프레임 × 주기 ${R31.PHASES}칸 · 매체 ${rowsPn}행 · 못박은 애니 노드 ${pinnedP}개`);
+    else bad(`[P-a] 전제 실패 — 화면 ${okP.length} · 매체 ${rowsPn}행 · 못박은 애니 노드 ${pinnedP} (0 이면 아래 초록은 전부 헛초록)`);
+
+    /* ⓐ2 **무음 실패 감시(시간)** — [O-a2] 와 같은 규율을 짧은 프레임에서 다시 세운다.
+       위상을 열여섯 번 옮겼는데 1600 에서 상자가 한 자리도 안 움직였으면 이 절의 0 은
+       «같은 순간을 열여섯 번 잰 0» 이다. */
+    if (movedP > 0)
+      ok(`[P-a2] 1600 에서 위상 사이에 상자가 실제로 움직인 매체 ${movedP}자리 — 이 절의 0 은 «한 점을 열여섯 번 잰 0» 이 아니다`);
+    else bad('[P-a2] 1600 에서 위상을 옮겼는데 상자가 한 자리도 안 움직였다 — 못박기가 리사이즈 뒤에 안 먹었다 (헛초록 방지)');
+
+    /* ⓐ3 **무음 실패 감시(프레임)** — [N-a2] 와 같은 자를 이 절의 문장으로 다시 읽는다.
+       두 주기가 정말 «다른 프레임» 의 주기여야 [P-c] 의 차집합이 뜻을 갖는다. */
+    {
+      const pairMF = R30.pairUp(rowsM, rowsMF, TOL);
+      if (pairMF.boxMoved.length > 0)
+        ok(`[P-a3] 두 프레임에서 상자가 실제로 달라진 매체 ${pairMF.boxMoved.length}자리 — [O](2280 주기) 와 이 절(1600 주기)은 정말 다른 프레임의 수다`);
+      else bad('[P-a3] 프레임 사이에 상자가 한 자리도 안 움직였다 — 두 주기가 같은 프레임의 수다 (헛초록 방지)');
+    }
+
+    /* ⓐ2b ⚑ **커버리지를 부풀려 읽지 않는다**([O-a2b] 와 같은 규율) — 상자를 미는 것이 배율이면
+       그 자리는 [A]·[I] 도 보는 자리다. 0 이면 그 뜻은 «이 층 전용 결함이 아직 없다» 이지
+       «자가 못 본다» 가 아니다(그 증명은 [P-e]·[P-f]). */
+    ok(`[P-a2b] 1600 에서 움직인 상자 ${movedP}자리 중 **배율이 한 위상에서도 안 걸린** «이 절 전용» ${trFreeP}자리`
+      + (trFreeP ? ` — 예: ${okP.flatMap((s) => s.fold.trFreeKeys).slice(0, 3).join(' · ')}` : ' — 지금 트리에서 1600 의 상자를 미는 것은 전부 배율(스케일 프로퍼티)이라 [A]·[I] 와 겹친다. 이 «전용» 0 은 «없어서 0» 이다'));
+
+    /* ⓑ 판정 — 지금 트리 */
+    if (!cycP.length) ok(`[P-b] 1600 프레임에서 주기 ${R31.PHASES}칸 어느 위상에도 매체 비균등 0자리 (1600 한 점 ${restP}자리 · [N] 과 같은 0)`);
+    else bad(`[P-b] 1600 주기 안에서 비균등 ${cycP.length}자리: `
+      + cycP.slice(0, 6).map((x) => `${x.screen} ${x.row.sel} d=${x.row.d} @위상 ${(x.at * 100).toFixed(0)}%`).join(' · '));
+
+    /* ⓒ **이 절의 존재 이유** — «1600 한 주기에서만» 어긋나는 자리([O] 의 2280 주기가 못 보는 것).
+       [N-c]·[O-c] 와 같은 규율: [P-b] 가 0 이면 정의상 0 이지만, 수를 따로 찍는 것이
+       이 절이 무엇을 위해 있는지를 말한다. */
+    if (!onlyShortP.length) ok(`[P-c] «1600 한 주기에서만» 어긋나는 매체 0자리 — [O] 의 2280 주기·[N] 의 1600 한 점이 못 보는 곱셈 전용 결함이 없다`);
+    else bad(`[P-c] «1600 한 주기에서만» 어긋나는 매체 ${onlyShortP.length}자리 — [N]·[O] 가 구조적으로 못 보는 자리다: `
+      + onlyShortP.slice(0, 4).map((x) => `${x.screen} ${x.row.sel} d=${x.row.d} @위상 ${(x.at * 100).toFixed(0)}%`).join(' · '));
+
+    /* ⓓ **문턱까지 얼마나 남았나**([O-d] 와 같은 손) — 재서 적을 뿐 판정하지 않는다.
+       [O-d] 와 나란히 읽으라고 두 수를 같은 줄에 적는다. */
+    {
+      const worstO = seenO.filter((s) => s.fold).reduce((m, s) => (s.fold.maxDev > (m ? m.fold.maxDev : -1) ? s : m), null);
+      if (worstP)
+        ok(`[P-d] 1600 주기 제품 최악 편차 ${worstP.fold.maxDev.toFixed(4)} (허용 ${TOL} 의 ${(worstP.fold.maxDev / TOL * 100).toFixed(0)}%) @«${worstP.label}»`
+          + (worstO ? ` ↔ 2280 주기 최악 ${worstO.fold.maxDev.toFixed(4)} @«${worstO.label}»` : '')
+          + ` — 문턱 아래이지만 0 이 아니다 ⇒ 이 축은 짧은 프레임에서도 실제로 움직인다 (판정 아님)`);
+      else bad('[P-d] 1600 화면분 접기가 한 장도 안 남았다 — 위 초록의 근거가 없다');
+    }
+
+    /* ⓔ **되돌림(합성)** — 이 자가 «곱 전용» 자리를 정말 보는가 + 음성항.
+       ⚠ 이 항이 없으면 [P-b] 의 0 은 «프레임을 줄이고 위상을 옮겨도 아무것도 안 보는 자» 의 0 일 수 있다.
+       표본 ⓛ 은 키프레임 한복판이 `4.3859649vh` — 2280 에서는 정확히 100px 이라 **주기를 다 훑어도 초록**이고,
+       1600 에서만 70.18px 로 어긋난다(비트맵 200×100 고정 · 배율은 한 줄도 안 걸린다). */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.setContent(R32.SYN_FT);
+        await page.waitForTimeout(150);
+        const sweepPhases = async () => {
+          await page.evaluate(PIN_PHASE, 0);
+          const per = [];
+          for (let k = 0; k < R31.PHASES; k++) {
+            await page.evaluate(PIN_PHASE, k / R31.PHASES);
+            per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA), tr: await page.evaluate(R31.MEDIA_TR) });
+          }
+          await page.evaluate(PIN_PHASE, null);
+          return R31.foldScreen(per, TOL);
+        };
+        const fTall = await sweepPhases();
+        await page.setViewportSize(FRAME_F);
+        await page.waitForTimeout(200);
+        const fShort = await sweepPhases();
+        const vhTall = fTall.cycBad.find((x) => x.key.indexOf('#cVhKf') >= 0);
+        const vhShort = fShort.cycBad.find((x) => x.key.indexOf('#cVhKf') >= 0);
+        const propShort = fShort.cycBad.find((x) => x.key.indexOf('#cProp') >= 0);
+        if (!vhTall && !fShort.restBad && vhShort)
+          ok(`[P-e] 되돌림 — 키프레임 값이 \`vh\` 인 캔버스(비트맵 200×100 고정): `
+            + `2280 한 주기 ${fTall.cycBad.length}자리(= [O] 초록) · 1600 한 점 ${fShort.restBad}자리(= [N] 초록) `
+            + `↔ **1600 한 주기 ${fShort.cycBad.length}자리** (최악 d=${vhShort.row.d} @위상 ${(vhShort.at * 100).toFixed(0)}%) `
+            + `⇒ [P-b] 의 0 은 «안 보는 자» 의 0 이 아니다`);
+        else bad(`[P-e] 되돌림 실패 — 2280 주기 ${fTall.cycBad.length}자리 / 1600 한 점 ${fShort.restBad}자리 / 1600 주기 ${fShort.cycBad.length}자리`);
+
+        if (!propShort) ok('[P-e2] 음성항 — 짧은 프레임에서 종횡이 «같이» 흔들리는 상자는 어느 위상에도 안 빨개진다 (프레임에 매인 애니메이션이라는 이유만으로는 결함이 아니다)');
+        else bad(`[P-e2] 음성항 실패 — 멀쩡한 등방 vh 애니메이션을 결함이라 부른다: d=${propShort.row.d}`);
+      } catch (e) { bad('[P-e] 합성 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+
+    /* ⓕ **제품 되돌림** — [O-f] 와 같은 손이되 축이 «시간 × 프레임» 이다.
+       ⚠ 합성만으로 닫으면 «자는 사는데 **스윕에는** 안 물려 있다» 를 못 가른다(26회차 [J] 가 데인 자리).
+       주입은 **프레임에 매인 키프레임**이다 — 한복판 높이를 `(H/2280 × 100)vh` 로 적으면
+       2280 에서는 H 그대로(= [O] 초록)이고 1600 에서만 H×0.70 으로 눌린다. 0%·100% 는 H 라
+       **1600 의 가라앉은 한 점도 초록**이다(= [N] 초록). 화면 **한 장**이다 — 스윕을 한 벌 더 돌지 않는다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.goto(URL, { waitUntil: 'load' });
+        await page.waitForTimeout(700);
+        const hit = await page.evaluate(() => {
+          const app = document.getElementById('app');
+          const c = [...app.querySelectorAll('canvas')].find((x) => { const r = x.getBoundingClientRect(); return r.width > 8 && r.height > 8 && x.width && x.height; });
+          if (!c) return null;
+          const r = c.getBoundingClientRect();
+          const st = document.createElement('style');
+          /* 한복판을 «2280 에서 정확히 지금 높이» 인 vh 로 적는다 — 프레임이 줄 때만 값이 갈린다 */
+          st.textContent = `@keyframes __p32vh{0%,100%{height:${r.height}px}50%{height:${(r.height / 2280 * 100).toFixed(6)}vh}}`;
+          document.head.appendChild(st);
+          c.style.width = r.width + 'px';
+          c.style.animation = '__p32vh 40s linear infinite';
+          return c.id || c.getAttribute('class') || '(익명)';
+        });
+        await page.waitForTimeout(200);
+        const sweepPhases = async () => {
+          await page.evaluate(PIN_PHASE, 0);
+          const per = [];
+          for (let k = 0; k < R31.PHASES; k++) {
+            await page.evaluate(PIN_PHASE, k / R31.PHASES);
+            per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA), tr: await page.evaluate(R31.MEDIA_TR) });
+          }
+          await page.evaluate(PIN_PHASE, null);
+          return R31.foldScreen(per, TOL);
+        };
+        const fTall = await sweepPhases();
+        await page.setViewportSize(FRAME_F);
+        await page.waitForTimeout(420);
+        const fShort = await sweepPhases();
+        if (!hit) bad('[P-f] 되돌림 표본이 없다 — 02 메인에 잴 수 있는 캔버스가 한 자리도 없다');
+        else if (!fTall.cycBad.length && !fShort.restBad && fShort.cycBad.length)
+          ok(`[P-f] 제품 되돌림 — 02 메인의 실제 캔버스 «${hit}» 에 **프레임에 매인 키프레임**을 심으면 `
+            + `2280 한 주기 ${fTall.cycBad.length}자리(= [O] 는 여전히 초록) · 1600 한 점 ${fShort.restBad}자리(= [N] 도 초록) `
+            + `↔ 1600 한 주기 ${fShort.cycBad.length}자리로 갈린다 ⇒ 이 절이 제품 스윕에 정말 물려 있다`);
+        else bad(`[P-f] 제품 되돌림 실패 — 2280 주기 ${fTall.cycBad.length}자리 / 1600 한 점 ${fShort.restBad}자리 / 1600 주기 ${fShort.cycBad.length}자리 (표본 «${hit}»)`);
+
+        /* ⓕ2 «전용» 분류기도 같은 주입으로 문다([O-f2] 와 같은 규율) — 배율을 한 줄도 안 걸었으니
+           이 자리는 1600 에서 `boxMovedTrFree` 로 세져야 한다. 안 세지면 [P-a2b] 의 0 은 눈먼 0 이다. */
+        if (hit && fShort.boxMovedTrFree > 0)
+          ok(`[P-f2] 같은 주입을 1600 에서 «이 절 전용»(배율 없이 움직인 상자) 으로도 ${fShort.boxMovedTrFree}자리 세었다 ⇒ [P-a2b] 의 분류기가 눈먼 0 을 찍는 자가 아니다`);
+        else if (hit) bad(`[P-f2] 배율을 안 걸고 상자만 흔들었는데 1600 «전용» 으로 0자리 — [P-a2b] 의 분류기가 이 갈래를 못 본다`);
+      } catch (e) { bad('[P-f] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
       await ctx.close();
     }
   }
