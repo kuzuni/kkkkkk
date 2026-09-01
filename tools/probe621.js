@@ -25,7 +25,11 @@ const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 
 const HOLD_MS = Number(process.env.P621_HOLD || 2600);   /* 64 홀드: 350ms 뒤부터 160→60ms 가속 */
-const REST_TH = 0.995;                                   /* «원래 크기» 문턱 — 326폭에서 1.6px */
+/* «원래 크기» 문턱 — 3회차 재설계(왕복이 «갔다 온다» 가 되어 꼭대기 창이 사이클의 28%)에 맞춰
+   `verify621` 과 **같은 자**를 쓴다: 틱 축은 0.985(표본이 틱당 3~5장뿐이라 꼭대기를 놓치는 틱이 운으로 생긴다),
+   완전 복귀는 듀티(0.995 이상 프레임 비율)로 따로 찍는다. 수리 전 값(0/19 · 1/20 · 0/18)은 두 문턱 어느 쪽으로도 같다. */
+const REST_TH = 0.985;
+const FULL_TH = 0.995;
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d ? ' — ' + d : '')); };
@@ -134,7 +138,7 @@ const SPOTS = [
     const fr = d.frames.filter(f => rep.length && f.t >= rep[0] - 8);
     const ratios = fr.map(f => f.w / W0);
     const owns = fr.map(own);
-    const restFrames = owns.filter(x => x >= REST_TH).length;
+    const restFrames = owns.filter(x => x >= FULL_TH).length;
     let cyc = 0;
     for (let i = 0; i < rep.length; i++) {
       const a = rep[i] - 8, b = (i + 1 < rep.length) ? rep[i + 1] - 8 : rep[i] + 90;
@@ -168,7 +172,7 @@ const SPOTS = [
   for (const o of out) ok(o.ticks >= 5, o.id + ' 홀드가 실제로 연속으로 돌았다', '틱 ' + o.ticks + '회');
   /* 이 셋은 «수리 전에는 빨간 것이 정상» 이다 — 재현이 등재문을 확인하는 자리 */
   for (const o of out) {
-    ok(o.cycRatio >= 0.95, o.id + ' 틱마다 원래 크기로 돌아온다(목표 ≥0.95)',
+    ok(o.cycRatio >= 0.85, o.id + ' 틱마다 원래 크기로 돌아온다(목표 ≥0.85 · 표본 3~5장/틱)',
        '왕복 ' + o.cyc + '/' + o.ticks + ' (' + o.cycRatio + ') · 최대비 ' + o.max);
   }
   for (const o of out) ok(Math.abs(o.after - 1) <= 0.005, o.id + ' 손을 떼면 1.0 복귀', String(o.after));
