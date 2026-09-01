@@ -1568,6 +1568,14 @@ function writeReport(rep) {
      **같은 함수**로 읽도록 함수 스코프로 끌어올렸다. 16회차까지 [G] «③ 축» 줄은 `netPct`
      (정체 밖 시간 = [D2] 가 «넓은 자 · ③ 축 아님» 이라 명기한 값)를 찍고 있었다 — 같은
      라벨이 두 값을 가리키는 «표 두 벌» 사고(402 계보). 정의는 5·7·13회차의 것 그대로다. */
+  /* ⚑⚑ 18회차(17-7 정정1 — TT·VV 1순위 · UU 결손, **3인 일치**) — ④ 교차와 ② 말미 한계를
+     [G] 블록 밖(함수 스코프)으로 끌어올렸다. 17회차까지 이 둘은 `if (pols.length > 1)` 안에만
+     있어서 **단일 정책 실행은 자기 교차를 자가 못 찍었고**(17-4 가 --policy=casual 로 돌린
+     d260 표가 그 자리다), 그 회차의 헤드라인 네 수(248.2 · 215.5 · 103,764 · 92,466)가 전부
+     **표 밖 수기 계산**이 됐다 — 세 비평가가 «원표만으로 재현 불가» 로 일치 반박했다.
+     ⇒ 정의는 한 벌 그대로 두고 **읽는 자리만 둘로 늘린다**(정책 절 [E2] + [G] 대조표).
+     둘이 같은 함수 하나를 읽으므로 «표 두 벌»(402 계보)이 아니다 — 게이트가 두 자리의 값이
+     같은 수인지 직접 대조한다(`verify494` [8]). */
   const wA = (w) => (w.amin != null ? w.amin : w.min);
   const actTot = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
   const faceNetOf = (r) => {
@@ -1580,6 +1588,72 @@ function writeReport(rep) {
     }
     return f;
   };
+
+  /* 10회차(정정12 — Z) — §0 의 자기 산수는 소환 Lv50 26,705,000 + 불멸 기대 5종×1,000뽑
+     ×100다이아 = 500,000 ⇒ **27,205,000** 이다. 주인의 «2,730만» 은 그 반올림 호칭이고,
+     상수가 27,300,000 이면 교차일이 +0.5일급으로 밀린다. 산수 쪽으로 정오한다
+     (옛 값 27,300,000 — 1~9회차 표의 도달일은 그 상수 위 수다). */
+  const GOAL_DIA = 27205000;
+  /* 13회차 — §0 ② 의 «하루 27만» (주인 확정 2026-08-31 00:30). 지금까지 회차마다 손으로
+     나눠 왔고 12회차가 «50.7%» 를 본문에만 적었다 — 자가 찍는다(정정7 계열). */
+  const GOAL_DAY = 270000;
+  /* ⚑ 10회차(정정1 — Y·Z·AA 3인 일치) — ④ 는 «하루치로 나눈 값» 이 아니라 **누적 곡선이
+     목표를 지나는 날의 실측**이다. 스냅의 `inAll`/`outNS` 로 교차일을 직접 검출하고,
+     창 밖(측정 일수 안에 못 지난 시드)은 **말미 구간율 외삽 + (외삽) 표식**으로 찍는다 —
+     9회차의 «전(前)엔 보정, 후(後)엔 무보정» 비대칭 자가 이 한 함수로 사라진다. */
+  /* ⚑ 13회차(12회차 FF #9) — 말미 창 `W` 를 **인자로 뺀다.** 12회차가 «W=3 → 199.9 ·
+     7 → 174.2 · 29 → 101.2» 를 본문에만 적었는데, ④ 가 판정 줄이면서 그 창 하나에
+     ±50% 를 먹는다는 사실이 표에 없으면 다음 세대는 174.2 를 단일 실측으로 읽는다.
+     기본값은 옛 식 그대로라 판정 줄의 수는 안 움직인다 — 민감도 행만 늘어난다. */
+  const crossOf = (pol, mode, wOpt) => {
+    const runs = rep.policies[pol];
+    const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
+                   : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));   /* 말미 구간(일) */
+    const vals = [];
+    let miss = 0;
+    for (const r of runs) {
+      const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
+      const v = (s) => (mode === 'summon' ? s.inAll - s.outNS : s.inAll);
+      const end = day(rep.days);
+      if (!end || end.inAll == null) { miss++; continue; }           /* 옛 --json — 필드 없음 */
+      let hit = null;
+      for (let d = 1; d <= rep.days; d++) { const s = day(d); if (s && v(s) >= GOAL_DIA) { hit = { d, ex: false }; break; } }
+      if (!hit) {
+        const w0 = day(Math.max(1, rep.days - W));
+        const rate = w0 ? (v(end) - v(w0)) / Math.max(1, rep.days - Math.max(1, rep.days - W)) : 0;
+        if (rate > 0) hit = { d: rep.days + (GOAL_DIA - v(end)) / rate, ex: true };
+      }
+      if (hit) vals.push(hit);
+    }
+    if (!vals.length) return null;
+    const ds = vals.map(x => x.d), ex = vals.filter(x => x.ex).length;
+    return { p50: med(ds), p50i: medI(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W };
+  };
+  /* ⚑ 13회차(12회차 정정4 — «3회차째 미이행» 이라고 적힌 그 항) — **말미 한계 수급.**
+     ④ 의 외삽은 «말미 W일 구간율» 로 미는데 그 구간율이 표에 없었다. 없으면 ④ 를 못 검산하고
+     (외삽 20/20 이면 ④ 는 **전부** 이 수의 함수다), «수급을 어디서 올릴까» 도 못 정한다 —
+     30일 평균은 일회성·초반 미션이 섞여 말미의 실제 기울기보다 크다.
+     같은 장부(`inAll` / `inAll − outNS`)·같은 창(W)을 `crossOf` 와 공유한다(표 두 벌 금지). */
+  const tailRate = (pol, mode, wOpt) => {
+    const runs = rep.policies[pol];
+    const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
+                   : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));
+    const v = (s) => (mode === 'summon' ? s.inAll - s.outNS : s.inAll);
+    const vals = [];
+    for (const r of runs) {
+      const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
+      const end = day(rep.days), w0 = day(Math.max(1, rep.days - W));
+      if (!end || end.inAll == null || !w0) continue;
+      const span = rep.days - Math.max(1, rep.days - W);
+      if (span > 0) vals.push((v(end) - v(w0)) / span);
+    }
+    return vals.length ? { p50: med(vals), p50i: medI(vals), n: vals.length, W } : null;
+  };
+  /* ⚑ 18회차 — **셀 서식까지 공유한다.** 값을 같은 함수로 재도 서식이 갈리면 두 자리의 수가
+     같은 수인지 눈으로도 자로도 대조할 수 없다(정정1 이 요구한 것은 «재현 가능» 이다). */
+  const LEDGER = { in: '유입 장부', summon: '소환 예산 장부(결2 ⓐ 확정 2026-09-01 — ④ 의 판정 장부)' };
+  const crossCell = (x) => x ? `${x.p50.toFixed(1)} (보간 ${x.p50i.toFixed(1)}) [${x.p10.toFixed(0)}~${x.p90.toFixed(0)}]${x.ex ? ` (외삽 ${x.ex}/${x.n} · 말미 ${x.W}일 구간율)` : ' (전 시드 실측)'}` : '—';
+  const tailCell  = (x) => x ? `${fmtN(x.p50)} (보간 ${fmtN(x.p50i)})` : '—';
 
   for (const pol of Object.keys(rep.policies)) {
     const runs = rep.policies[pol];
@@ -1645,6 +1719,10 @@ function writeReport(rep) {
        93,600 · 144,000분)이 빠져, 120일 표가 그 자리의 벽 4개+를 «창 밖» 으로 세었다(창밖 16 은
        ~25% 과대). 30일 표는 `t <= days*1440` 필터로 그 칸들을 원래 못 보므로 **Δ0** 이다. */
     const TARGET = [30, 180, 1440, 3600, 7200, 12960, 21600, 36000, 57600, 93600, 144000];
+    /* ⚑ 18회차(17-7 정정2) — **사다리의 끝**. §0 목록의 마지막 칸(144,000분 = 100일)의 창 끝
+       1.2t = 172,800분이 §0 이 무엇이든 말하는 마지막 좌표다. 그 밖의 정체는 «없어야 할 벽»
+       이 아니라 **과녁이 없는 구간의 벽**이라, 창 밖 수를 이 선에서 갈라 찍는다. */
+    const LADDER_END = 1.2 * TARGET[TARGET.length - 1];
     /* ⚑ 199 7회차 — ① 의 자 두 곳을 주인 목록에서 **역산한 값**으로 바꾼다(6회차 비평 P·Q).
        ⓐ **분모** — 30분·3h 칸은 **첫 접속 이전**이다(부지런 첫 로그인 480분 · 대충 1,260분).
           봇이 아직 한 분도 안 논 시각에 벽이 설 길이 없으므로 그 두 칸은 «못 맞힌 것» 이 아니라
@@ -1731,13 +1809,22 @@ function writeReport(rep) {
       }
       /* ⓙ 잉여를 둘로 — «창 안 중복»(어떤 칸의 창 안이지만 그 칸을 남에게 뺏긴 벽) 과
          «창 밖»(어느 칸의 창에도 안 드는 벽 = §0 의 «없어야 할 벽»). */
-      let dup = 0, out = 0;
+      /* ⚑ 18회차(17-7 정정2 — UU1) — «창 밖» 을 **사다리 안 / 사다리 밖**으로 쪼갠다.
+         §0 의 사다리는 마지막 칸 144,000분(100일)에서 끝나는데 관측창은 그보다 길 수 있다
+         (17-4 는 260일을 쟀다) — 그 뒤의 벽은 «엉뚱한 데 선 벽» 이 아니라 **과녁이 아직
+         안 정해진 구간의 벽**이다. 17회차 표의 «창 밖 8» 은 그 둘이 섞인 수였고(시드1 창밖
+         9 중 8개가 172,800분 이후), 섞인 채로는 §0 대조가 «없어야 할 벽» 을 과대 계상한다.
+         ⇒ 두 수를 나란히 찍고 §0 대조는 **사다리 안** 쪽으로 읽는다(처방이 정반대다 —
+         사다리 밖은 계수가 아니라 **과녁 길이**(결12-ⓑ)가 정할 몫이다). */
+      let dup = 0, out = 0, outIn = 0, outOut = 0;
       ws.forEach((w, wi) => {
         if (uw.has(wi)) return;
         const inAny = REACH.some(t => Math.abs(coord(w) - t) / t <= 0.2);
-        if (inAny) dup++; else out++;
+        if (inAny) { dup++; return; }
+        out++;
+        if (coord(w) > LADDER_END) outOut++; else outIn++;
       });
-      return { hit: us.size, extra: ws.length - uw.size, dup, out, seat: uw };
+      return { hit: us.size, extra: ws.length - uw.size, dup, out, outIn, outOut, seat: uw };
     };
     const pairOf  = (r) => pairBy(r, wallT);
     const hitOf   = (r) => pairOf(r).hit;
@@ -1778,9 +1865,21 @@ function writeReport(rep) {
         return a + (1 - Math.pow(1 - w, n));
       }, 0);
     })();
-    L.push(`**① 축 — 목표 칸 적중 p50 = ${med(runs.map(hitOf))}/${tgtN} (±20% · 1:1 유일 배정 · 달력 중앙 좌표`
+    /* ⚑ 18회차(17-7 정정3 — TT3·UU2·VV2 **3인 일치** · 16-8 정정5 동형 재발, 세 회차 연속)
+       — **«① 을 적을 때는 널과 간격을 한 문장에»** 를 자에 박는다. 널 기준선과 간격 이탈%는
+       이미 아랫줄에 있었지만, 헤드라인만 옮겨 적으면 «적중 6/9» 가 단독으로 인용돼 세 회차
+       연속 같은 오독이 났다(16회차 ③ · 17회차 ①). 값을 옮기는 게 아니라 **헤드라인 문장이
+       스스로 널·간격을 데리고 다니게** 한다 — 아랫줄의 상세(창 합·산포)는 그대로 둔다. */
+    const hitP50  = med(runs.map(hitOf));
+    const spanP50 = med(runs.map(spanOf));
+    L.push(`**① 축 — 목표 칸 적중 p50 = ${hitP50}/${tgtN}`
+      + ` (**널 기준선 ${nullE.toFixed(2)} 대비 ${(hitP50 - nullE) >= 0 ? '+' : ''}${(hitP50 - nullE).toFixed(2)}칸**`
+      + `${hitP50 < nullE ? ' ⚠ **난수 산포 이하**' : ''}`
+      + ` · ±20% · 1:1 유일 배정 · 달력 중앙 좌표`
       + ` · 왼쪽 끝 좌표로는 ${med(runs.map(hitLOf))}/${tgtN})`
-      + ` · **창 밖 벽 p50 = ${med(runs.map(outOf))}**(= §0 의 «없어야 할 벽»)`
+      + ` · **창 밖 벽 p50 = ${med(runs.map(outOf))}**(= §0 의 «없어야 할 벽»`
+      + ` — **사다리 안 ${med(runs.map(r => pairOf(r).outIn))} · 사다리 밖 ${med(runs.map(r => pairOf(r).outOut))}**`
+      + ` [사다리 끝 = ${LADDER_END}분 = 마지막 칸 ${TARGET[TARGET.length - 1]}분의 창 끝 · 그 밖은 §0 이 과녁을 안 정한 구간이라 §0 대조는 «사다리 안» 으로 읽어라 — 18회차 정정2])`
       /* ⚑ 17회차(16-8 정정6 — QQ5) — «창 밖 p50 + 중복 p50 = 잉여 p50» 은 시드가 다르면
          성립하지 않는 p50 끼리의 산수다(r16 부지런 3+12=15 ↔ 잉여 16 이 그 자리). 항등
          «창밖+중복=잉여» 는 **시드별**로만 참이라, 그 검산(전 시드)을 자가 직접 찍고
@@ -1792,7 +1891,10 @@ function writeReport(rep) {
       /* ⚑ 13회차 비평 JJ(R12) — 배정 벽이 2개 미만이면 `spanOf` 는 «간격 0» 이 아니라
          **미정의**를 뜻하는 0 을 돌려준다. 그것을 «0.00 (목표 ×1.904)» 로 찍으면 측정치로
          읽힌다(대충이 실제로 그랬다). 미정의는 미정의라고 적는다. */
-      + ` · 벽 간격 기하평균 p50 = ${med(runs.map(spanOf)) > 0 ? med(runs.map(spanOf)).toFixed(2) : '— (미정의 · 배정 벽 2개 미만)'} (목표 ×${SPAN_T.toFixed(3)})**`);
+      /* 18회차 정정3 — 간격도 «목표 대비 몇 %» 를 같은 문장에 단다(그 수를 본문이 손으로
+         내던 것이 17-4 ① 행의 −22.4% 였다). 미정의는 미정의라고 적는다(13회차 JJ). */
+      + ` · **벽 간격 기하평균 p50 = ${spanP50 > 0 ? spanP50.toFixed(2) : '— (미정의 · 배정 벽 2개 미만)'} (목표 ×${SPAN_T.toFixed(3)}`
+      + `${spanP50 > 0 && SPAN_T > 0 ? ` · ${(100 * (spanP50 / SPAN_T - 1)) >= 0 ? '+' : ''}${(100 * (spanP50 / SPAN_T - 1)).toFixed(1)}%` : ''})**`);
     L.push('');
     L.push(`_⚠ **널 기준선** — ±20% 창의 합이 측정 구간(${HOR}분)의 **${covPc.toFixed(2)}%** 라`
       + ` 벽 ${med(wallsAll)}개를 **아무 데나 뿌려도 기대 적중 ${nullE.toFixed(2)}/${tgtN}** 이다.`
@@ -1916,6 +2018,34 @@ function writeReport(rep) {
     L.push('|---|---|');
     Object.keys(outAll).sort((a, b) => outAll[b] - outAll[a]).forEach(k => L.push(`| ${k} | ${fmtN(outAll[k])} |`));
     L.push('');
+
+    /* ⚑⚑ 18회차(17-7 정정1 — TT·VV 1순위 · UU 결손, **3인 일치**) — **정책 절이 자기 ④ 교차를
+       찍는다.** 17회차까지 이 두 자(④ 교차 · ② 말미 한계)는 [G] 안에만 있었고 [G] 는
+       `pols.length > 1` 가드 뒤라, `--policy=casual` 같은 **단일 정책 실행은 판정 줄을 통째로
+       못 찍었다** — 17-4 의 d260 표(1,612초짜리 실측)가 그래서 «표 밖 수기 계산» 이 됐고
+       세 비평가가 «원표만으로 재현 불가» 로 일치 반박했다.
+       ⇒ 자는 위 함수 스코프의 **하나**를 [G] 와 같이 읽는다(표 두 벌 금지 · 402 계보).
+       이 절이 선 뒤로 이 루프에 «표 밖 수기 교차» 는 없어야 한다. */
+    L.push(`### [E2] ④ 교차일 · ② 말미 한계 — ${P} (**판정 줄** · [G] 와 같은 함수 하나로 잰다 — 단일 정책 실행도 여기서 읽는다)`);
+    L.push('');
+    L.push('| 축 | 값 |');
+    L.push('|---|---|');
+    for (const mode of ['in', 'summon']) {
+      const c = crossOf(pol, mode), t = tailRate(pol, mode);
+      L.push(`| **④ 교차일(2,720.5만 · 실측 — 판정은 이 줄) 〔${LEDGER[mode]} · ${rep.days}일 창 · p50 (보간 med) [p10~p90]〕** | ${c ? crossCell(c) : '(스냅에 누적 장부 없음 — 10회차 이전 --json)'} |`);
+      const goalPct = t ? ` — 목표 ${fmtN(GOAL_DAY)}의 ${(100 * t.p50 / GOAL_DAY).toFixed(1)}%` : '';
+      L.push(`| ② 말미 ${t ? t.W : '—'}일 한계 수급/일 〔${LEDGER[mode]} · p50 (보간 med)〕 — ④ 외삽이 쓰는 기울기${goalPct} | ${tailCell(t)} |`);
+      /* [G] 와 같은 규약 — 외삽 시드가 0 이면 W 를 흔들어도 같은 수라 민감도 행을 생략한다
+         (그 사실 자체가 판정의 강도다 · 13회차). */
+      if (c && c.ex) {
+        const WS = [3, 7, 14, 29].filter(w => w < rep.days);
+        const sp = WS.map(w => { const x = crossOf(pol, mode, w); return `W${w} ${x ? x.p50.toFixed(1) : '—'}`; }).join(' / ');
+        const f0 = crossOf(pol, mode, WS[0]), fL = crossOf(pol, mode, WS[WS.length - 1]);
+        const swing = f0 && fL && fL.p50 > 0 ? ' — 흔들림 ×' + (f0.p50 / fL.p50).toFixed(2) : '';
+        if (WS.length) L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${LEDGER[mode]} · p50〕 | ${sp}${swing} |`);
+      }
+    }
+    L.push('');
   }
 
   /* ⚑ 199 5회차 — [G] 정책 대조. 4회차 비평 ⓒ 는 «스윕 표에 정책비 열이 없어 ④ 가 창 밖으로
@@ -1994,14 +2124,6 @@ function writeReport(rep) {
            · 소환 예산 장부(결2 ⓐ 확정 2026-09-01 — ④ 의 판정 장부) = 거기서 **소환 이외의 씽크**(입장권교환 등)를 더 뺀다
          도달일 = (목표 2,730만 − 일회성 선지급) ÷ 지속 수급/일 — 일회성은 첫날 통째로 들어오므로
          분자에서 빼는 것이 «누적이 목표를 지나는 날» 의 정의다(§0 ②). */
-      /* 10회차(정정12 — Z) — §0 의 자기 산수는 소환 Lv50 26,705,000 + 불멸 기대 5종×1,000뽑
-         ×100다이아 = 500,000 ⇒ **27,205,000** 이다. 주인의 «2,730만» 은 그 반올림 호칭이고,
-         상수가 27,300,000 이면 교차일이 +0.5일급으로 밀린다. 산수 쪽으로 정오한다
-         (옛 값 27,300,000 — 1~9회차 표의 도달일은 그 상수 위 수다). */
-      const GOAL_DIA = 27205000;
-      /* 13회차 — §0 ② 의 «하루 27만» (주인 확정 2026-08-31 00:30). 지금까지 회차마다 손으로
-         나눠 왔고 12회차가 «50.7%» 를 본문에만 적었다 — 자가 찍는다(정정7 계열). */
-      const GOAL_DAY = 270000;
       /* ⚑ 199 8회차(정정1 · S·T 독립 일치) — 7회차의 «비 1.840» 은 **시드별 도달일의 중앙값끼리
          나눈 값**이었다. 도달일 두 칸의 분자는 같은 (목표 − 일회성) 이므로 비는 **반드시 지속
          수급의 비와 같아야 한다**(정책이 일회성을 같은 값으로 받으므로). med(비) ≠ 비(med) 라
@@ -2020,58 +2142,6 @@ function writeReport(rep) {
           return (inAll - o1 - off) / rep.days;
         }));
         return per > 0 ? (GOAL_DIA - one) / per : 0;
-      };
-      /* ⚑ 10회차(정정1 — Y·Z·AA 3인 일치) — ④ 는 «하루치로 나눈 값» 이 아니라 **누적 곡선이
-         목표를 지나는 날의 실측**이다. 스냅의 `inAll`/`outNS` 로 교차일을 직접 검출하고,
-         창 밖(측정 일수 안에 못 지난 시드)은 **말미 구간율 외삽 + (외삽) 표식**으로 찍는다 —
-         9회차의 «전(前)엔 보정, 후(後)엔 무보정» 비대칭 자가 이 한 함수로 사라진다. */
-      /* ⚑ 13회차(12회차 FF #9) — 말미 창 `W` 를 **인자로 뺀다.** 12회차가 «W=3 → 199.9 ·
-         7 → 174.2 · 29 → 101.2» 를 본문에만 적었는데, ④ 가 판정 줄이면서 그 창 하나에
-         ±50% 를 먹는다는 사실이 표에 없으면 다음 세대는 174.2 를 단일 실측으로 읽는다.
-         기본값은 옛 식 그대로라 판정 줄의 수는 안 움직인다 — 민감도 행만 늘어난다. */
-      const crossOf = (pol, mode, wOpt) => {
-        const runs = rep.policies[pol];
-        const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
-                       : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));   /* 말미 구간(일) */
-        const vals = [];
-        let miss = 0;
-        for (const r of runs) {
-          const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
-          const v = (s) => (mode === 'summon' ? s.inAll - s.outNS : s.inAll);
-          const end = day(rep.days);
-          if (!end || end.inAll == null) { miss++; continue; }           /* 옛 --json — 필드 없음 */
-          let hit = null;
-          for (let d = 1; d <= rep.days; d++) { const s = day(d); if (s && v(s) >= GOAL_DIA) { hit = { d, ex: false }; break; } }
-          if (!hit) {
-            const w0 = day(Math.max(1, rep.days - W));
-            const rate = w0 ? (v(end) - v(w0)) / Math.max(1, rep.days - Math.max(1, rep.days - W)) : 0;
-            if (rate > 0) hit = { d: rep.days + (GOAL_DIA - v(end)) / rate, ex: true };
-          }
-          if (hit) vals.push(hit);
-        }
-        if (!vals.length) return null;
-        const ds = vals.map(x => x.d), ex = vals.filter(x => x.ex).length;
-        return { p50: med(ds), p50i: medI(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W };
-      };
-      /* ⚑ 13회차(12회차 정정4 — «3회차째 미이행» 이라고 적힌 그 항) — **말미 한계 수급.**
-         ④ 의 외삽은 «말미 W일 구간율» 로 미는데 그 구간율이 표에 없었다. 없으면 ④ 를 못 검산하고
-         (외삽 20/20 이면 ④ 는 **전부** 이 수의 함수다), «수급을 어디서 올릴까» 도 못 정한다 —
-         30일 평균은 일회성·초반 미션이 섞여 말미의 실제 기울기보다 크다.
-         같은 장부(`inAll` / `inAll − outNS`)·같은 창(W)을 `crossOf` 와 공유한다(표 두 벌 금지). */
-      const tailRate = (pol, mode, wOpt) => {
-        const runs = rep.policies[pol];
-        const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
-                       : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));
-        const v = (s) => (mode === 'summon' ? s.inAll - s.outNS : s.inAll);
-        const vals = [];
-        for (const r of runs) {
-          const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
-          const end = day(rep.days), w0 = day(Math.max(1, rep.days - W));
-          if (!end || end.inAll == null || !w0) continue;
-          const span = rep.days - Math.max(1, rep.days - W);
-          if (span > 0) vals.push((v(end) - v(w0)) / span);
-        }
-        return vals.length ? { p50: med(vals), p50i: medI(vals), n: vals.length, W } : null;
       };
       L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
       L.push('');
@@ -2115,10 +2185,10 @@ function writeReport(rep) {
       /* ⚑ 13회차 — ④ 바로 위에 **그 외삽이 쓰는 기울기**를 놓는다. 두 줄을 나란히 읽으면
          «④ 가 왜 그 값인가» 가 나눗셈 한 번으로 검산된다: (목표 − 30일 누적) ÷ 이 값 + 30. */
       for (const mode of ['in', 'summon']) {
-        const nm = mode === 'in' ? '유입 장부' : '소환 예산 장부(결2 ⓐ 확정 2026-09-01 — ④ 의 판정 장부)';
+        const nm = LEDGER[mode];   /* 18회차 — 이름표도 공유한다([E2] 와 같은 표) */
         const t = pols.map(p => tailRate(p, mode));
         if (t.every(x => !x)) continue;
-        const cell = (x) => x ? `${fmtN(x.p50)} (보간 ${fmtN(x.p50i)})` : '—';
+        const cell = tailCell;    /* 18회차 — 함수 스코프의 공유 서식 */
         const ratio = t[0] && t[1] && t[1].p50 ? (t[0].p50 / t[1].p50).toFixed(3) : '-';
         const goalPct = t[0] ? ` — 목표 27만의 ${(100 * t[0].p50 / GOAL_DAY).toFixed(1)}%` : '';
         /* ⚑ 13회차 비평 JJ(R12) — 말미 창에 소환 외 씽크가 0 이면 두 장부가 **같은 수**다.
@@ -2131,13 +2201,13 @@ function writeReport(rep) {
       /* 10회차(정정1·11) — ④ 판정 줄 = 교차 실측. p50 옆에 산포(p10~p90)와 외삽 시드 수를
          같이 찍는다(외삽 = 측정 일수 안에 목표를 못 지나 말미 구간율로 민 시드). */
       for (const mode of ['in', 'summon']) {
-        const nm = mode === 'in' ? '유입 장부' : '소환 예산 장부(결2 ⓐ 확정 2026-09-01 — ④ 의 판정 장부)';
+        const nm = LEDGER[mode];   /* 18회차 — 이름표도 공유한다([E2] 와 같은 표) */
         const c = pols.map(p => crossOf(p, mode));
         if (c.every(x => !x)) {
           L.push(`| **④ 교차일(2,720.5만 · 실측) 〔${nm}〕** | (스냅에 누적 장부 없음 — 10회차 이전 --json) | — | — |`);
           continue;
         }
-        const cell = (x) => x ? `${x.p50.toFixed(1)} (보간 ${x.p50i.toFixed(1)}) [${x.p10.toFixed(0)}~${x.p90.toFixed(0)}]${x.ex ? ` (외삽 ${x.ex}/${x.n} · 말미 ${x.W}일 구간율)` : ' (전 시드 실측)'}` : '—';
+        const cell = crossCell;   /* 18회차 — 함수 스코프의 공유 서식 */
         const ratio = c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : '-';
         L.push(`| **④ 교차일(2,720.5만 · 실측 — 판정은 이 줄) 〔${nm} · ${rep.days}일 창 · p50 (보간 med) [p10~p90]〕** | ${c.map(cell).join(' | ')} | ${ratio} |`);
         /* ⚑ 13회차 — 같은 줄의 **말미 창 민감도**. 외삽 시드가 0 이면 W 가 안 쓰이므로 생략한다
