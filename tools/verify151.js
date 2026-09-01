@@ -41,7 +41,7 @@ const EXPECT = {
 /* ⚑ 199 21회차 이관(333 처방 — 자리를 비우지 않고 방향을 뒤집었다). 옛 상수 `OFF_BASE_H 6`·
    `OFF_PLUS_H 4` 는 제품에서 **선언째** 사라졌다(결3 ⓑ: 1회 상한 6h → 하루 예산 1,440분).
    그 자리를 배율 축이 받는다 — 기대값은 제품에서 파생하지 않고 여기 다시 적는다(위 ⚠ 규약). */
-const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, DAILY_MAX_D = 60;
+const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, OFF_CLAIM_H = 10.5, DAILY_MAX_D = 60;   /* 199 22회차 — 1회 상한 10.5h */
 
 (async () => {
   const browser = await launch(chromium);
@@ -209,12 +209,16 @@ const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, DAILY_MAX_D = 60;
   });
   ok('C1 offMul() 미보유 1', C.mul0 === 1, String(C.mul0));
   ok('C2 offMul() 보유 ' + OFF_MUL_ON, Math.abs(C.mul1 - OFF_MUL_ON) < 1e-9, String(C.mul1));
-  ok('C3 01 팝업 문구 — 미보유는 «최대 24시간»(하루 예산) · 보유는 «이용권 ×1.2» 를 같이 적는다',
-    /24시간/.test(C.txtOff) && !/이용권 ×/.test(C.txtOff) && /이용권 ×1\.2/.test(C.txtOn),
+  /* ⚑ 199 22회차(정정5) — 1회 상한이 10.5h 로 되살아났다(구 6h 가 아니다 — `OFF_CLAIM_CAP_H`).
+     C3 문구는 «1회 상한 + 하루 예산» 두 축을 다 적어야 하고(156 표기·지급 한 벌),
+     C4 는 방향이 뒤집힌다(333 처방 — 항을 지우지 않는다): 12h 자리비움도 10.5h 에서 잘린다. */
+  ok('C3 01 팝업 문구 — «1회 최대 10시간 30분» + «하루 24시간» 두 축 · 보유는 «이용권 ×1.2» 를 같이 적는다',
+    /1회 최대 10시간 30분/.test(C.txtOff) && /24시간/.test(C.txtOff)
+    && !/이용권 ×/.test(C.txtOff) && /이용권 ×1\.2/.test(C.txtOn),
     C.txtOff + ' ‖ ' + C.txtOn);
-  ok('C4 1회 적립 상한 폐지 — 12시간 자리비움이 12시간 그대로(옛 6h 절단 없음)',
-    near(C.secOff, 12 * 3600, 2) && near(C.secLong, OFF_DAY_H * 3600, 2),
-    '12h=' + C.secOff + 's · 30h=' + C.secLong + 's(하루 예산 ' + OFF_DAY_H + 'h 에서 멈춤)');
+  ok('C4 1회 적립 상한 10.5h — 12시간도 30시간도 한 번에는 10.5h 에서 잘린다 (옛 6h 도, 폐지도 아니다)',
+    near(C.secOff, OFF_CLAIM_H * 3600, 2) && near(C.secLong, OFF_CLAIM_H * 3600, 2),
+    '12h=' + C.secOff + 's · 30h=' + C.secLong + 's(1회 상한 ' + OFF_CLAIM_H + 'h 에서 멈춤)');
   ok('C5 배율은 «지급액» 에만 — 다이아 ×' + OFF_MUL_ON + ' 인데 소비된 분 예산은 Δ0',
     C.secOn === C.secOff && Math.abs(C.diaOn - Math.floor(C.diaOff * OFF_MUL_ON)) <= 1 &&
     Math.abs(C.minOn - C.minOff) < 1e-6,

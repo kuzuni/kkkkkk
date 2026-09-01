@@ -183,20 +183,29 @@ let b = null;
 try {
   b = await page.evaluate(() => {
     const cap = OFF_DAY_CAP_MIN, pm = OFF_DIA_PM;
+    const cph = (typeof OFF_CLAIM_CAP_H === 'number' ? OFF_CLAIM_CAP_H : null);   /* 199 22회차 — 1회 상한 */
     /* 하루 예산을 통째로 쓰는 ×1 수령 — 제품의 실제 경로로 굴린다(손으로 안 더한다).
-       `offlineReward` 가 sec 를 남은 예산으로 자르고 `floor(sec * OFF_DIA_PM / 60 * om)` 을 담는다. */
+       199 22회차 — 1회 수령은 `OFF_CLAIM_CAP_H` 가 먼저 자르므로 예산(24h)은 **여러 번 수령**으로
+       회수한다(부지런 유저의 실제 경로 — 대충의 1회 상한 몫은 bot199 [G] 가 잰다). */
     Object.assign(S, DEF()); S.daily.offMin = 0;
-    offlineReward(Date.now() - 1000 * 60 * 60 * 48);      /* 48h — 예산(24h)보다 길게 */
-    const real = (typeof offPend !== 'undefined' && offPend) ? offPend.dia : null;
-    const sec = (typeof offPend !== 'undefined' && offPend) ? offPend.sec : null;
-    return { cap, pm, gate: cap * pm, real, sec, mul: offMul() };
+    offlineReward(Date.now() - 1000 * 60 * 60 * 48);      /* 48h — 상한(10.5h)보다 길게 */
+    const sec1 = (typeof offPend !== 'undefined' && offPend) ? offPend.sec : null;
+    let real = 0, n = 0;
+    while (n < 10 && S.daily.offMin < cap) {
+      offlineReward(Date.now() - 1000 * 60 * 60 * 48);
+      if (!offPend || !offPend.sec || offPend.sec < 60) break;
+      real += offPend.dia; claimOffline(1); n++;
+    }
+    return { cap, pm, cph, gate: cap * pm, real, sec1, n, spent: S.daily.offMin, mul: offMul() };
   });
 } catch (e) { console.log('  ⚠ evaluate 예외: ' + e.message.split('\n')[0]); }
 yes('[B0] §B 가 실제로 돌았다 (evaluate 예외 0건)', b !== null);
 if (b) {
-  eq('[B1] 제품이 자르는 축은 하루 예산 분(OFF_DAY_CAP_MIN)이다 — 잘린 초', b.sec, b.cap * 60);
+  eq('[B1] 1회 수령은 `OFF_CLAIM_CAP_H`(10.5h)가 먼저 자른다 — 잘린 초 (199 22회차 정정5)',
+     b.sec1, (b.cph || 0) * 3600);
   eq('[B2] 이용권 배율은 기본 ×1 이다 (표본에 배율이 안 섞였다)', b.mul, 1);
-  eq('[B3] **게이트 식 = 제품 실지급** (OFF_DAY_CAP_MIN × OFF_DIA_PM ↔ offPend.dia)', b.gate, b.real);
+  eq('[B3] **게이트 식 = 제품 실지급** (OFF_DAY_CAP_MIN × OFF_DIA_PM ↔ 하루 여러 번 수령의 합)', b.gate, b.real);
+  eq('[B3b] 그 하루가 예산 분을 정확히 소진한다', b.spent, b.cap);
   /* 음성항 — 옛 식은 실지급과 다르다. 이 항이 빨개지면 «이름만 갈아도 같은 값» 이라는 뜻이라
      [B3] 이 아무것도 안 지키는 것이 된다(348 [전제] 규약 — 자가 무엇을 잴 수 있는지부터 잰다). */
   yes('[B4] 옛 사본식 `6 × 60 × 3` 은 실지급과 **다르다** (이름만 갈면 안 되는 이유)',
