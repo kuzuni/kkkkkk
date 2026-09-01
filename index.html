@@ -30925,7 +30925,36 @@ const RW_FX_N0 = 10;                     /* 첫 발 — 619 어휘(`fxUpOk` 의 
      공용 상수는 한 글자도 안 건드린다(전투·보상 버스트 불변).
    ⚠ 접힌 만큼 위쪽 밀도가 오르는 것은 의도다(657 «파티클이 너무 적다» 와 같은 방향).
    ↩ 되돌림: `RW_FX_UP` 을 `Infinity` 로 두면 3회차(360°)와 픽셀 동일하다. */
+/* ⚑⚑ 682(2026-09-02, 주인 보고) — **«3방향으로 퍼진다 · 랜덤이 아니다» 를 재현으로 확인했다.**
+   주인 원문: «유물소환 연속으로 하니까 3방향으로 입자 퍼지더라 랜덤이 아니라».
+   `tools/probe682.js` 실측(수리 전) — 홀드 버스트(4알)의 방향이
+     #2 = 4.2° · 80.0° · 85.1° · 177.4°   #3 = 4.3° · 84.4° · 86.7° · 171.9°
+   = **오른쪽·위·위·왼쪽 = 눈에는 3갈래**이고, 연속 두 버스트가 ±15° 안에서 **같은 시퀀스**다.
+   뿌리가 둘이고 **둘 다 이 자리에 있다**(공용 `fxBurst` 는 무죄 — 대조군 [5] 참조):
+     ⓐ **점(좌표) 버스트에는 위상 굴림이 없다** — `fxBurst` 의 `phase`·`rr` 은 `strict ? … : 0`
+        이고 이 호출은 `strict=false` 다. 그래서 각도가 `i/cnt × 360°` **고정**(4알 = 0·90·180·270°)에
+        ±10.3° 지터뿐이다. 660(훈련·단련·룬)은 `strict=true` 라 위상이 돌고, 실제로 대조군은
+        연속 5쌍 전부 «±3° 동일 0쌍» 으로 초록이었다 ⇒ **공용 부품을 고칠 자리가 아니다.**
+     ⓑ **4회차의 «뒤집기» 가 각을 겹쳐 놓는다** — `dy → −dy` 는 아래쪽 반구를 위쪽 반구에
+        **정확히 포개는** 사상이라, 등간격 링에서는 접힌 각이 **이미 있던 각 위에 그대로 앉는다**
+        (4알: 90°↓ 가 270°↑ 와 한 자리 · 10알: 36/72/108/144 가 324/288/252/216 과 쌍쌍이).
+        그래서 알은 4개인데 갈래는 3개, 10개인데 6개다. 지터를 아무리 키워도 **쌍이 안 풀린다**.
+   ⇒ 뒤집기를 **상향 반구 안의 층화 난수 배치**로 갈아 끼운다:
+      반구를 알 수만큼 칸으로 나눠 한 칸에 한 알(겹침이 구조적으로 불가) · 칸 **안**은 난수
+      (`RW_FX_JIT`) · 칸 자체는 버스트마다 **황금비 저불일치 수열**로 돈다(619 6회차와 같은 수열 —
+      순수 난수는 연속 두 버스트가 우연히 같은 값을 뽑는다).
+      검산(4알): 칸 45° · 지터 ±0.30칸 ⇒ 두 알의 최소 간격 45×(1−0.60) = **18° ≥ 15°**
+      (사람이 «같은 방향» 으로 읽는 폭) — 갈래 수가 알 수와 **반드시** 같다.
+   ⚠ **바꾼 것은 «어느 쪽으로 가는가» 하나다** — 이동 거리(`mag`)·탄생 반경(`r0`)·개수·수명·크기·
+     색은 노드에 이미 적힌 값을 그대로 다시 쓴다(666 [C1][C3][C4] 가 그 축들을 지킨다).
+   ⚠ `RW_FX_UP`(4회차의 상향 원뿔 손잡이)은 **뜻 그대로 살아 있다** — 종전 조건 `dy > |dx|·RW_FX_UP`
+     이 잘라내던 그 여유를 이제 칸 범위에서 뺀다(`atan(RW_FX_UP)/π`). 0 이면 반구 180° 로 같은 값이다.
+     ↩ 되돌림: 이 블록을 위 머리말의 뒤집기 3줄로 되돌리면 666 4회차와 픽셀 동일하다.
+       (⚠ 4회차가 적어 둔 «`RW_FX_UP` 을 `Infinity` 로 두면 360°» 는 **뒤집기 시절의 되돌림**이다 —
+        새 식에서 ∞ 는 원뿔이 수직 한 줄로 **좁아진다**. 360° 로 되돌리려면 뒤집기째 되돌린다.) */
 const RW_FX_Y = 0.28, RW_FX_FLY = 2.0, RW_FX_UP = 0;
+const RW_FX_JIT = 0.30;                  /* 682 — 칸 폭 대비 ±지터. 0 이면 고정 부채 · 0.5 면 완전 난수(뭉침) */
+let rwFxW = 0;                           /* 682 — 버스트마다 도는 저불일치 위상(황금비 · 619 6회차와 같은 수열) */
 function rwSummonFx(it, first){
   const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
   if(el){ fxFlash(el); fxHitEl(el); }
@@ -30933,20 +30962,28 @@ function rwSummonFx(it, first){
   const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
   if(!L || !r) return false;
   const n = Math.max(1, Math.min(first ? RW_FX_N0 : UPFX_N, FXMAX - L.childElementCount - 1));
-  const cy = r.y + r.h * RW_FX_Y, before = new Set(L.children);
+  const cx = r.x + r.w / 2, cy = r.y + r.h * RW_FX_Y, before = new Set(L.children);
   fxBurst({ x:r.x + r.w / 2, y:cy }, FXPAL.up, n, false, null, PAY_CUR.relic);
-  for(const nd of L.children){
-    if(before.has(nd)) continue;
-    let dx = parseFloat(nd.style.getPropertyValue('--dx')), dy = parseFloat(nd.style.getPropertyValue('--dy'));
-    if(!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
-    if(dy > Math.abs(dx) * RW_FX_UP){                 /* 아래로 쏜 입자는 궤적을 뒤집는다(위 머리말) */
-      dy = -dy;
-      const sy = parseFloat(nd.style.top);
-      if(Number.isFinite(sy)) nd.style.top = (2 * cy - sy).toFixed(1) + 'px';
-    }
-    nd.style.setProperty('--dx', (dx * RW_FX_FLY).toFixed(1) + 'px');
-    nd.style.setProperty('--dy', (dy * RW_FX_FLY).toFixed(1) + 'px');
-  }
+  const born = [];
+  for(const nd of L.children) if(!before.has(nd)) born.push(nd);
+  const m = born.length, ph = (rwFxW = (rwFxW + 0.6180339887) % 1);
+  /* 상향 원뿔의 여유를 칸 범위에서 뺀다 — 종전 `dy > |dx| × RW_FX_UP` 과 같은 경계다(위 머리말) */
+  const mg = Math.min(0.49, Math.atan(RW_FX_UP) / Math.PI);
+  born.forEach((nd, j) => {
+    const dx0 = parseFloat(nd.style.getPropertyValue('--dx'));
+    const dy0 = parseFloat(nd.style.getPropertyValue('--dy'));
+    if(!Number.isFinite(dx0) || !Number.isFinite(dy0)) return;
+    const mag = Math.hypot(dx0, dy0);                 /* 이동 거리는 `fxBurst` 가 정한 그대로 */
+    const sx = parseFloat(nd.style.left), sy = parseFloat(nd.style.top);
+    const r0 = (Number.isFinite(sx) && Number.isFinite(sy)) ? Math.hypot(sx - cx, sy - cy) : 0;
+    const u = clamp((((j + 0.5 + ph + rnd(-RW_FX_JIT, RW_FX_JIT)) % m) + m) % m / m, mg, 1 - mg);
+    const a = -Math.PI * (1 - u), ca = Math.cos(a), sa = Math.sin(a);   /* u∈[0,1) → 위쪽 반구 */
+    /* 탄생점도 같은 각으로 옮긴다 — 반경(r0)은 그대로라 «링에서 태어나 그 방향으로 난다» 가 유지된다.
+       (안 옮기면 알이 엉뚱한 자리에서 태어나 옆으로 미끄러지는 그림이 된다) */
+    if(r0){ nd.style.left = (cx + ca * r0).toFixed(1) + 'px'; nd.style.top = (cy + sa * r0).toFixed(1) + 'px'; }
+    nd.style.setProperty('--dx', (ca * mag * RW_FX_FLY).toFixed(1) + 'px');
+    nd.style.setProperty('--dy', (sa * mag * RW_FX_FLY).toFixed(1) + 'px');
+  });
   return true;
 }
 function rwHoldTick(){
