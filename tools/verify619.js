@@ -8,6 +8,10 @@
  *   [A] 선언  — 발화 부품이 **한 곳**(`upFx`)이고 세 자리가 그것을 부른다 · 풀 상한 상수가 있다
  *   [B] 실동작 — 홀드 동안 「강화 N 회 ↔ 발화 N 회」. 훈련·단련은 **틱과 1:1**, 룬은 확률이라
  *                «레벨이 실제로 오른 시도(성공)» 와 1:1 이다(실패에 성공 세트를 얹으면 거짓 신호).
+ *                ⚑ 635 — **[B1] 과 [B2] 는 축이 다르다.** [B1] 이 묻는 것은 «홀드가 연속으로
+ *                들어가는가» = **시도 수**(결정적 · 홀드 틱 수)이고, [B2] 가 묻는 것은 «오른 만큼
+ *                터지는가» = **성공 축**(비율이라 분모·분자가 같이 움직인다). 룬만 둘이 갈라지는데
+ *                [B1] 이 성공 수에 절대 문턱을 대고 있어 자가 흔들렸다 — 축을 시도로 옮겼다(§635).
  *   [C] 상한  — 발화가 **상한 때문에 조용히 빠지는 일이 0** 이고, `#fxl` 동시 노드가 FXMAX 밑에 있다
  *   [D] 324 불변 — 훈련 홀드의 전투력 토스트는 종전대로 **합계 1장**(주인 승인 설계를 안 건드렸다)
  *   [R] 되돌림 — `upFx` 를 무력화한 사본에서는 [B] 가 **빨개진다**(무르게 푼 수리가 아님을 못박는다)
@@ -37,15 +41,22 @@ const SPOTS = [
 /* 페이지에 계측기를 심는다(제품은 한 줄도 안 고친다) */
 const ARM = () => {
   const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
-  const P = (window.__v619 = { buys: [], nodes: [], max: 0, blocked: 0, toasts: [] });
+  /* 635 — `buys`(성공, [B2] 의 분모) 와 `tries`(시도, [B1] 의 축)를 **따로** 센다.
+     훈련·단련은 확률 판정이 없어 둘이 같은 수이고, 룬만 갈라진다. */
+  const P = (window.__v619 = { buys: [], tries: [], nodes: [], max: 0, blocked: 0, toasts: [] });
   const wrap = (name, kind, okOf) => {
     const f = window[name]; if (typeof f !== 'function') return;
-    window[name] = function (...a) { const r = f.apply(this, a); if (okOf(r)) P.buys.push({ kind, t: performance.now() }); return r; };
+    window[name] = function (...a) { const r = f.apply(this, a); const t = performance.now();
+      P.tries.push({ kind, t }); if (okOf(r)) P.buys.push({ kind, t }); return r; };
   };
   wrap('trainBuy',    'train',  r => !!r);
   wrap('temperUpBtn', 'temper', r => !!r);
+  /* 룬 — `runeTry` 는 `{ ok, up }` 을 돌려준다. `ok` = 재화가 실제로 나간 **시도** · `up` = **성공**.
+     막힌 호출(`{ ok:false }` — 재화 부족·만렙)은 시도로도 안 센다(헛초록 방지). */
   { const f = window.runeTry; if (typeof f === 'function') window.runeTry = function (...a) {
-      const r = f.apply(this, a); if (r && r.up) P.buys.push({ kind: 'rune', t: performance.now() }); return r; }; }
+      const r = f.apply(this, a); const t = performance.now();
+      if (r && r.ok) { P.tries.push({ kind: 'rune', t }); if (r.up) P.buys.push({ kind: 'rune', t }); }
+      return r; }; }
   /* [C] — 상한 때문에 «아무것도 안 붙은» 발화를 센다(upFx 가 false 를 돌린 횟수) */
   { const f = window.upFx; if (typeof f === 'function') window.upFx = function (...a) {
       const r = f.apply(this, a); if (!r) P.blocked++; return r; }; }
@@ -71,25 +82,27 @@ const ARM = () => {
   }).observe(L, { childList: true });
 };
 
-async function hold(page, sp) {
+async function hold(page, sp, opt) {
+  const tapOnly = !!(opt && opt.tap);      /* 635 [R3] — 홀드 대신 «한 번 클릭» (되돌림 시험) */
   await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, sp.tab);
   await page.waitForTimeout(420);
-  await page.evaluate(() => { const P = window.__v619; P.buys.length = 0; P.nodes.length = 0; P.toasts.length = 0; P.max = 0; P.blocked = 0; });
+  await page.evaluate(() => { const P = window.__v619; P.buys.length = 0; P.tries.length = 0; P.nodes.length = 0; P.toasts.length = 0; P.max = 0; P.blocked = 0; });
   const r = await page.evaluate(sel => { const el = document.querySelector(sel); if (!el) return null;
     const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; }, sp.sel);
   if (!r || !r.w) return null;
   await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
   await page.mouse.down();
-  await page.waitForTimeout(HOLD_MS);
+  await page.waitForTimeout(tapOnly ? 20 : HOLD_MS);
   await page.mouse.up();
   await page.waitForTimeout(420);
-  const d = await page.evaluate(() => { const P = window.__v619; return { buys: P.buys.slice(), nodes: P.nodes.slice(), max: P.max, blocked: P.blocked, toasts: P.toasts.slice() }; });
+  const d = await page.evaluate(() => { const P = window.__v619; return { buys: P.buys.slice(), tries: P.tries.slice(), nodes: P.nodes.slice(), max: P.max, blocked: P.blocked, toasts: P.toasts.slice() }; });
   const WIN = 55;                       /* 최소 틱 간격 60ms 보다 짧게 — 다음 강화의 발화를 훔쳐 세지 않는다 */
   const fires = d.nodes.filter(n => n.k === 'flash' || n.k === 'spark' || n.k === 'spend');
   const buys = d.buys.filter(b => b.kind === sp.id);
+  const tries = d.tries.filter(b => b.kind === sp.id);
   let hit = 0;
   buys.forEach(b => { if (fires.some(f => f.t >= b.t - 12 && f.t <= b.t + WIN)) hit++; });
-  return { buys: buys.length, hit, ratio: buys.length ? p2(hit / buys.length) : 0,
+  return { buys: buys.length, tries: tries.length, hit, ratio: buys.length ? p2(hit / buys.length) : 0,
            fires: fires.length, max: d.max, blocked: d.blocked, toasts: d.toasts };
 }
 
@@ -134,9 +147,27 @@ async function hold(page, sp) {
     const d = await hold(page, sp);
     if (!d) { ok(false, 'B0 ' + sp.id + ' 대상이 없다', sp.sel); continue; }
     res[sp.id] = d;
-    ok(d.buys >= 8, 'B1 ' + sp.id + ' 홀드가 연속으로 들어간다', '강화 ' + d.buys + '회');
+    /* ⚑ 635 — [B1] 의 축은 **시도 수**다(성공 수가 아니다).
+       뜻이 «홀드가 연속으로 들어간다» 이므로 세야 하는 것은 홀드 틱이 실제로 굴린 횟수이고,
+       그 값은 결정적이다(`probe635` 실측: 룬 시도 18·21·20·21·19 = 폭 3).
+       성공 수로 세던 종전 축은 `runeRate` 가 레벨과 함께 **0.90 → 0.05 로 감쇠**하는 값이라
+       같은 홀드에서 9·5·2·1·1 로 무너졌다(폭 8) — 문턱 8 에 여유가 없어 자가 흔들렸다.
+       ⚠ 문턱은 **한 칸도 안 내렸다**(334 규약) — 8 그대로이고 축만 옮겼다. 무르게 푼 것이
+       아님은 [R3] 이 못박는다(클릭 한 번이면 시도 = 1 이라 이 항이 빨개진다). */
+    ok(d.tries >= 8, 'B1 ' + sp.id + ' 홀드가 연속으로 들어간다', '시도 ' + d.tries + '회'
+       + (sp.id === 'rune' ? ' (성공 ' + d.buys + '회 — 룬은 확률 판정이라 시도 축으로 센다)' : ''));
     ok(d.ratio >= 0.95, 'B2 ' + sp.id + ' 강화마다 이펙트가 터진다(≥0.95)',
        d.hit + '/' + d.buys + ' = ' + d.ratio + (sp.id === 'rune' ? ' · 룬은 «성공» 축' : ''));
+  }
+  /* 635 — [B2] 의 분모가 «한 자리 표본» 이 아님을 못박는다([E1] 과 같은 꼴의 표본 항).
+     룬만 확률이라 분모가 줄어들 수 있고, 분모가 1 이면 비율이 0/1 두 값밖에 못 갖는다.
+     문턱 3 의 근거: 이 홀드는 **Lv0 에서 시작**해 초반 곡선(0.90 → …)을 타므로 기대 성공은 ≈8 이다
+     (`probe635` 첫 홀드 실측 9) — 2.7 배 여유다. 종전 [B1] 의 문턱 8 은 그 기대값과 같은 자리라
+     여유가 1.0 배였고, 그래서 절반이 빨갰다. */
+  {
+    const d = res.rune;
+    ok(!!d && d.buys >= 3, 'B3 룬 — [B2] 의 «성공» 표본이 비율을 잴 만큼 있다(≥3)',
+       d ? '성공 ' + d.buys + '/' + d.tries + '회' : 'n/a');
   }
   console.log('\n[C] 상한 — 발화가 조용히 빠지지 않는다 · 레이어가 안 막힌다');
   for (const sp of SPOTS) {
@@ -217,6 +248,16 @@ async function hold(page, sp) {
   {
     const d = await hold(page, SPOTS[0]);
     ok(!!d && d.ratio >= 0.95, 'R2 원복하면 같은 자로 다시 초록', d ? d.hit + '/' + d.buys + ' = ' + d.ratio : 'n/a');
+  }
+  /* ⚑ 635 [R3] — 새 [B1] 축이 «무르게 잡은 자» 가 아님을 못박는다.
+     시도 축으로 옮겼으니 «홀드가 아예 안 반복되면» 빨개져야 한다 — 홀드 대신 **한 번 클릭**하면
+     시도는 1(첫 발)이라 문턱 8 을 못 넘는다. 세 자리 전부에서 확인한다(룬만 고친 게 아니라
+     축 자체가 «반복 횟수» 라는 뜻을 세 자리가 같이 지킨다). */
+  console.log('\n[R3] 되돌림 — 홀드가 아니라 «한 번 클릭» 이면 새 [B1] 축이 빨개진다');
+  for (const sp of SPOTS) {
+    const d = await hold(page, sp, { tap: true });
+    ok(!!d && d.tries < 8, 'R3 ' + sp.id + ' 클릭 한 번은 시도 < 8 — [B1] 이 «반복» 을 실제로 세고 있다',
+       d ? '시도 ' + d.tries + '회' : 'n/a');
   }
 
   console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
