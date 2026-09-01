@@ -335,14 +335,15 @@ function scanEmoji(bare) {
      자산(`cur-*.svg`)이 고쳐져 override 가 필요 없어지면 **이 기대값도 같이 내려야** 한다
      (measure/A3 §아트 필요 «자산이 고쳐지면 그 override 를 지워야 한다»).
      화면 override 는 `#top .curs` 한정이라 13 재화 탭(55×55)은 이 선택자에 안 들어온다. */
-  /* ⚑ 644(2026-09-01) — dia 63 → **59.06**. 위 D3 주석이 «자산이 고쳐지면 D1 과 함께 내린다» 고
-     적어 둔 그 자리다. 644 가 `cur-dia.svg` 의 viewBox 를 잉크 bbox 로 잘라 채움비 .9375 → **1.0** 이
-     되었으므로, 종전 상자 63 이 그리던 잉크(63 × .9375 = 59.06)를 그대로 내려면 상자가 59.06 이다.
-     ⇒ **그려지는 잉크는 Δ0** 이고 움직인 것은 «상자» 라는 이름의 숫자뿐이다. 잉크가 실제로 안 움직였다는
-     증거는 `tools/verify340.js` [2](dia 색 잉크 −12.5%±3)·`tools/verify585.js` §5(«59.06 그대로»)가
-     **수리 전과 같은 값으로** 초록인 것이다 — 그 둘이 이 이관의 음성항이다. gold 65.3 은 안 움직인다
-     (`cur-gold.svg` 는 원래 채움비 1.0 이라 644 가 한 자도 안 건드린 유일한 아트다). */
-  const HUD_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 59.06, h: 59.06, tf: false } };
+  /* ⚑ 671(2026-09-01) — dia 59.06 → **65.3 = 골드와 같은 값**. 위 D3 주석이 «자산이 고쳐지면
+     D1 과 함께 내린다» 고 적어 둔 그 자리이고, **이번이 그 «자산이 고쳐진» 회차다.**
+     644 는 아트가 비등방인 채로(색÷실루엣 가로 .848 · 세로 .973) 잉크를 Δ0 으로 보존하느라
+     두 재화의 상자를 다르게 뒀다 — 같은 프레임 안 덩치 비 **1.106** 이 411·356 눈금(≤1.05)을 넘었다.
+     671 이 `cur-dia.svg` 의 테 규격을 **.875 등방**으로 다시 그려 «같은 상자 = 같은 잉크» 가 됐다.
+     ⇒ 이제 두 재화가 **한 값**이고, 그것이 이 D1·D3 이 원래 말하려던 것이다(«재화별 확정값» 이
+     둘로 갈려 있던 것은 아트 결손의 그림자였다). 음성항은 `verify340` [2](색 잉크·실루엣 ref ±3)와
+     `verify671` [C](자리 잉크 덩치 비 ≤1.05)다. */
+  const HUD_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 65.3, h: 65.3, tf: false } };
   const D = await page.evaluate(() => {
     const out = { hud: [], tf: [] };
     document.querySelectorAll('.cbox i > img.cic').forEach(im => {
@@ -356,7 +357,7 @@ function scanEmoji(bare) {
   const geoBad = D.hud.filter(x => !HUD_EXP[x.k]
     || Math.abs(x.w - HUD_EXP[x.k].w) > 2 || Math.abs(x.h - HUD_EXP[x.k].h) > 2);
   ok(D.hud.length === 2 && geoBad.length === 0,
-     'D1 HUD 아이콘 재화별 확정 크기 (gold 65.3×65.3 · dia 59.06×59.06 — 356 이관: dia scaleX 폐기 · 644 이관: 상자 = 잉크)',
+     'D1 HUD 아이콘 확정 크기 — 코인·젬 둘 다 65.3×65.3 (671 이관: 아트 .875 등방 재작도로 한 값이 됐다)',
      D.hud.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
   const mBad = D.hud.filter(x => HUD_EXP[x.k]
     && HUD_EXP[x.k].tf !== (x.tf !== 'none' && x.tf !== 'matrix(1, 0, 0, 1, 0, 0)'));
@@ -375,8 +376,8 @@ function scanEmoji(bare) {
      ⇒ 기대값을 HUD(D1)와 **같은 재화별 확정값**으로 옮긴다. 상자(`<i>` 57×57)는 그대로이고
      움직인 것은 **이미지**뿐이라, 여기서 재는 것도 이미지 rect 다. 자산이 고쳐지면 D1 과
      함께 내린다. 잉크가 실제로 ref 에 붙었는지는 `tools/verify340.js` 가 픽셀로 못박는다. */
-  /* ⚑ 644 — D1 과 같은 이관(위 주석). dia 63 → 59.06 · 그려지는 잉크 Δ0. */
-  const PCB_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 59.06, h: 59.06, tf: false } };  /* 356 이관 */
+  /* ⚑ 671 — D1 과 같은 이관(위 주석). dia 59.06 → 65.3 = 코인과 한 값. */
+  const PCB_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 65.3, h: 65.3, tf: false } };  /* 356·671 이관 */
   const P = await page.evaluate(() => {
     openDungeon();
     const out = [];
@@ -390,7 +391,7 @@ function scanEmoji(bare) {
   });
   const pBad = P.filter(x => PCB_EXP[x.k] && (Math.abs(x.w - PCB_EXP[x.k].w) > 2 || Math.abs(x.h - PCB_EXP[x.k].h) > 2));
   ok(P.length >= 2 && pBad.length === 0,
-     'D3 41 재화 바 아이콘 = HUD 와 같은 재화별 확정값 (gold 65.3×65.3 · dia 59.06×59.06 — 340·356·644)',
+     'D3 41 재화 바 아이콘 = HUD 와 같은 확정값 (코인·젬 둘 다 65.3×65.3 — 340·356·644·671)',
      P.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
   const pmBad = P.filter(x => PCB_EXP[x.k]
     && PCB_EXP[x.k].tf !== (x.itf !== 'none' && x.itf !== 'matrix(1, 0, 0, 1, 0, 0)'));

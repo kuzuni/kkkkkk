@@ -357,7 +357,10 @@ const OLD_CSS =
   const dg = dun.find((r) => r.slot === 'pcbG'), dd = dun.find((r) => r.slot === 'pcbD');
   const sg = shp.find((r) => r.slot === 'pcbG'), sd = shp.find((r) => r.slot === 'pcbD');
   ok(near(ink(dg).w, 65.3, 0.5), '03 `.pcb` 골드 잉크 65.3 그대로 (340 값)', r2(ink(dg).w));
-  ok(near(ink(dd).w, 59.06, 0.5), '03 `.pcb` 다이아 잉크 59.06 그대로', r2(ink(dd).w));
+  /* ⚑ 671 이관 — 59.06 → **65.3**. 이 절이 지키는 것은 «알약 펄스가 아이콘 잉크를 흔들지 않는다» 이고
+     기대값은 그 시각의 확정 상자다. 671 이 젬 아트를 .875 등방으로 다시 그려 코인과 한 값이 됐다
+     (`verify125` D1·D3 · `verify340` [3]). 음성항 [R4] 는 아래에서 같은 값으로 다시 잰다. */
+  ok(near(ink(dd).w, 65.3, 0.5), '03 `.pcb` 다이아 잉크 65.3 그대로 (671 — 코인과 한 값)', r2(ink(dd).w));
   ok(near(ink(dg).w, ink(sg).w, 0.5) && near(ink(dd).w, ink(sd).w, 0.5),
     '03 던전 ↔ 10 상점이 같은 값 (공용 `.pcb` 가 안 갈렸다)',
     r2(ink(sg).w) + ' / ' + r2(ink(sd).w));
@@ -444,9 +447,9 @@ const OLD_CSS =
   const o2 = await open(ctx, '#dunw .pcb-p{transform:scale(1.05)}', 1080, 2280);
   const r4rows = await o2.page.evaluate(PICK + '(' + JSON.stringify(DUN_SEL) + ')');
   const r4g = r4rows.find((r) => r.slot === 'pcbG'), r4d = r4rows.find((r) => r.slot === 'pcbD');
-  ok(!near(ink(r4g).w, 65.3, 0.5) && !near(ink(r4d).w, 59.06, 0.5),
+  ok(!near(ink(r4g).w, 65.3, 0.5) && !near(ink(r4d).w, 65.3, 0.5),
     '[R4] `.pcb-p` 에 정적 `scale(1.05)` 을 심은 사본에서 §5 골드·다이아가 둘 다 빨개진다',
-    r2(ink(r4g).w) + ' / ' + r2(ink(r4d).w) + ' (기대 65.3 / 59.06)');
+    r2(ink(r4g).w) + ' / ' + r2(ink(r4d).w) + ' (기대 65.3 / 65.3 — 671)');
   await o2.page.close();
 
   /* ── §E ────────────────────────────────────────────────────────────── */

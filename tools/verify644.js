@@ -37,10 +37,15 @@ const FILL_TOL = 0.006;  /* 512px 래스터의 AA 한 겹 = 1/512 ≈ .002. 세 
 const ASP_TOL = 0.01;    /* 종횡비 대조 허용 — 등방이면 0 이어야 한다 */
 
 /* 642 §5 가 남긴 «수리 전» 채움비 표 (원 좌표계 0 0 64 64 에서 512px 로 잰 값).
-   [C] 는 이 표를 **되돌린 좌표계**에서 다시 요구한다 — 아트 내용이 안 바뀌었다는 산술 증거다. */
+   [C] 는 이 표를 **되돌린 좌표계**에서 다시 요구한다 — 아트 내용이 안 바뀌었다는 산술 증거다.
+   ⚑ 671(2026-09-01) — **`cur-dia.svg` 한 칸만 갱신했다**(0.9375 → 1.0000). 이 표의 뜻은
+     «644 가 캔버스만 잘랐다» 인데, 671 은 그 뒤에 **젬의 테 규격을 실제로 다시 그린 회차**다
+     (몸통 path 는 Δ0 · 검정 테를 straddle stroke → 뒤에 까는 실루엣으로 바꿨다 ⇒ 잉크가 0..64 를 채운다).
+     ⚠ 그래서 이 한 칸은 «644 이후 아무도 안 건드렸다» 를 더는 못 지킨다 — 지키는 자는
+       `verify671`([A] 색÷실루엣 .875 등방 · §R 옛 테 규격 되돌림)로 **옮겼다**. 나머지 14칸은 그대로다. */
 const ORIG = {
   'cur-gold.svg':          [1.0000, 1.0000],
-  'cur-dia.svg':           [0.9375, 0.9375],
+  'cur-dia.svg':           [1.0000, 1.0000],   /* 671 재작도 — 옛 값 0.9375×0.9375 */
   'cur-relic.svg':         [0.8438, 0.9727],
   'cur-rstone.svg':        [0.6250, 1.0000],
   'cur-stone.svg':         [0.7520, 0.8164],
@@ -211,11 +216,15 @@ async function inkOnScreen(page, sel, nth) {
     out.push('');
     out.push('§R 되돌림 시험 — 무르게 푼 수리가 아님을 세 방향에서 못박는다');
     {
-      /* R1 — 한 장(다이아)의 viewBox 를 옛 값으로 되돌린 사본: [A]·[B] 가 빨개져야 한다 */
-      const r1 = await inkBox(page, setVB(src['cur-dia.svg'], '0 0 64 64'), 512);
-      ok('[R1] 다이아를 옛 viewBox 로 되돌리면 채움비가 1.0 에서 벗어난다 ([A] 가 잡는다)',
+      /* R1 — 한 장의 viewBox 를 옛 값으로 되돌린 사본: [A]·[B] 가 빨개져야 한다.
+         ⚑ 671 이관 — 표본을 **다이아 → 단련석**으로 옮겼다. 671 이 젬의 테를 다시 그려
+         젬은 옛 좌표계에서도 채움비가 1.0 이라(실루엣이 0..64 를 채운다) 더는 «되돌림» 표본이 못 된다.
+         `cur-stone.svg`(옛 채움비 .8164)는 644 가 캔버스만 자른 14장 중 하나라 같은 시험을 그대로 한다. */
+      const R1F = 'cur-stone.svg';
+      const r1 = await inkBox(page, setVB(src[R1F], '0 0 64 64'), 512);
+      ok('[R1] ' + R1F + ' 를 옛 viewBox 로 되돌리면 채움비가 1.0 에서 벗어난다 ([A] 가 잡는다)',
         r1 && Math.abs(Math.max(r1.w, r1.h) - 1.0) > FILL_TOL, r1 ? Math.max(r1.w, r1.h).toFixed(4) : '—');
-      const others = files.filter(f => f !== 'cur-dia.svg' && cur[f]).map(f => Math.max(cur[f].w, cur[f].h));
+      const others = files.filter(f => f !== R1F && cur[f]).map(f => Math.max(cur[f].w, cur[f].h));
       const rr = Math.max(...others) / Math.max(r1.w, r1.h);
       ok('[R1b] 그 한 장만으로 [B] 눈금이 깨진다 (한 장도 봐주지 않는다)', rr > GAUGE, rr.toFixed(4) + ' > ' + GAUGE);
 

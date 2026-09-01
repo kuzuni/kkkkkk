@@ -126,8 +126,10 @@ async function capInk(page, kind, sel) {
       return { g: r(g), d: r(d) };
     });
     const rat = box.g / box.d;
-    ok('[A1] 코인 상자 ÷ 젬 상자 > 1.05 (411·356 눈금 초과 — 등재문 1.106)',
-      rat > 1.05, box.g + ' ÷ ' + box.d + ' = ' + rat.toFixed(3));
+    /* 등재문(수리 전) 값은 65.3 ÷ 59.06 = **1.106** 이었다. 수리 뒤에는 두 상자가 한 값이라 1.000 이다 —
+       이 항은 «지금 어느 쪽인지» 를 기록하고, 눈금을 지키는 것은 `verify671` [B]·[C] 다. */
+    ok('[A1] 코인 상자 ÷ 젬 상자 ≤ 1.05 (411·356 눈금 — 수리 전 등재문 값 1.106)',
+      rat <= 1.05, box.g + ' ÷ ' + box.d + ' = ' + rat.toFixed(3) + ' (수리 전 65.3 ÷ 59.06 = 1.106)');
 
     const cap = { gold: await capInk(page, 'gold', '#dunw .pcb-g>i'), dia: await capInk(page, 'dia', '#dunw .pcb-d>i') };
     for (const k of ['gold', 'dia']) {
@@ -152,12 +154,26 @@ async function capInk(page, kind, sel) {
         + '  ⇒ 색÷실루엣 w ' + a.rw.toFixed(3) + ' · h ' + a.rh.toFixed(3)
         + ' · 축 비대칭 ' + (Math.max(a.rw, a.rh) / Math.min(a.rw, a.rh)).toFixed(3));
     }
-    ok('[B1] 젬의 «색÷실루엣» 세로가 등재문의 .968 근처다 (등재문 값의 정체 = 세로 축)',
-      Math.abs(art.dia.rh - 0.968) <= 0.03, art.dia.rh.toFixed(3));
-    ok('[B2] ⚑ 젬은 두 축이 서로 다르다 — 등재문이 못 본 것 (가로가 세로보다 10% 이상 작다)',
-      art.dia.rh / art.dia.rw >= 1.10,
-      'w ' + art.dia.rw.toFixed(3) + ' vs h ' + art.dia.rh.toFixed(3)
-        + ' = ' + (art.dia.rh / art.dia.rw).toFixed(3) + '배');
+    /* ⚑ 재현은 «수리 전 아트» 를 사본으로 그려서 한다 — 파일이 고쳐진 뒤에도 이 자가 계속
+       같은 것을 말하게 하기 위해서다(수리 전 커밋을 다시 체크아웃해야만 도는 자는 다음 세션이 못 쓴다). */
+    const OLD_DIA = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 2 60 60" width="64" height="64" shape-rendering="geometricPrecision">'
+      + '<path d="M20 4h24l16 18-28 38L4 22z" fill="#2FA7D8" stroke="#000" stroke-width="4" stroke-linejoin="round"/>'
+      + '<path d="M20 4l-6 18 18 38 18-38-6-18z" fill="#67D8F7" stroke="#0E6E96" stroke-width="2.5" stroke-linejoin="round"/>'
+      + '<path d="M14 22h36" stroke="#0E6E96" stroke-width="2.5"/>'
+      + '<path d="M20 4l12 18L44 4" fill="none" stroke="#0E6E96" stroke-width="2.5" stroke-linejoin="round"/>'
+      + '<path d="M22 24l6 24-14-26z" fill="#CFF6FF" opacity=".9"/></svg>';
+    const old = await page.evaluate(eval('(' + ART_SRC + ')'),
+      { href: 'data:image/svg+xml;base64,' + Buffer.from(OLD_DIA, 'utf8').toString('base64'), N: 512, mask: MASKS.dia });
+    old.rw = old.col.w / old.sil.w; old.rh = old.col.h / old.sil.h;
+    console.log('  · 수리 전 cur-dia.svg(사본) 색÷실루엣 w ' + old.rw.toFixed(3) + ' · h ' + old.rh.toFixed(3));
+    ok('[B1] 수리 전 젬의 «색÷실루엣» 세로가 등재문의 .968 근처다 (등재문 값의 정체 = 세로 축 하나)',
+      Math.abs(old.rh - 0.968) <= 0.03, old.rh.toFixed(3));
+    ok('[B2] ⚑ 수리 전 젬은 두 축이 서로 달랐다 — 등재문이 못 본 것 (가로가 세로보다 10% 이상 작다)',
+      old.rh / old.rw >= 1.10,
+      'w ' + old.rw.toFixed(3) + ' vs h ' + old.rh.toFixed(3) + ' = ' + (old.rh / old.rw).toFixed(3) + '배');
+    ok('[B2b] ⇒ 뿌리는 «테가 얇다» 가 아니라 «테가 축마다 다르다» — 현행 아트는 등방이다(671 수리 후)',
+      Math.max(art.dia.rw, art.dia.rh) / Math.min(art.dia.rw, art.dia.rh) <= 1.03,
+      'w ' + art.dia.rw.toFixed(3) + ' · h ' + art.dia.rh.toFixed(3));
     ok('[B3] 코인은 두 축이 같다 (등방 — 그래서 상자 하나로 ref 에 붙는다)',
       Math.max(art.gold.rw, art.gold.rh) / Math.min(art.gold.rw, art.gold.rh) <= 1.05,
       'w ' + art.gold.rw.toFixed(3) + ' · h ' + art.gold.rh.toFixed(3));
