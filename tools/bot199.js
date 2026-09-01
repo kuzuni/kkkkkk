@@ -1685,6 +1685,43 @@ function writeReport(rep) {
     const f0 = crossOf(pol, mode, WS[0]), fL = crossOf(pol, mode, WS[WS.length - 1]);
     return { sp, WS, swing: f0 && fL && fL.p50 > 0 ? '×' + (f0.p50 / fL.p50).toFixed(2) : '—' };
   };
+  /* ⚑⚑ 20회차(19-10 정정5·정정8 — ZZ 1순위 · 6회차째 미구현) — **말미 창 «안» 의 축별 기울기.**
+     ② 말미 한계 수급은 합계 하나뿐이라 «어느 축이 말미를 나르는가» 를 표가 못 말했고,
+     19-5 의 «② 예측이 −7.7~−10.8% 빗나갔다» 를 그 회차가 설명하지 못한 자리가 여기다
+     (14-7 2 `--dryknob` 와 같은 자리). 재료는 14회차부터 스냅에 실려 있었다(`inBy`) —
+     **한 번도 읽은 적이 없다.** 창·장부·통계는 `tailRate` 와 같은 것을 쓴다(표 두 벌 금지):
+     같은 W · 같은 실구간 · 시드별 차분의 p50. 합계는 [E2] 의 ② 유입 장부 줄과 맞대진다. */
+  const tailBy = (pol, wOpt) => {
+    const runs = rep.policies[pol];
+    const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
+                   : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));
+    const span = rep.days - Math.max(1, rep.days - W);
+    if (span <= 0) return null;
+    const acc = {}; let n = 0;
+    for (const r of runs) {
+      const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
+      const end = day(rep.days), w0 = day(Math.max(1, rep.days - W));
+      if (!end || !end.inBy || !w0 || !w0.inBy) continue;
+      n++;
+      const keys = {};
+      Object.keys(end.inBy).forEach(k => { keys[k] = 1; });
+      Object.keys(w0.inBy).forEach(k => { keys[k] = 1; });
+      Object.keys(keys).forEach(k => {
+        (acc[k] = acc[k] || []).push(((end.inBy[k] || 0) - (w0.inBy[k] || 0)) / span);
+      });
+    }
+    if (!n) return null;
+    /* 축이 어떤 시드에만 있으면 그 시드의 몫은 0 이다 — 안 채우면 p50 이 «그 축을 가진
+       시드만» 의 중앙값이 되어 축끼리 분모가 달라진다(9회차 장부 오차와 같은 병). */
+    const rows = Object.keys(acc).map(k => {
+      const v = acc[k].slice(); while (v.length < n) v.push(0);
+      return { k, p50: med(v) };
+    }).sort((a, b) => b.p50 - a.p50);
+    return { rows, tot: rows.reduce((a, b) => a + b.p50, 0), W, span, n };
+  };
+  /* ⚑ 20회차(19-10 정정1 — ZZ·AAA·AAB **3인 일치**) — [D] 가 잰 ① 판정 수를 [G] 가 그대로
+     싣게 하는 자리. 재계산하지 않는다(표 두 벌 금지 · 18회차가 ④ 에 쓴 것과 같은 규약). */
+  const JUDGE = {};
 
   for (const pol of Object.keys(rep.policies)) {
     const runs = rep.policies[pol];
@@ -1903,6 +1940,23 @@ function writeReport(rep) {
        스스로 널·간격을 데리고 다니게** 한다 — 아랫줄의 상세(창 합·산포)는 그대로 둔다. */
     const hitP50  = med(runs.map(hitOf));
     const spanP50 = med(runs.map(spanOf));
+    /* ⚑⚑ 20회차(19-10 정정1 — 3인 일치, 이 회차의 가장 큰 항) — **[D] 가 방금 잰 ① 을
+       [G] 대조표가 그대로 읽는다.** 19회차는 ④ 의 다리(부지런 교차 103.0)를 «①» 이라
+       부르고 «창 안» 이라 적었는데, 대조표에 ① 이 한 줄도 없어서 본문이 «어느 줄이 ①인가»
+       를 고를 수 있었다(17-1 정정3 «라벨 하나가 두 값» 의 재발 · 이번엔 제품 주석까지
+       옮겨 갔다). 값을 다시 계산하지 않고 이 순간의 것을 그대로 싣는 이유도 같다 —
+       재계산하면 자가 둘이 되고, 둘이 갈리는 날 본문이 또 고르게 된다. */
+    JUDGE[pol] = {
+      hit: hitP50, tgtN, nullE,
+      out:    med(runs.map(outOf)),
+      outIn:  med(runs.map(r => pairOf(r).outIn)),
+      outOut: med(runs.map(r => pairOf(r).outOut)),
+      extra:  med(runs.map(extraOf)),
+      dup:    med(runs.map(dupOf)),
+      first:  med(runs.map(firstOf)),
+      reach0: REACH[0] || 0,
+      span:   spanP50, spanT: SPAN_T,
+    };
     L.push(`**① 축 — 목표 칸 적중 p50 = ${hitP50}/${tgtN}`
       + ` (**널 기준선 ${nullE.toFixed(2)} 대비 ${(hitP50 - nullE) >= 0 ? '+' : ''}${(hitP50 - nullE).toFixed(2)}칸**`
       + `${hitP50 < nullE ? ' ⚠ **난수 산포 이하**' : ''}`
@@ -2075,6 +2129,50 @@ function writeReport(rep) {
       if (ws) L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${LEDGER[mode]} · p50〕 | ${ws.sp} — 흔들림 ${ws.swing} (W${ws.WS[0]}/W${ws.WS[ws.WS.length - 1]}) |`);
     }
     L.push('');
+    /* ⚑⚑ 20회차 — ② 말미 한계의 **분해**. 위 두 줄이 «얼마» 라면 이 표는 «어디서» 다.
+       [E] 의 축별 표는 전 기간 누적이라 일회성·초반 미션이 섞여 있어서 말미의 축 구성과
+       다르다 — 19-10 정정8 이 «누적 유입 +31.6% 인데 말미는 +0.44%» 로 잡은 그 어긋남이
+       이 두 표의 차이다. 여기 없으면 «수급을 어느 축에서 올릴까» 를 본문이 손으로 고른다. */
+    {
+      const tb = tailBy(pol);
+      if (tb) {
+        L.push(`### [E3] ② 말미 창 안 **축별 기울기** — ${P} 〔유입 장부 · 창 W${tb.W} · 실구간 ${tb.span}일 · 시드 ${tb.n} · p50〕`);
+        L.push('');
+        /* ⚠ 머리글 끝을 «대비» 로 두면 안 된다 — [8] 이 [G] 머리글을 `/비 \|$/` 로 찾는데
+           «목표 27만 대비 |» 가 그 정규식에 먼저 걸려 [E2]↔[G] 대조가 0/0 으로 비었다
+           (20회차 1차 실행 실측). 라벨에 단위를 붙여 끝을 가른다. */
+        L.push('| 축 | 말미 수급/일 | 말미 비중(%) | 목표 27만 대비(%) |');
+        L.push('|---|---|---|---|');
+        tb.rows.forEach(r => L.push(`| ${r.k} | ${fmtN(r.p50)} | ${pct(r.p50, tb.tot)} | ${(100 * r.p50 / GOAL_DAY).toFixed(1)}% |`));
+        L.push(`| **합** | **${fmtN(tb.tot)}** | 100% | **${(100 * tb.tot / GOAL_DAY).toFixed(1)}%** |`);
+        /* ⚑ 20회차 비평 AAD — 위 표는 **유입만** 분해하는데 ④ 의 판정 장부는 «유입 − 소환 외
+           씽크» 다(결2 ⓐ). 씽크는 스냅이 축별로 안 싣고 합계 `outNS` 하나뿐이라 분해가
+           불가능한데, 그 사실을 안 적으면 이 표가 판정 장부의 분해로 읽힌다. ⇒ 씽크를 한 줄로
+           같이 놓고 판정 장부 말미를 그 자리에서 짓는다(대조는 [E2] 의 소환 예산 줄). */
+        const sink = (() => {
+          const vals = [];
+          for (const r of runs) {
+            const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
+            const end = day(rep.days), w0 = day(Math.max(1, rep.days - tb.W));
+            if (!end || end.outNS == null || !w0 || w0.outNS == null) continue;
+            vals.push((end.outNS - w0.outNS) / tb.span);
+          }
+          return vals.length ? med(vals) : null;
+        })();
+        if (sink != null) {
+          L.push(`| _(참고) 소환 외 씽크 — **축별 분해 없음**(스냅이 합계 \`outNS\` 하나만 싣는다)_ | −${fmtN(sink)} | — | −${(100 * sink / GOAL_DAY).toFixed(1)}% |`);
+          L.push(`| **= 소환 예산 장부 말미**(④ 의 판정 장부 · 유입 − 씽크) | **${fmtN(tb.tot - sink)}** | — | **${(100 * (tb.tot - sink) / GOAL_DAY).toFixed(1)}%** |`);
+        }
+        L.push('');
+        /* 축의 p50 을 더한 값과 [E2] ② 유입 장부 줄(합계의 p50)은 **다를 수 있다** —
+           시드가 다르면 med(합) ≠ Σ med(축). 그 차를 자가 직접 찍는다(8회차 정정1 규약). */
+        const t2 = tailRate(pol, 'in');
+        if (t2) L.push(`_⚠ 합 ${fmtN(tb.tot)} = **축별 p50 의 합**이고 [E2] ② 유입 장부 줄 ${fmtN(t2.p50)} 는 **합계의 p50** 이다`
+          + ` — 시드가 다르면 med(합) ≠ Σ med(축)이라 어긋남 ${((tb.tot / (t2.p50 || 1) - 1) * 100).toFixed(2)}% 는 결함이 아니다.`
+          + ` 판정에는 [E2] 줄을 쓰고, 이 표는 **구성비**를 읽어라._`);
+        L.push('');
+      }
+    }
   }
 
   /* ⚑ 199 5회차 — [G] 정책 대조. 4회차 비평 ⓒ 는 «스윕 표에 정책비 열이 없어 ④ 가 창 밖으로
@@ -2082,7 +2180,20 @@ function writeReport(rep) {
      찍히게 한다 — 한 정책만 재면 ④ 는 언제나 사후에 발견된다. */
   {
     const pols = Object.keys(rep.policies);
-    if (pols.length > 1) {
+    /* ⚑⚑ 20회차(19-10 정정5 — ZZ 1순위 · 18회차 정정1 의 나머지 절반) — **«정책 둘» 가드를
+       걷었다.** 18회차가 ④ 교차·② 말미만 [E2] 로 빼 단일 정책도 찍게 했지만, ① 판정 ·
+       §0 ② «한 축 ≤50%» · ③ 순 이동 · «비» 는 여전히 이 가드 뒤에 있었다. 그래서 19회차의
+       d150(부지런)·d260(대충) 단일 실행 두 장에는 «비» 행이 아예 없었고, 본문이 **창이 다른
+       두 표의 값을 손으로 나눠**(196.0 ÷ 103.0 = 1.903) 판정 줄로 썼다 — 같은 문서가
+       «창을 바꾸면 부지런 추정이 +11.8% 어긋난다» 를 실측해 둔 바로 그 자리다.
+       ⇒ 표는 언제나 찍고, **못 재는 칸은 못 잰다고 자가 말한다**(빈칸도 «-» 도 아니다). */
+    const two = pols.length > 1;
+    /* 표 밖 손계산을 막는 문장은 «비 없음» 이 아니라 «다른 표끼리 나누지 마라» 여야 한다 —
+       19회차가 나눈 두 수는 각자 자기 표 안에서는 멀쩡한 실측이었다. */
+    /* 칸마다 긴 문장을 반복하면 표가 안 읽힌다 — 문장은 표 머리에 한 번, 칸에는 «못 잰다» 는
+       사실과 그 이유의 이름표만. 빈칸·«-» 로 두지 않는 것이 이 항의 전부다. */
+    const NORATIO = '— ⚠ **정책 1개 — 못 잰다**(다른 표끼리 나누지 마라 · 19-10 정정5)';
+    {
       /* ⚑ 199 5회차 비평 3인 일치 — «지속 수급» 의 장부가 회차마다 달라지면 ④ 를 못 잰다.
          1~4회차의 «지속» 은 **일회성 3종(시작 신규 지급 100만 · 가이드미션 60만 · 우편 30만)을
          전부 뺀** 값이고(그 자로 r4 부지런 268,527 · 대충 152,569 · 비 1.760), 5회차가 시작만
@@ -2172,8 +2283,10 @@ function writeReport(rep) {
         }));
         return per > 0 ? (GOAL_DIA - one) / per : 0;
       };
-      L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
+      L.push(`## [G] ${two ? '정책 대조' : '판정 표(정책 1개)'} — ① 벽 · ③ 순 이동 · ④ 정책 간격 (손잡이를 돌릴 때마다 같이 본다)`);
       L.push('');
+      if (!two)
+        L.push(`_⚠ **정책 1개 실행**(\`--policy=${pols[0]}\`) — 이 표의 «비» 칸은 **못 잰다**. 20회차부터 [G] 는 정책 하나에도 찍힌다(19-10 정정5): 못 재는 칸을 비워 두면 본문이 다른 표에서 값을 끌어와 나눈다._\n`);
       /* 10회차(정정10 — AA 처방3) — 판정 줄마다 **(장부 · 창 · 통계)** 라벨을 병기한다.
          9회차의 장부 수치 5곳 오차가 전부 «어느 장부·어느 창·어느 통계인가» 를 안 적어 생겼다. */
       L.push('| 축 | ' + pols.map(p => POLICIES[p].name).join(' | ') + ' | 비 |');
@@ -2207,9 +2320,41 @@ function writeReport(rep) {
          한 표에서 향이 섞이면 다음 회차가 역수를 그대로 읽는다 — 행마다 향을 적는다. */
       for (const [name, f, fmt, inv] of rows) {
         const v = pols.map(f);
-        const ratio = inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
-                          : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
+        const ratio = !two ? NORATIO
+                      : inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
+                            : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
         L.push(`| ${name} | ${v.map(fmt).join(' | ')} | ${ratio} |`);
+      }
+      /* ⚑⚑ 20회차(19-10 정정1 — 3인 일치) — **① 판정 줄.** 값은 [D] 헤드라인이 잰 그 순간의
+         것이다(`JUDGE` · 재계산 없음). 이 다섯 줄이 없던 동안 [G] 는 ②③④ 만 있는 표였고,
+         19회차가 ④ 의 다리를 «①» 이라 부른 것을 표가 반증할 방법이 없었다. */
+      if (pols.every(p => JUDGE[p])) {
+        const jrat = (f, inv) => {
+          if (!two) return NORATIO;
+          const v = pols.map(p => f(JUDGE[p]));
+          return inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
+                     : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
+        };
+        const jcell = (f) => pols.map(p => f(JUDGE[p])).join(' | ');
+        L.push(`| **① 목표 칸 적중 p50 〔달력 중앙 좌표 · ±20% · 1:1 배정 · [D] 헤드라인과 같은 자〕** | `
+          + jcell(j => `${j.hit}/${j.tgtN} — 널 ${j.nullE.toFixed(2)} 대비 ${(j.hit - j.nullE) >= 0 ? '+' : ''}${(j.hit - j.nullE).toFixed(2)}칸${j.hit < j.nullE ? ' ⚠ **난수 이하**' : ''}`)
+          + ` | ${jrat(j => j.hit - j.nullE)} |`);
+        L.push(`| **① 창 밖 벽 p50 = §0 의 «없어야 할 벽»**(사다리 안 / 밖) | `
+          + jcell(j => `${j.out} (안 ${j.outIn} · 밖 ${j.outOut})`) + ` | ${jrat(j => j.out)} |`);
+        L.push(`| ① 잉여 벽 p50 (그중 창 안 중복) | `
+          + jcell(j => `${j.extra} (중복 ${j.dup})`) + ` | ${jrat(j => j.extra)} |`);
+        L.push(`| ① 첫 벽(배정) p50 — 목표 = 첫 도달 가능 칸 | `
+          /* 13회차 JJ 규약 — **미정의는 미정의라고 적는다.** 배정 벽이 0개면 `firstOf` 는
+             «0분» 을 돌려주는데, 그것을 목표로 나누면 «−100.0%» 라는 측정치처럼 읽히는
+             수가 찍힌다(20회차 1차 실행의 대충 열이 실제로 그랬다 — 벽이 없는 것이지
+             0분에 벽이 선 것이 아니다). */
+          + jcell(j => j.first > 0
+            ? `${fmtN(j.first)}분 / 목표 ${fmtN(j.reach0)}분` + (j.reach0 ? ` = ${(100 * (j.first / j.reach0 - 1)) >= 0 ? '+' : ''}${(100 * (j.first / j.reach0 - 1)).toFixed(1)}%` : '')
+            : '— (미정의 · 배정 벽 0개)')
+          + ` | ${jrat(j => j.first)} |`);
+        L.push(`| ① 벽 간격 기하평균 p50 — 목표 ×(칸 사다리) | `
+          + jcell(j => j.span > 0 ? `×${j.span.toFixed(3)} / 목표 ×${j.spanT.toFixed(3)}` + (j.spanT > 0 ? ` = ${(100 * (j.span / j.spanT - 1)) >= 0 ? '+' : ''}${(100 * (j.span / j.spanT - 1)).toFixed(1)}%` : '') : '— (미정의 · 배정 벽 2개 미만)')
+          + ` | ${jrat(j => j.span)} |`);
       }
       /* ⚑ 13회차 — ④ 바로 위에 **그 외삽이 쓰는 기울기**를 놓는다. 두 줄을 나란히 읽으면
          «④ 가 왜 그 값인가» 가 나눗셈 한 번으로 검산된다: (목표 − 30일 누적) ÷ 이 값 + 30. */
@@ -2218,7 +2363,7 @@ function writeReport(rep) {
         const t = pols.map(p => tailRate(p, mode));
         if (t.every(x => !x)) continue;
         const cell = tailCell;    /* 18회차 — 함수 스코프의 공유 서식 */
-        const ratio = t[0] && t[1] && t[1].p50 ? (t[0].p50 / t[1].p50).toFixed(3) : '-';
+        const ratio = !two ? NORATIO : (t[0] && t[1] && t[1].p50 ? (t[0].p50 / t[1].p50).toFixed(3) : '-');
         const goalPct = t[0] ? ` — 목표 27만의 ${(100 * t[0].p50 / GOAL_DAY).toFixed(1)}%` : '';
         /* ⚑ 13회차 비평 JJ(R12) — 말미 창에 소환 외 씽크가 0 이면 두 장부가 **같은 수**다.
            정보량 0 인 줄이 판정 표에 두 줄로 서는 것보다 나쁜 것은, 그 동일성이 곧
@@ -2237,7 +2382,7 @@ function writeReport(rep) {
           continue;
         }
         const cell = crossCell;   /* 18회차 — 함수 스코프의 공유 서식 */
-        const ratio = c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : '-';
+        const ratio = !two ? NORATIO : (c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : '-');
         L.push(`| ${crossTitle(mode)} | ${c.map(cell).join(' | ')} | ${ratio} |`);
         /* ⚑ 13회차 — 같은 줄의 **말미 창 민감도**. 외삽 시드가 0 이면 W 가 안 쓰이므로 생략한다
            (전 시드 실측이면 W 를 흔들어도 같은 수다 — 그 사실 자체가 판정의 강도다). */
@@ -2249,6 +2394,18 @@ function writeReport(rep) {
           L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${nm} · p50〕 | ${wsA.map(x => x ? x.sp : '—').join(' | ')} | ${wsA[0].swing} (W${W0[0]}/W${W0[W0.length - 1]} · ${POLICIES[pols[0]].name}) |`);
         }
       }
+      /* ⚑⚑ 20회차(19-10 정정2 · 16-3 «최고 회차 대조» 상설 규약) — «이 루프에서 처음» 이라는
+         말이 **네 번** 재발했다(13-10 정정11 · 14-10 정정1 · 15-정정10 · 19-10 정정2). 규약을
+         문서에만 적어 두면 다음 회차는 그 문서를 안 읽고 자기 표만 본다 ⇒ **자가 판정 표
+         안에 최고 회차를 상설로 놓는다.** 값은 §8(8회차)의 ④ 세 수다 — 그 회차가 이 루프에서
+         유일하게 «3/3 창 안» 을 찍었다(1236·1266행). 회차가 «처음» 을 적으려면 이 줄과
+         나란히 놓아야 하고, 나란히 놓으면 그 말이 참인지 그 자리에서 갈린다. */
+      L.push(`| _⚑ **§8 대조(8회차 = 최고 회차 · 상설)** — «처음» 을 말하기 전에 이 줄과 맞대라_ | `
+        + pols.map(p => `_④ ${({ diligent: '102.1', casual: '190.1' })[p] || '—'}일 (3/3 창 안)_`).join(' | ')
+        /* ⚑ 20회차 비평 AAC(정정4) — 이 줄의 «비» 칸에 8회차의 1.861 을 **표식 없이** 넣었더니,
+           단일 정책 표에서 «다른 실행의 수가 비 칸에 앉는» 모양이 됐다 — 이 회차가 막겠다고
+           한 바로 그 경로다. 값은 남기되 **출처를 칸 자신이 말한다.** */
+        + ` | _§8(8회차)의 비 **1.861** — **이 실행의 수가 아니다**(대조용)_ |`);
       L.push('');
       L.push('_최대 유입 축의 이름 — ' + pols.map(p =>
         `${POLICIES[p].name}: 지속 «${topOf(p, true).name}» · 유입 «${topOf(p, false).name}»`).join(' / ') + '_');
