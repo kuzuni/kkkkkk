@@ -19157,12 +19157,16 @@ const cosStepAt = n => COS_STEP[Math.min(COS_STEP.length - 1,
                         Math.max(0, Math.floor((n - 1) / COS_STEP_EVERY)))];
 /* n 번째 코스튬의 축별 보유 효과(배수 −1) */
 const cosOwnStep = (k, n) => COS_OWN[k] * cosStepAt(n);
-/* 보유 총효과(축 → 배수). 1..보유수 의 계단을 전부 곱한다 */
-function cosOwnMul(k){
-  let m = 1, n = cosOwnCount();
-  for(let i = 1; i <= n; i++) m *= 1 + cosOwnStep(k, i);
-  return m;
-}
+/* 보유 총효과(축 → 배수 −1). 1..보유수 의 계단을 **전부 더한다**.
+   ⚑ 724(주인 확정 2026-09-02 04:05 «카테고리 안은 합») — 여기는 곱(`Π(1+step)`)이었다.
+     50종이면 ×117 이 되던 자리이고, 코스튬 카테고리의 «안» 이므로 합이 맞다.
+     반환 단위도 «배수» 에서 «배수 −1» 로 바뀌었다 — 강화 축(`cosLvVal`)과 같은 단위라
+     둘을 그냥 더해서 한 번만 곱할 수 있다(`bonus()` 의 코스튬 절). */
+const cosOwnSum = k => {
+  let s = 0, n = cosOwnCount();
+  for(let i = 1; i <= n; i++) s += cosOwnStep(k, i);
+  return s;
+};
 /* 표시용 순번 — 보유분은 AVATARS 순서 중 자기 등수, 미보유는 «지금 얻으면 받을» 다음 칸 */
 function cosOwnIdx(id){
   let n = 0;
@@ -21282,96 +21286,121 @@ let bonusCache = null, bonusDirty = true;
    전부 이 한 줄을 지나가므로(파생 캐시를 깨야 하니까) 호출부를 하나도 안 고치고 전 경로가 걸린다.
    상세·침묵 규칙은 아래 `cpTick` 절. */
 const markDirty = () => { bonusDirty = true; cpFxArm(); };
+/* ── 724 — 전 스탯 합성 모델(주인 확정 2026-09-02 04:05) ───────────────────────────
+   주인 원문: «장비 x 스킬 x 코스튬 x 펫 x 훈련 x 룬 x 단련 x 유물 이런식으로 돼야할거 같은데»
+     ⇒ 총배율 = (1+Σ장비)×(1+Σ스킬)×(1+Σ코스튬)×(1+Σ펫)×(1+Σ훈련)×(1+Σ룬)×(1+Σ단련)×(1+Σ유물)
+     ⇒ **카테고리 «안» 은 합 · 카테고리 «간» 은 곱.**
+   수리 전에는 스킬·장비 보유·펫 보유·코스튬 보유·유물 다섯이 **개체마다 곱**이었다
+   (`probe724` 실측 — 스킬 27종 Lv100 에서 합 모델의 **×1.79e8**. 주인이 본 «개같이 높다»).
+   ⚠ 카테고리는 **화면 이름이 아니라 «곱이 한 번 걸리는 단위»** 다 — 같은 카테고리를 두 번
+     적용하면(보유 따로 · 장착 따로) 그 자리에서 지수가 두 번 걸린다. 그래서 장비는 보유+장착,
+     펫은 보유+장착, 코스튬은 보유+강화가 **한 장부**다.
+   ⚠ `crit`·`cdmg` 는 배율이 아니라 **덧셈 축**이라 이 모델 밖이다(그대로 b 에 더한다). */
+const CAT_AXES = ['atk', 'hp', 'regen', 'gold', 'rate', 'pet'];
+const catSum   = () => ({ atk:0, hp:0, regen:0, gold:0, rate:0, pet:0 });
+/* 장부 하나를 닫는다 — 축마다 **한 번만** 곱한다(0 인 축은 건드리지 않는다) */
+const catApply = (b, c) => { for(const k of CAT_AXES) if(c[k]) b[k] *= 1 + c[k]; };
+/* 장비 부위 → 그 부위가 올리는 축(보유·장착이 같은 표를 본다) */
+const eqAxis = slot => slot === 'weapon' ? 'atk' : slot === 'shield' ? 'hp' : 'regen';
+
 function bonus(){
   if(!bonusDirty && bonusCache) return bonusCache;
   const b = { atk:1, hp:1, regen:1, gold:1, rate:1, pet:1, cdmg:0, crit:0 };
 
-  SKILLS.forEach(s => { if(has(s.id)) b.atk *= 1 + ownVal(s); });
-  PETS.forEach(p => { if(has(p.id)){ b.atk *= 1 + ownVal(p)*0.6; b.gold *= 1 + ownVal(p); } });
-  EQUIPS.forEach(e => {
-    if(!has(e.id)) return;
-    const v = 1 + ownVal(e);
-    if(e.slot === 'weapon') b.atk *= v; else if(e.slot === 'shield') b.hp *= v; else b.regen *= v;
-  });
-  SLOTS.forEach(s => {
-    const id = S.eqSlot[s.k];
-    if(!id || !has(id)) return;
-    const v = 1 + equipVal(EQ[id]);
-    if(s.k === 'weapon') b.atk *= v; else if(s.k === 'shield') b.hp *= v; else b.regen *= v;
-  });
-  /* 485 — 펫 «장착 효과 — 공격력 +n%». 장착 중인 펫(최대 3마리)의 값을 **합산해 한 번만** 곱한다.
-     ⚠ 마리마다 곱하면 (1+x)³ 이라 장비 3부위(부위마다 **다른 스탯** 하나씩)와 다른 축이 된다 —
-       주인 지시가 «장비랑 동일한 식» 이므로 «한 스탯에 한 번» 쪽을 따라 합산으로 넣는다.
-     보유 효과(`ownVal`)는 위에서 이미 별도로 곱했다 — 여기 것은 «끼워야 붙는» 축이다. */
+  /* ① 스킬 — 보유 효과만(장착 스킬은 `stat.dps` 로 간다) */
   {
-    let pe = 0;
-    S.eqPet.forEach(id => { const p = PT[id]; if(p && has(id)) pe += petEquipVal(p); });
-    if(pe > 0) b.atk *= 1 + pe;
+    const c = catSum();
+    SKILLS.forEach(s => { if(has(s.id)) c.atk += ownVal(s); });
+    catApply(b, c);
   }
-  /* 89 — 유물: 보유(= Lv ≥ 1)만으로 상시 적용. 장착 개념 없음 */
-  RELICS.forEach(r => {
-    if(!has(r.id)) return;
-    const v = relicVal(r);
-    if(r.eff === 'all'){ b.atk *= 1+v; b.hp *= 1+v; b.regen *= 1+v; b.gold *= 1+v; }
-    else if(r.eff === 'crit') b.crit += v;
-    else if(r.eff === 'cdmg') b.cdmg += v;
-    else if(r.eff === 'rate') b.rate *= 1+v;
-    else b[r.eff] *= 1+v;
-  });
-  /* 코스튬(구 «아바타») — 두 축이 결합 방식이 다르다(194 · LESSONS 91-1):
-     ① 보유 효과 — 코스튬마다 곱한다. **197 부터 «몇 번째로 얻었나» 에 따라 계단**(cosOwnMul).
-        50종 전부 ≈ ×113 공격력(194 의 ×117 과 같은 자리 — 총량은 두고 곡선 모양만 계단으로).
-     ② 강화 효과 — 보유분 레벨을 **전부 더한 뒤 한 번만** 곱한다(만렙 상한 ×101 공격력).
-        코스튬마다 곱하면 (1+2.0)^50 ≈ 7e23 이 되어 밸런스가 통째로 터진다. */
-  b.atk *= cosOwnMul('atk'); b.hp *= cosOwnMul('hp'); b.gold *= cosOwnMul('gold');
+  /* ② 펫 — 보유(ownVal ×0.6 = 공격 · ×1 = 골드) + 485 장착 효과가 한 장부다 */
   {
-    const n = cosLvSum();
-    if(n){ b.atk *= 1 + n*COS_LV.atk; b.hp *= 1 + n*COS_LV.hp; b.gold *= 1 + n*COS_LV.gold; }
+    const c = catSum();
+    PETS.forEach(p => { if(has(p.id)){ c.atk += ownVal(p)*0.6; c.gold += ownVal(p); } });
+    S.eqPet.forEach(id => { const p = PT[id]; if(p && has(id)) c.atk += petEquipVal(p); });
+    catApply(b, c);
   }
-  /* 203 룬 — 194 코스튬 강화와 **같은 규칙**: 세 룬의 효과를 축별로 먼저 더한 뒤 한 번만 곱한다
-     (룬마다 곱하면 만렙 셋에서 배율이 터진다 — LESSONS 91-1). 계단 배수는 `runeVal()` 안에 있다. */
+  /* ③ 장비 — 보유 + 장착(3부위)이 한 장부. 부위마다 축이 달라 축별로 따로 쌓인다 */
   {
-    const ra = runeSum('atk'), rh = runeSum('hp'), rg = runeSum('gold');
-    if(ra) b.atk  *= 1 + ra;
-    if(rh) b.hp   *= 1 + rh;
-    if(rg) b.gold *= 1 + rg;
+    const c = catSum();
+    EQUIPS.forEach(e => { if(has(e.id)) c[eqAxis(e.slot)] += ownVal(e); });
+    SLOTS.forEach(s => {
+      const id = S.eqSlot[s.k];
+      if(!id || !has(id)) return;
+      c[eqAxis(s.k)] += equipVal(EQ[id]);
+    });
+    catApply(b, c);
   }
-  /* 210 단련 — 168 선형 훈련·203 룬과 **겹치지 않는 별도 축**이다(주인 지시 ⓓ).
-     축별로 «포인트 × 계수» 를 한 번만 곱한다(축이 하나뿐이라 합칠 것이 없지만 규칙은 같다). */
+  /* ④ 유물 — 89: 보유(= Lv ≥ 1)만으로 상시 적용. 장착 개념 없음.
+     `crit`·`cdmg` 는 덧셈 축이라 장부를 안 지난다. */
   {
-    const ta = temperVal('atk'), th = temperVal('hp'), tr = temperVal('regen');
-    if(ta) b.atk   *= 1 + ta;
-    if(th) b.hp    *= 1 + th;
-    if(tr) b.regen *= 1 + tr;
+    const c = catSum();
+    RELICS.forEach(r => {
+      if(!has(r.id)) return;
+      const v = relicVal(r);
+      if(r.eff === 'all'){ c.atk += v; c.hp += v; c.regen += v; c.gold += v; }
+      else if(r.eff === 'crit') b.crit += v;
+      else if(r.eff === 'cdmg') b.cdmg += v;
+      else c[r.eff] += v;
+    });
+    catApply(b, c);
   }
-  /* 91 도감 — «받은 단계 수 × 단계당 값» 을 축별로 전부 더한 뒤 한 번만 곱한다.
-     (세트마다 곱하면 37세트가 전부 만단계일 때 공격력이 ×673 까지 튄다 — COLL_BASE 주석 참고) */
+  /* ⑤ 코스튬 — 보유 계단(`cosOwnSum`) + 강화(`cosLvVal`)가 **한 장부**다.
+     194·197 은 이 둘을 따로 곱했지만 724 의 모델에서 코스튬은 카테고리 하나다. */
   {
-    const cb = { atk:0, hp:0, gold:0, rate:0, pet:0, cdmg:0 };
+    const c = catSum();
+    ['atk', 'hp', 'gold'].forEach(k => { c[k] += cosOwnSum(k) + cosLvVal(k); });
+    catApply(b, c);
+  }
+  /* ⑥ 룬 — 203 규약(축별 합산 뒤 1회 곱)을 그대로 장부에 옮겼다 */
+  {
+    const c = catSum();
+    c.atk += runeSum('atk'); c.hp += runeSum('hp'); c.gold += runeSum('gold');
+    catApply(b, c);
+  }
+  /* ⑦ 단련 — 210: 168 선형 훈련·203 룬과 겹치지 않는 별도 카테고리 */
+  {
+    const c = catSum();
+    c.atk += temperVal('atk'); c.hp += temperVal('hp'); c.regen += temperVal('regen');
+    catApply(b, c);
+  }
+  /* ⑧ 도감 — 91 규약(«받은 단계 수 × 단계당 값» 을 축별로 더한 뒤 1회 곱).
+     주인의 8 카테고리 목록 밖이지만 **성격이 같은 별도 카테고리**라 같은 규칙으로 둔다. */
+  {
+    const c = catSum();
     COLL_SETS.forEach(st => {
       const n = collStep(st.key); if(!n) return;
-      Object.keys(st.eff).forEach(k => cb[k] += st.eff[k] * n);
+      Object.keys(st.eff).forEach(k => { if(k === 'cdmg') b.cdmg += st.eff[k] * n; else c[k] += st.eff[k] * n; });
     });
-    b.atk *= 1 + cb.atk; b.hp *= 1 + cb.hp; b.gold *= 1 + cb.gold;
-    b.rate *= 1 + cb.rate; b.pet *= 1 + cb.pet; b.cdmg += cb.cdmg;
+    catApply(b, c);
   }
-  /* 계급 보너스 (승급전) */
-  const rb = 1 + S.rank*0.25;
-  b.atk *= rb; b.hp *= rb;
+  /* ⑨ 계급 보너스(승급전) — 항이 하나뿐인 카테고리 */
+  {
+    const c = catSum();
+    c.atk += S.rank*0.25; c.hp += S.rank*0.25;
+    catApply(b, c);
+  }
   /* 88 — 스탯 포인트 분배·스탯 훈련 단계 배율 제거(구 세이브의 배율분은 보상 없이 소멸 —
      «밸런스 재측정» 단계에 «스탯 포인트 제거분» 으로 기록, 지시 ②). */
-  /* 23 훈련 단계 보너스 — 단계가 오를 때마다 공격력·체력·체력회복 각 +10% 누적 */
-  const tb = 1 + TRAIN_BONUS * (trainStage() - 1);
-  b.atk *= tb; b.hp *= tb; b.regen *= tb;
-
-  /* 34 축복 — 활성 축복만 곱하고, 3종 전부 활성이면 «보너스 축복»(골드)이 붙는다.
+  /* ⑩ 23 훈련 단계 보너스 — 단계가 오를 때마다 공격력·체력·체력회복 각 +10% 누적 */
+  {
+    const c = catSum(), tb = TRAIN_BONUS * (trainStage() - 1);
+    c.atk += tb; c.hp += tb; c.regen += tb;
+    catApply(b, c);
+  }
+  /* ⑪ 34 축복 — 활성 축복만 붙고, 3종 전부 활성이면 «보너스 축복»(골드)이 붙는다.
      만료는 시간으로 갈리므로 blessTick() 이 만료 순간에 markDirty() 를 불러 이 캐시를 깬다.
-     117 — 배율에 축복 레벨이 곱해진다(blessScale()). 레벨업은 activateBless() 가 markDirty() 로 캐시를 깬다. */
-  const bsc = blessScale();
-  if(blessOn('atk'))  b.atk  *= 1 + BLESS[0].v * bsc;
-  if(blessOn('hp'))   b.hp   *= 1 + BLESS[1].v * bsc;
-  if(blessOn('rate')) b.rate *= 1 + BLESS[2].v * bsc;
-  if(blessAll())      b.gold *= 1 + BLESS_GOLD * bsc;
+     117 — 배율에 축복 레벨이 곱해진다(blessScale()). 레벨업은 activateBless() 가 markDirty() 로 캐시를 깬다.
+     ⚠ 축마다 항이 하나씩이라 «안이 합» 이어도 값은 수리 전과 같다 — 그래도 장부를 지나게 둔다
+       (축복이 늘어나는 날 이 자리만 규약 밖으로 남는 것을 막는다). */
+  {
+    const c = catSum(), bsc = blessScale();
+    if(blessOn('atk'))  c.atk  += BLESS[0].v * bsc;
+    if(blessOn('hp'))   c.hp   += BLESS[1].v * bsc;
+    if(blessOn('rate')) c.rate += BLESS[2].v * bsc;
+    if(blessAll())      c.gold += BLESS_GOLD * bsc;
+    catApply(b, c);
+  }
 
   bonusCache = b; bonusDirty = false;
   return b;
@@ -33599,8 +33628,9 @@ function renderSkill(){
   h += '<div class="sk-gsp" style="height:' + (35 + Math.ceil(SKILLS.length/5)*220) + 'px"></div>';
   h += '</div>';
 
-  /* 7 총 보유 효과 — 전투력 계산과 같은 곱연산(1954행)으로 낸다 */
-  const tot = SKILLS.reduce((m, s) => has(s.id) ? m * (1 + ownVal(s)) : m, 1) - 1;
+  /* 7 총 보유 효과 — 724: `bonus()` 의 스킬 장부와 **같은 합연산**이다(05 장비 `wpnTotalOwn` 과 같은 꼴).
+     수리 전에는 여기만 Π−1 이라 장비 시트와 서로 다른 모델을 적고 있었다(`probe724` [4]). */
+  const tot = SKILLS.reduce((t, s) => has(s.id) ? t + ownVal(s) : t, 0);
   h += '<div class="sk-tot"><i class="ol3">총 보유 효과:</i><em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
   /* 8 버튼 2개 — [스킬 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §7, 작업 27) */
@@ -33704,8 +33734,8 @@ function renderPet(){
   h += '<div class="sk-gsp" style="height:' + (35 + Math.ceil(PETS.length/5)*220) + 'px"></div>';
   h += '</div>';
 
-  /* 7 총 보유 효과 — 스킬과 같은 곱연산 표시 */
-  const tot = PETS.reduce((m, s) => has(s.id) ? m * (1 + ownVal(s)) : m, 1) - 1;
+  /* 7 총 보유 효과 — 스킬 시트와 같은 합연산 표시(724) */
+  const tot = PETS.reduce((t, s) => has(s.id) ? t + ownVal(s) : t, 0);
   h += '<div class="sk-tot"><i class="ol3">총 보유 효과:</i><em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
   /* 8 버튼 2개 — [동료 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §26) */
@@ -33907,11 +33937,10 @@ function renderCos(){
   h += '<div class="cos-pad" style="top:' + (TOP + Math.ceil(AVATARS.length/5)*220 - 30) + 'px"></div>';
   h += '</div></div>';
 
-  /* 7 총 보유 효과 — bonus() 와 **같은 두 축**으로 낸다(194):
-     보유는 코스튬마다 곱하고, 강화는 레벨 총합에 한 번 곱한다. 두 식이 갈라지면 표기가 거짓이 된다.
-     197 — 보유 쪽은 계단(cosOwnMul)이 됐다. bonus() 와 **같은 함수**를 부른다(식을 두 벌 쓰지 않는다). */
-  const own1 = cosOwnMul('atk');
-  const tot  = own1 * (1 + cosLvVal('atk')) - 1;
+  /* 7 총 보유 효과 — bonus() 의 **코스튬 장부와 같은 식**으로 낸다.
+     724: 보유 계단(`cosOwnSum`)과 강화(`cosLvVal`)는 **한 카테고리**라 더한 뒤 한 번만 곱한다
+     (194·197 은 둘을 따로 곱했다). 두 식이 갈라지면 표기가 거짓이 된다 — 그래서 같은 함수를 부른다. */
+  const tot  = cosOwnSum('atk') + cosLvVal('atk');
   const nOwn = cosOwnCount();
   /* 520 — 주인 지시(«그 코스튬쪽에 + − 표시 없애셈») 로 **부호를 뺐다.** 값·식은 0줄이다
      (표기 = 실효 규약 156·346 그대로 — `pct(tot)` 는 한 글자도 안 바뀐다). ⚠ 이 자리는 «총효과:»
