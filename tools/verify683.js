@@ -133,8 +133,19 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   ok(/const u = \(\(\(\(j \+ 0\.5 \+ ph \+ rnd\(-RW_GAIN_JIT, RW_GAIN_JIT\)\)/.test(src)
      && /rwGainW = \(rwGainW \+ 0\.6180339887\) % 1/.test(src),
      'A6b ★ 갈래를 **알 수만큼 칸**으로 나누고 칸 자체가 버스트마다 황금비로 돈다(682 규약 — 2회차 신설)');
-  ok(/\.fx-spark\.fx-rlic\{/.test(code) && /filter:drop-shadow\(0 0 6px var\(--c/.test(code),
-     'A7 `.fx-rlic` 부품이 있고 `--c`(그 칸의 글로우 색)를 실제로 쓴다 — 죽은 값 0(295-②·399·460)');
+  /* ⚑ 4회차 — [A7] 이 «색을 쓰는가» 만 묻던 것을 **«문양이 밑바탕에서 서는가»** 까지로 넓혔다.
+     비평가 실측(알 코어 vs 둘레 링 휘도차 🐂 위 🐂 = 2.4% · 🫀 위 🫀 = 0.7%)이 말한 결손은
+     «색이 없다» 가 아니라 «윤곽이 없다» 였다 — 알이 자기가 올라탄 아이콘의 축소 복제본이라
+     같은 색 위에서 도형-바탕이 안 갈린다. ⇒ 네 방향 어두운 림을 요구한다(컬러 이모지는
+     `-webkit-text-stroke` 가 안 먹어 `drop-shadow` 스택이 유일한 외곽선 수단이다).
+     ⚠ 색(`--c`)은 여전히 **마지막**에 얹혀야 한다 — 순서가 뒤집히면 글로우가 림을 뭉갠다. */
+  const mFilt = code.match(/\.fx-spark\.fx-rlic\{[\s\S]{0,400}?filter:([^}]+)\}/);
+  const filt = mFilt ? mFilt[1] : '';
+  const rimN = (filt.match(/drop-shadow\([^)]*#0B0B0B\)/g) || []).length;
+  ok(/\.fx-spark\.fx-rlic\{/.test(code) && /var\(--c/.test(filt) && rimN >= 4
+     && filt.lastIndexOf('var(--c') > filt.lastIndexOf('#0B0B0B'),
+     'A7 ★ `.fx-rlic` 가 **네 방향 어두운 림**으로 문양을 오리고 그 칸 글로우 색을 **마지막에** 얹는다',
+     mFilt ? ('림 ' + rimN + '겹 · 색 ' + (/var\(--c/.test(filt) ? '있음' : '없음')) : '필터를 못 찾았다');
   ok(/function rwCardShown\(r\)\{/.test(src) && /rwCardShown\(r\)/.test(src),
      'A8 화면 밖 카드 가드가 있다(518 «쌩뚱맞은 곳에서 이펙트» 재발 방지)');
 
@@ -218,16 +229,28 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
     let bMax = 0;
     for (const q of g) {
       const t = Math.hypot(q.dx, q.dy);
-      const ink = Math.hypot(q.x + q.dx - cx, q.y + q.dy - cy) + q.w / 2;
+      /* ⚑ 4회차 — 「잉크」의 반폭은 **상자(`w`)가 아니라 글리프(`fs`)** 다. 상자는 투명한 여백을
+         포함하므로 그것으로 재면 «이웃 칸을 침범했는가»([C6])를 과하게 잡아 R1 을 부당하게 묶는다
+         ([D3] 이 `fs ≤ w` 를 이미 못박고 있으니 이쪽이 더 좁은 자가 아니라 **옳은 자**다). */
+      const ink = Math.hypot(q.x + q.dx - cx, q.y + q.dy - cy) + (q.fs || q.w) / 2;
       travTot++; minTrav = Math.min(minTrav, t);
       bMax = Math.max(bMax, ink); maxInk = Math.max(maxInk, ink);
       if (ink > NEIGH) farBad++;
     }
     burstN++; if (bMax > HALF) burstOut++;
   }
-  ok(travTot > 0 && minTrav >= 40,
-     'C4 ★ 모든 알이 **실제로 날아간다**(이동 ≥ 40px) — 1회차의 «14px = 붙은 데칼» 이 빨개지는 자리',
-     travTot ? '최소 이동 ' + Math.round(minTrav) + 'px' : '표본 0');
+  /* ⚑ 4회차 — 자를 «절대 px» 에서 **«자기 잉크 대비»** 로 옮겼다. 탄생 반경(`R0`)을 밀면 이웃 칸
+     상한(100.5) 때문에 절대 주행은 줄지만 «데칼이 아니다» 라는 **뜻**은 안 변한다 — 사람이 보는 것은
+     «제 몸보다 많이 갔는가» 다. **무르게 푼 것이 아님은 1회차 값이 새 자에서도 빨간 것으로 못박힌다**:
+     1회차 주행 14px / 잉크 21px = **0.67배** < 1.4. 지금은 35 / 24 = 1.46배. */
+  let minRatio = 1e9;
+  for (const b of BS) for (const q of b.born.filter(isGain)) {
+    const ink = q.fs || q.w;
+    if (ink > 0) minRatio = Math.min(minRatio, Math.hypot(q.dx, q.dy) / ink);
+  }
+  ok(travTot > 0 && minRatio >= 1.4,
+     'C4 ★ 모든 알이 **제 잉크보다 멀리 간다**(주행 ÷ 글리프 ≥ 1.4) — 1회차의 «0.67배 = 붙은 데칼» 이 빨개지는 자리',
+     travTot ? ('최소 비 ' + (minRatio === 1e9 ? '—' : minRatio.toFixed(2)) + ' · 최소 이동 ' + Math.round(minTrav) + 'px') : '표본 0');
   ok(burstN > 0 && burstOut === burstN,
      'C5 ★ 버스트마다 잉크가 **카드 테(반폭 75.5) 를 넘는다** — «카드 안에서만 논다» 가 아니다',
      burstOut + '/' + burstN + '버스트 · 최대 잉크 끝 ' + Math.round(maxInk) + 'px');
@@ -314,6 +337,96 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   });
   ok(!!closed && closed.n === 0 && closed.ret === false,
      'E1 ★ 닫힌 페이지에서는 획득 알 0 · 반환 false', closed ? ('알 ' + closed.n + ' · ret ' + closed.ret) : '측정 실패');
+
+  /* ── [G] 대비 — 찍힌 «알의 잉크» 가 밑바탕과 무관하게 갈리는가 ────────── */
+  /* ⚑⚑ 4회차 신설 — **두 회차를 연달아 8에서 막은 축이 이것 하나였다.** 3회차 비평가 둘이
+     독립으로 같은 결론을 냈다: 알이 «자기가 올라탄 아이콘의 축소 복제본» 이라 같은 색 위에서
+     도형-바탕이 안 갈린다(숙주 대비 Δ평균 ≤3~5% · peak Weber 0.07~0.26). 기하 축(①②③)은 8·9 인데
+     ④ 만 4·5 였다 — **자에 그 축이 아예 없었다.**
+     ⚠⚠ **이 자를 세 번 고쳐 썼다. 그 과정이 곧 이 절의 교훈이다:**
+       ① «숙주 상대 Weber» — **축이 뒤집힌다.** 카드 플래시가 흰 순간에는 흰 실루엣이 흰 배경 위라
+          값이 낮아져 «플래시가 밝을수록 연출이 나쁘다» 가 된다.
+       ② «알 상자 안 Michelson» — **평평한 값을 잰다.** 상자가 글리프보다 작으면 안이 통째로 흰
+          실루엣이라 max = min = 255 ⇒ **0.00**. 되레 «문양이 없는 3회차» 가 높게 나왔다.
+       ③ **차분**(지금 것) — 676-③ 규약 그대로. «알이 있는 화면» ↔ «`#fxl` 만 숨긴 같은 화면» 을
+          픽셀로 빼서 **바뀐 화소 = 알의 잉크** 를 고르고, 그 잉크의 휘도 폭을 잰다.
+          밑바탕이 무엇이든 «흰 실루엣(≈255) + 어두운 림(≈11)» 이면 폭이 넓고, 걷으면 좁아진다.
+          ⇒ 헛초록이 구조적으로 불가능하다(무엇이 알인지 자가 안 헷갈린다). */
+  blk('G] 대비 — 찍힌 «알의 잉크» 휘도 폭 (차분 · 문턱 170)');
+  const inkRange = async (drop) => {
+    const st = await ev(p, async (dropFx) => {
+      const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+      if (dropFx) {
+        const t = document.createElement('style'); t.id = '__v683norim';
+        t.textContent = '.fx-spark.fx-rlic{filter:none !important}';
+        document.head.appendChild(t);
+      } else { const o = document.getElementById('__v683norim'); if (o) o.remove(); }
+      /* ⚠⚠ **타이머를 먼저 얼린다.** 안 얼리면 `fxBye` 가 스크린샷을 찍는 수백 ms 사이에 알을
+         걷어 가서 «찍힌 그림에 알이 없다» 가 된다 — 이 자의 1차 판이 정확히 그래서 «바뀐 화소 0»
+         이었다(진단은 «.fx-rlic 6» 인데 그림엔 없는, 자기모순처럼 보이던 값). 원본은 되돌려 준다. */
+      if (!window.__v683to) { window.__v683to = window.setTimeout; window.__v683ri = window.requestAnimationFrame; }
+      window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
+      const it = summonRelic(true); if (!it) return null;
+      rwSummonFx(it, true, null);
+      try { document.getAnimations().forEach(a => {
+        const tg = a.effect && a.effect.target;
+        if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = 40; } catch (_) {} }
+        else { a.pause(); try { a.finish(); } catch (_) {} }
+      }); } catch (e) {}
+      const el = document.querySelector('[data-rw="' + it.id + '"]');
+      const r = el.getBoundingClientRect();
+      let nRlic = 0, nAll = 0;
+      for (const nd of L.children) { nAll++; if (/fx-rlic/.test(nd.className + '')) nRlic++; }
+      return { id: it.id, nRlic, nAll, open: document.getElementById('relw').classList.contains('on'),
+               box: { x: Math.round(r.x) - 40, y: Math.round(r.y) - 40,
+                      w: Math.round(r.width) + 80, h: Math.round(r.height) + 80 } };
+    }, drop);
+    if (!st) return null;
+    console.log('  ·  표본(' + (drop ? '걷음' : '넣음') + ') — 당첨 ' + st.id + ' · 획득 알 ' + st.nRlic
+                + ' · 레이어 자식 ' + st.nAll);
+    const withFx = (await p.screenshot()).toString('base64');
+    /* ⚠ 대조 화면에서는 **획득 알만** 걷는다 — 레이어를 통째로 숨기면 차분에 플래시·지불 알까지
+       섞여 «획득 알의 잉크» 가 아니게 된다(그리고 `visibility` 토글은 이 판에서 화면을 안 바꿨다). */
+    const gone = await ev(p, () => {
+      const L = document.getElementById('fxl'); let n = 0;
+      if (L) for (const nd of Array.prototype.slice.call(L.children))
+        if (/fx-rlic/.test(nd.className + '')) { nd.remove(); n++; }
+      return n;
+    });
+    const noFx = (await p.screenshot()).toString('base64');
+    if (!gone) return { n: 0, lo: 0, hi: 0, range: 0, note: '대조에서 걷은 알 0' };
+    return await ev(p, async ({ a, b, box }) => {
+      const load = u => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = 'data:image/png;base64,' + u; });
+      const ia = await load(a), ib = await load(b);
+      const mk = im => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+        c.getContext('2d').drawImage(im, 0, 0); return c.getContext('2d').getImageData(box.x, box.y, box.w, box.h).data; };
+      const da = mk(ia), db = mk(ib);
+      const lum = (d, i) => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      let lo = 255, hi = 0, n = 0;
+      for (let i = 0; i < da.length; i += 4) {
+        const va = lum(da, i), vb = lum(db, i);
+        if (Math.abs(va - vb) < 12) continue;          /* 안 바뀐 화소 = 알이 아니다 */
+        n++; lo = Math.min(lo, va); hi = Math.max(hi, va);
+      }
+      return { n, lo: Math.round(lo), hi: Math.round(hi), range: Math.round(hi - lo) };
+    }, { a: withFx, b: noFx, box: st.box });
+  };
+  const gOn = await inkRange(false);
+  info('알 잉크(실루엣+림)', gOn ? ('바뀐 화소 ' + gOn.n + ' · 휘도 ' + gOn.lo + '~' + gOn.hi + ' · 폭 ' + gOn.range) : '측정 실패');
+  ok(!!gOn && gOn.n > 200 && gOn.range >= 170,
+     'G1 ★ 알의 잉크가 **어두운 림 ~ 흰 실루엣** 양끝을 다 갖는다(휘도 폭 ≥ 170) — 밑바탕과 무관하게 문양이 오려진다',
+     gOn ? ('폭 ' + gOn.range + ' (' + gOn.lo + '~' + gOn.hi + ')') : '측정 실패');
+  const gOff = await inkRange(true);
+  info('알 잉크(실루엣·림 걷음 = 3회차 상태)', gOff ? ('바뀐 화소 ' + gOff.n + ' · 휘도 ' + gOff.lo + '~' + gOff.hi + ' · 폭 ' + gOff.range) : '측정 실패');
+  ok(!!gOn && !!gOff && gOff.range < gOn.range,
+     'G2 ★ 되돌림 — 실루엣·림을 걷으면 잉크의 휘도 폭이 좁아진다(이 자가 그 처방을 재고 있다는 증거)',
+     (gOff && gOn) ? ('걷음 ' + gOff.range + ' ↔ 넣음 ' + gOn.range) : '측정 실패');
+  await ev(p, () => {
+    const o = document.getElementById('__v683norim'); if (o) o.remove();
+    if (window.__v683to) { window.setTimeout = window.__v683to; window.requestAnimationFrame = window.__v683ri;
+      window.__v683to = null; window.__v683ri = null; }
+    const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+  });
 
   /* ── [F] 불변 — 등재문 요구 ③ · 지불 이미터 ──────────────────────── */
   blk('F] 불변 — 텍스트 0건(666) · 지불 이미터는 그대로 산다');
