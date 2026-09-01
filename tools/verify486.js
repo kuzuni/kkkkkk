@@ -197,7 +197,16 @@ const shot = page => page.evaluate(() => {
   }
 
   /* ══════════════════ [F] 58 플로터는 증가분 ══════════════════ */
-  sec('[F] 58 «+n» 플로터 — 증가분을 말한다(`.cv` 와 분리됐다)');
+  /* ⚑ 628(2026-09-01) — **축을 갈아 끼웠다**(333 처방 — 항을 지우거나 무르게 풀지 않는다).
+     486 은 «플로터 = 증가분» 을 세우면서 그 증가분을 `U.atk.val()` **기저**로 적었는데,
+     같은 작업이 알약(`.cv`)은 «지금 최종값»(`TRAIN_NOW` = `stat.*`)으로 옮겼다 —
+     한 카드 안에서 두 수가 서로 다른 자를 쓰게 된 자리다(`probe628` [B]: atk +21.7% ·
+     hp +19.3% · regen +16.7%). 486 의 «증가분을 말한다» 는 뜻은 그대로 두고,
+     **무엇의 증가분인가**만 알약과 같은 축으로 돌린다.
+     ⚠ 기대값을 제품 식으로 다시 적지 않는다 — **실제로 사서** 최종값의 전·후 차를 잰다.
+     ⚠ 그리고 [F0] 로 «옛 기저 축이 되살아나면 빨강» 을 같이 못박는다 — 이 한 줄이 없으면
+       «628 이 통째로 사라져도 초록인 게이트» 가 된다(328~330 의 이관 교훈). */
+  sec('[F] 58 «+n» 플로터 — 증가분을 말한다(`.cv` 와 분리됐다 · 628 최종값 축)');
   {
     const { ctx, page, errs } = await open(browser, SRC, save(12, 200));
     for (const qty of [1, 10, 30]) {
@@ -205,10 +214,21 @@ const shot = page => page.evaluate(() => {
         S.buyQty = q; S.gold = 1e30; markDirty(); renderTrain();
         const card = document.querySelector('#trCards [data-tr="atk"]');
         const bi = trainBuyInfo('atk');
-        const want = '+' + fmtB(U.atk.val(lv('atk') + bi.n) - U.atk.val(lv('atk')));
-        return { txt: trDeltaTxt(card), want, cv: card.querySelector('.cv i').textContent, n: bi.n };
+        const txt = trDeltaTxt(card);                    /* 구매 «전» 에 잡는 그 문자열 */
+        const cv = card.querySelector('.cv i').textContent;
+        /* 옛 축(기저) — 되살아나면 [F0] 이 빨개진다 */
+        const baseWant = '+' + fmtB(U.atk.val(lv('atk') + bi.n) - U.atk.val(lv('atk')));
+        const before = TRAIN_NOW.atk();
+        trainBuy('atk');
+        const d = TRAIN_NOW.atk() - before;
+        /* `fmtG` 는 floor 라 «전·후를 빼서» 잰 값은 부동소수 누적으로 한 칸 내려앉을 수 있다 */
+        return { txt, cv, baseWant, n: bi.n,
+                 want: '+' + fmtB(d), wantEps: '+' + fmtB(d * (1 + 1e-9)) };
       }, qty);
-      eq('  x' + qty + ' — 플로터 문구 = 증가분', r.txt, r.want);
+      ok(r.txt === r.want || r.txt === r.wantEps,
+         '  x' + qty + ' — 플로터 문구 = 실제 최종값 증분(628)', r.txt + ' ≟ ' + r.want);
+      ok(r.txt !== r.baseWant,
+         '  x' + qty + ' — [F0] 옛 «기저 증분» 축(«' + r.baseWant + '»)이 안 되살아났다');
       ok(r.txt !== r.cv, '  x' + qty + ' — 플로터가 알약 글자(«' + r.cv + '»)를 그대로 쓰지 않는다');
     }
     /* 상한에서는 안 띄운다(58 규약 유지) */
