@@ -33,6 +33,38 @@ const settled = async page => {
    30분으로 해줘 렙업되도», 2026-08-30)이 나중이므로 **456 이 이긴다** — 지속은 레벨을 안 읽는다.
    ⚠ 기대값만 갈아 끼우면 «지속이 통째로 사라져도 초록» 이 되므로, 30분이라는 **값 자체**를 §6 [6-e]
    («만료 = 마지막 발동 + 30분»)·[6-f](3종이 서로 같다)가 따로 단언하고 §R 이 되돌림을 못박는다. */
+/* ── 679(2026-09-01) — «카드 밖으로 새는 요소» 를 재는 자. 한 벌만 두고 본 측정·음성항·되돌림이
+   **같은 소스**를 쓴다(둘로 적으면 «음성항만 옛 규칙» 같은 헛초록이 난다).
+   `spillOf(card, clip)` — `clip=true` 면 «보이는 상자»(클리핑 조상과 교차한 나머지),
+   `clip=false` 면 옛 raw 상자. 판정은 카드 상자 ±1px. 자세한 사연은 §2 의 `spill` 주석. */
+const SPILL_SRC = `((c, clip) => {
+  const cb = c.getBoundingClientRect();
+  const out = ['stt', 'pil', 'bdg', 'rb'];
+  const vis = e => {
+    const b = e.getBoundingClientRect();
+    let r = { x: b.x, y: b.y, right: b.right, bottom: b.bottom };
+    if (!clip) return r;
+    for (let n = e.parentElement; n; n = n.parentElement) {
+      if (getComputedStyle(n).overflow !== 'visible') {
+        const nb = n.getBoundingClientRect();
+        r = { x: Math.max(r.x, nb.x), y: Math.max(r.y, nb.y),
+              right: Math.min(r.right, nb.right), bottom: Math.min(r.bottom, nb.bottom) };
+      }
+      if (n === c) break;
+    }
+    return r;
+  };
+  return [...c.querySelectorAll('*')].filter(e => {
+    if (out.some(k => e.closest('.' + k))) return false;
+    const b = e.getBoundingClientRect(); if (!(b.width > 0)) return false;
+    const r = vis(e);
+    if (r.right - r.x <= 0 || r.bottom - r.y <= 0) return false;   /* 통째로 잘렸다 */
+    return r.x < cb.x - 1 || r.right > cb.right + 1
+      || r.y < cb.y - 1 || r.bottom > cb.bottom + 1;
+  }).map(e => (e.className || e.tagName)
+    + (e.parentElement && e.parentElement.className ? '@' + e.parentElement.className : ''));
+})`;
+
 const B_KEYS = ['atk', 'hp', 'rate'];
 const B_DUR = 30 * 60 * 1000, B_MAXLV = 51;
 /* 500(2026-08-30) — 레벨업 «필요 경험치» 가 상수 하나에서 **레벨별 표**로 바뀌었다(주인 지시).
@@ -153,8 +185,9 @@ function safeElapsed(bless, until0, cands) {
   console.log('\n[2] 이용권 탭 — 카드 · 미보유 상태 (규격은 151, 여기선 공통 불변식만)');
   await page.click('#shopCats .shp-ct[data-cat="pass"]');
   await page.waitForTimeout(350); await settled(page);
-  const pv = await page.evaluate(() => {
+  const pv = await page.evaluate(SPILL_SRC => {
     const cds = [...document.querySelectorAll('#shopList .pvc')];
+    const spillOf = eval(SPILL_SRC);
     return {
       cat: shopCat, cls: document.getElementById('shopList').classList.contains('pass'),
       n: cds.length,
@@ -163,21 +196,25 @@ function safeElapsed(bless, until0, cands) {
       st: cds.map(c => c.querySelector('.stt>i').textContent),
       buy: cds.map(c => { const b = c.querySelector('[data-pvbuy]'); return b ? b.dataset.pvbuy : null; }),
       /* 카드 안 요소가 카드 밖으로 새지 않는지. 151 은 **상태 탭·알약·가치 배지·리본**이
-         레퍼런스대로 카드 밖으로 일부러 나온다(ref 탭 −27 · 알약 −25 · 리본 좌 −2 × k) */
-      spill: cds.map(c => {
-        const cb = c.getBoundingClientRect();
-        const out = ['stt', 'pil', 'bdg', 'rb'];
-        return [...c.querySelectorAll('*')].filter(e => {
-          if (out.some(k => e.closest('.' + k))) return false;
-          const b = e.getBoundingClientRect();
-          return b.width > 0 && (b.x < cb.x - 1 || b.right > cb.right + 1
-            || b.y < cb.y - 1 || b.bottom > cb.bottom + 1);
-        }).map(e => e.className || e.tagName);
-      }),
+         레퍼런스대로 카드 밖으로 일부러 나온다(ref 탭 −27 · 알약 −25 · 리본 좌 −2 × k)
+         ⚑ **679(2026-09-01) — 축이 «상자» 에서 «보이는 상자» 로 바뀌었다.**
+         이 자는 `getBoundingClientRect()` 하나만 보고 «샌다» 를 판정했는데, 그 상자는
+         **조상의 `overflow:hidden` 을 모른다**. 667 이 우변 물결 노치를 «구멍 + 덧댄 호» 로
+         올리면서(`c552a67`) `.pvc>.ntc{width:32px;overflow:hidden}` 안에 **64px 짜리 타원 링**
+         `<s>` 를 넣었다 — 오른쪽 절반이 카드 밖 좌표에 있지만 `.ntc` 가 잘라서 **화면에는 한
+         픽셀도 안 나온다**(설계 그대로: 타원 중심이 카드 우변 위라 왼쪽 절반만 쓴다).
+         ⚠ **항을 눌러 초록으로 만들지 않았다**(328-330 이관 교훈 — 그러면 헛초록이 된다).
+         축을 **«잘리고 남은 상자»** 로 바꿔 명제를 더 참되게 만들고, 무르게 푼 것이 아님을
+         아래 세 겹이 못 박는다: ⑴ raw 축을 버리지 않고 **래칫**으로 남겨 «잘려 있음이 확인된
+         자리» 밖의 새 넘침은 그대로 빨개진다 ⑵ 음성항(정말 새는 노드 주입) ⑶ §R2 되돌림
+         (`.ntc` 의 `overflow` 를 떼면 그 `<s>` 는 진짜로 새고 [2-s] 가 빨개진다). */
+      spill: cds.map(c => spillOf(c, true)),
+      /* 래칫 — 클리핑을 안 보는 옛 축. 값이 «.ntc>s 세 자리» 를 벗어나면 빨개진다 */
+      spillRaw: cds.map(c => spillOf(c, false)),
       wrapH: Math.round(document.querySelector('#shopList .cn-wrap.pv').getBoundingClientRect().height
         / (document.getElementById('app').getBoundingClientRect().width / 1080)),
     };
-  });
+  }, SPILL_SRC);
   ok('shopCat = pass · #shopList.pass', pv.cat === 'pass' && pv.cls, pv.cat + ' / ' + pv.cls);
   ok('이용권 카드 3장(151)', pv.n === 3, pv.n + '장');
   ok('124 의 옛 카드(.cn-cd.pv) 0장', pv.old === 0, pv.old + '장');
@@ -185,7 +222,42 @@ function safeElapsed(bless, until0, cands) {
   ok('전부 «비활성화»', pv.st.every(t => t === '비활성화'), pv.st.join(','));
   ok('구매 버튼 3개 (noads · abless · offplus)',
     pv.buy.join(',') === 'noads,abless,offplus', pv.buy.join(','));
-  ok('카드 밖으로 새는 요소 0 (의도한 돌출 제외)', pv.spill.every(a => a.length === 0), JSON.stringify(pv.spill));
+  ok('[2-s] 카드 밖으로 **보이게** 새는 요소 0 (의도한 돌출 제외 · 클리핑 반영 — 679)',
+    pv.spill.every(a => a.length === 0), JSON.stringify(pv.spill));
+  /* 679 래칫 — raw 축은 «잘려 있음이 확인된 자리» 하나만 허용한다. `.ntc>s` 는 667 의 물결
+     노치이고 `.ntc{overflow:hidden}` 가 오른쪽 절반을 자른다(위 주석). 그 밖의 raw 넘침이
+     새로 생기면 여기서 먼저 빨개져 «클리핑에 가려진 결함»(LESSONS 151-③)이 조용히 지나가지 않는다. */
+  ok('[2-s2] raw 넘침은 «잘려 있음이 확인된» .ntc>s 세 자리뿐 (래칫 — 679)',
+    pv.spillRaw.every(a => a.length === 1 && a[0] === 'S@ntc'),
+    JSON.stringify(pv.spillRaw));
+  /* 679 음성항 — 정말 새는 노드(클리핑 조상 없음)를 주입하면 [2-s] 가 빨개져야 한다.
+     안 그러면 «축을 바꾼 것» 이 아니라 «항을 끈 것» 이다. */
+  const neg = await page.evaluate(SPILL_SRC => {
+    const spillOf = eval(SPILL_SRC);
+    const c = document.querySelector('#shopList .pvc');
+    const mk = (parent, cls) => {
+      const s = document.createElement('div');
+      s.className = cls;
+      s.style.cssText = 'position:absolute;right:-80px;top:40px;width:60px;height:60px;background:#f0f';
+      parent.appendChild(s); return s;
+    };
+    /* ⓐ 카드 직속 = 자르는 조상이 없다 ⇒ 진짜로 샌다 ⇒ [2-s] 가 빨개져야 한다 */
+    const a = mk(c, 'v679nega');
+    const hitA = spillOf(c, true).filter(t => t.indexOf('v679nega') === 0).length;
+    a.remove();
+    /* ⓑ 같은 노드를 `.ntc`(overflow:hidden) 안에 넣으면 화면에 안 나오므로 «샌다» 가 아니다 */
+    const ntc = c.querySelector('.ntc');
+    const b = mk(ntc, 'v679negb');
+    const hitB = spillOf(c, true).filter(t => t.indexOf('v679negb') === 0).length;
+    const rawB = spillOf(c, false).filter(t => t.indexOf('v679negb') === 0).length;
+    b.remove();
+    return { hitA, hitB, rawB, clean: spillOf(c, true).length };
+  }, SPILL_SRC);
+  ok('[2-s3] 음성항 ⓐ — 안 잘리는 곳에 카드 밖 노드를 주입하면 [2-s] 가 잡는다 (679)',
+    neg.hitA === 1, '잡힌 수 ' + neg.hitA);
+  ok('[2-s4] 음성항 ⓑ — 같은 노드를 .ntc(overflow:hidden) 안에 넣으면 «보이는 넘침» 0 · raw 는 1 (679)',
+    neg.hitB === 0 && neg.rawB === 1, '보임 ' + neg.hitB + ' / raw ' + neg.rawB);
+  ok('[2-s5] 주입을 걷으면 다시 0 (679)', neg.clean === 0, neg.clean + '건');
   ok('페이지 높이 = 카드 3장을 담는다(≥2000)', pv.wrapH >= 2000, pv.wrapH + 'px');
 
   /* ================= 3. 588 — 다이아 경로가 아예 없다 =================
@@ -487,6 +559,31 @@ function safeElapsed(bless, until0, cands) {
   ok('[R5] 그 되돌림을 걷으면 다시 초록',
     rr.good2.lv === wantR.lv && rr.good2.prog === wantR.prog && rr.good2.n === wantR.fires,
     'Lv' + rr.good2.lv + '·' + rr.good2.prog + '/' + needAt(rr.good2.lv) + ' · ' + rr.good2.n + '회');
+
+  /* ===== [R6] 679 되돌림 시험 — 「새는 요소」 축이 무르게 풀린 것이 아님을 못 박는다 =====
+     `.ntc` 의 `overflow:hidden` 을 떼면 667 의 64px 타원 링 `<s>` 는 **정말로** 카드 밖 32px 에
+     그려진다 ⇒ [2-s] 가 빨개져야 한다. 걷으면 다시 0. 이 항이 없으면 «클리핑을 본다» 는 새 축이
+     «아무것도 안 본다» 와 구별되지 않는다(334 처방). */
+  console.log('\n[R6] 679 되돌림 — .ntc 의 클리핑을 떼면 물결 노치가 진짜로 샌다');
+  await page.evaluate(() => { document.querySelector('#shopCats [data-cat="pass"]').click(); });
+  await page.waitForTimeout(350); await settled(page);
+  const r2 = await page.evaluate(SPILL_SRC => {
+    const spillOf = eval(SPILL_SRC);
+    const cds = [...document.querySelectorAll('#shopList .pvc')];
+    const before = cds.map(c => spillOf(c, true).length);
+    const st = document.createElement('style');
+    st.id = 'v679r2'; st.textContent = '#shopw .pvc>.ntc{overflow:visible !important}';
+    document.head.appendChild(st);
+    const off = cds.map(c => spillOf(c, true));
+    st.remove();
+    const after = cds.map(c => spillOf(c, true).length);
+    return { before, off, offN: off.map(a => a.length), after };
+  }, SPILL_SRC);
+  ok('[R6-a] 되돌림 전 «보이는 넘침» 0', r2.before.every(n => n === 0), JSON.stringify(r2.before));
+  ok('[R6-b] .ntc 클리핑을 떼면 카드마다 그 <s> 가 «샌다» 로 잡힌다',
+    r2.offN.every(n => n === 1) && r2.off.every(a => a[0] === 'S@ntc'),
+    JSON.stringify(r2.off));
+  ok('[R6-c] 되돌림을 걷으면 다시 0', r2.after.every(n => n === 0), JSON.stringify(r2.after));
 
   /* ================= 9. 콘솔 ================= */
   console.log('\n[9] 콘솔');
