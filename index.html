@@ -21420,10 +21420,30 @@ const CP_FX_MS = 420;
 let cpPrev = 0, cpOpen = false, cpAt = 0, cpReady = false;
 function cpFxInit(){ cpPrev = cp(); cpOpen = false; cpReady = true; }
 function cpFxArm(){ if(!cpReady) return; cpOpen = true; cpAt = performance.now(); }
+/* ⚑ 677 — «홀드가 살아 있는가» 를 **직접** 묻는다(제품 상태 4개 · 새 축 0개).
+   324 는 위 머리말대로 «창은 홀드가 멎은 뒤에만 닫힌다» 를 뜻했는데, 그것을 **시간**으로만
+   흉내 냈다(공백 예산 = CP_FX_MS 420 − TR_HOLD_DELAY 350 = **70ms**). 그 예산의 근거인 350 은
+   `setTimeout(trHoldTick, TR_HOLD_DELAY)` 의 **선언값**이고 실제로 굴러가는 값이 아니다 —
+   `probe677` 실측: 첫 발↔첫 반복의 실제 공백은 **384~497ms**(타이머 지연 +34~+147ms)라
+   8회 중 3~6회가 420 을 넘겼다. 넘긴 구간에 루프 틱이 떨어지면 창이 **홀드 한복판에서** 닫혀
+   토스트가 한 장 더 난다 — `verify619` [D1] 이 «2장» 으로 본 그림이고, 틱이 그 좁은 틈에
+   떨어지느냐가 운이라 **간헐적**이었다(같은 트리에서 초록·빨강이 섞였다).
+   ⇒ 상수를 키우는 길은 안 골랐다. 지연에 상한이 없어 어떤 값을 적어도 같은 경주가 남고,
+     키운 만큼 «손을 뗀 뒤 토스트까지» 도 같이 늘어난다. 홀드 상태는 이미 제품 안에 있으므로
+     그것을 읽는다(338 «등가식으로 쓰고 축을 새로 안 만든다»).
+   ⚠ 324 의 «홀드는 합계 1장» 은 주인 승인 설계다 — 이 줄은 그 설계를 **지키는** 쪽이다(무르게
+     푼 것이 아니다). 홀드가 끝나면 그 다음 틱부터 종전대로 420ms 를 재고 닫는다.
+   ⚠ 화살표 상수가 아니라 **함수 선언**이다 — `upFx` 와 같은 이유로 자가 이 한 줄만 무력화해
+     «되돌림 시험» 을 돌릴 수 있어야 한다(`verify677` [R]). const 로 적으면 그 시험이 불가능하다.
+   ⚠ 홀드 상태 넷을 **다 읽는다** — 훈련 카드(`trHold`) · 룬·단련(`rtHold`) · 강화 버튼(`upHold`) ·
+     유물(`rwHold`). [D1] 이 본 자리는 훈련 하나지만 기계는 넷이 같고, 하나만 적으면 나머지 셋에
+     같은 결함이 그대로 남는다(402 «표가 아니라 파생으로» 와 같은 이유). */
+function cpHolding(){ return !!(trHold || rtHold || upHold || rwHold); }
 function cpTick(now){
   if(!cpReady) return;
   if(!cpOpen){ cpPrev = cp(); return; }          /* 묶음이 닫혀 있는 동안만 기준선이 따라 오른다 */
   if(now - cpAt < CP_FX_MS) return;              /* 홀드가 멎기 전에는 닫지 않는다 */
+  if(cpHolding()){ cpAt = now; return; }         /* 677 — 홀드가 살아 있으면 창을 다시 무장한다 */
   cpOpen = false;
   const v = cp(), d = v - cpPrev;
   cpPrev = v;
