@@ -1,8 +1,16 @@
-/* 작업 153 — «상점 구매품은 전부 우편함으로 지급 · 상점발 우편은 보관 기간 무한» 회귀 게이트.
+/* 작업 153 — 회귀 게이트.
  *   node tools/verify153.js
  *
+ * ⚑ **697(2026-09-02, 주인 지시 «걍 상점에서 구매한거 걍 다 즉시 지급으로 하자 우편함 말고»)이
+ *   이 행의 앞쪽 절반을 뒤집었다.** 333 처방대로 **항을 지우지 않고 방향만** 뒤집었다:
+ *   [A]·[B]·[E] 는 이제 «우편으로 가는가» 가 아니라 «즉시 지급되는가» 를 같은 세 경로에서 묻고,
+ *   153 의 뒤쪽 절반(«상점발 우편은 보관 기간 무한» = [C]·[D]·[F])은 **그대로 산다** —
+ *   이미 우편함에 있는 옛 상점 통과 180 월별 다이아가 그 규약 위에서 계속 돌기 때문이다
+ *   (주인 «기존 우편 소급 삭제 금지»). 그래서 [C]·[D] 의 표본만 «구매» 에서 «옛 통 주입» 으로 옮겼다.
+ *
  * 주인 지시(2026-08-27) 원문: «상점에서 구매한 것들은 전부 우편함으로 지급, 상점 구매분은
- * 우편함 기간 무한». 구현은 `sendMail()` 한 곳으로 모았고 대상은 **지급품(재화·패키지)** 이다.
+ * 우편함 기간 무한». 앞 절은 697 이 폐지했고, 뒤 절(«기간 무한»)은 남은 통에 그대로 적용된다.
+ * 697 이후 세 경로의 지급은 `grantNow()` 한 곳으로 모인다(`sendMail` 과 같은 보상 표를 읽는다):
  *   · 다이아 상품 5종 `grantDiaPack()`  — 다이아 + 마일리지 쿠폰
  *   · 마일리지 교환 `mileageExchange()` — 다이아
  *   · 유물조각 교환 `[data-ex]`          — 유물조각
@@ -10,12 +18,12 @@
  * 물건이 아니라 계정 권한이라 즉시 반영 · 광고 상품(COIN_ADS)은 «구매» 가 아니라 무료 수령.
  *
  * 다섯 겹으로 본다:
- *   [A] 정적 — 세 경로의 본문에 «직접 가산»(S.dia +=, S.relic +=, S.mileage =) 이 되살아났는가.
- *   [B] 지급 — 구매 «직전/직후» 를 같은 tick 에서 재서 재화 Δ가 0 이고 우편이 1통 늘었는가.
- *              그리고 그 우편을 받으면 그제서야 정확히 그 수량이 들어오는가.
- *   [C] 무한 보관 — 미수령 상점 우편이 [읽음 전체 삭제]·세이브 라운드트립을 넘어 살아남는가.
+ *   [A] 정적 — 세 경로가 `sendMail` 을 안 지나고 지급이 그 자리에 있는가 (697 이관)
+ *   [B] 지급 — 구매 «직전/직후» 를 같은 tick 에서 재서 재화가 **상품 표대로** 늘고 우편은 0인가 (697 이관)
+ *   [C] 무한 보관 — 미수령 상점 우편이 [읽음 전체 삭제]·세이브 라운드트립을 넘어 살아남는가
+ *                  (표본 = 옛 세이브에 남아 있던 통 · 697 이후 «새로 생기지 않는다» 는 [B] 몫)
  *   [D] 실제 클릭 — 우편함 [받기] 버튼을 진짜로 눌러 지급이 되는가(핸들러가 연결돼 있는가).
- *   [E] 과교정 방지 — 이용권 구매는 여전히 «즉시» 권한이 서는가.
+ *   [E] 과교정 방지 — 이용권은 권한도 재화도 **둘 다 즉시**인가 (697 보강3 이관)
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -65,33 +73,36 @@ async function open(browser) {
   const browser = await launch(chromium);
   try {
     /* ================= [A] 정적 — 직접 가산이 되살아났는가 ================= */
-    console.log('[A] 정적 — 구매 경로에 «직접 가산» 이 없는가');
+    console.log('[A] 정적 — 구매 경로가 우편을 안 지나고 그 자리에서 지급하는가(697)');
     const bGrant = body('function grantDiaPack(p)');
     const bMile  = body('function mileageExchange()');
     bGrant ? ok('grantDiaPack 본문 확보') : fail('grantDiaPack 본문을 못 찾았다');
     bMile  ? ok('mileageExchange 본문 확보') : fail('mileageExchange 본문을 못 찾았다');
     if (bGrant) {
-      /^[\s\S]*$/.test(bGrant) && !/S\.dia\s*\+=/.test(bGrant)
-        ? ok('grantDiaPack — S.dia 직접 가산 없음')
-        : fail('grantDiaPack 이 S.dia 를 직접 더한다 — 153 회귀');
-      !/S\.mileage\s*=\s*\(S\.mileage/.test(bGrant)
-        ? ok('grantDiaPack — 쿠폰 직접 가산 없음')
-        : fail('grantDiaPack 이 마일리지 쿠폰을 직접 더한다 — 153 회귀');
-      /sendMail\(/.test(bGrant) ? ok('grantDiaPack — sendMail 경유') : fail('grantDiaPack 이 sendMail 을 안 쓴다');
+      !/sendMail\(/.test(bGrant) ? ok('grantDiaPack — sendMail 안 지난다(697)')
+                                 : fail('grantDiaPack 이 다시 우편으로 보낸다 — 697 회귀');
+      /grantNow\(/.test(bGrant) ? ok('grantDiaPack — grantNow 경유(즉시 지급)')
+                                : fail('grantDiaPack 이 grantNow 를 안 쓴다 — 697 회귀');
     }
     if (bMile) {
-      !/S\.dia\s*\+=/.test(bMile) ? ok('mileageExchange — S.dia 직접 가산 없음')
-                                  : fail('mileageExchange 가 S.dia 를 직접 더한다 — 153 회귀');
-      /sendMail\(/.test(bMile) ? ok('mileageExchange — sendMail 경유') : fail('mileageExchange 가 sendMail 을 안 쓴다');
+      !/sendMail\(/.test(bMile) ? ok('mileageExchange — sendMail 안 지난다(697)')
+                                : fail('mileageExchange 가 다시 우편으로 보낸다 — 697 회귀');
+      /grantNow\(/.test(bMile) ? ok('mileageExchange — grantNow 경유(즉시 지급)')
+                               : fail('mileageExchange 가 grantNow 를 안 쓴다 — 697 회귀');
     }
     /* 유물조각 교환은 핸들러 안 블록이라 근처 창으로 본다 */
     const exI = SRC.indexOf("const ex = EXCHANGE.find(");   /* 490 — 키로 찾는다(구: 가격) */
-    const exW = exI >= 0 ? SRC.slice(exI, exI + 900) : '';
+    /* ⚠ 창을 **주석 제거 후** 본다 — 697 의 설명 주석이 «`ex.mail` 은 선언째 사라졌다» 라고
+       적고 있어서, 날것 창으로 grep 하면 «갈래가 되살아났다» 로 잘못 읽힌다(1회차에 실제로 그랬다). */
+    const exW = exI >= 0 ? SRC.slice(exI, exI + 1200).replace(/\/\*[\s\S]*?\*\//g, ' ') : '';
     exI >= 0 ? ok('유물조각 교환 블록 확보') : fail('유물조각 교환 블록을 못 찾았다');
     if (exI >= 0) {
-      !/S\.relic\s*\+=/.test(exW) ? ok('유물조각 교환 — S.relic 직접 가산 없음')
-                                  : fail('유물조각 교환이 S.relic 을 직접 더한다 — 153 회귀');
-      /sendMail\(/.test(exW) ? ok('유물조각 교환 — sendMail 경유') : fail('유물조각 교환이 sendMail 을 안 쓴다');
+      /S\[ex\.k\]\s*=/.test(exW) ? ok('유물조각 교환 — 그 자리에서 지급한다(697)')
+                                : fail('유물조각 교환이 지급을 안 한다 — 697 회귀');
+      !/sendMail\(/.test(exW) ? ok('유물조각 교환 — sendMail 안 지난다(697)')
+                              : fail('유물조각 교환이 다시 우편으로 보낸다 — 697 회귀');
+      !/ex\.mail/.test(exW) ? ok('유물조각 교환 — 죽은 `ex.mail` 갈래가 없다(333·399)')
+                            : fail('`ex.mail` 갈래가 되살아났다 — 697 회귀');
     }
     /* 삭제가 «수령 완료» 만 고르는가 — 무한 보관의 뿌리 */
     const bDel = body('function delReadMail()');
@@ -102,33 +113,26 @@ async function open(browser) {
     const d = await open(browser);
 
     /* ================= [B] 지급 — 구매는 우편으로만 ================= */
-    console.log('[B] 지급 — 구매 즉시 재화 Δ0 · 우편 1통 · 수령 시 정확히 지급');
+    console.log('[B] 지급 — 구매 그 틱에 상품 표대로 · 새 우편 0 (697 이관)');
 
     /* B-1 다이아 패키지 d5(다이아 1,000,000 · 쿠폰 2) */
     const b1 = await d.page.evaluate(() => {
       S.mailx = []; S.mailSeq = 0; S.mail = {}; S.mileage = 0;
       const p = DIA_PACKS.find(x => x.id === 'd5');
       const d0 = S.dia, m0 = S.mileage || 0, paid0 = S.cnt.paid || 0, n0 = S.mailx.length;
+      const g0 = S.gold, r0 = S.relic;
       devBuyDia('d5');
       const after = { dDia: S.dia - d0, dCp: (S.mileage || 0) - m0,
-                      dPaid: (S.cnt.paid || 0) - paid0, dMail: S.mailx.length - n0 };
-      const mail = S.mailx[S.mailx.length - 1];
-      const c0 = S.dia, cp0 = S.mileage || 0;
-      claimMail(mail.id);
-      return { want: { dia: p.dia, cp: p.cp }, after,
-               mail: { c: mail.c, m: mail.m, g: mail.g, r: mail.r, id: mail.id },
-               claimed: { dDia: S.dia - c0, dCp: (S.mileage || 0) - cp0, state: S.mail[mail.id] } };
+                      dPaid: (S.cnt.paid || 0) - paid0, dMail: S.mailx.length - n0,
+                      dGold: S.gold - g0, dRel: S.relic - r0 };
+      return { want: { dia: p.dia, cp: p.cp }, after };
     });
-    eq('d5 구매 직후 ΔS.dia', b1.after.dDia, 0);
-    eq('d5 구매 직후 Δ쿠폰', b1.after.dCp, 0);
-    eq('d5 구매 직후 Δ우편 통수', b1.after.dMail, 1);
+    eq('d5 구매 직후 ΔS.dia', b1.after.dDia, b1.want.dia);
+    eq('d5 구매 직후 Δ쿠폰', b1.after.dCp, b1.want.cp);
+    eq('d5 구매 직후 Δ우편 통수', b1.after.dMail, 0);
     eq('d5 구매 직후 Δ결제 카운터', b1.after.dPaid, 1);
-    eq('d5 우편 보상 다이아', b1.mail.c, b1.want.dia);
-    eq('d5 우편 보상 쿠폰', b1.mail.m, b1.want.cp);
-    eq('d5 우편 보상 골드·유물', [b1.mail.g, b1.mail.r], [0, 0]);
-    eq('d5 수령 후 ΔS.dia', b1.claimed.dDia, b1.want.dia);
-    eq('d5 수령 후 Δ쿠폰', b1.claimed.dCp, b1.want.cp);
-    eq('d5 우편 상태(1=수령 완료)', b1.claimed.state, 1);
+    /* 표 밖의 재화가 따라 늘면 «표대로» 가 아니다 — 음성항 */
+    eq('d5 구매가 안 준 재화(골드·유물)', [b1.after.dGold, b1.after.dRel], [0, 0]);
 
     /* B-2 마일리지 교환 */
     const b2 = await d.page.evaluate(() => {
@@ -136,17 +140,12 @@ async function open(browser) {
       const d0 = S.dia, n0 = S.mailx.length;
       const r = mileageExchange();
       const after = { r, dDia: S.dia - d0, cp: S.mileage, dMail: S.mailx.length - n0 };
-      const mail = S.mailx[S.mailx.length - 1];
-      const c0 = S.dia;
-      claimMail(mail.id);
-      return { want: MILE_DIA, after, mailC: mail.c, dClaim: S.dia - c0 };
+      return { want: MILE_DIA, after };
     });
     eq('마일리지 교환 반환값', b2.after.r, true);
-    eq('교환 직후 ΔS.dia', b2.after.dDia, 0);
+    eq('교환 직후 ΔS.dia', b2.after.dDia, b2.want);
     eq('교환 직후 남은 쿠폰', b2.after.cp, 0);
-    eq('교환 직후 Δ우편 통수', b2.after.dMail, 1);
-    eq('교환 우편 보상 다이아', b2.mailC, b2.want);
-    eq('교환 수령 후 ΔS.dia', b2.dClaim, b2.want);
+    eq('교환 직후 Δ우편 통수', b2.after.dMail, 0);
 
     /* B-3 유물조각 교환 — 진짜 카드 버튼을 클릭한다 */
     const b3 = await d.page.evaluate(async () => {
@@ -160,26 +159,25 @@ async function open(browser) {
       const d0 = S.dia, r0 = S.relic, n0 = S.mailx.length;
       btn.click();
       const after = { dDia: S.dia - d0, dRel: S.relic - r0, dMail: S.mailx.length - n0 };
-      const mail = S.mailx[S.mailx.length - 1];
-      const rr = S.relic;
-      claimMail(mail.id);
-      return { want: { dia: ex.dia, rel: ex.rel }, after, mailR: mail.r, dClaim: S.relic - rr };
+      return { want: { dia: ex.dia, rel: ex.rel }, after };
     });
     if (b3.err) fail(b3.err);
     else {
       eq('유물조각 교환 직후 ΔS.dia', b3.after.dDia, -b3.want.dia);
-      eq('유물조각 교환 직후 ΔS.relic', b3.after.dRel, 0);
-      eq('유물조각 교환 직후 Δ우편 통수', b3.after.dMail, 1);
-      eq('유물조각 우편 보상', b3.mailR, b3.want.rel);
-      eq('유물조각 수령 후 ΔS.relic', b3.dClaim, b3.want.rel);
+      eq('유물조각 교환 직후 ΔS.relic', b3.after.dRel, b3.want.rel);
+      eq('유물조각 교환 직후 Δ우편 통수', b3.after.dMail, 0);
     }
 
     /* ================= [C] 무한 보관 ================= */
-    console.log('[C] 보관 무한 — 미수령 상점 우편은 삭제·재기동을 넘어 남는다');
+    console.log('[C] 보관 무한 — 옛 미수령 상점 우편은 삭제·재기동을 넘어 남는다');
+    /* 697 — 구매가 더는 우편을 만들지 않으므로 표본은 **옛 세이브에 남아 있던 통**이다
+       (주인 «기존 우편 소급 삭제 금지» 가 지키라고 한 바로 그것). 153 스키마 그대로 주입한다. */
     const c1 = await d.page.evaluate(() => {
       S.mailx = []; S.mailSeq = 0; S.mail = {};
-      devBuyDia('d1');                       /* 미수령 상점 우편 1통 */
-      devBuyDia('d2'); const keep = S.mailx[1].id;
+      const oldMail = id => { const p = DIA_PACKS.find(x => x.id === id);
+        return sendMail({ t:'🛒 ' + diaPackName(p), c:p.dia, m:p.cp || 0, src:'shop', b:'옛 상점 지급분' }); };
+      oldMail('d1');                         /* 미수령 상점 우편 1통 */
+      oldMail('d2'); const keep = S.mailx[1].id;
       claimMail(S.mailx[0].id);              /* 한 통만 수령 → 삭제 대상 */
       const before = S.mailx.length;
       delReadMail();
@@ -222,7 +220,8 @@ async function open(browser) {
     /* 상점 우편 행이 «기한 없음» 으로 그려지는가 — 무한 보관의 화면 쪽 표기 */
     const c3 = await d.page.evaluate(() => {
       S.mailx = []; S.mailSeq = 0; S.mail = {};
-      devBuyDia('d2');
+      const p = DIA_PACKS.find(x => x.id === 'd2');
+      sendMail({ t:'🛒 ' + diaPackName(p), c:p.dia, m:p.cp || 0, src:'shop', b:'옛 상점 지급분' });
       openMail();
       const row = [...document.querySelectorAll('#mbox .ml-r')]
         .find(r => r.querySelector('[data-ml^="x"]'));
@@ -239,7 +238,9 @@ async function open(browser) {
     console.log('[D] 우편함 [받기] 버튼을 진짜로 눌러 지급되는가');
     const dSel = await d.page.evaluate(() => {
       S.mailx = []; S.mailSeq = 0; S.mail = {}; S.mileage = 0;
-      devBuyDia('d4');                        /* 다이아 900,000 · 쿠폰 1 (497 «×2» — 116 이 내렸던 값을 되돌렸다) */
+      /* 697 — 옛 통 주입(다이아 900,000 · 쿠폰 1 · 497 «×2»). 재는 것은 «받기 버튼이 도는가» 다 */
+      const p = DIA_PACKS.find(x => x.id === 'd4');
+      sendMail({ t:'🛒 ' + diaPackName(p), c:p.dia, m:p.cp || 0, src:'shop', b:'옛 상점 지급분' });
       openMail();
       const b = document.querySelector('#mbox [data-ml="' + S.mailx[0].id + '"]');
       window.__b153 = { d0: S.dia, m0: S.mileage || 0, id: S.mailx[0].id };
@@ -259,7 +260,7 @@ async function open(browser) {
     }
 
     /* ================= [E] 이용권 — 권한은 즉시 · 재화는 우편 ================= */
-    console.log('[E] 이용권(151) — 계정 권한은 즉시, 쿠폰·보석은 우편');
+    console.log('[E] 이용권(151·697) — 권한도 쿠폰·보석도 **둘 다 즉시**');
     const e1 = await d.page.evaluate(() => {
       S.mailx = []; S.mailSeq = 0; S.mail = {}; S.pass.noAds = false; S.dia = 1e9; S.mileage = 0;
       openShopPage(); shopCat = 'pass'; setShopCatTabs('pass'); renderShopPage();
@@ -267,24 +268,15 @@ async function open(browser) {
       const d0 = S.dia, m0 = S.mileage || 0;
       const r = buyPass('noads');
       const bought = { dDia: S.dia - d0, dCp: (S.mileage || 0) - m0, mails: S.mailx.length };
-      const mail = S.mailx[0];
-      const c0 = S.dia, cp0 = S.mileage || 0;
-      if (mail) claimMail(mail.id);
-      return { r, noAds: !!S.pass.noAds, want: { once: p.once || 0, cp: p.cp || 0 }, bought,
-               mail: mail ? { c: mail.c, m: mail.m } : null,
-               claimed: { dDia: S.dia - c0, dCp: (S.mileage || 0) - cp0 } };
+      return { r, noAds: !!S.pass.noAds, want: { once: p.once || 0, cp: p.cp || 0 }, bought };
     });
     eq('이용권 구매 반환값', e1.r, true);
     eq('이용권 — 구매 즉시 권한(계정 권한은 우편에 담지 않는다)', e1.noAds, true);
-    /* 구매 직후 다이아 Δ는 «가격만» 나가야 한다 — 즉시 보석이 여기서 들어오면 우편을 우회한 것이다 */
-    eq('이용권 구매 직후 Δ쿠폰', e1.bought.dCp, 0);
-    eq('이용권 구매로 생긴 우편 통수', e1.bought.mails, e1.want.once || e1.want.cp ? 1 : 0);
-    if (e1.mail) {
-      eq('이용권 우편 — 즉시 보석', e1.mail.c, e1.want.once);
-      eq('이용권 우편 — 마일리지 쿠폰', e1.mail.m, e1.want.cp);
-      eq('이용권 우편 수령 후 Δ다이아', e1.claimed.dDia, e1.want.once);
-      eq('이용권 우편 수령 후 Δ쿠폰', e1.claimed.dCp, e1.want.cp);
-    }
+    /* 697 보강3 «이용권도 즉시적용으로» — 권한만이 아니라 그 상품의 보석·쿠폰도 같은 틱이다.
+       588 축(«결제가 다이아를 깎지 않는다»)은 이 등식 안에 그대로 산다 — 차감이 되살아나면 Δ가 안 맞는다. */
+    eq('이용권 구매 직후 Δ다이아(즉시 보석)', e1.bought.dDia, e1.want.once);
+    eq('이용권 구매 직후 Δ쿠폰', e1.bought.dCp, e1.want.cp);
+    eq('이용권 구매로 생긴 우편 통수', e1.bought.mails, 0);
 
     /* E-2 «매일 보석» 누적분도 우편으로 — 며칠치가 밀려도 한 통이다 */
     const e2 = await d.page.evaluate(() => {
@@ -297,17 +289,14 @@ async function open(browser) {
       const d0 = S.dia;
       const got = passDailyTick();
       const after = { dDia: S.dia - d0, mails: S.mailx.length, got };
-      const sum = S.mailx.reduce((a, m) => a + m.c, 0);
-      const c0 = S.dia;
-      S.mailx.slice().forEach(m => claimMail(m.id));
-      return { after, sum, dClaim: S.dia - c0 };
+      return { after };
     });
     if (e2.skip) fail('daily 보석이 붙은 영구 이용권이 없다 — 표가 바뀌었으면 게이트를 고칠 것');
     else {
-      eq('매일 보석 3일치 — 정산 직후 ΔS.dia', e2.after.dDia, 0);
-      eq('매일 보석 3일치 — 우편 통수(모아서 1통)', e2.after.mails, 1);
-      eq('매일 보석 우편 합계 = 정산액', e2.sum, e2.after.got);
-      eq('매일 보석 수령 후 ΔS.dia', e2.dClaim, e2.after.got);
+      /* 697 — «며칠치가 밀려도 **한 번에**» 라는 153 의 성질은 그대로다. 바뀐 것은 그 한 번이
+         «우편 한 통» 이 아니라 «지급 한 번» 이라는 것뿐이다(오프라인 정산이 30번 터지지 않는다). */
+      eq('매일 보석 3일치 — 정산 직후 ΔS.dia = 정산액(즉시)', e2.after.dDia, e2.after.got);
+      eq('매일 보석 3일치 — 새 우편 0통', e2.after.mails, 0);
       e2.after.got > 0 ? ok(`매일 보석 정산액 = ${e2.after.got}`) : fail('3일치 정산인데 0 이 나왔다');
     }
 

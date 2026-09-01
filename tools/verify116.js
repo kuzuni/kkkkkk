@@ -146,20 +146,19 @@ const openCoin = async page => page.evaluate(() => {
   ok(rDev <= 1, 'C5 라벨 우변 정렬 유지 — 카드 안쪽 우측 여백 편차 ≤ 1px', 'r ' + rs.join('/') + ' · Δ' + rDev.toFixed(1) + 'px');
 
   /* ---- [D] 구매 지급 ---- */
-  /* 153(2026-08-27) — 지급 «경로» 가 바뀌었다: 구매는 우편 1통을 만들고 재화는 수령 시에 들어온다.
-     116 이 지키려는 것은 «수량» 이므로 «구매 → 그 우편을 수령» 까지 한 뒤 잰다.
-     경로 자체(구매 직후 Δ0)는 VERIFY153 이 본다. */
+  /* 153 은 지급 «경로» 를 우편으로 옮겼고, **697(2026-09-02)이 그것을 되돌렸다** — 구매가 곧
+     지급이다. 116 이 지키려는 것은 내내 «수량» 이라 재는 자리만 «수령 뒤» 에서 «구매 직후» 로
+     옮겼다. 경로 자체(새 우편 0)는 VERIFY697·VERIFY153 이 본다. */
   const D = await page.evaluate(ids => ids.map(id => {
     const d0 = S.dia, m0 = S.mileage || 0, p0 = S.cnt.paid || 0, n0 = (S.mailx || []).length;
     devBuyDia(id);
     const dMail = S.mailx.length - n0;
-    claimMail(S.mailx[S.mailx.length - 1].id);
     return { id, dDia: S.dia - d0, dCp: (S.mileage || 0) - m0, dPaid: (S.cnt.paid || 0) - p0, dMail };
   }), ['d1', 'd2', 'd3', 'd4', 'd5']);
-  D.forEach((r, i) => ok(r.dDia === DIA[i], 'D' + (i + 1) + ' ' + r.id + ' 구매 → 우편 수령 시 S.dia +' + DIA[i], '+' + r.dDia));
+  D.forEach((r, i) => ok(r.dDia === DIA[i], 'D' + (i + 1) + ' ' + r.id + ' 구매 그 틱에 S.dia +' + DIA[i], '+' + r.dDia));
   ok(JSON.stringify(D.map(r => r.dCp)) === JSON.stringify(CP), 'D6 쿠폰 지급 0/0/0/1/2 유지', D.map(r => r.dCp).join('/'));
   ok(D.every(r => r.dPaid === 1), 'D7 누적 결제수 S.cnt.paid 각 +1', D.map(r => r.dPaid).join('/'));
-  ok(D.every(r => r.dMail === 1), 'D8 구매마다 우편 1통(153)', D.map(r => r.dMail).join('/'));
+  ok(D.every(r => r.dMail === 0), 'D8 구매가 우편을 안 만든다(697 — 153 의 반대 방향)', D.map(r => r.dMail).join('/'));
 
   /* ---- [E] 마일리지 교환 ---- */
   const E = await page.evaluate(() => {
@@ -167,15 +166,14 @@ const openCoin = async page => page.evaluate(() => {
     const d0 = S.dia, r0 = mileageExchange(), lack = { r: r0, d: S.dia - d0, m: S.mileage };
     S.mileage = 10;
     const d1 = S.dia, n1 = (S.mailx || []).length, r1 = mileageExchange();
-    /* 153 — 교환 보상도 우편으로 온다. 수량 검사는 그 우편을 받은 뒤에 한다. */
+    /* 697 — 교환 보상도 그 틱에 들어온다(153 의 «우편으로 온다» 를 뒤집었다) */
     const dMail = S.mailx.length - n1;
-    if (dMail) claimMail(S.mailx[S.mailx.length - 1].id);
     return { lack, okc: { r: r1, d: S.dia - d1, m: S.mileage, dMail } };
   });
   ok(E.lack.r === false && E.lack.d === 0 && E.lack.m === 3, 'E1 쿠폰 부족(3/10) → false · 다이아 Δ0',
      'r=' + E.lack.r + ' Δ' + E.lack.d);
-  ok(E.okc.r === true && E.okc.d === MILE, 'E2 쿠폰 10 → 우편 수령 시 다이아 +' + comma(MILE), '+' + E.okc.d);
-  ok(E.okc.dMail === 1, 'E2-1 교환 보상이 우편 1통으로 온다(153)', String(E.okc.dMail));
+  ok(E.okc.r === true && E.okc.d === MILE, 'E2 쿠폰 10 → 그 틱에 다이아 +' + comma(MILE), '+' + E.okc.d);
+  ok(E.okc.dMail === 0, 'E2-1 교환 보상이 우편을 안 만든다(697)', String(E.okc.dMail));
   ok(E.okc.m === 0, 'E3 쿠폰 −10', String(E.okc.m));
   /* 교환 결과 안내문도 새 값으로(문자열은 fmt 파생).
      217 — 이 단언은 부패가 **둘 겹쳐** 있었다(got `{has:false, old:false}` = 새 문자열도 옛 문자열도 없음).
@@ -217,18 +215,20 @@ const openCoin = async page => page.evaluate(() => {
     const mail = (S.mailx || [])[(S.mailx || []).length - 1] || null;
     return { noEx, dDia: S.dia - d0, dPaid: (S.cnt.paid | 0) - p0, dMail: (S.mailx || []).length - n0,
              mailDia: mail ? mail.c : null, ready: txt.includes('결제 준비 중'),
-             done: txt.includes('결제 완료') && txt.includes('우편함'),
+             done: txt.includes('결제 완료') && txt.includes('즉시 지급'),
              won: [...document.querySelectorAll('#shopList [data-diabuy="d5"]')]
                     .some(el => el.textContent.includes('110,000원')) };
   });
   ok(F.noEx, 'F3 쿠폰 10 미만이면 교환 버튼 id(#cnExch) 자체가 없음(비활성 클릭 = Δ0)');
   /* 589 이관 — «지갑을 직접 안 건드린다» 는 116 의 성질이라 그대로 남기고, 그 뒤에 무엇이
      일어나는가를 새 진실로 적는다. 옛 문구가 되살아나면 F4-b 가 빨개진다(자리를 안 비웠다). */
-  ok(F.dDia === 0, 'F4 카드 [구매] 클릭이 지갑을 직접 안 건드린다(지급은 우편 — 153)', 'Δ' + F.dDia);
-  ok(F.dPaid === 1 && F.dMail === 1 && F.mailDia === 2000000,
-     'F4-a 589 — 클릭 = 결제 완료 1건 · 우편 1통 · 그 통에 d5 다이아 200만',
-     '결제 +' + F.dPaid + ' · 우편 +' + F.dMail + ' · c=' + F.mailDia);
-  ok(F.done && !F.ready, 'F4-b 589 — 안내가 «우편함 확인» 이고 옛 «결제 준비 중» 은 0건',
+  /* 697 — 116 의 성질(«클릭이 표대로 준다»)은 그대로이고 지급처만 바뀌었다: 지갑이 그 자리에서
+     d5 수량만큼 늘어야 한다(차감이 되살아나면 Δ가 200만보다 작아진다). */
+  ok(F.dDia === 2000000, 'F4 카드 [구매] 클릭이 지갑을 그 틱에 d5 수량만큼 채운다(697)', 'Δ' + F.dDia);
+  ok(F.dPaid === 1 && F.dMail === 0,
+     'F4-a 589·697 — 클릭 = 결제 완료 1건 · 새 우편 0통',
+     '결제 +' + F.dPaid + ' · 우편 +' + F.dMail);
+  ok(F.done && !F.ready, 'F4-b 589·697 — 안내가 «즉시 지급» 이고 옛 «결제 준비 중» 은 0건',
      '완료 ' + F.done + ' · 준비중 ' + F.ready);
   ok(F.won, 'F5 구매 버튼에 원화가 «110,000원» 표기');
 

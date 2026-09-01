@@ -130,11 +130,13 @@ const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, OFF_CLAIM_H = 10.5, DAILY_MAX_D = 60;   
      그래서 «구매 즉시 다이아가 늘어난다» 는 더 이상 참이 아니다 — 참인 것은
      ⓐ 정가만큼 차감 ⓑ 권한(광고 제거·자동 축복·오프라인 +4h)은 **즉시** ⓒ 쿠폰·즉시 보석은
      **우편 한 통**으로 가고, 그 우편을 수령하면 그때 재화가 된다. 세 층을 다 본다(LESSONS 156-2).
-     ⚠ **588·589 가 ⓐ 를 뒤집었다** — 차감할 다이아가 없다. 이 자리에서 재는 것은 이제
-     «다이아 Δ0 인데도 권한이 켜지고 우편이 온다» 이고, ⓑⓒ 는 한 글자도 안 바뀐다.
+     ⚠ **588·589 가 ⓐ 를 뒤집었다** — 차감할 다이아가 없다.
+     ⚠ **697(2026-09-02, 주인 «이용권도 즉시적용으로»)이 ⓒ 를 다시 뒤집었다** — 쿠폰·즉시 보석도
+     우편을 안 지나고 **구매 그 틱에** 들어온다. 그래서 이 자리에서 재는 것은 «차감 0인데
+     권한이 켜지고 재화가 그 자리에서 들어온다» 이고, 차감이 되살아나면 Δ가 표와 안 맞는다.
      ⚑ 무르게 푼 것이 아니다: 옛 «−75,000» 을 «0» 으로 고치기만 했으면 «구매가 통째로 사라져도
         초록» 이 된다 — 그래서 결제 이력(`S.cnt.paid` +1)을 같은 절에서 같이 묻는다(589). */
-  console.log('\n[B] 구매 — 다이아 Δ0(588) · 결제 1건(589) · 권한 즉시 · 재화는 우편(153)');
+  console.log('\n[B] 구매 — 차감 0(588) · 결제 1건(589) · 권한·재화 둘 다 즉시(697)');
   for (const id of ['noads', 'abless', 'offplus']) {
     const r = await page.evaluate(i => {
       S.pass = { prem: {}, got: {}, noAds: false, autoBlessUntil: 0, offPlus: false, dailyAt: {} };
@@ -144,24 +146,18 @@ const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, OFF_CLAIM_H = 10.5, DAILY_MAX_D = 60;   
       const okr = buyPass(i);
       const mails = (S.mailx || []).map(m => ({ t: m.t, c: m.c, m: m.m, src: m.src }));
       const dBuy = S.dia - d0, mBuy = (S.mileage | 0) - m0;
-      /* 그 우편을 수령하면 그때 재화가 들어온다 */
-      const d1 = S.dia, m1 = S.mileage | 0;
-      (S.mailx || []).forEach(m => claimMail(m.id));
-      return { okr, dBuy, mBuy, mails, dClaim: S.dia - d1, mClaim: (S.mileage | 0) - m1,
+      return { okr, dBuy, mBuy, mails,
         dPaid: (S.cnt.paid | 0) - p0,
         own: passOwned(i), twice: buyPass(i) };
     }, id);
     const e = EXPECT[id];
-    ok('B:' + id + ' 588 — 다이아가 1도 안 줄어든다', r.okr === true && r.dBuy === 0,
-      'Δ' + r.dBuy + ' (기대 0) · 구매 ' + r.okr);
+    ok('B:' + id + ' 588·697 — 차감 0 · 즉시 보석 +' + e.once + ' 이 그 틱에',
+      r.okr === true && r.dBuy === e.once, 'Δ' + r.dBuy + ' (기대 +' + e.once + ') · 구매 ' + r.okr);
     ok('B:' + id + ' 589 — 결제 1건으로 세어진다(S.cnt.paid +1)', r.dPaid === 1, '+' + r.dPaid);
-    ok('B:' + id + ' 구매 시점에는 재화가 안 들어온다(153 — 우편 경유)',
-      r.mBuy === 0, 'Δ쿠폰 ' + r.mBuy);
-    ok('B:' + id + ' 우편 1통 · 즉시 보석 ' + e.once + ' · 쿠폰 ' + e.cp,
-      r.mails.length === 1 && r.mails[0].c === e.once && r.mails[0].m === e.cp,
-      JSON.stringify(r.mails));
-    ok('B:' + id + ' 우편 수령 → 다이아 +' + e.once + ' · 쿠폰 +' + e.cp,
-      r.dClaim === e.once && r.mClaim === e.cp, '+' + r.dClaim + ' / +' + r.mClaim);
+    ok('B:' + id + ' 697 — 쿠폰도 구매 시점에 +' + e.cp,
+      r.mBuy === e.cp, 'Δ쿠폰 ' + r.mBuy + ' (기대 +' + e.cp + ')');
+    ok('B:' + id + ' 697 — 새 우편 0통(수령 절차가 사라졌다)',
+      r.mails.length === 0, JSON.stringify(r.mails));
     ok('B:' + id + ' 권한은 즉시 켜진다', r.own === true);
     ok('B:' + id + ' 중복 구매 차단', r.twice === false);
   }
@@ -170,10 +166,13 @@ const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, OFF_CLAIM_H = 10.5, DAILY_MAX_D = 60;   
   const lack = await page.evaluate(() => {
     S.pass = { prem: {}, got: {}, noAds: false, autoBlessUntil: 0, offPlus: false, dailyAt: {} };
     S.dia = 0; S.mailx = []; S.mail = S.mail || {}; const d0 = S.dia; const r = buyPass('noads');
-    return { r, dDia: S.dia - d0, own: passOwned('noads'), mails: (S.mailx || []).length };
+    return { r, dDia: S.dia - d0, own: passOwned('noads'), mails: (S.mailx || []).length,
+             once: (PASS_ITEMS.find(x => x.id === 'noads') || {}).once | 0 };
   });
-  ok('B:588 다이아 0 에서도 구매된다 — 지급 우편 1통 · 권한 즉시 · 다이아 Δ0',
-    lack.r === true && lack.dDia === 0 && lack.own === true && lack.mails === 1, JSON.stringify(lack));
+  /* 697 — «지급 우편 1통» 이 «즉시 보석 +once · 새 우편 0» 으로 뒤집혔다. 588 축(차감 0)은
+     그대로 산다: 차감이 되살아나면 다이아 0 에서 Δ가 once 보다 작아진다. */
+  ok('B:588·697 다이아 0 에서도 구매된다 — 즉시 보석 +once · 새 우편 0 · 권한 즉시',
+    lack.r === true && lack.dDia === lack.once && lack.own === true && lack.mails === 0, JSON.stringify(lack));
 
   /* ================= [C] 오프라인 배율 · 1회 상한 폐지 ================= */
   console.log('\n[C] 오프라인 보상 ×배율 (199 21회차 — 옛 «상한 6 → 10시간»)');
@@ -387,10 +386,12 @@ const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, OFF_CLAIM_H = 10.5, DAILY_MAX_D = 60;   
   await page.locator('.pvc[data-pv="noads"] .bt').click();
   await page.waitForTimeout(260);
   const after = await page.evaluate(() => ({ dia: S.dia, own: passOwned('noads'),
+    once: (PASS_ITEMS.find(x => x.id === 'noads') || {}).once | 0,
     modal: document.querySelectorAll('.modal.on, #modal.on').length }));
-  /* 588 — 클릭이 «샀다» 는 증거는 이제 «다이아가 줄었다» 가 아니라 «권한이 켜졌다 + 다이아는 그대로» 다 */
-  ok('G6 가격 버튼 실제 클릭으로 구매된다(588 — 다이아는 그대로)',
-    after.own === true && after.dia === before, 'dia ' + before + ' → ' + after.dia);
+  /* 588 — 클릭이 «샀다» 는 증거는 «다이아가 줄었다» 가 아니라 «권한이 켜졌다 + 차감 0» 이다.
+     697 — 그 위에 즉시 보석이 얹혀 Δ가 «+once» 가 됐다(차감이 되살아나면 여기가 어긋난다). */
+  ok('G6 가격 버튼 실제 클릭으로 구매된다(588 차감 0 · 697 즉시 보석 +' + after.once + ')',
+    after.own === true && after.dia === before + after.once, 'dia ' + before + ' → ' + after.dia);
   const G7 = await page.evaluate(() => {
     renderPassPage($('shopList'));
     const c = document.querySelector('.pvc[data-pv="noads"]');

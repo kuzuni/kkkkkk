@@ -164,16 +164,13 @@ const diaOnly = page => ev(page, () => {
       renderShopPage();
       document.querySelector('#shopList .cn-qty .q[data-exq="10"]').click();
       const n = exQtyN();
-      /* ⓐ 유물조각 — 다이아는 즉시 나가고 물건은 우편(153) */
+      /* ⓐ 유물조각 — **697 이후 룬강화석과 같은 처리**다(다이아 −n · 그 자리에서 +n · 우편 0).
+         153 이 «유물조각만 우편» 으로 갈라 두었던 분기는 주인 지시로 사라졌다. */
       const d0 = S.dia, r0 = S.relic, m0 = S.mailx.length;
       document.querySelector('#shopList .bt.buy[data-ex="relic"]').click();
-      const mail = S.mailx[S.mailx.length - 1] || {};
-      const relStep = { dia: d0 - S.dia, rel: S.relic - r0, mail: S.mailx.length - m0, mailR: mail.r };
-      /* ⚠ `claimAllMail()` 로 재면 못 잰다 — 부팅 우편(환영 유물조각)이 같이 들어와 값이 섞인다.
-         그 한 통만 받아 **이 교환이 실어 온 몫**을 잰다. */
-      const rBefore = S.relic;
-      claimMail(mail.id); await sleep(60);
-      const relGot = S.relic - rBefore;
+      await sleep(60);
+      const relStep = { dia: d0 - S.dia, rel: S.relic - r0, mail: S.mailx.length - m0 };
+      const relGot = relStep.rel;
       /* ⓑ 룬강화석 — 우편 스키마에 자리가 없어 즉시 지급(204 선례) */
       const d1 = S.dia, s0 = S.rstone, m1 = S.mailx.length;
       renderShopPage();
@@ -187,13 +184,13 @@ const diaOnly = page => ev(page, () => {
       return { n, relStep, relGot, stStep, poor };
     });
     ok(buy && buy.n === 10, '[B6] ×10 을 고르면 수량이 10 이다', buy ? String(buy.n) : '');
-    ok(buy && buy.relStep.dia === buy.n && buy.relStep.rel === 0 && buy.relStep.mail === 1 && buy.relStep.mailR === buy.n,
-      '★ [B7] 유물조각 — 다이아 −n · 그 순간 재화는 안 늘고 우편이 한 통(153) · 우편 수량 = n',
-      buy ? '다이아 −' + buy.relStep.dia + ' · 우편 r=' + buy.relStep.mailR : '');
-    ok(buy && buy.relGot === buy.n, '[B8] 그 우편을 받으면 정확히 n 개가 들어온다(1:1 완결)',
+    ok(buy && buy.relStep.dia === buy.n && buy.relStep.rel === buy.n && buy.relStep.mail === 0,
+      '★ [B7] 유물조각 — 다이아 −n · **그 자리에서** +n · 새 우편 0(697 — 153 의 갈래 폐지)',
+      buy ? '다이아 −' + buy.relStep.dia + ' · 유물 +' + buy.relStep.rel + ' · 우편 ' + buy.relStep.mail : '');
+    ok(buy && buy.relGot === buy.n, '[B8] 그 지급이 정확히 n 개다(1:1 완결)',
       buy ? '+' + buy.relGot : '');
     ok(buy && buy.stStep.dia === buy.n && buy.stStep.st === buy.n && buy.stStep.mail === 0,
-      '★ [B9] 룬강화석 — 다이아 −n · **즉시** +n · 우편은 안 온다(스키마에 자리가 없다 — 204 선례)',
+      '★ [B9] 룬강화석 — 다이아 −n · **즉시** +n · 우편은 안 온다(697 이후 두 줄이 같은 처리다)',
       buy ? '다이아 −' + buy.stStep.dia + ' · 룬강화석 +' + buy.stStep.st : '');
     ok(buy && buy.poor.dia === 0 && buy.poor.st === 0,
       '[B10] 부족하면 다이아도 재화도 한 톨 안 움직인다', buy ? '다이아 Δ' + buy.poor.dia : '');

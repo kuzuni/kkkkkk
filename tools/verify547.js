@@ -80,8 +80,15 @@ const same = (a, b) => a && b && a.node === b.node && a.off === b.off && a.exch 
                     && a.ct === b.ct && a.barW === b.barW;
 const show = s => s ? ('node=' + s.node + ' off=' + s.off + ' #cnExch=' + s.exch
                        + ' ct="' + s.ct + '" bar ' + s.barW + 'px') : '(없음)';
-/* 등재문의 «쿠폰 11개» — d4(+1) 1통 + d5(+2) 5통 */
-const BUY11 = () => { window.devBuyDia('d4'); for(let i = 0; i < 5; i++) window.devBuyDia('d5'); };
+/* 등재문의 «쿠폰 11개» — d4(+1) 1통 + d5(+2) 5통.
+   ⚑ **697(2026-09-02) 이관** — 구매는 더는 우편을 만들지 않는다(즉시 지급). 547 이 지키는 축은
+   «구매» 가 아니라 **«우편을 수령하면 열려 있는 시트가 그 자리에서 따라온다»** 이므로, 표본을
+   «사서 만든 통» 에서 **«옛 세이브에 남아 있는 미수령 통»** 으로 옮긴다(주인 «소급 삭제 금지» 가
+   지키라고 한 바로 그 통이고, 그 위에서 수령 경로가 그대로 돈다). 통수·쿠폰 수는 그대로 11개다. */
+const BUY11 = () => {
+  const mk = m => window.sendMail({ t:'🛒 옛 상점 지급분', m:m, src:'shop', b:'697 이전 발송분' });
+  mk(1); for(let i = 0; i < 5; i++) mk(2);
+};
 
 (async () => {
   const src = fs.readFileSync(SRCP, 'utf8');
@@ -89,20 +96,23 @@ const BUY11 = () => { window.devBuyDia('d4'); for(let i = 0; i < 5; i++) window.
   const browser = await launch(chromium);
 
   /* ── [전제] 153 규약 ────────────────────────────────────────── */
-  blk('[전제] 지급은 우편으로만 — 마일리지는 «수령» 으로만 오른다(153)');
+  blk('[전제] 697 — 구매는 그 자리에서 오르고, 옛 우편은 수령으로 오른다');
   let page = await open(browser, 'file://' + SRCP);
   await openCat(page, 'coin');
   const pre = await ev(page, () => {
     const m0 = S.mileage | 0;
-    window.devBuyDia('d4');
+    window.devBuyDia('d4');                 /* 697 — 구매가 곧 지급이다 */
     const m1 = S.mileage | 0;
-    const id = (S.mailx || []).slice(-1)[0].id;
-    claimMail(id);
-    return { m0, m1, m2: S.mileage | 0 };
+    /* 옛 세이브의 미수령 통 — 이쪽은 여전히 «수령» 으로만 오른다(547 이 지키는 경로) */
+    const m = window.sendMail({ t:'🛒 옛 상점 지급분', m:1, src:'shop', b:'697 이전 발송분' });
+    const m2 = S.mileage | 0;
+    claimMail(m.id);
+    return { m0, m1, m2, m3: S.mileage | 0 };
   });
   if(pre){
-    ok(pre.m0 === 0 && pre.m1 === 0, '[전제-a] 구매만으로는 마일리지가 안 오른다', pre.m0 + ' → ' + pre.m1);
-    ok(pre.m2 === 1, '[전제-b] 수령해야 오른다', pre.m1 + ' → ' + pre.m2);
+    ok(pre.m0 === 0 && pre.m1 === 1, '[전제-a] 697 — 구매가 그 자리에서 쿠폰을 올린다', pre.m0 + ' → ' + pre.m1);
+    ok(pre.m2 === pre.m1, '[전제-a2] 옛 통이 생기는 것만으로는 안 오른다', pre.m1 + ' → ' + pre.m2);
+    ok(pre.m3 === pre.m2 + 1, '[전제-b] 그 통을 수령해야 오른다', pre.m2 + ' → ' + pre.m3);
   } else ok(false, '[전제] 못 읽었다');
 
   /* ── [A] 일괄 수령 ──────────────────────────────────────────── */
@@ -232,7 +242,9 @@ const BUY11 = () => { window.devBuyDia('d4'); for(let i = 0; i < 5; i++) window.
     /* 시트를 열고 한 통 더 받으면 그때는 그린다 */
     openShopPage(null, 'coin');
     const base = n;
-    window.devBuyDia('d4');
+    /* 697 — 여기서 재는 것은 «우편이 생기는 단계에서는 안 그린다» 다. 구매는 이제 즉시 지급이라
+       그 자체가 `reShopIfOpen()` 을 부르므로(547 축의 새 자리), 표본은 옛 통 주입으로 둔다. */
+    window.sendMail({ t:'🛒 옛 상점 지급분', m:1, src:'shop', b:'697 이전 발송분' });
     const afterBuy = n;
     claimAllMail();
     const opened = n;
@@ -242,7 +254,7 @@ const BUY11 = () => { window.devBuyDia('d4'); for(let i = 0; i < 5; i++) window.
   if(D){
     ok(D.closed === 0, '[D-c] 시트가 닫혀 있으면 한 번도 안 그린다', D.closed + '회');
     ok(D.opened > D.afterBuy, '[D-d] 시트가 열려 있으면 수령이 렌더를 부른다',
-       '열기 ' + D.base + ' → 구매 ' + D.afterBuy + ' → 수령 ' + D.opened + '회');
+       '열기 ' + D.base + ' → 우편 발생 ' + D.afterBuy + ' → 수령 ' + D.opened + '회');
   } else ok(false, '[D] 못 읽었다');
 
   /* ── [E] 넓이 — 다른 탭도 낡지 않는다 ───────────────────────── */

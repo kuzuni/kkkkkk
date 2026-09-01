@@ -90,10 +90,12 @@ const openPass = async (page) => {
       S.dia = 1234567; S.mailx = []; S.mailSeq = 0; S.mail = {}; S.mileage = 0;
       syncNoAds();
       const d0 = S.dia, r = buyPass(i);
-      return { r, dDia: S.dia - d0, own: passOwned(i) };
+      return { r, dDia: S.dia - d0, own: passOwned(i), once: (PASS_ITEMS.find(x => x.id === i) || {}).once | 0 };
     }, id);
-    ok(r.r === true && r.dDia === 0 && r.own === true,
-      'B1:' + id + ' 함수 경로 — 구매 성공 · 다이아 Δ0 · 권한 즉시',
+    /* 697 — «Δ0» 은 «차감이 없다» 는 뜻이었다. 즉시 보석이 그 틱에 들어오면서 Δ가 «+once» 가 됐고
+       588 축은 그 등식 안에 그대로 산다(차감이 되살아나면 Δ가 once 보다 작아진다). */
+    ok(r.r === true && r.dDia === r.once && r.own === true,
+      'B1:' + id + ' 함수 경로 — 구매 성공 · 차감 0(Δ = 즉시 보석 ' + r.once + ') · 권한 즉시',
       'r=' + r.r + ' Δdia=' + r.dDia + ' own=' + r.own);
   }
   /* 실클릭 경로 — 배선이 다른 함수를 부르고 있으면 여기서 갈린다 */
@@ -106,9 +108,11 @@ const openPass = async (page) => {
   await page.waitForTimeout(140);
   await page.locator('.pvc[data-pv="abless"] .bt').click();
   await page.waitForTimeout(260);
-  const clicked = await page.evaluate(() => ({ dia: S.dia, own: passOwned('abless') }));
-  ok(clicked.dia === before && clicked.own === true,
-    'B2 카드 [₩22,900] 실클릭 — 다이아 Δ0 · 권한 즉시', before + ' → ' + clicked.dia + ' · own=' + clicked.own);
+  const clicked = await page.evaluate(() => ({ dia: S.dia, own: passOwned('abless'),
+    once: (PASS_ITEMS.find(x => x.id === 'abless') || {}).once | 0 }));
+  ok(clicked.dia === before + clicked.once && clicked.own === true,
+    'B2 카드 [₩22,900] 실클릭 — 차감 0(Δ = 즉시 보석) · 권한 즉시',
+    before + ' → ' + clicked.dia + '(기대 +' + clicked.once + ') · own=' + clicked.own);
 
   /* ═════ [C] 표기 ═════ */
   console.log('\n[C] 표기 — «대체가» 가 화면에 0건');
@@ -126,8 +130,9 @@ const openPass = async (page) => {
     (C.txt.match(/[^\s]{0,8}대체[^\s]{0,8}/g) || []).join(' / ') || '0건');
   ok(C.buys.length === 3 && C.buys.every(t => /원$/.test(t)),
     'C3 원화 가격 버튼 3개가 살아 있다(못 사는 상품이 되지 않았다)', C.buys.join(' | '));
-  ok(C.note.some(t => /우편함/.test(t)) && !C.note.some(t => /대체 결제/.test(t)),
-    'C4 하단 총론 한 줄이 «우편함» 을 말하고 «대체 결제» 는 0건', C.note.join(' / '));
+  /* 697 — 총론 한 줄이 말해야 하는 «지급처» 가 우편함에서 즉시로 바뀌었다(주인 «이용권도 즉시적용으로») */
+  ok(C.note.some(t => /즉시/.test(t)) && !C.note.some(t => /우편함/.test(t)) && !C.note.some(t => /대체 결제/.test(t)),
+    'C4 하단 총론 한 줄이 «즉시» 를 말하고 «우편함»·«대체 결제» 는 0건', C.note.join(' / '));
 
   /* ═════ [D] 589 와의 짝 ═════ */
   console.log('\n[D] 589 짝 — 다이아 0 에서도 산다');
@@ -135,23 +140,21 @@ const openPass = async (page) => {
     S.pass = { prem:{}, got:{}, noAds:false, autoBlessUntil:0, offPlus:false, dailyAt:{} };
     S.dia = 0; S.mileage = 0; S.mailx = []; S.mailSeq = 0; S.mail = {};
     syncNoAds();
-    const p0 = S.cnt.paid | 0, r = buyPass('noads');
-    const m = (S.mailx || [])[0] || null;
-    const d1 = S.dia, c1 = S.mileage | 0;
-    if (m) claimMail(m.id);
+    const p0 = S.cnt.paid | 0, d1 = S.dia, c1 = S.mileage | 0;
+    const r = buyPass('noads');
     const item = PASS_ITEMS.find(x => x.id === 'noads');
     return { r, dia: S.dia, own: passOwned('noads'), dPaid: (S.cnt.paid | 0) - p0,
-             mails: (S.mailx || []).length, mailC: m ? m.c : null, mailM: m ? m.m : null,
-             claimDia: S.dia - d1, claimCp: (S.mileage | 0) - c1,
+             mails: (S.mailx || []).length,
+             buyDia: S.dia - d1, buyCp: (S.mileage | 0) - c1,
              once: item.once, cp: item.cp };
   });
   ok(D.r === true && D.own === true, 'D1 다이아 0 에서도 구매 성공 · 권한 즉시', 'r=' + D.r + ' own=' + D.own);
   ok(D.dPaid === 1, 'D2 결제 1건으로 세어진다(589 `payMock`)', '+' + D.dPaid);
-  ok(D.mails === 1 && D.mailC === D.once && D.mailM === D.cp,
-    'D3 지급이 우편 1통으로 간다(즉시 보석 ' + D.once + ' · 쿠폰 ' + D.cp + ') — 153',
-    D.mails + '통 · c=' + D.mailC + ' m=' + D.mailM);
-  ok(D.claimDia === D.once && D.claimCp === D.cp,
-    'D4 그 우편을 받으면 그때 재화가 들어온다', '+' + D.claimDia + ' / +' + D.claimCp);
+  ok(D.mails === 0,
+    'D3 지급이 우편을 **안 지난다**(697 — 153 의 반대 방향)', D.mails + '통');
+  ok(D.buyDia === D.once && D.buyCp === D.cp,
+    'D4 그 재화가 **구매 그 틱에** 들어온다(즉시 보석 ' + D.once + ' · 쿠폰 ' + D.cp + ')',
+    '+' + D.buyDia + ' / +' + D.buyCp);
 
   /* ═════ [E] 구 세이브 — 이미 산 사람의 권한은 회수하지 않는다 ═════ */
   console.log('\n[E] 구 세이브 — 이미 다이아로 산 권한은 그대로');
@@ -233,11 +236,13 @@ const openPass = async (page) => {
     const legacyBuy = (id) => { const q = PASS_ITEMS.find(x => x.id === id);
       const price = 50000; if (S.dia < price) return false; S.dia -= price; grantPass(q.id); return true; };
     const r = legacyBuy(p.id);
-    return { r, dDia: S.dia - d0 };
+    /* 697 — `grantPass()` 가 이제 즉시 보석을 그 자리에서 준다. 사본의 순 Δ는 «−가격 + once» 이고,
+       재는 것은 여전히 «차감이 실제로 일어났는가» 다(기대값을 상수로 적지 않고 표에서 뽑는다). */
+    return { r, dDia: S.dia - d0, once: p.once | 0 };
   });
-  ok(R2.r === true && R2.dDia === -50000,
+  ok(R2.r === true && R2.dDia === -50000 + R2.once,
     'R2 옛 «차감 → 지급» 사본은 다이아를 실제로 깎는다 = [B] 의 자가 그 차이를 본다',
-    'Δ' + R2.dDia);
+    'Δ' + R2.dDia + '(기대 −50000 + 즉시 보석 ' + R2.once + ')');
   /* 소스 수준 되돌림 — 상수를 되살린 사본에서 [A4] 가 빨개진다 */
   const REV = SRC.replace('const PASS_ABLESS_DAYS = 30;',
     'const PASS_ADFREE_DIA = 75000;\nconst PASS_ABLESS_DAYS = 30;');
