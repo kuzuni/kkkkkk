@@ -5425,7 +5425,11 @@
      3회차: 위 여백을 «HUD 하단에서 59» 가 아니라 **단일 변환 절대값**으로 다시 잡았다.
      ref 카드1 top 250 → 프레임 250−84 = 166 이고 페이지 top 은 104 라 padding-top = 62
      (59 는 «ref HUD 하단 191 → 프레임 104» 라는 화면별 보정을 섞은 값이라 3px 위로 떴다). */
-  .shp-list{position:absolute;left:0;right:0;top:0;bottom:154px;padding-top:62px;
+  /* 668 — 하변 154 → 266: 소환 탭 바닥에 배수 바(높이 98)가 새로 앉는다.
+     «리스트 ↔ 아래 부품 14px» 여유는 478 이 세운 값 그대로다(154 + 98 + 14 = 266).
+     ⚑ 카드는 top 기준이라 **스크롤 0 에서 좌표 Δ0** 이고, 바뀌는 것은 보이는 칸 수뿐이다.
+     ⚠ 재화·이용권 탭은 아래 `.coin,.pass{bottom:256px}` 가 그대로 이긴다(배수 바는 그 탭에서 꺼진다). */
+  .shp-list{position:absolute;left:0;right:0;top:0;bottom:266px;padding-top:62px;
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .shp-list::-webkit-scrollbar{width:0;height:0}
 
@@ -5566,6 +5570,17 @@
   .shp-card .cbtn>.cost{left:31px;right:0;top:66px;height:26px;line-height:26px;font-size:30px;
     transform:scaleX(1.2);letter-spacing:-1px}
   .shp-card .cbtn>.cost em{display:inline;font-size:30px;-webkit-text-stroke:0;vertical-align:-2px}
+  /* ⚑ 668 — 배수를 켜면 라벨·가격의 **자릿수만** 자란다(«10회 소환 1,000» → «10,000회 소환 1,000,000»).
+     버튼 폭은 레퍼런스 절대값이고 `.cbtn{overflow:hidden}` 이 넘친 잉크를 그냥 잘라 먹으므로
+     늘어난 자릿수만큼 글자를 좁힌다. 계단은 «자릿수 초과분» 에 물려 있고(`sumFitCls`),
+     **×1 은 임계 아래라 클래스가 아예 안 붙는다** — 레퍼런스 상태의 잉크가 한 픽셀도 안 바뀐다.
+     ⚠ 126 ② 의 «외곽선은 em 기준» 규약 덕에 두께비는 자동으로 따라온다(여기서 다시 안 적는다). */
+  .shp-card .cbtn>.lab.fit1{font-size:28px}
+  .shp-card .cbtn>.lab.fit2{font-size:26px}
+  .shp-card .cbtn>.lab.fit3{font-size:24px}
+  .shp-card .cbtn>.cost.fit1{font-size:27px}
+  .shp-card .cbtn>.cost.fit2{font-size:25px}
+  .shp-card .cbtn>.cost.fit3{font-size:23px}
   /* 시안 AD 버튼 */
   .shp-card .b1,.shp-card .stk1{left:720px;top:146px;width:200px;height:98px;border-radius:35px;
     --f1:#3DD5EC;--f2:#18B1D3;--ring:#53E6FA;--lip:#0DA2CA}
@@ -5638,6 +5653,19 @@
   /* 337 — bottom 41 → 42(공용 값). 10·13 서브탭은 살아 있는 ref 가 없다(96 정오표) —
      07 ref 의 «바 하단 → 바닥 42» 를 부품 값으로 따른다. 상변 1960 → 1961. */
   .shp-cats{position:absolute;left:45px;right:45px;bottom:42px}
+  /* ⚑ 668 — 소환 배수 바. 카테고리 바와 **같은 공용 부품**(`.stabs`)에 4칸 항(`.sp4`)만 더한 것이라
+     새 부품은 0개다. 자리는 카테고리 바 바로 위 — 리스트(`.shp-list`) **밖**이라 굴려도 안 사라진다.
+     ⚑ **여기에 둔 이유는 «카드 기하 Δ0»** 이다: 위(리스트 머리)에 두면 스크롤 0 화면에서 카드가
+       통째로 내려앉아 레퍼런스 배치가 바뀐다. 아래에 두면 바뀌는 것은 «보이는 칸 수» 뿐이고
+       카드·버튼 좌표는 한 픽셀도 안 움직인다(668 게이트 (d)).
+     ⚠ 소환 탭에서만 뜬다 — 재화·이용권 탭은 대신 478 고지 띠가 그 자리를 쓴다. */
+  .sum-mul{position:absolute;left:45px;right:45px;bottom:154px;display:block}
+  #shopw:has(.shp-list.coin) .sum-mul,#shopw:has(.shp-list.pass) .sum-mul{display:none}
+  /* ⚠ 활성 알약 색을 여기서 갈지 **않는다.** 면은 `.stab.on` 의 4단 그라디언트 한 줄에 박혀 있어
+     («#634F37 0 7 / #4B3E2D 7 70 / …» — 352 4·6회차가 ref 커버리지 적분으로 확정한 규약)
+     색만 바꾸려 해도 그 표를 통째로 다시 적어야 하고, 그 순간 «표 두 벌»(402)이 된다.
+     두 바를 가르는 것은 **라벨 형태**로 충분하다 — 카테고리는 낱말(소환·재화·이용권),
+     배수는 «×n» 이라 글자만 보고도 축이 갈린다. */
 
   /* ── 478 (2026-08-30 주인 지시) 청약철회 고지 띠 ──────────────────────────
      «재화»·«이용권» 두 탭의 **바닥 고정** 띠다(리스트 마지막 항목 아래가 아니다 — 주인 캡처가
@@ -11494,6 +11522,25 @@
     width:calc(33.3333% + 23.5px + var(--sb) * 2 / 3)}
   .stabs.sp3>.stab.on:nth-of-type(3){left:calc(66.6667% - 11.75px + var(--sb) / 3);
     width:calc(33.3333% + 11.75px - var(--sb) / 3)}
+  /* ⚑ 668 — 4칸 균등(10 상점 소환 배수 ×1/×10/×100/×1000). 새 부품이 아니라 **`.sp2`·`.sp3` 와
+     같은 한 식의 N=4 항**이다(379 ⓐ«기준 상자는 바깥» · ⓑ«활성 알약 오버행 11.75/변» ·
+     ⓒ«셸 안쪽 변에 닿는 면은 거기서 멈춘다» · 437 «b 는 `--sb` 로 되돌린다» 를 그대로 따른다):
+       칸 폭   = (100% + 2b)/4 = 25% + b/2
+       칸 k 좌 = k×칸폭 − b
+       끝 칸 활성 우변 = 100%(패딩박스에서 멈춘다 — 셸 검정을 안 덮는다)
+     검산: 3번 칸 활성의 좌+폭 = (75% + b/2 − 11.75) + (25% − b/2 + 11.75) = 100% ✓ */
+  .stabs.sp4>.stab{width:calc(25% + var(--sb) / 2)}
+  .stabs.sp4>.stab:nth-of-type(1){left:calc(-1 * var(--sb))}
+  .stabs.sp4>.stab:nth-of-type(2){left:calc(25% - var(--sb) / 2)}
+  .stabs.sp4>.stab:nth-of-type(3){left:50%}
+  .stabs.sp4>.stab:nth-of-type(4){left:calc(75% + var(--sb) / 2)}
+  .stabs.sp4>.stab.on:nth-of-type(1){left:0;width:calc(25% + 11.75px - var(--sb) / 2)}
+  .stabs.sp4>.stab.on:nth-of-type(2){left:calc(25% - 11.75px - var(--sb) / 2);
+    width:calc(25% + 23.5px + var(--sb) / 2)}
+  .stabs.sp4>.stab.on:nth-of-type(3){left:calc(50% - 11.75px);
+    width:calc(25% + 23.5px + var(--sb) / 2)}
+  .stabs.sp4>.stab.on:nth-of-type(4){left:calc(75% - 11.75px + var(--sb) / 2);
+    width:calc(25% + 11.75px - var(--sb) / 2)}
   /* 레드닷 — 옛 `.dns-t.r>s`(칸 안 절대좌표 371) 를 칸 우상단 기준으로 옮긴 것 */
   /* 166 (2026-08-27) — 이 배지는 마크업(`<s class="bdg">`)에만 있고 **켜고 끄는 곳이 한 군데도 없어**
      던전 서브탭에서 상시 점등이었다(입장 횟수를 다 써도, 전투력이 모자라도 빨간점). 다른 배지들과 같은
@@ -16039,6 +16086,11 @@
          두 탭이 같은 노드를 쓰고(166 «한 곳»), 소환 탭에서는 CSS 가 통째로 끈다.
          문구는 `LEGAL_BAND` 한 곳에서 오고 게이트가 그 상수와 DOM 을 대조한다. -->
     <div class="shop-legal" id="shopLegal"><i></i><i></i></div>
+    <!-- ⚑ 668(2026-09-02 주인 지시) — 소환 배수 토글. 카테고리 바와 **같은 공용 부품**(`.stabs`)의
+         4칸 항(`.sp4`)이고, 스크롤 그릇(#shopList) 밖 형제라 리스트를 굴려도 바닥에 붙어 있다.
+         칸은 `SUM_MULS` 한 곳에서 오고 초기 활성은 `sumMul`(=1) 이다 — 값이 두 벌이 되지 않게
+         마크업에 숫자를 손으로 적지 않고 `renderSumMulBar()` 가 그린다. -->
+    <div class="sum-mul stabs sp4" id="sumMulBar"></div>
     <!-- 45(2026-08-25 주인 지시): 특별·일일/주간은 상품이 없어 제거. `소환 · 재화` 2개를 균등 배치하고
          ✦ 구분선은 바 중앙 1개만 남긴다. NEW 리본은 «특별» 칸을 가리키던 것이라 그 칸과 함께 제거. -->
     <!-- 124(2026-08-26 주인 지시): «이용권» 탭 신설 → 2칸을 3칸으로 나눈다(.sp2 → .sp3). -->
@@ -25539,6 +25591,25 @@ function sumAddExp(_b, n){
   if(S.sumLv >= SUM_MAXLV) S.sumExp = 0;
   return up;
 }
+/* ⚑ 668 — 소환 배수 토글(전 배너 공용 하나). 주인 원문: «소환결과 버튼에 x1 x10 x100 x1000 배
+   토글 있게 하기 … 30회 소환이었으면 x100 토글 클릭시 3000회 소환 버튼으로 바뀌기. 필요재화도 마찬가지».
+   ⚑ **세이브에 안 넣는다**(위임 규약 2026-09-01 채택 — 등재문 «세션 내면 충분»): 배수는 «지금 얼마나
+     지를까» 라는 순간 의도라, 어제 켜 둔 ×1000 이 오늘 첫 탭에 살아 있으면 그것이 곧 사고다.
+     되돌리려면 이 변수를 `S.opt.sumMul` 로 옮기고 `load()` 에서 clamp 하면 된다(KEY 상승 불요 — 폴백 1).
+   ⚑ **무료 버튼(`.b1`·`#sumBF`)에는 안 걸린다**(같은 규약으로 결정): 무료 10연은 하루 재고가
+     `SHOP_FREE` 로 정해진 재화라, 배수를 걸면 재고 한 칸으로 1,000연을 주는 «가격 0» 상품이 된다.
+     주인 문면의 «필요재화도 마찬가지로 늘어남» 은 값을 치르는 버튼을 가리킨다.
+     자리는 `sumMulOf(btn)` 한 곳뿐이라 뒤집으려면 그 한 줄만 고치면 된다. */
+const SUM_MULS = [1, 10, 100, 1000];
+let sumMul = 1;
+/* 그 버튼이 실제로 뽑는 횟수. 무료 버튼은 배수를 안 탄다(위 머리말). */
+const sumMulOf = free => free ? 1 : sumMul;
+/* 라벨·가격이 «10회 1,000» → «10,000회 1,000,000» 까지 자란다. 레퍼런스 기하(폭)는 ×1 것이라
+   글자가 길어지면 버튼 밖으로 나간다(`.cbtn{overflow:hidden}` 이 그대로 잘라 먹는다) →
+   **자릿수가 늘어난 만큼만** 잉크를 좁힌다. ×1 은 임계 아래라 **레퍼런스 상태의 마크업이 불변**이다
+   (668 게이트 (d) «버튼 기하 회귀» 가 그 불변을 단언한다). */
+const sumFitCls = (txt, lim) => txt.length > lim ? ' fit' + Math.min(3, txt.length - lim) : '';
+const sumTimesTxt = n => n.toLocaleString('en-US') + '회 소환';
 /* 작업 73 ④ — `flat` 배너(무기·방패·목걸이·스킬)는 10연 할인을 받지 않는다(10회 1,000 / 30회 3,000,
    30회는 10회의 정확히 3배). 작업 195 — **펫도 `flat` 로 합류**해 5배너 전부 같은 값·같은 산식이다.
    0.9 분기는 `flat` 없는 배너용 기본값으로 남겨 둔다(현재 해당 배너 없음). */
@@ -25612,6 +25683,23 @@ function summonOne(b){
   if(isNew) S.own[it.id] = { n:0, l:1 }; else S.own[it.id].n++;
   return { it, isNew };
 }
+/* ⚑ 668(주인 지시 2026-09-02) — **대량 소환 = 1회 소환의 순차 반복**이다.
+   주인 원문: «3000회 소환해도 … 소환레벨이 10까지 한번에 간다 쳐도 해당 회수가 레벨들에 맞게
+   소환 되기 (1회씩 소환했을때 처럼 …)».
+   ⚠ 668 **이전 코드가 그 반대였다** — `sumAddExp(b, times)` 로 묶음 경험치를 **먼저 통째로** 넣고
+     그 뒤에 `times` 번을 굴렸다. 즉 배치가 올린 레벨의 확률표로 **첫 장부터** 뽑혀서
+     «×30 한 번» 과 «×1 서른 번» 이 갈렸다(레벨업이 배치 중간에 걸리는 구간에서만 갈리므로
+     10·30연에서는 눈에 잘 안 띄었고, ×1000 이 생기면 상시 갈린다).
+   ⇒ 여기서는 «그 장의 경험치 → 그 장의 추첨» 순서를 **한 장씩** 지킨다. 1회 소환의 순서
+     (`sumAddExp(b,1)` → `summonOne(b)`)와 글자 그대로 같으므로 등가성은 구조로 보장된다 —
+     확률표를 한 번 고정해 N 개를 뽑는 «샘플링» 로 바꾸지 마라(668 게이트 (a)·(b) 가 그것을 잡는다).
+   ⚠ 성능은 «루프를 없애서» 가 아니라 `tierWeights` 캐시로 낸다(아래 주석) — 판정 순서는 순차 그대로다. */
+function summonBatch(b, times){
+  const res = [];
+  let lvUp = 0;
+  for(let i=0;i<times;i++){ lvUp += sumAddExp(b, 1); res.push(summonOne(b)); }
+  return { res, lvUp };
+}
 function doSummon(b, times){
   const B = BANNERS[b];
   if(gmBlocked(b)) return;                       /* 73 ③ 가이드 소환 미션 진행 중 — 다른 상자는 못 뽑는다 */
@@ -25628,9 +25716,7 @@ function doSummon(b, times){
   S.summons += times;
   const ck = b === 'skill' ? 'sumSkill' : b === 'pet' ? 'sumPet' : b === 'relic' ? 'sumRelic' : 'sumEquip';
   S.cnt[ck] += times;
-  const lvUp = sumAddExp(b, times);
-  const res = [];
-  for(let i=0;i<times;i++) res.push(summonOne(b));
+  const { res, lvUp } = summonBatch(b, times);
   markDirty(); uiDirty = true;
   /* 263 — 소환 결과 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
@@ -25646,9 +25732,7 @@ function doSummonFree(b, times, viaReward){
   S.summons += times;
   const ck = b === 'skill' ? 'sumSkill' : b === 'pet' ? 'sumPet' : b === 'relic' ? 'sumRelic' : 'sumEquip';
   S.cnt[ck] += times;
-  const lvUp = sumAddExp(b, times);
-  const res = [];
-  for(let i=0;i<times;i++) res.push(summonOne(b));
+  const { res, lvUp } = summonBatch(b, times);
   markDirty(); uiDirty = true;
   /* 263 — 소환 결과 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
@@ -25784,8 +25868,15 @@ function showSummonResult(b, times, res, lvUp){
 function syncSummonBtns(){
   const b = sumCtx; if(!b) return;
   const B = BANNERS[b], cur = B.cur === 'rel' ? S.relic : S.dia;
-  const c10 = summonCost(b, 10), c30 = summonCost(b, 30), fl = freeLeft(b);
+  /* 668 — 결과 팝업의 [10회]·[30회] 는 카드의 그 버튼과 **같은 행위**라 배수도 같이 탄다.
+     무료 [FREE] 는 카드 `.b1` 과 같은 이유로 배수를 안 탄다(`sumMulOf`). */
+  const n10 = 10 * sumMul, n30 = 30 * sumMul;
+  const c10 = summonCost(b, n10), c30 = summonCost(b, n30), fl = freeLeft(b);
   const fat = t => '<i class="sm-fat" data-t="' + t + '">' + t + '</i>';
+  /* 라벨도 같이 바뀐다 — `.sm-fat` 은 `data-t` 를 겸해 들고 있어야 한다(84 «떨어져 나간 노드» 규약의
+     같은 부품이고, 그 속성을 읽는 자·연출이 있다). 그래서 텍스트만 갈지 않고 `fat()` 로 통째로 다시 찍는다. */
+  $('sumB10').querySelector('.lab').innerHTML = fat(sumTimesTxt(n10));
+  $('sumB30').querySelector('.lab').innerHTML = fat(sumTimesTxt(n30));
   $('sumBFn').innerHTML  = fat(fl + '/' + SHOP_FREE);
   /* 레퍼런스 가격은 «1,000 / 3,000» 쉼표 표기다. 공용 fmt() 는 알파벳 접미사(«1.44A»)라 이 화면만 쉼표로 쓴다. */
   $('sumB10c').innerHTML = fat(Math.round(c10).toLocaleString('en-US'));
@@ -25829,8 +25920,8 @@ $('sumBF').onclick = () => {
   doSummonFree(b, 10);
   { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); }
 };
-$('sumB10').onclick = () => { if(sumCtx){ doSummon(sumCtx, 10); { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); } } };
-$('sumB30').onclick = () => { if(sumCtx){ doSummon(sumCtx, 30); { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); } } };
+$('sumB10').onclick = () => { if(sumCtx){ doSummon(sumCtx, 10 * sumMul); { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); } } };
+$('sumB30').onclick = () => { if(sumCtx){ doSummon(sumCtx, 30 * sumMul); { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); } } };
 
 /* ==========================================================================
    장착
@@ -30320,6 +30411,7 @@ $('shopLegal').addEventListener('click', e => {
 
 function renderShopPage(){
   const list = $('shopList');
+  renderSumMulBar();   /* 668 — 배수 바는 탭과 무관하게 항상 최신 상태로 둔다(칸은 CSS 가 끈다) */
   list.classList.toggle('coin', shopCat === 'coin');
   list.classList.toggle('pass', shopCat === 'pass');
   if(shopCat === 'coin'){ renderCoinPage(list); return; }
@@ -30333,7 +30425,12 @@ function renderShopPage(){
        같은 구간을 잡고 있어 **이 세션 범위 밖**으로 남긴다 — PROGRESS 496 행 「남은 것」 참조. */
     const s = { lv: sumLv(x.b), exp: sumExp(x.b) }, need = sumNeedExp(s.lv), maxed = allMaxed(BANNERS[x.b].list);
     const pctFill = s.lv >= SUM_MAXLV ? 100 : Math.round(s.exp / need * 100);
-    const c10 = summonCost(x.b, 10), c30 = summonCost(x.b, 30), fl = freeLeft(x.b);
+    /* 668 — 배수는 «값을 치르는» 두 버튼에만 걸린다(무료 `.b1` 은 그대로 10연).
+       `data-shn` 은 **기본 횟수(10·30)** 를 그대로 들고 있고 배수는 읽는 쪽(클릭·102 동기화)이
+       곱한다 — 그래야 기존 게이트 선택자(`[data-shn="30"]` · fnchk115·verify195)가 배수와 무관하게 산다. */
+    const n10 = 10 * sumMul, n30 = 30 * sumMul;
+    const c10 = summonCost(x.b, n10), c30 = summonCost(x.b, n30), fl = freeLeft(x.b);
+    const l10 = sumTimesTxt(n10), l30 = sumTimesTxt(n30), w10 = won(c10), w30 = won(c30);
     /* 122 — `gm` = 73 가이드가 «이 상자를 소환하라» 고 지목한 칸(테두리 글로우 호흡).
        `.cbg>s.jzp` 는 상시 «빛 입자 상승» 레이어다(CSS 전용, JS 타이머 0줄). */
     /* 190 — 오늘 무광고 1회가 남아 있으면 이 칸의 ▶AD 뱃지를 감춘다(«그럴 때는 광고 표시 없게»).
@@ -30358,11 +30455,11 @@ function renderShopPage(){
       +    '<u class="lab">10회 소환</u><u class="sub">' + fl + '/' + SHOP_FREE + '</u></div>'
       +  '<div class="adbadge"><i>▶</i><b>AD</b></div>'
       +  '<div class="cbtn b2" data-shsum="' + x.b + '" data-shn="10">'
-      +    '<u class="lab">10회 소환</u><div class="pan"><span class="gem">' + curIc('dia') + '</span></div>'
-      +    '<u class="cost">' + won(c10) + '</u></div>'
+      +    '<u class="lab' + sumFitCls(l10, 7) + '">' + l10 + '</u><div class="pan"><span class="gem">' + curIc('dia') + '</span></div>'
+      +    '<u class="cost' + sumFitCls(w10, 5) + '">' + w10 + '</u></div>'
       +  '<div class="cbtn b3" data-shsum="' + x.b + '" data-shn="30">'
-      +    '<u class="lab">30회 소환</u><div class="pan"><span class="gem">' + curIc('dia') + '</span></div>'
-      +    '<u class="cost">' + won(c30) + '</u></div>'
+      +    '<u class="lab' + sumFitCls(l30, 7) + '">' + l30 + '</u><div class="pan"><span class="gem">' + curIc('dia') + '</span></div>'
+      +    '<u class="cost' + sumFitCls(w30, 5) + '">' + w30 + '</u></div>'
       /* ⚑ 122 22회차 — 버튼 검은 획을 전면 광택 «위» 로 올리는 사본 3개(§26-7 2번).
          기하를 한 줄도 새로 적지 않는다 — `.cbtn.b1/.b2/.b3` 를 그대로 쓰고 `.stk` 가
          면·립·애니메이션만 지운다. 그래서 링은 버튼과 **픽셀 동일**이고 좌표는 단일 출처다.
@@ -30391,7 +30488,9 @@ function syncShopSumBtns(){
     const b = btn.dataset.shsum, B = BANNERS[b];
     if(!B) return;
     const cur = B.cur === 'rel' ? S.relic : S.dia;
-    const lack = btn.dataset.shfree ? freeLeft(b) <= 0 : cur < summonCost(b, +btn.dataset.shn);
+    /* 668 — 「살 수 있나」 도 배수를 탄 가격으로 본다(무료 버튼은 종전대로 재고만 본다) */
+    const lack = btn.dataset.shfree ? freeLeft(b) <= 0
+      : cur < summonCost(b, +btn.dataset.shn * sumMulOf(btn.dataset.shfree));
     btn.classList.toggle('lack', lack);
     /* 무료 버튼의 «충분» 색은 시안(.b1)이라 rich(노랑)를 씌우지 않는다 */
     if(!btn.dataset.shfree) btn.classList.toggle('rich', !lack);
@@ -30483,7 +30582,8 @@ $('shopList').addEventListener('click', e => {
   }
   const btn = e.target.closest('[data-shsum]');
   if(!btn) return;
-  const b = btn.dataset.shsum, n = +btn.dataset.shn;
+  /* 668 — `data-shn` 은 기본 횟수고 배수는 여기서 곱한다(무료 버튼은 `sumMulOf` 가 1 로 막는다) */
+  const b = btn.dataset.shsum, n = +btn.dataset.shn * sumMulOf(btn.dataset.shfree);
   if(btn.dataset.shfree){
     if(gmBlocked(b)) return;                     /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
     if(allMaxed(BANNERS[b].list)){ doSummon(b, n); renderShopPage(); return; }
@@ -30495,6 +30595,26 @@ $('shopList').addEventListener('click', e => {
   }
   doSummon(b, n);
   renderShopPage();
+});
+/* ⚑ 668 — 배수 바를 그린다. 칸 목록은 `SUM_MULS` 한 곳에서만 오고(마크업에 숫자를 두 벌 적지 않는다),
+   활성 표시는 카테고리 탭과 **같은 규약**(`.stab.on`)이라 알약·오버행이 저절로 따라온다. */
+function renderSumMulBar(){
+  const bar = $('sumMulBar'); if(!bar) return;
+  bar.innerHTML = SUM_MULS.map(m =>
+    '<div class="stab' + (m === sumMul ? ' on' : '') + '" data-mul="' + m + '">'
+    + '<i class="' + (m === sumMul ? 'ol4' : 'ol3') + '">×' + m.toLocaleString('en-US') + '</i></div>').join('');
+}
+$('sumMulBar').addEventListener('click', e => {
+  const c = e.target.closest('[data-mul]');
+  if(!c) return;
+  const m = +c.dataset.mul;
+  if(!SUM_MULS.includes(m) || m === sumMul) return;
+  sumMul = m;
+  renderSumMulBar();
+  /* 값이 바뀌면 «라벨·가격» 과 «살 수 있나»(102) 를 같이 다시 그린다. 결과 팝업이 열린 채로도
+     바뀔 수 있으므로(팝업 뒤 상점이 살아 있다) 그쪽 버튼도 같은 틱에 맞춘다. */
+  if($('shopw').classList.contains('on')) renderShopPage();
+  if($('sumw').classList.contains('on')) syncSummonBtns();
 });
 $('shopCats').addEventListener('click', e => {
   const c = e.target.closest('[data-cat]');
