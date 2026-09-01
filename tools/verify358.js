@@ -21,9 +21,18 @@
  *             같은 천장에 붙는다(게터만 고치고 이동식에 배수가 남는 경우를 잡는다).
  *   §5 66     보스 추격 바닥 `BOSS_CHASE` 는 상수에 **비**로 걸린다 — 실측 보스 속도 ≈ 115 × 그 계수
  *              (359 이관: 계수는 1.08 → 0.94 로 바뀌었고, 이 절이 재는 것은 «비로 걸리는가» 다).
+ *              ⚑ **651(2026-09-01) — 이 절의 자를 «벽시계» 에서 «시뮬 시계» 로 옮겼다.** 제품 `loop`
+ *              가 `dt` 를 0.1 로 클램프하므로 프레임이 굶으면 시뮬 시간이 벽시계보다 덜 흐르고,
+ *              `변위/벽시계초` 는 «느려진 보스» 가 아니라 «덜 흐른 시계» 를 읽었다(부하 아래 ×0.51).
+ *              분모를 프레임별 `S.playtime` 증분으로, 보스 대기를 폴링으로 바꾸고, 눈금을
+ *              «돌진·예고를 뺀 프레임의 변위/dt **최댓값**» 으로 세우자 실측이 소스가 말한 바닥에
+ *              **정확히** 붙어(×1.000) 허용 밴드를 0.75~1.33 → **0.97~1.03 으로 좁혔다**.
+ *              재현·대조는 `tools/probe651.js`.
  *   §6 세이브 `S.lv.spd` 를 든 구 세이브를 **실제로 로드**해도 에러 0 · 속도 불변(88 «보상 없이 소멸»).
  *   §R 되돌림 `get speed()` 만 옛 식(`U.spd.val(lv('spd'))` + UPG 행)으로 되돌린 **소스 사본**에서
  *             §2·§4 가 실제로 빨개진다 — 이게 없으면 «축이 애초에 안 걸려서 초록» 과 구별할 수 없다.
+ *             651 이 **R3** 을 더했다: 같은 사본에서 §5 의 **좁힌** 비 밴드도 빨개진다(×40) —
+ *             밴드를 좁힌 것이 «무르게 푼 수리» 가 아님을 이 항이 못박는다.
  *   §7 에러   콘솔·페이지 에러 0건.
  *
  * 127 — 브라우저 해석은 tools/pwlaunch.js 공용.
@@ -235,40 +244,63 @@ async function run(page, kind) {
       meas[k] && `${meas[k].v} ≥ ${(SPEED * 0.97).toFixed(1)}`));
   });
 
-  console.log('\n=== §5 66 보스 추격 바닥은 상수에 «비» 로 걸린다 ===');
-  await blk('§5', async () => {
-    /* ⚠ 적에게는 `vx/vy` 가 없다(288 이 kx/ky 를 폐지하고 좌표를 직접 옮긴다) — 변위로 잰다.
-       공격 모션 중에는 `spd = 0` 으로 서므로(66) 평균이 아니라 **최댓값**이 추격 바닥이다. */
-    /* ⚠ 두 함정.
+  /* ⚑ 651 — 이 표본은 §R 도 쓴다(되돌림 사본에서 «좁힌 밴드가 실제로 빨개지는가»)라
+     블록 밖에 둔다. 같은 자를 두 벌 적으면 한쪽만 고쳐지는 자리가 된다. */
+    /* ⚠ 세 함정.
        ① 적에게는 `vx/vy` 가 없다(288 이 kx/ky 를 폐지하고 좌표를 직접 옮긴다) — **변위**로 잰다.
-       ② rAF 벽시계로 나눈 «프레임당 속도» 의 최댓값은 게임 내부 dt 와 어긋나 1.8배까지 튄다
-          (실측). 그래서 절대값을 상수와 맞대지 않고 **같은 자로 잰 두 판의 비**를 본다 —
-          이 절이 물어야 하는 것도 «구 세이브의 spd 가 추격 바닥을 못 올린다» 이지 눈금이 아니다. */
+       ② 공격 모션 중에는 `spd = 0` 으로 서고(66) 359 돌진 중에는 `stat.speed × DASH.boss.spd`
+          로 튄다 — 그래서 «평균» 은 표본 창이 어느 국면에 걸렸는지에 통째로 흔들린다(실측 78~114).
+          이 절이 물어야 하는 것은 **추격 바닥**이므로, 돌진·예고 프레임을 뺀 프레임들의
+          «변위 ÷ dt» 최댓값을 눈금으로 삼는다 — 그 값은 실측 6/6 표본에서 소스가 말한 바닥과
+          **정확히 같았다**(253 px/s).
+       ③ ⚑ **651 — 벽시계로 시뮬을 재면 안 된다.** 제품 `loop` 는 `if(dt > 0.1) dt = 0.1` 로
+          클램프하므로(38846), 프레임이 굶어 rAF 간격이 100ms 를 넘으면 **시뮬 시간이 벽시계보다
+          덜 흐른다**. 그 아래에서 `변위 / 벽시계초` 는 «느려진 보스» 가 아니라 «덜 흐른 시계» 를
+          읽는다(재현 `tools/probe651.js` §2-b — 부하 아래에서 ×0.51 로 내려앉았다).
+          ⇒ 나눗셈의 분모도, 보스를 기다리는 대기도 전부 **시뮬 시계**로 옮겼다:
+            · 분모 = 프레임별 `S.playtime` 증분(= 제품이 실제로 쓴 dt).
+            · 대기 = `startBoss()` 의 예약이 **시뮬 1.4초**(21359)라 벽시계 고정 대기가 아니라 폴링.
+          부하 아래에서도 이 자는 253 그대로다(probe651 §2-c ×1.02 · 흔들림 1.6%). */
     const runBoss = lvSpd => `(async () => {
       localStorage.clear(); Object.assign(S, DEF());
       S.stage = 50; S.best = 50; S.lv.spd = ${lvSpd}; markDirty();
-      /* ⚠ startBoss() 는 «if(bossOn) return» 으로 시작한다 — 앞 절이 남긴 전장을 먼저 치운다.
+      /* ⚠ startBoss() 는 «if(battleBusy()) return» 으로 시작한다 — 앞 절이 남긴 전장을 먼저 치운다.
          (이 블록은 템플릿 리터럴 안이다 — 여기 백틱을 쓰면 문자열이 끊긴다) */
       if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
       promo = null; raidOn = null; bossOn = false; S.bossFarm = false;
       enemies.length = 0; spawnQ.length = 0;
       startBoss();
-      await new Promise(r2 => setTimeout(r2, 2200));
       const B = () => enemies.find(e => e.tk === 'boss');
-      if (!B()) return { err: '보스가 안 섰다 — 필드 [' + enemies.map(e => e.tk).join(',') + ']' };
+      /* 651 — 벽시계 고정 대기(구 2200ms)는 프레임이 굶으면 모자란다. 설 때까지 기다린다. */
+      const w0 = performance.now();
+      while (!B() && performance.now() - w0 < 20000) await new Promise(r2 => setTimeout(r2, 40));
+      if (!B()) return { err: '보스가 20초 안에 안 섰다 — 필드 [' + enemies.map(e => e.tk).join(',') + ']' };
       const sp0 = +B().sp.toFixed(1);
-      let path = 0, px = B().x, py = B().y, t0 = performance.now(), fr = 0;
-      for (let i = 0; i < 160; i++) {
+      let path = 0, px = B().x, py = B().y, fr = 0, nC = 0, mxC = 0;
+      const t0 = performance.now(), s0 = S.playtime;
+      let ps = S.playtime;
+      for (let i = 0; i < 900; i++) {
         await new Promise(r2 => requestAnimationFrame(r2));
         const e2 = B(); if (!e2) break;
-        path += Math.hypot(e2.x - px, e2.y - py); px = e2.x; py = e2.y; fr++;
+        const d = Math.hypot(e2.x - px, e2.y - py); px = e2.x; py = e2.y;
+        const dts = S.playtime - ps; ps = S.playtime;
+        path += d; fr++;
+        /* 359 돌진(dashD)·예고(dashT) 프레임은 «추격» 이 아니다 — 그 축은 DASH.boss.spd 다 */
+        if (dts > 0 && !(e2.dashD > 0) && !(e2.dashT > 0)) { nC++; mxC = Math.max(mxC, d / dts); }
+        if (S.playtime - s0 >= 2.5 && nC >= 12) break;
+        if (S.playtime - s0 >= 8) break;
       }
-      const sec = (performance.now() - t0) / 1000;
+      const wall = (performance.now() - t0) / 1000, sim = S.playtime - s0;
       /* ⚠ 표본 끝에 보스가 사라져 있을 수 있다(제한 시간·격파) — 기본 속도는 **처음에** 잡아 둔 값을 쓴다 */
-      return { avg: +(path / Math.max(0.1, sec)).toFixed(1), fr,
+      return { chase: +mxC.toFixed(1), nC, fr,
+               sim: +sim.toFixed(2), wall: +wall.toFixed(2),
+               avgWall: +(path / Math.max(0.1, wall)).toFixed(1),
                floor: +(stat.speed * BOSS_CHASE).toFixed(1), baseSp: sp0,
-               pSpeed: stat.speed, chase: BOSS_CHASE };
+               pSpeed: stat.speed, chaseK: BOSS_CHASE };
     })()`;
+
+  console.log('\n=== §5 66 보스 추격 바닥은 상수에 «비» 로 걸린다 ===');
+  await blk('§5', async () => {
     const a = await h.page.evaluate(runBoss(0));
     const b = await h.page.evaluate(runBoss(999));
     if (a.err || b.err) ok(false, '5 보스 상태를 못 만들었다', a.err || b.err);
@@ -279,12 +311,23 @@ async function run(page, kind) {
       ok(CH > 0 && Math.abs(b.floor - SPEED * CH) < 0.2, `5 추격 바닥 = 상수 × ${CH}`, b.floor + ' px/s');
       ok(b.baseSp < b.floor, '5 이 스테이지의 보스 기본 속도는 바닥보다 느리다 = 바닥이 실제로 걸린다',
         `기본 ${b.baseSp} < 바닥 ${b.floor}`);
-      const ratio = b.avg / Math.max(1, a.avg);
-      ok(ratio > 0.75 && ratio < 1.33,
+      /* 651 전제 — 표본이 «시뮬 시계로» 실제로 열렸는가. 이 두 항이 없으면 창이 0.2초만 열려도
+         아래 비가 초록일 수 있다(«아무것도 안 재서 초록» 을 막는다). */
+      ok(a.sim >= 2.4 && b.sim >= 2.4, '5-전제 표본 창이 **시뮬 시간으로** 실제로 열렸다',
+        `Lv0 시뮬 ${a.sim}s(벽 ${a.wall}s) · Lv999 시뮬 ${b.sim}s(벽 ${b.wall}s)`);
+      ok(a.nC >= 12 && b.nC >= 12, '5-전제 그 창에 **추격** 프레임이 실제로 있다(돌진·예고만 잡은 게 아니다)',
+        `Lv0 ${a.nC}/${a.fr}프레임 · Lv999 ${b.nC}/${b.fr}프레임`);
+      /* 651 — 벽시계 자로는 절대 못 물었던 것. 옛 주석은 «벽시계 최댓값은 내부 dt 와 1.8배까지
+         어긋난다» 며 절대값 대조를 포기했는데, 시뮬 시계로 재면 바닥에 **정확히** 붙는다. */
+      ok(a.floor > 0 && Math.abs(a.chase / a.floor - 1) <= 0.03,
+        '5 실측 추격 속도가 소스가 말한 바닥에 붙는다(자가 눈금을 되찾았다)',
+        `실측 ${a.chase} vs 바닥 ${a.floor} px/s (×${(a.chase / a.floor).toFixed(3)})`);
+      const ratio = b.chase / Math.max(1, a.chase);
+      ok(ratio > 0.97 && ratio < 1.03,
         '5 구 세이브의 spd Lv999 가 실측 보스 추격 속도를 못 올린다',
-        `Lv0 ${a.avg} → Lv999 ${b.avg} px/s (×${ratio.toFixed(2)})`);
-      ok(a.avg > b.baseSp * 0.5, '5 그리고 보스가 실제로 움직였다(표본이 0 이 아니다)',
-        `${a.avg} px/s · ${a.fr}프레임`);
+        `Lv0 ${a.chase} → Lv999 ${b.chase} px/s (×${ratio.toFixed(3)})`);
+      ok(a.chase > b.baseSp * 0.5, '5 그리고 보스가 실제로 움직였다(표본이 0 이 아니다)',
+        `${a.chase} px/s · 추격 ${a.nC}프레임 · 참고 평균벽 ${a.avgWall} px/s`);
     }
   });
 
@@ -331,6 +374,21 @@ async function run(page, kind) {
       `${a.speed} → ${b.speed}`);
     const m = await run(r.page, 'oldspd');
     ok(m.v > SPEED + 1.5, 'R2 그리고 화면 위 실측도 상수를 넘긴다(§4 가 빨개진다)', m.v + ' px/s');
+    /* ⚑ 651 — **§5 의 새 자도 되돌림에 걸리는지** 못박는다. 벽시계를 시뮬 시계로 바꾸면서
+       허용 밴드를 0.75~1.33 → 0.97~1.03 으로 **좁혔으므로**, 그 자가 진짜 회귀를 여전히
+       잡는다는 것을 여기서 보여야 «무르게 푼 수리» 와 구별된다(334 처방 · 368 세 겹 규약). */
+    const ra = await r.page.evaluate(runBoss(0));
+    const rb = await r.page.evaluate(runBoss(999));
+    if (ra.err || rb.err) ok(false, 'R3 되돌린 사본에서 보스 상태를 못 만들었다', ra.err || rb.err);
+    else {
+      const rr = rb.chase / Math.max(1, ra.chase);
+      ok(!(rr > 0.97 && rr < 1.03),
+        'R3 되돌린 사본에서는 §5 의 **좁힌 비 밴드**가 실제로 빨개진다(자가 회귀를 여전히 잡는다)',
+        `Lv0 ${ra.chase} → Lv999 ${rb.chase} px/s (×${rr.toFixed(2)}) · 밴드 0.97~1.03`);
+      ok(rb.chase > ra.chase * 2,
+        'R3 그리고 그 이유는 «추격 바닥이 실제로 올라갔다» 이다(자가 딴 것을 재고 있는 게 아니다)',
+        `바닥 ${ra.floor} → ${rb.floor} px/s`);
+    }
     await r.page.close();
   });
   try { fs.unlinkSync(tmp); } catch (_) {}
