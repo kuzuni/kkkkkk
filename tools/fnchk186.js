@@ -70,29 +70,70 @@ const ok = (b, act, want, got) => {
     '전설·신화·초월·불멸 4행이 같은 격자 안(스크롤로 닿음)',
     '상위행=' + f2.upper + ' 마지막칸 bottom=' + f2.bottom + ' scrollH=' + f2.scrollH);
 
-  /* 3 — 미해금 등급 잠금 칸이 «언제 열리는지» 를 말한다. */
+  /* 3 — 미해금 등급 잠금 칸이 «언제 열리는지» 를 말한다.
+     ⚑ 767(2026-09-01) — 여기 있던 «소환 Lv.5 … Lv.75» 는 186 당시 세계의 스냅샷이었다.
+       196(만렙 100 → 25)·496(25 → 50)이 해금 사다리를 두 번 옮기는 동안 제품은 `GRADE_ROLL_EQ`
+       한 표로 따라갔지만 이 상수는 못 따라와 **두 세대 내내 빨간 채** 남았다(522-① 과 같은 사고).
+       ⇒ 기대값은 **재료(`GRADE_ROLL_EQ` · `WPN_COLS`)에서 매 실행 파생**한다. 사다리를 또 옮겨도
+       이 자는 따라온다. 형제 자 `verify186.js` [E] 가 처음부터 그렇게 적혀 있었다 — 그쪽을 베낀 것이다.
+     ⚠ 파생은 잘못 쓰면 «제품에게 답을 묻고 그 답을 채점하는» 헛초록이 된다(765-②). 그래서
+       ① 제품 함수(`rollOf`)가 아니라 **표 자체**를 읽고 ② 칸 수(잠긴 등급 × `WPN_COLS`)를 같이 세고
+       ③ 아래 5번에 **되돌림 시험**(표를 흔들면 화면도 흔들린다)을 둔다. */
   const f3 = await page.evaluate(() => {
+    const need = GRADE_ROLL_EQ.map(g => g.unlock);
+    const locked = need.map((n, i) => (n > 1 ? i : -1)).filter(i => i >= 0);
     const o = S.sum.weapon.lv; S.sum.weapon.lv = 1;
     openWeapon(null, 'weapon');
     const t = [...document.querySelectorAll('#wpnGrid .ulk')].map(u => u.textContent.trim());
     const uniq = [...new Set(t)];
     S.sum.weapon.lv = o;
-    return { n: t.length, uniq: uniq.join(' ') };
+    return { n: t.length, uniq: uniq.join(' '),
+             wantN: locked.length * WPN_COLS,
+             want: locked.map(i => '소환 Lv.' + need[i]).join(' '), nLocked: locked.length };
   });
-  ok(f3.n === 30 && f3.uniq === '소환 Lv.5 소환 Lv.15 소환 Lv.30 소환 Lv.40 소환 Lv.55 소환 Lv.75',
-    '소환 Lv 1 상태로 팝업을 봄', '미해금 6등급 × 5칸 = 30칸에 해금 레벨 표기',
+  ok(f3.n === f3.wantN && f3.uniq === f3.want,
+    '소환 Lv 1 상태로 팝업을 봄',
+    '미해금 ' + f3.nLocked + '등급 × ' + (f3.wantN / f3.nLocked) + '칸 = ' + f3.wantN + '칸에 해금 레벨 표기 — 기대 «' + f3.want + '»',
     f3.n + '칸 · ' + f3.uniq);
 
-  /* 4 — 소환 레벨이 올라가면 그 등급 안내가 사라진다(살아 있는 데이터를 읽는가). */
+  /* 4 — 소환 레벨이 올라가면 그 등급 안내가 사라진다(살아 있는 데이터를 읽는가).
+     끊는 레벨도 표에서 고른다 — «잠긴 등급의 아래 절반이 열리는 레벨». 사다리가 옮겨지면 같이 옮겨간다. */
   const f4 = await page.evaluate(() => {
+    const need = GRADE_ROLL_EQ.map(g => g.unlock);
+    const locked = need.map((n, i) => (n > 1 ? i : -1)).filter(i => i >= 0);
+    const cut = need[locked[Math.ceil(locked.length / 2) - 1]];      /* 아래 절반까지 해금되는 레벨 */
     const o = S.sum.weapon.lv;
-    S.sum.weapon.lv = 30; openWeapon(null, 'weapon');
+    S.sum.weapon.lv = cut; openWeapon(null, 'weapon');
     const a = [...new Set([...document.querySelectorAll('#wpnGrid .ulk')].map(u => u.textContent.trim()))];
     S.sum.weapon.lv = o;
-    return a.join(' ');
+    return { got: a.join(' '), cut,
+             want: locked.filter(i => need[i] > cut).map(i => '소환 Lv.' + need[i]).join(' '),
+             gone: locked.filter(i => need[i] <= cut).length };
   });
-  ok(f4 === '소환 Lv.40 소환 Lv.55 소환 Lv.75', '소환 Lv 를 30 으로 올린 뒤 다시 봄',
-    '희귀·영웅·전설 안내는 사라지고 신화·초월·불멸만 남음', f4 || '(0건)');
+  ok(f4.got === f4.want && f4.gone > 0 && f4.want !== '',
+    '소환 Lv 를 ' + f4.cut + '(표에서 고른 «아래 절반 해금» 레벨)으로 올린 뒤 다시 봄',
+    '아래 ' + f4.gone + '등급 안내는 사라지고 상위 등급만 남음 — 기대 «' + f4.want + '»',
+    f4.got || '(0건)');
+
+  /* 5 — 되돌림 시험(767). 파생이 «제품에게 답을 묻는» 헛초록이 아님을 못박는다:
+     표의 해금 레벨을 한 칸 흔들면 화면 안내가 **그대로 따라오고**, 원복하면 되돌아온다.
+     ⚠ 표를 안 읽고 상수를 그리는 회귀(= 767 이 고친 바로 그 부패의 제품판)라면 여기가 빨개진다. */
+  const f5r = await page.evaluate(() => {
+    const i = GRADE_ROLL_EQ.findIndex(g => g.unlock > 1);
+    const o = GRADE_ROLL_EQ[i].unlock, ol = S.sum.weapon.lv;
+    const first = () => { const u = document.querySelector('#wpnGrid .ulk'); return u ? u.textContent.trim() : '(0건)'; };
+    S.sum.weapon.lv = 1;
+    GRADE_ROLL_EQ[i].unlock = o + 7; openWeapon(null, 'weapon');
+    const moved = first();
+    GRADE_ROLL_EQ[i].unlock = o;     openWeapon(null, 'weapon');
+    const back = first();
+    closeWeapon(); S.sum.weapon.lv = ol;
+    return { moved, back, want: '소환 Lv.' + (o + 7), wantBack: '소환 Lv.' + o };
+  });
+  ok(f5r.moved === f5r.want && f5r.back === f5r.wantBack,
+    '되돌림 — 표의 해금 레벨을 +7 흔들었다가 원복',
+    '안내가 표를 따라 «' + f5r.want + '» 로 바뀌었다가 «' + f5r.wantBack + '» 로 돌아옴',
+    f5r.moved + ' → ' + f5r.back);
 
   /* 5 — 잠금 칸 클릭은 아무 일도 하지 않는다(선택이 튀면 안 된다). */
   const f5 = await page.evaluate(() => {
