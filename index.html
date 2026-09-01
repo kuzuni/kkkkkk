@@ -33841,7 +33841,7 @@ function upFx(key, host, cur, n, noFlash, iv){
     let fel = el;
     try { const s = getComputedStyle(el).getPropertyValue('--flash-to').trim();
       if(s){ const c = el.querySelector(s); if(c) fel = c; } } catch(_){}
-    fxFlash(fel, iv);                                /* 619 14회차 — 홀드면 틱 안에서 끝난다 */
+    fxFlash(fel, iv, true);                          /* 619 14회차 — 홀드면 틱 안에서 끝난다 · 15회차 — 액자 안쪽으로 */
   }
   /* 583 규약 그대로 — 화폐 키가 있으면 화폐 알갱이, 못 쏘면(레이어 포화·260ms 재시작 간격) 종전 앰버.
      619 3회차 — 알갱이가 서면 **타격 순간 몫**(UPFX_NOW)만 같이 쏜다(위 상수 머리말 — 합 10개로 583 상한 안). */
@@ -33922,7 +33922,7 @@ function trHoldStop(bad){
   const el = trCard(h.key);
   fxHoldMark(el, false);                             /* 619 8회차 — 홀드 글로우 끄기 */
   if(bad && el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);   /* 60 — 부족·상한 흔들림 */
-  else if(h.n > 1 && el) fxUpOk(el, el, trHoldGainTxt(h), PAY_CUR.train);  /* 58 — 반복분은 마지막에 한 번 · 583 골드 알갱이 · 628 «방금 오른 양» */
+  else if(h.n > 1 && el) fxUpOk(el, el, trHoldGainTxt(h), PAY_CUR.train, true);  /* 58 — 반복분은 마지막에 한 번 · 583 골드 알갱이 · 628 «방금 오른 양» */
   /* ⚑ 488 2회차 — 정산 요약 토스트. 룬·단련 홀드에는 처음부터 있었는데 여기만 없어서, 1회차 캡처를
      본 비평가 BM·BN 이 **독립적으로** «세 씬 중 훈련만 마무리 층이 없다»(④ 일관성)로 잡았다.
      문구는 룬·단련과 같은 꼴(«무엇을 몇 회») 이고, 1회 누름에는 안 띄운다(종전 침묵 유지). */
@@ -33983,7 +33983,7 @@ function trHoldStart(key, card){
   const ok = trBuyOnce(key);
   /* 58(다른 세션 변경분 유지) — 오버레이는 **재렌더 «전»** 에 쏜다. 뒤에 쏘면 렌더 비용만큼 연출이 늦는다.
      그 뒤 노드가 «바뀌었을 때만» fx-hit 를 새 노드에 다시 붙인다(renderTrainLive 는 노드를 유지하므로 보통 no-op). */
-  if(ok) fxUpOk(card, card, txt, bi0.cur);      /* 583 — 결제가 돌려준 화폐 키로 알갱이를 쏜다 */
+  if(ok) fxUpOk(card, card, txt, bi0.cur, true);      /* 583 — 결제가 돌려준 화폐 키로 알갱이를 쏜다 */
   /* ⚑ 619 3회차 — 첫 발의 «타격 순간» 몫. `fxUpOk` 는 공용 부품이라(09·12·17·장비·코스튬이 같이 쓴다)
      여기서 한 줌만 더한다 — 플래시는 `fxUpOk` 가 이미 걸었으므로 **끄고**(중복 금지) 파티클만.
      ⚠ 룬·단련은 같은 일을 `upFx` 안에서 한다(부품이 갈리지 않게 상수 `UPFX_NOW` 를 공유한다). */
@@ -35072,6 +35072,24 @@ const FXFLASH_SAME = 8;
    ⚠ 두 곳이 어긋나면 홀드 밖 단발이 CSS 값으로 돌고 «상수만» 바뀌는 헛수정이 된다 —
      `verify619` [F1] 이 CSS 선언과 이 두 상수가 같은지를 직접 물어 그것을 막는다. */
 const FXFLASH_MS = 340, FXSPARK_MS = 380;
+/* ⚑⚑ 619 15회차 — **회당 플래시가 액자를 넘지 않게 하는 산수.** 14회차 채점에서 두 비평가(EH·EI)의
+   「8점을 막는 단 하나」가 **문자 그대로 같은 문장**이었다: «버스트 순간의 흰 밴드를 호스트 footprint
+   **안쪽으로만** 그려라 · 상시 앰버 링은 손대지 마라». 실측(2인 독립):
+     훈련 알림 배지 붉은 픽셀 752 → **477(−36.6%, EH)** · 검은 외곽선 715 → **251(−65%, EI)**
+     단련 위 «단련석» 패널 아래 테두리 (20,20,20) → **(92,77,41)**(휘도 +360%) · 행↔바 6px 틈을 100% 채움
+   ⚑ **뿌리는 그림자가 아니라 `@keyframes fxFlash` 의 `scale(1.06)` 이다** — 플래시 상자는 호스트 rect
+     «그대로» 라 6% 확대가 곧 **바깥 3%**다: 훈련 카드 326×510 에서 좌우 **+9.2px** · 위아래 **+14.4px**
+     (EI 실측 «바깥 8~10px 흰 밴드» 와 같은 수). 거기에 `box-shadow` 의 하드 림 4px 이 더 얹힌다.
+   ⚠⚠ **처방으로 «글로우를 inset 으로 뒤집기» 를 고르면 안 된다** — 12회차가 그것으로 카드 내용을
+     통째로 지워 ④ 2점을 받았고 CSS 머리말이 «안쪽 글로우는 쓰지 마라 · 강조는 바깥 림만으로» 라고
+     못박아 뒀다. ⇒ 림은 **바깥 림 그대로 두고 «상자» 를 그만큼 안으로 들인다.** 확대·림·색·길이는
+     한 값도 안 바뀌고 바뀌는 것은 **플래시 상자의 네 변**뿐이다(13회차가 스파크 가둠에서 쓴 것과 같은 수).
+   ⚠ 들이는 양은 **상수가 아니라 식**이다 — 확대가 «비율» 이라 호스트가 크면 넘치는 양도 크다
+     (326 폭 9.2px ↔ 510 높이 14.4px). 축마다 따로 뽑는다: `pad = size × (1 − 1/PEAK) / 2 + RIM`.
+   ⚠ `FXFLASH_PEAK` 는 위 `@keyframes fxFlash` 의 최대 `scale` 과 **같은 값이어야 한다** —
+     `verify619` [F2] 가 둘이 어긋나면 빨개진다(FXFLASH_MS 와 같은 규약). */
+const FXFLASH_PEAK = 1.06;                          /* @keyframes fxFlash 의 최대 확대(52%) */
+const FXFLASH_RIM  = 8;                             /* box-shadow 하드 림 4px + 흐림의 보이는 몫 */
 /* ⚑ 543(주인 지시 2026-08-31 «재화 흡수 이펙트 … 다이아 크기 기준 3배») — **알갱이 크기 손잡이는
    이것 하나다.** 값은 «기준 재화(다이아)의 찍힌 잉크가 몇 배가 되는가» 이고, 아래 모든 것이
    여기서 파생된다: 비행 크기(FX3_FLYS) · 잉크 지름(FX3_GINK) · 밴드 피치 · 최소 중심거리 ·
@@ -37292,7 +37310,7 @@ function fxBurst(t, col, n, strict, iv){
 /* ⚑ 619 14회차 — 둘째 인자 `iv`(틱 간격)를 주면 애니 길이가 그 틱 안에서 끝난다(`fxTickLife` 머리말).
    ⚠ 제거 시각은 손으로 안 적는다 — 아래 `fxBye` 는 41회차 규약대로 **실제로 걸린 애니메이션의 끝**
      에서 재므로 길이를 바꾸면 저절로 따라온다(그래서 여기서 고칠 곳이 «한 줄» 이다). */
-function fxFlash(el, iv){
+function fxFlash(el, iv, inset){
   const L = fxL(), r = fxRect(el); if(!L || !r) return;
   if(L.childElementCount >= FXMAX) return;
   /* ⚑ 625 — **한 자리에 플래시 한 장.** 종전에는 부를 때마다 새 <s> 를 append 만 했다.
@@ -37318,8 +37336,12 @@ function fxFlash(el, iv){
   const d = document.createElement('s');
   d.className = 'fx-flash';
   d.__fxHost = el; d.__fxr = r;                       /* 625 — 다음 발화가 «같은 자리» 를 알아보는 표 */
-  d.style.left = r.x + 'px'; d.style.top = r.y + 'px';
-  d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
+  /* ⚑ 619 15회차 — `inset` 이면 상자를 **확대·림이 넘치는 만큼** 안으로 들인다(위 산수 머리말).
+     안 주면 종전 그대로 호스트 rect 다 — 09·12·17·코스튬·장비의 단발 플래시는 한 픽셀도 안 바뀐다. */
+  const pin = s => inset ? Math.min(s * (1 - 1 / FXFLASH_PEAK) / 2 + FXFLASH_RIM, Math.max(0, s / 2 - 12)) : 0;
+  const px = pin(r.w), py = pin(r.h);
+  d.style.left = (r.x + px) + 'px'; d.style.top = (r.y + py) + 'px';
+  d.style.width = (r.w - 2 * px) + 'px'; d.style.height = (r.h - 2 * py) + 'px';
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
   /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로. CSS 기본값(.34s)이 곧 `full` 이다. */
   { const ms = fxTickLife(iv, FXFLASH_MS); if(ms !== FXFLASH_MS) d.style.animationDuration = ms + 'ms'; }
@@ -37388,8 +37410,11 @@ function fxHitEl(t){
    재렌더 뒤에 부르면 `renderTrain()` 비용만큼(실측 ~150ms) 연출 시작이 늦는다. */
 /* ⚑ 583 — 네 번째 인자 `cur`(«무엇으로 샀는가»)를 받으면 화폐 알갱이를 같이 쏜다.
    안 주면 종전과 **한 값도 안 다르다**(장비·코스튬·유물 등 나머지 호출자는 그대로다). */
-function fxUpOk(target, at, txt, cur){
-  if(target){ fxFlash(target); fxHitEl(target); }
+/* ⚑ 619 15회차 — 다섯째 인자 `inset` 은 «플래시를 호스트 액자 «안쪽» 으로만 그린다» 다
+   (`FXFLASH_PEAK` 머리말 — 14회차 2인 공통 「단 하나」). 회당 발화 자리(23 훈련 홀드)만 켠다 —
+   안 주면 09·12·17·코스튬·장비 등 나머지 호출자는 종전 그대로다. */
+function fxUpOk(target, at, txt, cur, inset){
+  if(target){ fxFlash(target, null, inset); fxHitEl(target); }
   /* 16회차 — 크림 카드 위 #FFE9A8 은 저대비(Z «크림-온-크림»). 더 깊은 앰버로. */
   /* ⚑ 583 — 화폐 키를 받으면 그 앰버 알갱이를 **화폐 아이콘 알갱이로 갈아 끼운다**(겹쳐 쏘지 않는다).
      주인 원문이 «그 알갱이가 골드아이콘으로 되게 하기» 라 «더하기» 가 아니라 «되게» 다 —

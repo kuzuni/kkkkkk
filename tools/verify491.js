@@ -418,10 +418,10 @@ async function pixelRun(page) {
      /* ⚑ 619 14회차 이관 — 세 자리에 `iv`(틱 간격)가 붙었다: 서명 · `fxFlash(fel, iv)` ·
         `fxBurst(…, true, iv)`. 자는 **좁아졌다** — 회당 연출이 틱 안에서 끝나게 하는 축이
         하나라도 빠지면 여기가 빨개진다(13회차 채점의 두 「8점을 막는 단 하나」가 그 축이다). */
-     && /function upFx\(key, host, cur, n, noFlash, iv\)\{[\s\S]{0,3200}?fxFlash\(fel, iv\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,700}?fxBurst\(el, grain \? FXPAL\.upNow : FXPAL\.up, grain \? UPFX_NOW : cnt, true, iv\)/.test(src),
+     && /function upFx\(key, host, cur, n, noFlash, iv\)\{[\s\S]{0,3200}?fxFlash\(fel, iv, true\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,700}?fxBurst\(el, grain \? FXPAL\.upNow : FXPAL\.up, grain \? UPFX_NOW : cnt, true, iv\)/.test(src),
      '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 화폐 축 · 619 공용 부품)');
   ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \}/.test(src)
-     && /fxUpOk\(card, card, txt, bi0\.cur\)/.test(src),
+     && /fxUpOk\(card, card, txt, bi0\.cur, true\)/.test(src),
      '[7-d1] 583 — 대조군(훈련 카드)도 **같은 표**에서 화폐 키를 받는다(결제가 돌려준다 · 자리마다 문자열 금지)');
 
   const c2 = await boot(browser, SRC);
