@@ -292,7 +292,7 @@ async function pixels(h, shotPath) {
   }
 
   console.log('\n=== §R 되돌림 시험 — 숨김 목록에서 `.kboss` 만 빼면 §2·§3 이 빨개진다 ===');
-  const tmp = path.join(ROOT, 'index.verify350-revert.html');
+  const tmp = path.join(ROOT, `index.verify350-revert-${process.pid}.html`);
   fs.writeFileSync(tmp, CODE.replace(HIDE_NEW, HIDE_OLD));
   const r = await open(browser, tmp, 'revert');
   const rs = await r.enter('stage');
@@ -313,10 +313,10 @@ async function pixels(h, shotPath) {
   ok(rfm.kboss && rfm.kboss.w === 120,
     'R5 — 되돌린 사본에서도 .bfarm 은 Ø120 그대로 = §4 는 350 이 만든 것이 아니다(회귀 기준선)',
     rfm.kboss && rfm.kboss.w);
-  fs.unlinkSync(tmp);
+  try { fs.unlinkSync(tmp); } catch (e) {}
 
   console.log('\n=== §R6 되돌림 — 453 가드만 빼면 §6 의 가드 항이 빨개진다 (503) ===');
-  const tmp6 = path.join(ROOT, 'index.verify350-noguard.html');
+  const tmp6 = path.join(ROOT, `index.verify350-noguard-${process.pid}.html`);
   fs.writeFileSync(tmp6, CODE.replace(GUARD_NEW, GUARD_OLD));
   const g = await open(browser, tmp6, 'noguard');
   const gr = await g.ev(`(() => {
@@ -345,7 +345,7 @@ async function pixels(h, shotPath) {
       'bfight=' + gr.fight + ' kboss=' + gr.disp);
   }
   ok(g.errs.length === 0, 'R6 — 가드를 뺀 사본에도 콘솔·페이지 에러 0건', g.errs.length + '건');
-  fs.unlinkSync(tmp6);
+  try { fs.unlinkSync(tmp6); } catch (e) {}
 
   console.log('\n=== §7 에러 ===');
   eq('콘솔·페이지 에러(현재 파일)', h.errs.length, 0);

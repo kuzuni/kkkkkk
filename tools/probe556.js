@@ -163,7 +163,7 @@ async function openPage(browser, file) {
     const anchor = 'const DK = isBoss ? DASH.boss : DASH.mob;';
     if (raw.indexOf(anchor) < 0) { console.log('주입 앵커를 못 찾았다'); process.exit(1); }
     const inj = raw.replace(anchor, anchor + ' for (let __i = 0; __i < 400; __i++) Math.hypot(__i, e.x, e.y);');
-    file = path.join(ROOT, 'docs', 'shots', '__probe556-inject.html');
+    file = path.join(ROOT, 'docs', 'shots', `__probe556-inject-${process.pid}.html`);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, inj);
     console.log('[주입] 대시 블록에 프레임·적당 Math.hypot 400회를 넣은 사본으로 잰다');

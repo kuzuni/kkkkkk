@@ -99,11 +99,11 @@ function run(file, args) {
   const src = fs.readFileSync(P351, 'utf8');
   const D2LINE = "      push('D2', el, { k: 'ovfX', by: el.scrollWidth - el.clientWidth });";
   const cut = src.split(D2LINE).length - 1;
-  const TMP = path.join(__dirname, '.verify435-nod2.tmp.js');
+  const TMP = path.join(__dirname, `.verify435-nod2.tmp-${process.pid}.js`);
   let reverted = { code: -1, out: '' };
   if (cut === 1) {
     fs.writeFileSync(TMP, src.replace(D2LINE, '      /* [verify435] D2 ovfX 를 걷어낸 사본 */'));
-    try { reverted = run(TMP, ['--only', LABEL, '--selftest']); } finally { fs.unlinkSync(TMP); }
+    try { reverted = run(TMP, ['--only', LABEL, '--selftest']); } finally { try { fs.unlinkSync(TMP); } catch (e) {} }
   }
 
   let pass = 0, fail = 0;

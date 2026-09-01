@@ -193,7 +193,7 @@ const run = async (browser, file, fn, arg, errs) => {
     await blk('§R', async () => {
       const off = RAW.replace(/const BOSS_CHASE = [0-9.]+;/, 'const BOSS_CHASE = 0.94;');
       ok(off !== RAW, 'R0 되돌림 사본이 실제로 만들어졌다(359 의 0.94 로 되돌렸다)');
-      const p = path.join(ROOT, '.v501-slow.html');
+      const p = path.join(ROOT, `.v501-slow-${process.pid}.html`);
       fs.writeFileSync(p, off);
       try {
         const st = STAGES[0];
@@ -220,7 +220,7 @@ const run = async (browser, file, fn, arg, errs) => {
         .replace(/(goblin:[\s\S]{0,200}?)sp:0\.85/, '$1sp:1.10');
       ok(both !== RAW && /BOSS_CHASE = 0\.94/.test(both) && /110 \+ 3\*s\*0\.2\) \* SPD_SC/.test(both) && /sp:1\.10/.test(both),
         'R2-0 501·502 를 **둘 다** 되돌린 사본이 만들어졌다(수리 전 세계)');
-      const p2 = path.join(ROOT, '.v501-pre.html');
+      const p2 = path.join(ROOT, `.v501-pre-${process.pid}.html`);
       fs.writeFileSync(p2, both);
       try {
         const st = STAGES[0];

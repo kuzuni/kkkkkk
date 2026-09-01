@@ -215,8 +215,8 @@ const okMode = (v) => !!(v && !v.err && v.fightFr >= 0 && v.resets.length === 1 
     process.exit(1);
   }
 
-  const rev1 = path.join(path.dirname(SRC), '.verify459-r1.html');
-  const rev2 = path.join(path.dirname(SRC), '.verify459-r2.html');
+  const rev1 = path.join(path.dirname(SRC), `.verify459-r1-${process.pid}.html`);
+  const rev2 = path.join(path.dirname(SRC), `.verify459-r2-${process.pid}.html`);
   fs.writeFileSync(rev1, src.replace(FIRE_NEW, FIRE_OFF));
   fs.writeFileSync(rev2, src.replace(ARM_BOSS, ARM_BOSS_OLD));
   process.on('exit', () => { [rev1, rev2].forEach((p) => { try { fs.unlinkSync(p); } catch (e) {} }); });

@@ -27,7 +27,7 @@ const fs = require('fs');
 const { execFileSync } = require('child_process');
 
 const GATE = path.resolve(__dirname, 'verify338.js');
-const COPY = path.join(__dirname, '.verify466-old.js');
+const COPY = path.join(__dirname, `.verify466-old-${process.pid}.js`);
 const RATCHET = 181;                       /* 466 수리 직후 실측 — 아래로 내려가면 절이 사라진 것이다 */
 const IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4', 'stone', 'rstone', 'tower', 'despair'];
 /* 중립화의 지렛대 한 줄 — §R 은 이것만 뺀다(나머지는 그대로 두어 «다른 이유로 빨간» 사본을 만들지 않는다) */

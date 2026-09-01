@@ -230,7 +230,7 @@ async function shot(browser, o, H, file) {
   /* ── §3 Δ0px + §R 되돌림 시험 — **사본 한 벌로 둘 다 잰다** ────────────────
      ⚠ 사본은 **저장소 뿌리에** 둔다(407 선례) — `/tmp` 에 두면 `assets/` 상대 경로가 통째로 깨져
      그림이 안 뜨고, 그 차이가 «되돌렸더니 값이 다르다» 로 읽힌다(1회차에 tab:box 1.8 → 0 으로 실제로 그랬다). */
-  const tmp = path.join(ROOT, '.v419-neg.html');
+  const tmp = path.join(ROOT, `.v419-neg-${process.pid}.html`);
   ok(SRC.split(RULE).length === 2, '선언이 소스에 정확히 한 번 있다 (사본을 만들 수 있다)');
   fs.writeFileSync(tmp, SRC.replace(RULE, ''));
   try {
@@ -287,7 +287,7 @@ async function shot(browser, o, H, file) {
     eq('[R-음성] 사본에서도 cur:gold 는 100% 보임 (407 은 이 선언과 무관하게 산다)',
       REV['cur:gold@1600'].visPct, 100);
   }
-  } finally { fs.unlinkSync(tmp); }
+  } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
   /* 콘솔 에러 0 */
   {
     const m = await shot(browser, { label: 'side:bless', sel: '.side .ibtn[data-pop="bless"]' }, 1600);

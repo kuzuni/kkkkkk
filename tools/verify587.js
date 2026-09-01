@@ -32,8 +32,8 @@ const { FLAP_DET, PLAY_DET, SUB_HYST,
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
-const NEG_A = path.join(ROOT, '.v587-neg-a.html');
-const NEG_B = path.join(ROOT, '.v587-neg-b.html');
+const NEG_A = path.join(ROOT, `.v587-neg-a-${process.pid}.html`);
+const NEG_B = path.join(ROOT, `.v587-neg-b-${process.pid}.html`);
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d ? ' — ' + d : '')); };

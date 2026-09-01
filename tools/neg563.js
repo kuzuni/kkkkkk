@@ -32,7 +32,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP = path.join(ROOT, '.v563-neg.html');
+const TMP = path.join(ROOT, `.v563-neg-${process.pid}.html`);
 const LINES = SRC.split('\n');
 const ANCHORS = [];
 const ind = s => (s.match(/^[ \t]*/) || [''])[0];

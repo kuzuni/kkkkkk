@@ -114,7 +114,7 @@ const redRv = rv => rv.passKeys.length > 1 && rv.passKeys.includes('gold')
     for (const m of MUT) {
       const src = m.f(SRC);
       ok(src !== SRC, '§2 ' + m.id + ' — 사본이 실제로 달라졌다');
-      const file = path.join(ROOT, 'tools', '.probe539-' + m.id.split(' ')[0] + '.html');
+      const file = path.join(ROOT, 'tools', '.probe539-' + m.id.split(' ')[0] + `-${process.pid}.html`);
       files.push(file);
       fs.writeFileSync(file, src);
       const oldHit = src.includes(OLD_ANCHORS[m.touch]);
@@ -129,7 +129,7 @@ const redRv = rv => rv.passKeys.length > 1 && rv.passKeys.includes('gold')
     /* ══ §3 음성항 — 안 물리면 조용히 초록이 되면 안 된다 ═════════════════ */
     console.log('§3 음성항 — 되돌림이 안 물리는 사본');
     const bsrc = BLIND.f(SRC);
-    const bfile = path.join(ROOT, 'tools', '.probe539-N1.html');
+    const bfile = path.join(ROOT, 'tools', `.probe539-N1-${process.pid}.html`);
     files.push(bfile);
     fs.writeFileSync(bfile, bsrc);
     const b = await run(bfile);

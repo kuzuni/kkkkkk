@@ -32,7 +32,7 @@ const path = require('path');
 const fs = require('fs');
 
 const SRC = path.resolve(__dirname, '../index.html');
-const NEG = path.resolve(__dirname, '../.v558-neg.html');
+const NEG = path.resolve(__dirname, `../.v558-neg-${process.pid}.html`);
 const R = (n) => Math.round(n * 10) / 10;
 
 let pass = 0, fail = 0;
@@ -194,7 +194,7 @@ const gapBot = (m) => R(m.tabbarTop - m.wm.y2);
     ok(n.check(m), `[${n.id}] ${n.name}`,
       `@${n.frame} .wm ${R(m.wm.y1)}..${R(m.wm.y2)} · 위 ${gapTop(m)} / 아래 ${gapBot(m)}`);
     await ctx.close();
-    fs.unlinkSync(NEG);
+    try { fs.unlinkSync(NEG); } catch (e) {}
   }
 
   await browser.close();

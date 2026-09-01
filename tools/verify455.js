@@ -300,7 +300,7 @@ const untilFree = page => page.waitForFunction(
        '가드 줄 ' + (rev !== src ? '제거됨' : '못 찾음'));
     /* ⚠ 사본은 **저장소 루트**에 둔다 — index.html 이 이미지를 상대 경로로 물어 /tmp 에 두면 404 다
        (verify367 [R] 이 같은 주의를 적어 뒀다). */
-    const tmp = path.resolve(__dirname, '..', '.v455-neg.html');
+    const tmp = path.resolve(__dirname, '..', `.v455-neg-${process.pid}.html`);
     fs.writeFileSync(tmp, rev);
     try {
       const b4 = await boot(browser, { url: 'file://' + tmp });
@@ -323,7 +323,7 @@ const untilFree = page => page.waitForFunction(
       ok(b4.errs.length === 0, '[R4] 사본 경로도 에러 0', b4.errs.slice(0, 2).join(' | ') || '없음');
       await b4.ctx.close();
     } finally {
-      fs.unlinkSync(tmp);
+      try { fs.unlinkSync(tmp); } catch (e) {}
     }
   }
 

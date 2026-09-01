@@ -134,7 +134,7 @@ async function measure(page, url, tag) {
   const fixed = src.includes(GUARD);
   /* ⚠ 사본은 **index.html 과 같은 폴더**여야 한다 — 이 저장소는 단일 파일 + 상대 경로 자산이라
      /tmp 에 두면 아틀라스가 통째로 404 가 된다(probe350 과 같은 함정) */
-  const tmp = path.join(path.dirname(SRC), '.probe348-before.html');
+  const tmp = path.join(path.dirname(SRC), `.probe348-before-${process.pid}.html`);
   fs.writeFileSync(tmp, fixed ? src.replace(GUARD, GUARD_OLD) : src);
   process.on('exit', () => { try { fs.unlinkSync(tmp); } catch (e) {} });
   console.log(fixed

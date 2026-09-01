@@ -17,7 +17,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP = path.join(ROOT, '.v247-neg.html');
+const TMP = path.join(ROOT, `.v247-neg-${process.pid}.html`);
 
 /* 갈아 끼울 자리 — index.html `openArenaResult` 의 통보 두 줄이다(못 찾으면 시험 자체를 FAIL 시킨다) */
 const NOTE = `  notify((win ? '🏅 아레나 승리' : '💀 아레나 패배')

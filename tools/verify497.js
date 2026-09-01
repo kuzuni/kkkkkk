@@ -185,7 +185,7 @@ const openCoin = page => page.evaluate(() => {
   /* ================= [R] 되돌림 시험 ================= */
   /* 116 의 «÷2» 로 되돌린 사본을 만들어 [A]·[C] 가 실제로 빨개지는지 본다.
      이 절이 없으면 «값을 아무렇게나 적어도 초록인 게이트» 가 된다(334 처방). */
-  const tmp = path.join(ROOT, 'tools', '.v497-revert.html');
+  const tmp = path.join(ROOT, 'tools', `.v497-revert-${process.pid}.html`);
   let rev = SRC
     .replace(/dia:10000,   won:1000/, 'dia:5000,   won:1000')
     .replace(/dia:70000,   won:5000/, 'dia:35000,   won:5000')
@@ -208,7 +208,7 @@ const openCoin = page => page.evaluate(() => {
      'R1 «÷2» 사본은 [A] 상수 단언이 빨개진다', R.dia.join('·') + ' · ' + R.mile);
   ok(R.d5 !== DIA[4], 'R2 «÷2» 사본은 [C] 지급 단언이 빨개진다', '+' + R.d5 + ' (기대 ' + comma(DIA[4]) + ')');
   ok(R.q === '×' + comma(DIA116[4]), 'R3 라벨이 값을 그대로 따라간다(파생) — 사본에서 옛 문자열이 나온다', R.q);
-  fs.unlinkSync(tmp);
+  try { fs.unlinkSync(tmp); } catch (e) {}
 
   ok(errs.length === 0, 'H1 콘솔 에러 0건', errs.slice(0, 3).join(' | '));
 

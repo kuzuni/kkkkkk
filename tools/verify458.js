@@ -179,7 +179,7 @@ const T = (s, re) => s.some(t => re.test(t));
     process.exit(1);
   }
 
-  const revPath = path.join(path.dirname(SRC), '.verify458-rev.html');
+  const revPath = path.join(path.dirname(SRC), `.verify458-rev-${process.pid}.html`);
   fs.writeFileSync(revPath, src.replace(GUARD_NEW, GUARD_OLD));
   process.on('exit', () => { try { fs.unlinkSync(revPath); } catch (e) {} });
 

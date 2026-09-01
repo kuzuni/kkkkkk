@@ -25,7 +25,7 @@ const fs = require('fs');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
-const NEG = path.join(ROOT, '.v590-neg.html');
+const NEG = path.join(ROOT, `.v590-neg-${process.pid}.html`);
 
 const rows = [], fails = [];
 const ok = (t, d) => rows.push(['✓', t, d === undefined ? '' : String(d)]);

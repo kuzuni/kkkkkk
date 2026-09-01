@@ -198,7 +198,7 @@ async function measure(file) {
      손잡이를 1 로 되돌린 **사본**에서 잉크가 543 이전 값으로 정확히 돌아와야 «이 상수가 실제로
      크기를 정하고 있다» 가 참이 된다(334 처방 — 무르게 푼 수리가 아님을 못박는 자리). */
   console.log('\n§R 되돌림 — FX_GRAIN_SC 를 1 로 되돌린 사본');
-  const tmp = path.resolve(__dirname, '../.__v543_revert.html');
+  const tmp = path.resolve(__dirname, `../.__v543_revert-${process.pid}.html`);
   fs.writeFileSync(tmp, src.replace('const FX_GRAIN_SC = 3;', 'const FX_GRAIN_SC = 1;'));
   try {
     const R = await measure(tmp);

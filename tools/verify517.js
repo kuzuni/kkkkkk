@@ -272,7 +272,7 @@ async function open(browser, file, save, openTrain) {
     /* ⓐ 몫을 «300n»(326)으로 되돌린 사본 — [A]·[C] 의 계약이 깨진다 */
     const MARK_A = 'const trainNeedAt = n => TRAIN_NEED[Math.min(Math.max(1, Math.floor(n) || 1), TRAIN_NEED.length) - 1];';
     eq('  R0-a 전제 — 접근자가 제품에 정확히 한 번 있다', CODE.split(MARK_A).length - 1, 1);
-    const tmpA = path.join(ROOT, 'index.verify517-revert-a.html');
+    const tmpA = path.join(ROOT, `index.verify517-revert-a-${process.pid}.html`);
     fs.writeFileSync(tmpA, CODE.replace(MARK_A, 'const trainNeedAt = n => 300 * Math.max(1, Math.floor(n) || 1);'));
     try {
       const { ctx, page, errs } = await open(browser, tmpA, null);
@@ -286,13 +286,13 @@ async function open(browser, file, save, openTrain) {
       ok(r.c9 !== CAP(9), '  R-a 되돌린 사본의 9단계 상한이 1,600 이 아니다 (' + r.c9 + ')');
       allErrs = allErrs.concat(errs);
       await ctx.close();
-    } finally { fs.unlinkSync(tmpA); }
+    } finally { try { fs.unlinkSync(tmpA); } catch (e) {} }
   }
   {
     /* ⓑ 이관 한 줄을 뺀 사본 — probe517 §C 의 «폭등» 이 그대로 재현된다 */
     const MARK_B = '      b.trainStage = trainStageFor(lo);';
     ok(CODE.split(MARK_B).length - 1 === 1, '  R0-b 전제 — 이관 한 줄이 제품에 정확히 한 번 있다');
-    const tmpB = path.join(ROOT, 'index.verify517-revert-b.html');
+    const tmpB = path.join(ROOT, `index.verify517-revert-b-${process.pid}.html`);
     fs.writeFileSync(tmpB, CODE.replace(MARK_B, '      /* 517 이관을 뺀 사본 */'));
     try {
       const { ctx, page, errs } = await open(browser, tmpB, mkSave(9, OLD326(9)));
@@ -308,7 +308,7 @@ async function open(browser, file, save, openTrain) {
       eq('  R-b 그 연쇄의 끝은 이관이 세우는 자리와 같다', r.to, NAT(OLD326(9)));
       allErrs = allErrs.concat(errs);
       await ctx.close();
-    } finally { fs.unlinkSync(tmpB); }
+    } finally { try { fs.unlinkSync(tmpB); } catch (e) {} }
   }
 
   /* ---- [G] 콘솔 ---- */

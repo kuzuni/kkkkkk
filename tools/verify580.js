@@ -298,7 +298,7 @@ const withSc = v => RAW.replace(/const SPD_SC\s*=\s*[\d.]+\s*;/, `const SPD_SC =
     /* ── §R 되돌림 ────────────────────────────────────────────────────── */
     console.log('\n=== §R 되돌림 시험 ===');
     await blk('§R1', async () => {
-      const p = path.join(ROOT, '.v580-sc1.html');
+      const p = path.join(ROOT, `.v580-sc1-${process.pid}.html`);
       fs.writeFileSync(p, withSc(1));
       try {
         const r = await run(browser, p, RUN_CONST, {}, errs);
@@ -310,7 +310,7 @@ const withSc = v => RAW.replace(/const SPD_SC\s*=\s*[\d.]+\s*;/, `const SPD_SC =
     /* R2 — §4 의 계수가 «세는 법이 틀려서 늘 0» 인 게 아님을 못박는다.
        배수를 8 로 올리면 한 프레임 이동량이 접촉 임계를 넘어 실제로 통과가 찍힌다. */
     await blk('§R2', async () => {
-      const p = path.join(ROOT, '.v580-sc8.html');
+      const p = path.join(ROOT, `.v580-sc8-${process.pid}.html`);
       fs.writeFileSync(p, withSc(8));
       try {
         const r = await run(browser, p, RUN_TUNNEL, { frames: Math.round(SEC * 10), st: 200, ms: 100 }, errs);
@@ -325,7 +325,7 @@ const withSc = v => RAW.replace(/const SPD_SC\s*=\s*[\d.]+\s*;/, `const SPD_SC =
        **놓친 접촉이 실제로 되살아나는 것**을 못박는다. 판은 TUN_SEED 로 고정 = 우연한 초록이 없다. */
     await blk('§R3', async () => {
       const MARK = 'if(Math.hypot(sx, sy) >= reach && Math.hypot(tx, ty) >= reach){';
-      const p = path.join(ROOT, '.v580-nosweep.html');
+      const p = path.join(ROOT, `.v580-nosweep-${process.pid}.html`);
       ok(RAW.indexOf(MARK) >= 0, 'R3 되돌릴 자리(640 스윕 가지)를 제품에서 찾았다', MARK.slice(0, 46) + '…');
       fs.writeFileSync(p, RAW.replace(MARK, 'if(false){'));
       try {

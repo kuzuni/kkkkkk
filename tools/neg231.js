@@ -17,7 +17,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP = path.join(ROOT, '.v231-neg.html');
+const TMP = path.join(ROOT, `.v231-neg-${process.pid}.html`);
 
 /* 갈아 끼울 자리 — index.html 의 실제 한 줄이다(못 찾으면 시험 자체를 FAIL 시킨다) */
 const GUARD = `  if(c > 0 && !passPrem()){ notify('🔒 <b>프리미엄 패스</b>를 활성화하면 받습니다'); return false; }`;

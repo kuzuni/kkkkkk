@@ -97,7 +97,7 @@ async function read(browser, file, H) {
 (async () => {
   /* 수리 전(391 선언) 사본 — 일곱 자리를 전부 되돌린다. 하나라도 못 찾으면 종료 코드 2(neg279). */
   const before = revert(SRC, REV);
-  const BFILE = path.join(ROOT, '.probe415-before.html');
+  const BFILE = path.join(ROOT, `.probe415-before-${process.pid}.html`);
   fs.writeFileSync(BFILE, before);
 
   const browser = await launch(chromium);

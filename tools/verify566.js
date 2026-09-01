@@ -81,7 +81,7 @@ try {
   ok('[B2-0] 전제: 사본이 실제로 달라졌다', cut !== src);
   /* 사본은 **저장소 안**에 둔다 — `ROOT = __dirname/..` 이라 임시 디렉터리에 두면 종료 코드 2 로 죽고
      그 2 를 «초록 아님» 으로 잘못 읽게 된다(verify557 [B2] 가 1회차에 겪은 자리). */
-  const cutPath = path.join(ROOT, 'tools', '.v566-cut.js');
+  const cutPath = path.join(ROOT, 'tools', `.v566-cut-${process.pid}.js`);
   let b2;
   try { fs.writeFileSync(cutPath, cut); b2 = run(['--file', f512, '--no-gate'], 'tools/.v566-cut.js'); }
   finally { if (fs.existsSync(cutPath)) fs.unlinkSync(cutPath); }

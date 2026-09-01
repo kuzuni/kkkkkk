@@ -26,7 +26,7 @@ const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const IDX  = path.join(ROOT, 'index.html');
-const COPY = path.join(ROOT, '.v528-max.html');
+const COPY = path.join(ROOT, `.v528-max-${process.pid}.html`);
 const url  = f => 'file://' + f.replace(/\\/g, '/');
 const BIG  = 150;                     /* [R] 의 «만렙이 100 이상으로 오른 날» */
 

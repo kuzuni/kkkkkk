@@ -27,7 +27,7 @@ const ROOT = path.resolve(__dirname, '..');
 /* 313 — CRLF 체크아웃(Windows autocrlf)에서 `\n` 리터럴 치환이 전부 빗나가 N1~N3 이 헛돌았다.
    앵커·가드 리터럴이 전부 LF 기준이므로 읽을 때 정규화한다(사본 실행에는 영향 없음). */
 const SRC  = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
-const TMP  = path.join(ROOT, '.v283-neg.html');
+const TMP  = path.join(ROOT, `.v283-neg-${process.pid}.html`);
 const URL  = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
 
 let pass = 0, fail = 0;

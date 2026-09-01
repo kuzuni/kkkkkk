@@ -21,7 +21,7 @@ const { FLAP_DET, PLAY_DET, FLAP_NAT, FLAP_STAGE, SUB_HYST, stat598 } = require(
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
-const NEG = path.join(ROOT, '.p598-neg.html');
+const NEG = path.join(ROOT, `.p598-neg-${process.pid}.html`);
 
 const argv = process.argv.slice(2);
 const RUNS = Math.max(2, +((argv[argv.indexOf('--runs') + 1]) || 3) || 3);

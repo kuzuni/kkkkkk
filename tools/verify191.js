@@ -140,7 +140,7 @@ const MEASURE = () => {
      그래서 옛 규칙으로 갈아 끼운 **사본을 저장소 루트에 만들어 그것을 연다**(59·74·58 게이트 선례).
      루트여야 하는 이유는 `assets/atlas-data.js`·`assets/ui/*.svg` 가 상대 경로라서다. */
   {
-    const NEG = path.resolve(__dirname, '..', '.v191-neg.html');
+    const NEG = path.resolve(__dirname, '..', `.v191-neg-${process.pid}.html`);
     const src = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
     const CUR = /\.rw-c>i\{[^}]*\}/;
     const hit = src.match(CUR);
@@ -164,7 +164,7 @@ const MEASURE = () => {
     chk(dyOld < -5, '[2280] D3 음성항 — 옛 line-height:1 이면 세로도 위로 뜬다',
       `평균 Δy ${dyOld.toFixed(2)} (기대 ≈−8.5)`);
     await ctx.close();
-    fs.unlinkSync(NEG);
+    try { fs.unlinkSync(NEG); } catch (e) {}
   }
 
   await b.close();

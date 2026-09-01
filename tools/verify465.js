@@ -185,7 +185,7 @@ async function boxes(page) {
       '[R0] 전제 — 사본 편집이 실제로 먹었다(흩어진 remove 목록 3건이 되살아났다 · 313 교훈)', scattered + '건');
 
     /* ⚠ 사본은 **저장소 루트**에 둔다 — index.html 이 자산을 상대 경로로 물어 /tmp 에 두면 404 다 */
-    const tmp = path.resolve(__dirname, '..', '.v465-neg.html');
+    const tmp = path.resolve(__dirname, '..', `.v465-neg-${process.pid}.html`);
     fs.writeFileSync(tmp, rev);
     try {
       const b2 = await boot(browser, 'file://' + tmp);
@@ -210,7 +210,7 @@ async function boxes(page) {
       ok(b2.errs.length === 0, '[R3] 사본 경로도 콘솔 에러 0', b2.errs.slice(0, 2).join(' | ') || '없음');
       await b2.ctx.close();
     } finally {
-      fs.unlinkSync(tmp);
+      try { fs.unlinkSync(tmp); } catch (e) {}
     }
   }
 

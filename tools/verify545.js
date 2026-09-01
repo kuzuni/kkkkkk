@@ -90,7 +90,7 @@ function run(file) {
   ok(real.code === 0, '[D2] 종료 코드 0', 'code=' + real.code);
 
   /* [R] 되돌림 시험 — 오프너 하나를 죽은 이름으로 바꾼 사본 */
-  const tmp = path.join(__dirname, '.tmp545-deadopener.js');
+  const tmp = path.join(__dirname, `.tmp545-deadopener-${process.pid}.js`);
   let r = { code: -1, out: '' };
   try {
     const live = (openers || []).find(o => o !== 'openRelicPageXX()') || 'openRelw()';

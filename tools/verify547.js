@@ -33,7 +33,7 @@ const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const SRCP = path.join(ROOT, 'index.html');
-const TMP = path.join(ROOT, '.verify547.tmp.html');
+const TMP = path.join(ROOT, `.verify547.tmp-${process.pid}.html`);
 const W = 1080, H = 2280;
 
 let pass = 0, fail = 0;

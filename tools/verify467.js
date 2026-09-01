@@ -25,7 +25,7 @@ const path = require('path');
 const fs = require('fs');
 
 const SRC = path.resolve(__dirname, '../index.html');
-const NEG = path.resolve(__dirname, '../.v467-neg.html');
+const NEG = path.resolve(__dirname, `../.v467-neg-${process.pid}.html`);
 const R = (n) => Math.round(n * 10) / 10;
 
 let pass = 0, fail = 0;
@@ -227,7 +227,7 @@ const visPct = (b) => (b.h ? R(b.vis / b.h * 100) : 0);
     ok(n.check(m), `[${n.id}] ${n.name}`,
       `넘침 ${m.body.sh - m.body.ch} · 버튼 ${visPct(m.b1)}% · 탭바 ${covTab(m)} · HUD ${covHud(m)} · 배너 ${m.tutoShown ? '보임' : '숨김'} · 격자하변 ${R(m.grid.y2)} ↔ 총효과 ${R(m.tot.y1)}`);
     await ctx.close();
-    fs.unlinkSync(NEG);
+    try { fs.unlinkSync(NEG); } catch (e) {}
   }
 
   await browser.close();

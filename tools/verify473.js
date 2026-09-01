@@ -225,8 +225,8 @@ const preWin = (v) => ({                            /* 창 셋을 합친 «전�
   const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
 
-  const rev1 = path.join(path.dirname(SRC), '.verify473-r1.html');
-  const rev2 = path.join(path.dirname(SRC), '.verify473-r2.html');
+  const rev1 = path.join(path.dirname(SRC), `.verify473-r1-${process.pid}.html`);
+  const rev2 = path.join(path.dirname(SRC), `.verify473-r2-${process.pid}.html`);
   fs.writeFileSync(rev1, src.replace(GUARD, GUARD_OFF));
   fs.writeFileSync(rev2, src.replace(GUARD, GUARD_NARROW));
   process.on('exit', () => { [rev1, rev2].forEach((p) => { try { fs.unlinkSync(p); } catch (e) {} }); });

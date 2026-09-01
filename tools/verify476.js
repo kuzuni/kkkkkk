@@ -70,7 +70,7 @@ const MEASVIS = function (opt) {
   execFileSync(process.execPath, [path.join(__dirname, 'probe351.js'), '--only', 'eqslot', '--json', jf],
     { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], timeout: 900000 });
   const rows = JSON.parse(fs.readFileSync(jf, 'utf8'));
-  fs.unlinkSync(jf);
+  try { fs.unlinkSync(jf); } catch (e) {}
   eq('화면 3개를 돌았다', rows.length, 3);
   const d7 = [].concat(...rows.map((r) => r.regress.filter((d) => d.kind === 'D7')));
   const all = [].concat(...rows.map((r) => r.regress));

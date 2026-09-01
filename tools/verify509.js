@@ -98,10 +98,10 @@ const SEAT = {
     + '    border:5px solid #000;display:none;z-index:3}';
   ok(CUR.test(src), '[R] 되돌림 시험이 겨눌 자리를 찾았다 (`.tab .bdg` 현행 선언)');
   if (CUR.test(src)) {
-    const tmp = path.join(ROOT, '__v509_revert.html');
+    const tmp = path.join(ROOT, `__v509_revert-${process.pid}.html`);
     fs.writeFileSync(tmp, src.replace(CUR, OLD));
     let rev = [];
-    try { rev = probe(tmp); } finally { fs.unlinkSync(tmp); }
+    try { rev = probe(tmp); } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
     const t = rev.find(r => r.label === 'HUD 탭바 .tab .bdg');
     ok(!!t, '[R] 되돌린 사본에서 그 자리를 다시 쟀다');
     if (t) {

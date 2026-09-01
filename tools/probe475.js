@@ -86,7 +86,7 @@ const RUN = ([setup, md]) => {
 
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
-  const revPath = path.join(path.dirname(SRC), '.probe475-old.html');
+  const revPath = path.join(path.dirname(SRC), `.probe475-old-${process.pid}.html`);
   if (src.indexOf(FROM) < 0) { console.log('시퀀스 홀드 줄을 못 찾았다 — 사본을 못 만든다'); process.exit(1); }
   fs.writeFileSync(revPath, src.replace(FROM, TO));
 
@@ -113,6 +113,6 @@ const RUN = ([setup, md]) => {
   await table('현재 트리(475 — 터짐 → 알림 → 1초 → 후속)', 'file://' + SRC);
 
   await browser.close();
-  fs.unlinkSync(revPath);
+  try { fs.unlinkSync(revPath); } catch (e) {}
   console.log('\nPROBE475 done');
 })();

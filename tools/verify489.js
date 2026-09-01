@@ -247,7 +247,7 @@ const gains = (page, id, k) => ev(page, ([id, k]) => {
       + '    n += take * RUNE_STEP[seg]; l -= take; seg++; }\n  return r.eff[k] * n;\n}';
     ok(rev.indexOf(fnA) >= 0, '[R0b] `runeVal` 본문 앵커가 제품에 있다');
     rev = rev.replace(fnA, fnB);
-    const tmp = path.resolve(__dirname, '..', '.v489-neg.html');   /* 464·455 관례 — 자산 상대경로가 풀리도록 저장소 안에 */
+    const tmp = path.resolve(__dirname, '..', `.v489-neg-${process.pid}.html`);   /* 464·455 관례 — 자산 상대경로가 풀리도록 저장소 안에 */
     fs.writeFileSync(tmp, rev);
     try {
       const b3 = await boot(browser, 'file://' + tmp);
@@ -261,7 +261,7 @@ const gains = (page, id, k) => ev(page, ([id, k]) => {
       ok(rtStep === 'object', '[R3] 사본에는 계단 표가 있다 — [B2] 의 «없다» 가 공허하지 않다', String(rtStep));
       ok(b3.errs.length === 0, '[R4] 사본 경로도 에러 0', b3.errs.slice(0, 2).join(' | ') || '없음');
       await b3.ctx.close();
-    } finally { fs.unlinkSync(tmp); }
+    } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
   }
 
   await browser.close();

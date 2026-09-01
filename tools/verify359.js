@@ -403,7 +403,7 @@ async function openPage(browser, file) {
     await blk('§R', async () => {
       const off = RAW.replace(/(boss:\s*\{[^}]*min:)\s*[0-9.]+/, '$1 99999').replace(/(mob:\s*\{[^}]*min:)\s*[0-9.]+/, '$1 99999');
       ok(off !== RAW, 'R0 되돌림 사본이 실제로 만들어졌다(대시 창을 닫았다)');
-      const p = path.join(ROOT, '.v359-nodash.html');
+      const p = path.join(ROOT, `.v359-nodash-${process.pid}.html`);
       fs.writeFileSync(p, off);
       try {
         const h = await openPage(browser, p);
@@ -429,7 +429,7 @@ async function openPage(browser, file) {
       const anchor = 'const DK = isBoss ? DASH.boss : DASH.mob;';
       ok(RAW.indexOf(anchor) >= 0, 'R4-0 주입 앵커(대시 상태 기계 입구)를 찾았다');
       const heavy = RAW.replace(anchor, anchor + ' for (let __i = 0; __i < 200; __i++) Math.hypot(__i, e.x, e.y);');
-      const p = path.join(ROOT, '.v359-heavy.html');
+      const p = path.join(ROOT, `.v359-heavy-${process.pid}.html`);
       fs.writeFileSync(p, heavy);
       try {
         const h = await openPage(browser, p);

@@ -288,7 +288,7 @@ const SETUP = `
 
   /* ── §R 되돌림 — 홀드를 걷어낸 사본은 §A·§B 의 자로 빨갛다 ── */
   console.log('[R] 되돌림 시험 — 옛 «죽는 프레임에 바로» 거동을 재면 빨간가');
-  const rev = path.join(path.dirname(SRC), '.verify475-r1.html');
+  const rev = path.join(path.dirname(SRC), `.verify475-r1-${process.pid}.html`);
   const FROM = 'if(bossClear.t >= bossClear.die + DUN_CLR_HOLD) bossClearDone();';
   const TO   = 'bossClearDone();';
   if (src.indexOf(FROM) < 0) no('[R] 되돌릴 자리를 못 찾았다 — 시퀀스 홀드 줄이 바뀌었나');
@@ -313,7 +313,7 @@ const SETUP = `
       return { die, doneAt };
     }, [SETUP]);
     await p2.close();
-    fs.unlinkSync(rev);
+    try { fs.unlinkSync(rev); } catch (e) {}
     if (R.err) no('[R] ' + R.err);
     else {
       yes('[R-a] 사본은 한 프레임 만에 다음 스테이지로 넘어간다(= 주인이 본 그림)',

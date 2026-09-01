@@ -216,7 +216,7 @@ async function runOne(browser, file, fn, arg, errs) {
   const R = { 1: {}, 2: {} };
   try {
     for (const sc of [1, 2]) {
-      const p = path.join(ROOT, `.p580-sc${sc}.html`);
+      const p = path.join(ROOT, `.p580-sc${sc}-${process.pid}.html`);
       fs.writeFileSync(p, mk(sc));
       files[sc] = p;
     }

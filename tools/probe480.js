@@ -166,7 +166,7 @@ async function measure(page, url, tag) {
     console.log('probe480 — index.html 에서 480 의 두 자리를 못 찾았다(규칙이 바뀌었다). 사본 재현 불가.');
     process.exit(1);
   }
-  const tmp = path.resolve(__dirname, '../index.probe480-before.html');
+  const tmp = path.resolve(__dirname, `../index.probe480-before-${process.pid}.html`);
   fs.writeFileSync(tmp, cur.replace(NEW_BAN, OLD_BAN).replace(NEW_ART, OLD_ART));
 
   const browser = await launch(chromium);

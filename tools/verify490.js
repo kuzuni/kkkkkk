@@ -283,7 +283,7 @@ const diaOnly = page => ev(page, () => {
   if(S.rstone >= cost) S.rstone -= cost; else S.dia -= 50;`;
     ok(src.indexOf(A0) >= 0 && src.indexOf(B0) >= 0, '[R0] 되돌림 앵커 둘이 제품에 있다(없으면 이 절이 공허하다)');
     const rev = src.replace(A0, A1).replace(B0, B1);
-    const tmp = path.join(ROOT, '.v490-neg.html');
+    const tmp = path.join(ROOT, `.v490-neg-${process.pid}.html`);
     fs.writeFileSync(tmp, rev);
     try {
       const b2 = await boot(browser, 'file://' + tmp);
@@ -291,7 +291,7 @@ const diaOnly = page => ev(page, () => {
       ok(d && d.diaSpent > 0, '★ [R1] 다이아 결제를 되살린 사본에서는 다이아가 실제로 나간다(= [A1] 이 헛초록이 아니다)',
         d ? '다이아 Δ' + d.diaSpent + ' · 통과 ' + d.tried + '회' : '못 읽음');
       await b2.ctx.close();
-    } finally { fs.unlinkSync(tmp); }
+    } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
 
     /* ⓑ 옛 계수표를 되살린다 */
     const C0 = 'const DUN_EX_PRICE = 1000;\nconst dunExPrice = () => DUN_EX_PRICE;';
@@ -302,7 +302,7 @@ const diaOnly = page => ev(page, () => {
       + 'const dunExPrice = id => Math.round(DUN_EX_BASE * (DUN_EX_K[id] || 1) / 10) * 10;';
     ok(src.indexOf(C0) >= 0, '[R2] 입장권 앵커가 제품에 있다');
     const rev2 = src.replace(C0, C1);
-    const tmp2 = path.join(ROOT, '.v490-neg2.html');
+    const tmp2 = path.join(ROOT, `.v490-neg2-${process.pid}.html`);
     fs.writeFileSync(tmp2, rev2);
     try {
       const b3 = await boot(browser, 'file://' + tmp2);
@@ -311,7 +311,7 @@ const diaOnly = page => ev(page, () => {
         '★ [R3] 옛 계수표를 되살린 사본은 8종이 제각각이다(= [C1] 이 헛초록이 아니다)',
         t ? [...new Set(t)].sort((a, c) => a - c).join(',') : '못 읽음');
       await b3.ctx.close();
-    } finally { fs.unlinkSync(tmp2); }
+    } finally { try { fs.unlinkSync(tmp2); } catch (e) {} }
   }
 
   await browser.close();

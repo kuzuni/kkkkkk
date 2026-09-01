@@ -23,7 +23,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
-const TMP = '.v570-neg.html';
+const TMP = `.v570-neg-${process.pid}.html`;   /* 648 — 이름에 pid(646 처방) */
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail++; console.log('  ✗ ' + m); } };
 

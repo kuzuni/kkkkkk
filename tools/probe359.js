@@ -123,7 +123,7 @@ async function runOne(browser, file, scn) {
 
 function checkoutRef(sha) {
   const out = execFileSync('git', ['show', `${sha}:index.html`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
-  const p = path.join(ROOT, `.p359-${sha.slice(0, 7)}.html`);
+  const p = path.join(ROOT, `.p359-${sha.slice(0, 7)}-${process.pid}.html`);
   fs.writeFileSync(p, out);
   return p;
 }

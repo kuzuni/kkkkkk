@@ -19,7 +19,7 @@ const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
-const NEG = path.join(ROOT, '.p591-neg.html');
+const NEG = path.join(ROOT, `.p591-neg-${process.pid}.html`);
 const N = Number(process.argv[2] || 8);
 
 const p2 = n => Math.round(n * 100) / 100;

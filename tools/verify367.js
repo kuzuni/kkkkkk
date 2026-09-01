@@ -369,7 +369,7 @@ const settle = async page => {
        '[R0] 전제 — 사본 편집이 실제로 먹었다 (313 교훈: 전제부터 단언한다)');
     /* ⚠ 사본은 **저장소 루트**에 둔다 — index.html 이 이미지를 상대 경로로 물고 있어
        /tmp 에 두면 리소스가 통째로 404 다(.gitignore 가 360 자리에 같은 주의를 적어 뒀다). */
-    const tmp = path.resolve(__dirname, '..', '.v367-neg.html');
+    const tmp = path.resolve(__dirname, '..', `.v367-neg-${process.pid}.html`);
     fs.writeFileSync(tmp, rev);
     const b3 = await boot(browser, { url: 'file://' + tmp });
     await fastSpin(b3.page);
@@ -390,7 +390,7 @@ const settle = async page => {
        seen.map(r => r.spins).join(','));
     ok(b3.errs.length === 0, '[R3] 사본 경로도 에러 0', b3.errs.slice(0, 2).join(' | ') || '없음');
     await b3.ctx.close();
-    fs.unlinkSync(tmp);
+    try { fs.unlinkSync(tmp); } catch (e) {}
   }
 
   await browser.close();

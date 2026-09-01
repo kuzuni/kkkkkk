@@ -274,7 +274,7 @@ const MEASURE = (cfg) => {
     /* R1 — 축을 되돌린다: gain 에서 배수를 뺀다(486 직후의 그 모양) */
     const AXIS = 'const gain = bi.n ? (u.val(l + bi.n) - u.val(l)) * mul : 0;';
     ok(CODE.includes(AXIS), '  [R0-a] 축 앵커 문자열이 제품에 실재한다', AXIS);
-    const tmpA = path.join(ROOT, 'index.verify628-revert-axis.html');
+    const tmpA = path.join(ROOT, `index.verify628-revert-axis-${process.pid}.html`);
     fs.writeFileSync(tmpA, CODE.split(AXIS).join('const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;'));
     try {
       const { ctx, page } = await open(browser, tmpA, save(1, 200));
@@ -286,12 +286,12 @@ const MEASURE = (cfg) => {
          '  [R2] 그 사본이 실제로 «기저 증분» 을 말한다(= 수리 전의 그 그림)',
          rows.filter(r => r.txt !== r.baseWant).length + '건 불일치');
       await ctx.close();
-    } finally { fs.unlinkSync(tmpA); }
+    } finally { try { fs.unlinkSync(tmpA); } catch (e) {} }
 
     /* R3 — 시점을 되돌린다: 정산이 다시 `trDeltaTxt` 를 쓴다 */
     const TIME = 'fxUpOk(el, el, trHoldGainTxt(h), PAY_CUR.train);';
     ok(CODE.includes(TIME), '  [R0-b] 시점 앵커 문자열이 제품에 실재한다', TIME);
-    const tmpB = path.join(ROOT, 'index.verify628-revert-time.html');
+    const tmpB = path.join(ROOT, `index.verify628-revert-time-${process.pid}.html`);
     fs.writeFileSync(tmpB, CODE.split(TIME).join('fxUpOk(el, el, trDeltaTxt(el), PAY_CUR.train);'));
     try {
       const { ctx, page } = await open(browser, tmpB, save(1, 200));
@@ -310,7 +310,7 @@ const MEASURE = (cfg) => {
       ok(R.said !== R.want, '  [R3] 시점을 되돌린 사본에서 [D1] 이 빨개진다',
          '"' + R.said + '" ≠ 반복분 "' + R.want + '"(' + n3(R.repD) + ')');
       await ctx.close();
-    } finally { fs.unlinkSync(tmpB); }
+    } finally { try { fs.unlinkSync(tmpB); } catch (e) {} }
   }
 
   /* ══════════════════ [I] 콘솔 ══════════════════ */

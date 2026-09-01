@@ -20,7 +20,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const SMOKE = path.join(ROOT, 'tools', 'smoke.js');
-const NEG = path.join(ROOT, '.v633-neg.js');   /* 되돌림 사본 — .gitignore 에 있다 */
+const NEG = path.join(ROOT, `.v633-neg-${process.pid}.js`);   /* 되돌림 사본 — .gitignore 에 있다 */
 const TAIL = 8;
 
 let sec = '?';
@@ -92,7 +92,7 @@ section('[5] 초록일 때는 조용하다 — 목록 절이 헛으로 안 붙�
   /* 실패를 0 으로 만든 사본으로 «PASS 경로» 만 본다(실제 스모크 한 판은 3분 30초라 못 쓴다). */
   const passSrc = SRC.replace(/^ *fail\('표본 실패 A[^\n]*\n/m, '').replace(/^ *fail\('1080×2280: 표본 실패 B[^\n]*\n/m, '');
   t(passSrc !== SRC, '[5-0] 전제 — 표본 실패를 실제로 걷어냈다');
-  const r = withNeg(passSrc, () => run('node .v633-neg.js --selftest'));
+  const r = withNeg(passSrc, () => run(`node ${path.basename(NEG)} --selftest`));
   t(r.code === 0, '[5-a] 실패가 0 이면 종료 코드 0', 'code ' + r.code);
   t(/SMOKE PASS/.test(r.out), '[5-b] 초록 판정 줄이 그대로다');
   t(!/실패 항목/.test(r.out), '[5-c] 초록일 때 «실패 항목» 블록이 안 붙는다');
@@ -104,7 +104,7 @@ section('[R] 되돌림 시험 — 수리를 빼면 이 자가 빨개진다');
   /* R1 — 재출력 블록만 걷어낸 사본 = 409 가 본 그 출력. */
   const r1Src = SRC.replace(/ {2}if \(fails\.length\) \{\n {4}console\.log\('\\n실패 항목[\s\S]*?\n {2}\}\n/, '');
   t(r1Src !== SRC, '[R1-0] 전제 — 재출력 블록을 실제로 걷어냈다');
-  const r1 = withNeg(r1Src, () => run('node .v633-neg.js --selftest'));
+  const r1 = withNeg(r1Src, () => run(`node ${path.basename(NEG)} --selftest`));
   const r1tail = tailOf(r1.out, TAIL);
   t(/SMOKE FAIL — 2건/.test(r1tail), '[R1-a] 되돌린 사본도 판정 줄은 남는다 — 그래서 «건수만 보인다» 였다');
   t(!/표본 실패 A/.test(r1tail) && !/표본 실패 B/.test(r1tail),
@@ -114,7 +114,7 @@ section('[R] 되돌림 시험 — 수리를 빼면 이 자가 빨개진다');
   const OLD_FAIL = "const fail = (m) => { fails.push({ sec, m }); console.log('  ✗ ' + m); };";
   const r2Src = SRC.replace(OLD_FAIL, "const fail = (m) => { fails.push({ sec: '?', m }); console.log('  ✗ ' + m); };");
   t(r2Src !== SRC, '[R2-0] 전제 — `fail()` 을 실제로 되돌렸다');
-  const r2 = withNeg(r2Src, () => run('node .v633-neg.js --selftest'));
+  const r2 = withNeg(r2Src, () => run(`node ${path.basename(NEG)} --selftest`));
   const r2names = [...r2.out.matchAll(/^ {2}\d+\. (.+)$/gm)].map((m) => m[1].trim());
   t(r2names.length === 2 && new Set(r2names).size === 1,
     '[R2-a] 절을 안 담으면 두 실패가 **한 이름**으로 뭉개진다 = [4-b] 가 빨개진다', r2names.join(' · ') || '없음');

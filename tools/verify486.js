@@ -299,7 +299,7 @@ const shot = page => page.evaluate(() => {
     const M2 = "set('.cv i', c.full ? 'MAX' : c.now);";
     eq('  R0 전제 — 통째 렌더의 최종값 표기가 정확히 한 번', CODE.split(M1).length - 1, 1);
     eq('  R0 전제 — 가벼운 갱신의 최종값 표기가 정확히 한 번', CODE.split(M2).length - 1, 1);
-    const tmp = path.join(ROOT, 'index.verify486-revert.html');
+    const tmp = path.join(ROOT, `index.verify486-revert-${process.pid}.html`);
     fs.writeFileSync(tmp, CODE.split(M1).join(M1.replace('c.now', 'c.gain'))
                               .split(M2).join(M2.replace('c.now', 'c.gain')));
     try {
@@ -316,7 +316,7 @@ const shot = page => page.evaluate(() => {
       });
       eq('  R3 — 사도 알약 글자가 안 움직인다(= 주인이 본 그림)', r.a, r.b);
       await ctx.close();
-    } finally { fs.unlinkSync(tmp); }
+    } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
   }
 
   /* ══════════════════ [I] 콘솔 ══════════════════ */

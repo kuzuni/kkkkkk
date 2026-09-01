@@ -23,7 +23,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP = path.join(ROOT, '.v279-neg.html');
+const TMP = path.join(ROOT, `.v279-neg-${process.pid}.html`);
 
 /* ---- 갈아 끼울 자리 — 리터럴이 아니라 «제품에게 묻는다» (2026-08-29, 작업 387 · 368 처방) ----
  *

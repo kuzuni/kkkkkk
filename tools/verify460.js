@@ -37,7 +37,7 @@ const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 /* ⚠ 사본은 **저장소 루트**에 둔다 — /tmp 에 두면 상대 경로 assets/** 가 통째로 404 다
    (360·367·438·439·453 선례. .gitignore 에 등재돼 있다). */
-const NEG = path.join(ROOT, '.v460-neg.html');
+const NEG = path.join(ROOT, `.v460-neg-${process.pid}.html`);
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => {

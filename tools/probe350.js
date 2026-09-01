@@ -167,7 +167,7 @@ async function measure(page, url, tag) {
     console.log('probe350 — 숨김 목록에서 350 의 자리를 못 찾았다(index.html 이 바뀌었다). 사본 재현 불가.');
     process.exit(1);
   }
-  const tmp = path.resolve(__dirname, '../index.probe350-before.html');
+  const tmp = path.resolve(__dirname, `../index.probe350-before-${process.pid}.html`);
   fs.writeFileSync(tmp, cur.replace(HIDE_NEW, HIDE_OLD));
 
   const browser = await launch(chromium);
@@ -209,7 +209,7 @@ async function measure(page, url, tag) {
     '[전제] 보스 체력바 자체는 Δ0px (190,231,700×67 — 레이아웃 변경 없음)');
   ok(after.errs.length === 0, '[전제] 콘솔 에러 0건 (' + after.errs.length + ')');
 
-  fs.unlinkSync(tmp);
+  try { fs.unlinkSync(tmp); } catch (e) {}
   console.log('\nprobe350 — ' + pass + '/' + (pass + fail) + (fail ? '  FAIL' : '  PASS'));
   await browser.close();
   process.exit(fail ? 1 : 0);

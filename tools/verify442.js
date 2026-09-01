@@ -176,8 +176,8 @@ async function open(ctx, url) {
      '[전제-f] 그리기 블록에 옛 앵커(e.y − e.r*3.1 − 6)가 남아 있지 않다');
 
   /* 되돌림 사본 — 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
-  const revPath = path.join(path.dirname(SRC), '.verify442-rev.html');
-  const nocPath = path.join(path.dirname(SRC), '.verify442-noclamp.html');
+  const revPath = path.join(path.dirname(SRC), `.verify442-rev-${process.pid}.html`);
+  const nocPath = path.join(path.dirname(SRC), `.verify442-noclamp-${process.pid}.html`);
   if (src.includes(ANCHOR)) {
     fs.writeFileSync(revPath, src.replace(ANCHOR, ANCHOR_OLD));
     fs.writeFileSync(nocPath, src.replace(ANCHOR, ANCHOR_NOCLAMP));

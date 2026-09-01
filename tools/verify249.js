@@ -22,7 +22,7 @@ const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
 const SRCF = path.resolve(__dirname, '..', 'index.html');
-const NEG  = path.resolve(__dirname, '..', '.neg249.html');
+const NEG  = path.resolve(__dirname, '..', `.neg249-${process.pid}.html`);
 const URL  = 'file://' + SRCF.replace(/\\/g, '/');
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {

@@ -133,7 +133,7 @@ async function boot(ctx, url) {
     process.exit(1);
   }
   /* §R 용 «수리 전»(518 판) 사본. 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
-  const revPath = path.join(ROOT, '.verify578-rev.html');
+  const revPath = path.join(ROOT, `.verify578-rev-${process.pid}.html`);
   fs.writeFileSync(revPath, src.replace(GUARD_NEW, GUARD_OLD));
   process.on('exit', () => { try { fs.unlinkSync(revPath); } catch (e) {} });
 

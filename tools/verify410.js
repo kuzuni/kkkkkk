@@ -109,7 +109,7 @@ async function boot(ctx, url) {
     process.exit(1);
   }
 
-  const revPath = path.join(path.dirname(SRC), '.verify410-rev.html');
+  const revPath = path.join(path.dirname(SRC), `.verify410-rev-${process.pid}.html`);
   fs.writeFileSync(revPath, src.replace(DSP_NEW, DSP_OLD).replace(MO_NEW, MO_OLD));
   process.on('exit', () => { try { fs.unlinkSync(revPath); } catch (e) {} });
 

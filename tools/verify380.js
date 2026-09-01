@@ -165,8 +165,8 @@ const measure = async (page) => {
      저장소 밖(/tmp)에 두면 폴백 서체로 떨어져 같은 커밋이 다른 수를 낸다(377 1회차의 함정). */
   const revA = src.replace(NEW_FS, OLD_FS);                       /* 세로 축을 되돌린 사본 */
   const revB = src.replace(/;--qk:[0-9.]+/g, '');                 /* 폭 보존 손잡이를 뺀 사본 */
-  const pA = path.join(path.dirname(SRC), '.verify380-fs.html');
-  const pB = path.join(path.dirname(SRC), '.verify380-qk.html');
+  const pA = path.join(path.dirname(SRC), `.verify380-fs-${process.pid}.html`);
+  const pB = path.join(path.dirname(SRC), `.verify380-qk-${process.pid}.html`);
   fs.writeFileSync(pA, revA); fs.writeFileSync(pB, revB);
   process.on('exit', () => { [pA, pB].forEach(f => { try { fs.unlinkSync(f); } catch (e) {} }); });
 

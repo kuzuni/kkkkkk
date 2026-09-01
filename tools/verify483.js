@@ -268,7 +268,7 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
     const MARK = '      b.trainStage = trainStageFor(lo);';
     const hits = CODE.split(MARK).length - 1;
     eq('  R0 전제 — 정정 한 줄이 제품에 정확히 한 번 있다', hits, 1);
-    const tmp = path.join(ROOT, 'index.verify483-revert.html');
+    const tmp = path.join(ROOT, `index.verify483-revert-${process.pid}.html`);
     fs.writeFileSync(tmp, CODE.replace(MARK, '      /* 483 정정을 뺀 사본 */'));
     try {
       const { ctx, page } = await open(browser, tmp, oldSave(9, [921, 983, 926]));
@@ -287,7 +287,7 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
       eq('  R5 음성항 — 되돌린 사본에서도 새 세이브는 +1 (결손은 «이관» 한 자리다)',
         fr.after.prog, fr.before.prog + 1);
       await fresh.ctx.close();
-    } finally { fs.unlinkSync(tmp); }
+    } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
   }
 
   /* ---- [I] 콘솔 ---- */

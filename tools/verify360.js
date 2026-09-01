@@ -362,7 +362,7 @@ async function survey(p) {
        상대 경로로 물고 있어 /tmp 에 두면 리소스가 통째로 404 가 되고, 배경이 달라지면
        차분으로 뜬 «찍힌 픽셀» 도 같이 달라진다. */
     const neg = async (tag, label, mutate) => {
-      const f = path.join(ROOT, `.v360-neg-${tag}.html`);
+      const f = path.join(ROOT, `.v360-neg-${tag}-${process.pid}.html`);
       fs.writeFileSync(f, mutate(src));
       const { p: p2, errs: e2 } = await boot(ctx, 'file://' + f);
       const s2 = await survey(p2);
@@ -410,7 +410,7 @@ async function survey(p) {
     ok(attHits === 1, '[R-c] 갈아 끼울 자리(출석 행 --sf)가 정확히 1곳', attHits);
     if (attHits === 1) {
       console.log('\n[R-c] 되돌림 시험 — 출석 --sf 를 360 당시 값(.896)으로 되돌린 사본 (382 본체)');
-      const f = path.join(ROOT, '.v360-neg-c.html');
+      const f = path.join(ROOT, `.v360-neg-c-${process.pid}.html`);
       fs.writeFileSync(f, src.replace(ATT_SF, ATT_SF.replace('--sf:.920;', '--sf:.896;')));
       const { p: p3, errs: e3 } = await boot(ctx, 'file://' + f);
       const s3 = await survey(p3);

@@ -241,7 +241,7 @@ async function read(page, h) {
   ];
   for (const c of cases) {
     ok(c.src !== SRC, `사본을 만들었다 — ${c.name}`);
-    const f = path.join(ROOT, '.v415-neg.html');
+    const f = path.join(ROOT, `.v415-neg-${process.pid}.html`);
     fs.writeFileSync(f, c.src);
     try {
       const nc = await browser.newContext({ viewport: { width: 1080, height: 1600 }, deviceScaleFactor: 1 });

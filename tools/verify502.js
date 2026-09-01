@@ -204,7 +204,7 @@ const run = async (browser, file, fn, arg, errs) => {
       const off = RAW.replace(/sp: Math\.min\(MOB_SPD_BASE \* T2\.sp \* rnd\(0\.9, 1\.1\), PLAYER_SPEED \* MOB_SPD_CAP\),/,
         'sp: (110 + 3*s*0.2) * T2.sp * rnd(0.9, 1.1),');
       ok(off !== RAW, 'R0 되돌림 사본이 만들어졌다(비례항 부활 · 천장 제거)');
-      const p = path.join(ROOT, '.v502-old.html');
+      const p = path.join(ROOT, `.v502-old-${process.pid}.html`);
       fs.writeFileSync(p, off);
       try {
         const r = await run(browser, p, RUN_SPAWN, { stages: [1000], types: TYPES, n: 100 }, errs);

@@ -183,7 +183,7 @@ async function read(browser, h, src, cur) {
   console.log('§R 되돌림 — 클램프를 뗀 사본에서 70.5px 겹침과 87.5% 덮임이 되살아난다');
   const negSrc = SRC.replace(CLAMP, OLD);
   ok(negSrc !== SRC, '사본을 만들었다 — 클램프를 옛 고정 여백으로 되돌림');
-  const f = path.join(ROOT, '.v407-neg.html');
+  const f = path.join(ROOT, `.v407-neg-${process.pid}.html`);
   fs.writeFileSync(f, negSrc);
   try {
     const n1600 = await read(browser, 1600, f, 'gold');
@@ -197,7 +197,7 @@ async function read(browser, h, src, cur) {
     ok(n2280.ovY <= 0, `[음성 2280] 사본에서도 2280 은 안 겹친다 (${n2280.ovY}) — 1600 전용 결함이 맞다`);
     const nRaw = await read(browser, RAW, f, 'gold');
     near(`[음성 ${RAW}] 클램프 없는 교차점에서 겹침이 정확히 0`, nRaw.ovY, 0, 1.1);
-  } finally { fs.unlinkSync(f); }
+  } finally { try { fs.unlinkSync(f); } catch (e) {} }
 
   await browser.close();
   console.log(`\nVERIFY407 ${pass}/${pass + fail} ` + (fail ? 'FAIL' : 'PASS'));

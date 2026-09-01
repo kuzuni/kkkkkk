@@ -317,7 +317,7 @@ async function run(page, kind) {
 
   /* ── §R 되돌림 ───────────────────────────────────────────────────── */
   console.log('\n=== §R 되돌림 시험 — 옛 식으로 되돌리면 §2·§4 가 빨개진다 ===');
-  const tmp = path.join(ROOT, 'index.verify358-revert.html');
+  const tmp = path.join(ROOT, `index.verify358-revert-${process.pid}.html`);
   await blk('§R', async () => {
     const old = RAW
       .replace('get speed(){ return PLAYER_SPEED; },', "get speed(){ return 115 + 4.5*lv('spd'); },");

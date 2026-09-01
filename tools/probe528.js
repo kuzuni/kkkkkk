@@ -23,7 +23,7 @@ const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const IDX  = path.join(ROOT, 'index.html');
-const COPY = path.join(ROOT, '.p528-max.html');
+const COPY = path.join(ROOT, `.p528-max-${process.pid}.html`);
 const url  = f => 'file://' + f.replace(/\\/g, '/');
 
 const LIT = 100;          /* 하네스 네 자리가 손으로 적어 둔 그 수 */

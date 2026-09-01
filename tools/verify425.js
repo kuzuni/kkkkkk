@@ -284,7 +284,7 @@ const RUN_OTHER = ([mode]) => {
   is('[전제] 전투 깃발이 선 뒤에만 t 가 깎인다', /else if\(dunRun\.fight\)\{\s*\n?\s*dunRun\.t -= dt;/.test(src), true);
 
   /* §R 용 «상수 0» 사본 — 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
-  const revPath = path.join(path.dirname(SRC), '.verify425-zero.html');
+  const revPath = path.join(path.dirname(SRC), `.verify425-zero-${process.pid}.html`);
   let revOk = false;
   if (m) {
     const zeroed = src

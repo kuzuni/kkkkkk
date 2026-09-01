@@ -182,7 +182,7 @@ async function read(page, h) {
   ];
   for (const c of cases) {
     ok(c.src !== SRC, `사본을 만들었다 — ${c.name}`);
-    const f = path.join(ROOT, '.v391-neg.html');
+    const f = path.join(ROOT, `.v391-neg-${process.pid}.html`);
     fs.writeFileSync(f, c.src);
     try {
       const nc = await browser.newContext({ viewport: { width: 1080, height: 1600 }, deviceScaleFactor: 1 });
@@ -200,7 +200,7 @@ async function read(page, h) {
       else ok(m.topGap !== m.botGap,
         `[음성 1600 · ${c.name}] 위 ${m.topGap} ≠ 아래 ${m.botGap} — 비대칭이 되살아난다`);
       await nc.close();
-    } finally { fs.unlinkSync(f); }
+    } finally { try { fs.unlinkSync(f); } catch (e) {} }
   }
 
   await browser.close();

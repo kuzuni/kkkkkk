@@ -203,7 +203,7 @@ const MEAS = `(function(){
 
   /* ── §6 음성항 — 갈아 끼운 사본을 새로 열어서 잰다 ── */
   console.log('§6 음성항 — 옛 규칙 사본에서 227px 이 되살아나고 smoke 자가 빨개진다');
-  const negPath = path.join(ROOT, '.v241-neg.html');
+  const negPath = path.join(ROOT, `.v241-neg-${process.pid}.html`);
   /* 415 이관 — 사본은 **241 이전 선언 그대로**로 되돌린다(상한도 흡수분도 없는 고정 1396).
      상한만 떼면 흡수분이 남아 밖으로 나가는 양이 227 이 아니라 193 이 되어 원 증상과 달라진다. */
   const REV241 = [   /* 415 자리 일곱 개를 **전부** 되돌린다 — 상자만 되돌리면 자식이 100px 올라간 채라

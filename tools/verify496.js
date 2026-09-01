@@ -261,7 +261,7 @@ const ok = (b, name, detail) => {
         + '  if(s.lv >= SUM_MAXLV) s.exp = 0; return up; }')
       .replace('let S = DEF();',
         'let S = DEF(); S.__rev = BKEYS.reduce((o,b) => (o[b] = { lv:1, exp:0 }, o), {});');
-    const rp = path.join(ROOT, '.verify496-rev.html');
+    const rp = path.join(ROOT, `.verify496-rev-${process.pid}.html`);
     fs.writeFileSync(rp, rev);
     const c = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const p2 = await c.newPage();
@@ -275,7 +275,7 @@ const ok = (b, name, detail) => {
       return { snap: BKEYS.map(k => sumLv(k) + '/' + sumExp(k)) };
     });
     await c.close();
-    fs.unlinkSync(rp);
+    try { fs.unlinkSync(rp); } catch (e) {}
     ok(new Set(R.snap).size > 1,
       'R1 ★ 되돌린 사본에서는 다섯이 **따로 논다** — [A2] 가 빨개진다(무르게 풀지 않았다)',
       R.snap.join(' · '));

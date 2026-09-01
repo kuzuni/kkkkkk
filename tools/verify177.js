@@ -25,7 +25,7 @@ const fs = require('fs');
 const { execFileSync } = require('child_process');
 
 const SRC = path.resolve(__dirname, '../index.html');
-const NEG = path.resolve(__dirname, '../.v177-neg.html');
+const NEG = path.resolve(__dirname, `../.v177-neg-${process.pid}.html`);
 const FILE = 'file://' + SRC;
 
 const R = [];
@@ -211,7 +211,7 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
      같은 자를 대면 이 항목이 빨개지는지 본다. 안 빨개지면 위 두 항은 아무것도 안 지키는 것이다.
      ⚠ 살아 있는 sim177.js 를 고쳤다 되돌리지 않는다 — 사본을 tools/ 안에 만들어 돌리고 지운다
        (상대 require `./dpsk`·`./ecurve` 가 그대로 풀리려면 같은 디렉터리여야 한다). */
-  const SIMNEG = path.join(__dirname, '.v553-simneg.js');
+  const SIMNEG = path.join(__dirname, `.v553-simneg-${process.pid}.js`);
   let negRatio = null, negErr = '';
   try {
     const simSrc = fs.readFileSync(path.join(__dirname, 'sim177.js'), 'utf8');
@@ -309,7 +309,7 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
              mobMax: mob ? mob.max : null, mobMul: mob ? ETYPE[mob.tk].hp : null, gold: eGold(2)/eGold(1) };
   });
   await np.close();
-  fs.unlinkSync(NEG);
+  try { fs.unlinkSync(NEG); } catch (e) {}
   yes('⑨ N1 — 구 곡선에서도 s1 은 같다(55·6) : 이 항목만으로는 회귀를 못 잡는다는 증명', neg.hp1 === 55 && neg.dmg1 === 6);
   yes('⑨ N2 — 구 곡선 eHp(40) 는 새 기대값과 다르다 (' + neg.hp40.toExponential(3)
       + ' vs ' + wantHp(40).toExponential(3) + ')', Math.abs(neg.hp40 - wantHp(40)) > wantHp(40)*0.5);

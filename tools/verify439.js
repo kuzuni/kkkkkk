@@ -24,7 +24,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const PROBE = path.join(ROOT, 'tools', 'probe351.js');
 const INDEX = path.join(ROOT, 'index.html');
-const NEG = path.join(ROOT, '.v439-neg.html');
+const NEG = path.join(ROOT, `.v439-neg-${process.pid}.html`);
 /* 420 이 넣은 한 줄 — 이것을 빼면 33 재화 팝업이 89 유물 CTA 를 다시 문다(35px @1600) */
 const RULE420 = '  #relw.on ~ #ciw{padding-bottom:calc(234px + max(0px, 1931px - var(--frameh, 2280px)))}';
 
@@ -48,8 +48,8 @@ const d7of = (rows) => {
   return d;
 };
 
-const J1 = path.join(ROOT, '.v439-now.json');
-const J2 = path.join(ROOT, '.v439-neg.json');
+const J1 = path.join(ROOT, `.v439-now-${process.pid}.json`);
+const J2 = path.join(ROOT, `.v439-neg-${process.pid}.json`);
 const cleanup = () => { for (const p of [NEG, J1, J2]) { try { fs.unlinkSync(p); } catch (_) {} } };
 
 try {

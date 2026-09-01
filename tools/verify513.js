@@ -223,7 +223,7 @@ const READ_VIEW = n => {
 
   /* ── [R] 되돌림 시험 ───────────────────────────────────────── */
   blk('[R] 되돌림 — 28칸으로 되돌린 사본은 [A]·[B]·[C] 가 빨개진다');
-  const tmp = path.join(ROOT, 'tools', '.verify513-revert.html');
+  const tmp = path.join(ROOT, 'tools', `.verify513-revert-${process.pid}.html`);
   const nowDecl = `for(let i=1;i<=7;i++){`;
   const oldDecl = `for(let i=1;i<=28;i++){`;
   /* 199 9회차 — 곡선 ×12 확정에 맞춰 «지금 소스» 표식만 갱신(되돌림 사본은 여전히 28칸 세계다)

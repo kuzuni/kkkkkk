@@ -102,7 +102,7 @@ async function runOne(browser, url, stage) {
 /* REF 커밋의 index.html 을 임시 파일로 꺼내 같은 방법으로 잰다 */
 function checkoutRef(sha) {
   const out = execFileSync('git', ['show', `${sha}:index.html`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
-  const p = path.join(ROOT, `.v59-before-${sha.slice(0, 7)}.html`);
+  const p = path.join(ROOT, `.v59-before-${sha.slice(0, 7)}-${process.pid}.html`);
   fs.writeFileSync(p, out);
   return p;
 }

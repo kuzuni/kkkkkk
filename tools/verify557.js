@@ -79,9 +79,9 @@ try {
     ok('[B2-0] 전제: 사본이 실제로 달라졌다', cut !== src);
     /* 사본은 **저장소 안**에 둬야 한다 — `ROOT = __dirname/..` 이라 임시 디렉터리에 두면
        저장소를 못 찾아 종료 코드 2 로 죽고, 그 2 를 «초록 아님» 으로 잘못 읽게 된다(1회차 실패). */
-    const cutPath = path.join(ROOT, 'tools', '.v557-cut.js');
+    const cutPath = path.join(ROOT, 'tools', `.v557-cut-${process.pid}.js`);
     let b2;
-    try { fs.writeFileSync(cutPath, cut); b2 = run(['--file', f498], 'tools/.v557-cut.js'); }
+    try { fs.writeFileSync(cutPath, cut); b2 = run(['--file', f498], 'tools/' + path.basename(cutPath)); }
     finally { if (fs.existsSync(cutPath)) fs.unlinkSync(cutPath); }
     ok('[B2-a] §3 을 걷어낸 사본은 같은 표에서 종료 코드 0(초록)', b2.code === 0, 'code ' + b2.code);
     ok('[B2-b] 그 사본은 §3 을 «건너뜀» 으로 밝힌다', /§3 마감 누락 검사 — 건너뜀/.test(b2.out));
@@ -104,7 +104,7 @@ try {
       const d = run(['--file', f498, '--no-gate']);
       ok('[D-a] lock 이 있으면 §3 이 «제외» 로 빼고 이름을 찍는다', /–  498 — 제외 · lock sess-verify557-tmp/.test(d.out));
       ok('[D-b] 그 행이 «마감 누락» 으로는 안 불린다', !/498 — 마감 누락/.test(d.out));
-    } finally { fs.unlinkSync(lockPath); }
+    } finally { try { fs.unlinkSync(lockPath); } catch (e) {} }
     ok('[D-c] 시험이 임시 lock 을 도로 지웠다', !fs.existsSync(lockPath));
   } else {
     console.log('  –   [D-a]~[D-c] 건너뜀(' + (hadLock ? '498 에 남의 lock 이 있다' : '--quick') + ')');

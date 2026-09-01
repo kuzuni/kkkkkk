@@ -113,7 +113,7 @@ async function runOne(browser, url) {
   try {
     if (REF) {
       const out = execFileSync('git', ['show', `${REF}:index.html`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
-      refFile = path.join(ROOT, `.p288-before-${REF.slice(0, 7)}.html`);
+      refFile = path.join(ROOT, `.p288-before-${REF.slice(0, 7)}-${process.pid}.html`);
       fs.writeFileSync(refFile, out);
     }
     const targets = [{ tag: 'after', file: path.join(ROOT, 'index.html') }];

@@ -16,7 +16,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP = path.join(ROOT, '.v230-neg.html');
+const TMP = path.join(ROOT, `.v230-neg-${process.pid}.html`);
 
 /* 갈아 끼울 자리 — 전부 index.html 의 실제 문자열이다(못 찾으면 시험 자체를 FAIL 시킨다) */
 const NOTIFY = `  notify('📌 <b>' + BANNERS[need].n + ' 소환</b>을 먼저 해주세요');`;

@@ -184,7 +184,7 @@ const whiteRight = async (page) => {
      ⚑ 이것은 취향이 아니라 실측이다: 저장소 밖(/tmp)에 두면 GameKR 이 안 붙어 글자 폭이 통째로
      달라지고, 같은 커밋인데 넘침이 +1 → +3 으로 바뀐다(1회차에 실제로 그랬다). */
   const revSrc = src.replace(/qx:1\.33/g, 'qx:' + OLD_QX).replace(NEW_FS, OLD_FS);
-  const revPath = path.join(path.dirname(SRC), '.verify377-rev.html');
+  const revPath = path.join(path.dirname(SRC), `.verify377-rev-${process.pid}.html`);
   fs.writeFileSync(revPath, revSrc);
   process.on('exit', () => { try { fs.unlinkSync(revPath); } catch (e) {} });
 

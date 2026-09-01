@@ -48,7 +48,7 @@ const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
-const NEG = path.join(ROOT, '.v579-neg.html');
+const NEG = path.join(ROOT, `.v579-neg-${process.pid}.html`);
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d ? ' — ' + d : '')); };

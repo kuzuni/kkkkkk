@@ -76,7 +76,7 @@ ok('현재 neg229 = PASS 93/93', now && now.verdict === 'PASS' && now.n === 93 &
 console.log('\n[R] 되돌림 시험 — 옛 상수를 도로 박으면 42/46 으로 죽는다');
 /* ⚠ 사본은 반드시 `tools/` 안에 둔다 — neg229 는 ROOT 를 `path.resolve(__dirname,'..')` 로 잡고
    `verify71.js` 도 `__dirname` 으로 찾는다. ROOT 에 두면 저장소 «바깥» 을 뒤져 ENOENT 로 죽는다. */
-const TMP = path.join(ROOT, 'tools', '.p381-neg.js');
+const TMP = path.join(ROOT, 'tools', `.p381-neg-${process.pid}.js`);
 try {
   let js = fs.readFileSync(NEG, 'utf8');
   js = js.replace(/const COLL_ROW = row\('coll'\);/, 'const COLL_ROW = ' + JSON.stringify(OLD.coll) + ';')
@@ -97,7 +97,7 @@ try {
 /* 가드가 «조용한 0곳» 을 다시는 안 만든다는 증명 — 없는 pop 을 뽑으면 그 자리에서 죽어야 한다.
    381 이 고친 것의 핵심이라 음성항으로 못박는다(«0곳이면 continue» 가 부패의 뿌리였다). */
 console.log('\n[R2] 가드 — 뽑기가 실패하면 «조용히 지나가지» 않고 그 자리에서 죽는다');
-const TMP2 = path.join(ROOT, 'tools', '.p381-guard.js');
+const TMP2 = path.join(ROOT, 'tools', `.p381-guard-${process.pid}.js`);
 try {
   const js = fs.readFileSync(NEG, 'utf8').replace(/const COLL_ROW = row\('coll'\);/, "const COLL_ROW = row('nosuchpop');");
   fs.writeFileSync(TMP2, js);

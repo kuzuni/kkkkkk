@@ -25,7 +25,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const TMP = path.join(ROOT, '.v303-load.html');
+const TMP = path.join(ROOT, `.v303-load-${process.pid}.html`);
 const GATE = path.resolve(ROOT, process.env.REP303_GATE || 'tools/verify107.js');
 const N = +(process.env.REP303_N || 3);
 const MS = +(process.env.REP303_MS || 8);

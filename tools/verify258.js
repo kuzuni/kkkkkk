@@ -26,7 +26,7 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 const URL = 'file://' + SRC;
-const NEG = path.join(ROOT, '__neg258.html');
+const NEG = path.join(ROOT, `__neg258-${process.pid}.html`);
 
 let pass = 0, fail = 0;
 const ok = (t, d) => { pass++; console.log(`PASS ${t}${d ? ' — ' + d : ''}`); };

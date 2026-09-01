@@ -243,7 +243,7 @@ const count = (hay, v) => (hay.match(new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g,
     const tmp = path.join(os.tmpdir(), 'kkkkkk-346-revert-' + process.pid + '.html');
     /* 같은 폴더에 둬야 상대 경로 리소스가 풀린다(이 저장소는 index.html 단일 파일이지만
        `docs/ref` 등 상대 자원을 쓰는 절이 있어 저장소 안 임시 파일로 만든다) */
-    const inRepo = path.resolve(__dirname, '..', '.tmp-346-revert.html');
+    const inRepo = path.resolve(__dirname, '..', `.tmp-346-revert-${process.pid}.html`);
     fs.writeFileSync(inRepo, rev);
     try {
       const R = await boot('file://' + inRepo.replace(/\\/g, '/'));

@@ -190,10 +190,10 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
     process.exit(1);
   }
   /* §R 용 «수리 전» 사본. 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
-  const revPath = path.join(path.dirname(SRC), '.verify348-rev.html');
+  const revPath = path.join(path.dirname(SRC), `.verify348-rev-${process.pid}.html`);
   fs.writeFileSync(revPath, src.replace(GUARD, GUARD_OLD));
   /* 368 §R2 용 «클램프를 뺀» 사본 */
-  const clpPath = path.join(path.dirname(SRC), '.verify348-noclamp.html');
+  const clpPath = path.join(path.dirname(SRC), `.verify348-noclamp-${process.pid}.html`);
   if (src.includes(CLAMP)) fs.writeFileSync(clpPath, src.replace(CLAMP, CLAMP_OFF));
   process.on('exit', () => {
     try { fs.unlinkSync(revPath); } catch (e) {}

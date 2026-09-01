@@ -20,7 +20,7 @@ const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC  = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP  = path.join(ROOT, '.v202-neg.html');
+const TMP  = path.join(ROOT, `.v202-neg-${process.pid}.html`);
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 

@@ -191,7 +191,7 @@ async function boxes(page) {
       '★ [R1] 사본에서는 [A1]·[B3] 이 **빨개진다** ⇒ [A] 는 이미 참인 것을 굳힌 항이 아니다', '사본 ' + revHits + '건 ↔ 현재 0건');
 
     /* ⚠ 사본은 **저장소 루트**에 둔다 — index.html 이 자산을 상대 경로로 물어 /tmp 에 두면 404 다(verify455 [R] 주의) */
-    const tmp = path.resolve(__dirname, '..', '.v464-neg.html');
+    const tmp = path.resolve(__dirname, '..', `.v464-neg-${process.pid}.html`);
     fs.writeFileSync(tmp, rev);
     try {
       const b2 = await boot(browser, 'file://' + tmp);
@@ -212,7 +212,7 @@ async function boxes(page) {
       ok(b2.errs.length === 0, '[R2] 사본 경로도 에러 0', b2.errs.slice(0, 2).join(' | ') || '없음');
       await b2.ctx.close();
     } finally {
-      fs.unlinkSync(tmp);
+      try { fs.unlinkSync(tmp); } catch (e) {}
     }
   }
 

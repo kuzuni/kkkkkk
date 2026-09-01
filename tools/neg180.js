@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const NEG = path.join(ROOT, '.v180-neg.html');
+const NEG = path.join(ROOT, `.v180-neg-${process.pid}.html`);
 const KEY = 'idle_hunter_save_v4';
 
 const WANT_MON_DIA = 100000;

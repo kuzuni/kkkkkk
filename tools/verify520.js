@@ -239,7 +239,7 @@ async function boot(url) {
     }
     /* ⚠ 저장소 루트에 둔다 — /tmp 에 두면 index.html 이 상대 경로로 무는 리소스가 통째로 404 다
        (360·367·410 자리와 같은 이유). .gitignore 에 등재한다. */
-    const tmp = path.resolve(__dirname, '..', '.v520-rev.html');
+    const tmp = path.resolve(__dirname, '..', `.v520-rev-${process.pid}.html`);
     fs.writeFileSync(tmp, rev);
     try {
       const B = await boot('file://' + tmp.replace(/\\/g, '/'));

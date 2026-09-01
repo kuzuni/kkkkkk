@@ -16,7 +16,7 @@ const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
 const rev = process.argv[2] || '';
-const COPY = path.join(ROOT, '.b236.html');
+const COPY = path.join(ROOT, `.b236-${process.pid}.html`);
 
 function launchOpts() {
   for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean))

@@ -78,7 +78,7 @@ window.__pnl = function(){
   }
   /* 상대 경로 자산 때문에 사본은 반드시 같은 폴더에 둔다(probe350 함정) */
   const preSrc = hasNew ? src.replace(DSP_NEW, DSP_OLD).replace(MO_NEW, MO_OLD) : src;
-  const prePath = path.join(path.dirname(SRC), '.probe410-pre.html');
+  const prePath = path.join(path.dirname(SRC), `.probe410-pre-${process.pid}.html`);
   fs.writeFileSync(prePath, preSrc);
   process.on('exit', () => { try { fs.unlinkSync(prePath); } catch (e) {} });
   const URL = 'file://' + prePath;

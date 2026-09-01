@@ -98,7 +98,7 @@ if (cloned) {
   /* [R-a] 되돌림 — 날짜 시도를 뺀 사본(= 옛 축)은 같은 자리에서 도로 null. */
   const SRC_R = PSRC.replace(/const tries = \[[^\]]*\];/,
     "const tries = ['--deepen=40'];");
-  const rFile = path.join(clone, 'tools', '.v631-revert.js');
+  const rFile = path.join(clone, 'tools', `.v631-revert-${process.pid}.js`);
   let rOut = 'x';
   if (SRC_R !== PSRC) {
     fs.writeFileSync(rFile, SRC_R);

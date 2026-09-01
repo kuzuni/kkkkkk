@@ -228,8 +228,8 @@ const RUN_DUN = () => {
      /introOn:\s*\{[\s\S]{0,200}?get\(\)\{ return !!\(bossIntro/.test(src), true);
 
   /* §R 사본 둘 — 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
-  const revPath = path.join(path.dirname(SRC), '.verify457-zero.html');
-  const gatePath = path.join(path.dirname(SRC), '.verify457-nogate.html');
+  const revPath = path.join(path.dirname(SRC), `.verify457-zero-${process.pid}.html`);
+  const gatePath = path.join(path.dirname(SRC), `.verify457-nogate-${process.pid}.html`);
   let revOk = false, gateOk = false;
   if (m) {
     const zeroed = src

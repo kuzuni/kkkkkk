@@ -242,7 +242,7 @@ async function read(page, h, KIDS) {
   ];
   for (const c of cases) {
     ok(c.src !== SRC, `사본을 만들었다 — ${c.name}`);
-    const f = path.join(ROOT, '.v400-neg.html');
+    const f = path.join(ROOT, `.v400-neg-${process.pid}.html`);
     fs.writeFileSync(f, c.src);
     try {
       const nc = await browser.newContext({ viewport: { width: 1080, height: 1600 }, deviceScaleFactor: 1 });
@@ -251,7 +251,7 @@ async function read(page, h, KIDS) {
       await np.evaluate(OPEN + '()');
       c.chk(await read(np, 1600, KIDS));
       await nc.close();
-    } finally { fs.unlinkSync(f); }
+    } finally { try { fs.unlinkSync(f); } catch (e) {} }
   }
 
   await browser.close();

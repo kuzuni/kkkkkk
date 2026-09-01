@@ -27,7 +27,7 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP = path.join(ROOT, '.v236-neg.html');
+const TMP = path.join(ROOT, `.v236-neg-${process.pid}.html`);
 
 /* 갈아 끼울 자리 — 전부 index.html 의 실제 문자열이다(못 찾으면 시험 자체를 FAIL 시킨다) */
 const SKIP  = 'if(el.__bh === html) return null;';                        /* 107 ① 내용 동일 시 재생성 생략 */

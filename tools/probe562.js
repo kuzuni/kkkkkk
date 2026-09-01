@@ -181,7 +181,7 @@ const sec = (t) => console.log('\n' + t);
     if (!src.includes(GUARD)) no('index.html 에 562 가드가 없다 — 수리가 사라졌다(§R 을 잴 수 없다)');
     else {
       /* 상대 경로 자산 때문에 사본은 반드시 같은 폴더에 둔다(probe350·verify348 함정) */
-      const revPath = path.join(path.dirname(SRC), '.probe562-rev.html');
+      const revPath = path.join(path.dirname(SRC), `.probe562-rev-${process.pid}.html`);
       fs.writeFileSync(revPath, src.replace(GUARD, '/* §R: 562 가드 제거 */'));
       try {
         const r = await run('§R 사본', -260, 12, 12, 3200, false, 'file://' + revPath);

@@ -124,7 +124,7 @@ function strip(src) {
      NOTE_NEW, "+ '동료는 최대 <em>3마리</em>까지 장착합니다.'", r => /동료는 최대/.test(r.desc || '') && r.dongryo > 0]
   ];
   for (const [name, from, to, want] of REV) {
-    const tmp = path.resolve(__dirname, '..', '.tmp-369-revert.html');
+    const tmp = path.resolve(__dirname, '..', `.tmp-369-revert-${process.pid}.html`);
     fs.writeFileSync(tmp, src.replace(from, to));
     try {
       const B = await boot('file://' + tmp.replace(/\\/g, '/'));
