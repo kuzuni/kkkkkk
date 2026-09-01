@@ -77,8 +77,13 @@ const cpToasts = list => list.filter(o => /전투력/.test(o.t));
    Δ 기대값은 **페이지가 직접 계산해서** 돌려준다 — 게이트가 fmtB 를 흉내 내면 그 흉내가 판정이 된다.
    `prep` 은 **재료 준비**다 — 스냅샷 밖에서 따로 돌려 그 cp 변화가 Δ 에 섞이지 않게 한다
    (훈련 단계 상한을 올리는 준비가 액션과 한 덩어리로 들어가 [5] 두 항목이 빨개졌다). */
-async function act(page, fn, prep) {
+async function act(page, fn, prep, pre) {
   if (prep) { await page.evaluate(p => { new Function(p)(); }, prep); await page.waitForTimeout(WAIT); }
+  /* 623 — `pre` 는 «재료 준비가 실제로 먹었는가» 를 **제품에게 물어** 돌려준다({ ok, d }).
+     없으면 Δ=0 하나가 «준비 실패» 와 «제품이 안 올린다» 를 한 항에 뭉뚱그린다 — 613 이 재화를
+     갈아 끼웠을 때 이 자리가 정확히 그렇게 빨개졌고, 뭉쳐 있는 동안은 어느 쪽인지 표에 안 찍혔다.
+     [6] 이 336 에서 같은 처방(`pre6.ok`)을 이미 쓰고 있다 — 그 자를 이 표에도 세운다. */
+  const preR = pre ? await page.evaluate(p => new Function('return (' + p + ');')(), pre) : null;
   await clear(page);
   const exp = await page.evaluate(src => {
     const f = new Function(src);
@@ -88,6 +93,7 @@ async function act(page, fn, prep) {
   }, fn);
   await page.waitForTimeout(WAIT);
   exp.list = cpToasts(await got(page));
+  exp.pre = preR;
   return exp;
 }
 
@@ -181,10 +187,20 @@ async function blk(name, fn) {
                               "TRAIN_STATS.forEach(id => S.lv[id] = trainCap()); markDirty();"],
       ['도감 claimColl',       "const st = COLL_SETS[0]; st.it.forEach(id => { if(!S.own[id]) S.own[id] = { n:0, l:1 }; }); markDirty(); claimColl(st.key, 1);"],
       ['축복 activateBless',   "activateBless('atk');"],
-      ['단련 temperUp',        "temperObj().pts = 99999; temperUp(TEMPERS[0].k);"],
+      /* 623 — 재료는 «단련석» 이다. 613(단련석 직접 지불)이 중간 포인트를 선언째 없앤 뒤로
+         옛 `temperObj().pts = 99999` 는 **아무것도 안 채우는 한 줄**이 되어 `temperUpOk` 가 거짓 →
+         `temperUp` 이 첫 줄에서 되돌아갔고, 이 항이 «전투력이 안 올랐다» 로 빨개져 있었다(제품은 0줄 상함).
+         336 처방대로 액수는 상수로 다시 적지 않고 **제품에게 묻는다**(`temperCost` = 지금 서 있는 구간의 값) —
+         비용 곡선(`TEMPER_SEG`·`temperSegCost`)이 다시 바뀌어도 이 자리는 안 따라 썩는다. */
+      ['단련 temperUp',        "temperUp(TEMPERS[0].k);",
+                              "S.tstone = temperCost(TEMPERS[0].k) * 1e3; markDirty();",
+                              "({ ok: temperUpOk(TEMPERS[0].k),"
+                              + "   d: '단련석 ' + tstoneHave() + ' ≥ 비용 ' + temperCost(TEMPERS[0].k) })"],
     ];
-    for (const [name, src, prep] of cases) {
-      const r = await act(page, src, prep);
+    for (const [name, src, prep, pre] of cases) {
+      const r = await act(page, src, prep, pre);
+      /* 623 — 준비가 안 먹은 것과 제품이 안 올린 것을 **다른 항으로** 적는다(336 · [6] 과 같은 자) */
+      if (r.pre) ok(r.pre.ok, '[5] ' + name + ' — 준비가 실제로 재료를 깔았다 (아니면 아래 Δ=0 은 제품 탓이 아니다)', r.pre.d);
       if (r.after <= r.before) { ok(false, '[5] ' + name + ' — 전투력이 안 올랐다 (재료 준비 실패)', r.before + ' → ' + r.after); continue; }
       ok(r.list.length === 1 && r.list[0].t === r.txt,
         '[5] ' + name + ' → 1장 · 값 = 실측차',
@@ -322,6 +338,35 @@ async function blk(name, fn) {
     const d3 = await page.evaluate(b => cp() - b, b3), l3 = cpToasts(await got(page));
     ok(d3 > 0 && l3.length === 1, '[R] 되돌리면 다시 오르고 1장', 'Δ=' + d3 + ' · ' + l3.length + '장');
     await page.evaluate(g => { S.gold = g; }, keepGold);
+
+    /* ── R3 (623) — 단련 표본이 «무르게 푼 것» 이 아님을 두 방향으로 못 박는다 ────────────
+       R3a: 613 이전 문법(`temperObj().pts`)만으로는 지금도 아무것도 안 깔린다 = 빨갛던 것이 진짜였다.
+       R3b: 새 준비를 깔아 두고 **제품 쪽 `temperUp` 을 무력화**하면 Δ=0 · 0장 = [5] 의 단련 항은
+            전제가 아니라 제품을 본다(준비만 초록으로 만들어 놓고 헐거워진 것이 아니다). */
+    const keepTs = await page.evaluate(() => S.tstone);
+    const r3a = await page.evaluate(() => {
+      S.tstone = 0; temperObj().pts = 99999;
+      return { ok: temperUpOk(TEMPERS[0].k), have: tstoneHave(), cost: temperCost(TEMPERS[0].k) };
+    });
+    ok(r3a.ok === false,
+      '[R] 613 이전 문법(`temperObj().pts`)만으로는 단련 재료가 안 깔린다 (623 이 잡은 부패가 실재한다)',
+      '단련석 ' + r3a.have + ' < 비용 ' + r3a.cost);
+
+    await page.evaluate(() => {
+      delete temperObj().pts;
+      S.tstone = temperCost(TEMPERS[0].k) * 1e3;
+      window.__tu = temperUp; window.temperUp = () => false; markDirty();
+    });
+    await page.waitForTimeout(WAIT);
+    await clear(page);
+    const b4 = await page.evaluate(() => { const b = cp(); temperUp(TEMPERS[0].k); return b; });
+    await page.waitForTimeout(WAIT);
+    const d4 = await page.evaluate(b => cp() - b, b4), l4 = cpToasts(await got(page));
+    ok(d4 === 0 && l4.length === 0,
+      '[R] `temperUp` 을 무력화하면 단련 표본이 Δ=0 · 0장 — 그 항은 제품을 본다',
+      'Δ=' + d4 + ' · ' + l4.length + '장');
+
+    await page.evaluate(ts => { window.temperUp = window.__tu; S.tstone = ts; markDirty(); }, keepTs);
   });
 
   /* ══ [10] 콘솔 ══════════════════════════════════════════════════════════ */
