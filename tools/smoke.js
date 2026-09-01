@@ -30,9 +30,34 @@ const SECS = Number(process.env.SMOKE_SECS || 20);
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const BAD_TEXT = /\bNaN\b|\bundefined\b|\bInfinity\b/;
 
+/* 633 — 실패 항목을 «절 이름» 과 함께 들고 있다가 **요약 바로 앞에** 다시 찍는다.
+   왜: `fail()` 은 원래도 `  ✗ …` 를 찍었지만, 그것은 절 한복판에 찍히고 그 뒤로
+   [2] 오프너 수십 줄 + [3] 화면비 6종이 붙는다 — `tail` 로 잘라 보관한 출력에는
+   마지막 줄(`SMOKE FAIL — n건`)만 남아 **어느 항인지 특정이 안 된다**
+   (409 §28-6 이 «5회 중 2회 흔들리는데 항목을 못 짚겠다» 고 인계한 자리).
+   게이트를 «말하게» 만드는 것은 `✗` 를 찍는 것이 아니라 **잘라도 남을 자리에 찍는 것**이다
+   — 305 가 `verify95` 에서 닫은 병이고, push 게이트인 여기에는 안 왔었다. */
+let sec = '?';
+const section = (s) => { sec = s; console.log(s); };
 const fails = [];
-const fail = (m) => { fails.push(m); console.log('  ✗ ' + m); };
+const fail = (m) => { fails.push({ sec, m }); console.log('  ✗ ' + m); };
 const ok = (m) => console.log('  ✓ ' + m);
+
+/* 633 — 요약 앞에 실패 목록, 그 뒤에 판정 한 줄. `tail -n` 하나로 둘 다 걸린다. */
+function report() {
+  if (fails.length) {
+    console.log('\n실패 항목 (절 · 내용)');
+    fails.forEach((f, i) => console.log(`  ${i + 1}. ${f.sec}\n     ✗ ${f.m}`));
+  }
+  console.log(fails.length ? `\nSMOKE FAIL — ${fails.length}건` : '\nSMOKE PASS');
+  /* 633 — `process.exit()` 은 stdout 이 **파이프**일 때 아직 안 나간 버퍼를 버린다
+     (`node tools/smoke.js | tail` 이 정확히 그 경로다). 방금 되살린 실패 목록이
+     거기서 다시 잘리면 이 수리가 통째로 무의미해지므로, 정상 종료로 흘려보내
+     버퍼를 비우고 — 핸들이 남아 안 끝나면 그때만 상한을 두고 강제 종료한다. */
+  const code = fails.length ? 1 : 0;
+  process.exitCode = code;
+  setTimeout(() => process.exit(code), 5000).unref();
+}
 
 async function fresh(browser, vw, vh) {
   const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, deviceScaleFactor: 1 });
@@ -79,7 +104,7 @@ function launchOpts(){
    여는 표시와 닫는 표시 **개수만 세도** 전부 잡힌다. (JS 는 파싱해서 본다.)
    — 이 주석 안에 그 두 기호를 «그대로» 쓰면 여기서도 같은 사고가 난다. 실제로 났다. */
 function staticSyntax() {
-  console.log('[0] 정적 문법 — CSS 주석 균형 · 인라인 JS 파싱');
+  section('[0] 정적 문법 — CSS 주석 균형 · 인라인 JS 파싱');
   const fsx = require('fs');
   const h = fsx.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
   [...h.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].forEach((m, i) => {
@@ -91,6 +116,26 @@ function staticSyntax() {
     try { new Function(m[1]); ok('<script> ' + i + ' 파싱 OK'); }
     catch (e) { fail('<script> ' + i + ' 파싱 실패 — ' + e.message); }
   });
+}
+
+/* 633 — `--selftest`: 브라우저를 안 띄우고 «보고 형식» 만 찍는다.
+   이 자리가 필요한 이유는 값이 아니라 **시간**이다 — 실제 스모크 한 판이 3분 30초라
+   «실패했을 때 무엇을 찍는가» 를 실패를 일부러 내서 확인하는 길이 그 전엔 없었고,
+   그래서 이 병이 409 까지 안 잡혔다. `tools/verify633.js` 가 이 경로를 읽는다. */
+if (process.argv.includes('--selftest')) {
+  /* 실제 판의 «모양» 을 축소해 그대로 흉내낸다 — 실패가 **절 한복판**에 찍히고
+     그 뒤로 초록 수십 줄이 덮는 것이 이 병의 전부이므로, 뒤따르는 초록을 빼면
+     되돌림 시험이 «잘려도 남는가» 를 못 묻는다(꼬리 8줄에 ✗ 가 그냥 들어와 버린다). */
+  section('[1] 로드 + 자동 플레이 (자기 시험)');
+  fail('표본 실패 A — 자기 시험이 만든 것이다');
+  ok('표본 초록');
+  section('[2] 팝업 오픈 (자기 시험)');
+  for (let i = 0; i < 20; i++) ok('표본 오프너 ' + i);
+  section('[3] 화면비 — #app 이 뷰포트 안에 (자기 시험)');
+  fail('1080×2280: 표본 실패 B — 자기 시험이 만든 것이다');
+  for (let i = 0; i < 12; i++) ok('표본 화면비 ' + i);
+  report();
+  return;
 }
 
 (async () => {
@@ -105,7 +150,7 @@ function staticSyntax() {
   }
   try {
     /* ---------- 1. 로드 + 자동 플레이 ---------- */
-    console.log(`[1] 로드 + 자동 플레이 ${SECS}s (1080×2280 · 9:19 기준)`);
+    section(`[1] 로드 + 자동 플레이 ${SECS}s (1080×2280 · 9:19 기준)`);
     {
       const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       await page.waitForTimeout(SECS * 1000);
@@ -125,7 +170,7 @@ function staticSyntax() {
     }
 
     /* ---------- 2. 팝업 전부 열기 (각각 새 페이지) ---------- */
-    console.log('[2] 팝업 오픈');
+    section('[2] 팝업 오픈');
     const openers = [];
     {
       const { ctx, page } = await fresh(browser, 1080, 2280);
@@ -333,7 +378,7 @@ function staticSyntax() {
     /* ---------- 2-1. 던전 입장 화면 (작업 30) ----------
        04 [도전] → 30초 제한 전투 «런» 이라 탭/사이드 오프너 수집에 안 걸린다.
        상단 HUD·탭바가 통째로 사라지는 유일한 상태라 여기서 별도로 본다. */
-    console.log('[2-1] 던전 입장 화면(30)');
+    section('[2-1] 던전 입장 화면(30)');
     {
       const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       const enter = await page.evaluate(() => {
@@ -378,7 +423,7 @@ function staticSyntax() {
     /* ---------- 2-2. 아레나 입장 화면 (작업 123) ----------
        «컨텐츠» 탭 → 아레나 [도전] → 30초 1:1 대전 «런». 던전 런과 같은 상태(#app.dunrun)를 쓰되
        HUD 가 통째로 다르므로(양쪽 닉네임·HP 바) 여기서 별도로 본다. */
-    console.log('[2-2] 아레나 입장 화면(123)');
+    section('[2-2] 아레나 입장 화면(123)');
     {
       const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       const enter = await page.evaluate(() => {
@@ -423,7 +468,7 @@ function staticSyntax() {
     }
 
     /* ---------- 3. 화면비 회귀 (37/51) ---------- */
-    console.log('[3] 화면비 — #app 이 뷰포트 안에');
+    section('[3] 화면비 — #app 이 뷰포트 안에');
     for (const [w, h] of [[1080, 2280], [1080, 1920], [1920, 1080], [1024, 768], [1080, 2340], [1080, 2520]]) {
       const { ctx, page, errs } = await fresh(browser, w, h);
       const r = await appInside(page);
@@ -512,6 +557,5 @@ function staticSyntax() {
   } finally {
     await browser.close();
   }
-  console.log(fails.length ? `\nSMOKE FAIL — ${fails.length}건` : '\nSMOKE PASS');
-  process.exit(fails.length ? 1 : 0);
+  report();
 })().catch((e) => { console.error('SMOKE CRASH', e); process.exit(2); });

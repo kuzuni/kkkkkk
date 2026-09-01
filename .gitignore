@@ -261,3 +261,7 @@ docs/review/.probe541.json
 # ⚠ 저장소 루트에 둔다 — /tmp 에 두면 index.html 이 상대 경로로 무는 assets/** 가 통째로 404 다
 #    (360·367·438·439·453·467·471·541 선례).
 .p356r23-pre616.html
+
+# 633 verify633.js §5·§R 이 «수리 전 보고» 대조용으로 잠깐 뽑는 smoke 사본 (시험이 끝나면 지운다)
+# ⚠ 저장소 루트에 둔다 — /tmp 에 두면 `require('playwright')` 가 저장소 node_modules 를 못 찾는다.
+.v633-neg.js
