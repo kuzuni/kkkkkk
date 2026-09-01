@@ -21755,11 +21755,31 @@ function syncPets(){
   });
 }
 
-function spawnStage(){
-  enemies.length = 0; shots.length = 0; parts.length = 0; nums.length = 0;
-  corpses.length = 0; zones.length = 0; booms.length = 0; bolts.length = 0; spawnQ.length = 0; drones.length = 0;
-  rings.length = 0;                                  /* 114 — 충격파 링도 전장과 함께 비운다 */
+/* ⚑ 738(주인 보고 2026-09-02 04:40 «승급전 도전할때 스테이지에서 있던 스킬들 찌꺼기 보임») —
+   **모드 전환 «연출 레이어» 일괄 청소.** 665 가 판정을 런 소속으로 격리한 것의 연출판이다.
+   ⚠ 왜 함수 하나로 모으는가: 이 목록이 진입점 네 곳에 복붙돼 있었고 **`parts`(파티클)가 spawnStage
+     한 곳에만 있었다** — 던전·탑·레이드·아레나는 파티클을 안 지웠고 승급전은 아예 아무것도 안 지웠다
+     (`probe738` 수리 전: 승급전 286개 전부 잔류 · 던전 23 · 탑 92 · 아레나 91). 종이 늘 때마다
+     네 곳이 따로 뒤처지는 자리라, 목록을 한 곳에 두고 넷이 읽게 한다.
+   ⚠ 660 «캔슬 금지» 와 충돌하지 않는다 — 그 규약은 **같은 모드 안**(연속 강화 틱마다 독립 스폰)의
+     것이고, 모드 전환은 «문맥이 끝난 것» 이라 예외다(738 등재문이 두 행에 못박은 그 경계).
+   ⚠ DOM 은 **전투 발 층(#fxlc)만** 비운다. `#fxl`(UI 발 · z60)은 강화·상점 버스트가 사는 층이라
+     660/666 의 살아 있는 연출을 죽이게 된다 — 77 이 세운 «발원으로 층을 가른다» 를 그대로 쓴다.
+     노드를 떼면 `fxTick` 의 `!f.el.isConnected` 분기가 `fxFlies` 항목을 스스로 걷는다(공짜 청소).
+   ⚠ 전장 판정 축(`enemies`·`spawnQ`·`killed`)은 여기 안 넣는다 — 진입점마다 시점이 다르고
+     (승급전은 비운 뒤 수호자를 세운다) 그것은 연출이 아니라 판정이다. */
+function clearFieldFx(){
+  shots.length = 0; parts.length = 0; nums.length = 0; corpses.length = 0;
+  zones.length = 0; booms.length = 0; bolts.length = 0; drones.length = 0;   /* 193 — 소환수도 이전 런 소속 */
+  rings.length = 0;                                  /* 114 — 충격파 링 */
   ghosts.length = 0;                                 /* 114 20회차 — 접촉 잔상 */
+  const L = (typeof fxLC === 'function') ? fxLC() : (typeof $ === 'function' ? $('fxlc') : null);
+  if(L) while(L.firstChild) L.removeChild(L.firstChild);
+}
+
+function spawnStage(){
+  enemies.length = 0; spawnQ.length = 0;
+  clearFieldFx();                                    /* ⚑ 738 — 연출 목록은 한 곳에서 읽는다 */
   killed = 0;
   /* 162 — 새 스테이지는 «몹 50마리» 구간부터다. 보스전·파밍은 이 스테이지에서 아직 일어나지 않았다. */
   S.bossFarm = false; bossOn = false; stageWin = false;
@@ -27331,10 +27351,8 @@ function startDunRun(d, f){
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   bossClear = null;                 /* ⚑ 475 — 새 판은 언제나 격파 시퀀스 없이 시작한다(457 이 국면에 쓴 그 한 줄) */
-  enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
-  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
-  rings.length = 0;                                  /* 114 */
-  ghosts.length = 0;                                 /* 114 20회차 */
+  enemies.length = 0; spawnQ.length = 0; killed = 0;
+  clearFieldFx();                                    /* ⚑ 738 — 이전 모드의 연출(파티클 포함)을 데려오지 않는다 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
@@ -27825,6 +27843,10 @@ function startPromo(){
   if(battleLocked()) return;
   leaveStageRun();              /* ⚑ 665 — 이전 스테이지 보스전을 «명시 종료» 하고 들어온다 */
   enemies.length = 0; spawnQ.length = 0;
+  /* ⚑ 738(주인 보고) — **여기가 «스킬 찌꺼기» 의 자리다.** 다른 진입점 넷은 전장 정리 목록을 복붙해
+     갖고 있었는데 승급전만 `enemies`·`spawnQ` 두 줄뿐이라, 스테이지에서 날아가던 투사체·장판·전격·
+     파티클이 그대로 승급전 화면으로 넘어왔다(`probe738` 수리 전 286개 전부 잔류 = 넘어온 것이 전부). */
+  clearFieldFx();
   /* ⚑ 285 — 승급전만 60초였다(«보스전 계열» 인데 28·30 과 규격이 갈려 있던 자리). `BOSS_SEC` 참조로 통일한다. */
   /* ⚑ 665 — `down` = «수호자를 **잡았다**». 구식 판정은 `!enemies.some(e => e.tk === 'promo')` 로
      **필드에서 읽는** 것이었다: «잡았다» 가 아니라 «필드에 수호자가 없다» 라서, 어떤 이유로든
@@ -30499,10 +30521,8 @@ function startRaid(r){
   raidOn = r; raidT = r.sec; raidDmg = 0; raidStage = S.stage;
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   bossClear = null;                 /* ⚑ 475 — 새 판은 언제나 격파 시퀀스 없이 시작한다(457 이 국면에 쓴 그 한 줄) */
-  enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
-  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
-  rings.length = 0;                                  /* 114 */
-  ghosts.length = 0;                                 /* 114 20회차 */
+  enemies.length = 0; spawnQ.length = 0; killed = 0;
+  clearFieldFx();                                    /* ⚑ 738 — 이전 모드의 연출(파티클 포함)을 데려오지 않는다 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
@@ -30627,10 +30647,8 @@ function startArena(){
   /* 30·46 과 같은 «전장 초기화» 절차 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   bossClear = null;                 /* ⚑ 475 — 새 판은 언제나 격파 시퀀스 없이 시작한다(457 이 국면에 쓴 그 한 줄) */
-  enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
-  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
-  rings.length = 0;
-  ghosts.length = 0;                                 /* 114 20회차 */
+  enemies.length = 0; spawnQ.length = 0; killed = 0;
+  clearFieldFx();                                    /* ⚑ 738 — 이전 모드의 연출(파티클 포함)을 데려오지 않는다 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
