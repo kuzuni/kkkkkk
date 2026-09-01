@@ -1765,6 +1765,106 @@ async function sweep(browser, inject) {
     else bad('[R12-d] 되돌림 실패 — 검출기가 수리 전 모양조차 못 잡는다 (regex 가 늙었다)');
   }
 
+  /* ── [G] 23회차 — **찌그러짐의 출처가 «CSS transform» 하나가 아니다** ────────────────
+     22회차까지 이 자의 모든 절은 `scan356.COLLECT` 가 보는 두 축(ⓐ transform/scale 누적 ·
+     ⓑ IMG 의 object-fit:fill)만 봤다. 그런데 같은 날 **616**(다른 워커)이 눈으로 찾아낸 자리가 있다 —
+     레이드 측정장 마법사 **×1.45** · 아레나 기사 **×1.65**. 스무두 회차 동안 이 자는 그 화면을
+     **실제로 밟으면서도**(SCREENS 에 «03 레이드» 가 1회차부터 있다) 초록을 줬다.
+     못 본 이유는 문도 상태도 아니고 **축**이다: `drawSpriteTo()` 가 `ctx.drawImage(..., W, H−padY*2)` 로
+     **캔버스 안에서** 늘려 그렸고, 그 찌그러짐은 DOM 에 흔적이 없다(`getComputedStyle` 로는 영영 안 보인다).
+     ⇒ 이 절은 남은 출처 셋을 «상시 자» 로 못박는다. 전수 스윕은 `probe356r23`(비상시 자) 몫이고,
+        여기서는 캔버스가 실제로 사는 대표 화면만 몬다 — 축이 죽지 않았는지가 이 절의 일이다.
+     ⚠ 훅·수집기는 `probe356r23` 에서 **받아 쓴다**(자를 두 벌로 적지 마라 — 13회차 [R12]).
+     ⚠ [G-c] 되돌림이 이 절의 본체다 — 616 «직전» 트리를 같은 자로 재서 ×1.45 를 실제로 받아내야
+        [G-b] 의 0건이 «값이 옳아서 0» 이지 «안 보는 자라서 0» 이 아니라는 것이 선다(21회차 교훈). */
+  console.log('[G] 23회차 — 캔버스 안·비트맵 상자·svg: transform 이 아닌 찌그러짐 출처');
+  {
+    const R23 = require('./probe356r23.js');
+    /* 화면은 SCREENS 에서 **이름으로 꺼낸다** — 문을 손으로 다시 적지 않는다(13회차 [R12]). */
+    const PICK = ['03 레이드', '26 펫', '12 소환 결과(펫)', '09 일괄 강화 결과'];
+    const rowsOf = async (fileUrl, labels) => {
+      const draw = new Map(); const cvs = []; const svgs = [];
+      let calls = 0, err = 0, ctxNU = 0; const miss = [];
+      for (const label of labels) {
+        const line = SCREENS.find(([l]) => l === label);
+        if (!line) { miss.push(`SCREENS 에 «${label}» 줄이 없다`); continue; }
+        const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+        const page = await ctx.newPage();
+        try {
+          await page.addInitScript(R23.initHook, TOL);
+          await page.goto(fileUrl, { waitUntil: 'load' });
+          await page.waitForTimeout(700);
+          for (const s of line[1]) {
+            if (!(await STEP(page, s))) miss.push(`«${label}» → '${s}'`);
+            await page.waitForTimeout(400);
+          }
+          await page.waitForTimeout(250);
+          const dom = await page.evaluate(R23.DOMAXES, TOL);
+          const hk = await page.evaluate(() => window.__r23 || null);
+          if (!hk) miss.push(`«${label}» 훅이 안 심겼다`);
+          else {
+            calls += hk.calls; err += hk.err; ctxNU += hk.ctxNonUni;
+            for (const k of Object.keys(hk.bad)) {
+              const b = hk.bad[k];
+              if (!draw.has(k)) draw.set(k, Object.assign({ screen: label }, b));
+            }
+          }
+          for (const c of dom.cv) cvs.push(Object.assign({ screen: label }, c));
+          for (const c of dom.svg) svgs.push(Object.assign({ screen: label }, c));
+        } catch (e) { miss.push(`«${label}» ${String(e.message || e).split('\n')[0]}`); }
+        await ctx.close();
+      }
+      return { draw: [...draw.values()], cvs, svgs, calls, err, ctxNU, miss };
+    };
+
+    const now = await rowsOf(URL, PICK);
+    /* ⓐ 전제 — 훅이 정말 돌았는가. 0 이면 아래 초록은 전부 헛초록이다. */
+    if (now.calls > 0) ok(`[G-a] drawImage 훅 관측 ${now.calls}건 · 훅 예외 ${now.err}건 (축이 살아 있다)`);
+    else bad('[G-a] drawImage 호출을 한 건도 못 봤다 — 훅이 안 걸렸다(아래 초록은 전부 헛초록)');
+    if (!now.miss.length) ok(`[G-a2] 대표 화면 ${PICK.length}곳 전부 진입 (${PICK.join(' · ')})`);
+    else bad(`[G-a2] 진입/훅 실패 ${now.miss.length}건: ${now.miss.join(' · ')}`);
+
+    /* ⓑ 본항 — #app 안 캔버스에 비균등 그리기 0건 */
+    const inApp = now.draw.filter((r) => r.inApp);
+    if (!inApp.length) ok(`[G-b] 캔버스 안 비균등 그리기 0자리 (대표 ${PICK.length}화면)`);
+    else bad(`[G-b] 캔버스 안 비균등 그리기 ${inApp.length}자리: `
+      + inApp.map((r) => `${r.screen} ${r.sel} ×${r.ratio} (${r.src})`).join(' · '));
+
+    /* ⓒ 되돌림 — 616 «직전» 트리에서 이 자가 실제로 빨개지는가 */
+    {
+      const abs = R23.PRE_ABS;
+      try {
+        if (!fs.existsSync(abs)) {
+          const { execFileSync } = require('child_process');
+          fs.writeFileSync(abs, execFileSync('git', ['show', R23.PRE_REV + ':index.html'],
+            { cwd: path.resolve(__dirname, '..'), maxBuffer: 1 << 28 }));
+        }
+        const pre = await rowsOf('file://' + abs.replace(/\\/g, '/'), ['03 레이드']);
+        const hit = pre.draw.filter((r) => r.inApp && Math.abs(r.ratio - 1) > 0.30)
+          .sort((a, b) => Math.abs(b.ratio - 1) - Math.abs(a.ratio - 1));   /* «최악» 이라 적으려면 정렬해야 한다 */
+        if (hit.length) ok(`[G-c] 되돌림 — 616 직전 트리에서 ${hit.length}자리가 빨개진다 (최악 ×${hit[0].ratio} · 등재문의 ×1.45/×1.65 자리)`);
+        else bad('[G-c] 되돌림 실패 — 616 직전 트리에서도 0자리다. 이 절은 아무것도 못 보는 자다');
+      } catch (e) {
+        bad('[G-c] 되돌림을 못 돌렸다: ' + String(e.message || e).split('\n')[0]);
+      } finally { try { fs.unlinkSync(abs); } catch (e) {} }
+    }
+
+    /* ⓓ 음성항 — 등방 축소는 안 잡는다. 대표 화면의 던전/펫 썸네일은 전부 `k` 한 배율로 줄여 그린다:
+       [G-b] 가 0 인데 [G-a] 관측이 수천 건이라는 것이 곧 «크기 변경은 결함이 아니다» 의 실측이다. */
+    if (now.calls > 200 && !inApp.length) ok(`[G-d] 음성항 — 등방 축소 ${now.calls}건은 안 잡힌다 (크기 변경은 결함이 아니다)`);
+    else if (!inApp.length) bad(`[G-d] 음성항 표본이 얇다 — 관측 ${now.calls}건뿐이라 «안 잡는다» 가 공허하다`);
+
+    /* ⓔ 남은 두 출처 — 캔버스 비트맵↔CSS 상자 종횡 · svg preserveAspectRatio="none" */
+    if (!now.cvs.length) ok('[G-e] 캔버스 비트맵 종횡을 CSS 상자가 늘리는 자리 0');
+    else bad(`[G-e] 상자가 비트맵을 늘리는 캔버스 ${now.cvs.length}자리: `
+      + now.cvs.map((r) => `${r.screen} ${r.sel} ×${r.ratio} (비트맵 ${r.bmp} ↔ 상자 ${r.box})`).join(' · '));
+    if (!now.svgs.length) ok('[G-f] viewBox 종횡을 어기는 svg(preserveAspectRatio="none") 0자리');
+    else bad(`[G-f] viewBox 를 어기는 svg ${now.svgs.length}자리: `
+      + now.svgs.map((r) => `${r.screen} ${r.sel} ×${r.ratio}`).join(' · '));
+    if (!now.ctxNU) ok('[G-g] 비균등 컨텍스트 변환(ctx.scale(x,y), x≠y) 0회 — 뒤집기 scale(-1,1) 은 |sx|=|sy| 라 안 센다');
+    else bad(`[G-g] 비균등 컨텍스트 변환 ${now.ctxNU}회 — drawImage 인자가 등방이어도 화면에서는 늘어난다`);
+  }
+
   await browser.close();
   const total = oks.length + fails.length;
   console.log(`\nVERIFY356 ${oks.length}/${total} ` + (fails.length ? 'FAIL' : 'PASS'));
