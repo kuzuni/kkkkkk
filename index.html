@@ -4040,16 +4040,30 @@
      ⚑⚑ **림만으로는 모자랐다 — 자가 그것을 바로 잡았다.** 4회차에 신설한 [G] 절(찍힌 픽셀로
        «알 코어 vs 두른 고리» Weber 를 잰다)이 림만 넣은 사본에서 **최소 0.19 · 중앙값 0.97**
        (문턱 1.5)로 빨갰다 — 림은 밝은 아이콘 위에서 «같은 그림» 을 못 이긴다.
-       ⇒ 비평가 처방 ①(«단색 실루엣 — 지불 육각형과 같은 어휘»)을 받아 **`brightness(0) invert(1)`**
-       을 맨 앞에 세운다: 컬러 이모지를 **흰 실루엣**으로 굽고 그 위에 림·글로우를 얹는다.
+       ⇒ 비평가 처방 ①(«단색 실루엣 — 지불 육각형과 같은 어휘»)을 받아 **단색 실루엣**으로 굽는다.
        ⚠ **문양(모양)은 그대로 남는다** — 주인 지시의 «해당 유물» 은 모양이 지고 있고, 색 정체성은
-         마지막 글로우(`--c` = 그 칸의 글로우 색)가 계속 진다. 잃는 것은 «미니어처 사진» 뿐이다. */
+         마지막 글로우(`--c` = 그 칸의 글로우 색)가 계속 진다. 잃는 것은 «미니어처 사진» 뿐이다.
+     ⚑⚑⚑ **5회차 — 실루엣을 «흰색» 에서 «검은색 + 흰 테» 로 뒤집었다.** 4회차(흰 실루엣 + 어두운
+       2px 테)를 비평가가 다시 ④ 5점으로 잡았고 근거가 결정적이었다: **획득 알 34개 중 주변 대비
+       3:1(WCAG 비텍스트 최소)을 넘는 것이 0개**(최악 1.24:1 — 크림색 토네이도 몸통 휘도 202 위에
+       채움 254). 그리고 **흰 채움이 흰 플래시에 녹는다** — 카드 내부의 22~24% 가 이미 휘도 ≥238 이라
+       알의 밝은 덩어리 50~80% 가 플래시 덩어리와 **한 연결성분**으로 붙었다.
+       ⚑ **뿌리는 «한 가지 밝기로는 세 바탕을 다 못 이긴다» 이다.** 이 알이 앉는 바탕은 셋이다 —
+         어두운 카드 배경(≈40) · 컬러 아이콘(≈140~200) · 흰 플래시(≈238~254).
+         단색 채움 하나로는 그중 하나에서 반드시 진다.
+       ⇒ **알이 양끝을 다 갖게 한다**: 채움은 검정(`brightness(0)`), 테는 **여덟 방향 2px 흰색**.
+         · 흰 플래시(254) 위 → **검은 채움**이 오려 낸다   · 어두운 배경(40) 위 → **흰 테**가 오려 낸다
+         · 컬러 아이콘(140~200) 위 → 둘 다 선다
+       ⚠ 테를 4·8방향으로 겹친 것은 비평가의 «2px 은 실기기 스케일에서 앨리어싱으로 날아간다» 지적
+         때문이다(대각 4방향을 1.4px 로 더해 유효 두께를 올린다 — 상자는 한 픽셀도 안 키운다). */
   .fx-spark.fx-rlic{background:none;box-shadow:none;border-radius:0;
     display:flex;align-items:center;justify-content:center;line-height:1;
-    filter:brightness(0) invert(1)
-           drop-shadow(0 1.5px 0 #0B0B0B) drop-shadow(0 -1.5px 0 #0B0B0B)
-           drop-shadow(1.5px 0 0 #0B0B0B) drop-shadow(-1.5px 0 0 #0B0B0B)
-           drop-shadow(0 0 3px #0B0B0B) drop-shadow(0 0 7px var(--c,#FFE07A))}
+    filter:brightness(0)
+           drop-shadow(0 2px 0 #FFF) drop-shadow(0 -2px 0 #FFF)
+           drop-shadow(2px 0 0 #FFF) drop-shadow(-2px 0 0 #FFF)
+           drop-shadow(1.4px 1.4px 0 #FFF) drop-shadow(-1.4px -1.4px 0 #FFF)
+           drop-shadow(1.4px -1.4px 0 #FFF) drop-shadow(-1.4px 1.4px 0 #FFF)
+           drop-shadow(0 0 6px var(--c,#FFE07A))}
 
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
@@ -31418,8 +31432,9 @@ let rwFxW = 0;                           /* 682 — 버스트마다 도는 저�
 const RW_GAIN_N0 = 6, RW_GAIN_N = 5;     /* 첫 발 / 홀드 틱당 알 수 — 분리는 R0 가 맡는다(위 머리말) */
 const RW_GAIN_SC = 0.60;                 /* `fxBurst` 가 준 상자 대비 축소율(≤1 — 위 머리말). 44px → 26px */
 const RW_GAIN_GS = 0.74;                 /* 알 상자 대비 글리프 font-size — 4회차: .62 → .74(문양 해상) */
-const RW_GAIN_R0 = 50, RW_GAIN_R1 = 85;  /* 카드 중심 기준 탄생·도달 반경(px) — 위 4회차 머리말의 산수 */
+const RW_GAIN_R0 = 38, RW_GAIN_R1 = 86;  /* 카드 중심 기준 탄생·도달 반경(px) — 위 5회차 머리말의 산수 */
 const RW_GAIN_JIT = 0.28;                /* 칸 폭 대비 ±지터(682 규약과 같은 어휘) */
+const RW_FLASH_MS = 120;                 /* 5회차 — 당첨 칸 플래시 길이(ms). 위 `rwSummonFx` 머리말의 산수 */
 let rwGainW = 0;                         /* 버스트마다 도는 저불일치 위상(황금비 · 682·619 6회차와 같은 수열) */
 /* 칸이 «지금 화면에 온전히 있는가». 프레임과 89 페이지 두 상자에 다 들어와야 한다
    (`#relw` 는 `overflow:visible` 이라 짧은 프레임에서 격자가 페이지 밖으로 나갈 수 있다). */
@@ -31469,9 +31484,16 @@ function rwSummonFx(it, first, iv){
   const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
   /* 2회차 — 홀드 틱이면 **플래시도 그 틱 안에서 끝난다**(619 14회차 `fxTickLife` API 그대로).
      1회차 채점에서 두 비평가가 독립으로 «한 화면에 «방금 얻음» 흰 카드가 두 장 켜져 있다»
-     (홀드 간격 ≈293ms < 플래시 수명 340ms ⇒ 듀티 109%)를 잡았다. 단발(`first`)은 다음 틱이
-     없으므로 종전 340ms 그대로다. */
-  if(el){ fxFlash(el, first ? undefined : iv); fxHitEl(el); rwGainFx(it, el, first, first ? null : iv); }
+     (홀드 간격 ≈293ms < 플래시 수명 340ms ⇒ 듀티 109%)를 잡았다.
+     ⚑⚑ **5회차 — 단발 플래시도 짧게.** 4회차 비평가 둘이 «8점을 막는 단 하나» 를 **플래시**로
+       짚었고 수치가 같았다: 당첨 칸 «Lv.n» 대비가 정착 **9.17:1 → 1.48:1**(A3 · 84% 손실)로
+       **240ms(연출의 71%) 동안** 큰 글자 최소선 3:1 아래이고, 아이콘 대비도 4.98 → **1.60:1** 이다.
+       ⇒ «보상이 떨어지는 바로 그 순간 «어느 유물인가» 가 카드에서 가장 안 보이는 요소» 가 된다.
+       처방은 **길이**다(폭·알파는 09·12·17·코스튬·장비가 같이 쓰는 곡선이라 손대지 않는다 —
+       LESSONS 666-⑨ «남의 부품 곡선은 그 행에서 고치지 말고 등재하라»).
+       `fxTickLife(iv, 340)` 는 `iv × FXTICK_DUTY` 를 돌려주므로 **원하는 길이를 duty 로 나눠 넘긴다**
+       — 새 상수도, 공용 부품 변경도 없다. 120ms 면 A4(130ms) 전에 꺼져 씻기는 구간이 71% → 35% 다. */
+  if(el){ fxFlash(el, first ? RW_FLASH_MS / FXTICK_DUTY : iv); fxHitEl(el); rwGainFx(it, el, first, first ? null : iv); }
   const L = (typeof fxL === 'function') ? fxL() : null;
   const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
   if(!L || !r) return false;
