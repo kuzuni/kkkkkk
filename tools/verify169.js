@@ -209,15 +209,30 @@ async function openList(p) {
     await openList(p);
     await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
     await p.waitForTimeout(300);
+    /* 643 — `gold` 는 여기서 뺐다(아래 `paid` 가 같은 tick 에서 직접 잰다). 이 자리에서 읽은 값은
+       클릭 시점까지 배경 사냥에 밀릴 수 있어 기준선으로 못 쓴다. */
     const before = await p.evaluate(() => ({
-      gold: S.gold, left: S.dunTk.gold, cnt: S.cnt.dungeon,
+      left: S.dunTk.gold, cnt: S.cnt.dungeon,
       want: DUNGEONS[0].rw(S.dun.gold - 1).gold,
-      hud: document.getElementById('hudGold') ? document.getElementById('hudGold').textContent : null,
     }));
-    await p.evaluate(() => document.getElementById('dgdSweep').click());
+    /* ⚑ 643(2026-09-01) — 지급액은 클릭과 **같은 tick** 에서 읽는다.
+       종전에는 클릭 → 500ms 대기 → `after.gold - before.gold` 로 쟀는데, 그 500ms 동안
+       팝업 뒤에서 방치 사냥이 계속 돌아 **몹이 하나만 죽어도 골드가 저 혼자 는다**
+       (`probe643` 실측: 대조군 5회 중 1회 +4.08 · 그 판은 예외 없이 `S.totalKills` 도 +1).
+       그래서 이 항이 «+36868 vs 기대 36864» 로 빨갰다 — **제품은 한 번도 틀리지 않았다**
+       (같은 tick 측정 5회 전부 정확히 `rw(4).gold`).
+       D5 가 258 에서 이미 «소탕이 도는지는 저절로 변할 수 없는 값으로만 재라» 고 적어 뒀는데
+       C2·E1 두 자리만 그 규약을 못 받았다. `onclick → sweepDungeon → giveReward` 는 전부
+       동기라 클릭과 읽기 사이에 프레임이 못 낀다 = 배경분이 섞일 창 자체가 없다.
+       ⚠ 기대값을 36868 로 고쳐 적는 재기준은 반려다(334 규약) — 고칠 것은 **자의 측정 방식**이다. */
+    const paid = await p.evaluate(() => {
+      const g0 = S.gold;
+      document.getElementById('dgdSweep').click();
+      return S.gold - g0;
+    });
     await p.waitForTimeout(500);
     const after = await p.evaluate(() => ({
-      gold: S.gold, left: S.dunTk.gold, cnt: S.cnt.dungeon,
+      left: S.dunTk.gold, cnt: S.cnt.dungeon,
       dgdOpen: document.getElementById('dgdw').classList.contains('on'),
       dclOpen: document.getElementById('dclw').classList.contains('on'),
       dclAmt: document.getElementById('dclAmt').textContent,
@@ -225,8 +240,8 @@ async function openList(p) {
       saved: (() => { try { return JSON.parse(localStorage.getItem(KEY)).dunTk.gold; } catch (e) { return 'ERR'; } })(),
     }));
     chk(after.left === before.left - 1, 'C1 입장 횟수 −1', `${before.left} → ${after.left}`);
-    chk(Math.abs((after.gold - before.gold) - before.want) < 1,
-      'C2 이전 층 보상 실지급 (골드)', `+${(after.gold - before.gold).toFixed(0)} (기대 ${before.want.toFixed(0)})`);
+    chk(Math.abs(paid - before.want) < 1,
+      'C2 이전 층 보상 실지급 (골드)', `+${paid.toFixed(0)} (기대 ${before.want.toFixed(0)})`);
     chk(after.cnt === before.cnt + 1, 'C3 던전 클리어 카운터 +1', `${before.cnt} → ${after.cnt}`);
     chk(!after.dgdOpen, 'C4 세부 팝업이 닫힌다', `열림=${after.dgdOpen}`);
     chk(after.dclOpen, 'C5 31 클리어 화면이 열린다', `열림=${after.dclOpen}`);
@@ -305,13 +320,21 @@ async function openList(p) {
       const { ctx, p } = await boot(b, 2280, 'file://' + NEG1);
       await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
       await p.waitForTimeout(300);
-      const same = await p.evaluate(async () => {
-        const g0 = S.gold, l0 = S.dunTk.gold;
+      /* ⚑ 643 — `S.gold` 를 축에서 뺐다. C2 와 **같은 결함**이 여기에도 있었다:
+         400ms 동안 배경 방치 사냥이 몹을 하나 죽이면 빈 핸들러인데도 골드가 올라
+         **음성항이 거짓 빨강**이 된다(258 이 D5 에서 이미 뺀 축인데 이 자리만 안 받았다).
+         빠진 자리는 «소탕 말고는 안 움직이는» 값 둘로 메워 오히려 강해졌다 —
+         클리어 카운터와 31 클리어 화면(D5 가 쓰는 그 셋). */
+      const inv = await p.evaluate(async () => {
+        const b0 = JSON.stringify({ l: S.dunTk.gold, c: S.cnt.dungeon });
         document.getElementById('dgdSweep').click();
         await new Promise(r => setTimeout(r, 400));
-        return g0 === S.gold && l0 === S.dunTk.gold;
+        return { same: b0 === JSON.stringify({ l: S.dunTk.gold, c: S.cnt.dungeon }),
+                 dcl: document.getElementById('dclw').classList.contains('on') };
       });
-      chk(same, 'E1 음성항 — 옛 빈 핸들러로 되돌리면 눌러도 아무 일이 없다', String(same));
+      chk(inv.same && !inv.dcl,
+        'E1 음성항 — 옛 빈 핸들러로 되돌리면 입장 횟수·클리어 카운터·클리어 화면 전부 불변',
+        `불변=${inv.same} 클리어화면=${inv.dcl}`);
       await ctx.close();
     }
     fs.unlinkSync(NEG1);
@@ -337,6 +360,35 @@ async function openList(p) {
       await ctx.close();
     }
     fs.unlinkSync(NEG2);
+
+    /* ⚑ E3 — 643 되돌림 시험. C2 를 «같은 tick 측정» 으로 갈아 끼웠으니, 그 새 식이
+       **여전히 진짜 결함을 잡는지**를 못박아야 한다(334 규약 — 무르게 푼 수리 금지).
+       소탕이 «한 층 위» 보상을 주도록 갈아 끼운 사본에서 C2 의 식이 반드시 어긋나야 한다.
+       ⚠ `giveReward(d.rw(f));` 는 파일에 두 자리다(26676 = [도전] 클리어 · 26772 = 소탕).
+         앞줄 `S.dunTk[d.id]--; S.cnt.dungeon++;` 까지 묶어 **소탕 쪽만** 집는다. */
+    const NEG3 = path.join(ROOT, '.v169-neg3.html');
+    const PAY = 'S.dunTk[d.id]--; S.cnt.dungeon++;\n  giveReward(d.rw(f));';
+    const hit3 = src.split(PAY).length - 1;
+    chk(hit3 === 1, 'E0c 음성항 사본 — 소탕 지급 자리를 한 곳으로 집었다', `${hit3}곳`);
+    fs.writeFileSync(NEG3, src.replace(PAY,
+      'S.dunTk[d.id]--; S.cnt.dungeon++;\n  giveReward(d.rw(f + 1));'));
+    {
+      const { ctx, p } = await boot(b, 2280, 'file://' + NEG3);
+      await openList(p);
+      await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
+      await p.waitForTimeout(300);
+      const n = await p.evaluate(() => {
+        const want = DUNGEONS[0].rw(S.dun.gold - 1).gold, g0 = S.gold;
+        document.getElementById('dgdSweep').click();
+        return { paid: S.gold - g0, want };
+      });
+      /* 같은 자·같은 허용 오차(1)로 재서 **빨개져야** 통과다 */
+      chk(Math.abs(n.paid - n.want) >= 1,
+        'E3 음성항 — 지급을 한 층 위 보상으로 갈면 C2 의 새 식이 그대로 빨개진다',
+        `지급 ${n.paid.toFixed(0)} vs 기대 ${n.want.toFixed(0)} (차 ${(n.paid - n.want).toFixed(0)})`);
+      await ctx.close();
+    }
+    fs.unlinkSync(NEG3);
   }
 
   /* ================= [F] 회귀 — 도전 버튼·팝업 흐름 불변 ================= */
