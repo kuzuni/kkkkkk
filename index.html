@@ -36836,6 +36836,22 @@ const FXB_M = 6, FXB_K = 0.20, FXB_RMIN = 22, FXB_RMAX = 260;
    ⓑ 반경 방향으로는 못 뺀다 — 끝점이 이미 bbox 테두리라 밖으로 밀 여유가 없다. 그래서 **접선 방향**이다.
    ⓒ 못 피하면 마지막 후보를 그대로 쓴다(FX3_MTRY 와 같은 규약) — 링이 무너지는 것보다 낫다. */
 const FXB_KTRY = 9, FXB_KSTEP = 0.26;
+/* ⚑ 619 12회차 — **스파크 크기의 눈금을 «절대» 로 정한다**(394 선례: «무엇을 눈금으로 삼는가» 를 먼저 적는다).
+   11회차까지의 눈금은 «호스트 짧은 변 대비 %»(6회차 hsc)였고, 그 축에서 룬은 상한 1.6 에 붙어
+   단일 62px · 3알 융합 97×64 «아메바» 로 읽혔다(비평가 EC ① · EB ⑥⑦ — 10·11회차 **네 명 연속**).
+   ⚠ **두 비평가가 축이 갈렸다** — EB 는 «호스트 짧은 변 6~8%»(상대) · EC 는 «38px 공통 절대 상한».
+   **절대를 고른다.** 근거는 EC ② 가 찍은 자리다: 스파크가 크다고 읽히는 순간의 비교 대상은
+   호스트 패널이 아니라 **바로 옆 글리프**였다(«숫자 옆에 같은 밝기의 원반이 붙어 라벨이 글자인지
+   파티클인지 헷갈린다»). 글리프는 `--fx-plus-fs` **34px 절대값**이므로 스파크도 절대여야 한 어휘가 된다.
+   ⇒ 지름 상한 `FXB_DMAX` 40px(= 글리프 34 의 1.18배). 호스트 비례는 **그 상한까지만** 살린다
+   (6회차가 회수한 «룬이 작아 보인다» 를 통째로 되돌리지 않는다 — 룬은 여전히 최대 배율이다).
+   ⚠ keep-out 여유(`FXB_KOS × hsc`)도 같은 상한을 따라간다 — «여유는 입자 크기에서 나온다»(4회차). */
+const FXB_DMAX = 40, FXB_SZMAX = 34;                 /* FXB_SZMAX = 아래 `rnd(24, 34)` 의 위끝 */
+/* 619 12회차 — 살아 있는 스파크끼리의 **최소 중심거리 배수**(두 알 반지름합 × 이 값).
+   EB ⑥ 「(r1+r2)×1.25」 · EC ① 「×1.35」 의 사이. 융합은 «한 버스트 안» 이 아니라 **틱이 겹치는 구간**에서
+   난다(수명 300ms > 틱 간격 110ms ⇒ 3틱 12알 동시 생존) — 그래서 자를 «이번 버스트» 가 아니라
+   `#fxl` 에 **살아 있는 스파크 전부**에 댄다. */
+const FXB_SEP = 1.30;
 const FXB_KOS = 19;                                  /* 619 — strict 회피의 여유. 4회차 14(스파크 «평균» 반경 13+1)는
                                                         6회차 링 숨쉬기(rr)가 입자를 안쪽으로 들이자 최대 입자(34px)의
                                                         상자 모서리가 글자 상자를 스쳤다([E2] 0.12) — 최대 반경 17+2 로. */                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
@@ -36939,13 +36955,12 @@ function fxBurst(t, col, n, strict){
      19% → 24~27% 로 되레 올랐다. 기하평균은 짧은 변이 얇으면 배율도 낮아(단련 1.15 · 룬 1.9)
      그 함정이 없다. 훈련은 배율 1 그대로(«크기 어휘» 불변). keep-out 여유(FXB_KOS)도 같은 배율로
      따라간다(여유는 입자 크기에서 나온다는 4회차 규칙 그대로). */
-  /* ⚑ 619 11회차 — 상한 1.9 → **1.6**. 6회차가 «룬이 작아 보인다»(DQ ②)를 고치려 올린 값인데
-     10회차에 반대편이 걸렸다: 룬 패널(998×700 · √wh 836)이 상한에 붙어 배율 1.9 를 그대로 받아
-     스파크가 **48~52px 융합 블롭**으로 읽혔다(비평가 DZ ② · EA ② — 2인 공통). 1.6 이면 룬은
-     같은 자리에서 40~44px 이라 개체가 갈리고, 6회차가 회수한 «폭 대비» 는 훈련 2.9% → 4.9% 로
-     남는다(1.9 일 때 5.8%). 훈련(408)·단련(998×222 → √wh 471)은 각각 1.00·1.15 라 **손이 안 닿는다**
-     — 이 한 줄이 움직이는 것은 상한에 붙은 룬 하나뿐이다. */
-  const hsc = (strict && r) ? clamp(Math.sqrt(r.w * r.h) / 410, 1, 1.6) : 1;
+  /* ⚑ 619 11 → 12회차 — 상한 1.9 → 1.6 → **`FXB_DMAX/FXB_SZMAX` = 1.176**(위 상수 머리말: 눈금을
+     «호스트 상대» 에서 **«글리프 대비 절대»** 로 바꿨다). 11회차의 1.6 은 **단일 크기만** 눌렀고
+     «중첩» 은 못 막아 EC 가 같은 자리를 다시 «단 하나» 로 냈다 — 그래서 이 줄(크기)과 아래
+     `ks`(최소 중심거리) **둘이 한 벌**이다. 검산: 룬 √wh 836 → 배율 1.176 ⇒ 스파크 **28~40px**
+     (11회차 38~54 · 10회차 46~65). 훈련(408 → 1.00)·단련(471 → 1.15)은 상한에 안 닿아 **불변**이다. */
+  const hsc = (strict && r) ? clamp(Math.sqrt(r.w * r.h) / 410, 1, FXB_DMAX / FXB_SZMAX) : 1;
   const kh = r ? fxbTextHoles(t, strict ? Math.round(FXB_KOS * hsc) : undefined) : [];
   /* ⚑ 619 8회차 — strict 구멍 두 벌 추가(비평가 DT·DU 2인 공통 «스파크가 −n 플로터를 70% 은폐 ·
      진행바 위에 착지»): ① 살아 있는 플로터(`.fx-plus`) — 정보 층인데 #fxl 에 살아 호스트 자손 스캔에
@@ -36973,6 +36988,25 @@ function fxBurst(t, col, n, strict){
      clamp 로 증발) — 5회차 위상 굴림만으로 중복이 34% → 29% 에 멈춘 뿌리다. 수열이라 연속 버스트의
      위상·반경이 **반드시** 다르다(등간격·가둠 상자·이동량은 불변 — 기존 호출은 phase 0 · rr 1).
      ⚠ 안쪽으로 들어온 입자가 글자에 앉는 것은 strict 의 «버리기» 가 그대로 막는다([E] 게이트). */
+  /* ⚑ 619 12회차 — **융합 방지용 «살아 있는 스파크» 목록**(위 `FXB_SEP` 머리말).
+     좌표는 `getBoundingClientRect` 가 아니라 노드에 적힌 `style.left/top` 에서 읽는다 — 그 값이
+     아래 `sx`/`sy` 와 **같은 좌표계**(프레임 px)라 배율·스크롤 보정이 아예 필요 없다(350 규칙의 반대편:
+     여기서 재는 것은 «화면 위 픽셀» 이 아니라 «내가 방금 적은 자리» 다).
+     ⚠ strict(회당 발화) 자리에서만 켠다 — 전투 발 버스트(점 대상)는 링이 원래 흩어져 있고
+     한 프레임에 수십 개가 나므로 이 자를 대면 헛돈다. */
+  const ks = [];
+  if(strict && r && L){
+    for(const nd of L.children){
+      if(!/fx-spark/.test(nd.className + '')) continue;
+      const nx = parseFloat(nd.style.left), ny = parseFloat(nd.style.top), nw = parseFloat(nd.style.width);
+      if(Number.isFinite(nx) && Number.isFinite(ny) && Number.isFinite(nw)) ks.push({ x:nx, y:ny, r:nw/2 });
+    }
+  }
+  /* 두 알이 «한 덩이» 로 읽히는 거리 — 반지름합 × FXB_SEP */
+  const fxbFuse = (x, y, rad) => ks.some(o => {
+    const dx = o.x - x, dy = o.y - y, m = (o.r + rad) * FXB_SEP;
+    return dx*dx + dy*dy < m*m;
+  });
   const phase = strict ? (fxbW = (fxbW + 0.6180339887) % 1) * Math.PI * 2 / cnt : 0;
   const rr = strict ? 0.82 + 0.18 * (fxbR = (fxbR + 0.3819660113) % 1) : 1;
   let made = 0;                                      /* 619 6회차 — strict «버스트당 최소 1개» 보장(아래) */
@@ -37046,7 +37080,9 @@ function fxBurst(t, col, n, strict){
     /* 42회차 — 공통ㄹ. 시작·끝점이 대상 글자에 걸리면 **각도만** 좌우로 번갈아 굴려 피한다
        (반경 rx·ry·jt, 가둠 상자 bx/by, 이동량 FXB_K 는 그대로 — 링 기하는 안 건드린다). */
     let ang = a, sx0 = 0, sy0 = 0, ex = 0, ey = 0, sx = 0, sy = 0, hitK = -1;
-    for(let k = 0; k <= (kh.length ? FXB_KTRY : 0); k++){
+    /* 619 12회차 — «글자는 피했지만 이웃 알과 융합하는» 차선을 들고 있는다(아래 되돌림 참조) */
+    let fb = null;
+    for(let k = 0; k <= ((kh.length || ks.length) ? FXB_KTRY : 0); k++){
       /* 0, +step, −step, +2step, −2step … 원래 각에서 가장 가까운 쪽부터 본다 */
       ang = a + (k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k/2) * FXB_KSTEP);
       sx0 = clamp(p.x + Math.cos(ang)*rx*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
@@ -37055,10 +37091,21 @@ function fxBurst(t, col, n, strict){
       ey = r ? sy0 : clamp(sy0 + Math.sin(ang)*d, by0, by1);
       sx = r ? p.x + (ex - p.x)*(1 - FXB_K) : sx0;
       sy = r ? p.y + (ey - p.y)*(1 - FXB_K) : sy0;
-      if(!kh.length) break;
+      if(!kh.length && !ks.length) break;
       /* 시작·중간·끝 세 점으로 본다 — 이동이 짧아 세 점이면 선분 전체를 대표한다 */
-      if(!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey)) break;
-      hitK = k;
+      const okKh = !kh.length
+        || (!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey));
+      /* 619 12회차 — 글자 회피와 **융합 회피를 같은 각도 굴림 하나로** 본다(축을 새로 만들지 않는다) */
+      if(okKh && !fxbFuse(sx, sy, sz/2)) break;
+      if(okKh && !fb) fb = { ang, sx, sy, ex, ey };
+      if(!okKh) hitK = k;
+    }
+    /* ⚑ 619 12회차 — 융합 때문에 끝까지 못 벌렸으면 «글자만 피한» 차선으로 되돌린다.
+       융합은 «겹쳐 보인다» 이고 입자를 버리는 것은 «강화마다 터진다»([B] 1.00)를 깨는 것이라
+       둘 중에는 겹침이 싸다 — 이 되돌림이 없으면 좁은 호스트에서 발화가 조용히 비어 버린다. */
+    if(fb && (fxbFuse(sx, sy, sz/2) || (kh.length
+         && (fxbHit(kh, sx, sy) || fxbHit(kh, (sx + ex)/2, (sy + ey)/2) || fxbHit(kh, ex, ey))))){
+      ang = fb.ang; sx = fb.sx; sy = fb.sy; ex = fb.ex; ey = fb.ey;
     }
     /* 619 4회차 — `strict` 면 «끝까지 글자 위» 인 입자는 버린다(위 머리말).
        6회차 — 단 **버스트당 최소 1개는 남긴다**: 링 숨쉬기·키운 여유(FXB_KOS×hsc)로 «4개 전부
@@ -37068,6 +37115,8 @@ function fxBurst(t, col, n, strict){
        && (fxbHit(kh, sx, sy) || fxbHit(kh, (sx + ex)/2, (sy + ey)/2) || fxbHit(kh, ex, ey))) continue;
     el.style.left = sx + 'px';
     el.style.top  = sy + 'px';
+    /* 619 12회차 — 같은 버스트의 **뒤 입자**도 방금 앉힌 이 알을 피하게 한다(한 버스트 안 융합) */
+    if(strict && r) ks.push({ x:sx, y:sy, r:sz/2 });
     el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');
     el.style.setProperty('--dy', (ey - sy).toFixed(1) + 'px');
     L.appendChild(el); made++;
@@ -37437,9 +37486,21 @@ function hbFloat(host, txt, kind, lone){
                         + ((k * 0.6180339887) % 1 - 0.5) * 2 * jxA;
   {
     const dxMin = Math.min(HB_INK_W, sw - 2 * jxA) - 1;
-    const xs = (hbNodes.get(lk) || []).filter(nd => nd.isConnected)
-                 .map(nd => parseFloat(nd.style.left)).filter(Number.isFinite);
+    const live = () => (hbNodes.get(lk) || []).filter(nd => nd.isConnected);
+    const xs = live().map(nd => parseFloat(nd.style.left)).filter(Number.isFinite);
     for(let g = 0; g < n && xs.some(x => Math.abs(x - hbLeftOf(i)) < dxMin); g++) i = hbSeqK[seqk]++;
+    /* ⚑ 619 12회차 — **칸이 모자라면 «미는» 것으로는 못 푼다.** 단련은 `--hb-slots:2` 인데 점유자가
+       셋이다(첫 발 `lng` 1.3s + 반복분 2장) — 빈 칸이 **구조적으로 없어** 위 루프가 n 바퀴를 다 돌고
+       충돌한 자리에 그대로 앉는다(11회차에 최소 Δx 7.55px 가 안 움직인 뿌리 · 비평가 EC ⑪ 이
+       «가드 미충족» 으로 정확히 짚었다). 칸을 늘리는 길은 막혀 있고(2회차 «카드 밖으로 나간다»)
+       레인 이동도 막혀 있다(612 [I6b] 래칫) ⇒ **겹칠 바에는 앞엣것을 먼저 보낸다** — EC 의 처방
+       그대로다. 걷는 것은 «지금 앉을 자리와 겹치는» 노드뿐이고, 상한 2 의 `old.remove()` 와 같은 규약이다.
+       ⚠ 새 사건을 버리지 않는다 — 버리면 «강화마다 터진다»([B])가 깨진다. */
+    const xNew = hbLeftOf(i);
+    for(const nd of live()){
+      const x = parseFloat(nd.style.left);
+      if(Number.isFinite(x) && Math.abs(x - xNew) < dxMin){ try { nd.remove(); } catch(_){} }
+    }
   }
   const jx = ((i * 0.6180339887) % 1 - 0.5) * 2 * jxA, jy = ((i * 0.3819660113) % 1 - 0.5) * 2 * jyA;
   d.style.left = (r.x + r.w * cx + (((i * st) % n) - (n - 1) / 2) * sw + jx) + 'px';
