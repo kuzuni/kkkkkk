@@ -213,28 +213,43 @@ const table = [];
   ok(cost.mono, '0~1200 레벨 전수에서 비용이 단조 비감소');
   ok(Number.isFinite(cost.far) && cost.far > 0, '맥스 없음 — Lv 100000 도 유한한 비용', String(cost.far));
 
+  /* ⚑ 686(2026-09-02 주인 지시) — 비용 «열»(.tc: «(단련석)n» + «n~n 구간 · 1레벨당»)이 통째로
+     사라졌다. **이 절의 뜻은 안 죽는다** — 주인 ⓑ-2 는 «UI 가 현재 구간 비용을 적는다» 이고
+     그 말을 이제 **버튼 라벨**이 한다(670 이 만든 «(아이콘) n»). 그래서 과녁을 열 → 버튼으로
+     옮기고, 문구 한 줄(«100~199 구간»)이 하던 «구간을 따라간다» 는 증언은 **세 구간을 실제로
+     걸어 보는 것**으로 갈아 끼운다(333 처방 — 자리를 비우지 않는다. 오히려 더 세다: 문구는
+     지워도 초록이던 반면 이 항은 값이 구간을 안 따라가면 빨개진다). */
   const ui = await p.evaluate(() => {
-    S.tstone = 5; S.dia = 1e6; S.temper = { alloc: { atk: 150, hp: 0, regen: 0 } };
-    openTrain(); setTrSub('temper'); renderTemper();
+    S.tstone = 5; S.dia = 1e6;
+    openTrain(); setTrSub('temper');
+    const read = lv => {
+      S.temper = { alloc: { atk: lv, hp: 0, regen: 0 } }; renderTemper();
+      const card = document.querySelector('.tr-tp[data-temper="atk"]');
+      return { lv, tb: card.querySelector('.tb').textContent.replace(/\s+/g, ''),
+               cost: temperCost('atk'),
+               tbIc: /cur-tstone\.svg/.test(card.querySelector('.tb i').innerHTML),
+               tc: !!card.querySelector('.tc') };
+    };
+    const steps = [50, 150, 250].map(read);
+    S.temper = { alloc: { atk: 150, hp: 0, regen: 0 } }; renderTemper();
     const card = document.querySelector('.tr-tp[data-temper="atk"]');
-    return { tc: card.querySelector('.tc i').textContent.trim()
-                 + ' | ' + card.querySelector('.tc s').textContent,
+    return { steps, all: document.getElementById('trTemper').textContent,
              tb: card.querySelector('.tb').textContent,
-             tcIc: /cur-tstone\.svg/.test(card.querySelector('.tc i').innerHTML),
              tbIc: /cur-tstone\.svg/.test(card.querySelector('.tb i').innerHTML),
              cost: temperCost('atk') };
   });
-  ok(ui.cost === 3 && ui.tc.split(' | ')[0] === '3' && /100~199/.test(ui.tc),
-    '★ UI 가 «현재 구간 비용» 을 적는다(주인 ⓑ-2) — Lv150 → 3 · 100~199 구간', ui.tc.replace(/\s+/g, ' '));
-  /* ⚑ 670(2026-09-02 주인 지시) — 버튼 라벨에서 «단련» 낱말이 빠졌다. 이 항의 뜻은 «두 표기층이
-     같은 수를 말한다» 였지 «버튼이 «단련» 이라고 말한다» 가 아니었으므로, 낱말을 묻던 자리를
-     **수의 일치**로 갈아 끼운다(333 처방 — 항을 지우지 않는다). 화폐 아이콘은 `tbIc` 가 따로 본다. */
-  ok(ui.tb.replace(/\s+/g, '') === String(ui.cost) && ui.tb.replace(/\s+/g, '') === ui.tc.split(' | ')[0],
-    '단련 버튼에도 같은 비용이 적힌다(표기층 두 벌 금지 · 670 — 낱말 없이 수만)',
-    '버튼 «' + ui.tb.replace(/\s+/g, ' ').trim() + '» ↔ 열 «' + ui.tc.split(' | ')[0] + '»');
-  ok(ui.tcIc && ui.tbIc, '613 — 비용 열·버튼 둘 다 단련석 아이콘으로 화폐를 말한다(125 · «pt» 죽은 말)');
-  ok(!/pt/.test(ui.tc) && !/pt/.test(ui.tb), '613 — «pt» 라는 말이 화면에서 사라졌다',
-    (ui.tc + ' / ' + ui.tb).replace(/\s+/g, ' '));
+  ok(ui.cost === 3 && ui.tb.replace(/\s+/g, '') === '3',
+    '★ UI 가 «현재 구간 비용» 을 적는다(주인 ⓑ-2 · 686 이후 그 자리는 버튼) — Lv150 → 3',
+    '버튼 «' + ui.tb.replace(/\s+/g, ' ').trim() + '»');
+  ok(ui.steps.every(s => s.tb === String(s.cost))
+     && ui.steps.map(s => s.tb).join(',') === '1,3,6',
+    '★ 686 — 버튼 값이 **구간을 따라간다**(Lv50/150/250 → 1/3/6) — 지워진 «n~n 구간» 문구가 하던 말',
+    ui.steps.map(s => 'Lv' + s.lv + '→' + s.tb).join(' · '));
+  ok(ui.steps.every(s => !s.tc),
+    '686 — 비용 열(.tc)은 사라졌다(주인 지시 · 되살아나면 빨강)');
+  ok(ui.tbIc, '613 — 버튼이 단련석 아이콘으로 화폐를 말한다(125 · «pt» 죽은 말 · 686 이후 유일한 자리)');
+  ok(!/pt/.test(ui.all) && !/포인트/.test(ui.all), '613 — «pt» 라는 말이 화면에서 사라졌다',
+    ui.tb.replace(/\s+/g, ' '));
 
   /* ================= [D] 지불 장부 ================= */
   console.log('[D] ★ 지불 장부 — 무작위 배분에서 «단련석 감소 총량 = 계단 비용의 합» (오차 0)');
@@ -695,9 +710,11 @@ const table = [];
     const read = () => {
       const w = document.getElementById('trTemper');
       const row = w.querySelector('.tr-tp[data-temper="atk"]');
+      /* 686 — 비용 열(.tc) 두 줄이 사라졌다. 이 항의 뜻(«홀드 경로와 통짜 경로가 같은 것을
+         그린다»)은 그대로이므로 살아 있는 노드만 읽는다 — 지운 두 줄을 남겨 두면 두 경로가
+         **둘 다 없어서** 같아지는 헛초록이 된다. `.tc` 부재 자체는 [C] 절이 따로 못박는다. */
       return [w.querySelector('.tp-hd .pv i').innerHTML,
               row.querySelector('.tl i').textContent, row.querySelector('.td i').textContent,
-              row.querySelector('.tc i').innerHTML, row.querySelector('.tc s').textContent,
               row.querySelector('.tb i').innerHTML,
               row.querySelector('.tb').classList.contains('no') ? 'no' : 'ok'].join(' | ');
     };

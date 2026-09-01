@@ -54,11 +54,14 @@ const PRE = { btn: '단련 1', room10: 1.13 };
     return { n: rows.length,
              btn: rows.every(r => !!r.querySelector('.tb i')),
              tn: rows.every(r => !!r.querySelector('.tn i')),
-             tc: rows.every(r => !!r.querySelector('.tc i')) };
+             /* 686 이관 — 비용 열(.tc)은 주인 지시로 사라졌다. [1-c] 는 «있는가» 에서
+                «없는가» 로 뒤집고, [3][5] 가 볼 자리는 살아 있는 `.tn`·`.tb` 로 남는다. */
+             tc: rows.every(r => !r.querySelector('.tc')) };
   });
   ok(pre.n >= 3, '[1-a] 단련 축 행이 셋 이상 그려졌다', pre.n + '행');
   ok(pre.btn, '[1-b] 행마다 강화 버튼 라벨 노드(.tb i)가 있다');
-  ok(pre.tn && pre.tc, '[1-c] 행 제목(.tn)·비용 열(.tc)도 있다 — [3][5] 가 볼 자리');
+  ok(pre.tn, '[1-c] 행 제목(.tn)이 있다 — [3][5] 가 볼 자리');
+  ok(pre.tc, '[1-c2] 686 — 비용 열(.tc)은 없다(670 이 «중복» 이라 부른 그 열 · 되살아나면 빨강)');
 
   /* ══ [2] ★ 라벨 = 아이콘 + 수 ═══════════════════════════════════════════ */
   console.log('\n=== [2] ★ 주인 지시 — 버튼은 «(아이콘) n» 만 말한다 ===');
@@ -149,10 +152,11 @@ const PRE = { btn: '단련 1', room10: 1.13 };
       room10: +room10.toFixed(2),
     };
   });
-  ok(Math.abs(geo.w - 340) < 0.5 && Math.abs(geo.h - 74) < 0.5,
-    '[5-a] ★ 버튼 상자 340×74 불변(584)', geo.w + '×' + geo.h);
-  ok(Math.abs(geo.right - 26) < 0.5 && Math.abs(geo.top - 128) < 0.5,
-    '[5-b] 자리(right 26 · top 128)도 불변', 'right ' + geo.right + ' · top ' + geo.top);
+  ok(Math.abs(geo.w - 340) < 0.5 && Math.abs(geo.h - 178) < 0.5,
+    '[5-a] ★ 버튼 **가로** 340 불변(584 자릿수 예산) · 세로는 686 이 178 로 키웠다',
+    geo.w + '×' + geo.h);
+  ok(Math.abs(geo.right - 26) < 0.5 && Math.abs(geo.top - 22) < 0.5,
+    '[5-b] 자리 — right 26 불변(584) · top 은 686 값 22', 'right ' + geo.right + ' · top ' + geo.top);
   ok(geo.curTop >= 5 && geo.curBot >= 5 && Math.abs(geo.curTop - geo.curBot) <= 3,
     '[5-c] ★ 화폐 아이콘이 버튼 안에서 세로 중앙(584 [2-i] 와 같은 자)',
     '위 ' + geo.curTop + ' · 아래 ' + geo.curBot);

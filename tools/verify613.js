@@ -76,7 +76,10 @@ async function open(browser, seed) {
     return {
       pvHtml: pv ? pv.innerHTML : '', pvTxt: pv ? pv.textContent : '',
       allTxt: w.textContent,
-      tcIc: /cur-tstone\.svg/.test(row.querySelector('.tc i').innerHTML),
+      /* 686 이관 — 비용 열(.tc)이 주인 지시로 사라졌다. 613 이 지키던 «화폐 자리는 아이콘으로
+         말한다»(125)는 안 죽는다 — 남은 자리가 버튼 하나이므로 그쪽만 본다. `tcGone` 은
+         되살아나면 빨개지는 짝이다(333 처방 — 항을 지우지 않고 방향을 뒤집는다). */
+      tcGone: !row.querySelector('.tc'),
       tbIc: /cur-tstone\.svg/.test(row.querySelector('.tb i').innerHTML),
       hdKids: w.querySelectorAll('.tp-hd > *').length
     };
@@ -85,7 +88,8 @@ async function open(browser, seed) {
     '[2-a] ★ 헤더가 «단련석 1,234,567» — 아이콘 + 현재 보유 개수', disp.pvTxt.trim());
   ok(!/포인트/.test(disp.allTxt) && !/\bpt\b/.test(disp.allTxt),
     '[2-b] ★ «포인트»·«pt» 라는 말이 단련 탭 어디에도 없다');
-  ok(disp.tcIc && disp.tbIc, '[2-c] 비용 열·버튼이 단련석 아이콘으로 화폐를 말한다(125)');
+  ok(disp.tbIc, '[2-c] 버튼이 단련석 아이콘으로 화폐를 말한다(125 · 686 이후 유일한 자리)');
+  ok(disp.tcGone, '[2-c2] 686 — 비용 열(.tc)은 없다(주인 지시 · 되살아나면 빨강)');
   ok(disp.hdKids === 1, '[2-d] 헤더 자식은 보유 줄 하나 — [충전] 버튼 자리가 비어 있다', disp.hdKids + '개');
 
   console.log('\n=== §3 세이브 이관 — 구 pts 잔액 → 단련석 1:1 (실로드) ===');

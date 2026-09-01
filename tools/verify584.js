@@ -329,7 +329,10 @@ const openAt = async (browser, h) => {
     const rows = ['.tp-hd', '.tr-tp.k0', '.tr-tp.k1', '.tr-tp.k2'].map(s => rc(s));   /* 614 — 회수 줄 없음 */
     const tb = window.__rc('#trTemper .tr-tp.k0 .tb', '#trTemper .tr-tp.k0');
     const td = window.__rc('#trTemper .tr-tp.k0 .td', '#trTemper .tr-tp.k0');
+    /* 686 — 비용 줄(.tc)은 주인 지시로 사라졌다. [7-c] 의 과녁은 같은 행에서 버튼 위쪽에
+       남은 것(아이콘 상자 `.ti`)으로 옮긴다(333 처방 — 자리를 비우지 않는다). */
     const tc = window.__rc('#trTemper .tr-tp.k0 .tc', '#trTemper .tr-tp.k0');
+    const ti = window.__rc('#trTemper .tr-tp.k0 .ti', '#trTemper .tr-tp.k0');
     /* 519 — 올릴 축이 없으면 소등, 있으면 점등 */
     const dot = () => { const d = document.querySelector('#trSubs [data-trsub="temper"]');
       return { alert: d.classList.contains('alert'),
@@ -340,15 +343,16 @@ const openAt = async (browser, h) => {
     S.tstone = 1e6; renderTrain();
     const on = { judge: temperAlert(), ui: dot() };
     S.tstone = before.tstone; renderTrain();
-    return { rows, tb, td, tc, off, on };
+    return { rows, tb, td, tc, ti, off, on };
   });
   let overlap = 0;
   for (let i = 1; i < reg.rows.length; i++) if (reg.rows[i].y < reg.rows[i - 1].y2) overlap++;
   ok(overlap === 0, '[7-a] 210 — 단련 탭 네 줄이 여전히 겹침 0(614 — 회수 줄 없음)', reg.rows.map(r => r.y + '..' + r.y2).join(' · '));
   ok(reg.tb.x >= reg.td.x2, '[7-b] ★ 넓힌 [단련] 버튼이 같은 행 효과 줄(`.td`)과 겹치지 않는다',
     `버튼 좌변 ${reg.tb.x} ↔ .td 우변 ${reg.td.x2} (여유 ${p1(reg.tb.x - reg.td.x2)})`);
-  ok(reg.tb.y >= reg.tc.y2, '[7-c] 같은 행 비용 줄(`.tc`)과도 겹치지 않는다',
-    `버튼 상변 ${reg.tb.y} ↔ .tc 하변 ${reg.tc.y2}`);
+  ok(reg.tc === null && reg.tb.y === reg.ti.y && reg.tb.y2 === reg.ti.y2,
+    '[7-c] 686 — 비용 줄(`.tc`)은 사라졌고, 버튼이 그 세로를 먹어 아이콘 상자와 같은 밴드에 선다',
+    `.tc ${reg.tc === null ? '없음' : '있음'} · 버튼 ${reg.tb.y}..${reg.tb.y2} ↔ 아이콘 ${reg.ti.y}..${reg.ti.y2}`);
   ok(reg.off.judge === false && reg.off.ui.alert === false,
     '[7-d] 519 — 올릴 축이 없으면 판정도 닷도 꺼진다(오점등 회귀)',
     'judge=' + reg.off.judge + ' · alert=' + reg.off.ui.alert);

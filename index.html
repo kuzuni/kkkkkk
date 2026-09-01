@@ -10816,20 +10816,27 @@
   .tr-tp>.tn{left:224px;top:18px;height:50px;line-height:50px;font-size:42px;color:#2C1E10}
   .tr-tp>.tl{left:224px;top:72px;height:40px;line-height:40px;font-size:31px;color:#7A5A34}
   .tr-tp>.td{left:224px;top:118px;width:392px;height:68px;line-height:34px;font-size:26px;color:#5E4823}
-  /* 지금 서 있는 구간의 1업글 비용 — 주인 지시 ⓑ-2 «UI 에 현재 구간 비용 표기» 가 이 줄이다 */
-  .tr-tp>.tc{right:26px;top:14px;width:420px;text-align:right}
-  .tr-tp>.tc>i{height:52px;line-height:52px;font-size:40px;color:#B4571E}
-  /* 613 — 비용 열에도 화폐 아이콘(34px). 잉크 중심을 숫자 x-height 중심에 맞춘다 */
-  .tr-tp>.tc .cic{vertical-align:-4px;margin-right:6px}
-  .tr-tp>.tc>s{height:32px;line-height:32px;font-size:25px;color:#7A5A34;text-decoration:none}
+  /* (686) 비용 열(.tc — «(단련석)n» + «n~n 구간 · 1레벨당»)은 선언째 걷어냈다.
+     주인 지시(2026-09-02 00:50) «구간당 1레벨당 (단련석)1 이거 텍스트 없애주고 대신 그 단련석
+     강화버튼을 세로로 키워줘야함». 210 ⓑ-2 «UI 가 현재 구간 비용을 적는다» 는 죽지 않았다 —
+     670 이 만든 버튼 라벨 «(아이콘) n» 이 **같은 수**를 말한다(`probe686` ⓑ-1 이 세 구간에서
+     `.tc` = `.tb` 를 못박았다). 지운 것은 값이 아니라 **비용식 설명**이다(ⓑ-3).
+     ⚠ 자리를 새 부품으로 메우지 않는다 — 그 여백은 아래 버튼의 세로가 먹는다(614 와 같은 규칙). */
   /* 584 — 라벨이 «투자 n pt» → «단련 🪨n pt» 로 길어졌다(화폐 아이콘 53 + 여백 6 = 59px 추가).
      폭 300 이면 내부 예산 290 중 글자 몫이 231 뿐이라 `probe584` §E 스윕에서 **8자리부터** 넘친다.
      ⇒ 340 으로 넓힌다(내부 330 · 글자 몫 271 ⇒ 10자리까지 여유). 넓히는 쪽은 **왼쪽**이고
      `right:26` 은 불변이라 우측 정렬(같은 행 `.tc` 와 같은 축)은 그대로다.
      ⚠ 왼쪽 한계는 같은 행의 효과 줄 `.td`(26..586)다 — 340 이면 좌변 **632** 로 46px 뜬다
      (`verify210` [B] «다섯 줄 겹침 0» 불변). 세로(top 128 · h74)는 한 픽셀도 안 건드린다. */
-  .tr-tp>.tb{right:26px;top:128px;width:340px;height:74px;border-radius:20px;cursor:pointer;
-    text-align:center;line-height:74px;font-size:31px;color:#fff;
+  /* 686 — 비용 열이 사라져 비는 세로(`.tc` 상변 14 ~ 버튼 상변 128 = **114px**, `probe686` ⓒ-2)를
+     버튼이 먹는다. 높이는 발명이 아니라 **같은 행이 이미 쓰는 값**이다: 아이콘 상자 `.ti` 가
+     «행 222 − 위 22 − 아래 22 = 178» 로 서 있으므로(ⓒ-3) 버튼도 같은 띠 **22..200** 에 세운다
+     ⇒ 한 행의 두 덩어리(왼쪽 그림 · 오른쪽 버튼)가 같은 세로 밴드를 공유하고 행 여백이 대칭이 된다.
+     가로(`right:26` · 340)는 **한 픽셀도 안 건드린다** — 584 의 자릿수 예산이 그대로 산다(ⓓ-1 여유 61.9).
+     line-height 를 높이와 같이 올리는 것으로 라벨 중심이 따라온다(반여백이 위아래 같이 늘어 baseline 이
+     정확히 (178−74)/2 = 52 내려가므로 `.cic` 의 −17.5 대칭은 **재계산이 필요 없다** — verify584 [2-i]). */
+  .tr-tp>.tb{right:26px;top:22px;width:340px;height:178px;border-radius:20px;cursor:pointer;
+    text-align:center;line-height:178px;font-size:31px;color:#fff;
     background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #3F7412}
   /* 584 — 버튼 안 화폐. 세로 정렬은 «잉크 중심 = 버튼 중심» 으로 잡는다 — 값은 취향이 아니라
@@ -34811,16 +34818,17 @@ const temperAlert = () => TEMPERS.some(t => temperUpOk(t.k));
 /* 297 — 룬과 같은 규칙: 레벨·포인트를 타는 문자열을 **함수 한 벌**로 뽑아
    통짜 렌더와 `liveTemper()` 가 같은 식을 보게 한다(262 교훈 2ⓐ). */
 function temperRowTxt(t){
-  const l = temperLv(t.k), c = temperCost(t.k), seg = Math.floor(l / TEMPER_SEG);
+  const l = temperLv(t.k), c = temperCost(t.k);   /* 686 — 구간 번호(seg)는 쓰던 줄이 사라져 같이 지웠다 */
   return {
     lv:  'Lv. ' + fmt(l),
     /* 612 — 아이콘 178 확대로 `.td` 가 «아이콘 옆 두 줄» 이 됐다(폭 392 < 한 줄 잉크 최악 411).
        «·» 구분을 <br> 로 — liveTemper 의 `.td` 경로도 html 로 짝을 맞춘다(584 `.tb` 와 같은 규칙). */
     eff: t.n + ' +' + pct(temperVal(t.k)) + '<br>다음 1레벨 +' + pct(TEMPER_EFF[t.k]),
-    /* 613 — 비용 단위가 pt → 단련석. 열(.tc)에도 화폐 아이콘을 같이 적는다(125 규약 —
-       화폐 자리는 이모지가 아니라 .cic 아이콘. 숫자만 남기면 단위를 잃는다) */
-    cost: curIc('tstone', 34) + fmt(c),
-    seg: (seg * TEMPER_SEG) + '~' + ((seg + 1) * TEMPER_SEG - 1) + ' 구간 · 1레벨당',
+    /* 686 — `cost`·`seg`(비용 열 `.tc` 의 두 줄)는 주인 지시로 **선언째** 사라졌다.
+       613 이 «열에도 화폐 아이콘» 으로 지키던 «단위를 잃지 않는다» 는 버튼 라벨(`btn`)이
+       그대로 물려받는다 — 아래 `btn` 도 `curIc('tstone', …)` 로 시작한다(125 규약).
+       ⚠ 죽은 필드를 남기지 않는다(402 가 `tk:` 사본 10칸을 지운 것과 같은 규칙) — 남기면
+       다음 세션이 «표시하는 곳이 있다» 고 읽는다. */
     /* 584 — 주인 지시 «**투자 버튼 말고 단련으로 이름 바꾸고** 해당 화폐 거기에 표시 되게 해줘
        **어떤 화폐 쓰는지 버튼 내에**». 613 이후 «pt» 는 죽은 말이다 — 버튼이 말할 것은
        무엇을 쓰는가(단련석 아이콘) · 얼마를 쓰는가(n) 둘이고, 그 수가 곧 지불액이다.
@@ -34864,7 +34872,8 @@ function renderTemper(){
       +  '<span class="tn"><i>' + t.n + ' 단련</i></span>'
       +  '<span class="tl"><i>' + x.lv + '</i></span>'
       +  '<span class="td"><i>' + x.eff + '</i></span>'
-      +  '<span class="tc"><i>' + x.cost + '</i><br><s>' + x.seg + '</s></span>'
+      /* 686 — 비용 열(.tc)은 주인 지시로 사라졌다. 그 자리를 메우지 않는다(빈 여백이 아니라
+         **버튼의 세로**가 먹는다 — CSS `.tr-tp>.tb` top 22 · h 178). */
       +  '<span class="tb' + (x.ok ? '' : ' no') + '" data-tempup="' + t.k + '"><i>'
       +    x.btn + '</i></span>'
       +  '</div>';
@@ -34886,11 +34895,11 @@ function liveTemper(){
     const row = w.querySelector('.tr-tp[data-temper="' + CSS.escape(t.k) + '"]'); if(!row) return;
     const x = temperRowTxt(t);
     put(row, '.tl i', x.lv);
-    /* 612 — eff 에 <br> 이 들어왔다 · 584·613 — .tc·.tb 라벨에 화폐 `<img>`. 셋 다 `textContent` 로
-       두면 홀드 중 첫 갱신에 태그가 **글자로** 찍힌다(297 «통짜 렌더와 같은 식» 이 깨지는 자리). */
+    /* 612 — eff 에 <br> 이 들어왔다 · 584 — .tb 라벨에 화폐 `<img>`. 둘 다 `textContent` 로
+       두면 홀드 중 첫 갱신에 태그가 **글자로** 찍힌다(297 «통짜 렌더와 같은 식» 이 깨지는 자리).
+       686 — `.tc` 두 줄은 통짜 렌더에서 사라졌으므로 여기서도 같이 뺀다(두 경로가 어긋나면
+       홀드 중에만 옛 노드가 되살아난다 — 297 이 막는 그 자리다). */
     put(row, '.td i', x.eff, true);
-    put(row, '.tc i', x.cost, true);
-    put(row, '.tc s', x.seg);
     put(row, '.tb i', x.btn, true);
     jzNo(row.querySelector('.tb'), !x.ok);
   });
