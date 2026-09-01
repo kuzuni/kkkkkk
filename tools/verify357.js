@@ -9,9 +9,23 @@
  *   §1 구조   `.si3` 상자가 **글리프 advance 보다 넓다**(넘치면 text-align 이 죽는다) · 좌우 마진 대칭
  *   §2 배치   글리프 줄(run) 중심 = 슬롯 중심 (8칸 전부, ±0.5px) ← 결함의 본체, 픽셀 없이 정확
  *   §3 잉크   **찍힌 픽셀**의 잉크 중심 = 슬롯 중심 (±2px, 평균 ±1px) ← 주인이 실제로 보는 것
- *   §4 되돌림 옛 CSS(`width:100%`)를 주입하면 **반드시 빨개진다** — 무르게 푼 수리가 아님을 못박는다
- *   §5 불변   잉크 정규화(fs 78.3 · scaleX .842)와 행 위치(REF 슬롯1 중심 86.34~86.40)는 **안 건드렸다**
+ *   §4 되돌림 옛 CSS(**356 이전** fs 78.3 + scaleX .842 + `width:100%`)를 주입하면 **반드시 빨개진다**
+ *   §5 불변   가로 잉크 정규화(**fs × scaleX = 65.9**)와 행 위치(REF 슬롯1 중심 86.34~86.40)는 **안 건드렸다**
  *   §6 잠금칸 `.lk`(🔒)도 중앙 — 같은 뿌리에 걸릴 수 있는 이웃 부품
+ *
+ * ⚑ 730(2026-09-01) — **356 이 이 자의 §1 전제·§4 대조군·§5 상수를 통째로 무의미하게 만들었다**(17/22).
+ *   356(주인 지시 «아이콘은 원본 비율 · 비균등 scaleX 금지»)이 `fs 78.3 + scaleX .842` 를 **등방 65.9** 로 갈면서
+ *   글리프 advance 가 97.7 → **82.23** 으로 줄어 well 87.63 **안에** 들어왔다. 그래서
+ *     ① §1 [전제] «advance > well» 이 **거짓**이 되고
+ *     ② §4 가 주입하던 «옛 CSS = `width:100%`» 만으로는 **더는 안 깨진다**(상자 87.63 ≥ advance 82.23)
+ *     ③ §5 의 «fs 78.3»·«scaleX .842» 는 356 이 **폐기한 값**이다.
+ *   ⇒ 333 처방대로 **자리를 비우지 않고 방향만 356 축으로 갈아 끼웠다**:
+ *     ① 전제를 «356 이후의 부등호»(advance ≤ well)로 다시 적고, 넓힌 상자는 «안전핀» 으로 따로 못박는다
+ *     ② 주입하는 옛 CSS 를 **356 이전 값**(fs 78.3 + scaleX .842 + width:100%)으로 되돌려 되돌림 시험을 살린다.
+ *        같은 절에 «현행 fs 에서는 `width:100%` 만으로는 안 깨진다» 는 **음성항**을 세워 ②가 죽었던 이유를 기록한다
+ *     ③ 상수 대신 **regime 을 넘어 살아남는 불변량**(가로 시각 크기 = fs × scaleX = 65.9)을 묻는다
+ *        — 356 전 78.3×.842 = 65.90 · 356 후 65.9×1 = 65.90 으로 **같은 값**이다(세로는 356 이 −15.8% 로 줄인 것이 정답).
+ *   ⚠ 357 의 뜻(«아이콘은 well 가운데 · 가로 Δ0»)은 내내 초록이었다 — 죽은 것은 그 뜻이 아니라 **상수**다.
  *
  * ⚑ §3 의 상한이 ±1 이 아니라 **±2** 인 근거는 `tools/probe357.js` ⓓ 다 — 남는 것은 글리프 자신의
  *   side bearing(🪨 −1.68px)이고, 폰트를 뺀 «배치» 잔차는 ≤0.50px 다. 칸마다 손으로 밀어 0 을 만드는 것은
@@ -123,8 +137,12 @@ const analyze = (p, meta, on, off, ctl) => p.evaluate(async (a) => {
     ok(st.boxRaw >= st.runRaw, '§1 상자(' + st.boxRaw + ') ≥ 글리프 advance(' + st.runRaw + ') — 줄이 안 넘쳐 text-align 이 산다');
     ok(Math.abs(st.ml - st.mr) < 0.01, '§1 좌우 마진이 대칭(' + st.ml + ' / ' + st.mr + ') — 상자 중심 = well 중심');
     ok(st.ta === 'center', '§1 text-align 은 center 그대로(' + st.ta + ')');
-    /* 넘치던 시절의 값을 못 박아 둔다 — 이 수가 다시 나오면 결함이 돌아온 것이다 */
-    ok(st.runRaw > st.wellW, '§1 [전제] 글리프 advance(' + st.runRaw + ')는 well(' + st.wellW + ')보다 넓다 — 그래서 상자를 넓혀야 했다');
+    /* ⚑ 730 — 여기 있던 «advance > well»(넘치던 시절의 전제)은 356 이 등방 65.9 로 내리면서 거짓이 됐다.
+       뜻을 버리지 않고 **356 이후의 부등호**로 다시 적는다: 넘침이 사라진 것이 356 의 결과이고,
+       그래도 남겨 둔 넓은 상자는 «안전핀» 이라는 것이 index.html 1141~1142 주석의 선언이다.
+       fs 를 78.3 으로 되돌리면 advance 가 97.7 로 커져 [전제]가 곧바로 빨개진다(§4 가 그 되돌림을 실제로 돌린다). */
+    ok(st.runRaw <= st.wellW, '§1 [전제·356 이후] 글리프 advance(' + st.runRaw + ') ≤ well(' + st.wellW + ') — 등방 축소로 넘침이 사라졌다');
+    ok(st.boxRaw - st.wellW >= 39.5, '§1 [안전핀] 상자가 well 보다 ' + (st.boxRaw - st.wellW).toFixed(2) + 'px 넓다(margin −20/−20) — 356 뒤에도 떼지 않는다');
   } catch (e) { fail++; console.log('  FAIL §1 예외 — ' + e.message); }
 
   /* ── §2 배치 ─────────────────────────────────────────────────── */
@@ -223,23 +241,36 @@ const analyze = (p, meta, on, off, ctl) => p.evaluate(async (a) => {
   await p.close();
 
   /* ── §4 되돌림 시험 ──────────────────────────────────────────── */
-  sec('§4 되돌림 시험 — 옛 CSS(width:100%)를 주입하면 반드시 빨개진다');
+  sec('§4 되돌림 시험 — 356 이전 CSS(fs 78.3 + scaleX .842 + width:100%)를 주입하면 반드시 빨개진다');
   try {
     const p2 = await ctx.newPage();
     await p2.goto(SRC);
     await p2.waitForTimeout(1200);
     await arm(p2);
-    /* 수리 전 규격 그대로: 상자를 well 폭(100%)으로 되돌리고 마진을 지운다 */
+
+    /* ⚑ 730 [음성항] — 먼저 «`width:100%` 만» 주입한다. 이것이 356 **이전**에는 결함을 재현하던 주입이고,
+       지금은 **안 깨진다**(advance 82.23 ≤ 상자 87.63). 이 항이 이 절이 한때 죽었던 이유 그 자체이므로
+       숫자를 지우지 말고 기록으로 남긴다 — 여기가 다시 «깨진다» 로 뒤집히면 fs 가 356 전으로 돌아간 것이다. */
     await p2.addStyleTag({ content: '#slots .si3{width:100%!important;margin:0!important}' });
+    await p2.waitForTimeout(200);
+    const pinOnly = await runOffsets(p2);
+    const worstPin = Math.max(...pinOnly.map(r => Math.abs(r.d)));
+    console.log('  [음성항] width:100% 만 주입 → 8칸 Δ = ' + pinOnly.map(r => (r.d >= 0 ? '+' : '') + r.d).join(' · '));
+    ok(worstPin <= 0.5, '§4 [음성항] 현행 fs 에서는 `width:100%` 만으로는 안 깨진다 (최악 ' + worstPin.toFixed(2) + ') — 356 이 넘침을 없앴다 = 넓힌 상자는 안전핀');
+
+    /* 수리 전 규격 그대로 — **356 이전 잉크 정규화까지** 되돌린다:
+       fs 78.3 이면 advance 가 97.7px 로 커져 상자(well 87.63)를 넘고, 넘친 줄은 text-align 을 잃어
+       line-left 로 붙는다(A1 비고의 «글리프 advance 보다 좁은 박스» 함정). scaleX .842 는 그 시절의 짝이다. */
+    await p2.addStyleTag({ content: '#slots .si3{font-size:78.3px!important;transform:scaleX(.842)!important;width:100%!important;margin:0!important}' });
     await p2.waitForTimeout(200);
     const bad = await runOffsets(p2);
     const worstBad = Math.max(...bad.map(r => Math.abs(r.d)));
     const allRight = bad.every(r => r.d > 3);
-    console.log('  옛 CSS 주입 후 8칸 Δ = ' + bad.map(r => (r.d >= 0 ? '+' : '') + r.d).join(' · '));
-    ok(worstBad > 0.5, '§4 옛 CSS 에서는 §2 기준(±0.5)이 실제로 깨진다 (최악 ' + worstBad.toFixed(2) + ')');
+    console.log('  356 이전 CSS 주입 후 8칸 Δ = ' + bad.map(r => (r.d >= 0 ? '+' : '') + r.d).join(' · '));
+    ok(worstBad > 0.5, '§4 356 이전 CSS 에서는 §2 기준(±0.5)이 실제로 깨진다 (최악 ' + worstBad.toFixed(2) + ')');
     ok(allRight, '§4 그리고 8칸이 **전부 오른쪽으로** 밀린다 — 주인 보고(«다 오른쪽») 재현');
     /* 되돌리면 다시 초록인지도 본다 — 게이트가 «주입» 자체에 반응하는 게 아님을 못 박는다 */
-    await p2.addStyleTag({ content: '#slots .si3{width:auto!important;margin:0 -20px!important}' });
+    await p2.addStyleTag({ content: '#slots .si3{font-size:65.9px!important;transform:none!important;width:auto!important;margin:0 -20px!important}' });
     await p2.waitForTimeout(200);
     const back = await runOffsets(p2);
     const worstBack = Math.max(...back.map(r => Math.abs(r.d)));
@@ -263,8 +294,12 @@ const analyze = (p, meta, on, off, ctl) => p.evaluate(async (a) => {
     });
     console.log('  fs ' + inv.fs + ' · scaleX ' + inv.sx + ' · line-height ' + inv.lh + ' · top ' + inv.top
       + ' · 칸1 중심 ' + inv.s1 + ' · pitch ' + inv.pitch);
-    ok(inv.fs === 78.3, '§5 font-size 78.3 그대로 (측정표 §3 잉크 68×85 정규화)');
-    ok(Math.abs(inv.sx - 0.842) < 0.001, '§5 scaleX .842 그대로');
+    /* ⚑ 730 — 여기 있던 «fs 78.3»·«scaleX .842» 는 356 이 폐기한 **상수**다. 상수 대신
+       regime 을 넘어 살아남는 **불변량**을 묻는다: 가로 시각 크기 = fs × scaleX.
+         356 전 78.3 × .842 = 65.90  ·  356 후 65.9 × 1 = 65.90  ⇒ 같은 값(측정표 §3 잉크 폭 68 정규화, Δ0).
+       세로는 356 이 −15.8%(85 → 71.6) 로 줄인 것이 **정답**이라 이 절이 묻지 않는다 — 묻는 것은 `lh` 뿐이다. */
+    ok(Math.abs(inv.sx - 1) < 0.001, '§5 등방이다 — 비균등 scaleX 없음 (scaleX ' + inv.sx.toFixed(3) + ') · 356 «아이콘은 원본 비율»');
+    ok(Math.abs(inv.fs * inv.sx - 65.9) < 0.05, '§5 가로 잉크 정규화 불변 — fs × scaleX = ' + (inv.fs * inv.sx).toFixed(2) + ' (356 전 78.3×.842 와 같은 값)');
     ok(Math.abs(inv.lh - 87.6) < 0.05, '§5 line-height 87.6 그대로 — 세로는 안 건드렸다');
     ok(Math.abs(inv.s1 - 86.37) <= 0.5, '§5 칸1 중심 = REF 86.34~86.40 (A4 가 `padding-left:3px` 로 맞춘 값 — 357 은 여기 손대지 않는다)');
     ok(Math.abs(inv.pitch - 130) <= 0.5, '§5 칸 pitch 130 그대로 (' + inv.pitch + ')');
@@ -297,6 +332,49 @@ const analyze = (p, meta, on, off, ctl) => p.evaluate(async (a) => {
     ok(worstLk <= 0.5, '§6 자물쇠 줄 중심이 슬롯 중심과 ±0.5px (최악 ' + worstLk.toFixed(2) + ')');
     await p4.close();
   } catch (e) { fail++; console.log('  FAIL §6 예외 — ' + e.message); }
+
+  /* ── §R 되돌림 시험 (730) — 갈아 끼운 §1·§5 항이 «항상 참» 이 아님을 못박는다 ── */
+  sec('§R 갈아 끼운 항의 되돌림 — 356 이전 CSS 를 주입하면 §1 [전제]·[안전핀]·§5 두 항이 전부 뒤집힌다');
+  try {
+    const p5 = await ctx.newPage();
+    await p5.goto(SRC);
+    await p5.waitForTimeout(1200);
+    await arm(p5);
+    await p5.addStyleTag({ content: '#slots .si3{font-size:78.3px!important;transform:scaleX(.842)!important;width:100%!important;margin:0!important}' });
+    await p5.waitForTimeout(200);
+    const r = await p5.evaluate(() => {
+      const ic = document.querySelector('#slots .slot2 .si3');
+      const well = ic.closest('.cdw');
+      const cs = getComputedStyle(ic);
+      let sx = 1; const m = (cs.transform || '').match(/matrix\(([^,]+)/); if (m) sx = parseFloat(m[1]);
+      const rg = document.createRange(); rg.selectNodeContents(ic);
+      return {
+        boxRaw: +(ic.getBoundingClientRect().width / sx).toFixed(2),
+        runRaw: +(rg.getBoundingClientRect().width / sx).toFixed(2),
+        wellW: +well.getBoundingClientRect().width.toFixed(2),
+        fs: parseFloat(cs.fontSize), sx: +sx.toFixed(3),
+      };
+    });
+    console.log('  356 이전 주입 → advance ' + r.runRaw + ' · well ' + r.wellW + ' · 상자 ' + r.boxRaw
+      + ' · fs ' + r.fs + ' · scaleX ' + r.sx + ' · fs×sx ' + (r.fs * r.sx).toFixed(2));
+    ok(r.runRaw > r.wellW, '§R §1 [전제·356 이후]가 뒤집힌다 — advance(' + r.runRaw + ') > well(' + r.wellW + ')');
+    ok(r.boxRaw - r.wellW < 39.5, '§R §1 [안전핀]이 뒤집힌다 — 상자−well = ' + (r.boxRaw - r.wellW).toFixed(2) + 'px');
+    ok(Math.abs(r.sx - 1) >= 0.001, '§R §5 «등방» 이 뒤집힌다 — scaleX ' + r.sx.toFixed(3));
+    /* ⚑ fs×scaleX 는 356 이전 규격에서도 65.90 이다 — **그것이 이 불변량을 고른 이유**다
+       (356 은 «어떻게» 를 바꿨지 «가로로 얼마나» 를 바꾸지 않았다). 그러니 이 항은 여기서 뒤집히면 안 되고,
+       대신 **크기를 실제로 바꾸면** 뒤집혀야 한다 — 아래 두 번째 주입이 그것을 확인한다. */
+    ok(Math.abs(r.fs * r.sx - 65.9) < 0.05, '§R §5 «fs×scaleX = 65.9» 는 356 이전 규격에서도 그대로 (' + (r.fs * r.sx).toFixed(2) + ') — regime 을 넘는 불변량');
+    await p5.addStyleTag({ content: '#slots .si3{font-size:80px!important;transform:none!important}' });
+    await p5.waitForTimeout(200);
+    const r2 = await p5.evaluate(() => {
+      const ic = document.querySelector('#slots .slot2 .si3');
+      const cs = getComputedStyle(ic);
+      let sx = 1; const m = (cs.transform || '').match(/matrix\(([^,]+)/); if (m) sx = parseFloat(m[1]);
+      return { fs: parseFloat(cs.fontSize), sx: +sx.toFixed(3) };
+    });
+    ok(Math.abs(r2.fs * r2.sx - 65.9) >= 0.05, '§R 크기를 실제로 바꾸면(fs 80 등방) §5 불변량이 뒤집힌다 — fs×scaleX ' + (r2.fs * r2.sx).toFixed(2));
+    await p5.close();
+  } catch (e) { fail++; console.log('  FAIL §R 예외 — ' + e.message); }
 
   await b.close();
   console.log('\n콘솔 에러: ' + (errs.length ? errs.join(' | ') : 0));
