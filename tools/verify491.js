@@ -319,29 +319,41 @@ async function pixelRun(page) {
                dn: !!(el && el.classList.contains('jz-dn')),
                no: !!(el && el.classList.contains('no')) };
     });
+    /* ⚑ 659·660 이관(작업 693) — «회당 피드백» 의 **잉크가 무엇인지**가 바뀌었다.
+       659(주인 «단련 버튼 눌렀더니 숫자들 뜨는 연출 없애기 존나 후지다»)가 숫자 플로터를 폐지하고
+       660 이 그 자리에 «강화 버튼에서 터지는 단련석 아이콘 버스트» 를 세웠다. 그래서 종전처럼
+       `.fx-plus.hb` 를 세면 이 자는 **영영 빈 배열**을 본다(수리 전 실측: 130/800ms 둘 다 0장).
+       ⇒ 묻는 뜻은 그대로 두고 **자리만 옮긴다**(333 처방 · [7-c2]·[7-d0] 과 같은 꼴):
+         ① 회당 피드백의 **잉크**(이제 `s.fx-spark`)가 행 상자 «안» 이다 — 종전 `inHd` 그대로
+         ② 회당 **맥박**(`jz-hb`)의 호스트가 **행**(`.tr-tp`) 이다 — 488 «호스트는 버튼이 아니라 행»
+            의 축 자체. 맥박은 한 beat 뒤 스스로 꺼지므로 **표본 시각에 걸리면 놓친다** → 누르기
+            «전»에 MutationObserver 를 걸어 붙은 횟수를 센다(플레이키 없음).
+         ③ 음성항 — 폐지된 숫자 플로터가 되살아나면 빨갛다(방향을 못 박는다).
+       ⚠ 이 절의 표본은 `S.tstone = 1`(1발 뒤 자멸)이라 beat 는 **첫 발 한 번**이다. */
+    await pg.evaluate(() => {
+      const hd = document.querySelector('#trTemper .tr-tp.k0');
+      window.__v491hb = 0;
+      if (!hd) return;
+      new MutationObserver(ms => { for (const m of ms)
+        if (m.target === hd && m.target.classList.contains('jz-hb')) window.__v491hb++; })
+        .observe(hd, { attributes: true, attributeFilter: ['class'] });
+    });
     await pg.mouse.move(g.x, g.y);
     await pg.mouse.down();
     await pg.waitForTimeout(130);
-    const fl = await pg.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')]
-      .filter(n => +getComputedStyle(n).opacity > 0.08)
-      .map(n => { const r = n.getBoundingClientRect();
-                  return { t: n.textContent, x: r.x, y: r.y, w: r.width, h: r.height }; }));
+    const fx = await pg.evaluate(() => {
+      const box = n => { const r = n.getBoundingClientRect();
+                         return { x: r.x, y: r.y, w: r.width, h: r.height }; };
+      const live = s => [...document.querySelectorAll(s)]
+        .filter(n => +getComputedStyle(n).opacity > 0.08).map(box);
+      return { spark: live('#fxl s.fx-spark'), plus: live('#fxl .fx-plus.hb'), hb: window.__v491hb || 0 };
+    });
     await pg.waitForTimeout(670);                       /* 누적 800ms — 자멸(≈350ms) 을 넘긴다 */
     const held = await snap();
-    /* 5회차 — 비평 캡처가 보는 두 시각(`-hold` ≈800ms · `-up` ≈940ms)에 **회당 플로터가 남아 있는가**.
-       [충전]은 발이 하나뿐이라 그 한 장의 수명이 곧 «결과가 남아 있는 시간» 이다(CA·CB 2인 공통 1순위). */
-    const inkAt = () => pg.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')]
-      .filter(n => +getComputedStyle(n).opacity > 0.08)
-      .map(n => { const r = n.getBoundingClientRect();
-                  return { t: n.textContent, a: +(+getComputedStyle(n).opacity).toFixed(2), oh: n.offsetHeight,
-                           y1: r.y, y2: r.y + r.height }; }));
-    const flHold = await inkAt();
     await pg.mouse.up();
-    await pg.waitForTimeout(140);
-    const flUp = await inkAt();
-    await pg.waitForTimeout(510);                       /* 되튐 200 + 밀린 렌더 210 + 여유 */
+    await pg.waitForTimeout(650);                       /* 되튐 200 + 밀린 렌더 210 + 여유 */
     const after = await snap();
-    return { g, fl, held, after, flHold, flUp };
+    return { g, fx, held, after };
   };
   {
     const h = await holdRun(page);
@@ -353,10 +365,20 @@ async function pixelRun(page) {
       ok(!h.after.same && h.after.no,
          '[6-d] ★ 손을 뗀 뒤에는 밀린 통짜 렌더가 **실제로 돌아** 정합이 맞는다(«영영 안 갱신» 의 반대 결함 없음 — 잔액 0 이라 회색이 옳다)',
          'same=' + h.after.same + ' no=' + h.after.no);
-      const inHd = n => n.y >= h.g.hd.y - 1 && n.y + n.h <= h.g.hd.y + h.g.hd.height + 1;
-      ok(h.fl.length >= 1 && h.fl.every(inHd),
-         '[6-f] 회당 플로터의 호스트가 **행(.tr-tp)** 이다(488 규약 유지)',
-         JSON.stringify(h.fl.map(n => Math.round(n.y) + '..' + Math.round(n.y + n.h))));
+      const inHd = n => n.y >= h.g.hd.y - 1 && n.y + n.h <= h.g.hd.y + h.g.hd.height + 1
+                     && n.x >= h.g.hd.x - 1 && n.x + n.w <= h.g.hd.x + h.g.hd.width + 1;
+      const yr = a => a.length ? Math.round(Math.min(...a.map(n => n.y))) + '..'
+                               + Math.round(Math.max(...a.map(n => n.y + n.h))) : '—';
+      ok(h.fx.spark.length >= 1 && h.fx.spark.every(inHd),
+         '[6-f] 회당 피드백의 **잉크**가 행(.tr-tp) 상자 안이다(488 규약 유지 · 659·660 이관 — 숫자 플로터 → 아이콘 버스트)',
+         h.fx.spark.length + '알 y' + yr(h.fx.spark) + ' / 행 '
+           + Math.round(h.g.hd.y) + '..' + Math.round(h.g.hd.y + h.g.hd.height));
+      ok(h.fx.hb >= 1,
+         '[6-g] 회당 **맥박**(`jz-hb`)의 호스트가 **행**(.tr-tp) 이다 — 488 «버튼이 아니라 행» 의 축(693 신설)',
+         'jz-hb ' + h.fx.hb + '회');
+      ok(h.fx.plus.length === 0,
+         '[6-h] ★음성항 — 폐지된 숫자 플로터(`.fx-plus.hb`)는 0장이다(659 «존나 후지다» 가 지켜진다 · 693 신설)',
+         h.fx.plus.length + '장');
     }
   }
 
@@ -413,16 +435,59 @@ async function pixelRun(page) {
      2.60:1 · 비평가 EA·DX 2인). **333 처방 그대로 자리만 옮긴다** — 색이 개수와 **같은 `grain` 갈래**를
      타는 것까지 못박아 두므로 헐거워지지 않는다: 앰버 폴백이 사라져도, 색·개수 갈래가 어긋나도,
      첫 발이 `UPFX_NOW` 를 안 쏘아도 여기가 그대로 빨개진다. */
-  ok(/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\], o\.key\);/.test(src)
-     && /function rtFirstFx\(sel, cur, key\)\{[\s\S]{0,400}?upFx\(key \|\| \('first:' \+ sel\), sel, cur, 10\)/.test(src)
-     /* ⚑ 619 14회차 이관 — 세 자리에 `iv`(틱 간격)가 붙었다: 서명 · `fxFlash(fel, iv)` ·
-        `fxBurst(…, true, iv)`. 자는 **좁아졌다** — 회당 연출이 틱 안에서 끝나게 하는 축이
-        하나라도 빠지면 여기가 빨개진다(13회차 채점의 두 「8점을 막는 단 하나」가 그 축이다). */
-     && /function upFx\(key, host, cur, n, noFlash, iv\)\{[\s\S]{0,3200}?fxFlash\(fel, iv, true\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,700}?fxBurst\(el, grain \? FXPAL\.upNow : FXPAL\.up, grain \? UPFX_NOW : cnt, true, iv\)/.test(src),
-     '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 화폐 축 · 619 공용 부품)');
-  ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \}/.test(src)
-     && /fxUpOk\(card, card, txt, bi0\.cur, true\)/.test(src),
-     '[7-d1] 583 — 대조군(훈련 카드)도 **같은 표**에서 화폐 키를 받는다(결제가 돌려준다 · 자리마다 문자열 금지)');
+  /* ⚑ 658·660 이관(작업 693) — 종전 이 자리는 `fxSpend(cur, el)`(583 «알약 → 버튼» 화폐 비행)과
+     `fxBurst(el, grain ? FXPAL.upNow : FXPAL.up, grain ? UPFX_NOW : cnt, true, iv)`(619 3·11·14회차)를
+     **글자로** 물었다. 주인 지시 658(«골드가 훈련 버튼쪽으로 가는 연출 없애기. 존나 후지다»)과
+     660 이 그 둘을 걷어냈다 — 비행이 사라지자 «알갱이가 섰는가» 를 조건으로 하던 `grain` 갈래도
+     물어볼 것이 없어졌고, `iv` 는 «버스트를 틱 안에서 끊지 마라»(주인 보강 2)로 **뜻이 뒤집혀**
+     플래시에만 남았다. 자를 눌러 초록으로 되돌리지 않는다(328-330 이관 교훈) — 뜻은 그대로 두고
+     **자리만 옮긴다**(333 처방 · [7-c2] 와 같은 꼴). 살아 있는 표본으로 물으면 이렇다:
+       ① 첫 발 자리에서 부른다(`rtHoldStart` → `rtFirstFx`)
+       ② 대조군과 **같은 공용 부품** `upFx()` 한 곳을 지난다(619)
+       ③ **화폐 축이 살아 있다** — `cur` 가 버스트의 아이콘 인자로 끝까지 간다(583 의 뜻)
+       ④ **스폰 자리 규약** — 버스트는 `fxBurstAt(el)`(= 호스트가 신고한 강화 버튼)에서 태어난다(660)
+       ⑤ `iv` 는 플래시가 계속 받는다(619 14회차 축은 그 자리에 남아 있다)
+     ⇒ 헐거워지지 않는다: `cur` 가 빠지면(=아이콘이 구슬로 되돌아가면) · `fxBurstAt` 가 빠지면
+       (=버스트가 행/카드 통짜에서 태어나면) · 플래시가 `iv` 를 잃으면 여기가 그대로 빨개진다.
+       그 셋을 [7-dR] 이 사본으로 직접 못박는다. */
+  const D0 = [
+    [/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\], o\.key\);/, '첫 발 자리'],
+    [/function rtFirstFx\(sel, cur, key\)\{[\s\S]{0,400}?upFx\(key \|\| \('first:' \+ sel\), sel, cur, 10\)/, '공용 부품'],
+    [/function upFx\(key, host, cur, n, noFlash, iv\)\{[\s\S]{0,3200}?fxFlash\(fel, iv, true\)[\s\S]{0,2400}?fxBurst\(fxBurstAt\(el\), FXPAL\.up, cnt, true, null, cur \|\| null\)/, '화폐 축·스폰 자리'],
+  ];
+  ok(D0.every(([r]) => r.test(src)),
+     '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 화폐 축 · 619 공용 부품 · 658·660 이관)',
+     D0.filter(([r]) => !r.test(src)).map(([, n]) => n).join(',') || undefined);
+  /* ⚑ 660·666 이관(작업 693) — 두 조각이 «표를 글자로 굳혀» 부패했다:
+       ⓐ `PAY_CUR` 를 **닫는 중괄호까지** 물었는데 666(유물 소환 버스트)이 `relic:'relic'` 을 한 칸
+         더했다. 이 항이 묻는 뜻은 «세 탭 키가 **한 표**에서 온다» 이지 «표가 세 칸이다» 가 아니다.
+       ⓑ 셋째 인자를 `txt` 로 물었는데 660 이 그 숫자 플로터를 폐지해 `null` 이 됐다. 이 항이 묻는
+         뜻은 «화폐 키(넷째 인자)가 **결제가 돌려준 값**(`bi0.cur`)이다» — 셋째 인자는 남의 축이다.
+     ⇒ 표는 «칸이 있는가» 로, 호출은 «넷째가 `bi0.cur` 인가» 로 묻는다. 자리마다 문자열을 손으로
+       적으면(예: `fxUpOk(card, card, null, 'gold', true)`) 그대로 빨개진다 — 그것이 이 항의 과녁이다. */
+  const D1 = [
+    [/const PAY_CUR = \{[^}]*\btrain:'gold'/, 'train'],
+    [/const PAY_CUR = \{[^}]*\brune:'rstone'/, 'rune'],
+    [/const PAY_CUR = \{[^}]*\btemper:'tstone'/, 'temper'],
+    [/fxUpOk\(card, card, [^,()]+, bi0\.cur, true\)/, '대조군 호출'],
+  ];
+  ok(D1.every(([r]) => r.test(src)),
+     '[7-d1] 583 — 대조군(훈련 카드)도 **같은 표**에서 화폐 키를 받는다(결제가 돌려준다 · 자리마다 문자열 금지)',
+     D1.filter(([r]) => !r.test(src)).map(([, n]) => n).join(',') || undefined);
+  /* ⚑ [7-dR] 되돌림 시험(693 신설) — 위 둘을 «무르게 풀지 않았다» 는 증명. 부품을 한 조각씩 뺀
+     **소스 사본**에서 같은 자가 빨개지는지 본다(브라우저를 안 띄운다 — 소스 축이라 문자열로 족하다). */
+  const dR = [
+    ['화폐 축(`cur`)을 빼면', src.replace('fxBurst(fxBurstAt(el), FXPAL.up, cnt, true, null, cur || null)',
+                                          'fxBurst(fxBurstAt(el), FXPAL.up, cnt, true, null, null)'), D0],
+    ['스폰 자리(`fxBurstAt`)를 빼면', src.replace('fxBurst(fxBurstAt(el), FXPAL.up, cnt, true, null, cur || null)',
+                                          'fxBurst(el, FXPAL.up, cnt, true, null, cur || null)'), D0],
+    ['플래시가 `iv` 를 잃으면', src.replace('fxFlash(fel, iv, true)', 'fxFlash(fel, null, true)'), D0],
+    ['화폐 키를 손으로 적으면', src.replace('fxUpOk(card, card, null, bi0.cur, true)',
+                                          "fxUpOk(card, card, null, 'gold', true)"), D1],
+  ];
+  for (const [n, mut, set] of dR)
+    ok(mut !== src && !set.every(([r]) => r.test(mut)),
+       '[7-dR] ★되돌림 — ' + n + ' 자가 빨개진다(693 신설)');
 
   const c2 = await boot(browser, SRC);
   const pg = c2.page;
@@ -788,6 +853,34 @@ async function pixelRun(page) {
          '[R4-a] ★ 밝기를 뺀 사본은 800ms 에 **호스트 자신**의 구별(밝기)이 없다 — 첫 발 오버레이도 이미 꺼져 있다(619 이관)',
          'flash=' + h5.flash + ' filter=' + h5.filter);
       await b5.ctx.close();
+    } finally {
+      try { fs.unlinkSync(NEG); } catch (_) {}
+    }
+  }
+
+  /* ── §R5 되돌림(693 신설) — §6 의 갈아 끼운 두 항([6-f] 잉크 · [6-g] 맥박)이 무르지 않다는 증명 ──
+     659·660 이관으로 «세는 것» 이 숫자 플로터에서 버스트·맥박으로 바뀌었으니, 그 둘을 **한 조각씩
+     빼 본다**. 종전 [6-f] 는 폐지된 부품을 세고 있어 «제품이 무엇을 하든» 빨갰다(= 아무것도 안 지켰다) —
+     이 절이 그 반대(«부품이 빠지면 빨개진다»)를 직접 실행으로 못박는다.
+     ⚠ 둘을 한 사본에서 같이 뺀다 — 두 항의 부품이 서로 다른 함수라 서로를 가리지 않는다
+       (`rtFirstFx` = 첫 발 버스트 · `hbBeat` = 회당 맥박). */
+  {
+    const rev5 = src
+      .replace('  rtFirstFx(o.host, PAY_CUR[o.tag], o.key);', '  /* R5 */')
+      .replace('      hbBeat(host, true, null, null);', '      /* R5 */');
+    ok(rev5 !== src && !/rtFirstFx\(o\.host/.test(rev5) && !/hbBeat\(host, true, null, null\)/.test(rev5),
+       '[R5-0] 되돌림 사본을 만들었다(첫 발 버스트 · 회당 맥박을 둘 다 걷어낸 상태)');
+    fs.writeFileSync(NEG, rev5);
+    try {
+      const b6 = await boot(browser, NEG);
+      const h6 = await holdRun(b6.page);
+      ok(!!h6 && h6.fx.spark.length === 0,
+         '[R5-a] ★ 버스트를 뺀 사본에서는 회당 **잉크**가 0알이다 — [6-f] 가 실제로 그것을 세고 있다',
+         h6 ? h6.fx.spark.length + '알' : '표본 없음');
+      ok(!!h6 && h6.fx.hb === 0,
+         '[R5-b] ★ 맥박을 뺀 사본에서는 `jz-hb` 가 0회다 — [6-g] 가 실제로 그것을 세고 있다',
+         h6 ? h6.fx.hb + '회' : '표본 없음');
+      await b6.ctx.close();
     } finally {
       try { fs.unlinkSync(NEG); } catch (_) {}
     }
