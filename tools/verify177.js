@@ -196,7 +196,19 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
        시뮬이 다시 뒤처지면 여기서 곧바로 빨개진다 — 게이트가 자기 사본을 보던 시절에는 그럴 수 없었다.
      ⚠ 허용 폭(0.5~2.0)은 **한 칸도 안 넓혔다.** 그 위에 «항등»(±1%) 을 한 항 더 얹는다 —
        이제 둘은 같은 것을 모델하므로 자릿수가 아니라 값이 같아야 한다. */
-  const simOut = execFileSync(process.execPath, [path.join(__dirname, 'sim177.js')], { encoding:'utf8' });
+  /* ⚑ 696 — 자식이 죽으면 이 자가 **스택 트레이스로 즉사**했다(execFileSync 는 종료 코드 ≠ 0 에
+     throw 한다). 199 21회차가 `OFF_MAX_H` 를 걷어내자 sim177 이 죽었고, 그 순간 verify177 은
+     «FAIL 7건» 이 아니라 «Error: Command failed» 로 끝나 **무엇이 몇 개 빨간지조차 안 보였다.**
+     653 의 반대 방향 위생 사고다(그쪽은 FAIL 을 내고도 종료 코드 0). ⇒ 자식의 죽음도 **한 항의
+     빨강**으로 적는다 — 아래 세 항이 자식 출력에 의존하므로 자연히 같이 빨개진다. */
+  let simOut = '';
+  try {
+    simOut = execFileSync(process.execPath, [path.join(__dirname, 'sim177.js')], { encoding:'utf8' });
+  } catch (e) {
+    simOut = String((e && e.stdout) || '');
+    const why = String((e && e.stderr) || e && e.message || '').trim().split('\n')[0];
+    yes('⑤ sim177 이 끝까지 돌았다 [죽음: ' + why.slice(0, 160) + ']', false);
+  }
   const simK = parseFloat((simOut.match(/DPS 계수 ([\d.]+)/) || [])[1]);
   yes('⑤ sim177 이 찍은 «DPS 계수» 를 읽었다 (K = ' + simK + ')', Number.isFinite(simK));
   const simDps = fight.atk * simK;                 /* 시뮬이 이 표본에 예측하는 DPS */
