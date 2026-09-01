@@ -1858,27 +1858,25 @@ async function sweep(browser, inject) {
           경계 밖이면 **그 자리에서 이력을 판다** — 실패하면 여전히 빨갛고, 빨간 줄이 원인과
           한 줄 처방을 같이 말한다. 판정을 무르게 푼 것이 아니라 **표본을 가져오는 것**이다.
        ⚠ `git fetch origin <sha>` 는 서버가 막는다(`couldn't find remote ref` — 26회차 실측).
-          되는 것은 `--deepen` 하나뿐이고, 30커밋이면 닿는다(.git 490M → 497M · 7MB). */
+          되는 것은 `--deepen`·`--shallow-since` 둘뿐이다.
+       ⚠⚠ **631 — 26회차가 적은 `--deepen=40` 은 «상수를 세운 것» 이라 그날에만 맞았다.**
+          워커 4대가 시간당 ~26커밋을 올리므로 40 이 덮는 것은 약 1.5시간뿐이고, 그 뒤로 뜨는
+          컨테이너는 전부 이 항 하나로 **187/188** 을 봤다(거짓 빨강 — 다음 워커가 «내 변경이
+          356 을 깼나» 를 의심하며 회차를 태운다). ⇒ 깊이를 **세지 말고 날짜로 판다**
+          (`--shallow-since=R23.PRE_DATE` · 표본이 고정이면 안 썩는다). 파는 일 자체는
+          `probe356r23.digPre()` **한 벌**이 맡는다(자를 두 벌로 안 적는다 — 13회차 [R12]). */
     {
       const abs = R23.PRE_ABS;
       const ROOT = path.resolve(__dirname, '..');
       try {
         const { execFileSync } = require('child_process');
-        const have = (rev) => {
-          try { execFileSync('git', ['cat-file', '-e', rev], { cwd: ROOT, stdio: 'ignore' }); return true; }
-          catch (e) { return false; }
-        };
         let dug = '';
-        if (!fs.existsSync(abs) && !have(R23.PRE_REV)) {
-          try {
-            execFileSync('git', ['fetch', '--deepen=40', 'origin', 'main'],
-              { cwd: ROOT, stdio: 'ignore', timeout: 240000 });
-            dug = have(R23.PRE_REV) ? ' (얕은 클론이라 `--deepen=40` 으로 표본을 파 왔다)' : '';
-          } catch (e) { /* 아래에서 빨개진다 */ }
-        }
-        if (!fs.existsSync(abs) && !have(R23.PRE_REV)) {
-          throw new Error(`616 직전 트리 ${R23.PRE_REV} 가 이 클론에 없다(얕은 클론) `
-            + '— `git fetch --deepen=40 origin main` 을 먼저 돌려라');
+        if (!fs.existsSync(abs)) {
+          dug = R23.digPre();                       /* '' = 이미 있었다 · null = 못 팠다 */
+          if (dug === null) {
+            throw new Error(`616 직전 트리 ${R23.PRE_REV} 가 이 클론에 없다(얕은 클론) `
+              + `— \`git fetch --shallow-since=${R23.PRE_DATE} origin main\` 이 실패했다`);
+          }
         }
         if (!fs.existsSync(abs)) {
           fs.writeFileSync(abs, execFileSync('git', ['show', R23.PRE_REV + ':index.html'],

@@ -44,6 +44,47 @@ const URL = 'file://' + FILE.replace(/\\/g, '/');
 /* 616 직전 = `wip(616) 1회차` 의 부모. 없으면 뽑는다(끝나면 지운다 — .gitignore 등재). */
 const PRE_REV = process.env.P356R23_PRE || '319277e^';
 
+/* 표본의 «날짜» — 작업 631. 얕은 클론에서 표본을 파 올 때 깊이를 **커밋 수로 세면 썩는다**:
+   26회차가 세운 `--deepen=40` 은 그날에만 맞던 값이고, 워커 4대가 도는 이 저장소는 시간당
+   약 26커밋이라 그 40 이 덮는 것은 **약 1.5시간**뿐이었다(631 실측 — 그 뒤 뜨는 컨테이너는
+   전부 `verify356` 187/188 을 봤다). **날짜는 표본이 고정인 한 안 썩는다.**
+   ⚠ **표본(`PRE_REV`)을 옮기면 이 줄도 같이 옮겨라** — 둘은 한 벌이다.
+   값은 표본 `319277e`(2026-09-01T01:09:45Z)와 그 부모 `25c21c2`(01:31:49Z — 리베이스 때문에
+   부모가 더 «나중» 이다) **둘 다보다 앞선** 시각으로, 여유 2시간을 얹었다. */
+const PRE_DATE = process.env.P356R23_PRE_DATE || '2026-08-31T23:00:00Z';
+
+/* 표본을 이 클론에 데려온다(없으면 판다) — 631.
+   ⓐ **날짜로 판다**(`--shallow-since=PRE_DATE`) · ⓑ 서버가 날짜를 거절하면 배수 깊이 그물
+   (160 → 640) · 못 닿으면 **null 을 돌려준다**(호출부가 빨개진다).
+   ⚠ «못 팠으니 건너뛴다» 는 금지다 — 26회차 교훈 ④(표본을 못 가져오면 여전히 빨갛다).
+   돌려주는 문자열은 PASS 문구에 그대로 붙는 «어떻게 팠는지» 꼬리표다(빈 문자열 = 이미 있었다). */
+function digPre(rev = PRE_REV, since = PRE_DATE, budgetMs = 240000) {
+  const { execFileSync } = require('child_process');
+  const git = (args, opt) => execFileSync('git', args, Object.assign({ cwd: ROOT }, opt));
+  const have = () => {
+    try { git(['cat-file', '-e', rev], { stdio: 'ignore' }); return true; } catch (e) { return false; }
+  };
+  const count = () => {
+    try { return String(git(['rev-list', '--count', 'HEAD'], { encoding: 'utf8' })).trim(); }
+    catch (e) { return '?'; }
+  };
+  if (have()) return '';
+  const t0 = Date.now();
+  const tries = ['--shallow-since=' + since, '--deepen=160', '--deepen=640'];
+  const log = [];
+  for (const arg of tries) {
+    const left = budgetMs - (Date.now() - t0);
+    if (left <= 1000) { log.push('(시간 예산 소진)'); break; }
+    try { git(['fetch', arg, 'origin', 'main'], { stdio: 'ignore', timeout: left }); log.push(arg); }
+    catch (e) { log.push(arg + '✗'); continue; }
+    if (have()) {
+      return ` (얕은 클론이라 \`git fetch ${log.join(' → ')}\` 로 표본을 파 왔다`
+        + ` · ${((Date.now() - t0) / 1000).toFixed(1)}s · 이력 ${count()}커밋)`;
+    }
+  }
+  return null;
+}
+
 let PASS = 0, FAIL = 0;
 const ok = (c, m) => { (c ? PASS++ : FAIL++); console.log(`  ${c ? '✓' : '✗'} ${m}`); return c; };
 
@@ -169,13 +210,21 @@ const DOMAXES = function (tol) {
 
 /* 게이트(`verify356` [G])가 **같은 훅·같은 축**을 받아 쓴다 — 자를 두 벌로 안 적는다(13회차 [R12]).
    ⚠ 아래 `require.main` 가드가 없으면 verify356 이 이 파일을 require 하는 순간 전수 스윕이 같이 돈다. */
-module.exports = { initHook, DOMAXES, PRE_REL, PRE_ABS, PRE_REV };
+module.exports = { initHook, DOMAXES, PRE_REL, PRE_ABS, PRE_REV, PRE_DATE, digPre };
 
 if (require.main !== module) return;
 
 (async () => {
   if (PRE && !fs.existsSync(PRE_ABS)) {
     const { execFileSync } = require('child_process');
+    /* 631 — 얕은 클론이면 여기서도 표본이 없다. 게이트와 **같은 한 벌**(`digPre`)로 판다. */
+    const dug = digPre();
+    if (dug === null) {
+      console.error(`[!] ${PRE_REV} 가 이 클론에 없다(얕은 클론) — `
+        + `\`git fetch --shallow-since=${PRE_DATE} origin main\` 이 실패했다`);
+      process.exit(2);
+    }
+    if (dug) console.log(`[i]${dug}`);
     const src = execFileSync('git', ['show', PRE_REV + ':index.html'], { cwd: ROOT, maxBuffer: 1 << 28 });
     fs.writeFileSync(PRE_ABS, src);
     console.log(`[i] ${PRE_REL} 을 ${PRE_REV} 에서 뽑았다 (${(src.length / 1048576).toFixed(1)} MiB)`);
