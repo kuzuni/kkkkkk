@@ -210,8 +210,12 @@ async function measure(p, opts = {}) {
   ok(near(C.clv.l, 55) && near(C.clv.t, 363) && near(C.clv.w, 89) && near(C.clv.h, 44),
     'C1 알약 = 측정표 10 §2 #6 (55,363,89×44) — 실측 ('
     + C.clv.l.toFixed(1) + ',' + C.clv.t.toFixed(1) + ',' + C.clv.w.toFixed(1) + '×' + C.clv.h.toFixed(1) + ')');
-  ok(near(C.cbar.l, 113) && near(C.cbar.t, 369) && near(C.cbar.w, 306) && near(C.cbar.h, 33),
-    'C2 게이지 = 측정표 10 §2 #8 정오표 (113,369,306×33) — 실측 ('
+  /* ⚑ 669 이관 — 게이지 바깥이 33 → **40**(top 369 → 365) 로 커졌다(측정표 10 §5 정오표 갱신).
+     ⚠ 이 자가 지키던 뜻은 «치수 상수» 가 아니라 «알약과의 상하 관계» 다 — 그래서 값만 갈아 끼우고
+     [A2] 겹침 31px·[A3] z 순서·[C1] 알약 기하는 한 칸도 안 건드렸다. 세로 중심 387 은 Δ0 이고
+     바는 여전히 알약 span(363..407) 안에 들어간다(그 관계가 깨지면 [A2]·[A3] 이 먼저 빨개진다). */
+  ok(near(C.cbar.l, 113) && near(C.cbar.t, 365) && near(C.cbar.w, 306) && near(C.cbar.h, 40),
+    'C2 게이지 = 측정표 10 §2 #8 정오표 + 669 (113,365,306×40) — 실측 ('
     + C.cbar.l.toFixed(1) + ',' + C.cbar.t.toFixed(1) + ',' + C.cbar.w.toFixed(1) + '×' + C.cbar.h.toFixed(1) + ')');
 
   /* ── [R] 되돌림 시험 ───────────────────────────────────────────── */

@@ -5538,7 +5538,15 @@
      scaleX·letter-spacing 은 5회차가 ref 글리프 폭에 맞춘 값이라 **크기 한 축만** 올린다. */
   .shp-card .clv>i{font-size:28px;color:#7DE5ED;transform:translateY(2px) scaleX(1.216);letter-spacing:-1px}
   /* 경험치 바 — 알약 아래로 물림 */
-  .shp-card .cbar,.shp-card .stkbar{left:113px;top:369px;width:306px;height:33px;border-radius:8px;background:#000;
+  /* ⚑ 669 2회차 — 바깥 높이 33 → **40**(top 369 → 365, 세로 중심 387 **Δ0**). 폭·좌변·radius 는 Δ0.
+     1회차에 «글자만» 키웠더니 비평가 DA·DB 가 **독립으로 같은 곳**을 짚었다: 알약은 44 안에 잉크 23
+     (여유 10~11px)인데 게이지는 27 안에 잉크 20(여유 2~4px) — «이득을 전부 여백에서 빼 썼고
+     두 값의 크기 격차가 오히려 벌어졌다»(DB ④ 21%). 같은 그릇 안에서 더 키우면 ① 이 오르는 만큼
+     ② 가 내려가는 맞바꿈이라 **그릇을 같이 키우는 것이 유일한 출구**다(PROGRESS 669 ② 가 미리 허용).
+     40 을 고른 근거: 안쪽 트랙이 34 가 되어 잉크 23 을 넣고도 알약과 **같은 비율의 여유**(5.5px)가 남고,
+     세로는 알약 span(363..407) **안에** 그대로 들어가 655 의 «알약이 게이지 계열 전부의 위» 가 불변이다.
+     ⚠ 의도적 ref 이탈 — 측정표 10 §5 정오표(#8) 갱신 · `verify655` [C2] 이관. */
+  .shp-card .cbar,.shp-card .stkbar{left:113px;top:365px;width:306px;height:40px;border-radius:8px;background:#000;
     box-sizing:border-box}
   .shp-card .cbar>.trk{position:absolute;left:3px;top:3px;right:3px;bottom:3px;border-radius:5px;
     background:#373C4D;overflow:hidden}
@@ -5552,7 +5560,8 @@
      남는다. 그 남는 폭이 있는데 .85 로 눌러 두면 «작아서 안 읽힌다» 를 두 축에서 거들 뿐이라
      압축만 푸는 것으로 폭 잉크를 대가 0 으로 회수한다(높이는 fs 가 올린다). */
   .shp-card .cbar>b{position:absolute;left:10px;right:3px;top:0;bottom:0;text-align:center;
-    line-height:33px;font-size:27px;color:#F3F3F2;transform:translateY(2px);
+    /* 669 2회차 — 트랙 34 안에서 잉크 23 의 상하 여유가 5/7 로 1px 기울어 있었다 → 6/6 */
+    line-height:40px;font-size:31px;color:#F3F3F2;transform:translateY(3px);
     letter-spacing:-1px;z-index:2}
 
   /* 소환 버튼 3개 — 공통 3단 밴드 */
