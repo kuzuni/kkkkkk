@@ -137,35 +137,85 @@ const reset = p => p.evaluate(() => {
     eq('§3 (준비) 스테이지 보스 ⏱', h3a.tmTx, '27.7');
     ok(h3a.hpW === Math.round(671 * 0.9), '§3 (준비) 스테이지 보스 체력바 90%', h3a.hpW + 'px');
 
-    /* ⚑ 453(주인 지시 2026-08-30) — 이 절의 표본을 갈아 끼웠다.
-       종전에는 «보스전 **도중** 승급전 진입» 이었는데, 주인이 그 설계를 뒤집어(«보스전 … 도중에
-       … 승급전 팝업못열고 입장도 못하게») 그 전환 자체가 이제 일어나지 않는다.
-       죽은 표본을 붙들지 않고(333·402 처방) 둘로 나눈다:
-         ⓐ 그 전환이 **막힌다**는 것 자체를 항으로 세운다(453 이 세운 살아 있는 규칙).
-         ⓑ §3 의 원래 뜻(«승급전 HUD 가 직전 스테이지 보스의 값을 물려받지 않는다»)은
-            **아직 도달 가능한 전환**으로 잰다 — 보스전이 실패로 끝나 파밍 대기가 된 직후다.
-            그 순간 화면에는 직전 보스의 체력바 90%·시계 27.7 이 남아 있던 상태이고,
-            파밍은 «전투 중» 이 아니라 승급전에 들어갈 수 있다. 위험은 종전과 똑같다. */
+    /* ⚑ 734(2026-09-01) — 453 이 갈아 끼웠던 표본을 **다시 뒤집는다.**
+       453(주인 지시 2026-08-30 «보스전 … 도중에 … 승급전 팝업못열고 입장도 못하게»)은 이 전환을
+       막았고, 이 절은 그 «막힌다» 를 항으로 세운 뒤 §3 의 원래 뜻은 «파밍 대기» 우회로로 쟀다.
+       그런데 **665(주인 지시 2026-09-02 «그냥 그 스테이지 도전하다가 던전, 승급전 도전 가능하게
+       해주기»)가 그 차단을 정면으로 뒤집었다** — 입장 판정이 `battleBusy()`(지금 전투 중인가)에서
+       `battleLocked()`(지금 판을 버리고 갈아탈 수 없는가)로 갈렸고, 스테이지 보스전은 «갈아탈 수
+       있는» 쪽이다. 그래서 453 이 세운 두 항이 굳어 빨개졌다(60/62).
+       죽은 표본을 붙들지도, 자리를 비우지도 않는다(333 처방) — 방향을 뒤집고 넷으로 나눈다:
+         ⓐ 그 전환이 **열린다**(665 가 세운 살아 있는 규칙). 453 의 «막힌다» 를 그냥 지웠으면
+            «665 가 통째로 되돌아가도 초록인 자» 가 된다.
+         ⓑ 그 전환이 이전 스테이지 런을 **명시 종료**하고 온다(`leaveStageRun` → `failBoss('모드 전환')`).
+            **이것이 «stale 값을 물려받지 않는다» 의 뿌리다** — 665 가 그 한 줄을 빼면 ⓒ 가 빨개진다.
+         ⓒ §3 의 원래 뜻(«승급전 HUD 가 직전 스테이지 보스의 값을 물려받지 않는다»)을 이제
+            **주인이 284 에서 보고한 그 전환 자체**로 잰다(453 의 우회로보다 강하다 — 우회로는
+            보스가 이미 죽은 뒤라 «물려받을 값» 이 절반만 남아 있었다).
+         ⓓ 453 의 «막힌다» 가 통째로 사라진 것은 아니다 — 입장권·도전 횟수를 이미 치른 모드와
+            격파 시퀀스 창은 665 도 잠근 채로 뒀다. 그 살아 있는 절반을 §3-c 가 못박는다. */
     const g3b = await p.evaluate(() => {
-      startPromo();                                  /* 453 — 보스전 «도중» 진입은 이제 막힌다 */
-      const blocked = !promo;
-      failBoss('시간');                              /* 28 — 시간 초과 → 파밍 대기(전투 중이 아니다) */
-      startPromo();
+      startPromo();                                  /* 665 — 보스전 «도중» 진입이 열렸다 */
+      const opened = !!promo;
+      const left = { bossOn, bossT, boss: enemies.filter(x => x.tk === 'boss').length };
       const e = enemies.find(x => x.tk === 'promo');
-      if (!e) return { blocked, made: false };
+      if (!e) return { opened, made: false, left };
       e.max = 1000; e.hp = 400;                      /* 40% */
       promo.t = 8.8;
-      return { blocked, made: true, boss: enemies.filter(x => x.tk === 'boss').length, bossOn, bossT };
+      return { opened, made: true, left };
     });
-    ok(g3b.blocked, '§3+453 보스전 «도중» 승급전 진입이 막힌다(주인 지시 2026-08-30)');
-    ok(g3b.made, '§3 (준비) 파밍 대기로 내려온 뒤에는 승급 수호자가 선다');
-    eq('§3 스테이지 보스는 전장에서 치워진다', g3b.boss, 0);
+    ok(g3b.opened, '§3+665 보스전 «도중» 승급전 진입이 열린다(주인 지시 2026-09-02 — 453 뒤집음)');
+    ok(g3b.made, '§3 (준비) 그 자리에 승급 수호자가 선다');
+    eq('§3 스테이지 보스는 전장에서 치워진다', g3b.left.boss, 0);
+    ok(g3b.left.bossOn === false && g3b.left.bossT === 0,
+      '§3+665 그 전환이 직전 스테이지 런을 명시 종료한다 — bossOn false · bossT 0(stale 의 뿌리)',
+      `bossOn=${g3b.left.bossOn} · bossT=${g3b.left.bossT}`);
     const h3b = await hud(p);
     eq('§3 모드가 승급전으로 갈린다', h3b.md, 'promo');
     eq('§3 ⏱ 가 스테이지 보스 시계(27.7)가 아니라 승급전 시계', h3b.tmTx, '8.8');
     ok(h3b.hpW === Math.round(671 * 0.4),
       '§3 체력바가 «직전 스테이지 보스 90%» 가 아니라 수호자 40%', h3b.hpW + 'px');
     ok(!h3b.rt && !h3b.gv, '§3 스테이지 보스전 버튼([포기하기]·[재도전])이 안 남는다');
+
+    /* §3-b — 453 이 §3 대신 쓰던 «보스전 실패 → 파밍 대기 → 승급전» 우회로. 665 이후에도 살아 있는
+       경로라 지우지 않고 자기 절로 남긴다(파밍 잔존은 §4 가 모드별로 따로 본다). */
+    await reset(p);
+    const g3c = await p.evaluate(() => {
+      killed = ENEMY_COUNT; startBoss();
+      for (let i = 0; i < 120 && !enemies.some(e => e.tk === 'boss'); i++) step(0.05);
+      const b = enemies.find(e => e.tk === 'boss');
+      if (b) { b.max = 1000; b.hp = 900; }
+      bossT = 27.7;
+      failBoss('시간');                              /* 28 — 시간 초과 → 파밍 대기(전투 중이 아니다) */
+      const farmed = !!S.bossFarm && !bossOn;
+      startPromo();
+      const e = enemies.find(x => x.tk === 'promo');
+      if (!e) return { farmed, made: false };
+      e.max = 1000; e.hp = 400;
+      promo.t = 8.8;
+      return { farmed, made: true };
+    });
+    ok(g3c.farmed, '§3-b (준비) 보스전이 실패로 끝나 파밍 대기로 내려왔다');
+    ok(g3c.made, '§3-b 파밍 대기에서도 승급전에 들어갈 수 있다(665 가 안 건드린 경로)');
+    const h3c = await hud(p);
+    eq('§3-b 모드가 승급전으로 갈린다', h3c.md, 'promo');
+    eq('§3-b ⏱ 가 직전 보스 시계(27.7)가 아니라 승급전 시계', h3c.tmTx, '8.8');
+    ok(!h3c.rt && !h3c.farm, '§3-b 파밍에서 왔어도 [스테이지 재도전]·재도전 헤더가 안 남는다');
+
+    /* §3-c — 665 가 **안 연** 절반. `battleLocked()` 는 «스테이지가 아닌 모드»(던전·탑·레이드·
+       아레나·승급전)와 격파 시퀀스 창을 잠근 채로 둔다. 이 항이 없으면 가드가 통째로 사라져도
+       ⓐ 만 보고 초록이 나온다 — 453 이 지키던 «갈아타면 입장권이 조용히 사라진다» 가 그 자리다. */
+    await reset(p);
+    const g3d = await p.evaluate(() => {
+      startDunRun(DUNGEONS[0], 1);
+      const inDun = bossMode() === 'dun';
+      startPromo();
+      return { inDun, blocked: !promo, md: bossMode() };
+    });
+    ok(g3d.inDun, '§3-c (준비) 던전 런에 들어가 있다');
+    ok(g3d.blocked && g3d.md === 'dun',
+      '§3-c+665 던전 런 «도중» 승급전 진입은 여전히 막힌다(battleLocked — 453 의 살아 있는 절반)',
+      `md=${g3d.md}`);
 
     /* ── §4 파밍 잔존 0 ──────────────────────────────────────── */
     console.log('\n§4 잔존 0 — 파밍 상태에서 다른 보스전에 들어가도 [스테이지 재도전]이 안 남는다');
@@ -277,29 +327,32 @@ const reset = p => p.evaluate(() => {
       const newFm = !!(S.bossFarm && md === '');
       promo = null; enemies.length = 0;
       /* ⓑ 승급전 분기가 없었다면 — 모드가 'stage' 로 읽혀 ⏱ 가 bossT 를 띄웠다.
-         ⚑ 453(주인 지시 2026-08-30) — 이 항의 원래 표본(«보스전 도중 승급전»)은 이제 **도달할 수 없다**.
-            그래서 두 가지를 나눠 잰다:
-              ① 453 이 그 진입을 막고, 보스전이 실패로 끝나면 `bossT` 가 **0 으로 비워진다**
-                 = stale 보스 시계가 승급전 화면까지 따라오는 경로 자체가 사라졌다(구멍이 두 겹으로 막혔다).
-              ② 그래도 «옛 식 vs 새 식» 은 여전히 물을 수 있다 — 옛 식은 `bossT` 를, 새 식은 `promo.t` 를 읽는다.
-                 ②는 제품 상태가 아니라 **식의 차이**를 재는 항이므로 stale 값을 손으로 주입해 비교한다. */
+         ⚑ 734(2026-09-01) — 453 이 «도달할 수 없다» 고 적어 둔 이 항의 원래 표본(«보스전 도중
+            승급전»)이 **665 로 다시 도달 가능해졌다.** 손으로 주입한 stale 값 대신 **제품이 실제로
+            지나는 경로**로 잰다(453 은 진입이 막혀 있어 그럴 수 없었다):
+              ① 보스전 도중 진입이 **열린다** — 665 의 살아 있는 규칙(453 의 «막힌다» 를 뒤집은 자리).
+              ② 그 전환에서 `leaveStageRun()` 이 런을 끝내 `bossT` 가 **0 으로 비워진다**
+                 = stale 보스 시계가 승급전 화면까지 따라올 값 자체가 없다.
+              ③ «옛 식 vs 새 식» 은 그 상태에서 그대로 물을 수 있다 — 옛 식은 `bossT`(주입 없이도
+                 옛 코드가 읽었을 27.7 을 여기서 되살려 비교한다), 새 식은 `promo.t` 를 읽는다. */
       S.stage = 50; spawnStage(); killed = ENEMY_COUNT; startBoss(); bossT = 27.7;
-      startPromo();
-      const blockedInBoss = !promo;               /* 453 — 보스전 도중 진입은 막힌다 */
-      failBoss('시간');
-      const bossTAfterFail = bossT;               /* 0 이어야 한다 — stale 시계가 안 남는다 */
-      startPromo();
+      startPromo();                               /* 665 — 보스전 도중 진입이 열렸다 */
+      const openedInBoss = !!promo;
+      const bossTAfterSwap = bossT;               /* 0 이어야 한다 — 전환이 런을 끝내고 온다 */
       const e = enemies.find(x => x.tk === 'promo'); if (e) e.hp = e.max = 1e30;
-      promo.t = 8.8;
-      bossT = 27.7;                               /* ② 옛 식이 읽었을 stale 값을 주입 */
-      const oldTm = Math.max(0, bossT).toFixed(1), newTm = Math.max(0, promo.t).toFixed(1);
+      /* ⚠ 278 처방 — 진입이 막힌 사본(453 되돌림)에서는 `promo` 가 null 이다. 그대로 `promo.t` 를
+         쓰면 자가 **예외로 즉사**해 §7 뒤쪽과 §8 이 통째로 안 돈다(319 가 고친 그 모양). 이 절만
+         빨개지게 두고 계속 간다. */
+      if (promo) promo.t = 8.8;
+      bossT = 27.7;                               /* ③ 옛 식이 읽었을 stale 값을 되살려 대조 */
+      const oldTm = Math.max(0, bossT).toFixed(1), newTm = promo ? Math.max(0, promo.t).toFixed(1) : '—';
       promo = null; enemies.length = 0; bossT = 0;
-      return { oldFm, newFm, oldTm, newTm, blockedInBoss, bossTAfterFail };
+      return { oldFm, newFm, oldTm, newTm, openedInBoss, bossTAfterSwap };
     });
-    ok(neg.blockedInBoss, '§7+453 보스전 도중 승급전 진입이 막힌다');
-    ok(neg.bossTAfterFail === 0,
-      '§7+453 보스전이 끝나면 `bossT` 가 0 — stale 보스 시계가 승급전까지 따라올 경로가 없다',
-      String(neg.bossTAfterFail));
+    ok(neg.openedInBoss, '§7+665 보스전 도중 승급전 진입이 열린다(453 뒤집음 · 주인 지시 2026-09-02)');
+    ok(neg.bossTAfterSwap === 0,
+      '§7+665 그 전환 직후 `bossT` 가 0 — stale 보스 시계가 승급전까지 따라올 값이 없다',
+      String(neg.bossTAfterSwap));
     ok(neg.oldFm && !neg.newFm,
       '§7 ⓐ 옛 파밍 조건이면 승급전 위에 [재도전]이 떴다 (옛 true → 새 false)');
     ok(neg.oldTm === '27.7' && neg.newTm === '8.8',
