@@ -13,6 +13,25 @@
  *   ④ 회귀 — 141 의 수량 배지(`--ifq-k` .317)와 형제 다섯 화면 아이콘이 **안 움직였는지**.
  *     `--if-ic` 는 화면별 입력이라 22 만 움직여야 한다.
  *
+ * ── 642 개정(2026-09-01) — [형제] 절의 축이 바뀌었다 ──────────────────────────
+ * 69 `.ml-i` 가 «잉크 52 → 49.33» 으로 빨갰다. `probe642` 로 재현해 보니 **아이콘은 한 픽셀도
+ * 안 줄었다** — `.cic` 상자는 두 경우 모두 51.83 이고, 바뀐 것은 **표본이 든 아트**다.
+ *   · 게이트가 재는 것은 `.ml-i` **첫 노드** 하나이고, 우편 행의 썸네일은 «가장 값진 보상» 이다
+ *     (`mailRowHtml` 의 `rw.sort((a,b) => b.v - a.v)[0]`).
+ *   · 498(첫날 100만 수급 곡선)이 `MAILS` 의 다이아 합을 5,000 → 200,000 으로 올리면서
+ *     m1 의 으뜸 보상이 **골드 → 다이아**로 뒤집혔다.
+ *   · 두 아트의 viewBox 채움비가 다르다: `cur-gold.svg` **1.0000** · `cur-dia.svg` **0.9375**.
+ *     같은 상자 51.83 에서 잉크는 각각 **52.00** · **49.33** ⇒ 옛 기준선 52 는 «골드 표본» 값이었다.
+ * ⇒ 그래서 이 절은 **움직이지 않는 축**으로 갈아 끼웠다(334 규약 — «현재 값을 그대로 다시 적는»
+ *   재기준은 아이콘이 더 줄어도 초록이라 반려다):
+ *     [형제-상자] `.cic` 상자 = `--if-ic` × 1.08 — 화면이 주는 값이라 우편 내용과 무관하다.
+ *     [형제-법]   잉크 ÷ 상자 = **그 아트의 viewBox 채움비**(SVG 파일에서 직접 잰다).
+ *   상자가 줄면 [형제-상자]가, 아트에 여백이 생기면 [형제-법]이 빨개진다. 표본이 골드↔다이아로
+ *   뒤집히는 것만으로는 둘 다 안 흔들린다 — §R 이 그 둘을 각각 못박는다.
+ * ⚠ 상자는 **그려지는 노드(`img.cic`)의 상자**로 잰다. 70 `.at-if` 는 SVG 를 `<em>`(inset:0 = 128px)
+ *   으로 한 겹 감싸고 `.at-if>em>.cic{width:82px}` 로 크기를 따로 준다 — 감싼 `<em>` 을 상자로 잡으면
+ *   «잉크 77.33 ÷ 128 = .604» 가 나와 아트 채움비와 안 맞는다(이 칸을 이모지로 오독하게 되는 자리다).
+ *
  * 잉크는 차분으로 잰다(아이콘 노드만 껐다 켠 두 장). 이유는 tools/probe144.js 머리말 참고.
  */
 const { pw, launch } = require('./pwlaunch');
@@ -37,12 +56,18 @@ const SAVE = {
 const REF_INK = 55;
 
 /* 형제 화면 기준선 — 144 수정 «전» 에 probe144.js 로 뜬 값(이 작업이 건드리면 안 되는 것들).
-   05·12 는 이모지라 서체·폴백에 따라 흔들릴 수 있어 ±3px, SVG 세 칸은 ±1px 로 조인다. */
+   642 개정: 축이 «잉크 px» 에서 «그려지는 상자 + 잉크÷상자 = 아트 채움비» 로 바뀌었다.
+   세 칸 다 지금은 SVG 다(125). 상자 기준값은 화면이 주는 값에서 나오므로 우편·가방 «내용» 이
+   바뀌어도 안 움직인다 — `how` 에 그 값이 어디서 오는지를 적어 둔다.
+   ⚠ 53 은 `--if-ic` 를 안 주고 폴백(`--if-w` × .554)을 쓰고, 70 은 `<em>` 안에서 82px 을 따로 준다. */
 const SIB = [
-  { id: '53', sel: '.bg53-c', w: 83.33, h: 83.67, tol: 1 },
-  { id: '69', sel: '.ml-i',   w: 52.00, h: 52.00, tol: 1 },
-  { id: '70', sel: '.at-if',  w: 77.33, h: 77.33, tol: 1 },
+  { id: '53', sel: '.bg53-c', box: 89.43, tol: 1, how: '`--if-w` 148 × .554 폴백 × 1.08' },
+  { id: '69', sel: '.ml-i',   box: 51.83, tol: 1, how: '`--if-ic` 48 × 1.08' },
+  { id: '70', sel: '.at-if',  box: 82.00, tol: 1, how: '`.at-if>em>.cic{width:82px}` 고정' },
 ];
+/* 잉크는 외곽선 AA 때문에 아트 실루엣보다 한 겹 크게 잡힌다(69 다이아 .9518 vs 아트 .9375 —
+   3배 DSF 에서 픽셀 1~2줄). 법의 허용은 그 한 겹만 덮는 ±0.02 로 조인다. */
+const ART_TOL = 0.02;
 
 const OPEN = {
   '.qs-i':    () => document.querySelector('.side .ibtn[data-pop="quest"]').click(),
@@ -75,6 +100,9 @@ async function measure(page, sel) {
       iconSrc: img ? img.getAttribute('src') : null,
       iconText: ic ? (ic.textContent || '').trim() : null,
       iconBox: ir ? { w: +ir.width.toFixed(2), h: +ir.height.toFixed(2) } : null,
+      /* 642 — «그려지는» 상자. 70 처럼 SVG 를 `<em>` 으로 감싼 자리는 위 iconBox 가 그 껍데기다. */
+      imgBox: img ? { w: +img.getBoundingClientRect().width.toFixed(2),
+                      h: +img.getBoundingClientRect().height.toFixed(2) } : null,
       qFs: q ? +parseFloat(getComputedStyle(q).fontSize).toFixed(2) : null,
     };
   }, sel);
@@ -117,7 +145,43 @@ async function measure(page, sel) {
   return { ...dom, ink };
 }
 
-async function openAndMeasure(browser, sel) {
+/* 아트가 viewBox 를 얼마나 채우는가 — SVG 파일을 그대로 그려서 실루엣 bbox 를 잰다.
+   경로 문자열을 손으로 읽는 것(위 [art] 절)보다 아트 교체에 강하다: 어떤 아트로 바뀌어도
+   «잉크 ÷ 상자 = 그 아트의 채움비» 라는 법 자체는 계속 성립해야 한다. */
+const artCache = new Map();
+async function artFill(browser, src) {
+  const file = path.basename(String(src || ''));
+  if (artCache.has(file)) return artCache.get(file);
+  const p = path.join(ROOT, 'assets', 'ui', file);
+  if (!file || !fs.existsSync(p)) { artCache.set(file, null); return null; }
+  const svg = fs.readFileSync(p, 'utf8');
+  const ctx = await browser.newContext({ viewport: { width: 600, height: 600 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  const r = await page.evaluate(async ({ svg, S }) => {
+    const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    const im = await new Promise((res, rej) => {
+      const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('decode'));
+      i.width = S; i.height = S; i.src = url;
+    });
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const g = c.getContext('2d'); g.clearRect(0, 0, S, S); g.drawImage(im, 0, 0, S, S);
+    const d = g.getImageData(0, 0, S, S).data;
+    let ax = 1e9, ay = 1e9, bx = -1, by = -1;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      if (d[((y * S) + x) * 4 + 3] > 8) { if (x < ax) ax = x; if (x > bx) bx = x; if (y < ay) ay = y; if (y > by) by = y; }
+    }
+    if (bx < 0) return null;
+    return { w: (bx - ax + 1) / S, h: (by - ay + 1) / S };
+  }, { svg, S: 512 });
+  await ctx.close();
+  artCache.set(file, r);
+  return r;
+}
+
+/* opts.css — 화면을 연 뒤 끼워 넣는 스타일(§R 되돌림 시험용)
+   opts.mut — 화면을 연 뒤 도는 페이지 안 함수(표본 바꿔치기용) */
+async function openAndMeasure(browser, sel, opts) {
+  opts = opts || {};
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: DSF });
   await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} },
     [KEY, JSON.stringify(SAVE)]);
@@ -129,6 +193,8 @@ async function openAndMeasure(browser, sel) {
     window.step = () => {};
   });
   await page.evaluate(OPEN[sel]);
+  if (opts.css) await page.addStyleTag({ content: opts.css });
+  if (opts.mut) await page.evaluate(opts.mut);
   /* 60 쥬시 스태거·오버슛이 끝나야 한다 — 고정 400ms 는 짧다(136 교훈) */
   await page.waitForTimeout(1400);
   await page.evaluate(() => document.getAnimations().forEach(a => { try { a.finish(); } catch (e) {} }));
@@ -183,13 +249,77 @@ async function openAndMeasure(browser, sel) {
       near('141 수량 배지 font-size (106 × .317)', q.qFs, 33.6, 0.6, 'px');
     }
 
-    /* ── ④ 형제 화면은 «안 움직였는지» ── */
+    /* ── ④ 형제 화면은 «안 움직였는지» (642 개정 — 축은 상자 + 아트 채움비) ── */
     out.push('[형제] .ifr 를 같이 쓰는 화면 — 144 는 22 만 건드린다');
+    let mail = null;                                   /* §R 이 다시 쓰는 69 실측 */
     for (const s of SIB) {
       const m = await openAndMeasure(browser, s.sel);
       if (!m || !m.ink) { bad(`${s.id} ${s.sel} 측정`, '요소·잉크 없음'); continue; }
-      near(`${s.id} ${s.sel} 잉크 폭 불변`, m.ink.w, s.w, s.tol, 'px');
-      near(`${s.id} ${s.sel} 잉크 높이 불변`, m.ink.h, s.h, s.tol, 'px');
+      if (s.id === '69') mail = m;
+      /* ⓪ 원인 고정 — 125 가 이 세 칸을 SVG 로 갈아 끼웠다. 이모지로 되돌아가면 여기가 먼저 빨갛다
+         (그때는 아트 파일이 없으니 아래 «채움비 법» 도 쓸 수 없다 — 축을 다시 세워야 한다). */
+      if (!m.imgBox) {
+        bad(`${s.id} ${s.sel} 아이콘은 SVG(<img class="cic">)`,
+          `${m.iconTag} ${JSON.stringify(m.iconText)} — 이모지로 되돌아갔다`);
+        continue;
+      }
+      ok(`${s.id} ${s.sel} 아이콘은 SVG`, path.basename(String(m.iconSrc)));
+      /* ⓐ 화면이 주는 값 — 우편·가방 «내용» 과 무관하다. 아이콘이 정말 줄면 여기가 빨개진다. */
+      near(`${s.id} ${s.sel} 그려지는 상자 불변(${s.how})`, m.imgBox.w, s.box, s.tol, 'px');
+      /* ⓑ 법 — 잉크는 상자 × 그 아트의 채움비다. 표본이 다른 아트로 바뀌어도 성립한다. */
+      const art = await artFill(browser, m.iconSrc);
+      if (!art) { bad(`${s.id} 아트 채움비`, `아트 파일을 못 찾았다 — ${m.iconSrc}`); continue; }
+      const f = path.basename(String(m.iconSrc));
+      near(`${s.id} ${s.sel} 잉크÷상자 = ${f} 채움비(가로)`,
+        +(m.ink.w / m.imgBox.w).toFixed(4), +art.w.toFixed(4), ART_TOL, '');
+      near(`${s.id} ${s.sel} 잉크÷상자 = ${f} 채움비(세로)`,
+        +(m.ink.h / m.imgBox.h).toFixed(4), +art.h.toFixed(4), ART_TOL, '');
+    }
+
+    /* ── §R 되돌림 시험(642) — 새 축이 «무르게 푼 재기준» 이 아님을 못박는다 ──
+       R-a 아이콘을 정말 줄이면 빨갛다 · R-b 아트에 여백이 생기면 빨갛다 ·
+       R-c 표본이 골드↔다이아로 뒤집히는 것만으로는 안 흔들린다(옛 축이 빨갰던 바로 그 자리). */
+    out.push('[§R] 642 되돌림 시험 — 69 `.ml-i`');
+    if (!mail || !mail.ink) bad('§R 전제', '69 본 측정이 없다');
+    else {
+      const s69 = SIB.find(s => s.id === '69');
+      /* R-a — `--if-ic` 48 → 44 (아이콘을 실제로 줄인다) */
+      const ra = await openAndMeasure(browser, '.ml-i', { css: '.ml-i{--if-ic:44px !important}' });
+      if (!ra || !ra.ink || !ra.imgBox) bad('R-a 측정', '잉크·상자 없음');
+      else {
+        (Math.abs(ra.imgBox.w - s69.box) > s69.tol ? ok : bad)
+          ('R-a --if-ic 44 면 [상자] 항이 빨갛다', `상자 ${ra.imgBox.w}px (기준 ${s69.box}±${s69.tol})`);
+        /* 같은 사본에서 «법» 은 여전히 초록이다 — 그래서 축이 둘이어야 한다는 근거 */
+        const art = await artFill(browser, ra.iconSrc);
+        (art && Math.abs(ra.ink.w / ra.imgBox.w - art.w) <= ART_TOL ? ok : bad)
+          ('R-a 그때도 [법] 은 초록(= 축 하나로는 못 잡는다)',
+            `잉크÷상자 ${(ra.ink.w / ra.imgBox.w).toFixed(4)}`);
+      }
+      /* R-b — 아트에 여백이 생긴 꼴(상자는 그대로, 그려지는 실루엣만 줄어든다) */
+      const rb = await openAndMeasure(browser, '.ml-i', { css: '.ml-i .cic{padding:6px}' });
+      if (!rb || !rb.ink || !rb.imgBox) bad('R-b 측정', '잉크·상자 없음');
+      else {
+        const art = await artFill(browser, rb.iconSrc);
+        (art && Math.abs(rb.ink.w / rb.imgBox.w - art.w) > ART_TOL ? ok : bad)
+          ('R-b 아트 여백 +6px 면 [법] 이 빨갛다',
+            `잉크÷상자 ${(rb.ink.w / rb.imgBox.w).toFixed(4)} (아트 ${art ? art.w.toFixed(4) : '—'}±${ART_TOL})`);
+      }
+      /* R-c — 표본을 골드로 바꿔치기한다(498 이전의 으뜸 보상). 옛 축(잉크 52 고정)은
+         다이아 표본에서 빨갰지만, 새 축은 두 아트 어느 쪽에서도 초록이어야 한다. */
+      const rc = await openAndMeasure(browser, '.ml-i',
+        { mut: () => { const im = document.querySelector('.ml-i img.cic');
+                       if (im) im.src = 'assets/ui/cur-gold.svg'; } });
+      if (!rc || !rc.ink || !rc.imgBox) bad('R-c 측정', '잉크·상자 없음');
+      else {
+        const art = await artFill(browser, rc.iconSrc);
+        (/cur-gold\.svg$/.test(String(rc.iconSrc)) ? ok : bad)('R-c 표본이 골드로 바뀌었다', String(rc.iconSrc));
+        near('R-c 골드 표본에서도 [상자] 불변', rc.imgBox.w, s69.box, s69.tol, 'px');
+        (art && Math.abs(rc.ink.w / rc.imgBox.w - art.w) <= ART_TOL ? ok : bad)
+          ('R-c 골드 표본에서도 [법] 초록',
+            `잉크÷상자 ${(rc.ink.w / rc.imgBox.w).toFixed(4)} (아트 ${art ? art.w.toFixed(4) : '—'})`);
+        /* 그리고 그 골드 표본의 잉크가 옛 기준선 52 다 — «표본이 바뀐 것» 의 산술 증거 */
+        near('R-c 골드 잉크 = 옛 기준선 52 (표본 이동의 증거)', rc.ink.w, 52, 1, 'px');
+      }
     }
   } finally { await browser.close(); }
 
