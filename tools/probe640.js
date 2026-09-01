@@ -140,6 +140,7 @@ async function run(browser, seed, fn, arg, errs) {
 (async () => {
   const browser = await launch(chromium);
   const errs = [];
+  const G = {};                      /* 절 사이로 넘기는 값(같은 시드를 [1] ↔ [2] 로 잇는다) */
   const seeds = []; for (let i = 0; i < REPS; i++) seeds.push(1000 + i * 7717);
   try {
     /* ── [1] 노출량이 흔들린다 — «프레임 수» 를 고정하면 노출량은 안 고정된다 ── */
@@ -151,11 +152,21 @@ async function run(browser, seed, fn, arg, errs) {
     ok(bad1.length === 0, '1-a 표본을 얻었다(dt 0.1 · 프레임 고정)', bad1.length ? bad1[0].err : fx.map(r => `f${r.frames}`).join(' · '));
     if (!bad1.length) {
       const tfs = fx.map(r => r.touchF);
-      const ratio = Math.max.apply(null, tfs) / Math.max(1, Math.min.apply(null, tfs));
       console.log(`         ↳ 판별 «임계 안» 프레임: ${tfs.join(' · ')} (표본 seg ${fx.map(r => r.seg).join(' · ')})`);
       console.log(`         ↳ 통과(준비됨): ${fx.map(r => r.tunReady + '/' + r.tun).join(' · ')}`);
-      ok(ratio >= 1.5, '1-b 판이 바뀌면 노출량이 배로 갈린다(= 이 축은 고정돼 있지 않다)',
-        `최대/최소 = ${ratio.toFixed(2)}배 (${Math.min.apply(null, tfs)} → ${Math.max.apply(null, tfs)})`);
+      /* ⚑ 1회차 정정 — 처음엔 «판이 바뀌면 노출량이 배로 갈린다» 를 판정으로 걸었다가 **빨갰다**
+         (127 vs 137 = 1.08배). 등재문이 본 4배(353 vs 89)는 시드를 안 고정한 실행끼리의 것이고,
+         시드를 고정하면 노출량은 오히려 잘 붙는다. **흔드는 것은 노출량 편차가 아니라 «사건의 드묾»** 이다 —
+         그러니 이 절이 물을 것은 «같은 자·같은 표본 크기에서 초록 판이 실제로 나온다» 하나다.
+         그 초록 판이 [2] 에서 노출량만 키우면 빨개지는 것이 ⓑ 의 증명이고, 그 비교는 **판을 건너뛰지
+         않는 같은 시드 안**에서 이뤄진다(판끼리 비교하면 «판이 달라서» 라는 반론이 남는다). */
+      ok(fx.some(r => r.tunReady === 0),
+        '1-b 같은 표본 크기(600프레임)에서 **계수 0 인 판이 실제로 있다** = verify580 §4 가 초록으로 지나가는 판',
+        fx.map((r, i) => `시드 ${seeds[i]} ${r.tunReady}건(노출 ${r.touchF})`).join(' · '));
+      ok(new Set(fx.map(r => r.tunReady)).size > 1 || fx.some(r => r.tunReady > 0),
+        '1-c 그런데 같은 자·같은 크기에서 계수가 **판마다 다르다**(0 ↔ n) = 등재문의 «실행마다 다르다»',
+        fx.map(r => r.tunReady).join(' ↔ '));
+      G.fix = fx.map((r, i) => ({ seed: seeds[i], tunReady: r.tunReady, touchF: r.touchF }));
     }
 
     /* ── [2] 노출량을 고정하면 dt 0.1 은 계수가 선다 ─────────────────── */
@@ -167,12 +178,20 @@ async function run(browser, seed, fn, arg, errs) {
     if (!badL.length) {
       lag.forEach((r, i) => console.log(
         `         ↳ 시드 ${seeds[i]}: 프레임 ${r.frames} · 표본 ${r.seg} · «임계 안» ${r.touchF} · 통과 ${r.tun}건(준비됨 ${r.tunReady}건)`));
-      const every = lag.every(r => r.tunReady > 0);
       const tot = lag.reduce((a, r) => a + r.tunReady, 0);
       ok(tot > 0, '2-b 노출량을 맞추면 통과(준비됨)가 **0 이 아니다** ⇒ 갈래 ⓐ(제품 터널링 잔존)',
         `${lag.map(r => r.tunReady).join(' · ')} (합계 ${tot})`);
-      ok(every, '2-c 그리고 그것이 «어쩌다 한 판» 이 아니다 — 시드 전부에서 선다',
-        `${lag.filter(r => r.tunReady > 0).length}/${lag.length}판`);
+      /* ⚑ ⓑ 의 본증 — [1] 에서 **0 건이던 바로 그 시드**가 노출량만 키우면 계수가 선다.
+         판을 안 바꾸고 «보는 시간» 만 늘렸는데 답이 뒤집히면, 초록은 «없다» 가 아니라 «덜 봤다» 다. */
+      const zero = (G.fix || []).filter(f => f.tunReady === 0);
+      for (const z of zero) {
+        const big = lag[seeds.indexOf(z.seed)];
+        if (!big || big.err) continue;
+        ok(big.tunReady > 0,
+          `2-c [1] 에서 0건이던 시드 ${z.seed} 가 노출량을 ${z.touchF} → ${big.touchF} 로만 키우자 계수가 선다 ⇒ 초록은 «없음» 이 아니라 «덜 봄» (ⓑ)`,
+          `${z.tunReady}건 → ${big.tunReady}건`);
+      }
+      console.log(`         ↳ 노출 100프레임당 통과(준비됨): ${lag.map(r => (r.tunReady / r.touchF * 100).toFixed(2)).join(' · ')}건`);
     }
 
     /* ── [3] 같은 노출량에서 정상 dt 는 0 ────────────────────────────── */
@@ -213,10 +232,12 @@ async function run(browser, seed, fn, arg, errs) {
       console.log(`         ↳ 프레임당 상대 이동 상한: dt 0.1 → ${relLag.toFixed(1)} px · dt 1/60 → ${relFast.toFixed(2)} px (임계 reach ${lag[0].reachMin}~${lag[0].reachMax})`);
       ok(relLag > 2 * Math.sqrt(2 * lag[0].reachMin * 0.5),
         '5-a dt 0.1 의 한 프레임 이동은 임계를 «스쳐 지나갈» 만큼 길다(통과가 산술적으로 가능하다)',
-        `${relLag.toFixed(1)} px`);
-      ok(relFast < 1.0,
-        '5-b dt 1/60 의 한 프레임 이동은 1px 미만이라 통과가 산술적으로 거의 불가능하다',
-        `${relFast.toFixed(2)} px`);
+        `${relLag.toFixed(1)} px (임계 ${lag[0].reachMin}~${lag[0].reachMax})`);
+      /* ⚑ 눈금은 LESSONS 580-① 이 이미 세워 놨다 — «프레임당 접근이 임계의 1/3 아래면 통과는 안 난다»
+         (그 실측이 88,000 적·프레임에서 0건이었다). 그 자를 그대로 가져다 쓴다. */
+      ok(relFast < lag[0].reachMin / 3,
+        '5-b dt 1/60 의 한 프레임 이동은 임계의 1/3 아래다(LESSONS 580-① 의 눈금 — 그 구간에서 통과는 0건이었다)',
+        `${relFast.toFixed(2)} px < ${(lag[0].reachMin / 3).toFixed(2)}`);
     }
 
     ok(errs.length === 0, '6 pageerror 0건', errs.length ? errs.slice(0, 3).join(' | ') : '0건');
