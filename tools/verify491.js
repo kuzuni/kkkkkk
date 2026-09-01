@@ -20,6 +20,7 @@
  *   §4 소리 — pointerdown 마다 `sfx('tap')` 이 한 번(78 규약)
  *   §5 홀드 — 350ms 넘게 누르면 반복이 돌고 그동안 노드가 안 갈린다
  *   §R 되돌림 — 옛 순서로 되돌린 사본에서는 §2·§3 이 빨개진다(무르게 풀지 않았다는 증명)
+ *        ⚑ 718 — [R-c] 는 «한 점의 픽셀» 이 아니라 **홀드 구간 전수**로 묻는다(경주 창을 재고 있었다)
  *   §Z 콘솔 에러 0
  *
  * ⚑ 613·614 이관(2026-08-31): [충전](.cg)·[회수](.tp-ft)가 기능째 폐지됐다 — 그 두 자리를 보던
@@ -164,14 +165,41 @@ const NAMED = [
    호스트 안쪽으로 들이면서 버튼 상자에 더 겹친 것이 직접 원인이다.
    ⇒ **문턱을 넓히지 않고**(그건 자를 무르게 푸는 것이다 — 333) **재는 동안만 이펙트 층을 가린다.**
    가린 채로도 [R-c] 는 빨개질 수 있다(대조군 [R-d] 훈련 카드가 같은 가림 아래에서 여전히 초록이라야
-   통과다 — 이 자가 «아무거나 빨개지는 자» 가 아님을 그 항이 지킨다). */
+   통과다 — 이 자가 «아무거나 빨개지는 자» 가 아님을 그 항이 지킨다).
+
+   ⚑⚑ **718 — 이 축은 «경주 창» 을 재고 있었다.** [R-c] 가 되돌림 사본에서 1.04% ↔ 32.74% 로
+   갈렸고(693 실측 · 부하가 있으면 4/10 이 빨갛다 — 718 재현 `probe718`), 재현이 범인을 **둘**로
+   갈랐다. 둘 다 «누른 노드의 반응» 이 아니라 **그 자리를 지나가는 다른 연출**이다:
+     ⓐ **회당 맥박이 호스트 카드를 움직인다** — `.jz-hb{animation:jzHb .08s}`(성공 팝 scale 1.06) ·
+       `.jz-hbx{animation:jzHbx .1s}`(실패 흔들림 −10px)가 **호스트 `.tr-rn` 에** 걸리므로 그 안의
+       버튼이 고정 clip 안에서 최대 **14.8px 밀린다**(718 실측: 버튼 y 1667.0 → 1681.8). 고정 clip
+       대조는 그것을 «버튼이 달라졌다» 로 읽는다(693 이 본 «검은 테 20,20,20 → 카드 크림
+       255,253,242» 은 밀린 자리의 배경이다). 맥박은 60~160ms 마다 다시 쏘므로 **표본 시각과 경주**한다.
+     ⓑ **되돌림 사본이 놓은 «새 노드» 도 눌린 그림을 그린다** — 통짜 렌더가 누른 노드를 죽이고
+       새로 놓은 `.rbt.b1` 에 60 위임이 뒤늦게 누름을 얹는다(718 실측 — 조상 변형 전수: WAAPI
+       4키프레임 `translate:0 8px` `scale:.94`). 즉 되돌림 사본의 누름은 «없다» 가 아니라
+       **«누른 그 노드의 것이 아니다»** 이고, 그것이 표본에 들어오면 21.9~30.6% 로 읽힌다.
+   ⇒ 처방은 둘로 갈린다 — **문턱(PX_MIN)도 clip 도 표본 시각도 한 칸 안 건드린다**(333):
+     ① ⓐ 는 **가림**으로 없앤다. 맥박을 `#fxl`·`.fx-holding` 과 **같은 가림에 넣는다**
+        (`.jz-hb,.jz-hbx{animation:none}`) — 같은 갈래의 남은 한 겹이다.
+        ⚠ 누름(`.jz-dn{scale:.94;translate:0 8px}`)은 `animation` 을 안 쓰므로(§7 [7-c1] 이 그것을
+        소스에서 못박는다) 이 가림은 **재려는 것을 안 가린다**.
+     ② ⓑ 는 가릴 수가 없다 — **가리면 재려던 것(누름)을 가린다.** 그래서 [R-c] 는 **축을 옮긴다**
+        (아래 §R 의 [R-c]). 718 이 표본 시각을 옮겨 푸는 안을 둘 다 실측으로 기각했다:
+        800ms(되튐 뒤)는 되돌림 사본 **7/12 빨강**, 60ms 유지도 부하가 세지면 **6/12 빨강**이다.
+        고정 clip 픽셀은 이 자리에서 «누른 그 노드» 를 못 가린다 — 새 노드가 같은 자리에 앉는다.
+   ⚑ 그래도 이 가림은 남긴다 — §3·[R-d] 의 픽셀도 같은 맥박 위에서 재고 있었다(수리 트리는
+     90~93% 라 판정이 안 뒤집혔을 뿐이고, 뒤집힐 여지를 없애는 것이 옳다). 되돌림 시험 `probe718`. */
+const SAMPLE_MS = 60;    /* 718 — 통짜 렌더는 pointerdown 과 같은 태스크라 이 시각에 이미 끝나 있다 */
+const CENSUS_MS = 600;   /* 718 [R-c] 구간 — 되튐(≤380ms)·첫 홀드 틱(350ms)을 둘 다 넘긴다 */
 async function pixelRun(page) {
   const out = {};
   await page.evaluate(() => {
     if (document.getElementById('v491mask')) return;
     const st = document.createElement('style');
     st.id = 'v491mask';
-    st.textContent = '#fxl{visibility:hidden!important}.fx-holding{outline:0!important}';
+    st.textContent = '#fxl{visibility:hidden!important}.fx-holding{outline:0!important}'
+                   + '.jz-hb,.jz-hbx{animation:none!important}';   /* 718 ① 맥박 */
     document.head.appendChild(st);
   });
   for (const t of NAMED) {
@@ -189,7 +217,7 @@ async function pixelRun(page) {
     await page.evaluate(sel => { const e = document.querySelector(sel); window.__p491 = e || null; }, t.sel);
     await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
     await page.mouse.down();
-    await page.waitForTimeout(60);
+    await page.waitForTimeout(SAMPLE_MS);                          /* 718 ② 표본 시각 */
     const live = await page.evaluate(() => ({ alive: !!(window.__p491 && window.__p491.isConnected),
       dn: !!(window.__p491 && window.__p491.isConnected && window.__p491.classList.contains('jz-dn')) }));
     const down = await page.screenshot({ clip });
@@ -198,6 +226,45 @@ async function pixelRun(page) {
   }
   /* 가림은 이 자 안에서만 산다 — 뒤에 오는 절이 이펙트 노드를 세므로 반드시 걷는다 */
   await page.evaluate(() => { const s = document.getElementById('v491mask'); if (s) s.remove(); }).catch(() => {});
+  return out;
+}
+
+/* ⚑⚑ 718 — [R-c] 의 새 축. «한 점의 픽셀» 이 아니라 **홀드 구간 전수**로 묻는다.
+   되돌림 사본과 수리 트리를 가르는 것은 «그 자리에 눌린 그림이 있는가» 가 **아니다**(둘 다 있다 —
+   되돌림 사본은 통짜 렌더가 놓은 **새 노드**에 뒤늦게 얹힌다). 가르는 것은 **«누른 그 노드가
+   눌린 채 살아 있는가»** 이고, 그것은 §5 [5-c]·§8 [8-c] 가 수리 트리에서 이미 쓰는 성질이다.
+   ⇒ 누른 뒤 `ms` 동안 rAF 로 전수를 세어 «원본 노드가 연결돼 있고 `jz-dn` 인» 프레임 비율을 돌려준다.
+     되돌림 사본 0% ↔ 수리 트리 100% 로 **양쪽에서 각각** 답하므로 «항상 0 을 보는 자» 가 아니다
+     (그 대조를 [R-c2] 가 같은 코드로 못박는다). 594 처방과 같은 꼴 — 한 점을 구간으로 옮긴다. */
+async function holdCensus(page, sel, ms) {
+  await page.evaluate(([s, d]) => {
+    const e = document.querySelector(s);
+    window.__c491 = e || null;
+    window.__cf = []; window.__cd = 0;
+    (function step(now) {
+      const h = window.__c491;
+      /* ⚠ 수집은 `mouse.down` **전에** 걸어 두고(누른 첫 프레임을 놓치지 않는다) 세는 것은
+         눌린 뒤 프레임뿐이다 — 누르기 전 프레임을 같이 세면 수리 트리의 비율이 저절로 내려간다. */
+      window.__cf.push({ t: now, on: !!(h && h.isConnected && h.classList.contains('jz-dn')) });
+      if (!window.__cd || now - window.__cd < d) requestAnimationFrame(step);
+    })(performance.now());
+  }, [sel, ms]);
+  const r = await page.evaluate(s => {
+    const e = document.querySelector(s); if (!e) return null;
+    const b = e.getBoundingClientRect();
+    return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  }, sel);
+  if (!r) return { frames: 0, pressed: 0 };
+  await page.mouse.move(r.x, r.y);
+  await page.mouse.down();
+  await page.evaluate(() => { window.__cd = performance.now(); });
+  await page.waitForFunction(d => window.__cd && performance.now() - window.__cd >= d, ms,
+                             { timeout: ms + 4000 }).catch(() => {});
+  const out = await page.evaluate(() => {
+    const held = window.__cf.filter(f => f.t >= window.__cd);
+    return { frames: held.length, pressed: held.filter(f => f.on).length };
+  });
+  await release(page);
   return out;
 }
 
@@ -290,6 +357,11 @@ async function pixelRun(page) {
     ok(now[t.id] && now[t.id].alive && now[t.id].dn,
        '[2-b] ' + t.n + ' — 누른 그 노드가 살아남고 jz-dn 이 붙는다(§3 과 같은 누름에서)',
        now[t.id] ? 'alive=' + now[t.id].alive + ' dn=' + now[t.id].dn : '없음');
+  /* 718 — §R [R-c] 가 쓰는 축의 **수리 트리 쪽 값**. 같은 함수·같은 시간으로 재서 [R-c2] 가 대조한다. */
+  await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain();
+    setTrSub(k); if (typeof setRuneSub === 'function') setRuneSub('r1'); renderTrain(); }, 'rune');
+  await page.waitForTimeout(420);
+  const census = await holdCensus(page, '#trRunes .rbt.b1', CENSUS_MS);
 
   /* ── §6 4회차 — 홀드가 «자멸» 해도 손 밑에서 노드를 안 간다 ─────────────────────────────
      613 이식 — 옛 표본이던 [충전](보유분 전부 1발 → 자멸)이 폐지돼, 같은 성질을 **[단련] 행 +
@@ -531,6 +603,13 @@ async function pixelRun(page) {
            홀드 **전 구간**에서 묻는다(7회차의 원래 결손 «클래스는 붙었는데 scale 이 none» 자리).
        ⚠ 수집은 `mouse.down` **전에** 걸어 둔다 — 스크린샷·픽셀 대조가 도는 동안에도 계속 찍혀야
          한다(그 사이가 곧 맥박 구간이다). 눌린 시각은 `__dn` 으로 따로 찍어 정착 프레임을 가른다. */
+    /* ⚑⚑ 718 — `SETTLE` 은 «누른 시각» 이 아니라 **«누름이 실제로 붙은 시각»** 에서 잰다.
+       [7-tempup-b3s] 가 부하에서 빨개진 자리다 — `__dn`(mouse.down 뒤 왕복 한 번)과 `jz-hdn` 이
+       실제로 붙는 프레임 사이가 부하에서 벌어지면, 고정 150ms 창에 **들어가는 전이(.07s) 프레임**이
+       섞여 «정착 값이 둘» 이 된다(693 7회차 실측 `0.990107` · 718 재현 `0.98506`).
+       ⇒ 붙은 프레임(`hd`)을 같이 찍어 두고 **거기서** 전이 길이 + 여유만큼 뒤를 «정착» 으로 삼는다.
+       ⚠ 이것은 창을 넓히는 것이 아니라 **창의 원점을 옳게 놓는 것**이다 — 허용 오차(TOL)도
+         표본 수 하한(≥4)도 안 건드린다. 전 구간 축(ⓐ 최솟값 [b3])은 그대로 홀드 전체를 본다. */
     const SWEEP = 900, SETTLE = 150;
     await pg.evaluate(([hs, bs, dur]) => {
       window.__sw = []; window.__dn = 0;
@@ -538,7 +617,8 @@ async function pixelRun(page) {
       (function step(now) {
         const cs = getComputedStyle(H);
         window.__sw.push({ t: now, w: H.getBoundingClientRect().width,
-                           bw: B ? B.getBoundingClientRect().width : 0, sc: cs.scale });
+                           bw: B ? B.getBoundingClientRect().width : 0, sc: cs.scale,
+                           hd: H.classList.contains('jz-hdn') });
         if (!window.__dn || now - window.__dn < dur) requestAnimationFrame(step);
       })(performance.now());
     }, [t.host, t.btn, SWEEP]);
@@ -574,7 +654,9 @@ async function pixelRun(page) {
        `.jz-dn` 이 자기 값을 직접 적는다 — 그 못이 빠지면 여기가 빨개진다. */
     const dn0 = sw.dn || 0;
     const held = sw.f.filter(f => f.t >= dn0);                     /* 누른 뒤 프레임 */
-    const settled = held.filter(f => f.t >= dn0 + SETTLE);         /* 들어가는 트랜지션(.07s)이 앉은 뒤 */
+    /* 718 — 원점은 «누름이 붙은 첫 프레임». 못 찾으면(붙기 전에 수집이 끝난 실행) 옛 원점으로 떨어진다 */
+    const hd0 = held.find(f => f.hd);
+    const settled = held.filter(f => f.t >= (hd0 ? hd0.t : dn0) + SETTLE);   /* 트랜지션(.07s)이 앉은 뒤 */
     const hrs = held.map(f => (rest.hw ? f.w / rest.hw : 0));
     const brs = held.map(f => (rest.bw ? f.bw / rest.bw : 0));
     const hMin = hrs.length ? Math.min(...hrs) : 0, bMin = brs.length ? Math.min(...brs) : 0;
@@ -593,9 +675,16 @@ async function pixelRun(page) {
        + ' (구간 ×' + Math.round(hMin * 1e4) / 1e4 + '~' + Math.round(Math.max(...hrs) * 1e4) / 1e4 + ')');
     /* ★ ⓑ 캐스케이드 — 맥박과 **다른 속성**인 자기 값으로 묻는다(579-④ⓐ). 맥박이 `animation` 을
        가져가 누름이 사라지면 여기는 `none` 이 되므로, 위 ⓐ 와 달리 **맥박 구간에서도** 답한다. */
-    ok(scs.length === 1 && Math.abs(parseFloat(scs[0]) - 0.985) <= 0.0005,
-       '[7-' + t.id + '-b3s] ★★ 누름 부품이 홀드 **전 구간** 자기 속성을 지킨다 — computed `scale` 이 정착 뒤 «.985» 한 값뿐(맥박이 `animation` 을 가져가면 `none` 이 된다)',
-       scs.map(s => '«' + s + '»').join(' , ') + ' / ' + settled.length + '프레임');
+    /* 718 — «문자열이 한 종» 이 아니라 **«전 프레임의 값이 .985»** 로 묻는다. 앞의 것은 소수 꼬리
+       하나(`0.98506` — .985 와 6e-5 차)에도 빨개지는데 그건 «맥박이 animation 을 가져갔다» 가
+       아니라 표기 노이즈다. 허용 오차(TOL)는 그대로 두고 **세는 방법만** 옳게 고친다 —
+       `none`·`1` 이 한 프레임이라도 섞이면 여전히 빨갛다(그것이 이 항이 잡으려는 그림이다). */
+    const TOL = 0.0005;
+    const bad = settled.filter(f => !(Math.abs(parseFloat(f.sc) - 0.985) <= TOL));
+    ok(settled.length >= 4 && bad.length === 0,
+       '[7-' + t.id + '-b3s] ★★ 누름 부품이 홀드 **전 구간** 자기 속성을 지킨다 — computed `scale` 이 정착 뒤 전 프레임 «.985»(맥박이 `animation` 을 가져가면 `none` 이 된다)',
+       scs.map(s => '«' + s + '»').join(' , ') + ' / ' + settled.length + '프레임'
+       + (bad.length ? ' · 벗어난 프레임 ' + bad.length + '장(' + bad.slice(0, 3).map(f => f.sc).join(', ') + ')' : ''));
     ok(bMin > 0.90 && bMin < 0.965,
        '[7-' + t.id + '-b2] ★ 누른 **버튼**은 여전히 .94 배다 — 호스트 진폭이 버튼까지 약하게 만들지 않았다(594: 같은 구간 최솟값)',
        p2(rest.bw) + ' → 최소 ' + p2(Math.min(...held.map(f => f.bw))) + ' = ×' + Math.round(bMin * 10000) / 10000);
@@ -709,6 +798,10 @@ async function pixelRun(page) {
   try {
     const b2 = await boot(browser, NEG);
     const back = await pixelRun(b2.page);
+    await b2.page.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain();
+      setTrSub('rune'); if (typeof setRuneSub === 'function') setRuneSub('r1'); renderTrain(); });
+    await b2.page.waitForTimeout(420);
+    const backCensus = await holdCensus(b2.page, '#trRunes .rbt.b1', CENSUS_MS);   /* 718 */
     const three = ['rune', 'tempup'];
     /* ⚠ 되돌림의 **주 축은 픽셀이 아니라 노드 생존**이다 — 「단련 [충전]」은 누름 반응이 0 이어도
        머리 띠의 «포인트 n» 이 통째로 바뀌어 bbox 픽셀이 76% 변한다. 그건 «결과» 지 «누름» 이 아니다.
@@ -719,9 +812,25 @@ async function pixelRun(page) {
     ok(three.every(k => back[k] && back[k].dn === false),
        '[R-b] 옛 순서에서는 세 자리 전부 jz-dn 이 0장이다',
        three.map(k => k + ':dn=' + (back[k] && back[k].dn)).join(' · '));
-    ok(['rune', 'tempup'].every(k => back[k] && back[k].px < PX_MIN),
-       '[R-c] 그 결과 룬 [강화]·단련 [투자] 는 «누른 채» 픽셀이 ' + PX_MIN + '% 미만이다',
-       ['rune', 'tempup'].map(k => k + ' ' + p2(back[k].px) + '%').join(' · '));
+    /* ⚑⚑ 718 — 여기 있던 «누른 채 픽셀 < PX_MIN» 은 **경주 창을 재고 있었다**(1.04% ↔ 32.74%
+       bimodal · 부하가 걸리면 5/12 빨강). 뿌리는 위 `pixelRun` 머리말의 ⓐⓑ 다. ⓐ(맥박)는 가림으로
+       없앴지만 ⓑ 는 못 가린다 — **되돌림 사본도 «눌린 그림» 을 그리기 때문**이고(통짜 렌더가 놓은
+       새 노드에 60 위임이 뒤늦게 얹는다), 그것을 가리면 재려던 것을 가린다.
+       ⇒ 자리를 비우지 않고 **축을 옮겼다**(333·149 처방). 두 트리를 실제로 가르는 성질은
+       «그 자리에 눌린 그림이 있는가» 가 아니라 **«누른 그 노드가 눌린 채 살아 있는가»** 이고,
+       그것은 한 점이 아니라 **구간**이라야 답이 흔들리지 않는다(594 와 같은 처방).
+       무르게 푼 것이 아님은 **[R-c2] 가 같은 코드로 수리 트리를 100% 로 읽는 것**이 못박는다.
+       ⚠ 픽셀 축 자체가 사라진 것은 아니다 — 대조군 [R-d]가 같은 누름의 픽셀을 그대로 세고,
+         §3 [3-*]·§7 [7-*-c] 가 수리 트리 쪽에서 같은 축을 계속 묻는다. */
+    ok(backCensus.frames >= 8,
+       '[R-c0] 전제 — 되돌림 사본에서도 홀드 구간 rAF 표본이 모였다(구간 축이 «표본 0» 으로 헛초록이 되지 않는다)',
+       backCensus.frames + '프레임 / ' + CENSUS_MS + 'ms');
+    ok(backCensus.pressed === 0,
+       '[R-c] 그 결과 옛 순서에서는 홀드 ' + CENSUS_MS + 'ms **전 구간**에서 «누른 그 노드가 눌린 채 살아 있는» 프레임이 0장이다',
+       backCensus.pressed + '/' + backCensus.frames + '프레임');
+    ok(census.frames >= 8 && census.pressed === census.frames,
+       '[R-c2] ★ 같은 코드가 **수리 트리**에서는 같은 구간을 전 프레임 «눌린 채 살아 있음» 으로 읽는다 — 이 축이 «항상 0 을 보는 자» 가 아니다',
+       census.pressed + '/' + census.frames + '프레임');
     ok(back.train && back.train.alive && back.train.px >= PX_MIN,
        '[R-d] 같은 사본에서 **대조군(훈련 카드)은 그대로 초록**이다 — 이 자가 «아무거나 빨개지는 자» 가 아님',
        back.train ? 'alive=' + back.train.alive + ' ' + p2(back.train.px) + '%' : '없음');
