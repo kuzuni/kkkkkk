@@ -3976,6 +3976,21 @@
     52%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(1);opacity:1}
     100%{transform:translate(var(--dx),var(--dy)) scale(.62);opacity:0}}
 
+  /* ⚑⚑ 660 — **강화 버스트의 알갱이를 «그 탭이 내는 재화 아이콘» 으로 갈아 끼운다**
+     (주인 지시 2026-09-01 23:47 «단련버튼에서 단련석이 터지는 느낌» → 보강 «훈련은 골드 아이콘»
+      → 보강 3 «룬강화 버튼에서 룬아이콘»). 한 규약 하나로 셋이 갈린다: **버스트 아이콘 = `PAY_CUR[탭]`**.
+     ⚠ **몸을 새로 만들지 않는다** — `.fx-spark` 를 그대로 쓰고 «무엇이 그려지는가» 만 바꾼다.
+       그래야 619 가 16회차에 걸쳐 세운 링 기하(탄생 타원·keep-out·융합 회피·가둠 상자·틱 수명)가
+       한 줄도 안 갈라진 채 그대로 따라온다(58 «규격 3종» 이 ④ 감점받은 자리의 반대편).
+     ⚠ 크림 구슬의 radial-gradient 와 검정 링(box-shadow)은 **끈다** — 아이콘 위에 얹히면
+       문양이 안 읽히고 «구슬 위에 그림» 이라는 셋째 어휘가 생긴다.
+     ⚠ 크기 보정은 **543 의 축을 그대로 빌린다**(`--fxgs` = 재화별 잉크 덩치 등가 배수) —
+       13 재화 탭 제외 가드도 `.fx-fly` 와 **같은 벌**이라 두 벌로 안 적는다. 안 걸면 골드 원판과
+       단련석 마름모가 같은 상자에서 잉크 면적이 갈린다. */
+  .fx-spark.fx-cic{background:none;box-shadow:none;border-radius:0}
+  .fx-spark.fx-cic>.cic{display:block;width:100%;height:100%;object-fit:contain}
+  #app:not(:has(#shopw.on .shp-list.coin)) .fx-spark.fx-cic>.cic{transform:scale(var(--fxgs,1))}
+
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
      innerHTML 로 통째로 재렌더돼(25 교훈 5) 대상에 붙인 클래스가 그 프레임에 날아간다. */
@@ -13341,7 +13356,7 @@
      `.rd` 상자 top 이 정확히 280 이라(y280..442) 비용 봉투 하단(283)이 3px 문다 — 띠는 어느
      방향으로도 여유 0 이다(224..280 확정). 플러시 스침은 감수한다. */
   .tr-rn{--hb-y:248;--hb-x:.432;--hb-y2:224;--hb-x2:.8026;--hb-sw:70;--hb-jy:0;--hb-fall:12px;
-    --spend-to:.ri;--flash-to:.rd}   /* 619 9회차 도착 = 좌측 아이콘 · 16회차 플래시 = 효과 행(아래 머리말) */
+    --flash-to:.rd;--burst-to:.rbt.b1}   /* 619 16회차 플래시 = 효과 행(아래 머리말) · 660 — 버스트는 «강화 버튼» 에서만 태어난다(주인 지목) · `--spend-to`(9회차 도착 = 좌측 아이콘)는 그 연출과 함께 폐지 */
   /* ⚑⚑ 619 16회차 — `--flash-to` 를 `.ri`(200×200 아이콘) → **`.rd`(910×162 효과 행)**.
      EJ 15회차 「8점을 막는 단 하나」이고 **EH ⑧ · EI ⑧ 과 합쳐 세 회차 연속 2인 공통**이다:
      «룬 몸통에 회당 워시가 없다» — 실측 warm **1.0~1.2** ↔ 훈련 44.6~54.7 · 단련 35.3~50.1.
@@ -13367,7 +13382,11 @@
      ⇒ 4칸 × **72px** (span 3×72+54 = 270 ≤ 315−2×12 = 291) · 여유도 **12px** 로 줄여 클램프가 안 물게 한다.
      칸이 하나 줄면 최고속(60ms)에서 동시 5장이 4칸을 쓰지만, 그건 «가끔 한 쌍이 같은 칸» 이고
      지금은 «매 프레임 이웃이 붙어 한 문자열로 읽히는» 것이다 — 뒤가 훨씬 나쁘다. */
-  .tr-card{--hb-y:250;--hb-x:.5;--hb-y2:180;--hb-x2:.5;--hb-slots:4;--hb-sw:72;--hb-pad:12}
+  .tr-card{--hb-y:250;--hb-x:.5;--hb-y2:180;--hb-x2:.5;--hb-slots:4;--hb-sw:72;--hb-pad:12;
+    --burst-to:.cb}   /* ⚑ 660 — 훈련 카드의 «강화 버튼» 은 하단 비용 바(`.cb` 310×106)다 —
+       카드 전체가 눌리는 자리이지만 «누르는 것» 으로 읽히는 부품은 이 하나뿐이고(초록 알약 + 골드
+       아이콘 + 금액), 주인이 «버튼에서 터지는» 이라고 말한 것도 여기다. 카드(326×510) 전체를
+       호스트로 두면 링이 아이콘(.ci)·수치(.cv)·이름(.cn) 위를 지나 «아이콘 쪽 이펙트 0건» 을 깬다. */
   /* ⚠ 단련 행은 **빈 띠가 하나뿐**이다 — x340..550 · y0..150(그 아래 `.td` 150..186 이 x26..586 을 가로지른다).
      행 사이 틈은 14px 이고 다음 행의 `.tc` 가 y14 부터 시작해 **아래로 새는 길도 없다.**
      ⇒ 두 줄기를 그 한 칸에 위아래로 포갠다: 비용 20..80(위) · 결과 82..148(아래, 서로 안 만난다).
@@ -13404,7 +13423,7 @@
      [I7](두 줄기 위아래 포개기) · [K2](sw 52 는 이웃 빈 폭 3px). 비평가 DX·DY 의 «아이콘 점거» 지적은
      612 잠금 설계와 정면 충돌이라 619 가 못 뒤집는다 — 채점 전제로 넘긴다(원복). */
   .tr-tp{--hb-y:116;--hb-x:.1152;--hb-y2:20;--hb-x2:.1152;--hb-slots:2;--hb-sw:88;--hb-pad:12;
-    --spend-to:.ti}   /* 619 9회차 — 첫 발 알갱이 도착을 좌측 아이콘 타일로(비행이 타이틀·Lv 를 관통하지 않게) */
+    --burst-to:.tb}   /* 660 — 위 둘과 같은 한 규약(단련 행의 강화 버튼은 `.tb`) · `--spend-to`(619 9회차 도착 = 좌측 아이콘 타일)는 폐지 */
   /* 613 — [충전] 회당 피드백 호스트(.tp-hd)의 hbBeat 신고는 버튼과 함께 걷어냈다 —
      헤더는 더 이상 누를 수 있는 부품이 아니다(491 4·8회차의 사다리 기하 기록은 review 491 §31). */
   /* 08/50 세부 팝업 — 호스트가 «레벨 행»(139×70)이라 **띠를 카드(`.skd` 800×701) 좌표로 신고한다**
@@ -34065,17 +34084,36 @@ const upFxDrop = g => { for(const nd of g){ try { nd.remove(); } catch(_){} } };
 /* 한 번의 강화 = 한 번의 발화. 돌려주는 값은 «실제로 무엇이 붙었는가» 다(게이트가 이것을 센다). */
 /* ⚑ 619 14회차 — 여섯째 인자 `iv` 는 **다음 틱까지의 간격**이다(위 `fxTickLife` 머리말).
    호출부가 안 주면 종전 그대로 단발 길이로 돈다 — 홀드 밖 경로는 한 글자도 안 바뀐다. */
+/* ⚑ 660 — **버스트가 태어나는 자리는 «강화 버튼» 뿐이다**(주인 보강 3 «아이콘쪽에 이펙트 안뜨게 하고,
+   룬강화 버튼에서 룬아이콘이 터지는 느낌으로» — 룬에서 지목됐고 세 탭 공통 규약으로 올렸다).
+   회당 피드백의 «호스트» 는 488 이 카드·행으로 못 박아 둔 것이라(맥박·플래시·글로우가 그 자리다)
+   버스트만 따로 신고받는다 — 호스트가 `--burst-to`(자식 셀렉터)로 말하고, 신고가 없으면 종전 그대로
+   호스트 자신이다(09·12·17·장비·코스튬은 신고를 안 하므로 한 값도 안 바뀐다).
+   ⚠ `--flash-to`(619 9·16회차)·`--spend-to`(619 9회차)와 **같은 꼴**이다 — 새 기계를 안 만든다. */
+function fxBurstAt(el){
+  if(!el || !el.querySelector) return el;
+  try { const s = getComputedStyle(el).getPropertyValue('--burst-to').trim();
+    if(s){ const c = el.querySelector(s); if(c) return c; } } catch(_){}
+  return el;
+}
 function upFx(key, host, cur, n, noFlash, iv){
   const L = (typeof fxL === 'function') ? fxL() : null;
   const el = (typeof host === 'string') ? document.querySelector(host) : host;
   if(!L || !el || !el.getBoundingClientRect) return false;
-  const cnt = n || UPFX_N;
   /* 죽은 노드(수명 만료)는 세대에서 저절로 빠진다 — 타이머와 경쟁하지 않는다 */
   const q = (upFxPool.get(key) || []).map(g => g.filter(nd => nd.isConnected)).filter(g => g.length);
-  /* ① 자리는 «내 세대» 에서 먼저 만든다 */
-  while(q.length && upFxLive(q) + cnt + 1 > UPFX_CAP) upFxDrop(q.shift());
-  /* ② 그래도 레이어 상한에 걸리면 내 세대를 전부 걷는다 — 발화가 조용히 빠지면 «회당 터짐» 이 깨진다 */
-  if(L.childElementCount + cnt + 1 > FXMAX){ while(q.length) upFxDrop(q.shift()); }
+  /* ⚑⚑ 660 — **캔슬-재시작 금지**(주인 보강 2, 2026-09-01 23:53: «연속강화할때 영점 몇초 단위로
+     알갱이가 캔슬되는데 그거는 하지말기»). 주인이 본 «뚝뚝 끊김» 의 뿌리가 정확히 이 두 줄이었다 —
+     상한에 닿으면 **앞 세대를 통째로 걷어**(`upFxDrop`) 자리를 만들었고, 그러면 날아가던 알갱이가
+     수명 한복판에서 사라진다. 홀드 최고속(60ms)에서는 `UPFX_CAP` 이 서너 틱마다 차므로 그 «걷기» 가
+     0.2~0.3초 주기로 돌아왔다(주인 문면 «영점 몇초 단위» 와 같은 값이다).
+     ⇒ **걷지 않는다. 새 스폰만 줄인다.** 진행 중인 입자는 `fxBye` 가 제 수명 끝에서만 걷는다.
+     ⚠ **바닥 1개는 남긴다** — 0 이 되면 619 [B] «강화 N회 ↔ 발화 N회» 가 조용히 깨진다(그 게이트가
+       금지한 «발화가 조용히 빠지는» 자리다). 상한에서 줄어드는 것은 «개수» 이지 «발화» 가 아니다.
+     ⚠ 되돌리려면 이 두 줄을 종전 `while(...) upFxDrop(q.shift())` 두 줄로 되돌리면 된다
+       (`upFxDrop`·`upFxLive` 선언은 그대로 살아 있다 — 아래 세대 큐가 계속 쓴다). */
+  let cnt = Math.max(1, Math.min(n || UPFX_N, UPFX_CAP - upFxLive(q) - 1));
+  if(L.childElementCount + cnt + 1 > FXMAX) cnt = Math.max(1, FXMAX - L.childElementCount - 1);
   const before = new Set(L.children);
   /* ⚑ 619 9회차 — 플래시 자리를 호스트가 `--flash-to`(자식 셀렉터)로 좁힐 수 있다. 룬 호스트는
      998×700 패널 통짜라 성공 플래시가 «화면 전면 워시» 로 읽혔다(비평가 DV·DW 2인 공통 — f3 틴트로
@@ -34086,14 +34124,31 @@ function upFx(key, host, cur, n, noFlash, iv){
       if(s){ const c = el.querySelector(s); if(c) fel = c; } } catch(_){}
     fxFlash(fel, iv, true);                          /* 619 14회차 — 홀드면 틱 안에서 끝난다 · 15회차 — 액자 안쪽으로 */
   }
-  /* 583 규약 그대로 — 화폐 키가 있으면 화폐 알갱이, 못 쏘면(레이어 포화·260ms 재시작 간격) 종전 앰버.
-     619 3회차 — 알갱이가 서면 **타격 순간 몫**(UPFX_NOW)만 같이 쏜다(위 상수 머리말 — 합 10개로 583 상한 안). */
-  const grain = !!(cur && typeof fxSpend === 'function' && fxSpend(cur, el));
-  /* 619 4회차 — `strict`: 글자 위에 앉을 입자는 버린다(fxBurst 머리말). 회당 6회 터지는 자리라
-     한 번짜리 호출과 같은 확률이 «수치가 계속 가려진다» 로 읽힌다(DN·DO 2인 공통 ③). */
-  /* ⚑ 619 11회차 — 알갱이가 선 «타격 순간» 몫만 진한 앰버(`FXPAL.upNow`). 반복분은 종전 `up` 그대로다
-     (표 머리말 — 크림 위 첫 발만 대비가 모자랐다). 개수·strict·상한은 한 글자도 안 바뀐다. */
-  if(typeof fxBurst === 'function') fxBurst(el, grain ? FXPAL.upNow : FXPAL.up, grain ? UPFX_NOW : cnt, true, iv);
+  /* ⚑⚑ 660 — **583 의 «화폐 알갱이 비행»(`fxSpend`)을 여기서 걷어냈다**(= 658, 주인 «골드가 훈련
+     버튼쪽으로 가는 연출 없애기. 존나 후지다»). 그 연출은 «알약·보유 아이콘 → 버튼» 이동이라
+     주인이 새로 못 박은 «스폰 위치는 강화 버튼뿐 · 아이콘 쪽 이펙트 0건» 과 **방향이 정면으로 반대**다
+     (`--spend-to` 의 도착지가 바로 그 아이콘 타일이었다).
+     ⇒ 남는 것은 **버튼에서 터지는 아이콘 버스트 한 벌**이고, «무엇으로 샀는가» 는 583 이 말하던
+       그 아이콘이 **버스트 자신의 그림**으로 계속 말한다(정보는 안 준다 — 자리와 방향만 바뀐다).
+     ⚠ `FXPAL.upNow`/`UPFX_NOW` 분기(619 3·11회차 «알갱이가 선 타격 순간 몫»)도 같이 사라진다 —
+       그 둘은 «알갱이가 섰는가» 를 조건으로 하던 값이라 알갱이가 없으면 물어볼 것이 없다.
+     ⚠ 619 4회차 `strict`(글자 위에 앉을 입자는 버린다)는 **그대로**다.
+   ⚑⚑ **`iv` 는 버스트에 안 넘긴다 — 여기가 주인 보강 2 의 본체다.**
+     619 14회차는 스파크 수명을 `fxTickLife(iv, 380)` = **틱 간격의 55%** 로 잘랐다(«한 세대가 다음
+     틱까지 안 산다»). 그 자리가 정확히 주인이 본 그림이다 — 최속 틱 60ms 에서 입자는 **45ms 만에**
+     지워지고 45%(27ms)는 아무것도 없으며, 홀드 초반 160ms 틱에서는 88ms 살고 **72ms 가 빈다**.
+     날아가던 알갱이가 궤적 한복판에서 사라졌다 나타나는 이 깜빡임이 주인 문면
+     «연속강화할때 영점 몇초 단위로 알갱이가 캔슬되는데 그거는 하지말기» 의 실체다.
+     ⇒ 660 이 그 축을 뒤집는다: **버스트는 틱마다 독립으로 스폰되고, 각 입자는 제 수명(380ms)을
+       끝까지 산다. 세대가 겹치는 것은 허용**(주인 원문 «겹침 허용» 의 근거) — 겹침이 곧 «연속으로
+       터지고 있다» 는 그림이고, 그것이 657 이 «밀도 상향» 으로 원하던 것과 같은 방향이다.
+     ⚠ **플래시는 그대로 `iv` 를 받는다**(위 `fxFlash` 호출) — 625 «한 자리에 플래시 한 장» 은
+       별개의 주인 지시이고 660 도 «플래시 1장(625) 위에 얹는다» 라고 못 박았다. 겹치면 안 되는
+       것은 «면을 덮는 워시» 이고, 겹쳐도 되는 것은 «날아가는 알갱이» 다 — 둘은 다른 축이다.
+     ⚠ 예산 검산: 380ms 수명 ÷ 최속 틱 60ms = 6.3 세대 × `UPFX_N` 4 = **약 25알**이 동시에 산다.
+       `UPFX_CAP` 36 · `FXMAX` 120 둘 다 안 넘는다(홀드 초반 160ms 틱에서는 10알). 그래서 위
+       상한 처리가 «줄이기» 로 충분하고 «걷기» 가 필요 없다 — 두 변경이 한 벌인 이유다. */
+  if(typeof fxBurst === 'function') fxBurst(fxBurstAt(el), FXPAL.up, cnt, true, null, cur || null);
   const gen = [];
   for(const nd of L.children) if(!before.has(nd)) gen.push(nd);
   if(gen.length) q.push(gen);
@@ -34123,40 +34178,11 @@ function trBuyOnce(key){
   if(ok) sfx('train');                                  /* 78 — 훈련 ↑ 틱(꾹 누르기 반복 포함) */
   return ok;
 }
-/* 58 14회차 — 카드가 이미 보여 주는 «+2.4»(.cv)와 «공격력»(.cn)으로 델타 플로터 문구를 만든다 */
-/* 26회차 — 플로터 문자열에서 **스탯 낱말을 뺀다.** 25차 2인 공통 ③ 의 실체는 «플로터가 라벨을
-   덮는다» 인데, `probe58y` 로 재니 덮는 이유가 기하가 아니라 **문자열**이었다: 플로터 잉크 폭
-   156.6 은 카드(326) 한가운데 라벨 잉크(폭 80, 카드기준 x123~203)를 어느 x 에 둬도 가로로
-   100% 포함한다. 그런데 그 폭의 절반이 **라벨과 똑같은 낱말**(«공격력»)이다 — 바로 아래 줄이
-   상시로 말하고 있는 것을 플로터가 한 번 더 말하느라 자리를 두 배로 쓴 것이다.
-   낱말을 빼면 폭이 156.6 → ≈70 으로 내려가 카드 우측 빈 자리(x203~326)에 통째로 들어간다.
-   ⛔ 값을 «+0.2»(증분)로 바꾸는 것은 23·24회차가 «거짓말» 로 못 박은 항목이라 안 한다 —
-      플레이어가 방금 얻은 것은 0.2 가 아니라 2.2 다(19회차 `trainCardData()` 확인). */
-/* 486 — ⚠ **더는 `.cv` 를 읽지 못한다.** 그 알약은 이제 «지금 총량» 이라(주인 지시 2026-08-30),
-   그대로 띄우면 «방금 9.64G 를 얻었다» 는 거짓말이 된다 — 26회차가 «거짓말» 로 못 박은 바로 그 항목의
-   부호만 뒤집힌 꼴이다. 값은 `trainGainTxt()` 로 다시 세고, 상한(MAX)에서 안 띄우는 규칙은 그대로다.
-   ⚠ 이 함수는 **구매 «전»** 에 불린다(trHoldStart) — 그래서 `trainBuyInfo` 가 보는 것이
-   «이번에 살 양» 이고, 그것이 플레이어가 방금 얻는 양이다. */
-function trDeltaTxt(card){
-  const key = card && card.dataset && card.dataset.tr;
-  if(!key || !U[key]) return '';
-  if(trainBuyInfo(key).full) return '';
-  return trainGainTxt(key);
-}
-/* ⚑ 628 — **정산 한 장은 다른 수를 말해야 한다**(2026-09-01).
-   위 함수는 «다음에 살 양» 을 말한다 — `trHoldStart` 는 구매 «전» 에 부르므로 그것이 맞지만,
-   `trHoldStop` 은 구매 «뒤» 에 부르므로 같은 문자열이 «방금 얻은 양» 이 아니라
-   **«다음에 오를 양»** 이 된다. `probe628` [E] 실측(수리 전): 5회 홀드로 최종값이 127.745
-   올랐는데 정산 문구는 «+20»(= 다음 1회의 기저 증분)이었다 — 두 번 틀린 자리다(축 + 시점).
-   ⇒ 반복분의 기준값을 홀드 시작 시각에 박아 두고(`h.now0`) 정산은 **그 차이**를 말한다.
-   ⚠ 계산식을 여기서 다시 적지 않는다 — `TRAIN_NOW` 를 두 시점에 읽을 뿐이라 자가 하나다.
-   ⚠ `now0` 은 **첫 발을 산 뒤**에 잡는다(`trHoldStart`) — 첫 발은 자기 플로터가 이미 말했고
-     이 한 장이 맡은 것은 64 규약대로 «반복분»(`h.n > 1`)이기 때문이다. */
-function trHoldGainTxt(h){
-  if(!h || h.now0 == null || !TRAIN_NOW[h.key]) return '';
-  const g = TRAIN_NOW[h.key]() - h.now0;
-  return g > 0 ? '+' + fmtB(g) : '';
-}
+/* ⚑ 660 — `trDeltaTxt()`·`trHoldGainTxt()` 는 **선언째 사라졌다**(죽은 코드 금지 — 295-②·399·460).
+   둘은 «훈련 델타 플로터의 문자열» 만 만들던 함수이고, 그 플로터가 이 지시로 폐지되면서
+   소비처가 0 이 됐다. 58 26회차(낱말 빼기)·486(«.cv 를 읽지 마라»)·628(«정산은 방금 오른 양»)이
+   이 두 함수 위에 쌓아 둔 판단의 기록은 `docs/review/660-강화연출리디자인.md` §3 에 옮겨 적었다.
+   ⚠ 되돌리려면 그 절의 두 함수를 여기 되살리고 위 두 `fxUpOk` 의 셋째 인자를 되돌린다. */
 /* 정지 사유와 무관하게 여기 한 곳으로 모인다 — 타이머 해제 + 반복분 연출 정산 */
 function trHoldStop(bad){
   const h = trHold; if(!h) return;
@@ -34165,7 +34191,14 @@ function trHoldStop(bad){
   const el = trCard(h.key);
   fxHoldMark(el, false);                             /* 619 8회차 — 홀드 글로우 끄기 */
   if(bad && el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);   /* 60 — 부족·상한 흔들림 */
-  else if(h.n > 1 && el) fxUpOk(el, el, trHoldGainTxt(h), PAY_CUR.train, true);  /* 58 — 반복분은 마지막에 한 번 · 583 골드 알갱이 · 628 «방금 오른 양» */
+  /* ⚑ 660 — **숫자 플로터 폐지**(주인 보강 «훈련도 숫자 이펙트 안뜨게 하고»). 셋째 인자를 안 넘기면
+     `fxUpOk` 안의 `fxDelta` 가 통째로 안 돈다 — 부품(`fxDelta`)은 09·12·17·장비·코스튬이 계속 쓰므로
+     **호출부에서만** 끈다(659 의 «부품 삭제 금지» 규약 · 520 선례).
+     ⚠ 628 이 세운 «정산 한 장은 방금 오른 양을 말한다» 는 이 지시로 **은퇴한다**(그 값을 말하던 유일한
+       자리가 이 플로터였다) — 되돌리려면 셋째 인자에 `trHoldGainTxt(h)` 를 되돌려 주면 된다.
+     ⚠ `PAY_CUR.train` 은 그대로 넘긴다 — 이제 그 인자의 뜻이 «비행할 골드» 가 아니라
+       **«버스트에 그릴 아이콘»** 이다(위 `fxUpOk` 머리말). */
+  else if(h.n > 1 && el) fxUpOk(el, el, null, PAY_CUR.train, true);
   /* ⚑ 488 2회차 — 정산 요약 토스트. 룬·단련 홀드에는 처음부터 있었는데 여기만 없어서, 1회차 캡처를
      본 비평가 BM·BN 이 **독립적으로** «세 씬 중 훈련만 마무리 층이 없다»(④ 일관성)로 잡았다.
      문구는 룬·단련과 같은 꼴(«무엇을 몇 회») 이고, 1회 누름에는 안 띄운다(종전 침묵 유지). */
@@ -34204,7 +34237,7 @@ function trHoldTick(){
      `h.iv` 갱신 «뒤» 로 옮긴 것과 같은 이유 — 회당 연출은 그 틱 안에서 끝나야 «또 올랐다» 가 된다).
      세 부품(스파크·플래시·글로우)이 **같은 값**을 받아야 한 박자로 뛴다. */
   const ivNext = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
-  upFx('train:' + h.key, cardNow, null, null, false, ivNext);
+  upFx('train:' + h.key, cardNow, PAY_CUR.train, null, false, ivNext);   /* 660 — 버스트 아이콘 = 그 탭이 내는 재화(훈련 = 골드) */
   hbBeat(cardNow, true, null, null);
   h.iv = ivNext;
   /* 619 13회차 — 글로우 펌프는 **다음 틱까지의 간격**을 받아야 봉우리·골이 그 틱 안에 들어간다.
@@ -34221,16 +34254,15 @@ function trHoldStart(key, card){
   trHoldStop(false);
   /* 486 — 문구는 **구매 «전»** 에 잡는다. 예전에는 `.cv` 가 재렌더 전이라 저절로 그랬는데,
      이제 값을 계산해서 만들므로 순서를 명시한다(상한 직전 x30 이 7개만 사지는 자리에서 갈린다). */
-  const txt = trDeltaTxt(card);
   const bi0 = trainBuyInfo(key);                /* 488 3회차 — 비용도 «구매 전» 값(486 과 같은 이유) */
   const ok = trBuyOnce(key);
   /* 58(다른 세션 변경분 유지) — 오버레이는 **재렌더 «전»** 에 쏜다. 뒤에 쏘면 렌더 비용만큼 연출이 늦는다.
      그 뒤 노드가 «바뀌었을 때만» fx-hit 를 새 노드에 다시 붙인다(renderTrainLive 는 노드를 유지하므로 보통 no-op). */
-  if(ok) fxUpOk(card, card, txt, bi0.cur, true);      /* 583 — 결제가 돌려준 화폐 키로 알갱이를 쏜다 */
+  if(ok) fxUpOk(card, card, null, bi0.cur, true);      /* 660 — 숫자 플로터 폐지 · 화폐 키는 이제 «버스트 아이콘» 이다 */
   /* ⚑ 619 3회차 — 첫 발의 «타격 순간» 몫. `fxUpOk` 는 공용 부품이라(09·12·17·장비·코스튬이 같이 쓴다)
      여기서 한 줌만 더한다 — 플래시는 `fxUpOk` 가 이미 걸었으므로 **끄고**(중복 금지) 파티클만.
      ⚠ 룬·단련은 같은 일을 `upFx` 안에서 한다(부품이 갈리지 않게 상수 `UPFX_NOW` 를 공유한다). */
-  if(ok && bi0.cur) upFx('train:' + key, card, null, UPFX_NOW, true);
+  if(ok && bi0.cur) upFx('train:' + key, card, PAY_CUR.train, UPFX_NOW, true);   /* 660 — 위와 같은 한 규약 */
   renderTrainLive();
   if(!ok){                                                             /* 첫 누름부터 실패면 반복 없음 */
     const el = trCard(key) || card;
@@ -34426,7 +34458,9 @@ function rtRuneHold(id){
       tries++;
       /* 488 — 비용은 «빠져나가기 전» 에 읽는다(성공하면 레벨이 올라 다음 비용이 달라진다)
          490 — 결제가 룬강화석 하나라 비용도 한 갈래다 */
-      const cost = runeCost(r, runeLvOf(id));
+      /* ⚑ 660 — `const cost = runeCost(…)` 는 **선언째 사라졌다**(죽은 코드 금지 — 295-②·399·460).
+         488 이 그 값을 읽어 두던 이유는 «−n» 비용 플로터 한 장뿐이었고, 그 플로터가 이 지시로
+         폐지되면서 소비처가 0 이 됐다. 비용은 카드가 상시로 말한다(`.rd` 비용 상자). */
       const up = runeBuy(id, true);           /* quiet — 토스트·연출·통짜 렌더 없음 */
       if(up) succ++;
       /* 488 — 시도마다 **카드가 답한다**: 성공 팝 + «+1 Lv» / 실패 흔들림 + «실패» · 비용 «−n» */
@@ -34440,7 +34474,7 @@ function rtRuneHold(id){
          58 이 «강화·업그레이드 «성공» 한 세트» 로 뜻을 굳힌 그림이라(주석 36xxx), 실패에 얹으면
          «레벨이 올랐다» 는 거짓 신호가 된다 — 룬만 확률 판정이라 여기서 훈련·단련과 갈린다.
          실패의 회당 피드백은 종전대로 바로 아래 `hbBeat(…, false, '실패', …)` 의 흔들림·플로터다. */
-      if(up && tries > 1) upFx('rune:' + id, sel0, null, null, false, iv); /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
+      if(up && tries > 1) upFx('rune:' + id, sel0, PAY_CUR.rune, null, false, iv); /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
       /* ⚑ 619 11회차 — **실패 틱에도 «활동» 한 줌**(비평가 EA 의 «8점을 막는 단 하나»: «룬 f7(2736ms)
          무스파크 — 실패 연타 종반에 활동 신호가 플로터 한 겹»). 룬은 확률 판정이라 실패가 연달아
          나오는 구간이 있고, 그 동안 화면이 «이펙트가 멎었다» 로 읽힌다.
@@ -34449,8 +34483,16 @@ function rtRuneHold(id){
          두 부품(흰 플래시 · «+1» 플로터)은 성공에만 남는다. 개수도 성공(4)보다 적은 3 이라
          두 사건이 크기로도 갈린다. 게이트는 그대로다 — [B2] 룬은 «성공» 축(분모가 성공 수)이라
          분자만 늘 수 있는 이 호출로는 못 내려가고, [C1] 빈 발화는 `UPFX_CAP` 이 그대로 지킨다. */
-      if(!up && tries > 1) upFx('rune:' + id, sel0, null, UPFX_FAIL_N, true, iv);
-      hbBeat(sel0, up, up ? '+1' : '실패', '−' + fmt(cost));
+      if(!up && tries > 1) upFx('rune:' + id, sel0, PAY_CUR.rune, UPFX_FAIL_N, true, iv);
+      /* ⚑ 660 — **숫자 플로터 폐지**(세 탭 공통). 지운 것은 «+1»(레벨 증분)과 «−n»(비용) **둘 다 숫자**다.
+         ⚑ **«실패» 는 남긴다 — 위임 규약 채택(2026-09-01 22:35).** 주인 문면은 «숫자들 뜨는 연출» 이고
+           «실패» 는 숫자가 아니다. 그리고 룬만 확률 판정이라 이 두 글자가 «이번 틱이 헛돌았다» 를 말하는
+           **유일한 회당 채널**이다(성공 틱은 버스트·플래시가 말하지만 실패 틱은 그 둘이 안 뜬다 —
+           619 11회차가 «실패에는 성공 세트를 얹지 않는다» 로 못 박은 자리). 지우면 연타 중 실패 구간이
+           통째로 무응답이 된다. 되돌리려면 셋째 인자를 `null` 로 바꾸면 된다.
+         ⚠ 비용은 카드가 상시로 말한다(`.rd` 효과 행·비용 상자) — 플로터가 한 번 더 말할 필요가 없다
+           (58 26회차 «바로 아래 줄이 말하는 것을 플로터가 되풀이한다» 규약). */
+      hbBeat(sel0, up, up ? null : '실패', null);
       return true;
     },
     live: () => renderTrainLive(),
@@ -34479,15 +34521,19 @@ function rtTemperHold(k){
     tag:'temper', sel, host, key:'temper:' + k,     /* 491 7회차 — 첫 발 가산 오버레이의 호스트 · 619 — 세대 큐 키 */
     once: (iv) => {                          /* 619 14회차 — 틱 간격(회당 연출 길이) */
       if(!temperUpOk(k)){ if(!n) temperUpBtn(k); return false; }
-      const cost = temperCost(k);             /* 488 — 계단이라 «오르기 전» 값이 이번에 낸 값이다 */
+      /* ⚑ 659·660 — `const cost = temperCost(k)` 도 같이 걷었다(위 룬과 같은 이유 — 소비처가 «−n»
+         플로터 한 장뿐이었다). 488 의 «계단이라 오르기 전 값» 판단 기록은 review 660 §3 에 옮겼다. */
       if(!temperUpBtn(k, true)) return false;
       n++;
       /* 488 — 단련은 확정 처리라 실패 갈래가 없다. 회당 «+1 Lv» + «−n» 한 벌.
          613 — «−n» 의 단위는 이제 단련석이다(행 라벨·버튼이 상시로 아이콘을 말하므로 숫자만 —
          58 26회차 «바로 아래 줄이 말하는 낱말을 플로터가 한 번 더 말하느라 자리를 두 배로 쓴다»). */
       /* ⚑ 619 — 회당 이펙트(단련은 확정 처리라 실패 갈래가 없다 = 틱과 1:1) */
-      if(n > 1) upFx('temper:' + k, host, null, null, false, iv);          /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
-      hbBeat(host, true, '+1', '−' + fmt(cost));
+      if(n > 1) upFx('temper:' + k, host, PAY_CUR.temper, null, false, iv);          /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
+      /* ⚑ 659·660 — **숫자 플로터 폐지**(주인 «단련 버튼 눌렀더니 숫자들 뜨는 연출 없애기 존나 후지다»).
+         단련은 확정 처리라 실패 갈래가 없다 = 남길 문구가 없다. 맥박(`hbPulse`)은 그대로라 488 의
+         «회당 피드백» 은 안 사라지고, «또 올랐다» 는 660 의 단련석 버스트가 말한다. */
+      hbBeat(host, true, null, null);
       return true;
     },
     live: () => renderTrainLive(),
@@ -37242,6 +37288,14 @@ function fxSpendFrom(cur, host, toC){
   return hc ? { x:(toC ? toC.x : hc.x),
                 y:Math.max(hr.y + 30, hr.y + (C.ics * FX3_FLYS) / 2 + FX_SPEND_JY) } : null;
 }
+/* ⛔⛔ 660 — **이 함수는 소비처가 0 이 됐다**(`upFx`·`fxUpOk` 두 곳이 유일한 호출부였고 둘 다 걷혔다).
+   `fxSpendFrom`·`fxSpendT`·`FX_SPEND_*`·`.fx-spd` CSS 도 같은 벌이다.
+   ⚠ **이번 회차에 선언째 걷지 않은 것은 판단이 아니라 선점 규약 때문이다** — 지시서 [-1]·[4]:
+     `docs/claims/619.lock` 이 **살아 있고**(이 회차 시작 시각 기준 heartbeat 1분 전) 619 가 바로
+     이 함수(16·17회차 «이동 거리 상한»·«③ 폴백 클램프»)를 고치는 중이다. 120줄을 지우면 그 세션의
+     진행 중 회차가 통째로 병합 충돌로 죽는다([4] «내 작업 구간이 아닌 곳은 남의 버전을 그대로 둔다»).
+   ⇒ **죽은 코드 철거는 662 로 등재했다**(619 lock 이 풀린 뒤 · 제품 0줄짜리 청소 한 벌).
+     그때까지 이 함수는 **아무도 안 부른다** — 게이트 `verify660` [D] 가 그것을 매 실행 단언한다. */
 function fxSpend(cur, host){
   const C = FXCUR[cur]; if(!C) return false;
   const el0 = (typeof host === 'string') ? document.querySelector(host) : host;
@@ -37394,10 +37448,14 @@ function fxbHit(holes, x, y){
    ⚠ 링 기하·반경·이동량·수명은 한 값도 안 건드렸다. 버리는 것은 «글자 위에 앉을 뻔한» 입자뿐이다. */
 /* ⚑ 619 14회차 — 다섯째 인자 `iv`(틱 간격)를 주면 스파크가 **그 틱 안에서** 사그라든다
    (`fxTickLife` 머리말 — 수리 전 실측 «최대 켜짐 2835ms = ×30 틱 · 동시 20알»). 안 주면 종전 그대로. */
-function fxBurst(t, col, n, strict, iv){
+/* ⚑ 660 — 여섯째 인자 `ic` 는 «이 버스트가 무엇으로 그려지는가»(재화 키)다. 안 주면 종전
+   크림 스파크 그대로다(09·12·17·퀘스트·우편·전투 발 호출은 한 값도 안 바뀐다). 위 `.fx-cic`
+   머리말 — 몸·기하·수명은 그대로이고 갈아 끼우는 것은 «그림» 하나다. */
+function fxBurst(t, col, n, strict, iv, ic){
   /* 77 — 좌표 대상에 combat 태그가 있으면 팝업 아래 레이어. (현재 전투 킬은 캔버스 burst() 를
      쓰므로 실사용 경로는 없지만, 새 전투 발 호출이 생겨도 규칙이 자동 적용되게 맞춰 둔다) */
   const L = (t && t.combat) ? fxLC() : fxL(), p = fxPt(t); if(!L || !p) return;
+  const IC = ic ? FXCUR[ic] : null;                  /* 660 — 없으면 종전 그대로 */
   const cnt = n || 12;
   if(L.childElementCount + cnt > FXMAX) return;
   /* 출발 반경 — 대상이 «요소» 면 그 bbox 테두리 근처에서 튀어나오게 한다(11회차).
@@ -37446,12 +37504,27 @@ function fxBurst(t, col, n, strict, iv){
      (11회차 38~54 · 10회차 46~65). 훈련(408 → 1.00)·단련(471 → 1.15)은 상한에 안 닿아 **불변**이다. */
   const hsc = (strict && r) ? clamp(Math.sqrt(r.w * r.h) / 410, 1, FXB_DMAX / FXB_SZMAX) : 1;
   const sparkMs = fxTickLife(iv, FXSPARK_MS);      /* 619 14회차 — 한 세대가 다음 틱까지 안 산다 */
-  const kh = r ? fxbTextHoles(t, strict ? Math.round(FXB_KOS * hsc) : undefined) : [];
+  /* ⚑⚑ 660 — **아이콘 버스트는 «호스트 자기 글자» keep-out 을 안 탄다.**
+     619 4·8회차의 그 규칙은 호스트가 **카드·행**(326×510 · 998×222)일 때 세운 것이다 —
+     넓은 면 안에서 정보(수치 `.cv` · 진행바 `.rb` · 플로터)를 피해 앉을 빈자리가 넉넉했다.
+     660 이 스폰을 **버튼**으로 옮기자 그 전제가 깨졌다: 단련 `.tb` 는 340×74 인데 라벨 잉크가
+     상자의 대부분이라, keep-out 여유(`FXB_KOS × hsc`)까지 물리면 **빈자리가 사실상 0** 이 된다.
+     실측(`p660b`, 이 회차): 요청 4알 중 **실제로 앉은 것이 1알**(6회차 «버스트당 최소 1개 보장» 이
+     혼자 살아남은 그림) — 세 탭 전부 같았다. 그러면 «터진다» 가 아니라 «한 알씩 튄다» 다.
+     ⇒ **이 자리에서는 글자 구멍을 안 판다.** 근거 둘:
+       ① 뜻이 반대다 — 619 의 keep-out 은 «파티클이 **정보**를 가리지 마라» 인데, 버튼 라벨은
+          홀드 내내 안 변하는 고정 글자이고 주인은 바로 그 버튼에서 터지기를 지시했다.
+          가리면 안 되는 것들(수치 `.cv` · 진행바 `.rb` · 플로터)은 **버튼 안에 아예 없다**.
+       ② 숫자 플로터가 이 세 탭에서 폐지됐으므로(659) 8회차가 추가한 `.fx-plus` 구멍은 팔 대상도 없다.
+     ⚠ **융합 회피(`ks`)와 위상·반경 굴림은 그대로 탄다** — 12회차가 닫은 «연속 버스트가 같은 자리»
+       는 keep-out 이 아니라 그쪽이 막는 것이라, 겹쳐도 «판때기» 가 되지 않는다.
+     ⚠ 종전 호출(`ic` 없음 — 09·12·17·퀘스트·우편·장비)은 한 값도 안 바뀐다. */
+  const kh = (r && !IC) ? fxbTextHoles(t, strict ? Math.round(FXB_KOS * hsc) : undefined) : [];
   /* ⚑ 619 8회차 — strict 구멍 두 벌 추가(비평가 DT·DU 2인 공통 «스파크가 −n 플로터를 70% 은폐 ·
      진행바 위에 착지»): ① 살아 있는 플로터(`.fx-plus`) — 정보 층인데 #fxl 에 살아 호스트 자손 스캔에
      안 잡힌다 ② 진행바(`.rb`) — 단색 배경이라 43회차 «그림 잉크» 판정(backgroundImage)에 안 걸린다.
      이 버스트 순간의 스냅숏이면 충분하다(스파크 수명 300ms ≪ 플로터 이동 24px). */
-  if(strict && r && kh.length < 24){
+  if(strict && r && !IC && kh.length < 24){          /* 660 — 아이콘 버스트는 위 머리말대로 구멍을 안 판다 */
     const f2 = fxSc();
     if(f2){
       const K2 = Math.round(FXB_KOS * hsc), hb2 = t.getBoundingClientRect();
@@ -37528,6 +37601,12 @@ function fxBurst(t, col, n, strict, iv){
     el.style.width = sz + 'px'; el.style.height = sz + 'px';
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     el.style.setProperty('--c', col || FXPAL.spark);  /* 16회차 — 글로우 오브의 본색(radial 중간대) · 512 표에서만 */
+    /* ⚑ 660 — 재화 아이콘 버스트. 크기(sz)·자리(sx,sy)·이동(--dx,--dy)·수명은 위·아래에서
+       이미 정해진 것을 그대로 쓰고, 여기서는 «구슬 대신 아이콘» 만 갈아 끼운다.
+       ⚠ `curIc(k)` 에 크기를 **안 넘긴다** — 넘기면 인라인 width/height 가 박혀 위 CSS 의
+         `width:100%`(= 이 알의 sz)를 못 이긴다(543 이 골드에서 겪은 «인라인과 싸운다»). */
+    if(IC){ el.className = 'fx-spark fx-cic'; el.innerHTML = curIc(IC.cur);
+      el.style.setProperty('--fxgs', fxGrainSc(ic).toFixed(4)); }
     /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로(위 인자 머리말). 제거는 `fxBye` 가
        실제 애니 끝에서 재므로 따라온다(41회차 규약 — 여기서 상수를 새로 적지 않는다). */
     if(sparkMs !== FXSPARK_MS) el.style.animationDuration = sparkMs + 'ms';
@@ -37859,8 +37938,12 @@ function fxUpOk(target, at, txt, cur, inset){
      둘 다 쏘면 한 사건에 파티클 13개라 21회차가 폐기한 «손맛이 아니라 잡음» 이 된다.
      ⚠ 알갱이를 못 쏘는 순간(레이어 없음 · FXMAX 포화 · 출발 자리 없음)에는 **종전 앰버가 그대로** 뜬다 —
        바닥이 종전보다 얕아지는 일은 없다. 흰 플래시·카드 펄스(= «성공» 신호)는 한 줄도 안 건드렸다. */
-  if(!(cur && typeof fxSpend === 'function' && fxSpend(cur, target || at)))
-    fxBurst(at || target, FXPAL.up, 10);      /* 512 — 색은 표에서만(값은 종전 앰버 그대로) */
+  /* ⚑⚑ 660 — `cur` 를 준 호출(= 23 훈련 홀드 둘뿐)은 **강화 버튼에서 터지는 재화 아이콘 버스트**로
+     갈아 끼운다. 583 의 «알약 → 버튼» 비행(`fxSpend`)은 폐지(= 658) — 위 `upFx` 의 같은 자리 머리말.
+     ⚠ `cur` 를 **안** 주는 호출(09·12·17·장비·코스튬·유물)은 한 값도 안 바뀐다 — 종전 크림 스파크
+       10개 그대로다. 이 지시의 스코프는 «훈련·단련·룬 세 탭» 이고 그 셋만 `cur` 를 신고한다. */
+  if(cur) fxBurst(fxBurstAt(target || at), FXPAL.up, 10, true, null, cur);
+  else    fxBurst(at || target, FXPAL.up, 10);   /* 512 — 색은 표에서만(값은 종전 앰버 그대로) */
   /* 델타는 카드의 «수치 행»(.cv) 에서 떠오른다 — 없으면 카드 자체 */
   if(txt) fxDelta((target && target.querySelector && target.querySelector('.cv')) || target || at, txt);
 }
