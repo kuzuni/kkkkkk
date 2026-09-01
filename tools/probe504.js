@@ -385,14 +385,74 @@ const ok = (b, name, detail) => {
 
   /* [C2] — 그래서 그 하네스의 값이 위로 뜬다. **같은 초수·같은 종**으로 묻고, 판정에서는
      ⏸접촉(695)을 뺀다 — «이 눈금으로 못 잰다» 고 적어 놓고 그 값을 단언에 넣으면 자가 자기
-     말을 뒤집는다(695 §4-6 이 [D2] 에서 한 처분). 표에는 남겨 매 실행 찍힌다. */
+     말을 뒤집는다(695 §4-6 이 [D2] 에서 한 처분). 표에는 남겨 매 실행 찍힌다.
+
+     ⚑⚑ **775 정오표 — 옛 판정의 «전 종» 은 이 자 자신의 [C3] 이 이미 거짓이라고 적어 둔 말이었다.**
+     옛 항은 `judged.every(infl > 1.15)` 였고 `nova` 가 그 문턱에 **붙어 살았다**(4회 중 1회 빨강 ·
+     실측 1.09~1.78 · 여유가 다른 종의 1/6~1/10). 그런데 [C3] 은 같은 실행에서 «개체수를 고정하면
+     부호가 종마다 갈린다(gale·nova 는 내려간다)» 를 **PASS 로** 찍는다 — 즉 이 자는 한 항으로
+     «전 종 균일» 을 묻고 다음 항으로 «종마다 갈린다» 를 물어 **스스로를 뒤집고 있었다.**
+     ⚠ 문턱 1.15 를 내리는 길은 695-④·759·766 이 세 번 기각했고, 여기서도 답이 아니다 —
+     `nova` 의 중심값 자체가 1.3 근처라 반복 수를 3 → 12 로 올려도(√ 로만 좁아진다) 여유가
+     1σ 언저리에 남는다. **뿌리는 표본도 문턱도 아니라 «전칭» 이라는 판정의 모양**이다.
+     ⇒ 333 처방대로 자리를 비우지 않고 방향을 갈랐다:
+       · **크기**는 «전 종» 이 아니라 **중앙값·평균**이 진다([C2] — 문턱은 내린 게 아니라 1.15 →
+         **1.5(중앙값)** 로 오히려 올라갔고, 실측 중앙값 1.75~2.13 이라 여유가 넉넉하다).
+       · **왜 종마다 다른가**는 [C2b] 가 진다 — 항등식 `값 배수 = 개체수 배수 × 도달 몫 비` 에서
+         갈리는 것은 **도달 몫**(한 발이 판의 몇 %를 때리는가)이다. `nova`(t:'area' r250)는
+         개체수가 ×2.4 로 늘어도 그 반경 밖에 쌓이므로 도달 몫이 반토막 난다 = **포화**다.
+       · **이 바가 잡음만으로 넘어가지 않는다**는 [C2r] 이 진다(759-② «면제를 얹으면 통째로
+         사라져도 초록인지 세어 보라»의 짝) — 하네스를 끈 짝(실제↔실제)에는 같은 바를 못 넘는다.
+     상세 `docs/review/775-probe504불사배수전칭단언.md`. 재현 자는 `tools/probe775.js`. */
   const judged = cmp.filter(x => !x.hold);
-  const upAll = judged.every(x => x.infl > 1.15);
-  ok(upAll && avg(judged.map(x => x.infl)) >= 1.3,
-     'C2 `verify484` [E] 불사 하네스는 값을 위로 민다 — 같은 초수에서 ⏸접촉을 뺀 표본 **전 종**이 위로 간다',
+  const med = a => { const s = a.slice().sort((p, q) => p - q); const h = s.length >> 1;
+                     return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+  const inflMed = med(judged.map(x => x.infl)), inflAvg = avg(judged.map(x => x.infl));
+  ok(inflMed >= 1.5 && inflAvg >= 1.3,
+     'C2 `verify484` [E] 불사 하네스는 값을 위로 민다 — ⏸접촉을 뺀 표본의 **중앙값·평균**이 위로 간다(종별 크기는 [C2b] 몫)',
      judged.map(x => x.id + ' ×' + x.infl.toFixed(2)).join(' · ')
-     + ' · 평균 ×' + avg(judged.map(x => x.infl)).toFixed(2)
+     + ' · 중앙값 ×' + inflMed.toFixed(2) + '(≥1.5) · 평균 ×' + inflAvg.toFixed(2) + '(≥1.3)'
      + (cmp.length - judged.length ? ' (⏸접촉 제외: ' + cmp.filter(x => x.hold).map(x => x.id + ' ×' + x.infl.toFixed(2)).join(',') + ')' : ''));
+
+  /* [C2b] — 옛 전칭이 거짓인 **이유**를 자가 직접 잰다. `infl = popX × rx` 는 항등식이므로
+     (`rx` = 도달 몫 비 = 「불사 판에서 한 발이 판의 몇 %」 ÷ 「실제 판에서 한 발이 판의 몇 %」)
+     묻는 것은 항등식이 아니라 **`rx` 가 종마다 갈린다는 사실**과 **`infl` 의 순위를 정하는 것이
+     개체수가 아니라 그 `rx` 라는 것**이다 — 값 배수의 아래쪽은 «그날 잡음이 때린 종» 이 아니라
+     **포화한 종**이다(개체수가 ×2 넘게 늘어도 반경 밖에 쌓여 도달 몫이 반토막 난다).
+     ⚠ 이름도, «꼴찌 한 종» 도 적지 않았다(620·759-③ · 775 1회차 실측 — 값 배수의 최솟값은
+     `nova` 와 `gale` 사이를 오간다. 그 둘은 [C3] 이 «개체수를 고정하면 내려간다» 로 이미 같이
+     지목한 짝이라 **한 종만 묻는 자는 그 자체로 또 동전**이었다). 순위 상관 하나로 묻는다. */
+  const rxOf = x => (x.imm / x.immPop) / (x.real / x.realPop);
+  const rxs = judged.map(x => ({ id: x.id, rx: rxOf(x), infl: x.infl }));
+  const rank = (arr, key) => { const s = arr.slice().sort((a, b) => a[key] - b[key]);
+                               return new Map(s.map((x, i) => [x.id, i + 1])); };
+  const rRx = rank(rxs, 'rx'), rIn = rank(rxs, 'infl'), n = rxs.length;
+  const d2 = rxs.reduce((a, x) => a + Math.pow(rRx.get(x.id) - rIn.get(x.id), 2), 0);
+  const rho = 1 - 6 * d2 / (n * (n * n - 1));            /* 스피어만 — n=5 라 인접 1회 뒤바뀜이 0.9 */
+  const rxSpread = Math.max(...rxs.map(x => x.rx)) / Math.min(...rxs.map(x => x.rx));
+  console.log('      [C2b] 도달 몫 비 rx(= 한 발이 판의 몇 % 를 때리는가, 불사÷실제) — '
+    + rxs.map(x => x.id + ' ' + x.rx.toFixed(2)).join(' · '));
+  ok(rxSpread >= 1.5 && rho >= 0.7,
+     'C2b 값 배수가 종마다 다른 뿌리는 **도달 몫**이다 — `rx` 가 종마다 갈리고(포화), 값 배수의 순위를 정하는 것이 개체수가 아니라 그 `rx` 다',
+     'rx 최대÷최소 ×' + rxSpread.toFixed(2) + '(≥1.5) · 순위상관 ρ(rx, 값 배수) ' + rho.toFixed(2) + '(≥0.7)'
+     + ' · rx 아래 둘 ' + rxs.slice().sort((a, b) => a.rx - b.rx).slice(0, 2).map(x => x.id).join(',')
+     + ' · 값 배수 아래 둘 ' + rxs.slice().sort((a, b) => a.infl - b.infl).slice(0, 2).map(x => x.id).join(','));
+
+  /* [C2r] — **되돌림 시험(새 상수·새 실행 0).** [C2] 의 바(중앙값 1.5)가 «하네스 덕» 인지
+     «잡음 덕» 인지 가른다: 같은 `Cruns` 안에서 **하네스를 끈 짝**(실제 ↔ 다른 회차의 실제)으로
+     같은 비를 만들면 그 중앙값은 1 근처에 앉아 바를 못 넘어야 한다. 넘으면 [C2] 는 하네스가
+     아니라 회차 흔들림을 재고 있는 것이다(722 «[C2] 를 초록으로 만들던 것은 한 종의 분모였다»). */
+  const nullX = [];
+  for (const x of judged) {
+    const row = B.find(y => y.id === x.id), k = row.cd > 0 ? 'per' : 'hps';
+    const v = Cruns.map(c => c[x.id].real[k]);
+    for (let i = 0; i < v.length; i++) for (let j = 0; j < v.length; j++) if (i !== j && v[j]) nullX.push(v[i] / v[j]);
+  }
+  const nullMed = med(nullX);
+  ok(nullMed < 1.5 && nullMed > 1 / 1.5,
+     'C2r 되돌림 — 하네스를 끈 짝(실제↔실제)은 같은 바를 못 넘는다 ⇒ [C2] 가 잰 것은 회차 흔들림이 아니라 하네스다',
+     '무하네스 중앙값 ×' + nullMed.toFixed(2) + ' (바 1.5 · 표본 ' + nullX.length + '쌍 · 폭 ×'
+     + Math.min(...nullX).toFixed(2) + '~×' + Math.max(...nullX).toFixed(2) + ')');
 
   /* [C3] — **되돌림 시험 겸 기계 확정.** 같은 불사를 «개체수를 고정한 자» 위에서 켜면
      그 부풀림이 사라지고 부호가 종마다 갈린다 ⇒ [C2] 가 잰 것은 «뭉침» 이 아니라 **개체수**다.
