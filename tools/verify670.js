@@ -92,8 +92,8 @@ const PRE = { btn: '단련 1', room10: 1.13 };
      아니었다. 686 이 단련 버튼만 173px 로 키우면서 아이콘 크기를 전용 상수 `TP_CUR_PX`(96)로
      갈랐다 — `TR_CUR_PX`(53)는 아직 74px 인 **룬 [강화] 버튼과 공유**라 같이 못 올린다.
      ⇒ 상수 이름을 둘 다 받아들이되 «두 항뿐» 은 그대로 잠근다. */
-  ok(/btn: *curIc\('tstone', *(TR|TP)_CUR_PX\) *\+ *fmt\(c\)/.test(CODE),
-    '[2-e] 라벨식이 «아이콘 + 비용» 두 항뿐이다(686 — 크기 상수만 단련 전용 TP_CUR_PX 로 갈렸다)');
+  ok(/btn: *curIc\('tstone', *(TR|TP)_CUR_PX\) *\+ *('<b class="tbn">' *\+ *)?fmt\(c\)/.test(CODE),
+    '[2-e] 라벨식이 «아이콘 + 비용» 두 항뿐이다(686 3회차 — 숫자에 정렬용 껍데기 `<b class="tbn">` 만 씌웠다)');
 
   /* ══ [3] 뜻 보존 ════════════════════════════════════════════════════════ */
   console.log('\n=== [3] 뺀 말이 화면에 남아 있는가(등재문 ⚠ — 버튼이 «무슨 버튼» 인지) ===');
@@ -148,8 +148,10 @@ const PRE = { btn: '단련 1', room10: 1.13 };
     const CUR = (typeof TP_CUR_PX !== 'undefined') ? TP_CUR_PX : TR_CUR_PX;
     lab.innerHTML = curIc('tstone', CUR) + '9,999,999,999';
     const room10 = b.width - 16 - lab.getBoundingClientRect().width;
-    lab.innerHTML = curIc('tstone', CUR) + '99,999,999';
-    const room8 = b.width - 16 - lab.getBoundingClientRect().width;
+    lab.innerHTML = curIc('tstone', CUR) + '999,999';
+    const room6 = b.width - 16 - lab.getBoundingClientRect().width;
+    lab.innerHTML = curIc('tstone', CUR) + '9,999,999';
+    const room7 = b.width - 16 - lab.getBoundingClientRect().width;
     lab.innerHTML = keep;
     return {
       w: +b.width.toFixed(1), h: +b.height.toFixed(1),
@@ -157,7 +159,7 @@ const PRE = { btn: '단련 1', room10: 1.13 };
       curTop: +(c.top - b.top).toFixed(1), curBot: +(b.bottom - c.bottom).toFixed(1),
       inkL: +(i.left - b.left).toFixed(1), inkR: +(b.right - i.right).toFixed(1),
       gapTd: +(b.left - td.right).toFixed(1),
-      room10: +room10.toFixed(2), room8: +room8.toFixed(2),
+      room10: +room10.toFixed(2), room6: +room6.toFixed(2), room7: +room7.toFixed(2),
     };
   });
   ok(Math.abs(geo.w - 340) < 0.5 && Math.abs(geo.h - 173) < 0.5,
@@ -179,9 +181,9 @@ const PRE = { btn: '단련 1', room10: 1.13 };
      으로 쓰는 far 표본은 Lv 10만(비용 501,501 = 6자리 — `verify210` [C])이라 **4.5배 여유**다.
      ⇒ 항을 지우지 않고 **예산 자릿수를 8로 다시 적는다**(333 처방). 되돌리려면 `.tr-tp>.tb` 의
      font-size 42 와 `TP_CUR_PX` 96 을 내리면 10자리가 그대로 돌아온다. */
-  ok(geo.room8 > 0,
-    '[5-f] 686 — 자릿수 예산은 **8자리**다(라벨 확대의 대가 · Lv 44.7만까지 = far 표본 Lv 10만의 4.5배)',
-    `8자리 여유 ${geo.room8} · (10자리는 ${geo.room10} — 686 이 의도적으로 쓴 여유)`);
+  ok(geo.room6 > 0,
+    '[5-f] 686 3회차 — 자릿수 예산은 **6자리**다(라벨 확대의 대가 · 비용 999,999 까지 = 이 저장소의 far 표본 Lv 10만 비용 501,501 의 2배)',
+    `6자리 여유 ${geo.room6} · 7자리 ${geo.room7} · (10자리는 ${geo.room10})`);
 
   /* ══ [6] 297·584 회귀 ═══════════════════════════════════════════════════ */
   console.log('\n=== [6] 297 두 경로 동일 · 584 의 나머지 축은 안 건드렸다 ===');

@@ -10884,7 +10884,8 @@
         **4.5배 여유**다. ⚠ 크기 짝은 «96·38» 이다 — 42 로 올리면 같은 채움률에 8자리 여유가
         17.3 → **−3.9(넘침)** 이 된다(`probe686` ⓓ 스윕). 되돌림은 아래 세 값뿐. */
   .tr-tp>.tb{right:26px;top:22px;width:340px;height:173px;border-radius:20px;cursor:pointer;
-    text-align:center;line-height:173px;font-size:38px;color:#fff;
+    text-align:center;line-height:173px;font-size:48px;color:#fff;
+    font-variant-numeric:tabular-nums;
     background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 8px #141414,0 5px 0 #3F7412}
   /* 584 — 버튼 안 화폐. 세로 정렬은 «잉크 중심 = 버튼 중심» 으로 잡는다 — 값은 취향이 아니라
@@ -10894,7 +10895,13 @@
      상하 여백의 **대칭**을 잰다)는 그대로이고 값만 다시 풀었다: fs 38 · 아이콘 96 에서 −37.5 가
      위 **38.5** / 아래 **38.5**. 여백(10px)도 아이콘이 커진 만큼 6 → 10.
      ⚠ font-size 를 바꾸면 baseline 이 움직여 이 값도 같이 다시 풀어야 한다(반여백이 fs 를 탄다). */
-  .tr-tp>.tb .cic{vertical-align:-37.5px;margin-right:10px}
+  .tr-tp>.tb .cic{vertical-align:-30.5px;margin-right:18px}
+  /* 686 3회차 — 숫자 잉크 중심을 아이콘 중심에 맞추는 보정. 비평가 C·D 가 «숫자가 아이콘 중심보다
+     3.5~4px 위»(3행 모두 같은 방향 = 계통 오차)를 독립으로 짚었고, **자로 풀어 값이 정확히 나왔다**:
+     baseline 100 · 숫자 잉크(캡하이트 34 · 디센트 0 — canvas TextMetrics 실측)의 중심 **83** ·
+     아이콘 중심 **86.5** ⇒ 차 **3.5px**. 이 한 줄로 아이콘 중심 · 숫자 잉크 중심 · 버튼 중심이
+     셋 다 86.5 로 겹친다. ⚠ `font-weight:inherit` 이 있어야 `<b>` 기본 굵기가 안 얹힌다. */
+  .tr-tp>.tb .tbn{position:relative;top:3.5px;font-weight:inherit}
   .tr-tp>.tb.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
   /* (614) 회수 줄(.tp-ft)은 기능째 폐지 — CSS 도 선언째 걷어냈다(죽은 코드 금지 규약) */
@@ -34759,7 +34766,7 @@ const TR_CUR_PX = 53;
 /* 686 2회차 — **단련 버튼만** 화폐 아이콘을 키운다. 위 상수를 못 올리는 이유가 주석에 그대로 있다:
    `TR_CUR_PX` 는 룬 [강화] 버튼과 **공유**인데 그 버튼은 아직 74px 이라 96 이 안 들어간다.
    단련 버튼만 686 으로 173px 이 됐으므로 이 자리에만 제 상수를 준다(수치 근거는 `.tr-tp>.tb` 주석 ⓒ). */
-const TP_CUR_PX = 96;
+const TP_CUR_PX = 88;
 /* ⚑ 628 — «+n» 도 알약과 **같은 자**로 말한다(2026-09-01).
    486 이 알약(`.cv`)을 «지금 최종값»(`TRAIN_NOW` = `stat.*`)으로 옮길 때 «+n» 줄은 옛 축
    (`u.val()` 기저)에 남았다 — 한 카드 안에서 두 수가 서로 다른 자를 쓰고 있었다.
@@ -35085,7 +35092,12 @@ function temperRowTxt(t){
        버튼 안의 «단련» 은 한 화면에 세 번째 나오는 같은 말이었다.
        ⚠ 상자(340)는 그대로다 — 584 가 넓힌 근거는 «자릿수 최악에서 넘친다» 였고
        라벨이 짧아지면 여유가 1.13 → 61.89 로 **늘기만** 한다(`probe670` ⓒ). */
-    btn: curIc('tstone', TP_CUR_PX) + fmt(c),   /* 686 — 단련 버튼 전용 크기(룬과 공유 금지) */
+    /* 686 3회차 — 숫자를 `<b class="tbn">` 로 감싼다. 두 가지를 위해서다:
+       ① 비평 2인(C·D)이 «숫자 잉크 중심이 아이콘 중심보다 3.5~4px 위»(3행 모두 같은 방향 = 계통 오차,
+          캡하이트 박스 ↔ em 박스 차)를 독립으로 짚었다 — 그 보정을 CSS 로 걸 자리가 필요하다.
+       ② 자가 «숫자만» 의 rect 를 잴 수 있게 된다(그 전에는 아이콘과 한 덩어리라 못 쟀다).
+       ⚠ 라벨식은 여전히 «아이콘 + 비용» 두 항이다(670 [2-e] 의 뜻) — 껍데기만 씌웠다. */
+    btn: curIc('tstone', TP_CUR_PX) + '<b class="tbn">' + fmt(c) + '</b>',
     ok:  temperUpOk(t.k)
   };
 }

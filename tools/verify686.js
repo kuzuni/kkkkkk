@@ -159,22 +159,48 @@ async function openAt(browser, H) {
       return { top: r(a.top - b.top), bot: r(b.bottom - a.bottom),
                left: r(a.left - b.left), right: r(b.right - a.right) }; };
     const cs = getComputedStyle(btn);
+    /* 686 3회차 — 숫자 잉크 중심 ↔ 아이콘 중심 보정을 **자가 스스로 푼다**(손으로 박은 수가 아니다):
+       baseline = 아이콘 하변 − |vertical-align| · 잉크 중심 = baseline − (asc − desc)/2 (canvas TextMetrics).
+       서체가 바뀌면 need 가 따라 움직이고, CSS 의 top 이 안 따라오면 이 항이 빨개진다. */
+    const num = btn.querySelector('.tbn');
+    const cv = document.createElement('canvas').getContext('2d');
+    cv.font = cs.fontSize + ' ' + cs.fontFamily;
+    const tm = cv.measureText('8');
+    const vaPx = parseFloat(getComputedStyle(img).verticalAlign);
+    const baseline = (img.getBoundingClientRect().bottom - b.top) - (-vaPx);
+    const inkCy = baseline - (tm.actualBoundingBoxAscent - tm.actualBoundingBoxDescent) / 2;
+    const iconCy = img.getBoundingClientRect().top + img.getBoundingClientRect().height / 2 - b.top;
+    const need = Math.round((iconCy - inkCy) * 100) / 100;
+    const applied = parseFloat(getComputedStyle(num).top) || 0;
     /* computed boxShadow 는 «rgb(...) 0px 0px 0px 8px inset, rgb(...) 0px 5px 0px» 꼴이다 —
        inset 항의 네 번째 길이(spread)가 테 두께다. */
     const insetPart = cs.boxShadow.split(/,(?![^(]*\))/).find(t => /inset/.test(t)) || '';
     const nums = (insetPart.match(/(-?[\d.]+)px/g) || []).map(parseFloat);
     const stroke = nums.length >= 4 ? nums[3] : null;
     return { img: m(img), ink: m(ink), fs: cs.fontSize, lh: cs.lineHeight, stroke,
-             fill: img.getBoundingClientRect().height / b.height };
+             fill: img.getBoundingClientRect().height / b.height,
+             need, applied, inkH: Math.round((tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent) * 10) / 10,
+             ratio: Math.round(img.getBoundingClientRect().height
+                    / (tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent) * 100) / 100,
+             tab: cs.fontVariantNumeric };
   });
   ok(Math.abs(C.img.top - C.img.bot) <= 3 && C.img.top >= 5,
     '[4-a] ★ 화폐 아이콘 상하 여백 대칭(line-height 를 같이 올린 것으로 자동 성립)',
     `위 ${C.img.top} · 아래 ${C.img.bot}`);
   ok(Math.abs(C.ink.left - C.ink.right) <= 3 && C.ink.left > 0,
     '[4-b] 라벨이 가로 중앙(670 [5-d] 회귀)', `좌 ${C.ink.left} · 우 ${C.ink.right}`);
-  ok(C.lh === '173px' && C.fs === '38px',
-    '[4-c] line-height = 코어 높이(173) · font-size 38(2회차 — 비평 2인 «면 대비 잉크 6%» 반영 · 8자리 여유 17.3)',
+  ok(C.lh === '173px' && C.fs === '48px',
+    '[4-c] line-height = 코어 높이(173) · font-size 48(3회차 — 비평 2인 «숫자가 아이콘에 눌렸다» 반영)',
     `fs ${C.fs} · lh ${C.lh}`);
+  ok(Math.abs(C.applied - C.need) <= 0.05,
+    '[4-f] ★ 3회차 — 숫자 잉크 중심 보정이 **자가 푼 값과 일치**(아이콘 중심 ↔ 숫자 잉크 중심 정렬)',
+    `필요 ${C.need}px · CSS top ${C.applied}px`);
+  ok(C.ratio <= 2.8,
+    '[4-g] ★ 3회차 — 아이콘:숫자잉크 비율(2회차 3.56:1 이 «정보가 장식에 눌렸다» 로 ② 를 6점에 묶었다)',
+    `${C.ratio}:1 (아이콘 ${C.img ? '' : ''}88 · 숫자 잉크 ${C.inkH})`);
+  ok(/tabular-nums/.test(C.tab),
+    '[4-h] 3회차 — 자릿수 고정 숫자(비평 2인 «아이콘이 행마다 4px 흔들린다» — 1·3·6 자폭 차이가 원인)',
+    C.tab);
   ok(C.fill >= 0.5 && C.fill <= 0.7,
     '[4-d] ★ 2회차 — 세로 채움률(잉크 높이 ÷ 코어 높이)이 50~70%(1회차 29.8% 가 ② 를 4점으로 떨어뜨렸다)',
     `${Math.round(C.fill * 1000) / 10}%`);

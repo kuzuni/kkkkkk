@@ -154,9 +154,9 @@ const openAt = async (browser, h) => {
      ⇒ **단련만** 전용 상수 `TP_CUR_PX`(96)로 갈랐다. 584 의 «기준선은 상수 한 곳» 규약은 안 죽는다 —
      [2-b]·[2-c]·[2-d](훈련·룬)가 그대로 지키고, 이 항은 «단련은 제 상수를 **상수로** 읽는가» 로
      방향을 옮긴다(손으로 적은 수가 아니어야 한다는 것이 584 의 뜻이다). */
-  ok(/const TP_CUR_PX = 96;/.test(CODE) && cur.temp && near(cur.temp.w, 96, 3),
-    '[2-e] ★ 686 — 단련 화폐는 전용 상수 `TP_CUR_PX`(96)를 읽는다(룬은 기준선 53 그대로 = [2-d])',
-    cur.temp && `${cur.temp.w} ↔ TP_CUR_PX 96 (기준선 ${cur.base.w} 대비 ${p1(cur.temp.w / cur.base.w * 100)}%)`);
+  ok(/const TP_CUR_PX = 88;/.test(CODE) && cur.temp && near(cur.temp.w, 88, 3),
+    '[2-e] ★ 686 — 단련 화폐는 전용 상수 `TP_CUR_PX`(88)를 읽는다(룬은 기준선 53 그대로 = [2-d])',
+    cur.temp && `${cur.temp.w} ↔ TP_CUR_PX 88 (기준선 ${cur.base.w} 대비 ${p1(cur.temp.w / cur.base.w * 100)}%)`);
   ok(cur.tempN === 1, '[2-f] 단련 버튼 안 화폐 아이콘은 **정확히 1장**이다', cur.tempN + '장');
   /* ⚑ 644(2026-09-01) — 이 항은 **헛초록이었다.** 옛 술어는 세 파일의 `viewBox` **문자열**이
      `0 0 64 64` 로 같은지만 보고 «상자가 같다 = 잉크가 같다» 를 주장했는데, 그 결론은 세 아트가
