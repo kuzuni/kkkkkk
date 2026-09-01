@@ -6,7 +6,7 @@
      [2] 트레일  — 전 종(193 이후 27종)을 각각 강제 시전해 투사체가 나가는 종류는 «트레일 표본 ≥ 2» 가 쌓이는가
      [3] 임팩트  — 명중 순간 링(rings)이 생기고 치명타는 2겹인가 · 방향성 스파크가 진행 반대인가
      [4] 폭발    — 폭발형 4종(화염구·운석·심판의 빛·창세의 폭발)이 충격파 링 ≥ 3 · 흙/불 파편(gy) ·
-                   cam.shake 상승 · 연쇄 폭발(지연 링)을 내는가
+                   연쇄 폭발(지연 링)을 내는가 · **화면은 흔들지 않는가**(698 이관 — 방향 반전)
      [5] 번개    — 경로가 한 번만 굳고(프레임 간 불변) 가지 2~3개 · 잔광 수명 0.30s 인가
      [6] 등급    — 같은 종류에서 등급이 오르면 트레일 길이가 «+10%/등급» 으로 길어지는가
      [7] 밸런스  — 피해 계수(m)·쿨(cd)·폭발 반경이 하나도 안 바뀌었는가 (연출은 피해에 손대지 않는다)
@@ -395,8 +395,12 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   }, BOOM_R);
   for (const id of Object.keys(BOOM_R)) {
     const r = booms[id];
-    ok(r.ringsMax >= 3 && r.debrisMax >= 3 && r.shakeMax >= 3,
-       id + ' — 충격파 링 ' + r.ringsMax + '겹 · 파편 ' + r.debrisMax + '개 · shake ' + r.shakeMax);
+    /* 698 이관(2026-09-02, 주인 지시 «스킬중에 화면 흔들리는거 있으면 화면 흔들리는 효과 제거좀») —
+       옛 항은 `shakeMax >= 3` 으로 «스킬이 화면을 흔들 것» 을 요구했다. 지시가 그 방향을 뒤집었으므로
+       333 처방대로 **항을 지우지 않고 방향만 반전**한다(지우면 셰이크가 되살아나도 초록인 자가 된다).
+       링·파편 요구는 그대로다 — 흔들림을 뺀 대가로 폭발 자체가 죽으면 여기서 빨개진다. */
+    ok(r.ringsMax >= 3 && r.debrisMax >= 3 && r.shakeMax === 0,
+       id + ' — 충격파 링 ' + r.ringsMax + '겹 · 파편 ' + r.debrisMax + '개 · 화면 흔들림 없음(shake ' + r.shakeMax + ')');
   }
   ok(booms.boom.delayed >= 1 || booms.boom.chainSeen >= 1,
      '화염구 착탄에 연쇄(지연 발화) 폭발 — 지연 링 ' + booms.boom.delayed + ' · 연쇄 스펙 ' + booms.boom.chainSeen);
@@ -609,7 +613,10 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     S.opt.shake = true;
     return { off };
   });
-  ok(gate.off === 0, '55 «화면 흔들림» OFF 면 폭발이 나도 cam.shake 0 (실측 ' + gate.off + ')');
+  /* 698 이관 — 옛 라벨은 «폭발이 나도» 였다. 폭발은 더 이상 셰이크를 올리지 않으므로(위 [4])
+     그 문구는 이제 헛말이다. 이 항이 재는 것은 **55 옵션 축**(어디서 올라온 셰이크든 OFF 면 즉시 0)이고,
+     그래서 표본은 폭발이 아니라 손으로 넣은 20 이다. ON 쪽(감쇠하며 남는다)은 `verify698` [E1]. */
+  ok(gate.off === 0, '55 «화면 흔들림» OFF 면 셰이크 20 을 넣어도 즉시 cam.shake 0 (실측 ' + gate.off + ')');
   ok(errs.length === 0, '콘솔/페이지 에러 0건' + (errs.length ? ' — ' + errs.slice(0,3).join(' | ') : ''));
 
   await b.close();

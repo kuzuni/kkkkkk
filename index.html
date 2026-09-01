@@ -18887,7 +18887,7 @@ const SKILLS = [
   { id:'lance',  n:'천벌의 창', g:5, ic:'🔻', cd:2.30, m:3.3544, hits:4.45, d:'심판의 창 {cnt}자루가 날아가 적 {pierce}명까지 모조리 꿰뚫는다.',
     t:'proj', k:'ice', cnt:3, sp:820, spread:0.30, pierce:8, col:'#ffd0ff', life:1.5 },
   { id:'nova',   n:'창세의 폭발', g:5, ic:'💥', cd:3.60, m:1.6465, hits:14.19, d:'아주 넓은 범위를 통째로 날려버려 화면을 덮은 적을 한 번에 쓸어버린다.',
-    t:'area', r:250, col:'#ffd6ff', shake:9, scale:4.2 },
+    t:'area', r:250, col:'#ffd6ff', scale:4.2 },   /* 698 — `shake:9` 삭제(스킬 셰이크 폐지로 소비처 0) */
   { id:'laser',  n:'레이저',    g:5, ic:'🔆', cd:3.40, m:1.4291, hits:15.44, d:'적을 지지는 빔을 {dur}초 동안 뿜는다. 빔이 닿는 길의 적을 동시에 태운다.',
     t:'beam', dur:1.7, len:470, w:34, tick:0.18, col:'#ff86f0' }   /* 504 — 옛 1.7 은 «한 적이 받는 초». 빔은 길이 470 위의 적을 동시에 지진다(실측 27.15) */
 ];
@@ -22384,7 +22384,11 @@ function boomFx(x, y, r, col, big){
   /* 파편이 파면(2단 링)을 한 번도 추월하지 못해 «화염 텍스처» 로 읽혔다 → 크고 빠르게 */
   debris(x, y, c, big ? 18 : 13, big ? 780 : 620);
   debris(x, y, '#8a6a4a', big ? 11 : 8, 560);                     /* 흙 파편 */
-  cam.shake = Math.max(cam.shake, big ? 6 : 3);
+  /* 698(주인 지시 2026-09-02) — «스킬중에 화면 흔들리는거 있으면 화면 흔들리는 효과 제거».
+     여기서 카메라 셰이크를 올리던 한 줄(big ? 6 : 3)을 걷어냈다. 이 함수는 `areaDamage()`
+     한 곳에서만 불리고 그 호출부 5자리가 전부 **스킬 발동 경로**라(area·holy 시전 · boom/meteor 착탄)
+     부품 안에서 끄는 것이 곧 «스킬발 셰이크 0» 이다. 65 룰렛·108 카메라와 같은 축(화면을 흔드는
+     연출은 폐기). ⚠ 링·파편·화구는 «화면이 아니라 입자» 라 그대로 둔다 — 폭발이 사라지면 안 된다. */
 }
 /* 장판·오라형 시전 — 바닥 마법진 플래시(눕는 링 2겹 + 회전 룬 대용 점) */
 function magicFlash(x, y, r, col){
@@ -22903,7 +22907,8 @@ function castGeneric(s, dmg){
       areaDamage(px, py, s.r || 190, dmg, s.col);
       booms.push({ x:px, y:py, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom',
                    scale:(s.scale || 3.4)*1.45, alpha:0.5 });   /* 114 ④ — 화구를 피해 반경에 맞게 */
-      cam.shake = Math.max(cam.shake, s.shake || 6);
+      /* 698 — 스킬 셰이크 폐지. `s.shake` 를 읽던 유일한 자리라 `SKILLS` 의 `shake:9`(창세의 폭발)도
+         선언째 걷어냈다(295-②·399·460 «죽은 코드 금지»). */
       return true;
     }
     /* 193 — `case 'buff'`(자기 강화 발동)은 폐기했다. 버프 스킬 5종이 사라져 데이터 쪽에서
@@ -23183,7 +23188,7 @@ function castSkillRaw(s){
       magicFlash(px, py, 190, '#fff2b0');                  /* 114 ③ — 시전 순간 바닥 마법진 */
       areaDamage(px, py, 190, dmg, '#fff2b0');
       booms.push({ x:px, y:py, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom', scale:5.4, alpha:0.5 });
-      cam.shake = Math.max(cam.shake, 6);
+      /* 698 — 심판의 빛 시전 셰이크 폐지 */
       return true;
     }
     /* 86 — 신설 11종은 전부 여기로 떨어진다(기존 13종의 분기는 위에서 그대로 처리됨) */
@@ -23820,7 +23825,7 @@ function step(dt){
            ★ 폭발 안에 적이 있으면 chainBoomFx 가 **그 적 자리**를 쓰므로 이 값은 «적이 없을 때» 의 폴백이다. */
         /* 19회차 — 반경 계수 0.45(Ø117) → 0.30(Ø78). BC[20]·BD[11] 2인 공통 «적의 3.4배» (chainBoomFx 주석) */
         chainBoomFx(b.tx, b.ty, b.r, '#ffb45c', [0.42, 0.78], 0.30, 0.14);
-        cam.shake = Math.max(cam.shake, 8);
+        /* 698 — 운석 착탄 셰이크 폐지 */
         trPut(b); shots.splice(i,1); continue;
       }
       continue;
@@ -23853,7 +23858,7 @@ function step(dt){
           areaDamage(b.x, b.y, b.r, b.dmg, '#ffb45c');
           booms.push({ x:b.x, y:b.y, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:0.5 });
           chainBoomFx(b.x, b.y, b.r, '#ffb45c');          /* 114 ④ */
-          cam.shake = Math.max(cam.shake, 5);
+          /* 698 — 화염구 착탄 셰이크 폐지 */
           trPut(b); shots.splice(i,1); break;
         }
         const crit = Math.random() < stat.crit;
