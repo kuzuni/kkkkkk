@@ -488,24 +488,44 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
                w: +r.width.toFixed(1), h: +r.height.toFixed(1), r2: +(r.right - cr.left).toFixed(1) }; };
     /* 123 — 아레나 카드는 «마주 본 플레이어 2명» 이라 캔버스가 2장이다. 잉크 bbox 는
        두 캔버스를 슬롯 좌표로 합쳐(왼쪽 칸 오프셋 0, 오른쪽 칸 오프셋 = 칸 폭) 하나로 본다. */
-    let ink = null;
-    let off = 0;
-    for (const cv of cvs) {
-      const im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
-      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, on = 0;
-      for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
-        if (im[(y * cv.width + x) * 4 + 3] > 8) { on++;
+    /* 616 — 칸마다 «원본 잉크» 도 같이 잰다(아틀라스 rect 를 1:1 로 그려서). 종횡을 견주려면
+       상자가 아니라 원본이 기준이어야 한다 — `probe616` 과 같은 식이다. */
+    const bboxOf = (d, w, h) => {
+      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        if (d[(y * w + x) * 4 + 3] > 8) {
           if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
       }
-      if (on) {
-        const b = { x0: x0 + off, y0, x1: x1 + off, y1 };
+      return x1 < 0 ? null : { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+    };
+    const srcInkOf = (k, frame) => {
+      const A = ATLAS[k]; if (!A || !A.image) return null;
+      const fr = A.f[frame]; if (!fr) return null;
+      const t = document.createElement('canvas');
+      t.width = fr[2]; t.height = fr[3];
+      const g2 = t.getContext('2d'); g2.imageSmoothingEnabled = false;
+      g2.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, fr[2], fr[3]);
+      return bboxOf(g2.getImageData(0, 0, fr[2], fr[3]).data, fr[2], fr[3]);
+    };
+    let ink = null;
+    let off = 0;
+    const per = [];
+    for (const cv of cvs) {
+      const im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      const b0 = bboxOf(im, cv.width, cv.height);
+      const src = srcInkOf(cv.dataset.arnav ? 'knight' : cv.dataset.thk, cv._fr);
+      per.push({ w: cv.width, h: cv.height,
+                 ink: b0 && { w: b0.w, h: b0.h, x0: b0.x0, y0: b0.y0, x1: b0.x1, y1: b0.y1 },
+                 src: src && { w: src.w, h: src.h } });
+      if (b0) {
+        const b = { x0: b0.x0 + off, y0: b0.y0, x1: b0.x1 + off, y1: b0.y1 };
         ink = ink ? { x0: Math.min(ink.x0, b.x0), y0: Math.min(ink.y0, b.y0),
                       x1: Math.max(ink.x1, b.x1), y1: Math.max(ink.y1, b.y1) } : b;
       }
       off += cv.width;
     }
     if (ink) { ink.w = ink.x1 - ink.x0 + 1; ink.h = ink.y1 - ink.y0 + 1; }
-    return { id: c.dataset.rcard || (c.dataset.arena ? 'arena' : null), th: th ? rel(th) : null,
+    return { id: c.dataset.rcard || (c.dataset.arena ? 'arena' : null), th: th ? rel(th) : null, per,
              cvpx: cvs.length ? [cvs.reduce((a, v) => a + v.width, 0), Math.max(...cvs.map((v) => v.height))] : null,
              ncv: cvs.length, ink,
              pe: th ? getComputedStyle(th).pointerEvents : '',
@@ -532,17 +552,39 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     ok(c.ncv === (e.ncv || 1), `레이드 카드${i + 1} 캔버스 ${c.ncv}장 = ${e.ncv || 1}장`);
     /* «자리를 잡았다» 와 «자리를 채웠다» 는 다르다(LESSONS 72-③) — 잉크가 슬롯 4변에 5px 안으로 닿아야 한다 */
     ok(!!c.ink, `레이드 카드${i + 1} 스프라이트가 실제로 그려졌다`);
-    /* ⚠ **121 6회차 — 세로 판정에 `TH_BOBPAD` 를 더한다.**
-       97 의 «잉크가 슬롯 4변을 채운다» 는 정지 그림 기준으로 옳았지만, 121 의 들썩(최대 −14px)이
-       들어갈 자리를 0px 로 만들어 놓는 규칙이기도 했다. 5회차가 기준선을 내려(`--thby:14px`) 피하려
-       했으나 그건 천장 절단을 **바닥 절단으로 옮긴 것**이었다(6회차 I·J 독립 지적 · `probe121 cut`
-       확장판 «레이드1 바닥 접촉 101px · 14/14 위상»). 이제 `drawSpriteTo` 가 세로로만
-       `TH_BOBPAD`(16px) 를 비우므로, **가로는 그대로 엄격하게** 두고 세로만 그만큼 허용한다.
-       세로 여유가 16 을 넘으면(=그림이 더 쪼그라들면) 여전히 FAIL 이다. */
+    /* ⚠⚠ **616(2026-09-01) — 이 자리를 «채운다» 에서 «찌그러지지 않는다» 로 갈아 끼웠다(333 처방).**
+       옛 항은 97 의 «잉크가 슬롯 4변에 닿는다» 였고 121 6회차가 세로에 `TH_BOBPAD` 만큼 여유를
+       더해 둔 것이었다. 그런데 그 «4변에 닿는다» 는 곧 **원본 종횡을 안 본다**는 뜻이라,
+       레이드 마법사가 ×1.45 · 아레나 기사가 ×1.65 로 늘어난 채 **이 게이트는 내내 초록**이었다
+       (`node tools/probe616.js` 가 수리 전 값을 찍는다). 356(주인 지시 «모든 아이콘 … 원래 이미지
+       비율대로»)이 비균등 스케일을 금지했으므로 **97 이 진다** — 항을 지우지 않고 방향을 뒤집는다.
+       ⚠ 그냥 «등방이면 통과» 로 두면 그림이 칸 구석에 콩알만 하게 그려져도 초록이 된다.
+       97 의 살아 있는 절반(«칸을 놀리지 않는다»)을 함께 지키려고 셋을 같이 묻는다:
+         ⓐ 등방 — 그려진 잉크 종횡 ÷ 원본 잉크 종횡이 0.5% 안(356 [S3] 과 같은 자)
+         ⓑ 담기는 축은 여전히 슬롯을 채운다(옛 허용치 그대로 — 가로 tx · 세로 ty)
+         ⓒ 남는 축의 여백은 **원본 종횡이 정한 값**과 ±3px — 그림이 더 쪼그라들면 빨개진다
+       ⓒ 가 «무르게 푼 수리» 를 막는 항이다. 되돌림 시험은 `verify616` §R 에 있다. */
     const BOBPAD = 16;
     const tx = e.tx || 5, ty = (e.ty || 5) + BOBPAD;
-    if (c.ink) ok(c.ink.x0 <= tx && c.ink.y0 <= ty && c.ink.x1 >= e.w - tx - 1 && c.ink.y1 >= e.h - ty - 1,
-       `레이드 카드${i + 1} 잉크가 슬롯을 채운다 — 가로 ±${tx} · 세로 ±${ty}(=${e.ty || 5}+들썩여유 ${BOBPAD}) (${c.ink.x0},${c.ink.y0})~(${c.ink.x1},${c.ink.y1})`);
+    (c.per || []).forEach((q, j) => {
+      const lab = `레이드 카드${i + 1}${(c.per.length > 1) ? '-칸' + (j + 1) : ''}`;
+      if (!q.ink || !q.src) { ok(false, `${lab} 잉크·원본 잉크를 잴 수 있다`); return; }
+      const aniso = (q.ink.w / q.ink.h) / (q.src.w / q.src.h);
+      ok(Math.abs(aniso - 1) <= 0.005,
+         `${lab} 등방 — 그려진 잉크 ${q.ink.w}×${q.ink.h} ÷ 원본 ${q.src.w}×${q.src.h} = ×${aniso.toFixed(3)} (±0.5%)`);
+      /* 담기는 축 = 여백이 더 작은 축. 그 축은 옛 허용치 그대로 슬롯을 채워야 한다. */
+      const slackX = Math.min(q.ink.x0, q.w - 1 - q.ink.x1), slackY = Math.min(q.ink.y0, q.h - 1 - q.ink.y1);
+      const fitX = slackX <= slackY;
+      ok(fitX ? (q.ink.x0 <= tx && q.ink.x1 >= q.w - tx - 1)
+              : (q.ink.y0 <= ty && q.ink.y1 >= q.h - ty - 1),
+         `${lab} 담기는 축(${fitX ? '가로' : '세로'})이 슬롯을 채운다 — 여백 ${fitX ? slackX : slackY} ≤ ${fitX ? tx : ty}`);
+      /* 남는 축의 여백은 원본 종횡이 정한다: k 는 담기는 축이 정하므로 반대 축 잉크는
+         원본비 × 담기는 축 잉크 여야 하고, 남는 여백은 (칸 − 그 값) / 2 다. */
+      const expOther = fitX ? (q.ink.w * q.src.h / q.src.w) : (q.ink.h * q.src.w / q.src.h);
+      const gotOther = fitX ? q.ink.h : q.ink.w;
+      ok(Math.abs(gotOther - expOther) <= 3,
+         `${lab} 남는 축(${fitX ? '세로' : '가로'}) ${gotOther} = 원본 종횡이 정한 ${expOther.toFixed(1)} (±3)`);
+    });
     ok(c.pe === 'none', `레이드 카드${i + 1} 슬롯 pointer-events:none`);
     const iTh = c.kids.indexOf('th'), iSh = c.kids.indexOf('sh'), iFr = c.kids.indexOf('fr');
     ok(iTh > -1 && iTh < iSh && iTh < iFr, `레이드 카드${i + 1} 썸네일이 .sh/.fr 아래(${iTh} < ${iSh},${iFr})`);
