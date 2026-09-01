@@ -186,7 +186,10 @@ async function arm(page, mode) {
   /* ── [A] 선언 ─────────────────────────────────────────────────────── */
   section('[A] 선언 — «한 자리에 플래시 한 장» 규약이 제품 안에 있다');
   const code = fs.readFileSync(SRC, 'utf8');
-  const fxSrc = (/function fxFlash\(el\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* ⚑ 619 14회차 이관 — 서명에 둘째 인자 `iv`(틱 간격)가 붙었다(«회당 연출의 길이는 틱이 정한다»).
+     **자를 넓힌 것이 아니라 좁힌 것이다** — 인자를 명시로 박아 두므로 그 축이 사라지면 여기가
+     빨개진다. 625 의 뜻(«한 자리에 플래시 한 장»)은 아래 A3~A5 가 그대로 지킨다. */
+  const fxSrc = (/function fxFlash\(el, iv\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
   ok(!!fxSrc, 'A1 `fxFlash()` 를 찾았다', fxSrc ? fxSrc.split('\n').length + '줄' : '없음');
   ok(/const FXFLASH_SAME\s*=\s*\d+/.test(code), 'A2 허용 오차 상수 `FXFLASH_SAME` 이 선언돼 있다',
      (/const FXFLASH_SAME\s*=\s*(\d+)/.exec(code) || [])[1]);

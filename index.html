@@ -33690,6 +33690,32 @@ const UPFX_NOW = 4;
    (색·플래시는 룬 홀드 머리말 참조 — 실패에는 플래시도 «+1» 도 없다). 583 [G2] «사건당 3~12개»
    하한과 같은 값이라 그 자에도 걸리지 않는다. */
 const UPFX_FAIL_N = 3;
+/* ⚑⚑ 619 14회차 — **회당 연출의 길이는 «틱» 이 정한다**(13회차 채점 EF 3 / EG 3 의 두 「8점을
+   막는 단 하나」가 같은 말이었다: EF «회당 알갱이 수명이 틱(≈170ms)보다 길어 9~11알이 상시로 떠
+   있다» · EG «훈련 링·단련 플래시가 홀드 내내 «켜짐» 으로 구워져 있다 — **룬처럼 틱 사이에
+   내렸다 올려야 한다**»).
+   `probe619d` 신설로 그 축을 자에 세워 재현했다(수리 전 · 틱 중앙 **97ms**):
+     플래시 최대 «켜짐» **2803ms = ×29 틱** · 스파크 **2835ms = ×30 틱** · 동시 스파크 **최대 20알**
+     (소등 프레임 비율 플래시·스파크 **4%** — 사실상 홀드 내내 켜져 있다).
+   뿌리는 부품이 아니라 **손으로 적은 상수**다 — `.fx-spark` .38s · `.fx-flash` .34s 는 **단발**
+   (퀘스트·보상·업그레이드 한 번)에 맞춰 41·42회차가 고른 값인데, 홀드 틱은 60~175ms 라 어떤
+   화면에서도 반드시 2~3틱을 산다. 13회차가 글로우 펌프에서 이미 배운 것과 **같은 함정**이다
+   («길이를 상수로 박으면 어느 한쪽 속도에서 반드시 깨진다» — 그때 처방이 `h.iv` 를 받는 것이었고,
+   EG 가 «룬에서는 펌프가 스펙대로 보인다» 고 적은 그 부품이 바로 이 길로 고쳐진 것이다).
+   ⇒ 같은 길을 **나머지 두 조각**(플래시 · 스파크)에도 낸다. 듀티는 펌프와 같은 **0.80** 이다
+   (13회차가 자로 고른 값 — 0.92 는 골이 8% 라 «상시 켜짐» 으로 되돌아가고 0.62 는 봉우리가 스친다).
+   ⚠⚠ **41회차 «공용 퇴장 규약» 과 부딪히지 않는다** — 그 규약이 금지한 것은 «애니 길이와 따로
+     손으로 적은 제거 상수» 이고, 여기서 바뀌는 것은 **애니 길이 자신**이라 `fxBye`(= `fxAnimEnd`)의
+     제거 시각이 자동으로 따라온다. 그리고 **단발 경로는 한 글자도 안 바뀐다** — `iv` 가 없으면
+     `full`(380 · 340)을 그대로 돌려준다. 42회차가 «퇴장 182ms» 로 닫은 그 자리는 단발이다.
+   ⚠ 아래끝 40ms 는 «틱이 최속(60ms)이라도 한 프레임은 실린다» 는 하한이다 — 더 내리면 `verify619`
+     [B] «강화 N ↔ 발화 N» 이 화면에서 0장으로 읽힌다(«연출 없음» 은 무조건 0점 · 지시서 [3]-(다)). */
+const FXTICK_DUTY = 0.55;                           /* 틱 간격 중 «켜짐» 이 쓰는 몫 — 나머지가 소등 구간 */
+const FXTICK_MIN  = 45;                             /* 최속 틱에서도 한 프레임은 실리는 하한(ms) */
+const fxTickLife = (iv, full) => {
+  const v = Number(iv);
+  return (Number.isFinite(v) && v > 0) ? clamp(Math.round(v * FXTICK_DUTY), FXTICK_MIN, full) : full;
+};
 /* ⚑ 619 13회차 — 홀드 글로우의 **틱 펌프**. 12회차에 두 비평가(ED·EE)의 「8점을 막는 단 하나」가
    처음으로 완전히 일치했다 — «훈련은 f3~f7 932ms 동안 Lv 가 +9 인데 회당 원장이 0장» 이다.
    ⚠⚠ **그 처방의 절반은 «하지 말 것» 이다** — EE ② 의 «비용 «−N» 도 넣어라» 는 주인 지시 583 이
@@ -33770,7 +33796,9 @@ const upFxPool = new Map();                        /* key → [[node,…], …] 
 const upFxLive = q => q.reduce((n, g) => n + g.length, 0);
 const upFxDrop = g => { for(const nd of g){ try { nd.remove(); } catch(_){} } };
 /* 한 번의 강화 = 한 번의 발화. 돌려주는 값은 «실제로 무엇이 붙었는가» 다(게이트가 이것을 센다). */
-function upFx(key, host, cur, n, noFlash){
+/* ⚑ 619 14회차 — 여섯째 인자 `iv` 는 **다음 틱까지의 간격**이다(위 `fxTickLife` 머리말).
+   호출부가 안 주면 종전 그대로 단발 길이로 돈다 — 홀드 밖 경로는 한 글자도 안 바뀐다. */
+function upFx(key, host, cur, n, noFlash, iv){
   const L = (typeof fxL === 'function') ? fxL() : null;
   const el = (typeof host === 'string') ? document.querySelector(host) : host;
   if(!L || !el || !el.getBoundingClientRect) return false;
@@ -33789,7 +33817,7 @@ function upFx(key, host, cur, n, noFlash){
     let fel = el;
     try { const s = getComputedStyle(el).getPropertyValue('--flash-to').trim();
       if(s){ const c = el.querySelector(s); if(c) fel = c; } } catch(_){}
-    fxFlash(fel);
+    fxFlash(fel, iv);                                /* 619 14회차 — 홀드면 틱 안에서 끝난다 */
   }
   /* 583 규약 그대로 — 화폐 키가 있으면 화폐 알갱이, 못 쏘면(레이어 포화·260ms 재시작 간격) 종전 앰버.
      619 3회차 — 알갱이가 서면 **타격 순간 몫**(UPFX_NOW)만 같이 쏜다(위 상수 머리말 — 합 10개로 583 상한 안). */
@@ -33798,7 +33826,7 @@ function upFx(key, host, cur, n, noFlash){
      한 번짜리 호출과 같은 확률이 «수치가 계속 가려진다» 로 읽힌다(DN·DO 2인 공통 ③). */
   /* ⚑ 619 11회차 — 알갱이가 선 «타격 순간» 몫만 진한 앰버(`FXPAL.upNow`). 반복분은 종전 `up` 그대로다
      (표 머리말 — 크림 위 첫 발만 대비가 모자랐다). 개수·strict·상한은 한 글자도 안 바뀐다. */
-  if(typeof fxBurst === 'function') fxBurst(el, grain ? FXPAL.upNow : FXPAL.up, grain ? UPFX_NOW : cnt, true);
+  if(typeof fxBurst === 'function') fxBurst(el, grain ? FXPAL.upNow : FXPAL.up, grain ? UPFX_NOW : cnt, true, iv);
   const gen = [];
   for(const nd of L.children) if(!before.has(nd)) gen.push(nd);
   if(gen.length) q.push(gen);
@@ -33905,9 +33933,13 @@ function trHoldTick(){
      ⚠ 583 규약은 **첫 발에 그대로 남는다** — «무엇으로 샀는가» 는 한 사건에 한 번 말하면 되고(21회차
        «둘 다 쏘면 손맛이 아니라 잡음»), 반복분이 말하는 것은 «또 올랐다» 다. */
   const cardNow = trCard(h.key);
-  upFx('train:' + h.key, cardNow);
+  /* ⚑ 619 14회차 — **다음 틱까지의 간격**을 먼저 구해 이펙트에 넘긴다(13회차가 글로우 펌프를
+     `h.iv` 갱신 «뒤» 로 옮긴 것과 같은 이유 — 회당 연출은 그 틱 안에서 끝나야 «또 올랐다» 가 된다).
+     세 부품(스파크·플래시·글로우)이 **같은 값**을 받아야 한 박자로 뛴다. */
+  const ivNext = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  upFx('train:' + h.key, cardNow, null, null, false, ivNext);
   hbBeat(cardNow, true, null, null);
-  h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  h.iv = ivNext;
   /* 619 13회차 — 글로우 펌프는 **다음 틱까지의 간격**을 받아야 봉우리·골이 그 틱 안에 들어간다.
      그래서 `h.iv` 를 갱신한 **뒤**로 옮겼다(아래 621 눌림 왕복과 같은 값 = 둘이 같은 박자다). */
   fxHoldMark(cardNow, true, h.iv);                   /* 619 8회차 — 세 화면 같은 «홀드 중» 글로우(한 어휘) */
@@ -34045,9 +34077,12 @@ function rtHoldStop(bad){
 function rtHoldTick(){
   const h = rtHold; if(!h) return;
   if(!$('trw').classList.contains('on')){ rtHoldStop(false); return; }   /* 팝업이 닫히면 같이 멈춘다 */
-  if(!h.once()){ rtHoldStop(true); return; }                             /* 부족·만렙 → 조용히 정지 */
+  /* ⚑ 619 14회차 — `once` 에 **다음 틱까지의 간격**을 넘긴다(위 `fxTickLife` 머리말 · 훈련 쪽
+     `trHoldTick` 과 같은 길). 회당 연출이 그 틱 안에서 끝나야 «또 올랐다» 로 읽힌다. */
+  const ivNext = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  if(!h.once(ivNext)){ rtHoldStop(true); return; }                       /* 부족·만렙 → 조용히 정지 */
   h.n++; h.live();
-  h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  h.iv = ivNext;
   /* ⚑ 621 — 눌림 왕복 한 사이클. 누르는 것은 «버튼» 이라 `h.sel` 이다(회당 피드백의 호스트는
      488 규약대로 카드 `sel0` 이고 그쪽은 `jz-hdn` 이 맡는다 — 두 어휘를 겹치지 않는다).
      `h.live()` 뒤에 부르는 이유: 룬·단련은 live 갱신이 버튼 안 숫자를 다시 쓰므로 그 뒤의 노드를 잡는다. */
@@ -34116,7 +34151,7 @@ function rtRuneHold(id){
   const lv0 = runeLvOf(id);
   rtHoldStart({
     tag:'rune', sel, host:sel0, key:'rune:' + id,   /* 491 7회차 — 첫 발 가산 오버레이의 호스트(= hbBeat 와 같은 노드) · 619 — 세대 큐 키 */
-    once: () => {
+    once: (iv) => {                          /* 619 14회차 — 틱 간격(회당 연출 길이) */
       if(!runeOpen(id) || runeMaxed(id) || !runeTryOk(id)){
         if(!tries) runeBuy(id);               /* 첫 누름의 잠금·만렙·부족 안내는 기존 문구 그대로 */
         return false;
@@ -34138,7 +34173,7 @@ function rtRuneHold(id){
          58 이 «강화·업그레이드 «성공» 한 세트» 로 뜻을 굳힌 그림이라(주석 36xxx), 실패에 얹으면
          «레벨이 올랐다» 는 거짓 신호가 된다 — 룬만 확률 판정이라 여기서 훈련·단련과 갈린다.
          실패의 회당 피드백은 종전대로 바로 아래 `hbBeat(…, false, '실패', …)` 의 흔들림·플로터다. */
-      if(up && tries > 1) upFx('rune:' + id, sel0);   /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
+      if(up && tries > 1) upFx('rune:' + id, sel0, null, null, false, iv); /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
       /* ⚑ 619 11회차 — **실패 틱에도 «활동» 한 줌**(비평가 EA 의 «8점을 막는 단 하나»: «룬 f7(2736ms)
          무스파크 — 실패 연타 종반에 활동 신호가 플로터 한 겹»). 룬은 확률 판정이라 실패가 연달아
          나오는 구간이 있고, 그 동안 화면이 «이펙트가 멎었다» 로 읽힌다.
@@ -34147,7 +34182,7 @@ function rtRuneHold(id){
          두 부품(흰 플래시 · «+1» 플로터)은 성공에만 남는다. 개수도 성공(4)보다 적은 3 이라
          두 사건이 크기로도 갈린다. 게이트는 그대로다 — [B2] 룬은 «성공» 축(분모가 성공 수)이라
          분자만 늘 수 있는 이 호출로는 못 내려가고, [C1] 빈 발화는 `UPFX_CAP` 이 그대로 지킨다. */
-      if(!up && tries > 1) upFx('rune:' + id, sel0, null, UPFX_FAIL_N, true);
+      if(!up && tries > 1) upFx('rune:' + id, sel0, null, UPFX_FAIL_N, true, iv);
       hbBeat(sel0, up, up ? '+1' : '실패', '−' + fmt(cost));
       return true;
     },
@@ -34175,7 +34210,7 @@ function rtTemperHold(k){
   let n = 0;
   rtHoldStart({
     tag:'temper', sel, host, key:'temper:' + k,     /* 491 7회차 — 첫 발 가산 오버레이의 호스트 · 619 — 세대 큐 키 */
-    once: () => {
+    once: (iv) => {                          /* 619 14회차 — 틱 간격(회당 연출 길이) */
       if(!temperUpOk(k)){ if(!n) temperUpBtn(k); return false; }
       const cost = temperCost(k);             /* 488 — 계단이라 «오르기 전» 값이 이번에 낸 값이다 */
       if(!temperUpBtn(k, true)) return false;
@@ -34184,7 +34219,7 @@ function rtTemperHold(k){
          613 — «−n» 의 단위는 이제 단련석이다(행 라벨·버튼이 상시로 아이콘을 말하므로 숫자만 —
          58 26회차 «바로 아래 줄이 말하는 낱말을 플로터가 한 번 더 말하느라 자리를 두 배로 쓴다»). */
       /* ⚑ 619 — 회당 이펙트(단련은 확정 처리라 실패 갈래가 없다 = 틱과 1:1) */
-      if(n > 1) upFx('temper:' + k, host);          /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
+      if(n > 1) upFx('temper:' + k, host, null, null, false, iv);          /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
       hbBeat(host, true, '+1', '−' + fmt(cost));
       return true;
     },
@@ -35007,6 +35042,12 @@ const FXMAX = 120;                                   /* #fxl 동시 DOM 상한 (
    홀드 중 rect 가 한두 px 흔들린다 — 정확 일치로 물으면 그 흔들림마다 새 장이 쌓인다.
    버튼 사이 간격(단련 행 pitch 74·룬 112)보다 한참 작아 «다른 버튼» 을 같은 자리로 오인하지 않는다. */
 const FXFLASH_SAME = 8;
+/* ⚑ 619 14회차 — `.fx-flash`·`.fx-spark` 의 **CSS 애니 길이를 코드가 읽는 이름**으로 세운다.
+   값은 CSS 선언과 같아야 한다(`.fx-flash{animation:fxFlash .34s …}` · `.fx-spark{… .38s …}`) —
+   여기가 `fxTickLife(iv, full)` 의 `full`(= 단발 길이)이고, `iv` 가 없으면 이 값이 그대로 쓰인다.
+   ⚠ 두 곳이 어긋나면 홀드 밖 단발이 CSS 값으로 돌고 «상수만» 바뀌는 헛수정이 된다 —
+     `verify619` [F1] 이 CSS 선언과 이 두 상수가 같은지를 직접 물어 그것을 막는다. */
+const FXFLASH_MS = 340, FXSPARK_MS = 380;
 /* ⚑ 543(주인 지시 2026-08-31 «재화 흡수 이펙트 … 다이아 크기 기준 3배») — **알갱이 크기 손잡이는
    이것 하나다.** 값은 «기준 재화(다이아)의 찍힌 잉크가 몇 배가 되는가» 이고, 아래 모든 것이
    여기서 파생된다: 비행 크기(FX3_FLYS) · 잉크 지름(FX3_GINK) · 밴드 피치 · 최소 중심거리 ·
@@ -36924,7 +36965,11 @@ const FXB_DMAX = 40, FXB_SZMAX = 34;                 /* FXB_SZMAX = 아래 `rnd(
    난다(수명 300ms > 틱 간격 110ms ⇒ 3틱 12알 동시 생존) — 그래서 자를 «이번 버스트» 가 아니라
    `#fxl` 에 **살아 있는 스파크 전부**에 댄다. */
 const FXB_SEP = 1.30;
-const FXB_KOS = 19;                                  /* 619 — strict 회피의 여유. 4회차 14(스파크 «평균» 반경 13+1)는
+/* ⚑ 619 14회차 — 가둠 상자와 액자 사이의 **여유 한 칸**(px). 13회차의 «잉크 기준 가둠» 은
+   스필을 0 으로 만들었지만 잉크가 액자 «위» 에 앉아 두 비평가가 절단으로 읽었다(위 `inM` 머리말).
+   4px 은 스파크 최소 지름(24)의 1/6 — 링 반경·등간격은 안 건드리고 «닿음» 만 푼다. */
+const FXB_INPAD = 4;
+const FXB_KOS = 19;                                /* 619 — strict 회피의 여유. 4회차 14(스파크 «평균» 반경 13+1)는
                                                         6회차 링 숨쉬기(rr)가 입자를 안쪽으로 들이자 최대 입자(34px)의
                                                         상자 모서리가 글자 상자를 스쳤다([E2] 0.12) — 최대 반경 17+2 로. */                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
 let fxbW = 0, fxbR = 0.5;                            /* 619 6회차 — strict 위상·반경 저불일치 수열(황금비) 누산기 */
@@ -36982,7 +37027,9 @@ function fxbHit(holes, x, y){
    같은 확률이 «수치가 계속 가려진다» 로 읽힌다(비평가 DN ③4 · DO ③6 2인 공통 · 실측 스파크의 36%).
    ⇒ `strict` 를 준 호출에서는 **자리를 못 찾은 입자를 그냥 버린다**(옮기지 않는다 — 옮기면 링이 무너진다).
    ⚠ 링 기하·반경·이동량·수명은 한 값도 안 건드렸다. 버리는 것은 «글자 위에 앉을 뻔한» 입자뿐이다. */
-function fxBurst(t, col, n, strict){
+/* ⚑ 619 14회차 — 다섯째 인자 `iv`(틱 간격)를 주면 스파크가 **그 틱 안에서** 사그라든다
+   (`fxTickLife` 머리말 — 수리 전 실측 «최대 켜짐 2835ms = ×30 틱 · 동시 20알»). 안 주면 종전 그대로. */
+function fxBurst(t, col, n, strict, iv){
   /* 77 — 좌표 대상에 combat 태그가 있으면 팝업 아래 레이어. (현재 전투 킬은 캔버스 burst() 를
      쓰므로 실사용 경로는 없지만, 새 전투 발 호출이 생겨도 규칙이 자동 적용되게 맞춰 둔다) */
   const L = (t && t.combat) ? fxLC() : fxL(), p = fxPt(t); if(!L || !p) return;
@@ -37033,6 +37080,7 @@ function fxBurst(t, col, n, strict){
      `ks`(최소 중심거리) **둘이 한 벌**이다. 검산: 룬 √wh 836 → 배율 1.176 ⇒ 스파크 **28~40px**
      (11회차 38~54 · 10회차 46~65). 훈련(408 → 1.00)·단련(471 → 1.15)은 상한에 안 닿아 **불변**이다. */
   const hsc = (strict && r) ? clamp(Math.sqrt(r.w * r.h) / 410, 1, FXB_DMAX / FXB_SZMAX) : 1;
+  const sparkMs = fxTickLife(iv, FXSPARK_MS);      /* 619 14회차 — 한 세대가 다음 틱까지 안 산다 */
   const kh = r ? fxbTextHoles(t, strict ? Math.round(FXB_KOS * hsc) : undefined) : [];
   /* ⚑ 619 8회차 — strict 구멍 두 벌 추가(비평가 DT·DU 2인 공통 «스파크가 −n 플로터를 70% 은폐 ·
      진행바 위에 착지»): ① 살아 있는 플로터(`.fx-plus`) — 정보 층인데 #fxl 에 살아 호스트 자손 스캔에
@@ -37106,6 +37154,9 @@ function fxBurst(t, col, n, strict){
     el.style.width = sz + 'px'; el.style.height = sz + 'px';
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     el.style.setProperty('--c', col || FXPAL.spark);  /* 16회차 — 글로우 오브의 본색(radial 중간대) · 512 표에서만 */
+    /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로(위 인자 머리말). 제거는 `fxBye` 가
+       실제 애니 끝에서 재므로 따라온다(41회차 규약 — 여기서 상수를 새로 적지 않는다). */
+    if(sparkMs !== FXSPARK_MS) el.style.animationDuration = sparkMs + 'ms';
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
     /* 21회차 — 넓은 대상(우편 행 826px)에서 타원 반축이 프레임을 넘길 수 있어 좌표를 물린다. */
     /* 28회차 — 27차 **2인 공통**: 씬 C(강화) 파티클이 대상 카드 밖으로 새서 형제 UI 를 덮는다.
@@ -37138,7 +37189,12 @@ function fxBurst(t, col, n, strict){
        ⚠ 얇은 호스트에서 상자가 뒤집히지 않게 들이는 양은 반폭·반높이보다 작게 물린다
          (단련 띠 998×222 검산: inM 19.5 < 111 ⇒ 세로 가둠 폭 183px 로 링이 그대로 산다).
        ⚠ 좌표(점) 대상은 종전 그대로 — 잉크 기준으로 들이면 전투 발 버스트의 산포가 줄어든다. */
-    const inM = r ? Math.max(0, Math.min(sz/2, r.w/2 - 1, r.h/2 - 1)) : 0;
+    /* ⚑ 619 14회차 — **여유 한 칸**(`FXB_INPAD`). 13회차는 «밖으로 0» 을 얻었지만 잉크가 액자
+       «위» 에서 끝나 두 비평가가 그것을 절단으로 읽었다(EF ② «폭의 21~38% 가 잘림» ·
+       EG ⑬ «최상단 y=151 = 링 안쪽 경계 151» — 2인 공통). 스폰 타원은 그대로 두고 가둠 상자만
+       한 칸 더 들인다 = 잉크와 액자 사이에 늘 4px 이 남는다. 얇은 호스트에서 상자가 뒤집히지
+       않게 반폭·반높이 물림은 그대로다. */
+    const inM = r ? Math.max(0, Math.min(sz/2 + FXB_INPAD, r.w/2 - 1, r.h/2 - 1)) : 0;
     const bx0 = r ? Math.max(20, r.x + inM) : 20;
     const bx1 = r ? Math.min(FRAME_W - 20, r.x + r.w - inM) : FRAME_W - 20;
     /* 32회차 — 점 대상의 세로도 프레임 안으로(위 PB_M 주석의 비대칭 해소). 원점을 이미 들여
@@ -37209,7 +37265,10 @@ function fxBurst(t, col, n, strict){
     fxBye(el, 300);                                  /* 21회차 수명 .26s → 41회차 공용 퇴장 규약 */
   }
 }
-function fxFlash(el){
+/* ⚑ 619 14회차 — 둘째 인자 `iv`(틱 간격)를 주면 애니 길이가 그 틱 안에서 끝난다(`fxTickLife` 머리말).
+   ⚠ 제거 시각은 손으로 안 적는다 — 아래 `fxBye` 는 41회차 규약대로 **실제로 걸린 애니메이션의 끝**
+     에서 재므로 길이를 바꾸면 저절로 따라온다(그래서 여기서 고칠 곳이 «한 줄» 이다). */
+function fxFlash(el, iv){
   const L = fxL(), r = fxRect(el); if(!L || !r) return;
   if(L.childElementCount >= FXMAX) return;
   /* ⚑ 625 — **한 자리에 플래시 한 장.** 종전에는 부를 때마다 새 <s> 를 append 만 했다.
@@ -37238,6 +37297,8 @@ function fxFlash(el){
   d.style.left = r.x + 'px'; d.style.top = r.y + 'px';
   d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
+  /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로. CSS 기본값(.34s)이 곧 `full` 이다. */
+  { const ms = fxTickLife(iv, FXFLASH_MS); if(ms !== FXFLASH_MS) d.style.animationDuration = ms + 'ms'; }
   L.appendChild(d);
   /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
      500 고정은 그래서 138ms 를 투명한 채 남긴다(p58au 실측 — 40차 «upg-5 플래시 1 → 0»). */

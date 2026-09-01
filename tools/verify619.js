@@ -111,7 +111,10 @@ async function hold(page, sp, opt) {
 
   /* ── [A] 선언 ─────────────────────────────────────────────────────── */
   console.log('[A] 선언 — 발화 부품 한 곳 · 세 자리가 그것을 부른다');
-  ok(/function upFx\(key, host, cur, n, noFlash\)\{/.test(code), 'A1 공용 부품 `upFx()` 가 선언돼 있다');
+  /* ⚑ 14회차 — 여섯째 인자 `iv`(틱 간격)를 **서명에 박는다**. 느슨하게 푼 것이 아니라 **좁힌** 것이다:
+     13회차 채점의 두 「8점을 막는 단 하나」(«회당 연출이 틱을 넘겨 산다»)를 닫은 축이 이 인자이고,
+     이것이 사라지면 플래시·스파크가 다시 단발 상수(.34s/.38s)로 돌아 홀드 내내 켜진다. */
+  ok(/function upFx\(key, host, cur, n, noFlash, iv\)\{/.test(code), 'A1 공용 부품 `upFx()` 가 선언돼 있다(틱 간격 `iv` 를 받는다)');
   ok(/const UPFX_N\s*=\s*\d+/.test(code) && /const UPFX_CAP\s*=\s*\d+/.test(code),
      'A2 풀·동시 상한 상수(UPFX_N · UPFX_CAP)가 있다', (code.match(/const UPFX_N\s*=\s*\d+, UPFX_CAP\s*=\s*\d+/) || code.match(/const UPFX_N[^\n]*/) || [''])[0].trim());
   ok(/upFx\('train:'/.test(code),  'A3 훈련 홀드 틱이 upFx 를 부른다');
