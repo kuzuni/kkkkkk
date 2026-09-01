@@ -195,9 +195,31 @@ async function openWith(browser, save) {
     /* ---------------- §6 연출 ---------------- */
     console.log('\n§6 연출 — 등장은 #fxlc(팝업 아래) · 처치는 흔들림 · 277 이후 bfight 를 켠다');
     ok(s5.shook, '처치가 cam.shake 를 올린다(보스 대접)');
+    /* ⚑ 727 — 이 절은 «§5 에서 수호자를 잡은 직후» 에 `promo = null; enemies.length = 0` 로
+       상태를 손수 지우고 승급전을 다시 열어 «등장 순간» 을 쟀다. 그 손수 지우기는 332/475 의
+       격파 시퀀스(`bossClear`)와 665 의 재진입 가드(`battleLocked()`)보다 **먼저 쓰인 코드**라,
+       그 뒤로 `startPromo()` 는 첫 줄에서 되돌아갔고 세 항이 **제품이 멀쩡한 채로** 0 으로
+       읽혔다(36/39). `probe727` 이 그것을 못박았다 — [A] 깨끗한 첫 진입 `#fxlc +2 · bfight true ·
+       ⏱ 15.0` · [B] 옛 방식 재현 `+0 · false · off` · [C] 시퀀스만 닫고 재진입 `+2 · true · 15.0`.
+       ⇒ 333 처방대로 **자리를 비우지 않고 살아 있는 표본으로 갈아 끼운다**: 막히는 창은
+          «막히는 것이 정답» 이므로 [전제] 두 항으로 **단언**하고, 등장 측정은 시퀀스를 제품
+          경로(`bossClearDone()` → `endPromo(true)`)로 닫은 **다음 도전**에서 한다.
+       ⚠ 페이지 루프가 evaluate 사이에도 도는데 `bossClear` 는 die+1초(DUN_CLR_HOLD)면 스스로
+         닫히므로, 전제 관측과 재진입은 **한 evaluate 안에서** 연달아 해야 한다. */
     const s6 = await p.evaluate(() => {
-      /* 승급전을 다시 열어 «등장 순간» 의 레이어를 센다 */
-      promo = null; enemies.length = 0;
+      /* [전제] 665 — 격파 시퀀스 창에서는 승급전 재진입이 «막히는 것이 정답» 이다.
+         옛 §6 이 이 창 안에서 재고 있었다는 사실 자체를 여기서 단언으로 굳힌다. */
+      const preClear = bossClear ? bossClear.md : '';
+      const preLocked = battleLocked();
+      startPromo();
+      const preBlocked = !enemies.some(x => x.tk === 'promo');   /* 새 수호자가 서지 않아야 한다 */
+
+      /* 시퀀스를 «제품이 스스로 닫는 그 경로» 로 닫는다 — 새 종료 경로를 만들지 않는다.
+         승급전은 여기서 endPromo(true) 로 이어져 계급이 하나 오른다(= 다음 도전이 열린다). */
+      bossClearDone();
+      const cleared = !bossClear && !battleLocked();
+
+      /* 여기서부터가 «등장 순간» 이다 — 다음 계급 도전을 실제로 연다 */
       const lc0 = (document.getElementById('fxlc') || {}).childElementCount || 0;
       const l0 = (document.getElementById('fxl') || {}).childElementCount || 0;
       startPromo();
@@ -206,41 +228,66 @@ async function openWith(browser, save) {
       /* 277 — HUD 판정은 «한 프레임 그린 뒤» 봐야 한다(drawBossHud 는 drawHud 안에서 돈다) */
       drawHud();
       const si = document.getElementById('stinfo');
-      return {
+      const out = {
+        preClear, preLocked, preBlocked, cleared,
         lcAdd: ((document.getElementById('fxlc') || {}).childElementCount || 0) - lc0,
         lAdd: ((document.getElementById('fxl') || {}).childElementCount || 0) - l0,
         bfight: !!(si && si.classList.contains('bfight')),
         tmOn: !!document.getElementById('bossTm').classList.contains('on'),
         tmTx: document.getElementById('bossTmN').textContent,
         want: Math.max(0, promo ? promo.t : -1).toFixed(1),
-        bossOn: !!bossOn
+        bossOn: !!bossOn,
+        promoOn: !!promo
       };
+      /* [§6-R 되돌림 시험] — 위 세 항이 «상시 참» 이 아님을 못박는다(무르게 푼 수리가 아니라는
+         가장 짧은 증거). `#bossTmN` 의 문서 기본값이 하필 '15.0' 이라(index.html) 타이머 항은
+         «값이 맞다» 만으로는 헛초록이 될 수 있다 — 켜짐 토글까지 같이 본다. */
+      const keep = promo; promo = null; drawHud();
+      out.offBfight = !!(si && si.classList.contains('bfight'));
+      out.offTmOn = !!document.getElementById('bossTm').classList.contains('on');
+      promo = keep; drawHud();
+      return out;
     });
+    ok(s6.preLocked && s6.preClear === 'promo',
+      '[전제] 665 — 격파 시퀀스(bossClear ' + (s6.preClear || '없음') + ')가 돌면 battleLocked() 다');
+    ok(s6.preBlocked, '[전제] 665 — 그 창에서는 승급전 재진입이 막힌다(새 수호자가 서지 않는다)');
+    ok(s6.cleared, '[전제] 시퀀스를 제품 경로(bossClearDone)로 닫으면 잠금이 풀린다');
+    ok(s6.promoOn, '다음 계급 도전이 실제로 열린다(등장 순간을 잴 표본이 살아 있다)');
     ok(s6.lcAdd >= 2, '등장 연출 2개가 #fxlc(전투 발 · 팝업 아래, 184)에 붙는다 — +' + s6.lcAdd);
     ok(s6.lAdd === 0, '#fxl(팝업 위)에는 한 개도 안 붙는다 — +' + s6.lAdd);
     ok(s6.bfight, '277 — 승급전도 28 규격 보스 HUD(#stinfo.bfight)를 켠다');
     ok(!s6.bossOn, '스테이지 보스 플래그(bossOn)는 안 건드린다');
     ok(s6.tmOn && s6.tmTx === s6.want,
       '277 — ⏱ 타이머가 승급전 남은 시간을 띄운다 — ' + s6.tmTx + ' (기대 ' + s6.want + ')');
+    ok(!s6.offBfight && !s6.offTmOn,
+      '§6-R 되돌림 — 승급전을 비우면 .bfight·⏱ 가 꺼진다(상시 참이 아니다) — '
+      + s6.offBfight + '/' + s6.offTmOn);
 
     /* ---------------- §7 불변 ---------------- */
     console.log('\n§7 불변 — 배율 누적 없음 · 다른 적 불변');
     const s7 = await p.evaluate(() => {
       const first = ETYPE.promo.scale;
       /* 세 번 더 연다 — 갈아 끼운 값 위에 다시 계산하면 여기서 배율이 튄다 */
+      /* ⚑ 727 — «몇 번이 실제로 열렸는가» 를 같이 센다. 옛 §6 이 격파 시퀀스 창에 갇혀 있던
+         동안에는 이 세 번도 `battleLocked()` 에 막혀 **한 번도 안 열렸고**, 그러면
+         `first === last` 는 «배율이 안 튄다» 가 아니라 «아무 일도 안 일어났다» 가 된다
+         (헛초록). 배율 항이 그 사실을 못 보므로 여기서 따로 못박는다. */
+      let opened = 0;
       for (let i = 0; i < 3; i++) {
         promo = null; enemies.length = 0;
         startPromo();
         const e = enemies.find(x => x.tk === 'promo');
-        if (e) e.hp = e.max = 1e30;
+        if (e) { opened++; e.hp = e.max = 1e30; }
       }
       return {
+        opened,
         first, last: ETYPE.promo.scale,
         base: PROMO_BASE.atlas + '/' + PROMO_BASE.walk,
         zombie: ETYPE.zombie.scale, boss: ETYPE.boss.scale, arena: ETYPE.arena.scale,
         bossAtlas: ETYPE.boss.atlas, arenaAtlas: ETYPE.arena.atlas
       };
     });
+    ok(s7.opened === 3, '세 번 다 실제로 열렸다(배율 항이 헛초록이 아니다) — ' + s7.opened + '/3');
     ok(near(s7.first, s7.last, 1e-9),
       '4회 연속 승급전에도 배율이 그대로 — ' + s7.first.toFixed(4) + ' → ' + s7.last.toFixed(4));
     ok(s7.base === 'knight/idle', 'PROMO_BASE 가 원본을 붙잡고 있다 — ' + s7.base);
