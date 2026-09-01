@@ -72,6 +72,35 @@ const settle = (p, sels) => p.evaluate(async ss => {
   return { ok: false, ms: Math.round(performance.now() - t0), last: prev };
 }, sels);
 
+/* ── 638 — ③ «살아 있는 갱신» 절의 고정 대기(900ms) 폐기 ─────────────────────
+   증상: 단독 실행은 3/3 PASS(85/85) 인데 `for i in 1 2 3 4 5; do node tools/verify102.js & done`
+     으로 5병렬 실행하면 2/5 가 83/85 로 빨개졌다(게이트 스윕 `xargs -P 5` 중에는 3/3 빨강).
+       FAIL 10 라이브 · 다이아 복구 → rich 전환  →  false (want true)
+       FAIL 10 라이브 · lack 해제                →  true  (want false)
+     부하가 더 세면 앞의 «다이아 0 → lack 전환» 까지 셋이 된다.
+   원인: `syncShopSumBtns()` 는 `renderUI()` 안에서만 돌고(index.html 34907), 그 `renderUI()` 는
+     `loop()` 의 `uiT += dt; if(uiT > 0.35)` 로 **rAF 에 실려** 있다(index.html 38594).
+     크로미움이 여럿 붙어 렌더러가 굶으면 900ms 라는 «벽시계 창» 에 그 틱이 한 번도 안 들어온다.
+     즉 제품이 멈춘 것이 아니라 **게이트가 시간을 재고 있었다** — 136 이 ①② 절에서 고친 것과 같은 결함이
+     ③ 절에만 남아 있었다(①② 는 `settle()` 폴링이라 한 번도 안 흔들렸다. 이것이 진단의 가장 짧은 증거다).
+   처방: 기다리는 대상을 «시간» 에서 «틱» 으로 바꾼다 — 기대 상태가 될 때까지 rAF 폴링(상한 LIVE_CAP).
+     ⚠ 고정 대기 상수를 키우는 처방은 쓰지 않는다 — 위 38~55행 136 주석과 같은 이유로,
+       어떤 상수를 골라도 부하가 한 칸 더 세지면 다시 깨진다.
+     ⚠ 폴링은 **읽기만** 한다 — `syncShopSumBtns()` 를 직접 부르면 «제품이 안 돌아도 초록» 인 자가 된다.
+       제품이 정말로 멈추면 상한까지 안 바뀌고 `ok:false` 로 **빨개져야** 하고, 그것을 §R 이 못박는다. */
+const LIVE_CAP = 5000;   /* 관측된 전환은 ~300ms — 0.35초 틱이 14배 늘어져도 잡힌다 */
+const LIVE_WAIT = cap => {
+  window.__live = async test => {
+    const t0 = performance.now();
+    const raf = () => new Promise(r => requestAnimationFrame(() => r()));
+    while (performance.now() - t0 < cap) {
+      if (test()) return { ok: true, ms: Math.round(performance.now() - t0) };
+      await raf();
+    }
+    return { ok: false, ms: Math.round(performance.now() - t0) };
+  };
+};
+
 const B12 = ['#sumBF', '#sumB10', '#sumB30'];
 const B10 = ['#shopList .shp-card .cbtn.b1', '#shopList .shp-card .cbtn.b2', '#shopList .shp-card .cbtn.b3'];
 
@@ -272,29 +301,59 @@ const probe10 = () => {
   eq('10 경계 · 30회 가격 빨강', edge10.b3.txt, RED10);
 
   /* ── ③ 살아 있는 갱신 — 상점이 열린 채 재화가 변해도 색이 따라온다(재렌더 없이) ── */
+  await p.evaluate(LIVE_WAIT, LIVE_CAP);             /* 638 — 페이지에 폴링 대기를 심는다 */
   const live = await p.evaluate(async () => {
     const list = document.getElementById('shopList');
     list.scrollTop = 220;                       /* 카드 4장이라 최대 스크롤은 100 미만 — 끝까지 내린 값이 기준이다 */
     const set = list.scrollTop;
     const node = document.querySelector('#shopList .cbtn.b2');
     S.dia = 0; uiDirty = true;
-    await new Promise(r => setTimeout(r, 900));
+    /* 638 — 고정 대기 900ms 폐기. 기다리는 것은 «시간» 이 아니라 «틱» 이다 */
+    const w = await __live(() => document.querySelector('#shopList .cbtn.b2').classList.contains('lack'));
     const now = document.querySelector('#shopList .cbtn.b2');
-    return { lack: now.classList.contains('lack'), sameNode: now === node, set, scroll: list.scrollTop };
+    return { lack: now.classList.contains('lack'), sameNode: now === node, set, scroll: list.scrollTop, ms: w.ms };
   });
-  eq('10 라이브 · 다이아 0 → lack 전환', live.lack, true);
+  eq('10 라이브 · 다이아 0 → lack 전환(폴링 ' + live.ms + 'ms)', live.lack, true);
   eq('10 라이브 · 카드 노드 재생성 없음', live.sameNode, true);
   yes('10 라이브 · 스크롤 위치가 0 이 아님(측정 유효)', live.set > 0);
   near('10 라이브 · 스크롤 유지(리셋 0 아님)', live.scroll, live.set, 0);
 
   const live2 = await p.evaluate(async () => {
     S.dia = 99999; uiDirty = true;
-    await new Promise(r => setTimeout(r, 900));
+    const w = await __live(() => document.querySelector('#shopList .cbtn.b3').classList.contains('rich'));
     const n = document.querySelector('#shopList .cbtn.b3');
-    return { rich: n.classList.contains('rich'), lack: n.classList.contains('lack') };
+    return { rich: n.classList.contains('rich'), lack: n.classList.contains('lack'), ms: w.ms };
   });
-  eq('10 라이브 · 다이아 복구 → rich 전환', live2.rich, true);
+  eq('10 라이브 · 다이아 복구 → rich 전환(폴링 ' + live2.ms + 'ms)', live2.rich, true);
   eq('10 라이브 · lack 해제', live2.lack, false);
+
+  /* ── §R 638 되돌림 시험 — 폴링이 «영원히 초록» 이 아님을 못박는다 ────────────
+     폴링은 **읽기만** 한다(`syncShopSumBtns()` 를 직접 부르지 않는다). 그러니 갱신 주체를
+     무력화한 사본에서는 상한(LIVE_CAP)까지 클래스가 안 바뀌어야 하고, 되돌리면 다시 바뀌어야 한다.
+     이 두 방향이 §R 이 없으면 «대기를 늘린 것과 무엇이 다른가» 에 답할 수 없다. */
+  const rev = await p.evaluate(async () => {
+    const cls = () => document.querySelector('#shopList .cbtn.b3').className;
+    const orig = syncShopSumBtns;
+    syncShopSumBtns = () => {};                      /* 갱신 주체만 끈다 — 제품의 다른 축은 그대로 */
+    const before = cls();
+    S.dia = 0; uiDirty = true;
+    const off = await __live(() => document.querySelector('#shopList .cbtn.b3').classList.contains('lack'));
+    const frozen = cls();
+    syncShopSumBtns = orig;                          /* 되돌린다 */
+    const on = await __live(() => document.querySelector('#shopList .cbtn.b3').classList.contains('lack'));
+    const thawed = cls();
+    S.dia = 99999; uiDirty = true;
+    await __live(() => document.querySelector('#shopList .cbtn.b3').classList.contains('rich'));
+    return { before, frozen, thawed, offOk: off.ok, offMs: off.ms, onOk: on.ok, onMs: on.ms,
+             restored: cls() };
+  });
+  eq('§R 무력화 전 · 30회 rich', rev.before, 'cbtn b3 rich');
+  eq('§R 무력화 · 상한까지 안 바뀐다(= 이 항은 시간이 아니라 틱을 잰다)', rev.offOk, false);
+  eq('§R 무력화 · 클래스 그대로 rich', rev.frozen, 'cbtn b3 rich');
+  yes('§R 무력화 · 상한을 실제로 다 썼다(' + rev.offMs + 'ms ≥ ' + (LIVE_CAP - 200) + ')', rev.offMs >= LIVE_CAP - 200);
+  eq('§R 되돌리면 다시 잡힌다(폴링 ' + rev.onMs + 'ms)', rev.onOk, true);
+  eq('§R 되돌린 뒤 lack', rev.thawed, 'cbtn b3 lack');
+  eq('§R 뒷정리 · 다시 rich', rev.restored, 'cbtn b3 rich');
 
   /* ── ④ 기능 — 충분 상태에서 실제로 눌리고 재화가 깎이는가 ────────── */
   const fn = await p.evaluate(async ([b]) => {
