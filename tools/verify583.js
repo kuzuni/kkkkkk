@@ -82,8 +82,22 @@ const INSTALL = () => {
      라벨을 관통하지 않게). 부품·출발 자리의 존재를 묻는 뜻은 그대로다. */
   ok(/function fxSpend\(cur, host\)\{/.test(src) && /function fxSpendFrom\(cur, host, toC\)\{/.test(src),
      '[A1] 소모 알갱이 부품 `fxSpend` / 출발 자리 `fxSpendFrom` 이 있다');
-  ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \};/.test(src),
-     '[A2] ★ «이 자리는 무엇으로 사는가» 가 **한 표**다(자리마다 화폐 문자열 금지 — 402 «표 두 벌» 방지)');
+  /* ⚑ 660 — **문자열 전체를 박아 두던 것을 뜻으로 바꿨다.** 종전 정규식은 표의 리터럴을 통째로
+     고정해서, 표에 **칸이 하나 늘기만 해도** 빨개졌다(2026-09-01 실측: 666 이 유물 버스트를 위해
+     `relic:'relic'` 을 더하자 이 항만 빨갛고 나머지 35 항은 전부 초록이었다 — 결함이 아니라 자의 취약함이다).
+     이 항이 묻는 것은 «표가 **한 벌**인가» 이지 «표에 칸이 몇 개인가» 가 아니다. 세 조각으로 나눠 묻는다:
+       ⓐ 선언이 **딱 하나**(둘이면 그 순간 «표 두 벌» 이다) ⓑ 세 탭이 **그 표에서** 제 화폐를 얻는다
+       ⓒ 호출부가 화폐 문자열을 손으로 적지 않는다(아래 [A2b])
+     ⇒ 표가 늘어나는 것(666 유물 등)은 통과하고, **갈라지는 것**은 그대로 빨개진다. */
+  const payDecl = (src.match(/const PAY_CUR = \{[^}]*\}/g) || []);
+  ok(payDecl.length === 1
+     && /train:'gold'/.test(payDecl[0]) && /rune:'rstone'/.test(payDecl[0]) && /temper:'tstone'/.test(payDecl[0]),
+     '[A2] ★ «이 자리는 무엇으로 사는가» 가 **한 표**다(선언 1개 · 세 탭이 전부 거기 있다 — 402 «표 두 벌» 방지)',
+     '선언 ' + payDecl.length + '개 · ' + (payDecl[0] || '').slice(0, 90));
+  /* ⓒ — 호출부가 표를 안 거치고 화폐를 손으로 적으면 «두 벌» 이 된다(660 이 버스트 아이콘을
+     `PAY_CUR` 에서만 받게 한 것과 같은 규약 · `verify660` [A7~A10] 의 짝). */
+  ok(!/upFx\('(train|rune|temper):'[^)]*'(gold|rstone|tstone)'/.test(src),
+     "[A2b] ★ 세 탭의 호출부가 화폐 문자열을 **손으로 안 적는다**(전부 `PAY_CUR` 를 지난다)");
   /* ⚠ «크기를 두 벌로 적지 않았는가» — fxSpend 본문이 543 상수만 쓰고 새 리터럴을 안 만든다 */
   const body = (src.match(/function fxSpend\(cur, host\)\{[\s\S]*?\n\}/) || [''])[0];
   ok(/FX3_FLYS/.test(body) && /FX3_LAND/.test(body) && /FX3_BSPITCH/.test(body) && /fxGrainSc\(cur\)/.test(body),
