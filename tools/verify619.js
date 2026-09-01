@@ -43,7 +43,7 @@ const ARM = () => {
   const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
   /* 635 — `buys`(성공, [B2] 의 분모) 와 `tries`(시도, [B1] 의 축)를 **따로** 센다.
      훈련·단련은 확률 판정이 없어 둘이 같은 수이고, 룬만 갈라진다. */
-  const P = (window.__v619 = { buys: [], tries: [], nodes: [], max: 0, blocked: 0, toasts: [] });
+  const P = (window.__v619 = { buys: [], tries: [], nodes: [], max: 0, blocked: 0, toasts: [], up: 0 });
   const wrap = (name, kind, okOf) => {
     const f = window[name]; if (typeof f !== 'function') return;
     window[name] = function (...a) { const r = f.apply(this, a); const t = performance.now();
@@ -60,6 +60,12 @@ const ARM = () => {
   /* [C] — 상한 때문에 «아무것도 안 붙은» 발화를 센다(upFx 가 false 를 돌린 횟수) */
   { const f = window.upFx; if (typeof f === 'function') window.upFx = function (...a) {
       const r = f.apply(this, a); if (!r) P.blocked++; return r; }; }
+  /* ⚑ 770 — **손 뗌 시각**을 적는다. 아래 [B2]·[R] 의 «강화 경계 분할» 에서 마지막 강화의 구간이
+     열려 있으면 홀드가 **끝난 뒤** 도는 정산 연출(`trHoldStop` 의 `fxUpOk` 한 세트)이 그 강화의
+     발화로 세어진다 — 실제로 `R1`(무력화 사본)이 1/N 에서 2/N 으로 올라가 그만큼 무른 자가 됐다.
+     ⚠ **캡처 단계**라 앱의 손 뗌 처리(그 정산 연출)보다 반드시 먼저 찍힌다. */
+  addEventListener('pointerup', () => { P.up = performance.now(); }, true);
+  addEventListener('mouseup', () => { if (!P.up) P.up = performance.now(); }, true);
   const L = document.getElementById('fxl');
   const kindOf = el => {
     const c = (el.className || '') + '';
@@ -86,7 +92,7 @@ async function hold(page, sp, opt) {
   const tapOnly = !!(opt && opt.tap);      /* 635 [R3] — 홀드 대신 «한 번 클릭» (되돌림 시험) */
   await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, sp.tab);
   await page.waitForTimeout(420);
-  await page.evaluate(() => { const P = window.__v619; P.buys.length = 0; P.tries.length = 0; P.nodes.length = 0; P.toasts.length = 0; P.max = 0; P.blocked = 0; });
+  await page.evaluate(() => { const P = window.__v619; P.buys.length = 0; P.tries.length = 0; P.nodes.length = 0; P.toasts.length = 0; P.max = 0; P.blocked = 0; P.up = 0; });
   const r = await page.evaluate(sel => { const el = document.querySelector(sel); if (!el) return null;
     const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; }, sp.sel);
   if (!r || !r.w) return null;
@@ -95,13 +101,30 @@ async function hold(page, sp, opt) {
   await page.waitForTimeout(tapOnly ? 20 : HOLD_MS);
   await page.mouse.up();
   await page.waitForTimeout(420);
-  const d = await page.evaluate(() => { const P = window.__v619; return { buys: P.buys.slice(), tries: P.tries.slice(), nodes: P.nodes.slice(), max: P.max, blocked: P.blocked, toasts: P.toasts.slice() }; });
-  const WIN = 55;                       /* 최소 틱 간격 60ms 보다 짧게 — 다음 강화의 발화를 훔쳐 세지 않는다 */
+  const d = await page.evaluate(() => { const P = window.__v619; return { buys: P.buys.slice(), tries: P.tries.slice(), nodes: P.nodes.slice(), max: P.max, blocked: P.blocked, toasts: P.toasts.slice(), up: P.up }; });
   const fires = d.nodes.filter(n => n.k === 'flash' || n.k === 'spark' || n.k === 'spend');
   const buys = d.buys.filter(b => b.kind === sp.id);
   const tries = d.tries.filter(b => b.kind === sp.id);
+  /* ⚑ 770 — 「강화 N 회 ↔ 발화 N 회」를 **시계가 아니라 순서**로 잰다.
+     종전 축은 «강화 시각 +55ms 안에 노드가 붙었는가» 였고, 그 55 는 «최소 틱 간격 60ms 보다 짧게 —
+     다음 강화의 발화를 훔쳐 세지 않는다» 는 이유로 고른 값이다. 뜻(«그 강화의 발화인가»)은 순서인데
+     자는 **벽시계**에 묶여 있었고, 그래서 멈춤 프레임 한 번에 [R2] 가 4회 중 1~2회 빨갰다.
+     `probe770` 재현이 그 빠진 강화를 이름으로 찍었다 — `upFx` 는 **true 를 돌렸고**(노드도 붙었다)
+     그 호출 자체가 **60.6ms** 걸렸다(앞뒤 틱 간격 268.7·336.9ms = 그 프레임이 통째로 멈췄다).
+     발화는 **같은 틱 안**에 있었고 창 밖으로 밀린 것뿐이다 — 제품은 한 번도 안 빠뜨렸다.
+     ⇒ 노드를 **강화 경계로 분할**한다: 강화 i 는 `[b_i − BACK, b_{i+1} − BACK)` 구간의 노드를 갖는다.
+     ⚠ **무르게 푼 것이 아니라 좁혔다** — 55ms 창은 다음 강화 시각을 넘어설 수 있어(틱 간격이
+       60ms 밑으로 내려가면) 한 발화가 두 강화에 세어질 여지가 있었지만, 분할은 한 노드의 임자가
+       **정확히 하나**다. 「훔쳐 세지 않는다」가 상수가 아니라 **구조**로 지켜진다.
+     ⚠ 문턱(0.95·0.2)은 **한 칸도 안 건드렸다**(334 규약). 이 축이 헛초록이 아님은 아래 [R2b]
+       (틱 하나 걸러 발화를 죽이면 0.5 로 무너진다)가 못박는다. 재현기는 `tools/probe770.js`. */
+  const BACK = 12;   /* 관측 콜백이 강화 기록보다 살짝 앞설 수 있는 여유 — 경계 자체를 이만큼 당긴다 */
   let hit = 0;
-  buys.forEach(b => { if (fires.some(f => f.t >= b.t - 12 && f.t <= b.t + WIN)) hit++; });
+  buys.forEach((b, i) => {
+    /* 마지막 강화의 구간은 **손 뗌**에서 닫는다 — 정산 연출(`trHoldStop` 의 `fxUpOk`)은 틱이 아니다 */
+    const lo = b.t - BACK, hi = (i + 1 < buys.length) ? buys[i + 1].t - BACK : (d.up || Infinity);
+    if (fires.some(f => f.t >= lo && f.t < hi)) hit++;
+  });
   return { buys: buys.length, tries: tries.length, hit, ratio: buys.length ? p2(hit / buys.length) : 0,
            fires: fires.length, max: d.max, blocked: d.blocked, toasts: d.toasts };
 }
@@ -262,9 +285,44 @@ async function hold(page, sp, opt) {
     ok(d.ratio <= 0.2, 'R1 ' + sp.id + ' 무력화 사본은 발화가 사라진다(≤0.2)', d.hit + '/' + d.buys + ' = ' + d.ratio);
   }
   /* 되돌림이 «자를 무르게 잡아서» 통과한 게 아님을 못박는다 — 같은 자로 원본이 다시 초록이어야 한다 */
+  /* ⚑ 770 — **살 것을 먼저 되돌려 놓는다.** 이 자리까지 훈련 카드가 다섯 번 홀드돼(그 [B]·[E]·[R])
+     단계 상한 100 에 바짝 붙는다 — [K] 머리말이 적어 둔 «[R2] 가 살 것이 없어 0/0 으로 빨개졌다
+     (3회 중 2회)» 가 그 자리다. 순서를 바꿔 한 번 피했지만 **여유가 몇 레벨뿐이라** 언제든 재발한다.
+     레벨을 0 으로 되돌리면 [R2] 는 «원복하면 초록인가» 만 묻게 된다(자·문턱은 그대로).
+     ⚠ 이것은 «자를 무르게» 가 아니라 **다른 자(상한)를 자리에서 치우는 것**이다 — 상한이 실제로
+       빨개져야 할 자리는 [C1](빈 발화)이고 그 축은 안 건드렸다. 표본 유무는 [R2s] 가 따로 묻는다. */
+  const trResetLv = () => page.evaluate(() => {
+    const el = document.querySelector('#trCards [data-tr]'); const k = el && el.dataset.tr;
+    if (k && S.lv) S.lv[k] = 0;
+    S.gold = 1e18; if (typeof renderTrain === 'function') renderTrain();
+  });
+  await trResetLv();
   {
     const d = await hold(page, SPOTS[0]);
+    ok(!!d && d.buys >= 8, 'R2s 표본이 있다 — [R2] 홀드가 실제로 강화를 굴렸다(≥8 · 0/0 을 초록·빨강 어느 쪽으로도 안 읽는다)',
+       d ? '강화 ' + d.buys + '회 / 시도 ' + d.tries + '회' : 'n/a');
     ok(!!d && d.ratio >= 0.95, 'R2 원복하면 같은 자로 다시 초록', d ? d.hit + '/' + d.buys + ' = ' + d.ratio : 'n/a');
+  }
+  /* ⚑⚑ 770 [R2b] — **새 축(강화 경계 분할)이 «무르게 잡은 자» 가 아님을 못박는다.**
+     틱 하나 걸러 `upFx` 를 죽이면(노드가 안 붙는다) 절반의 강화가 임자 노드를 못 갖는다.
+     ⚠ 첫 발은 `trHoldStart` 의 `fxUpOk` 가 따로 터뜨리므로 항상 맞는다 — 그래서 기대값은 ≈0.5 이고
+       문턱을 0.7 에 둔다(0.95 축이 이 사본을 통과하면 그 축은 아무것도 안 묻는 것이다). */
+  console.log('\n[R2b] 되돌림 — 틱 하나 걸러 발화를 죽이면 새 축(강화 경계 분할)이 빨개진다');
+  await trResetLv();
+  await page.evaluate(() => { const f = window.upFx; window.__upFxAlt = f; let k = 0;
+    window.upFx = function (...a) { return (k++ % 2) ? f.apply(this, a) : false; }; });
+  {
+    const d = await hold(page, SPOTS[0]);
+    ok(!!d && d.buys >= 8, 'R2b-s 표본이 있다 — 반쪽 사본도 강화는 굴렸다(≥8)', d ? '강화 ' + d.buys + '회' : 'n/a');
+    ok(!!d && d.ratio <= 0.7, 'R2b ★ 틱 하나 걸러 죽인 사본은 [R2] 축이 무너진다(≤0.7)',
+       d ? d.hit + '/' + d.buys + ' = ' + d.ratio : 'n/a');
+  }
+  await page.evaluate(() => { if (window.__upFxAlt) window.upFx = window.__upFxAlt; });
+  await trResetLv();
+  {
+    const d = await hold(page, SPOTS[0]);
+    ok(!!d && d.ratio >= 0.95, 'R2c 원복하면 같은 자로 다시 초록(R2b 가 자를 안 남겼음을 못박는다)',
+       d ? d.hit + '/' + d.buys + ' = ' + d.ratio : 'n/a');
   }
   /* ⚑ 635 [R3] — 새 [B1] 축이 «무르게 잡은 자» 가 아님을 못박는다.
      시도 축으로 옮겼으니 «홀드가 아예 안 반복되면» 빨개져야 한다 — 홀드 대신 **한 번 클릭**하면
