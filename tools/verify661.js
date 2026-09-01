@@ -144,15 +144,43 @@ const MEASURE = `(function(){
           `§3 «${s}» 두 프레임에서 같은 자리 (프레임에 안 딸려간다)`,
           va && vb ? `${r2(va.top)} / ${r2(vb.top)}` : '—');
       }
-      ok(a && b && Math.abs(a.grp.h - b.grp.h) <= 1 && Math.abs(a.grp.h - 300) <= 1,
-        '§3 묶음 높이는 두 프레임 다 상수 300 (그래서 앵커가 `50% − 150px` 한 줄로 끝난다)',
-        a && b ? `${r2(a.grp.h)} / ${r2(b.grp.h)}` : '—');
+      /* ⚑ 726 이관 — 옛 항은 «묶음 높이 = 상수 300» 이었다. 726(«일괄 강화 결과를 전부 보여 준다»)
+         이후 높이는 **결과 칸 수**가 정한다: 6칸 이하면 그대로 300, 넘으면 행 수만큼 자라고
+         짧은 프레임은 «보이는 행수» 로 가둔다(그래서 두 프레임 값이 서로 다르다).
+         661 이 소유한 성질은 «상수» 가 아니라 «중앙» 이고 그것은 §1·§2 가 그대로 지킨다 —
+         그냥 지우면 «묶음이 통째로 다른 크기가 돼도 초록인 게이트» 가 되므로(333 처방)
+         항을 **둘로 갈라** 방향만 뒤집는다: ⓐ 레퍼런스 크기(≤6칸)에서는 옛 상수 300 이 살아 있다
+         ⓑ 7칸 이상에서는 실제로 자란다(= 726 이 되돌려지면 여기가 300 으로 굳어 빨개진다). */
+      for (const F of FRAMES) {
+        const page = await ctx.newPage();
+        await page.setViewportSize({ width: F.w, height: F.h });
+        await page.goto(URL);
+        await page.waitForTimeout(1400);
+        const m3 = await page.evaluate(() => {
+          openUpAll(EQUIPS.slice(0, 3).map((it, i) => ({ it, from: 1, to: 2 + i })));
+          const g = document.querySelector('#upw .upr-grp').getBoundingClientRect();
+          return { n: document.getElementById('upCards').childElementCount, h: g.height, cy: g.y + g.height / 2 };
+        });
+        ok(m3 && m3.n === 3 && Math.abs(m3.h - 300) <= 1,
+          `§3 ${F.id} 레퍼런스 크기(3칸)면 묶음 높이 300 그대로 — 726 가변 높이는 7칸부터다`,
+          m3 ? `${m3.n}칸 · h ${r2(m3.h)}` : '—');
+        ok(m3 && Math.abs(m3.cy - F.h / 2) <= TOL,
+          `§3 ${F.id} 그 3칸 결과도 세로 중앙 (661 의 성질은 높이가 아니라 앵커다)`,
+          m3 ? `Δy ${r2(m3.cy - F.h / 2)}` : '—');
+        await page.close();
+      }
+      ok(a && b && a.grp.h > 300 && b.grp.h > 300,
+        '§3 7칸 이상 결과는 묶음이 실제로 자란다 (726 — 옛 6칸 상한이 되살아나면 여기가 300 으로 굳는다)',
+        a && b ? `${r2(a.grp.h)} / ${r2(b.grp.h)} · 카드 ${a.cards}/${b.cards}` : '—');
     }
 
     /* ── §4 스코프 ────────────────────────────────────────────────────────── */
     blk('§4 스코프 — 공유 부품이지만 17·31 은 안 따라왔다');
-    ok(/\.upr-grp\{position:absolute;left:0;right:0;top:calc\(50% - 150px\);height:300px\}/.test(RAW),
-      '§4 09 규칙이 중앙 앵커다', 'top:calc(50% - 150px)');
+    /* 726 이관 — 상수 150/300 이 `--upr-gh`(폴백 300px)로 바뀌었다. **식은 그대로**이고
+       («top = 50% − 높이/2») 폴백이 옛 상수라 17·31 처럼 변수를 안 쓰는 화면은 한 픽셀도 안 움직인다. */
+    ok(/\.upr-grp\{position:absolute;left:0;right:0;top:calc\(50% - var\(--upr-gh,300px\)\/2\);height:var\(--upr-gh,300px\)\}/.test(RAW),
+      '§4 09 규칙이 중앙 앵커다 (726 — 상수가 변수로 바뀌었어도 «50% − 높이/2» 식 그대로)',
+      'top:calc(50% - var(--upr-gh,300px)/2)');
     ok(/#statw \.upr-grp\{top:793px/.test(RAW),
       '§4 17 스탯업(#statw)은 제 `top:793px` 을 그대로 덮는다 (특이도 id+class)', '있음');
     ok(/#dclw \.upr-grp\{top:768px/.test(RAW),

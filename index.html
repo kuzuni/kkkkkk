@@ -12573,8 +12573,14 @@
      ⚠ **`transform` 으로 중앙을 잡지 않았다** — `#upw i,b,em` 이 `transform-origin` 을 쓰고 60 쥬시가
        등장 연출에서 `transform` 을 얹는 계열이라, 묶음에 transform 을 걸면 그 연출과 자리가 싸운다.
        `calc()` 는 흐름 값이라 그 축과 겹치지 않는다.
-     ⚠ ref 이탈이므로 측정표 09 에 **정오표**를 남겼다(360·426 선례 — 주인 지시가 레퍼런스보다 우선). */
-  .upr-grp{position:absolute;left:0;right:0;top:calc(50% - 150px);height:300px}
+     ⚠ ref 이탈이므로 측정표 09 에 **정오표**를 남겼다(360·426 선례 — 주인 지시가 레퍼런스보다 우선).
+
+     ⚑ **726 — 높이가 더 이상 상수가 아니다.** 결과 칸이 7개 이상이면 격자가 줄바꿈해 묶음이
+       세로로 자란다(`--upr-gh` 를 `openUpAll` 이 그 자리에서 계산해 넣는다). 중앙 정렬식은
+       그대로라 «높이만 정하면 자리는 따라온다» — 661 이 만든 그 성질을 그대로 쓴다.
+       ⚠ 변수는 `#upw` 에만 걸리므로 같은 부품을 쓰는 `#statw`·`#dclw` 는 폴백 300px 그대로다
+         (그 둘은 자기 `top` 도 따로 덮는다 — 아래 661 주석). */
+  .upr-grp{position:absolute;left:0;right:0;top:calc(50% - var(--upr-gh,300px)/2);height:var(--upr-gh,300px)}
   .upr-grp>*{position:absolute}
 
   /* ── 리본 몸통 — ref x277–803(w527) y1012–1112(h101), 검정 6px, radius 15.5 ──
@@ -12624,6 +12630,25 @@
      3칸 등급색이 **전부 같다**(실측 Δ0). 칸별 등급색 분기를 넣지 않는다. */
   .upr-cards{left:0;right:0;top:131px;display:flex;gap:14px;justify-content:center}
   .upr-cel{width:137px;flex:0 0 auto}
+  /* ── 726 — 7칸 이상(«many») ─────────────────────────────────────────────────
+     레퍼런스는 3칸이고 6칸까지는 위 한 줄이 그대로 받는다(Δ0px). 넘치면 **줄바꿈**,
+     프레임에 안 들어가는 행은 이 격자만 스크롤한다 — 딤·리본·닫기 문구는 안 움직인다.
+     스크롤바는 이 저장소 규약대로 숨긴다(`.shsc`·`.shp-list`·`.dns-list` 와 같다) — 가려진 행이
+     있다는 사실은 «총 N건 강화 · 밀어서 더 보기» 글자가 말한다.
+     ⚠ `align-content:flex-start` 가 없으면 행이 남는 높이를 나눠 가져 **행 간격이 14 가 아니게** 된다. */
+  #upw.many .upr-cards{top:183px;flex-wrap:wrap;align-content:flex-start;
+    height:var(--upr-ch,166px);overflow-y:auto;overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #upw.many .upr-cards::-webkit-scrollbar{width:0;height:0}
+  /* «총 N건 강화» 합계 줄 — 리본(0..101) 아래 106..150. 09 의 다른 글자와 같은 규약
+     (흰 채움 + 검정 스트로크 · paint-order). 숫자만 리본 주황 계열로 띄운다. */
+  .upr-cnt{display:none;left:0;right:0;top:106px;height:44px;line-height:44px;
+    text-align:center;white-space:nowrap;font-size:36px;font-weight:900;color:#fff;
+    -webkit-text-stroke:7px #000;paint-order:stroke fill;z-index:2}
+  #upw.many .upr-cnt{display:block}
+  .upr-cnt s{display:inline-block;text-decoration:none}
+  .upr-cnt em{color:#FEBD55;margin:0 6px}
+  .upr-cnt s{color:#D8C6A6;font-size:27px;margin-left:18px;-webkit-text-stroke:5px #000}
   .upr-card{width:137px;height:138px;box-sizing:border-box;
     border:5px solid #000;border-radius:38px;
     background:radial-gradient(circle at 50% 62%,#9DC838 0 18%,#92BA33 78%);
@@ -16632,6 +16657,9 @@
       <div class="upr-tl l"><s></s></div>
       <div class="upr-tl r"><s></s></div>
       <div class="upr-rb"><i>강화 결과</i></div>
+      <!-- 726 — «총 N건 강화» 합계 줄. 7칸 이상일 때만 보인다(#upw.many) — 6칸 이하는
+           레퍼런스 그림 그대로라 이 줄이 없다. -->
+      <div class="upr-cnt" id="upCnt"></div>
       <div class="upr-cards" id="upCards"></div>
     </div>
     <div class="upr-close"><i>터치하여 닫기</i></div>
@@ -25556,9 +25584,37 @@ function levelUpAll(list){
   return { n, lvs, ups };
 }
 /* ── 09 일괄 강화 결과 팝업 ── 측정표: docs/measure/09-일괄강화결과팝업.md
-   껍데기 없는 «딤 위 연출». 레퍼런스는 카드 3칸이지만 실제 강화 결과는 개수가 가변이라
-   한 줄에 들어가는 6칸(151*6−14 = 892 < 1080)까지만 보여 준다. */
-const UPR_MAX = 6;
+   껍데기 없는 «딤 위 연출». 레퍼런스는 카드 3칸이지만 실제 강화 결과는 개수가 가변이다.
+
+   ⚑ **726 (2026-09-02, 주인 보고 «20개 넘게 일괄강화했는데 강화결과가 6개밖에 안뜨더라»)** —
+   여기 있던 `UPR_MAX = 6` 과 `ups.slice(0, UPR_MAX)` 가 그 6이었다. `probe726` 이 세 수를
+   같이 찍어 **표시만 잘린다**를 못박았다(24종 강화 → 세이브 상승 24 · `ups` 24 · 그려진 카드 6,
+   장비·스킬·펫 세 시트 모두). 데이터 경로는 처음부터 온전했으므로 고칠 곳은 이 한 자리다.
+   ⇒ 상한을 없애고 **6칸을 «한 줄 칸수»(`UPR_COLS`)로 뜻을 바꾼다** — 넘치면 줄바꿈,
+     프레임에 안 들어가면 그 격자만 스크롤. 6칸 이하는 레퍼런스 배치 그대로 **Δ0px** 이다
+     (`many` 클래스가 안 붙는다 = 옛 그림과 한 픽셀도 안 다르다).
+   ⚠ 327 «스크롤조차 안 쓴다» 규약은 12 소환 결과의 것이고 **여기로 옮기지 않는다** — 소환은
+     최대 30연으로 상한이 있지만 일괄 강화 건수는 보유 종수만큼 가변이라 «고정 2배» 가 없다.
+     대신 가려진 것이 있다는 사실을 **«총 N건 강화» 합계 줄**이 말한다(주인 지시 문면). */
+const UPR_COLS = 6;          /* 한 줄 칸수 — 137·6 + 14·5 = 892 < 1080 (측정표 §3 칸 규격 그대로) */
+const UPR_ROW_H = 166;       /* 한 행 = 카드 138 + `.upr-lv` margin 5 + 23 */
+const UPR_GAP = 14;          /* 칸 사이 — 가로·세로 같은 값(측정표 §3) */
+const UPR_SLACK = 8;         /* `.upr-lv` 검정 스트로크가 칸 밖으로 7px 넘친다(probe726 [5] 실측) */
+const UPR_TOP_1 = 131;       /* ≤6칸 — 레퍼런스 카드 상변(ref y1143 − 리본상변 1012) */
+const UPR_TOP_N = 183;       /* 7칸 이상 — «총 N건 강화» 줄(top 106 · h 44)이 끼어 52px 내려간다 */
+const UPR_BOT_KEEP = 240;    /* 아래로 비워 둘 띠 — «터치하여 닫기»(bottom 175 + 잉크 45) + 여유 20 */
+/* 187 합침 규약 — 같은 아이템이 여러 줄로 오면 한 칸에 «Lv a→b» 로 합친다.
+   `levelUpAll` 은 종당 한 줄만 만들지만(«a→b» 가 이미 합본), 호출부가 목록을 겹쳐 넘길 수
+   있으므로 표시층에서 한 번 더 접는다 — 게이트가 세는 «기대 건수» 는 이 합침 뒤 값이다. */
+function uprMerge(ups){
+  const by = new Map();
+  ups.forEach(u => {
+    const k = u.it && u.it.id, p = by.get(k);
+    if(p){ p.from = Math.min(p.from, u.from); p.to = Math.max(p.to, u.to); }
+    else   by.set(k, { it: u.it, from: u.from, to: u.to });
+  });
+  return [...by.values()];
+}
 /* 192 (T1 «버그», 2026-08-27 주인 보고 «펫 일괄 강화 했더니 슬롯이 ? 로 뜸») —
    `EQUIPS`·`SKILLS` 는 `ic`(이모지)를 갖지만 **`PETS` 는 안 갖는다**(sp+tint 스프라이트다).
    그래서 펫이 섞인 결과가 통째로 «❔» 로 떴다. 174 가 «펫 그림 = 전투 스프라이트» 로 확정했으므로
@@ -25761,19 +25817,47 @@ function petPaint(root){
 }
 function openUpAll(ups){
   if(!ups || !ups.length) return false;
-  $('upCards').innerHTML = ups.slice(0, UPR_MAX).map(u =>
+  const list = uprMerge(ups), n = list.length, w = $('upw');
+  const many = n > UPR_COLS;
+  /* 세로 자리 — 661 이후 묶음은 «화면 세로 중앙»(`top: calc(50% − 높이/2)`)이라 **높이만** 정하면
+     자리는 따라온다. 6칸 이하는 측정표의 300 을 그대로 써서 레퍼런스와 Δ0px 이다. */
+  const rows = Math.ceil(n / UPR_COLS);
+  const top  = many ? UPR_TOP_N : UPR_TOP_1;
+  /* 짧은 프레임(9:13.3)에서는 아래 «터치하여 닫기» 띠를 먹지 않는 만큼만 보여 주고 나머지는 스크롤.
+     중앙 정렬이라 묶음 높이 Hh 는 아래로 Hh/2 만 자라므로 여유는 **2배**로 잡는다. */
+  const fh   = ($('app') && $('app').clientHeight) || 2280;
+  const room = Math.max(UPR_ROW_H, fh - 2*UPR_BOT_KEEP - top);
+  const vis  = Math.max(1, Math.min(rows, Math.floor((room - UPR_SLACK + UPR_GAP) / (UPR_ROW_H + UPR_GAP))));
+  const gh   = vis*UPR_ROW_H + (vis - 1)*UPR_GAP + UPR_SLACK;
+  w.classList.toggle('many', many);
+  w.style.setProperty('--upr-gh', (many ? top + gh : 300) + 'px');
+  w.style.setProperty('--upr-ch', gh + 'px');
+  /* 합계 줄 — 주인 지시 «전 항목 표시 + «총 N건» 헤더». 가려진 행이 있으면 그렇다고 말한다
+     (스크롤바를 숨기는 것이 이 저장소 규약이라 — `.shsc`·`.shp-list` — 글자가 그 몫을 한다). */
+  $('upCnt').innerHTML = '<i>총</i><em>' + n + '</em><i>건 강화</i>'
+    + (rows > vis ? '<s>밀어서 더 보기</s>' : '');
+  $('upCards').innerHTML = list.map(u =>
       '<div class="upr-cel"><div class="upr-card"><b>' + petIcon(u.it, 'up') + '</b></div>'
     + '<div class="upr-lv"><i>' + u.from + '</i>'
     + '<em><svg viewBox="0 0 24 23"><path d="M0 5H10V-1l14 12.5L10 24v-5H0z"/></svg></em>'
     + '<i>' + u.to + '</i></div></div>').join('');
+  $('upCards').scrollTop = 0;
   petPaint($('upCards'));
-  $('upw').classList.add('on');
+  w.classList.add('on');
   sfx('up');                                            /* 78 — 일괄 강화 결과 */
   return true;
 }
 function closeUpAll(){ $('upw').classList.remove('on'); }
-/* «터치하여 닫기» — 화면 아무 데나 탭하면 닫힌다(레퍼런스에 ✕ 버튼이 없다) */
-$('upw').addEventListener('click', closeUpAll);
+/* «터치하여 닫기» — 화면 아무 데나 탭하면 닫힌다(레퍼런스에 ✕ 버튼이 없다).
+   ⚠ 726 — 격자가 스크롤되면 «밀어서 넘기는 손짓» 도 끝에서 click 으로 도착한다(마우스 드래그·
+   스크롤바 포함). 10px 넘게 움직인 클릭은 «닫기» 가 아니다 — 탭(움직임 0)은 종전 그대로다. */
+let uprPt = null;
+$('upw').addEventListener('pointerdown', e => { uprPt = { x: e.clientX, y: e.clientY }; });
+$('upw').addEventListener('click', e => {
+  const moved = uprPt && Math.hypot(e.clientX - uprPt.x, e.clientY - uprPt.y) > 10;
+  uprPt = null;
+  if(!moved) closeUpAll();
+});
 
 /* ── 17 스탯업 보너스 팝업 연출 ── 측정표: docs/measure/17-스탯업보너스팝업.md
    훈련(23) 단계 상승 시 재생하는 표시 전용 연출(저장 구조 무관).
