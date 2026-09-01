@@ -141,6 +141,9 @@ const ok = (b, name, detail) => {
     S.eqSlot.weapon = null; markDirty(); const off = stat.dmg;
     S.eqSlot.weapon = w0.id; markDirty(); const on0 = stat.dmg;
     S.eqSlot.weapon = w4.id; markDirty(); const on4 = stat.dmg;
+    /* ⚑ 724 — 장부 값은 **치우기 전에** 읽는다(치운 뒤엔 보유 Σ 0 · Lv0 이라 다른 물건이 된다) */
+    const own = EQUIPS.reduce((t, e) => (has(e.id) && e.slot === 'weapon') ? t + ownVal(e) : t, 0);
+    const ev0 = equipVal(w0), ev4 = equipVal(w4);
     S.eqSlot.weapon = null; delete S.own[w0.id]; delete S.own[w4.id]; markDirty();
     /* power() 순서 = 배열 순서(482 «제일 좋은 것» 자동 선택이 읽는 자) */
     const badPow = [];
@@ -148,11 +151,17 @@ const ok = (b, name, detail) => {
       const t = EQUIPS.filter(e => e.slot === s.k && e.g === g);
       for (let j = 1; j < t.length; j++) if (!(power(t[j]) > power(t[j - 1]))) badPow.push(t[j].id);
     }));
-    return { off, on0, on4, r0: on0 / off, r4: on4 / off, badPow };
+    /* ⚑ 724 — 장비는 «보유 + 장착» 이 한 카테고리라 장착 배수가 보유 Σ 로 희석된다.
+       그래서 관측비의 기댓값도 장부 꼴로 준다 — 지키는 뜻(«1티어 = +10%»)은 그대로다. */
+    return { off, on0, on4, r0: on0 / off, r4: on4 / off, badPow, own, ev0, ev4 };
   });
-  ok(Math.abs(E.r0 - 1.10) < 1e-9, 'E1 일반 1티어 장착 = 공격력 ×1.10', '×' + E.r0.toFixed(6));
-  ok(Math.abs(E.r4 / E.r0 - (1 + 0.50625) / 1.10) < 1e-9, 'E2 같은 등급 5티어는 1티어보다 ×1.5⁴ 만큼 위',
-     '×' + E.r4.toFixed(6) + ' (= 1 + 50.625%)');
+  ok(Math.abs(E.r0 - (1 + E.own + E.ev0) / (1 + E.own)) < 1e-9,
+     'E1 일반 1티어 장착 = 공격력 +' + (E.ev0 * 100).toFixed(2) + '%(장비 장부 · 724)',
+     '×' + E.r0.toFixed(6) + ' = (1+보유Σ ' + E.own.toFixed(4) + '+' + E.ev0.toFixed(4) + ')/(1+보유Σ)');
+  ok(Math.abs(E.ev0 - 0.10) < 1e-9, 'E1b 장착 효과 자체는 일반 1티어 = +10% 그대로',
+     (E.ev0 * 100).toFixed(4) + '%');
+  ok(Math.abs(E.ev4 / E.ev0 - Math.pow(1.5, 4)) < 1e-9, 'E2 같은 등급 5티어는 1티어보다 ×1.5⁴ 만큼 위',
+     '×' + (E.ev4 / E.ev0).toFixed(6) + ' (' + (E.ev4 * 100).toFixed(3) + '% / ' + (E.ev0 * 100).toFixed(3) + '%)');
   ok(E.badPow.length === 0, 'E3 power() 순서 = 배열 순서(482 자동 선택의 자)',
      E.badPow.slice(0, 4).join(' / ') || '위반 0');
 

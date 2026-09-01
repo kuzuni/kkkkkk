@@ -205,9 +205,11 @@ async function open(browser) {
       AVATARS.forEach(a => S.avatars[a.id] = 1);
       S.cosLv = {}; markDirty();
       const n = AVATARS.length;
-      const mine = { atk: cosOwnMul('atk'), hp: cosOwnMul('hp'), gold: cosOwnMul('gold') };
-      const flat = { atk: Math.pow(1 + COS_OWN.atk, n), hp: Math.pow(1 + COS_OWN.hp, n),
-                     gold: Math.pow(1 + COS_OWN.gold, n) };
+      /* ⚑ 724 — 두 축을 **같이** 합 모델로 뒤집었다(333 처방). 이 절이 지키는 것은
+         «계단 곡선이 194 의 총량을 보존하는가» 이고, 그 물음은 결합 방식과 무관하다 —
+         단 양쪽을 같은 모델로 재야 뜻이 산다(한쪽만 뒤집으면 비가 거짓이 된다). */
+      const mine = { atk: 1 + cosOwnSum('atk'), hp: 1 + cosOwnSum('hp'), gold: 1 + cosOwnSum('gold') };
+      const flat = { atk: 1 + n * COS_OWN.atk, hp: 1 + n * COS_OWN.hp, gold: 1 + n * COS_OWN.gold };
       return { n: n, mine: mine, flat: flat };
     });
     ['atk', 'hp', 'gold'].forEach(k => {
@@ -219,14 +221,15 @@ async function open(browser) {
 
     /* ---------------- [G] 표기 일치 ---------------- */
     const G = await page.evaluate(() => {
-      /* 코스튬 시트를 그려 «총효과» 표기를 읽고 cosOwnMul 과 맞춘다 */
+      /* 코스튬 시트를 그려 «총효과» 표기를 읽고 bonus() 의 코스튬 장부와 맞춘다.
+         ⚑ 724 — 보유·강화는 **한 카테고리**라 더한다(예전에는 `cosOwnMul × (1+강화)` 였다). */
       renderCos();
       const el = document.querySelector('#bCos .sk-tot em');
-      const want = cosOwnMul('atk') * (1 + cosLvVal('atk')) - 1;
+      const want = cosOwnSum('atk') + cosLvVal('atk');
       return { txt: el ? el.textContent : null, want: pct(want) };
     });
     ok(G.txt != null && G.txt.indexOf(G.want) >= 0,
-       'G1 코스튬 시트 «총효과» 표기 = cosOwnMul × 강화 (식이 갈라지지 않는다)',
+       'G1 코스튬 시트 «총효과» 표기 = 보유 Σ + 강화 (식이 갈라지지 않는다 · 724)',
        (G.txt || '없음') + ' / 기대 ' + G.want);
 
     /* ---------------- [H] 실동작 ---------------- */
@@ -245,10 +248,13 @@ async function open(browser) {
       }
       /* 코스튬 1개 더 획득 → 공격 배수가 오른다 */
       S.own = {}; S.eqSlot.weapon = null; markDirty();
-      const a0 = bonus().atk;
+      const a0 = bonus().atk, own0 = cosOwnSum('atk');
       S.avatars[AVATARS[1].id] = 1; markDirty();
       const a1 = bonus().atk;
-      return { seq: seq, a0: a0, a1: a1, stepWant: 1 + cosOwnStep('atk', 2) };
+      /* ⚑ 724 — 카테고리 «안» 이 합이라 한 칸 더 얻은 배수는 `(1+Σ+계단)/(1+Σ)` 다
+         (예전에는 계단 하나가 그대로 곱이었다). 묻는 것은 그대로 «2번째 계단만큼 붙는가» 다. */
+      return { seq: seq, a0: a0, a1: a1,
+               stepWant: (1 + own0 + cosOwnStep('atk', 2)) / (1 + own0) };
     });
     {
       const rising = H.seq.every((r, i) => i === 0 || r.cp > H.seq[i - 1].cp);

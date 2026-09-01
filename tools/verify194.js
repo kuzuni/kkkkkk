@@ -152,10 +152,18 @@ const table = [];
     S.cosLv = { av0: 200 }; markDirty();
     const a3 = bonus().atk;
     S.cosLv = {}; markDirty();
-    return { a0, a1, a2, a3, per: COS_LV.atk };
+    return { a0, a1, a2, a3, per: COS_LV.atk, own: cosOwnSum('atk') };
   });
-  ok(Math.abs(bo.a1 / bo.a0 - (1 + 100 * bo.per)) < 1e-9,
-    '강화 100Lv → 공격력 ×' + (1 + 100 * bo.per).toFixed(2) + ' (실측 ×' + (bo.a1 / bo.a0).toFixed(4) + ')');
+  /* ⚑ 724 — 방향을 뒤집었다(333 처방). 주인 확정 모델에서 코스튬은 **보유+강화가 한 카테고리**라
+     강화분이 «자기만의 곱» 을 갖지 않는다: 배수는 `(1+보유Σ+강화)/(1+보유Σ)` 다.
+     항을 지우지 않은 이유 — 이 자리가 지키는 것은 «강화 100Lv 이 정확히 100·per 만큼 붙는다» 이고
+     그 뜻은 모델이 바뀌어도 살아 있다(값이 아니라 «얼마나 붙나» 를 묻는다). */
+  {
+    const want = (1 + bo.own + 100 * bo.per) / (1 + bo.own);
+    ok(Math.abs(bo.a1 / bo.a0 - want) < 1e-9,
+      '강화 100Lv → 공격력 ×' + want.toFixed(4) + ' = (1+보유Σ+' + (100 * bo.per).toFixed(2) + ')/(1+보유Σ '
+      + bo.own.toFixed(4) + ') · 724 (실측 ×' + (bo.a1 / bo.a0).toFixed(4) + ')');
+  }
   ok(Math.abs(bo.a2 - bo.a3) < 1e-6,
     '«레벨 총합에 1회 곱» — 100+100 과 200 이 같다 (LESSONS 91-1)',
     bo.a2.toExponential(4) + ' vs ' + bo.a3.toExponential(4));

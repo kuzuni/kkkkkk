@@ -78,9 +78,12 @@ const SNAPS = [
         if (s.k === 'weapon') atkOldF *= r; else if (s.k === 'shield') hpOldF *= r; else regOldF *= r;
       });
       /* ④ 코스튬 */
+      /* ⚑ 724 — 코스튬 보유 축이 «곱» 에서 «합» 으로 바뀌었다(주인 확정 모델).
+         197 이 묻는 것은 «평평 → 계단» 한 축의 비이므로, 양쪽을 **같은 결합**(합)으로 재야
+         비가 197 의 것으로 남는다. 한쪽만 옛 곱으로 두면 724 의 변화가 197 표에 섞여 든다. */
       const nc = AVATARS.filter(a => S.avatars[a.id]).length;
-      atkOldF *= Math.pow(1 + COS_OWN.atk, nc) / cosOwnMul('atk');
-      hpOldF  *= Math.pow(1 + COS_OWN.hp,  nc) / cosOwnMul('hp');
+      atkOldF *= (1 + nc * COS_OWN.atk) / (1 + cosOwnSum('atk'));
+      hpOldF  *= (1 + nc * COS_OWN.hp)  / (1 + cosOwnSum('hp'));
 
       /* ② 장착 스킬·펫 피해 — dps 만 따로 환산 */
       let dpsOld = 0;

@@ -120,9 +120,16 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
 
   /* ---------------- §3 밸런스 상한 ---------------- */
   console.log('\n§3 밸런스');
+  /* ⚑ 724 — 방향을 뒤집었다(333 처방). 주인 확정 모델에서 코스튬 카테고리 «안» 은 합이므로
+     50종 전부 보유의 배수는 `Π(1+a[k])` 가 아니라 **1 + Σ(계단)** 이다(`cosOwnSum`).
+     항을 지우지 않은 이유 — 여기가 지키는 것은 «보유 축의 상한» 이고 그 뜻은 모델과 무관하다. */
   const bal = await page.evaluate(() => {
-    const m = k => AVATARS.reduce((p, a) => p * (1 + a[k]), 1);
-    return { atk: m('atk'), hp: m('hp'), gold: m('gold') };
+    const keep = Object.assign({}, S.avatars), keepLv = S.cosLv; S.cosLv = {};
+    AVATARS.forEach(a => S.avatars[a.id] = 1); markDirty();
+    const m = k => 1 + cosOwnSum(k);
+    const r = { atk: m('atk'), hp: m('hp'), gold: m('gold') };
+    S.avatars = keep; S.cosLv = keepLv; markDirty();
+    return r;
   });
   console.log('    전부 보유 시 배수 — 공격 ×' + bal.atk.toFixed(1) + ' · 체력 ×' + bal.hp.toFixed(1)
     + ' · 골드 ×' + bal.gold.toFixed(1));
@@ -135,14 +142,17 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
        «전부 보유 ÷ av0 하나» = 나머지 49종의 곱이다. 아래 기댓값도 같은 식으로 만든다.
        레벨은 전부 0 으로 두어 «보유 축» 만 잰다(강화 축은 §8 이 따로 잰다). */
     const keep = Object.assign({}, S.avatars), keepLv = S.cosLv; S.cosLv = {};
-    S.avatars = { av0: 1 }; markDirty(); const before = bonus().atk;
-    AVATARS.forEach(a => S.avatars[a.id] = 1); markDirty(); const after = bonus().atk;
+    S.avatars = { av0: 1 }; markDirty();
+    const before = bonus().atk, own1 = cosOwnSum('atk');
+    AVATARS.forEach(a => S.avatars[a.id] = 1); markDirty();
+    const after = bonus().atk, ownAll = cosOwnSum('atk');
     S.avatars = keep; S.cosLv = keepLv; markDirty();
-    return after / before;
+    return { got: after / before, want: (1 + ownAll) / (1 + own1) };
   });
-  const balNo0 = bal.atk / (1 + (data.find(a => a.id === 'av0') || { atk: 0 }).atk);
-  ok(Math.abs(bonusRatio / balNo0 - 1) < 0.02,
-    'bonus() 합산이 데이터 배수와 일치 (av0 제외 ' + bonusRatio.toFixed(1) + ' vs ' + balNo0.toFixed(1) + ')');
+  /* ⚑ 724 — 기댓값도 «합» 모델로 뒤집었다: 배수 = (1+전부 보유 Σ)/(1+av0 하나 Σ) */
+  ok(Math.abs(bonusRatio.got / bonusRatio.want - 1) < 1e-9,
+    'bonus() 합산이 데이터 합과 일치 (av0 제외 ×' + bonusRatio.got.toFixed(4)
+    + ' vs ×' + bonusRatio.want.toFixed(4) + ')');
 
   /* ---------------- §4 실동작 ---------------- */
   console.log('\n§4 실동작 (버튼을 눌렀을 때 무엇이 바뀌나)');

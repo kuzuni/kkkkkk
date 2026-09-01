@@ -107,8 +107,11 @@ const ok = (b, name, detail) => {
     S.eqPet = p.map(x => x.id); markDirty(); const three = stat.dmg;
     /* 미장착 펫은 기여 0 — 보유만 켠 채 장착을 비우면 off 로 돌아온다 */
     S.eqPet = []; markDirty(); const back = stat.dmg;
-    const want1 = 1 + petEquipVal(p[0]);
-    const want3 = 1 + p.reduce((a, x) => a + petEquipVal(x), 0);
+    /* ⚑ 724 — 펫은 «보유 + 장착» 이 한 카테고리(장부)라 장착 배수가 보유 Σ 로 희석된다.
+       기댓값을 장부 꼴로 준다 — 지키는 뜻(«3마리는 합산 한 번, 곱이 아니다»)은 그대로다. */
+    const pOwn = PETS.reduce((a, x) => has(x.id) ? a + ownVal(x) * 0.6 : a, 0);
+    const want1 = (1 + pOwn + petEquipVal(p[0])) / (1 + pOwn);
+    const want3 = (1 + pOwn + p.reduce((a, x) => a + petEquipVal(x), 0)) / (1 + pOwn);
     const prod3 = p.reduce((a, x) => a * (1 + petEquipVal(x)), 1);
     p.forEach(x => delete S.own[x.id]); S.eqPet = []; markDirty();
     return { r1: one / off, want1, r3: three / off, want3, prod3, backEq: back === off,
