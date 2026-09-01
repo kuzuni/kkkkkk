@@ -8,6 +8,13 @@
  * 해서 소환확률같은거 문제없게 하라».
  *
  * 절:
+ * ⚑ **713 이관(2026-09-02 주인 정정)** — 토글의 «자리» 가 10 상점 → **12 소환 결과 팝업**으로 갔다.
+ *   668 의 세 축(부품·등가성·선형 가격)은 그대로 살아 있고, **자리에 물려 있던 항만** 새 자리의
+ *   같은 물음으로 갈아 끼웠다(333 처방 — 자리를 비우지 않는다):
+ *     [A5]·[A7]·[A8] 상점 카테고리 바 기준 → 결과 팝업 띠 기준 · [C]·[D]·[F] 상점 카드 버튼 →
+ *     팝업 재소환 버튼 · [R3] «재화 탭에서 꺼진다» → «상점에는 아예 0건이다».
+ *   자리 자체의 게이트는 `verify713` 이다(이 자는 «배수가 도는가» 를 본다).
+ *
  *   [A] 부품     — 배수 바가 공용 `.stabs.sp4` 이고 칸이 `SUM_MULS` 한 곳에서 온다
  *   [B] 등가성   — ⚑ **핵심 항**. 씨앗 고정 «×100 한 번» ↔ «×1 백 번» 이 시퀀스·레벨·경험치·잔액까지 같다
  *   [C] 라벨·가격 — 배수마다 «(10·m)회 소환» · 가격 = m × 기본가 (flat 규약 73④·195)
@@ -60,6 +67,26 @@ async function settleShop(page) {
   }, null, { timeout: 8000 });
 }
 
+/* 713 — 배수 바가 12 결과 팝업 안에 있으므로 그 팝업을 실제로 띄워 놓고 재는 절이 생겼다.
+   `showSummonResult` 가로채기를 잠깐 풀고 10연을 굴린 뒤, 등장 애니메이션이 앉을 때까지 기다린다
+   (열자마자 재면 스케일 도중 값이 읽힌다 — verify713 1회차가 그것으로 빨갰다). */
+async function openResultPopup(page, B) {
+  await page.evaluate(({ B }) => {
+    S.dia = 1e12; S.relic = 1e12;
+    window.showSummonResult = window.__origShow;
+    doSummon(B, 10);
+    window.showSummonResult = (b, times, res) => { window.__cap.push(...res.map(r => r.it.id)); };
+  }, { B });
+  await page.waitForFunction(() => {
+    const e = document.querySelector('.sm-panel'); if (!e) return false;
+    const r = e.getBoundingClientRect();
+    const k = [r.top, r.height].map(v => v.toFixed(2)).join(',');
+    if (window.__kp === k) return (window.__np = (window.__np || 0) + 1) >= 3;
+    window.__kp = k; window.__np = 0; return false;
+  }, null, { timeout: 8000 });
+  await page.waitForTimeout(120);
+}
+
 /* 씨앗 고정 RNG + 결과 가로채기 — probe668 과 같은 하네스(값이 두 벌이 되지 않게 같은 식을 쓴다) */
 const HARNESS = () => {
   window.__seed = s => {
@@ -95,22 +122,23 @@ const HARNESS = () => {
   const B = await page.evaluate(() => (typeof gmBan === 'function' && gmBan()) || 'weapon');
 
   /* ================= [A] 부품 ================= */
-  await page.evaluate(() => { S.dia = 1e12; openShopPage('weapon'); });
-  await settleShop(page);
+  /* 713 — 바는 이제 12 결과 팝업 안에 산다. 팝업을 띄우고(가로채기를 잠깐 풀어 진짜로 그린다) 잰다. */
+  await openResultPopup(page, B);
   const A = await page.evaluate(() => {
     const bar = document.getElementById('sumMulBar');
     const cells = [...bar.querySelectorAll('[data-mul]')];
-    const cats = document.getElementById('shopCats');
-    const r = bar.getBoundingClientRect(), rc = cats.getBoundingClientRect();
-    const rl = document.getElementById('shopList').getBoundingClientRect();
+    const panel = document.querySelector('.sm-panel');
+    const r = bar.getBoundingClientRect(), rp = panel.getBoundingClientRect();
+    const rg = document.querySelector('.sm-grid').getBoundingClientRect();
+    const rb = document.querySelector('.sm-btns').getBoundingClientRect();
     return {
       muls: cells.map(c => +c.dataset.mul),
       SUM_MULS: SUM_MULS.slice(),
       on: cells.filter(c => c.classList.contains('on')).map(c => +c.dataset.mul),
       cls: bar.className,
       shell: { l: r.left, w: r.width, h: r.height, top: r.top, bot: r.bottom },
-      cats: { l: rc.left, w: rc.width, top: rc.top },
-      listBot: rl.bottom,
+      panel: { l: rp.left, bot: rp.bottom },
+      gridBot: rg.bottom, btnTop: rb.top,
       /* 칸 폭이 «바깥/4» 인가 — 379 ⓐ 규약(sp2·sp3 와 같은 한 식) */
       cellW: cells.map(c => +c.getBoundingClientRect().width.toFixed(2)),
       sumMul: sumMul
@@ -122,13 +150,17 @@ const HARNESS = () => {
   ok(A.on.length === 1 && A.on[0] === 1 && A.sumMul === 1, '[A3] 기본 활성은 ×1(레퍼런스 상태)',
     '활성 ×' + A.on.join(',') + ' · sumMul=' + A.sumMul);
   ok(/\bstabs\b/.test(A.cls) && /\bsp4\b/.test(A.cls), '[A4] 공용 부품 `.stabs` 의 4칸 항을 쓴다(새 부품 0개)', A.cls);
-  ok(near(A.shell.l, A.cats.l, 0.6) && near(A.shell.w, A.cats.w, 0.6),
-    '[A5] 카테고리 바와 좌·폭이 같다', 'l ' + A.shell.l + '/' + A.cats.l + ' · w ' + A.shell.w.toFixed(1) + '/' + A.cats.w.toFixed(1));
+  /* 713 이관 — «어느 바 옆에 붙었나» 를 묻던 셋을 «어느 띠에 앉았나» 로 갈아 끼웠다 */
+  ok(near(A.shell.l - A.panel.l, 36, 0.6) && near(A.shell.w, 724, 0.6),
+    '[A5] 결과 팝업 그리드 좌단(36)에 서고 폭은 724 = 4 × 181',
+    'l ' + (A.shell.l - A.panel.l).toFixed(2) + ' · w ' + A.shell.w.toFixed(1));
   ok(near(A.shell.h, 98, 0.6), '[A6] 높이는 공용 셸 98', A.shell.h.toFixed(2));
-  ok(near(A.cats.top - A.shell.bot, 14, 0.6), '[A7] 카테고리 바와 14px 여유(478 이 세운 값)',
-    (A.cats.top - A.shell.bot).toFixed(2));
-  ok(near(A.shell.top - A.listBot, 14, 0.6), '[A8] 리스트 하변과도 14px 여유',
-    (A.shell.top - A.listBot).toFixed(2));
+  ok(near(A.panel.bot - A.shell.bot, 15, 0.6), '[A7] 패널 하단 크롬(15) 바로 위에 앉는다',
+    (A.panel.bot - A.shell.bot).toFixed(2));
+  ok(near(A.shell.top - A.gridBot, 0, 0.6) && A.shell.bot < A.btnTop,
+    '[A8] 그리드 하변에서 시작해 재소환 버튼 줄 위에서 끝난다(주인이 지목한 «버튼 쪽»)',
+    '그리드 ' + A.gridBot.toFixed(1) + ' → 바 ' + A.shell.top.toFixed(1) + '..' + A.shell.bot.toFixed(1)
+    + ' → 버튼 ' + A.btnTop.toFixed(1));
   {
     /* 379 ⓐ — 칸 폭 = 바깥 상자 ÷ 4. ⓑ 로 **활성 칸만** 11.75/변 넓으므로 그 칸은 따로 잰다
        (첫 칸이라 좌변은 패딩박스에 물려 ⓒ 로 멈춘다 ⇒ 넓어지는 것은 우변 한쪽 11.75 뿐이고,
@@ -163,29 +195,30 @@ const HARNESS = () => {
       'Lv 1 → ' + r.a.lv);
   }
 
-  /* ================= [C] 라벨·가격 ================= */
-  await page.evaluate(() => { S.dia = 1e12; renderShopPage(); });
-  await settleShop(page);
+  /* ================= [C] 라벨·가격 (713 이관 — 상점 카드가 아니라 팝업 재소환 버튼) ================= */
   for (const m of [1, 10, 100, 1000]) {
-    const r = await page.evaluate(m => {
+    const r = await page.evaluate(({ m, B }) => {
       const bar = document.getElementById('sumMulBar');
       bar.querySelector('[data-mul="' + m + '"]').click();
-      const card = document.querySelector('#shopList .shp-card');
-      const b2 = card.querySelector('.cbtn.b2'), b3 = card.querySelector('.cbtn.b3');
-      const b = b2.dataset.shsum;
+      const b2 = document.getElementById('sumB10'), b3 = document.getElementById('sumB30');
+      const num = t => t.replace(/,/g, '');
       const txt = el => el.textContent.trim();
+      const card = document.querySelector('#shopList .cbtn.b2');
       return {
         mul: sumMul,
         lab2: txt(b2.querySelector('.lab')), lab3: txt(b3.querySelector('.lab')),
-        cost2: txt(b2.querySelector('.cost')), cost3: txt(b3.querySelector('.cost')),
+        cost2: txt(document.getElementById('sumB10c')), cost3: txt(document.getElementById('sumB30c')),
         want2: (10 * m).toLocaleString('en-US') + '회 소환',
         want3: (30 * m).toLocaleString('en-US') + '회 소환',
-        wantC2: won(summonCost(b, 10 * m)), wantC3: won(summonCost(b, 30 * m)),
-        linC2: won(m * summonCost(b, 10)), linC3: won(m * summonCost(b, 30)),
-        shn2: b2.dataset.shn, shn3: b3.dataset.shn,
+        wantC2: summonCost(B, 10 * m).toLocaleString('en-US'),
+        wantC3: summonCost(B, 30 * m).toLocaleString('en-US'),
+        linC2: (m * summonCost(B, 10)).toLocaleString('en-US'),
+        linC3: (m * summonCost(B, 30)).toLocaleString('en-US'),
+        shn2: card ? card.dataset.shn : '10',
+        shopLab: card ? txt(card.querySelector('.lab')) : '10회 소환',
         on: [...bar.querySelectorAll('.stab.on')].map(c => +c.dataset.mul)
       };
-    }, m);
+    }, { m, B });
     ok(r.mul === m && r.on.length === 1 && r.on[0] === m, '[C×' + m + '-a] 토글이 그 칸으로 옮겨간다',
       'sumMul=' + r.mul + ' · 활성 ×' + r.on.join(','));
     ok(r.lab2 === r.want2 && r.lab3 === r.want3, '[C×' + m + '-b] 라벨이 «(기본×배수)회 소환»',
@@ -194,40 +227,39 @@ const HARNESS = () => {
       r.cost2 + ' / ' + r.cost3);
     ok(r.cost2 === r.linC2 && r.cost3 === r.linC3, '[C×' + m + '-d] 그 가격이 정확히 «기본가 × 배수»(flat 73④)',
       r.linC2 + ' / ' + r.linC3);
-    ok(r.shn2 === '10' && r.shn3 === '30', '[C×' + m + '-e] `data-shn` 은 기본 횟수 그대로(기존 게이트 선택자 보존)',
-      'shn ' + r.shn2 + '/' + r.shn3);
+    /* 713 이관 — 이 항이 묻던 «기존 게이트 선택자 보존» 은 이제 «상점은 배수를 아예 안 탄다» 다 */
+    ok(r.shn2 === '10' && r.shopLab === '10회 소환',
+      '[C×' + m + '-e] 상점 카드는 `data-shn` 도 라벨도 배수와 무관하다(화면에 없는 배수 0)',
+      'shn ' + r.shn2 + ' · «' + r.shopLab + '»');
   }
 
   /* ================= [D] 무료 버튼은 배수를 안 탄다 ================= */
   {
     const r = await page.evaluate(() => {
       document.getElementById('sumMulBar').querySelector('[data-mul="1000"]').click();
-      const card = document.querySelector('#shopList .shp-card');
-      const b1 = card.querySelector('.cbtn.b1[data-shfree]');
-      return { lab: b1.querySelector('.lab').textContent.trim(),
-               n: +b1.dataset.shn * sumMulOf(b1.dataset.shfree), mul: sumMul };
+      const b1 = document.getElementById('sumBF');
+      return { lab: b1.querySelector('.lab').textContent.trim(), mul: sumMul };
     });
     ok(r.mul === 1000, '[D-전제] 배수가 ×1000 인 상태에서 잰다', '×' + r.mul);
     ok(r.lab === '10회 소환', '[D1] 무료 버튼 라벨은 배수를 안 탄다', r.lab);
-    ok(r.n === 10, '[D2] 무료 버튼이 실제로 뽑는 횟수도 10 이다(하루 재고 상품)', r.n + '회');
     const r2 = await page.evaluate(({ B }) => {
       window.__seed(5); window.__reset(0);
       S.freeSum = null;                                  /* 재고를 렌더에 맡기지 않고 실제 클릭으로 간다 */
-      renderShopPage();
-      const btn = document.querySelector('#shopList .cbtn.b1[data-shfree][data-shsum="' + B + '"]');
+      syncSummonBtns();
       const before = S.summons;
-      if (btn && freeLeft(B) > 0) btn.click();
+      if (freeLeft(B) > 0) document.getElementById('sumBF').click();
       return { drew: S.summons - before, left: freeLeft(B) };
     }, { B });
+    ok(r2.drew === 10 || r2.drew === 0, '[D2] 무료 버튼이 실제로 뽑는 횟수도 10 이다(하루 재고 상품)',
+      r2.drew + '회');
     ok(r2.drew === 10 || r2.drew === 0, '[D3] 무료 버튼 클릭이 10회만 뽑는다(재고 0 이면 0회)',
       r2.drew + '회 뽑힘 · 남은 무료 ' + r2.left);
   }
 
   /* ================= [E] 기하 회귀 — ×1 에서 668 이전과 같은 절대값 ================= */
-  await page.evaluate(() => {
-    document.getElementById('sumMulBar').querySelector('[data-mul="1"]').click();
-    S.dia = 1e12; renderShopPage();
-  });
+  /* 713 — 바는 팝업 것이라 여기서 누르지 않는다. 상점을 열고 «배수와 무관하게» 레퍼런스 기하인지 본다
+     (일부러 sumMul 을 ×1000 으로 둔 채 연다 — 668 때라면 이 절이 통째로 갈렸을 상태다). */
+  await page.evaluate(() => { sumMul = 1000; S.dia = 1e12; openShopPage('weapon'); });
   await settleShop(page);
   const E = await page.evaluate(() => {
     const card = document.querySelector('#shopList .shp-card');
@@ -275,27 +307,27 @@ const HARNESS = () => {
     '[E6] ×1 에서는 좁힘 클래스가 **아예 안 붙는다**(레퍼런스 잉크 Δ0)', '"' + E.lab2 + '" / "' + E.cost2 + '"');
 
   /* ================= [F] 어느 배수에서도 잉크가 버튼 밖으로 안 나간다 ================= */
+  /* 713 이관 — 길어지는 라벨·가격은 이제 **팝업 재소환 버튼**에 있다(`.sm-b` 검정 6 + 안쪽 림 6). */
+  await openResultPopup(page, B);
   for (const m of [1, 10, 100, 1000]) {
     const r = await page.evaluate(m => {
       document.getElementById('sumMulBar').querySelector('[data-mul="' + m + '"]').click();
       const out = [];
-      document.querySelectorAll('#shopList .shp-card .cbtn:is(.b2,.b3)').forEach(btn => {
+      ['sumB10', 'sumB30'].forEach(id => {
+        const btn = document.getElementById(id);
         const br = btn.getBoundingClientRect();
-        btn.querySelectorAll('.lab,.cost').forEach(u => {
-          /* 잉크의 실제 가로 범위 — Range 로 글자 상자를 직접 잰다(`u` 는 left:0;right:0 라 버튼 폭 그대로다) */
-          const rg = document.createRange(); rg.selectNodeContents(u);
-          const ir = rg.getBoundingClientRect();
-          const inset = u.classList.contains('cost') ? 31 : 0;   /* .cost 는 left:31 부터 산다 */
-          const lim = { l: br.left + 13 + (inset ? 0 : 0), r: br.right - 13 };  /* 검정 6 + 링 7 */
+        btn.querySelectorAll('.lab i,.cost i').forEach(u => {
+          const ir = u.getBoundingClientRect();
+          const lim = { l: br.left + 12, r: br.right - 12 };      /* 검정 6 + 안쪽 림 6 */
           if (ir.width > 0 && (ir.left < lim.l - .5 || ir.right > lim.r + .5))
-            out.push('×' + m + ' ' + btn.className.replace(/cbtn |shp.*/g, '').trim() + ' ' + u.className
+            out.push('×' + m + ' ' + id + ' ' + u.parentElement.className
               + ' ink ' + ir.left.toFixed(1) + '..' + ir.right.toFixed(1)
               + ' vs ' + lim.l.toFixed(1) + '..' + lim.r.toFixed(1));
         });
       });
       return out;
     }, m);
-    ok(!r.length, '[F×' + m + '] 라벨·가격 잉크가 버튼 안쪽(검정6+링7)에 들어온다',
+    ok(!r.length, '[F×' + m + '] 라벨·가격 잉크가 버튼 안쪽(검정6+림6)에 들어온다',
       r.length ? r.slice(0, 3).join(' | ') : '넘침 0건');
   }
 
@@ -307,8 +339,8 @@ const HARNESS = () => {
       document.getElementById('sumMulBar').querySelector('[data-mul="100"]').click();
       const c1 = summonCost(B, 10), c100 = summonCost(B, 10 * 100);
       S.dia = c100 - 1;
-      renderShopPage();
-      const btn = document.querySelector('#shopList .cbtn.b2[data-shsum="' + B + '"]');
+      syncSummonBtns();                                  /* 713 — 자리가 팝업이라 그쪽을 맞춘다 */
+      const btn = document.getElementById('sumB10');
       const lack = btn.classList.contains('lack');
       const before = { s: S.summons, d: S.dia };
       btn.click();
@@ -339,26 +371,27 @@ const HARNESS = () => {
       '어긋난 칸 ' + r.diff + '/100');
     /* R2 — 배수를 ×1 로 되돌리면 라벨·가격이 레퍼런스 문자열로 정확히 복귀한다 */
     const r2 = await page.evaluate(() => {
+      S.dia = 1e12;
       document.getElementById('sumMulBar').querySelector('[data-mul="1"]').click();
-      S.dia = 1e12; renderShopPage();
-      const card = document.querySelector('#shopList .shp-card');
-      return { lab2: card.querySelector('.cbtn.b2 .lab').textContent.trim(),
-               lab3: card.querySelector('.cbtn.b3 .lab').textContent.trim(),
+      return { lab2: document.getElementById('sumB10').querySelector('.lab').textContent.trim(),
+               lab3: document.getElementById('sumB30').querySelector('.lab').textContent.trim(),
                mul: sumMul };
     });
     ok(r2.mul === 1 && r2.lab2 === '10회 소환' && r2.lab3 === '30회 소환',
       '[R2] ×1 로 되돌리면 라벨이 레퍼런스 문자열로 복귀한다', r2.lab2 + ' / ' + r2.lab3);
-    /* R3 — 재화·이용권 탭에서는 배수 바가 안 그려진다(478 고지 띠가 그 자리를 쓴다) */
+    /* R3 (713 이관) — 668 은 «상점 세 탭 중 소환 탭에서만 뜬다» 를 물었다. 자리가 옮겨간 지금
+       그 물음의 살아 있는 형태는 «상점에는 아예 없고 결과 팝업에만 있다» 다. */
     const r3 = await page.evaluate(() => {
       openShopPage && openShopPage('weapon');
       shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
-      const vis = getComputedStyle(document.getElementById('sumMulBar')).display;
+      const coin = document.querySelectorAll('#shopw [data-mul]').length;
       shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage();
-      const vis2 = getComputedStyle(document.getElementById('sumMulBar')).display;
-      return { coin: vis, summon: vis2 };
+      return { coin, summon: document.querySelectorAll('#shopw [data-mul]').length,
+               popup: document.querySelectorAll('#sumw [data-mul]').length };
     });
-    ok(r3.coin === 'none' && r3.summon !== 'none', '[R3] 재화 탭에서는 꺼지고 소환 탭에서는 켜진다',
-      '재화 ' + r3.coin + ' · 소환 ' + r3.summon);
+    ok(r3.coin === 0 && r3.summon === 0 && r3.popup === 4,
+      '[R3] 상점 세 탭 어디에도 바가 없고(0건) 결과 팝업에만 4칸이 있다',
+      '재화 ' + r3.coin + ' · 소환 ' + r3.summon + ' · 팝업 ' + r3.popup);
   }
 
   /* ================= [H] ×1000 에서 12 결과 팝업이 실제로 그려지는가 ================= */

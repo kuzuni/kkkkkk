@@ -35,14 +35,17 @@ const errs = [];
 
 /* ── 363 의 상수 (index.html `.sm-sk` 주석과 한 벌) ── */
 const SK_RIGHT = 36;      // 그리드 우단(36 + 1008 = 1044) 정렬
-const SK_BOT = 28;        // 패널 하변 기준
+/* ⚑ 713 이관(2026-09-02) — 배수 토글이 이 팝업으로 오면서 패널 아래 띠가 83 → **98** 로 넓어졌다.
+   363 이 세운 규칙(«토글은 그 띠 한가운데»)은 **그대로**이고 값만 따라간다: 15 + (98 − 56)/2 = **36**.
+   같은 띠의 왼쪽은 배수 바(98)가 쓰고, 둘의 세로 중심이 64 로 같다(`verify713` [B1]). */
+const SK_BOT = 36;        // 패널 하변 기준
 const SK_H = 56;          // 토글 높이
 const CHROME = 15;        // .sm-panel::after (하단 크롬)
-const PAD_BOT = 98;       // 패널 아래 패딩 = 그리드 하변까지
+const PAD_BOT = 113;      // 패널 아래 패딩 = 그리드 하변까지 (713 — 크롬 15 + 배수 바 98)
 const TRACK_W = 120, TRACK_H = 46, KNOB_W = 70;
 const STEP = 0.055;       // SUM_POP_STEP (252)
 /* 84 하단 앵커 — 363 이 밀치면 안 되는 값(2280 프레임) */
-const A84 = { btnY: 1706, btnBot: 1854, closeY: 2066, panelY: 606, panelBot: 1686, gridBot: 1588, rbY: 538 };
+const A84 = { btnY: 1706, btnBot: 1854, closeY: 2066, panelY: 606, panelBot: 1686, gridBot: 1573, rbY: 538 };
 
 /* 결과 n칸을 «전부 다른 아이템» 으로 만든다(327 게이트와 같은 방식 — 중복이 섞이면 칸 수가 흔들린다).
    배너 하나의 풀은 10종뿐이라 5배너를 돌아야 30칸이 나온다. */
@@ -150,7 +153,9 @@ const GEO = `(() => {
     await p.waitForTimeout(2400);
     const g = await p.evaluate(GEO);
     ok('1-18 (1600) 패널 하변 기준 bottom 동일', +(g.panel.b - g.sk.b).toFixed(1), SK_BOT, 0.5);
-    ok('1-19 (1600) 그리드와의 여유 동일', +(g.sk.y - g.grid.b).toFixed(1), 14, 1.5);
+    /* 713 — 리터럴 14 를 띠 산수로 되돌린다(위 1-7 과 같은 식이라 띠가 바뀌면 같이 따라간다) */
+    ok('1-19 (1600) 그리드와의 여유 동일', +(g.sk.y - g.grid.b).toFixed(1),
+      (PAD_BOT - CHROME - SK_H) / 2 + 0.5, 1.5);
     ok('1-20 (1600) 버튼과 안 겹친다', g.sk.b <= g.btns.y, true);
     /* 짝 단언 — «그 띠가 실제로 좁다» 를 재서, 자리 선택이 취향이 아니라 기하였음을 남긴다 */
     ok('1-21 (1600) 버튼↔닫기 띠는 20px 미만이다', +(g.close.y - g.btns.b).toFixed(1) < 20, true);

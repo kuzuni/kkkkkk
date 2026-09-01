@@ -34,10 +34,21 @@ const ok = (n, got, want, tol) => {
   R.push({ n, got, want, d, pass: num ? Math.abs(d) <= tol : got === want });
 };
 
-/* ── 327 의 상수 ── (index.html `.sm-panel` 위 주석과 한 벌) */
-const GH = 876;            // 그리드 높이 (CSS 상수 --sm-gh)
-const PAD = 204;           // 패널 border-box 패딩분 (상 106 + 하 98)
-const PH = PAD + GH;       // 패널 1080
+/* ── 327 의 상수 ── (index.html `.sm-panel` 위 주석과 한 벌)
+   ⚑ 713 이관(2026-09-02 주인 정정) — 배수 토글이 이 팝업으로 오면서 패널 **안에서** 15px 이 옮겨갔다:
+     그리드 876 → **868** · 패딩분 204(106+98) → **212**(99+113). **패널 1080 은 그대로**라
+     327 의 주인 지시(«세로 2배» = ref 539 × 2.00)는 한 픽셀도 안 깨진다 — 바뀐 것은 그 안의 나눔이다.
+   ⚑ **그러면서 327 의 산수 하나가 정정됐다**: 이 그리드가 담아야 하는 것은 «5행 846» 이 아니다.
+     개수 배지(`.ifq`)는 절대배치라 스크롤 넘침에 그대로 드는데 카드 바닥 아래로 **18.69px** 나오고,
+     줄들은 세로 중앙정렬이라 그리드를 줄여도 **절반만 따라 올라온다** ⇒
+         배지 하단 = (H − 846)/2 + 838 + 18.69 ≤ H  ⇔  **H ≥ 867.4** ⇒ 하한 **868**.
+     876 은 그것을 담고 있었고 846·862·865·866 은 **못 담는다** — [E5] 가 그 넷에서 연달아 빨개져
+     이 산수를 드러냈다(713 1회차). 그래서 713 은 −30 이 아니라 **−8** 만 가져가고
+     나머지 7px 은 위 여백에서 냈다. */
+const GH = 868;            // 그리드 높이 (CSS 상수 --sm-gh)
+const PAD = 212;           // 패널 border-box 패딩분 (상 102 + 하 113 — 113 = 크롬 15 + 배수 바 98)
+const PH = PAD + GH;       // 패널 1080 (713 이관 뒤에도 같은 값)
+const WORST = 868;         // 스크롤 0 을 지키는 그리드 하한 (배지 돌출 18.69 + 중앙정렬 절반 몫)
 const REF_PH = 539;        // ref 패널 높이 (793~1331) — «2배» 의 분모
 const REF_TOP = 709;       // ref 패널 top
 const REF_RB = 641;        // ref 리본 top
@@ -145,7 +156,7 @@ const openAt = async (b, vp, n, css) => {
 
   /* ══ B. «2배» 검산 + 84 앵커 무회귀 ══ */
   ok('B1 패널 배율 (ref 539 대비)', +(g10.panel.h / REF_PH).toFixed(3), 2.0, 0.01);
-  ok('B2 패널 = 204 + 876', g10.panel.h, PH, 0);
+  ok('B2 패널 = 212 + 868 = 1080 (713 이관 — 나눔만 바뀌고 합은 그대로)', g10.panel.h, PH, 0);
   ok('B3 패널·리본이 같은 만큼 떴다 (103)',
     +(REF_TOP - g10.panel.y).toFixed(1), +(REF_RB - g10.rb.y).toFixed(1), 0);
   ok('B4 리본 = 패널 top − 68', +(g10.panel.y - g10.rb.y).toFixed(1), 68, 0);
@@ -186,8 +197,10 @@ const openAt = async (b, vp, n, css) => {
   ok('E2 행수 5', g30.rowsTotal, 5, 0);
   ok('E3 완전히 보이는 행 = 5', g30.rowsFull, 5, 0);
   ok('E4 완전히 보이는 칸 = 30 (가려짐 0)', g30.fullCards, 30, 0);
-  ok('E5 스크롤이 아예 필요 없다', g30.grid.sh <= g30.grid.h + 0.5, true, 0);
-  ok('E6 그리드 876 ≥ 최악 5행 846', GH >= PITCH * 5 - 4, true, 0);
+  /* 713 — «참/거짓» 이 아니라 **수치**로 적는다: 빨개졌을 때 몇 px 이 넘치는지 바로 보여야
+     다음 세션이 그리드 높이를 얼마나 되돌려야 하는지 안다(1회차에 이 항이 «false» 로만 빨갰다). */
+  ok('E5 스크롤 넘침 0 (scrollHeight ≤ 그리드 h)', g30.grid.sh, Math.round(g30.grid.h), 0.5);
+  ok('E6 그리드 868 ≥ 하한 868 (713 이관 — 배지 돌출 + 중앙정렬까지 센 값)', GH >= WORST, true, 0);
   ok('E7 열릴 때 scrollTop 0', g30.grid.st, 0, 0);
   ok('E8 마지막 카드 하단이 그리드 안', g30.lastBot <= g30.grid.bot + 0.5, true, 0);
 
@@ -239,7 +252,7 @@ const openAt = async (b, vp, n, css) => {
   const rv = await openAt(b, { width: 1080, height: 2280 }, 30,
     '#sumw{--sm-gh:676px !important}');
   ok('G1 되돌리면 그리드 676', rv.g.grid.h, 676, 0);
-  ok('G2 되돌리면 패널 880 (2배가 깨진다 → §A 가 FAIL)', rv.g.panel.h, 880, 0);
+  ok('G2 되돌리면 패널 894 (2배가 깨진다 → §A 가 FAIL)', rv.g.panel.h, PAD + 676, 0);
   ok('G3 되돌리면 다시 가려진다 (§E 가 FAIL)', rv.g.fullCards < 30, true, 0);
   ok('G4 되돌리면 보이는 행 4 (= 187 의 상한)', rv.g.rowsFull, 4, 0);
   /* ★ `safe center` 의 존재 이유 — 내용이 상자보다 커지면 중앙이 아니라 **위** 정렬이라
