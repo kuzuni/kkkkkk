@@ -70,6 +70,16 @@ const CALIB   = ARG.calib ? path.resolve(ROOT, String(ARG.calib)) : null;
    `--wallband=40` 으로 분류 주기를 제품 밴드에서 분리한다. 본 판정 표에서는 쓰지 마라
    (자연 정의 = 제품의 관문이 §0 의 자다) — 쓰면 표 머리에 경고가 찍힌다. */
 const WALLBAND = ARG.wallband ? Math.max(1, parseInt(ARG.wallband, 10)) : null;
+/* ⚑ 199 12회차 — **보정 프로브 전용 손잡이 둘**(판정 실행 금지 · 쓰면 표 머리에 경고).
+   `--pumpcap=<골드>` · `--pumprcap=<다이아>` 는 `pumpTo` 의 예산 상한(기본 1e33 · 1e12)을 연다.
+   왜 필요한가: 11회차가 «도달 가능 화력 상한 = 1.17e33 dps» 라고 적었는데 그 수는 **이 두
+   상수가 정한 보정 캐릭터의 지갑**이기도 하다. «게임의 벽» 과 «자의 지갑» 을 가르는 길은
+   지갑을 열어 같은 앵커를 다시 재 보는 것 하나뿐이다.
+   `--calstages=a,b,c` 는 그 스윕을 앵커 몇 개로 좁혀 싸게 돌린다(전 앵커 재보정은 40초급). */
+const PUMPCAP  = ARG.pumpcap  ? Number(ARG.pumpcap)  : null;
+const PUMPRCAP = ARG.pumprcap ? Number(ARG.pumprcap) : null;
+const PUMPSTEPS = ARG.pumpsteps ? Math.max(1, parseInt(ARG.pumpsteps, 10)) : null;   /* 12회차 — 소환·강화 눈금 반복 상한(기본 600) */
+const BOTCFG   = { ...(PUMPCAP ? { pumpCap: PUMPCAP } : {}), ...(PUMPRCAP ? { pumpRCap: PUMPRCAP } : {}), ...(PUMPSTEPS ? { pumpSteps: PUMPSTEPS } : {}) };
 /* ⚑ 199 10회차(9-9 4 — Y·AA) — «창 안 중복 8~10» 의 뿌리는 등간격 관문(밴드 배수 ~31개) vs
    등비 목표 9칸이다. `--wallgeo=<g0>,<r>` 는 관문 격자를 **기하 수열**(g0·r^k 를 제품 밴드의
    배수로 스냅)로 바꿔 리플레이 재분류만 한다 — 제품은 0줄, 판정 표에는 쓰지 마라(경고가 찍힌다).
@@ -289,9 +299,19 @@ const BOT_SRC = function (cfg) {
        부어 소환 한 바퀴와 골드 한 바퀴를 **교대로** 돈다(소환이 새 등급을 열면 강화 여지도
        새로 생긴다). 골드와 같은 «무한 재화 + 실측» 원칙이고, 이 컨텍스트는 본 실행과 분리된
        페이지라 세이브·장부를 오염시키지 않는다(ledger 는 이 컨텍스트의 B.diaIn 에만 적혀 버려진다). */
+    /* ⚑ 12회차 — 예산 상한을 **밖에서 열 수 있게** 했다(`--pumpcap`, 기본값은 옛 상수 그대로).
+       11회차가 «도달 가능 화력 상한 1.17e33» 이라고 적은 수는 이 두 상수(일괄 강화 골드 1e33 ·
+       유물 다이아 1e12)가 정한 **보정 캐릭터의 예산 상한**이기도 하다 — 그 둘을 구분하지 않으면
+       «게임의 벽» 과 «자의 지갑» 이 같은 수로 읽힌다. 열어서 재 보는 것이 그 구분의 유일한 길이다.
+       ⚠ 본 판정 실행에서는 쓰지 마라 — 쓰면 표 머리에 경고가 찍힌다(--wallband·--nofloor 규약). */
     let sg = 0, budget = 1e6, rbudget = 1e5;
+    const GCAP = (cfg && cfg.pumpCap) || 1e33;        /* 일괄 강화 골드 예산 상한 */
+    const RCAP = (cfg && cfg.pumpRCap) || 1e12;       /* 유물 소환 다이아 예산 상한 */
+    const SGMAX = (cfg && cfg.pumpSteps) || 600;      /* 소환·강화 눈금 반복 상한 */
     const STEP = 1.05;                                /* «눈금이 올렸다» 의 문턱 — 5% */
-    while (go() && sg++ < 600) {
+    /* 병합(12회차 ↔ 615) — 양쪽을 다 살린다: 조건·기준값은 615 의 `go()`/`have()`(생존 축까지
+       본다), 반복 상한은 12회차의 `SGMAX`(기본 600 = 옛 상수). */
+    while (go() && sg++ < SGMAX) {
       const d0 = have(), R2 = B.R;
       if (!R2) break;
       /* ⓐ 10뽑 한 눈금 — 제일 덜 뽑은 배너 하나만. 한 번에 R.summon 을 통째로 돌리면
@@ -317,14 +337,14 @@ const BOT_SRC = function (cfg) {
            눌러 κ_dps 를 거짓으로 깎는다(10회차 실측 — s200 과충 ×12 에서 κ_dps 2.64 → 0.19). */
         S.gold = budget;
         T('cal.lvl', () => { R2.levelAll(); R2.equipBest(); });
-        budget = Math.min(budget * 2, 1e33);
+        budget = Math.min(budget * 2, GCAP);
         /* ⓒ 그래도 안 오르면 나머지 축(유물 소환·룬·도감·골드 손잡이) 한 바퀴 */
         if (have() < d0 * STEP) {
           /* 유물 다이아도 예산 눈금 — 고정 1e9 를 주면 이 한 바퀴가 ×10 이상을 점프해
              s200 표본을 ×12 과충시켰다(10회차 실측). */
           S.dia = Math.max(S.dia, rbudget); S.gold = Math.max(S.gold, budget);
           T('cal.rest', () => { R2.relicSummon(); R2.runes(); R2.collection(); R2.equipBest(); });
-          rbudget = Math.min(rbudget * 2, 1e12);
+          rbudget = Math.min(rbudget * 2, RCAP);
           S.dia = 0;
           guard = 0;
           while (go() && guard++ < 400) if (!goldOnce()) break;
@@ -335,7 +355,11 @@ const BOT_SRC = function (cfg) {
              s800 목표에 못 닿는 것을 실측한 뒤에만 온다(이 분기 순서가 그 증명이다). */
           if (have() < d0 * STEP) {
             if (typeof SUM_MAXLV === 'number' && (S.sumLv | 0) < SUM_MAXLV) S.sumLv = (S.sumLv | 0) + 1;
-            else if (budget >= 1e33) break;            /* 전 축이 다 올랐다 — 진짜 상한 */
+            /* ⚑ 12회차 — 이 줄이 «진짜 상한» 을 선언하던 자리다. 문턱이 예산 상한과 **같은 수**
+               여야 뜻이 선다(«지갑을 다 쓰고도 안 오른다»). 1e33 을 손으로 박아 두면
+               `--pumpcap` 을 열어도 옛 자리에서 그대로 끊겨 «열어 봤지만 그대로다» 라는
+               거짓 검산이 나온다 — 실제로 이 회차의 첫 스윕이 그렇게 읽혔다. */
+            else if (budget >= GCAP) break;            /* 전 축이 다 올랐다 — 예산 상한까지 써도 안 오른다 */
           }
         }
       }
@@ -1020,7 +1044,22 @@ const POLICIES = {
    화력 미달이 만든 수라, 자에 넣으면 10회차가 걷어낸 클램프보다 더 나쁜 거짓 곡선이 된다.
    ⚠ r10 이하 캐시 행에는 `valid` 가 없다 — 그 세대는 유효 행만 저장했으므로 «없으면 유효» 로
    읽는다(`r.valid !== false`). */
-const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400, 500, 560, 640, 800, 1200];
+/* ⚑ 199 12회차(11-3 «12회차에게 남긴 지렛대») — 11회차가 상한 좌표를 s560(유효) … s640(실패)
+   **80 스테이지 창**으로 좁혔다. `valid` 축이 생긴 뒤로는 앵커를 더 끼우는 것이 싸므로
+   그 창 안에 **s580·600·620** 세 자리를 더 세워 창을 **20 스테이지**로 줄인다.
+   ⚠ 새 앵커가 셋 다 유효면 상한 창은 s620…s640, 셋 다 실패면 s560…s580 이다 — 어느 쪽이든
+   창이 20 으로 준다. 앵커를 늘리면 κ 세대가 바뀌므로 **r11 표와 직접 비교 금지**(정정9 규약).
+   ⚠ 유효 행이 늘어난 만큼 참고 평균(kDps·kHp·kGold·kBoss)도 움직인다 — 그 값들은 `kAt` 이
+   구간 보간을 못 할 때의 폴백이라 세대 비교 때 같이 봐야 한다.
+   ⚑⚑ 첫 스윕(s580·600·620 전부 유효 · s640 실패)이 창을 20 으로 줄이면서 **기제**까지 드러냈다 —
+   적 곡선은 완만한 오르막이 아니라 **밴드 계단**이다(`eScale` = 밴드 값 + 밴드 안 ES_RAMP 비탈).
+   밴드 안 40 스테이지가 ×1.62 인데 **경계 한 칸이 ×49.5** 다(eHp s639 3.61e32 → s640 1.79e34,
+   거기에 관문 ×1.44 가 겹친다). 그래서 «상한이 창 어디에 있는가» 는 창을 반으로 쪼개는 문제가
+   아니라 **어느 밴드 경계에서 넘는가** 다 ⇒ 밴드 안 끝(s630·**s639**)을 세워 «경계 직전까지
+   닿는가» 를 직접 묻는다. 둘이 유효면 벽의 좌표는 창이 아니라 **한 칸(s640)** 으로 확정된다. */
+const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400, 500, 560, 580, 600, 620, 630, 639, 640, 800, 1200];
+/* 12회차 — `--calstages=` 로 프로브 스윕을 좁힌다(위 손잡이와 한 벌 · 판정 실행 금지). */
+const CAL_LIST = ARG.calstages ? String(ARG.calstages).split(',').map(Number).filter(n => n > 0) : CAL_STAGES;
 const CAL_SEC = 60;
 /* 615 — 표가 쓰는 «화력 과충 상한» 사본. 판정 자체는 BOT_SRC 안 `BOSS_OVER` 한 곳이고
    여기는 **문장에 수를 적기 위한 것**뿐이다 — `verify615` 가 «두 수가 같은가» 를 소스로 확인한다. */
@@ -1207,12 +1246,12 @@ if (require.main === module) (async () => {
       await page.addInitScript(SEEDRNG, 1);
       await page.goto(URL);
       await page.waitForFunction(() => typeof step === 'function' && typeof S !== 'undefined' && S.daily, null, { timeout: 30000 });
-      await page.evaluate(BOT_SRC, {});
+      await page.evaluate(BOT_SRC, BOTCFG);
       return { ctx, page };
     };
     const rows = [];
     let kGuess = 1;
-    for (const s of CAL_STAGES) {
+    for (const s of CAL_LIST) {
       const { ctx, page } = await calPage();
       const row = await page.evaluate(([st, sec, kg]) => { window.BOT.freeze(); return window.BOT.calibrateOne(st, sec, kg); }, [s, CAL_SEC, kGuess]);
       await ctx.close();
@@ -1255,7 +1294,7 @@ if (require.main === module) (async () => {
       await page.addInitScript(SEEDRNG, i + 1);
       await page.goto(URL);
       await page.waitForFunction(() => typeof step === 'function' && typeof S !== 'undefined' && S.daily, null, { timeout: 30000 });
-      await page.evaluate(BOT_SRC, {});
+      await page.evaluate(BOT_SRC, BOTCFG);
       await page.evaluate((c) => { window.BOT.cal = c; }, report.cal);
       const r = await runOne(page, pol, i + 1, DAYS);
       r.seed = i + 1; r.errs = errs;
@@ -1301,6 +1340,9 @@ function writeReport(rep) {
   L.push(`> [A] κ 표 ${rep.calFrom || '실측(캐시 없음)'} · **calib sha ${rep.calHash || calHashOf(rep.cal)}** — 해시가 같은 표끼리만 «같은 자로 잰 비교» 다(정정9).`);
   if (WALLBAND) L.push(`> ⚠ **벽 분류 주기 강제 ${WALLBAND}** (\`--wallband\` — 밴드 비교 전용. §0 판정에는 자연 정의 표를 써라).`);
   if (GEO) L.push(`> ⚠ **벽 분류 = 기하 관문 격자 ${GEO[0]}×${GEO[1]}^k** (\`--wallgeo\` — 재분류 스윕 전용. §0 판정에는 자연 정의 표를 써라).`);
+  if (PUMPSTEPS) L.push(`> ⚠ **보정 프로브 눈금 반복 상한 강제 ${PUMPSTEPS}** (\`--pumpsteps\` — 스윕 전용).`);
+  if (PUMPCAP || PUMPRCAP) L.push(`> ⚠ **보정 프로브 예산 상한 강제** (\`--pumpcap\`${PUMPCAP ? ' 골드 ' + PUMPCAP.toExponential(1) : ''}${PUMPRCAP ? ' · 유물 다이아 ' + PUMPRCAP.toExponential(1) : ''} — «자의 지갑 ↔ 게임의 벽» 을 가르는 스윕 전용. §0 판정 표에는 쓰지 마라).`);
+  if (ARG.calstages) L.push(`> ⚠ **보정 앵커 목록 강제** (\`--calstages=${ARG.calstages}\` — 프로브 스윕 전용. κ 표가 부분집합이라 본 판정에 쓰면 안 된다).`);
   /* 10회차(정정2 — Z) — 시뮬 최고 스테이지가 κ 앵커 밖이면 그 구간의 ①③④ 전부가 외삽 위다.
      앵커 안이 될 때까지(또는 앵커를 늘릴 때까지) 장기 수치를 표식 없이 믿지 마라. */
   {
@@ -1317,9 +1359,18 @@ function writeReport(rep) {
     if (!okRows.length) L.push(`> ⛔ **유효 κ 앵커 0개** — ${calRows.length}행 전부 «대역 밖» 으로 읽혔다. 아래 ①③④ 는 자가 서 있지 않다(κ 는 폴백 1.0). [A] 표의 «자에 쓰나» 열부터 읽어라.`);
     if (badRows.length && okRows.length) {
       const firstBad = badRows[0], lastOk = okRows[okRows.length - 1];
-      L.push(`> ⚑⚑ **도달 가능 화력 상한 — 실측 좌표 s${maxAnchor} … s${firstBad.s} 사이**(11회차 · 정정7). 유효 앵커 마지막 = **s${maxAnchor}**(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) · 첫 실패 프로브 = **s${firstBad.s}**(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)} — 전 축 만개 후에도 목표의 그만큼). 실패 행도 [A] 표에 «✖ 대역 밖» 으로 실려 있다(재현 경로 있음).`);
+      L.push(`> ⚑⚑ **보정 프로브가 닿는 화력의 끝 — 실측 좌표 s${maxAnchor} … s${firstBad.s} 사이**(11회차 · 정정7 · ⚠ **12회차 정정: 이것은 «게임의 벽» 이 아니라 «이 지갑으로 세운 캐릭터의 끝» 이다** — 기본 예산(골드 1e33)을 \`--pumpcap\` 으로 열면 좌표가 움직인다(12회차 실측 s640 pump 1.9e-2 → **1.15**). 같은 표의 30일 봇이 그 위를 걷는 것이 그 증거다). 유효 앵커 마지막 = **s${maxAnchor}**(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) · 첫 실패 프로브 = **s${firstBad.s}**(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)} — 전 축 만개 후에도 목표의 그만큼). 실패 행도 [A] 표에 «✖ 대역 밖» 으로 실려 있다(재현 경로 있음).`);
+      /* ⚑ 12회차 — 창이 «밴드 경계 한 칸» 으로 좁혀졌으면 표가 그렇게 말해야 한다.
+         적 곡선은 완만한 오르막이 아니라 밴드 계단이라(밴드 안 40칸 ×1.6 ↔ 경계 한 칸 ×49.5),
+         상한이 창의 «어디쯤» 인가가 아니라 **어느 경계에서 넘는가** 가 답이다.
+         마지막 유효 앵커가 경계 직전 칸이면 좌표는 창이 아니라 한 칸이다. */
+      const BANDA = (allRuns[0] && allRuns[0].band) || 40;
+      if (firstBad.s % BANDA === 0 && maxAnchor === firstBad.s - 1) {
+        const jump = firstBad.target && lastOk.target ? firstBad.target / lastOk.target : null;
+        L.push(`> ⚑ **그 좌표는 기본 지갑 아래에서 한 칸이다 — 밴드 경계 s${firstBad.s}**(12회차). 경계 직전 칸 s${maxAnchor} 은 닿고(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) 경계 첫 칸 s${firstBad.s} 은 못 닿는다(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)}) — 한 칸 사이 목표 ×${jump == null ? '—' : jump.toPrecision(3)}. 밴드 안 오르막이 아니라 **경계 계단**이 화력을 추월한다(밴드 폭 ${BANDA} · 관문 배수 포함).`);
+      }
     }
-    if (maxStage > maxAnchor) L.push(`> ⚠⚠ **κ 외삽** — 시뮬 최고 s${maxStage} > κ 유효 앵커 s${maxAnchor}. 그 밖 구간은 log(s) 선형 외삽이다(정정2) — 앵커를 s${maxStage} 이상으로 늘려 재보정하기 전에는 그 구간 수치에 (외삽) 표식을 붙여 읽어라.${badRows.length ? ` ⚠ 그런데 s${badRows[0].s} 은 **물리적으로 앵커를 세울 수 없다**(위 줄) — 이 구간은 «앵커를 늘리면 풀리는» 외삽이 아니라 «적 곡선이 화력을 추월한 뒤» 다.` : ''}`);
+    if (maxStage > maxAnchor) L.push(`> ⚠⚠ **κ 외삽** — 시뮬 최고 s${maxStage} > κ 유효 앵커 s${maxAnchor}. 그 밖 구간은 log(s) 선형 외삽이다(정정2) — 앵커를 s${maxStage} 이상으로 늘려 재보정하기 전에는 그 구간 수치에 (외삽) 표식을 붙여 읽어라.${badRows.length ? ` ⚠ 그런데 s${badRows[0].s} 은 **이 지갑으로는 앵커를 세울 수 없다**(위 줄) — 12회차 실측으로는 «앵커를 늘리면 풀리는» 외삽도 아니고 «적 곡선이 화력을 추월한 뒤» 도 아니다: **지갑을 열면 앵커가 선다**(§12).` : ''}`);
   }
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
