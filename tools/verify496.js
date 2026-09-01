@@ -1,19 +1,27 @@
-/* 496 검증 — 소환 레벨 «배너별 5 벌 → 전 배너 공용 하나» · 만렙 50 · 경험치 식 200 + 210·n
+/* 496 검증 — 소환 레벨 만렙 50 · 경험치 식 200 + 210·n · 해금 사다리 · 구 세이브 이관
  *
  * 저장소 주인 확정(2026-08-31): «100 만개 팩 유지 · 소환 레벨 50 · 소환 경험치 조정 ·
  * 소환 레벨은 **다 합쳐서**(배너 공용)».
  *
+ * ⚑⚑ **714 (주인 지시 2026-09-02 03:00) 가 그 «다 합쳐서» 를 번복했다** — «무기 방패 목걸이
+ * 스킬 펫 소환레벨이랑 경험치 … 분리해라». 그래서 이 자의 «주머니가 하나인가» 축은
+ * **333 처방대로 방향을 뒤집어 갈아 끼웠다**(자리를 비우지 않았다 — [A]·[D]·[E]·[R] 은
+ * 같은 물음을 반대 답으로 묻는다). 496 이 세운 **곡선·만렙·사다리([B]·[C])는 714 가 한 줄도
+ * 안 건드렸고**, 그것이 이 자가 지금도 지키는 496 의 몫이다.
+ * ⚠ 이 항들을 그냥 지우면 «496 이 통째로 사라져도 초록인 게이트» 가 된다(328-330 교훈).
+ *
  * 196 게이트와의 분담(둘이 같은 것을 두 번 묻지 않게 갈라 둔다):
  *   · `verify196` — «만렙·필요 경험치·해금 사다리가 **주인 확정값**인가»(값의 게이트)
- *   · `verify496` — «레벨이 **하나**인가 · 구 세이브 5 벌을 합칠 때 **뽑기 수를 안 잃는가**»
+ *   · `verify496` — «곡선이 식 하나인가 · 구 세이브를 이관할 때 **뽑기 수를 안 잃는가**»
+ *   · `verify714` — «주머니가 배너마다 따로인가»(714 가 가져간 축의 본체)
  *
  * 절:
- *   [A] 공용성 — 어느 배너로 뽑아도 같은 레벨·경험치가 오른다 · `S.sum[b]` 별칭이 그 하나를 가리킨다
+ *   [A] 주머니 — 714 이후: 배너마다 따로다(496 의 «다섯이 같이 오른다» 를 뒤집은 자리)
  *   [B] 곡선 — need(n) = SUM_EXP_A + SUM_EXP_B·n · 누적 = 주인 목표 268,000 ±1% · 만렙 50
  *   [C] 해금 사다리 — 25 기준 → 50 기준 비례 · 불멸 = 만렙 − 1 · 바닥 두 행은 1 유지
- *   [D] 세이브 — 구 세이브(배너별 12/8/3/20/5) 이관 후 **누적 뽑기 합 보존** · 멱등 · 새 세이브 왕복
- *   [E] 10 상점 카드 — 5 장이 같은 Lv·같은 need 를 보인다 · NaN 0 건
- *   [R] 되돌림 시험 — 공용화를 되돌린 사본(배너별 5 벌)은 [A] 가 **빨개진다**
+ *   [D] 세이브 — 구 세이브(배너별 12/8/3/20/5) 이관 후 **배너별 뽑기 수 보존** · 멱등
+ *   [E] 10 상점 카드 — 5 장이 **그 배너의** Lv·need 를 보인다 · NaN 0 건
+ *   [R] 되돌림 시험 — 공용으로 되돌린 사본은 [A] 가 **빨개진다**
  *
  * 실행: node tools/verify496.js
  */
@@ -58,41 +66,49 @@ const ok = (b, name, detail) => {
   await page.goto(URL);
   await page.waitForTimeout(900);
 
-  /* ================= [A] 공용성 ================= */
-  console.log('[A] 소환 레벨은 전 배너 공용 하나');
+  /* ================= [A] 주머니 =================
+     ⚑ 714 로 **방향이 뒤집힌 절**이다(333 처방). 496 은 여기서 «다섯이 같이 오른다» 를 물었고
+     지금은 «따로 오른다» 를 묻는다 — 물음(어느 배너로 뽑으면 무엇이 오르는가)은 그대로다. */
+  console.log('[A] 소환 레벨 주머니 — 714 이후 «배너마다 따로»');
   const A = await page.evaluate(() => {
     const out = {};
-    out.scalar = (typeof S.sumLv === 'number' && typeof S.sumExp === 'number');
-    /* 배너마다 한 번씩 뽑아 «다섯이 같이 오르는지» — 각 배너 뒤의 스냅샷을 전부 남긴다 */
-    S.sumLv = 1; S.sumExp = 0;
+    out.cells = !!(S.sum && BKEYS.every(k => S.sum[k] && typeof S.sum[k].lv === 'number'));
+    out.scalarGone = (typeof S.sumLv === 'undefined' && typeof S.sumExp === 'undefined');
+    /* 배너마다 한 번씩 뽑아 «누가 오르는지» — 각 배너 뒤의 스냅샷을 전부 남긴다 */
+    BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = 0; });
     out.steps = BKEYS.map(b => { sumAddExp(b, 7); return BKEYS.map(k => sumLv(k) + '/' + sumExp(k)).join(' '); });
-    out.after = { lv: S.sumLv, exp: S.sumExp };
-    /* 별칭 뷰 — 옛 이름으로 써도 같은 하나가 움직인다 */
+    out.after = BKEYS.map(k => sumExp(k));
+    /* 옛 이름으로 쓰면 **그 칸만** 움직인다(496 별칭 뷰 폐지) */
+    BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = 0; });
     S.sum.weapon.lv = 9; S.sum.weapon.exp = 33;
-    out.alias = BKEYS.map(k => S.sum[k].lv + '/' + S.sum[k].exp);
-    out.aliasScalar = S.sumLv + '/' + S.sumExp;
-    /* 접근자는 인자를 무시한다 */
-    out.ignoreArg = BKEYS.every(k => sumLv(k) === S.sumLv && sumExp(k) === S.sumExp)
-                    && sumLv() === S.sumLv && sumLv('없는배너') === S.sumLv;
-    /* 저장 — 새 세이브에 5 벌 사본이 다시 들어가지 않는다 */
+    out.write = BKEYS.map(k => S.sum[k].lv + '/' + S.sum[k].exp);
+    /* 접근자는 인자를 **읽는다** */
+    BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = 0; });
+    S.sum.pet.lv = 4;
+    out.readArg = (sumLv('pet') === 4 && sumLv('skill') === 1 && sumLv('없는배너') === 1);
+    /* 저장 — 다섯 벌이 담기고 496 의 스칼라 둘은 안 담긴다 */
     out.json = JSON.stringify(S);
     return out;
   });
-  ok(A.scalar, 'A1 저장 자리는 스칼라 둘 — `S.sumLv` · `S.sumExp`');
-  ok(A.steps.every(s => new Set(s.split(' ')).size === 1),
-    'A2 ★ 어느 배너로 뽑아도 다섯이 **같은 값**으로 오른다', A.steps[A.steps.length - 1]);
-  ok(A.after.exp === 35 && A.after.lv === 1,
-    'A3 5 배너 × 7 뽑 = 한 주머니에 35(need ' + needNew(1) + ' 미만이라 Lv1 유지)',
-    JSON.stringify(A.after));
-  ok(new Set(A.alias).size === 1 && A.alias[0] === '9/33' && A.aliasScalar === '9/33',
-    'A4 `S.sum[b]` 별칭 뷰 — 옛 이름으로 써도 공용 스칼라 하나가 움직인다',
-    A.alias.join(' · ') + ' | scalar ' + A.aliasScalar);
-  ok(A.ignoreArg, 'A5 `sumLv/sumExp` 는 인자를 무시한다(없는 배너 이름도 같은 값)');
-  ok(!/"sum":/.test(A.json) && /"sumLv":/.test(A.json) && /"sumExp":/.test(A.json),
-    'A6 ★ 새 세이브에 배너별 5 벌 사본이 **안 담긴다**(`sum` 키 부재 · 스칼라 둘만)',
-    (A.json.match(/"sum[A-Za-z]*":[0-9]+/g) || []).join(' '));
-  ok(!/S\.sum\[[A-Za-z_$][\w$]*\]\.(lv|exp)/.test(CODE) && !/S\.sum\.\w+\.(lv|exp)/.test(CODE),
-    'A7 제품 코드에 «배너별» 읽기·쓰기(`S.sum[b].lv`) 0 건(주석 걷어낸 소스 스캔)');
+  ok(A.cells, 'A1 저장 자리는 배너 다섯 벌 — `S.sum[b] = {lv,exp}`(714 가 496 의 스칼라 둘을 갈았다)');
+  /* 스냅샷은 배너를 하나씩 «누적으로» 채운다(496 의 표본을 그대로 물려받았다) — 그러니
+     j 회차에는 정확히 j+1 칸만 7 이어야 한다. 마지막 회차가 다섯 다 7 인 것은 정상이다. */
+  ok(A.steps.every((s, j) => s.split(' ').filter(v => v === '1/7').length === j + 1),
+    'A2 ★ 뽑은 **그 배너만** 오른다(496 의 «다섯이 같이» 를 714 가 뒤집었다) — 회차마다 딱 한 칸씩 는다',
+    A.steps[0] + '  →  ' + A.steps[A.steps.length - 1]);
+  ok(A.after.filter(v => v === 7).length === 5,
+    'A3 5 배너 × 7 뽑 = 다섯 주머니에 7 씩(합 35 을 한 곳에 붓지 않는다)',
+    A.after.join(','));
+  ok(A.write.filter(s => s === '9/33').length === 1 && A.write.filter(s => s === '1/0').length === 4,
+    'A4 `S.sum[b]` 는 별칭이 아니라 **실물 칸** — 옛 이름으로 써도 그 칸만 움직인다',
+    A.write.join(' · '));
+  ok(A.readArg && A.scalarGone,
+    'A5 `sumLv/sumExp` 는 인자를 **읽는다** · 496 의 공용 스칼라 둘은 사라졌다');
+  ok(/"sum":\{/.test(A.json) && !/"sumLv":/.test(A.json) && !/"sumExp":/.test(A.json),
+    'A6 ★ 새 세이브에 배너별 5 벌이 **담긴다**(496 의 «스칼라 둘만» 을 714 가 뒤집었다)',
+    (A.json.match(/"sum[A-Za-z]*":/g) || []).join(' '));
+  ok(!/sumAliasView/.test(CODE),
+    'A7 496 의 별칭 뷰는 **선언째** 사라졌다 — 죽은 코드 0 건(주석 걷어낸 소스 스캔)');
 
   /* ================= [B] 곡선 ================= */
   console.log('[B] 경험치 곡선 — need(n) = ' + A_ + ' + ' + B_ + '·n');
@@ -129,7 +145,8 @@ const ok = (b, name, detail) => {
     eq: GRADE_ROLL_EQ.map(g => g.unlock),
     over: GRADE_ROLL_EQ.filter(g => g.unlock > SUM_MAXLV).length,
     lv1: gradeProbs('weapon'),
-    max: (() => { S.sumLv = SUM_MAXLV; const p = gradeProbs('weapon'); S.sumLv = 1; return p; })()
+    /* 714 — 레벨 자리가 배너 칸으로 옮겨졌다(496 의 `S.sumLv` 스칼라는 없다) */
+    max: (() => { S.sum.weapon.lv = SUM_MAXLV; const p = gradeProbs('weapon'); S.sum.weapon.lv = 1; return p; })()
   }));
   ok(C.base.join(',') === LADDER.join(','), 'C1 6 행 표 = ' + LADDER.join('/'), C.base.join(','));
   ok(C.eq.join(',') === LADDER_EQ.join(','), 'C2 8 행 표 = +초월 40 · 불멸 ' + (MAXLV - 1), C.eq.join(','));
@@ -149,7 +166,9 @@ const ok = (b, name, detail) => {
   /* ================= [D] 세이브 이관 =================
      ⚠ 살아 있는 페이지에 localStorage 를 쓰고 reload 하면 그 페이지의 자동 저장이 먼저 덮어쓴다
      (LESSONS 87-3 · 43-①). 주입은 «새 컨텍스트 + addInitScript» 로 한다(LESSONS 44-①). */
-  console.log('[D] 세이브 이관 — 5 벌 → 하나, 뽑기 수 보존');
+  /* ⚑ 714 로 방향이 뒤집힌 절 — 496 은 «다섯을 하나로 합쳐도 뽑기 수를 안 잃는가» 를 물었고
+     지금은 «배너마다 따로 환산해도 그 배너의 뽑기 수를 안 잃는가» 를 묻는다. 보존 축은 그대로다. */
+  console.log('[D] 세이브 이관 — 배너마다 환산, 뽑기 수 보존');
   const KEYV = await page.evaluate(() => KEY);
   const inject = async obj => {
     const c = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -159,18 +178,22 @@ const ok = (b, name, detail) => {
     p2.on('pageerror', e => errs.push('pageerror(세이브 이관): ' + String(e)));
     await p2.goto(URL);
     await p2.waitForTimeout(900);
-    const r = await p2.evaluate(() => ({ lv: S.sumLv, exp: S.sumExp,
-                                         alias: JSON.parse(JSON.stringify(
-                                           BKEYS.map(k => S.sum[k].lv + '/' + S.sum[k].exp))) }));
+    const r = await p2.evaluate(() => ({
+      cells: JSON.parse(JSON.stringify(BKEYS.map(k => ({ b: k, lv: S.sum[k].lv, exp: S.sum[k].exp })))),
+      /* 714 — 대표 한 칸(무기)을 옛 이름 자리에 실어 아래 단언 모양을 지킨다 */
+      lv: S.sum.weapon.lv, exp: S.sum.weapon.exp,
+      alias: JSON.parse(JSON.stringify(BKEYS.map(k => S.sum[k].lv + '/' + S.sum[k].exp)))
+    }));
     await c.close();
     return r;
   };
-  /* 게이트가 **독립으로** 같은 수를 센다 — 구 곡선으로 되돌려 센 뽑기 수의 합 */
-  const oldPulls = o => Object.keys(o).reduce((t, k) => {
-    const lv = Math.min(MAX196, Math.max(1, o[k].lv));
+  /* 게이트가 **독립으로** 같은 수를 센다 — 구 곡선으로 되돌려 센 뽑기 수.
+     714 — 496 은 이것을 다섯 칸에 걸쳐 **합**했다. 배너가 다시 독립이므로 칸 하나씩 센다. */
+  const oldPullsOne = c => {
+    const lv = Math.min(MAX196, Math.max(1, (c && c.lv) || 1));
     let s = 0; for (let n = 1; n < lv; n++) s += need196(n);
-    return t + s + Math.min(o[k].exp || 0, lv >= MAX196 ? 0 : need196(lv) - 1);
-  }, 0);
+    return s + Math.min((c && c.exp) || 0, lv >= MAX196 ? 0 : need196(lv) - 1);
+  };
   const place = pulls => { let lv = 1, e = pulls;
     while (lv < MAXLV && e >= needNew(lv)) { e -= needNew(lv); lv++; }
     return { lv, exp: lv >= MAXLV ? 0 : e }; };
@@ -178,57 +201,75 @@ const ok = (b, name, detail) => {
   const SAVE1 = { weapon: { lv: 12, exp: 0 }, shield: { lv: 8, exp: 0 }, amulet: { lv: 3, exp: 0 },
                   skill: { lv: 20, exp: 0 }, pet: { lv: 5, exp: 0 } };
   const D1 = await inject({ sum: SAVE1 });
-  const want1 = place(oldPulls(SAVE1));
+  const want1 = place(oldPullsOne(SAVE1.weapon));
   ok(D1.lv === want1.lv && D1.exp === want1.exp,
-    'D1 ★ 구 세이브 12/8/3/20/5 → Lv' + want1.lv + ' · exp ' + want1.exp
-      + ' (구 누적 ' + oldPulls(SAVE1).toLocaleString() + ' 뽑)',
-    JSON.stringify(D1));
-  {   /* 보존을 «되돌려 세서» 못박는다 — 새 레벨에서 뽑기 수를 다시 계산하면 같은 수여야 한다 */
-    let back = D1.exp; for (let n = 1; n < D1.lv; n++) back += needNew(n);
-    ok(back === oldPulls(SAVE1), 'D2 ★ 누적 뽑기 수 보존 — 새 곡선에서 되돌려 세도 같다',
-      back.toLocaleString() + ' vs ' + oldPulls(SAVE1).toLocaleString());
+    'D1 ★ 구 세이브의 **무기 칸** 12 → Lv' + want1.lv + ' · exp ' + want1.exp
+      + ' (그 배너 구 누적 ' + oldPullsOne(SAVE1.weapon).toLocaleString() + ' 뽑 — 714 는 다섯을 안 합친다)',
+    JSON.stringify(D1.cells));
+  {   /* 보존을 «되돌려 세서» 못박는다 — 다섯 칸 **전부** 그 배너의 뽑기 수로 되돌아와야 한다 */
+    const back = D1.cells.map(c => { let t = c.exp; for (let n = 1; n < c.lv; n++) t += needNew(n); return t; });
+    ok(back.every((v, i) => v === oldPullsOne(SAVE1[D1.cells[i].b])),
+      'D2 ★ 배너별 누적 뽑기 수 보존 — 새 곡선에서 되돌려 세도 칸마다 같다',
+      back.join(' · '));
   }
   const SAVE2 = { weapon: { lv: 12, exp: 700 }, shield: { lv: 8, exp: 5 }, amulet: { lv: 3, exp: 111 },
                   skill: { lv: 20, exp: 4321 }, pet: { lv: 5, exp: 9 } };
   const D3 = await inject({ sum: SAVE2 });
-  const want2 = place(oldPulls(SAVE2));
-  ok(D3.lv === want2.lv && D3.exp === want2.exp, 'D3 잔여 경험치가 있는 구 세이브도 합에 그대로 들어간다',
-    JSON.stringify(D3) + ' (구 누적 ' + oldPulls(SAVE2).toLocaleString() + ')');
+  ok(D3.cells.every(c => {
+      const w = place(oldPullsOne(SAVE2[c.b]));
+      return c.lv === w.lv && c.exp === w.exp;
+    }), 'D3 잔여 경험치가 있는 구 세이브도 **그 배너의** 셈에 그대로 들어간다',
+    D3.cells.map(c => c.b + ' ' + c.lv + '/' + c.exp).join(' · '));
   const SAVE3 = { weapon: { lv: 25, exp: 0 }, shield: { lv: 25, exp: 0 }, amulet: { lv: 25, exp: 0 },
                   skill: { lv: 25, exp: 0 }, pet: { lv: 25, exp: 0 } };
   const D4 = await inject({ sum: SAVE3 });
-  ok(D4.lv === MAXLV && D4.exp === 0,
-    'D4 구 5 배너 만렙(382,250 뽑 > 새 만렙 ' + TOTAL.toLocaleString() + ')은 Lv' + MAXLV + ' MAX 에서 멈춘다',
-    JSON.stringify(D4));
-  const D5 = await inject({ sumLv: D1.lv, sumExp: D1.exp });
-  ok(D5.lv === D1.lv && D5.exp === D1.exp, 'D5 이관은 멱등 — 새 세이브를 다시 넣어도 같다',
-    JSON.stringify(D5));
+  const want4 = place(oldPullsOne(SAVE3.weapon));
+  ok(D4.cells.every(c => c.lv === want4.lv && c.exp === want4.exp) && want4.lv < MAXLV,
+    'D4 ★ 구 배너 만렙(76,450 뽑) < 새 만렙 ' + TOTAL.toLocaleString()
+      + ' — 다섯 칸이 나란히 Lv' + want4.lv + '(눈금이 길어진 것이지 레벨을 잃은 게 아니다)',
+    D4.cells.map(c => c.lv + '/' + c.exp).join(' · '));
+  const D5 = await inject({ sumVer: 2, sum: SAVE1 });
+  ok(D5.cells.every(c => c.lv === SAVE1[c.b].lv && c.exp === SAVE1[c.b].exp),
+    'D5 이관은 멱등 — 714 판(`sumVer`)이 붙은 세이브는 그대로 다시 실린다',
+    D5.cells.map(c => c.lv + '/' + c.exp).join(' · '));
   const D6 = await inject({ sum: { weapon: { lv: -7, exp: -3 }, skill: { lv: '9', exp: 'x' },
                                    shield: { lv: 1 / 0, exp: NaN }, amulet: null,
                                    pet: { lv: 2, exp: 999999 } } });
   /* 셈: 음수·문자열·비유한·null 넷은 전부 Lv1/0 뽑 → 0. 남는 것은 `pet {lv:2, exp:999999}` 하나 —
      Lv1→2 를 지난 몫 구need(1) = 50 에, 잔여는 구 need(2) − 1 = 199 로 접혀 **249 뽑**이다.
-     (999,999 를 그대로 더했으면 Lv14 짜리 세이브가 공짜로 생긴다 — 그것을 막는 것이 이 항이다.) */
-  ok(D6.lv === 1 && D6.exp === 249,
-    'D6 ★ 손댄 세이브 방어 — 넷은 0 뽑 · `exp:999999` 는 구 need−1 로 접혀 50 + 199 = 249 뽑',
-    JSON.stringify(D6));
-  ok(Number.isFinite(D6.lv) && Number.isFinite(D6.exp) && new Set(D6.alias).size === 1,
-    'D7 이관 후 값 유한(NaN 0 건) · 별칭 다섯이 한 값', D6.alias.join(' · '));
+     (999,999 를 그대로 더했으면 Lv14 짜리 세이브가 공짜로 생긴다 — 그것을 막는 것이 이 항이다.)
+     714 — 그 249 는 이제 **펫 칸에만** 들어간다(496 은 합쳐서 무기에도 실렸다). */
+  {
+    const pet = D6.cells.find(c => c.b === 'pet');
+    ok(pet.lv === 1 && pet.exp === 249 && D6.cells.filter(c => c.b !== 'pet').every(c => c.lv === 1 && c.exp === 0),
+      'D6 ★ 손댄 세이브 방어 — 넷은 0 뽑 · `exp:999999` 는 구 need−1 로 접혀 50 + 199 = 249 뽑(펫 칸에만)',
+      D6.cells.map(c => c.b + ' ' + c.lv + '/' + c.exp).join(' · '));
+  }
+  ok(D6.cells.every(c => Number.isFinite(c.lv) && Number.isFinite(c.exp)) && new Set(D6.alias).size === 2,
+    'D7 이관 후 값 유한(NaN 0 건) · 다섯 칸이 한 값으로 접히지 않는다', D6.alias.join(' · '));
   const D8 = await inject({});
-  ok(D8.lv === 1 && D8.exp === 0, 'D8 `sum` 이 아예 없는 세이브 → Lv1/0', JSON.stringify(D8));
+  ok(D8.cells.every(c => c.lv === 1 && c.exp === 0),
+    'D8 `sum` 이 아예 없는 세이브 → 다섯 칸 Lv1/0', D8.cells.map(c => c.lv + '/' + c.exp).join(' · '));
 
-  /* ================= [E] 10 상점 소환 카드 ================= */
-  console.log('[E] 10 상점 소환 카드 — 다섯 장이 같은 레벨을 보인다');
+  /* ================= [E] 10 상점 소환 카드 =================
+     ⚑ 714 로 방향이 뒤집힌 절 — 496 은 «다섯 장이 같은 값» 을 물었고 지금은
+     «다섯 장이 **그 배너의** 값» 을 묻는다. 카드 마크업·좌표는 496·714 둘 다 안 건드렸다. */
+  console.log('[E] 10 상점 소환 카드 — 다섯 장이 그 배너의 레벨을 보인다');
   const E = await page.evaluate(() => {
-    S.dia = 2e6; S.sumLv = 7; S.sumExp = 100;
+    S.dia = 2e6;
+    BKEYS.forEach(k => { S.sum[k].lv = 7; S.sum[k].exp = 100; });
     openShopPage(null, 'sum'); renderShopPage();
     const cards = [...document.querySelectorAll('#shopList .shp-card')];
     const lvs = cards.map(c => c.querySelector('.clv>i').textContent.trim());
     const bars = cards.map(c => c.querySelector('.cbar>b').textContent.trim());
     const w = cards.map(c => c.querySelector('.cbar .trk>i').style.width);
-    const maxed = (() => { S.sumLv = SUM_MAXLV; S.sumExp = 0; renderShopPage();
+    /* 만렙 — 714 이후에는 **그 배너만** MAX 가 된다 */
+    const maxed = (() => {
+      BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = 0; });
+      S.sum.weapon.lv = SUM_MAXLV; renderShopPage();
       const cs = [...document.querySelectorAll('#shopList .shp-card')];
-      return { lv: cs.map(c => c.querySelector('.clv>i').textContent.trim()),
+      return { b: cs.map(c => c.querySelector('.cmag').dataset.shinfo),
+               lv: cs.map(c => c.querySelector('.clv>i').textContent.trim()),
                bar: cs.map(c => c.querySelector('.cbar>b').textContent.trim()),
                w: cs.map(c => c.querySelector('.cbar .trk>i').style.width) };
     })();
@@ -236,31 +277,32 @@ const ok = (b, name, detail) => {
     return { n: cards.length, lvs, bars, w, maxed, bad: /NaN|undefined/.test(txt) };
   });
   ok(E.n === 5, 'E1 소환 카드 5 장', String(E.n));
-  ok(new Set(E.lvs).size === 1 && E.lvs[0] === 'Lv.7',
-    'E2 ★ 다섯 장 전부 «Lv.7» — 소환 레벨은 하나다', E.lvs.join(' · '));
-  ok(new Set(E.bars).size === 1 && E.bars[0] === '100/' + needNew(7),
-    'E3 경험치 표기도 다섯 장이 같다 — 100/' + needNew(7), E.bars.join(' · '));
+  ok(E.lvs.every(v => v === 'Lv.7'),
+    'E2 다섯 칸에 7 을 넣으면 다섯 장이 «Lv.7» — 알약은 그 배너의 값을 읽는다', E.lvs.join(' · '));
+  ok(E.bars.every(b => b === '100/' + needNew(7)),
+    'E3 경험치 표기 = 100/' + needNew(7) + '(need 가 그 배너 레벨을 따라간다)', E.bars.join(' · '));
   ok(E.w.every(v => parseFloat(v) === Math.round(100 / needNew(7) * 100)),
-    'E4 채움률도 다섯 장이 같다', E.w.join(' · '));
-  ok(new Set(E.maxed.lv).size === 1 && E.maxed.lv[0] === 'Lv.' + MAXLV
-     && E.maxed.bar.every(b => b === 'MAX') && E.maxed.w.every(v => parseFloat(v) === 100),
-    'E5 만렙 — 다섯 장 «Lv.' + MAXLV + ' / MAX» · 채움률 100%',
-    E.maxed.lv[0] + ' ' + E.maxed.bar[0] + ' ' + E.maxed.w[0]);
+    'E4 채움률도 그 배너 값에서 나온다', E.w.join(' · '));
+  ok(E.maxed.bar.filter(b => b === 'MAX').length === 1
+     && E.maxed.lv[E.maxed.b.indexOf('weapon')] === 'Lv.' + MAXLV
+     && parseFloat(E.maxed.w[E.maxed.b.indexOf('weapon')]) === 100,
+    'E5 ★ 무기만 만렙 — «Lv.' + MAXLV + ' / MAX» 도 그 한 장뿐(496 의 «다섯 장 전부» 를 뒤집었다)',
+    E.maxed.b.map((b, i) => b + ' ' + E.maxed.lv[i] + ' ' + E.maxed.bar[i]).join(' · '));
   ok(!E.bad, 'E6 카드 표기 NaN/undefined 0 건');
 
   /* ================= [R] 되돌림 시험 =================
-     공용화를 되돌린 사본(배너별 5 벌)에서 [A2] 가 **빨개져야** 무르게 푼 수리가 아니다. */
-  console.log('[R] 되돌림 시험 — 배너별 5 벌로 되돌린 사본');
+     ⚑ 714 로 방향이 뒤집힌 절 — 이제 되돌리는 대상은 «496 의 공용 하나» 다.
+     그 사본에서 [A2] 가 **빨개져야** 무르게 푼 수리가 아니다. */
+  console.log('[R] 되돌림 시험 — 496 공용 하나로 되돌린 사본');
   {
     const rev = SRC
-      .replace('const sumLv  = _b => S.sumLv;', 'const sumLv  = b => S.__rev[b].lv;')
-      .replace('const sumExp = _b => S.sumExp;', 'const sumExp = b => S.__rev[b].exp;')
-      .replace(/function sumAddExp\(_b, n\)\{[\s\S]*?\n\}/,
-        'function sumAddExp(b, n){ const s = S.__rev[b]; s.exp += n; let up = 0;\n'
+      .replace('const sumLv  = b => sumOf(b).lv;', 'const sumLv  = _b => S.__sh.lv;')
+      .replace('const sumExp = b => sumOf(b).exp;', 'const sumExp = _b => S.__sh.exp;')
+      .replace(/function sumAddExp\(b, n\)\{[\s\S]*?\n\}/,
+        'function sumAddExp(_b, n){ const s = S.__sh; s.exp += n; let up = 0;\n'
         + '  while(s.lv < SUM_MAXLV && s.exp >= sumNeedExp(s.lv)){ s.exp -= sumNeedExp(s.lv); s.lv++; up++; }\n'
         + '  if(s.lv >= SUM_MAXLV) s.exp = 0; return up; }')
-      .replace('let S = DEF();',
-        'let S = DEF(); S.__rev = BKEYS.reduce((o,b) => (o[b] = { lv:1, exp:0 }, o), {});');
+      .replace('let S = DEF();', 'let S = DEF(); S.__sh = { lv:1, exp:0 };');
     const rp = path.join(ROOT, `.verify496-rev-${process.pid}.html`);
     fs.writeFileSync(rp, rev);
     const c = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -270,14 +312,14 @@ const ok = (b, name, detail) => {
     await p2.goto('file://' + rp.replace(/\\/g, '/'));
     await p2.waitForTimeout(900);
     const R = await p2.evaluate(() => {
-      BKEYS.forEach(k => { S.__rev[k].lv = 1; S.__rev[k].exp = 0; });
+      S.__sh = { lv:1, exp:0 };
       sumAddExp('weapon', 7);
       return { snap: BKEYS.map(k => sumLv(k) + '/' + sumExp(k)) };
     });
     await c.close();
     try { fs.unlinkSync(rp); } catch (e) {}
-    ok(new Set(R.snap).size > 1,
-      'R1 ★ 되돌린 사본에서는 다섯이 **따로 논다** — [A2] 가 빨개진다(무르게 풀지 않았다)',
+    ok(new Set(R.snap).size === 1 && R.snap[0] === '1/7',
+      'R1 ★ 되돌린 사본에서는 다섯이 **같이 오른다** — [A2] 가 빨개진다(무르게 풀지 않았다)',
       R.snap.join(' · '));
     ok(rerr.length === 0, 'R2 되돌린 사본도 콘솔 에러 0 건(되돌림이 딴 데를 안 깬다)', rerr.slice(0, 2).join(' | '));
   }
