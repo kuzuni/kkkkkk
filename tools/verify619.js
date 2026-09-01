@@ -201,8 +201,21 @@ async function hold(page, sp, opt) {
     await page.mouse.down();
     const out = await page.evaluate(async () => {
       const card = document.querySelector('#trCards [data-tr]'), L = document.getElementById('fxl');
+      /* ⚑⚑ 660 이관 — **«카드 글자» 에서 «강화 버튼 자기 라벨» 을 뺀다.**
+         이 축의 뜻은 «파티클이 카드의 **정보**를 가리지 마라» 이고(4·8회차), 그 전제는 파티클이
+         카드 **넓은 면**에 흩어진다는 것이었다. 660 이 주인 지시로 스폰을 **강화 버튼 안**으로
+         못 박으면서(«스폰 위치는 강화 버튼뿐 · 아이콘쪽에 이펙트 안뜨게») 그 전제가 바뀌었다 —
+         버튼 라벨 위에 앉는 것은 이제 **결함이 아니라 지시**다.
+         ⇒ 자리를 비우지 않고 **대상을 좁힌다**(333) — 여전히 가리면 안 되는 것들
+         (레벨 헤더 `.ch` · 수치 행 `.cv` · 이름 `.cn` · 진행바)은 그대로 세고, 버스트 호스트
+         (`--burst-to` 가 가리키는 그 버튼) 안의 글자만 뺀다. 문턱 5% 는 **한 칸도 안 넓혔다**.
+         ⚠ 되돌림도 같이 옮겼다(아래 E3) — «`strict` 무시» 는 660 이 아이콘 버스트에서 글자
+           구멍을 안 파게 하면서 축을 잃었다. 지금 겹침을 되살리는 한 값은 **`--burst-to`** 다. */
+      const bsel = (getComputedStyle(card).getPropertyValue('--burst-to') || '').trim();
+      const bhost = bsel ? card.querySelector(bsel) : null;
       const rects = () => { const o = [], rg = document.createRange();
         for (const el of [card, ...card.querySelectorAll('*')]) {
+          if (bhost && (el === bhost || bhost.contains(el))) continue;   /* 660 — 버스트 호스트 자기 라벨은 뺀다 */
           let has = false; for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { has = true; break; }
           if (!has) continue; rg.selectNodeContents(el); const b = rg.getBoundingClientRect();
           if (b.width && b.height) o.push(b); }
@@ -227,14 +240,15 @@ async function hold(page, sp, opt) {
   };
   const E = await overlapRun();
   ok(E.n >= 20, 'E1 표본이 있다 — 홀드 동안 스파크가 실제로 뜬다(연출이 «없어서» 안 겹치는 게 아니다)', '스파크 ' + E.n + '개');
-  ok(E.n > 0 && E.ov / E.n <= 0.05, 'E2 ★ 그 스파크가 카드 글자 위에 앉는 비율 ≤ 5%',
+  ok(E.n > 0 && E.ov / E.n <= 0.05,
+     'E2 ★ 그 파티클이 카드 **정보** 글자 위에 앉는 비율 ≤ 5%(660 이관 — 강화 버튼 자기 라벨 제외)',
      E.ov + '/' + E.n + ' = ' + p2(E.n ? E.ov / E.n : 0));
-  /* 되돌림 — `strict` 를 무시하는 사본에서는 겹침이 되살아난다(위 항이 «이미 참인 것» 이 아니다) */
-  await page.evaluate(() => { window.__burst0 = window.fxBurst;
-    window.fxBurst = function (t, c, n) { return window.__burst0(t, c, n); }; });
+  /* 되돌림 — `--burst-to` 를 지우면 버스트가 카드 전체로 흩어져 겹침이 되살아난다
+     (위 항이 «이미 참인 것» 이 아님을 못박는다 · 660 이관 전에는 «`strict` 무시» 가 이 자리였다) */
+  await page.addStyleTag({ content: '.tr-card{--burst-to:initial}' });
   const E0 = await overlapRun();
-  await page.evaluate(() => { if (window.__burst0) window.fxBurst = window.__burst0; });
-  ok(E0.n > 0 && E0.ov / E0.n >= 0.15, 'E3 ★ 되돌림 — `strict` 를 무시하면 겹침이 되살아난다(≥0.15)',
+  ok(E0.n > 0 && E0.ov / E0.n >= 0.15,
+     'E3 ★ 되돌림 — `--burst-to` 를 지우면(= 스폰이 카드 전체로) 겹침이 되살아난다(≥0.15)',
      E0.ov + '/' + E0.n + ' = ' + p2(E0.n ? E0.ov / E0.n : 0));
 
   /* ── [R] 되돌림 ───────────────────────────────────────────────────── */
@@ -480,7 +494,7 @@ async function hold(page, sp, opt) {
       await page.mouse.down();
       const o = await page.evaluate(([hostSel, TOP0]) => new Promise(res => {
         const host = document.querySelector(hostSel), L = document.getElementById('fxl');
-        const out = { n: 0, n2: 0, max2: 0, fxFrames: 0, frames: 0, hostMove: 0, spdInk: 0, spdN: 0 };
+        const out = { n: 0, n2: 0, max2: 0, fxFrames: 0, frames: 0, hostMove: 0, spdInk: 0, spdOld: 0, spdN: 0 };
         if (!host || !L) return res(out);
         const rect = e => e.getBoundingClientRect();
         const prev = new Map(), seen = new WeakSet();
@@ -508,8 +522,17 @@ async function hold(page, sp, opt) {
           for (const nd of L.querySelectorAll('.fx-flash')) {
             const he = nd.__fxHost; if (he && he.isConnected) prev.set(he, rect(he));
           }
-          /* 룬 알갱이 — 잉크가 행 상변 위로 나간 양(probe619f ⓙ 와 같은 산수·같은 잉크비) */
-          for (const nd of L.querySelectorAll('.fx-spd')) {
+          /* ⚑⚑ 660 이관 — **자가 보는 대상이 바뀌었다.** 종전 이 두 줄은 `.fx-spd`(583 «비용 알갱이»
+             = 알약·보유 아이콘에서 버튼으로 **날아가는** 화폐)를 셌는데, 주인 지시 658·660 이
+             그 연출을 **폐지**했다(«골드가 훈련 버튼쪽으로 가는 연출 없애기. 존나 후지다» ·
+             «스폰 위치는 강화 버튼뿐»). 표본이 0 이 되면 [L5] 는 «묻지 않는 자» 가 된다.
+             ⇒ 333 처방대로 **자리를 비우지 않고 살아 있는 표본으로 갈아 끼운다** — 같은 질문
+             («룬 입자의 잉크가 행 상변을 넘어 위 패널을 침범하는가»)을 660 의 버스트 아이콘
+             (`.fx-cic`)에 그대로 던진다. 산수·잉크비·문턱은 **한 값도 안 바꿨다**.
+             ⚠ 폐지 자체는 아래 [L4] 가 **방향을 뒤집어** 지킨다(«나야 한다» → «한 알도 안 난다») —
+               그 항이 없으면 «연출이 되살아나도 초록» 인 게이트가 된다. */
+          for (const nd of L.querySelectorAll('.fx-spd')) { out.spdOld++; }
+          for (const nd of L.querySelectorAll('.fx-cic')) {
             const b = rect(nd); if (!b.width) continue;
             out.spdN++;
             const pad = b.height * (1 - 0.938) / 2;
@@ -544,10 +567,15 @@ async function hold(page, sp, opt) {
          o ? '최악 ' + r2v(o.max2) + 'px · 표본 ' + o.n2 : '—');
     }
     const rn = T.rune;
-    ok(!!rn && rn.spdN > 0, 'L4 표본이 있다 — 룬 홀드에서 비용 알갱이가 실제로 난다',
-       rn ? '표본 ' + rn.spdN : '—');
+    /* ⚑ 660 이관 — 방향을 뒤집었다(333). 종전: «비용 알갱이가 나야 한다» / 지금: «한 알도 안 난다».
+       그냥 지웠으면 «658·660 이 통째로 되돌아가도 초록인 게이트» 가 됐을 자리다. */
+    ok(!!rn && rn.spdOld === 0,
+       'L4 ★ 룬 홀드에서 «버튼으로 날아가는 비용 알갱이»(`.fx-spd`)가 **한 알도 안 난다**(658·660 폐지)',
+       rn ? '표본 ' + rn.spdOld + '알' : '—');
+    ok(!!rn && rn.spdN > 0, 'L4b 표본이 있다 — 그 자리를 660 의 버스트 아이콘이 대신한다',
+       rn ? '아이콘 ' + rn.spdN + '알' : '—');
     ok(!!rn && rn.spdN > 0 && Math.max(0, rn.spdInk) <= 1,
-       'L5 ★ 룬 알갱이 **잉크**가 행 상변을 안 넘는다(≤1px · 16회차 ② 클램프를 ③ 폴백에도)',
+       'L5 ★ 룬 **버스트 아이콘** 잉크가 행 상변을 안 넘는다(≤1px · 16회차 ② 클램프를 ③ 폴백에도 · 660 이관)',
        rn ? r2v(Math.max(0, rn.spdInk)) + 'px (EL 49px / EM 57px)' : '—');
     /* ★ 되돌림 — 추적을 죽이면 L3 이 무너진다. 없으면 «원래 안 어긋났을 뿐» 인 헛초록과 못 가른다. */
     killFollow = true;

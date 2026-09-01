@@ -230,7 +230,7 @@ async function hold(page, sp) {
   ok(/function fxDelta\(el, txt\)\{/.test(code), 'D5 `fxDelta` 부품은 **남아 있다**(09·12·17·장비·코스튬이 쓴다 — 659 «부품 삭제 금지»)');
   {
     const calls = (code.match(/(?<!function )\bfxSpend\(/g) || []).length;
-    ok(calls === 0, 'D6 `fxSpend()` 호출 **0건** — 660 이 그 축을 폐지했다(662 가 선언째 걷는다)', '호출 ' + calls + '건');
+    ok(calls === 0, 'D6 `fxSpend()` 호출 **0건** — 660 이 그 축을 폐지했다(678 가 선언째 걷는다)', '호출 ' + calls + '건');
   }
 
   /* ── [E] 캔슬-재시작 금지 ─────────────────────────────────────────────── */

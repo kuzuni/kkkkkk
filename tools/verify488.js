@@ -27,6 +27,8 @@ const { chromium } = pw();
 const FILE = process.env.V488_FILE || 'index.html';
 const URL = 'file://' + path.resolve(__dirname, '..', FILE).replace(/\\/g, '/');
 const HOLD = Number(process.env.V488_HOLD || 2200);
+/* 660 — 빈 표본이면 Infinity 가 들어오므로 `toFixed` 대신 이것을 쓴다(자가 죽지 않게) */
+const n1 = v => (Number.isFinite(v) ? v.toFixed(0) : '—');
 /* 제품 상수 `HB_SLOT_W`(플로터 칸 간격)의 사본 — [H3] 이 «잉크 폭 < 칸 간격» 을 이 값으로 판정한다 */
 const HB_SLOT_W_JS = 80;
 
@@ -51,7 +53,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
     if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }
     if (!window.__alive) window.__alive = setInterval(() => { try { if (S.hp != null && typeof maxHp === 'function') S.hp = maxHp(); } catch (_) {} }, 200);
-    window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [], spd: [] };
+    window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [], spd: [], cic: [] };
     let __n = 0; const __ids = new WeakMap();
     window.__id = el => { if (!__ids.has(el)) __ids.set(el, ++__n); return __ids.get(el); };
     const oP = window.hbPulse, oF = window.hbFloat;
@@ -70,6 +72,12 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
         if (/\bfx-spd\b/.test(c)) {
           const im = n.querySelector && n.querySelector('img.cic');
           window.__C.spd.push(im ? im.dataset.curIc : '?');
+        }
+        /* ⚑ 660 이관 — 그 자리를 **다시** 이어받은 부품: 강화 버튼에서 터지는 재화 아이콘 버스트.
+           583 의 `.fx-spd`(비행)는 658·660 이 폐지했고, «무엇으로 냈나» 를 이제 이 놈이 말한다. */
+        if (/\bfx-cic\b/.test(c)) {
+          const im = n.querySelector && n.querySelector('img.cic');
+          window.__C.cic.push(im ? im.dataset.curIc : '?');
         }
       }
     }).observe(L, { childList: true, subtree: true });
@@ -95,7 +103,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     }).observe(document.body, { attributes: true, attributeFilter: ['class'], attributeOldValue: true, subtree: true });
   });
 
-  const reset = () => p.evaluate(() => { window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [], spd: [] }; window.__T = 0; });
+  const reset = () => p.evaluate(() => { window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [], spd: [], cic: [] }; window.__T = 0; });
   const grab = () => p.evaluate(() => {
     const C = window.__C;
     return {
@@ -110,7 +118,8 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
       txts: [...new Set(C.node.map(x => x.txt))].slice(0, 6),
       hb: C.cls.filter(x => x.c === 'jz-hb').length, hbx: C.cls.filter(x => x.c === 'jz-hbx').length,
       toast: C.toast, toastTxt: C.toastTxt || [], tries: window.__T || 0,
-      spd: C.spd.length, spdCur: [...new Set(C.spd)]
+      spd: C.spd.length, spdCur: [...new Set(C.spd)],
+      cic: C.cic.length, cicCur: [...new Set(C.cic)]        /* 660 */
     };
   });
 
@@ -184,14 +193,29 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(B1.tries >= 8, '[B1] 홀드가 실제로 여러 번 시도한다(전제)', B1.tries + '회');
   ok(B1.hb === B1.tries, '[B2] ★ 성공 맥박(jz-hb) 수 = 시도 수', B1.hb + ' / ' + B1.tries);
   ok(B1.hbx === 0, '[B3] 전부 성공이면 실패 흔들림(jz-hbx)은 0건이다', B1.hbx + '건');
-  ok(B1.fOk === B1.tries && B1.fNo === 0, '[B4] ★ 결과 플로터 «+1 Lv» 수 = 시도 수 · 실패 플로터 0', B1.fOk + '/' + B1.tries + ' · no ' + B1.fNo);
-  ok(B1.fPay === B1.tries, '[B5] ★ 비용 «−n» 플로터 수 = 시도 수', B1.fPay + ' / ' + B1.tries);
+  /* ⚑⚑ 660 이관 — **488 의 계약이 주인 지시로 바뀌었다.** 488 의 본체는 «시도마다 보이는 사건 ≥ 1»
+     이고 그것은 **그대로 살아 있다**. 바뀐 것은 그 사건을 이루는 부품이다:
+       종전 «맥박 + 플로터 두 장(«+1» 결과 · «−n» 비용)»
+       지금 «맥박 + **강화 버튼에서 터지는 재화 아이콘 버스트**»(659·660 — 주인 «숫자들 뜨는 연출 없애기»)
+     ⇒ 숫자 플로터를 세던 항들은 **지우지 않고 방향을 뒤집는다**(333) — «= 시도 수» → «0장» —
+       그리고 그 자리를 이어받은 부품에 **양성항**을 세운다(«버스트 = 시도 수»).
+       음성항만 남기면 «연출이 통째로 사라져도 초록» 인 게이트가 된다(583 [F3] 이 세운 규약 그대로다). */
+  ok(B1.fOk === 0 && B1.fNo === 0,
+     '[B4] ★ 660 — 성공 틱에 **숫자 플로터가 0장**이다(종전 «+1 Lv» = 시도 수)',
+     '결과 ' + B1.fOk + ' · 실패 ' + B1.fNo + ' / 시도 ' + B1.tries);
+  ok(B1.fPay === 0, '[B5] ★ 660 — 비용 «−n» 플로터도 **0장**이다', B1.fPay + ' / ' + B1.tries);
+  /* 양성항 — 그 자리를 이어받은 부품이 **시도마다** 실제로 뜬다(«보이는 사건 ≥1» 은 488 의 본체다) */
+  ok(B1.cic >= B1.tries && B1.cicCur.length === 1 && B1.cicCur[0] === 'rstone',
+     '[B5b] ★ 660 — 그 자리를 «룬강화석 버스트»가 대신한다(시도마다 · 전부 rstone)',
+     '아이콘 ' + B1.cic + ' [' + B1.cicCur.join(',') + '] / 시도 ' + B1.tries);
   ok(B1.node === B1.fOk + B1.fNo + B1.fPay, '[B6] 부른 만큼 실제 DOM 노드가 붙었다(FXMAX 로 떨어진 것 0)', B1.node + ' 노드');
   ok(B1.floatDrop === 0 && B1.pulseDrop === 0, '[B7] 홀드 내내 FXMAX·호스트 유실이 0건이다', 'float ' + B1.floatDrop + ' · pulse ' + B1.pulseDrop);
   ok(B1.nodeDn === B1.fPay, '[B8] 비용 플로터만 «아래로»(.dn) 진다 — 58 결제 어휘', B1.nodeDn + '/' + B1.fPay);
   ok(sumT(B1, /회 시도 · 성공/) === 1, '[B9] ★ 룬 정산 토스트는 손 뗀 뒤 «요약 한 장» 뿐이다(206 규약 유지)',
      sumT(B1, /회 시도 · 성공/) + '장 / 전체 ' + B1.toast);
-  ok(B1.txts.includes('+1'), '[B10] 성공 문구가 «+1» 이다(5회차 — 74px 잉크가 칸 간격 74 와 같아 이웃과 붙었다)', B1.txts.join(','));
+  ok(B1.txts.every(t => !/[0-9]/.test(t)),
+     '[B10] ★ 660 — 성공 갈래에 **숫자 문구가 한 자도 없다**(종전 «+1». 5회차의 잉크 74px 지적은 그 문구와 함께 은퇴)',
+     B1.txts.join(',') || '문구 0장');
 
   await runeSetup(0); await p.waitForTimeout(450);
   await countTries('runeBuy'); await reset();
@@ -200,11 +224,20 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('  · 전부 실패 — 시도 ' + B2.tries + ' · 맥박 ' + B2.hb + '/' + B2.hbx + ' · 플로터 ' + B2.node + ' · 색 ' + B2.cols.join(','));
   ok(B2.hbx === B2.tries && B2.hb === 0, '[B11] ★ 전부 실패면 흔들림(jz-hbx) 수 = 시도 수 · 성공 팝 0', B2.hbx + '/' + B2.tries + ' · hb ' + B2.hb);
   ok(B2.fNo === B2.tries && B2.fOk === 0, '[B12] ★ «실패» 플로터 수 = 시도 수', B2.fNo + '/' + B2.tries);
-  ok(B2.fPay === B2.tries, '[B13] 실패해도 재화는 나갔으므로 «−n» 은 그대로 시도 수', B2.fPay + '/' + B2.tries);
+  ok(B2.fPay === 0,
+     '[B13] ★ 660 — 실패 갈래에도 «−n» 은 **0장**이다(종전 «재화는 나갔으므로 시도 수»). 비용은 카드가 상시로 말한다',
+     B2.fPay + '/' + B2.tries);
   ok(B2.txts.includes('실패'), '[B14] 실패 문구가 «실패» 다', B2.txts.join(','));
   ok(B2.cols.includes('rgb(176, 27, 46)'), '[B15] 실패 색이 빨강 #B01B2E 다(성공 초록과 갈린다)', B2.cols.join(','));
-  ok(B1.cols.includes('rgb(46, 125, 20)'), '[B16] 성공 색이 초록 #2E7D14 다', B1.cols.join(','));
-  ok(B1.cols.includes('rgb(122, 58, 16)') && B2.cols.includes('rgb(122, 58, 16)'), '[B17] 비용 색은 성공·실패 무관하게 갈색 #7A3A10 하나다', B1.cols.join(','));
+  /* ⚑ 660 — [B16](성공 초록 #2E7D14)·[B17](비용 갈색 #7A3A10)은 **그 플로터와 함께 은퇴**했다.
+     색을 묻던 자리를 비우지 않고, 그 색이 말하던 것(«성공과 실패가 갈린다» · «비용이 보인다»)을
+     **살아 있는 부품**에 다시 묻는다. ⚠ [B15](실패 빨강)는 «실패» 플로터가 남아 그대로 산다. */
+  ok(B1.cols.every(c => c !== 'rgb(46, 125, 20)') && B1.cols.every(c => c !== 'rgb(122, 58, 16)'),
+     '[B16] ★ 660 — 성공 초록·비용 갈색 플로터가 **한 장도 안 뜬다**(그 두 색이 은퇴한 자리)',
+     B1.cols.join(',') || '플로터 0장');
+  ok(B2.cic >= B2.tries && B2.cicCur.length === 1 && B2.cicCur[0] === 'rstone',
+     '[B17] ★ 660 — 실패 갈래에도 버스트는 뜬다(619 11회차 «실패 틱에도 활동 한 줌» 규약 유지)',
+     '아이콘 ' + B2.cic + ' [' + B2.cicCur.join(',') + '] / 시도 ' + B2.tries);
   ok(sumT(B2, /회 시도 · 성공/) === 1, '[B18] 전부 실패해도 정산 토스트는 요약 한 장',
      sumT(B2, /회 시도 · 성공/) + '장 / 전체 ' + B2.toast);
 
@@ -222,7 +255,12 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('  · 시도 ' + C.tries + ' · 맥박 ' + C.hb + '/' + C.hbx + ' · 플로터 ' + C.node + ' · 토스트 ' + C.toast);
   ok(C.tries >= 8, '[C1] 단련 홀드가 여러 번 시도한다(전제)', C.tries + '회');
   ok(C.hb === C.tries && C.hbx === 0, '[C2] ★ 맥박 수 = 시도 수 · 확정 처리라 흔들림 0', C.hb + '/' + C.tries);
-  ok(C.fOk === C.tries && C.fPay === C.tries, '[C3] ★ «+1 Lv» · «−n(단련석)» 각각 시도 수', C.fOk + '·' + C.fPay + ' / ' + C.tries);
+  ok(C.fOk === 0 && C.fPay === 0,
+     '[C3] ★ 660·659 — 단련의 «+1 Lv»·«−n(단련석)» 숫자 플로터가 **둘 다 0장**이다(659 본체)',
+     C.fOk + '·' + C.fPay + ' / ' + C.tries);
+  ok(C.cic >= C.tries && C.cicCur.length === 1 && C.cicCur[0] === 'tstone',
+     '[C3b] ★ 660 — 그 자리를 «단련석 버스트»가 대신한다(시도마다 · 전부 tstone)',
+     '아이콘 ' + C.cic + ' [' + C.cicCur.join(',') + '] / 시도 ' + C.tries);
   ok(sumT(C, /단련/) === 1, '[C4] 단련 정산 토스트는 요약 한 장', sumT(C, /단련/) + '장 / 전체 ' + C.toast);
 
   /* ══ [D] 08 세부 팝업 [강화] 홀드(bindUpHold) ═══════════════════════ */
@@ -301,9 +339,12 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      자리를 비우지 않고 **갈아 끼운다**(333 처방): 「얼마를 냈나」 대신 「무엇으로 냈나」를 묻는다.
      ⇒ 음성항(금액 0)과 양성항(골드 알갱이가 실제로 뜬다)을 **같이** 세운다 — 한쪽만이면
         «연출이 통째로 사라져도 초록» 이 된다. */
-  ok(F.fPay === 0 && F.spd >= 3 && F.spdCur.length === 1 && F.spdCur[0] === 'gold',
-     '[F3] ★ 583 — 훈련은 «금액» 대신 **골드 알갱이**로 말한다(비용 플로터 0 · 화폐 알갱이 ≥ 3, 전부 gold)',
-     '비용 ' + F.fPay + ' · 알갱이 ' + F.spd + ' [' + F.spdCur.join(',') + ']');
+  /* ⚑ 660 이관 — 583 이 세운 «얼마를 냈나 → 무엇으로 냈나» 는 그대로이고, 그 말을 하는 부품만
+     비행 알갱이(`.fx-spd`) → **버튼 버스트**(`.fx-cic`)로 바뀌었다(658 «버튼으로 가는 연출 폐지»).
+     ⚠ 음성항을 **하나 늘렸다** — 비행이 0건인 것까지 물어야 «658 이 되돌아가도 초록» 이 안 된다. */
+  ok(F.fPay === 0 && F.spd === 0 && F.cic >= 3 && F.cicCur.length === 1 && F.cicCur[0] === 'gold',
+     '[F3] ★ 583·658·660 — 훈련은 «금액» 대신 **골드 아이콘 버스트**로 말한다(비용 플로터 0 · 비행 0 · 버스트 ≥3, 전부 gold)',
+     '비용 ' + F.fPay + ' · 비행 ' + F.spd + ' · 버스트 ' + F.cic + ' [' + F.cicCur.join(',') + ']');
   ok(F.fOk === 0 && F.fNo === 0, '[F4] ★ 결과 문구는 안 띄운다 — `.cv` 상시 표기 · `fx-cvswap` · 정지 시 `fxUpOk` 델타와 세 벌이 된다', (F.fOk + F.fNo) + '건');
   ok(sumT(F, /훈련/) === 1, '[F5] 훈련 홀드에도 정산 요약 토스트가 한 장 뜬다(2회차 신설 — 세 씬 마무리 층 일치)', sumT(F, /훈련/) + '장 / 전체 ' + F.toast);
 
@@ -353,7 +394,17 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('[H] 동시 생존 플로터 — 겹친 쌍 (1회차에 15~16쌍이었다)');
   await p.evaluate(() => {
     if (window.__rate0) runeRate = window.__rate0;
-    runeRate = () => 1;
+    /* ⚑⚑ 660 이관 — **확률을 1 이 아니라 0 으로 고정한다.** 이 두 절([H]·[J])은 «회당 플로터
+       사다리» 의 기하(칸 간격·수명·겹침)를 재는데, 주인 지시 659·660 이 **숫자 플로터**
+       («+1» 결과 · «−n» 비용)를 세 탭에서 폐지했다 — 성공을 강제하면 표본이 **0장**이 되어
+       [H1] 이 빨개지고 [J] 가 빈 배열에서 죽는다(1회차에 실제로 그랬다).
+       ⇒ 사다리는 **없어진 것이 아니라 실패 갈래에만 남았다**(660 결1 — «실패» 는 숫자가 아니고,
+         룬만 확률 판정이라 실패 틱의 유일한 회당 채널이라 살렸다). 그 살아 있는 표본으로 옮긴다.
+       ⚠ 재는 것(칸 간격 · 수명 · α · 겹침 · 애니 시작 시각)은 **한 항목도 안 바뀌었다** —
+         같은 부품(`hbFloat` → `.fx-plus.hb`)의 같은 기하다. 문턱도 한 칸도 안 건드렸다.
+       ⚠ 줄기가 둘(결과·비용)에서 하나(«실패»)로 준다 — [H2]«겹친 쌍 0»·[J] `streamMax` 는
+         줄기 수와 무관한 식이라 그대로 성립한다. */
+    runeRate = () => 0;
     try { closeModal(); } catch (_) {}
     S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 1e12;
     openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
@@ -398,7 +449,17 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('[J] 플로터 수명·α — 3회차에 «뒤 1/4 이 한 프레임도 안 나온다» 로 잡힌 자리');
   await p.evaluate(() => {
     if (window.__rate0) runeRate = window.__rate0;
-    runeRate = () => 1;
+    /* ⚑⚑ 660 이관 — **확률을 1 이 아니라 0 으로 고정한다.** 이 두 절([H]·[J])은 «회당 플로터
+       사다리» 의 기하(칸 간격·수명·겹침)를 재는데, 주인 지시 659·660 이 **숫자 플로터**
+       («+1» 결과 · «−n» 비용)를 세 탭에서 폐지했다 — 성공을 강제하면 표본이 **0장**이 되어
+       [H1] 이 빨개지고 [J] 가 빈 배열에서 죽는다(1회차에 실제로 그랬다).
+       ⇒ 사다리는 **없어진 것이 아니라 실패 갈래에만 남았다**(660 결1 — «실패» 는 숫자가 아니고,
+         룬만 확률 판정이라 실패 틱의 유일한 회당 채널이라 살렸다). 그 살아 있는 표본으로 옮긴다.
+       ⚠ 재는 것(칸 간격 · 수명 · α · 겹침 · 애니 시작 시각)은 **한 항목도 안 바뀌었다** —
+         같은 부품(`hbFloat` → `.fx-plus.hb`)의 같은 기하다. 문턱도 한 칸도 안 건드렸다.
+       ⚠ 줄기가 둘(결과·비용)에서 하나(«실패»)로 준다 — [H2]«겹친 쌍 0»·[J] `streamMax` 는
+         줄기 수와 무관한 식이라 그대로 성립한다. */
+    runeRate = () => 0;
     try { closeModal(); closeRelw(); } catch (_) {}
     S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 1e12;
     openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
@@ -450,15 +511,19 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      이 문턱을 훨씬 넘으므로 이 자가 무르게 풀린 것이 아니다. */
   const Jf = J.flat();
   const lag = Jf.map(r => Math.abs(r.age - r.ct)).sort((a, b) => a - b);
-  const lagMed = lag[Math.floor(lag.length / 2)], lagMax = lag[lag.length - 1];
+  /* ⚑ 660 — 빈 표본에서 **죽지 않게** 한다. 자가 크래시하면 [J1] 이 «빨강» 조차 못 내고
+     그 뒤 절들이 통째로 안 돈다(1회차에 `TypeError: … reading 'toFixed'` 로 그랬다).
+     판정은 안 무르게 둔다 — 표본이 없으면 [J1] 이 그것을 정확히 잡는다. */
+  const lagMed = lag.length ? lag[Math.floor(lag.length / 2)] : Infinity,
+        lagMax = lag.length ? lag[lag.length - 1] : Infinity;
   const opaque = Jf.filter(r => r.op >= 0.99).length, late = Jf.filter(r => r.ct > 200).length;
   const tailLate = TAIL.filter(ct => ct > 200).length;
   /* 줄기당 동시 생존 — 스냅숏마다 res(결과)/pay(비용)를 갈라 센다(.lng 도 제 줄기의 q 에 든다) */
   const streamMax = Math.max(...J.map(s => Math.max(s.filter(r => r.dn).length, s.filter(r => !r.dn).length)), 0);
-  console.log('  · 표본 ' + Jf.length + ' · 나이−진행 중앙 ' + lagMed.toFixed(0) + 'ms(최대 ' + lagMax.toFixed(0) + ') · α=1 표본 ' + opaque + ' · 줄기당 최대 ' + streamMax + '장 · 꼬리 표본 ' + TAIL.length + '(>200ms ' + tailLate + ')');
+  console.log('  · 표본 ' + Jf.length + ' · 나이−진행 중앙 ' + n1(lagMed) + 'ms(최대 ' + n1(lagMax) + ') · α=1 표본 ' + opaque + ' · 줄기당 최대 ' + streamMax + '장 · 꼬리 표본 ' + TAIL.length + '(>200ms ' + tailLate + ')');
   ok(Jf.length >= 8, '[J1] 표본이 충분하다(홀드 중 동시 생존 플로터)', Jf.length + '개');
   ok(lagMed <= 25, '[J2] ★ 애니메이션이 «만든 그 순간» 시작한다 — 나이와 진행의 차(중앙값) ≤ 25ms',
-     lagMed.toFixed(0) + 'ms · 최대 ' + lagMax.toFixed(0) + ' (3회차엔 86~131ms 였다)');
+     n1(lagMed) + 'ms · 최대 ' + n1(lagMax) + ' (3회차엔 86~131ms 였다)');
   /* ⚑ 630 — **[J3] 을 갈아 끼웠다(뜻 유지 · 자리 이동 · 임계 200 불변).**
      옛 [J3] 은 «홀드 중 스냅숏에 ct>200 표본이 있다» 였는데, 그 자보다 뒤에 들어온 설계가 뜻을 뒤집었다
      (LESSONS 627-③ 꼴) — 619 8회차 «줄기당 동시 생존 상한 2» 가 3장째 스폰에서 가장 오래된 것을 걷으므로,

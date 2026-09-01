@@ -35636,6 +35636,12 @@ const FXFLASH_SAME = 8;
    ⚠ 두 곳이 어긋나면 홀드 밖 단발이 CSS 값으로 돌고 «상수만» 바뀌는 헛수정이 된다 —
      `verify619` [F1] 이 CSS 선언과 이 두 상수가 같은지를 직접 물어 그것을 막는다. */
 const FXFLASH_MS = 340, FXSPARK_MS = 380;
+/* ⚑ 660 — 재화 아이콘 버스트의 크기 배수(구슬 24~34px 대비). 583 의 주인 지시 «알갱이 크기
+   더 크게» 를 «버튼 안에서» 지키는 값이다 — 아래 `fxBurst` 의 `FX_CIC_SC` 머리말 참조.
+   1.6 ⇒ **38~54px**. 하한 근거: 종전 비행 알갱이가 세운 «구슬보다 확실히 크다» 를 최소 크기
+   (24×1.6 = 38)에서도 지킨다. 상한 근거: 가장 얇은 호스트인 단련 버튼 `.tb`(74px)에서 가둠
+   `sz/2 + FXB_INPAD` 가 세로 밴드를 12px 남긴다 — 1.8 이면 밴드가 3px 로 링이 한 줄로 눌린다. */
+const FX_CIC_SC = 1.6;
 /* ⚑⚑ 619 15회차 — **회당 플래시가 액자를 넘지 않게 하는 산수.** 14회차 채점에서 두 비평가(EH·EI)의
    「8점을 막는 단 하나」가 **문자 그대로 같은 문장**이었다: «버스트 순간의 흰 밴드를 호스트 footprint
    **안쪽으로만** 그려라 · 상시 앰버 링은 손대지 마라». 실측(2인 독립):
@@ -37546,7 +37552,7 @@ function fxSpendFrom(cur, host, toC){
      `docs/claims/619.lock` 이 **살아 있고**(이 회차 시작 시각 기준 heartbeat 1분 전) 619 가 바로
      이 함수(16·17회차 «이동 거리 상한»·«③ 폴백 클램프»)를 고치는 중이다. 120줄을 지우면 그 세션의
      진행 중 회차가 통째로 병합 충돌로 죽는다([4] «내 작업 구간이 아닌 곳은 남의 버전을 그대로 둔다»).
-   ⇒ **죽은 코드 철거는 662 로 등재했다**(619 lock 이 풀린 뒤 · 제품 0줄짜리 청소 한 벌).
+   ⇒ **죽은 코드 철거는 678 로 등재했다**(619 lock 이 풀린 뒤 · 제품 0줄짜리 청소 한 벌).
      그때까지 이 함수는 **아무도 안 부른다** — 게이트 `verify660` [D] 가 그것을 매 실행 단언한다. */
 function fxSpend(cur, host){
   const C = FXCUR[cur]; if(!C) return false;
@@ -37849,7 +37855,7 @@ function fxBurst(t, col, n, strict, iv, ic){
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
-    const sz = Math.round(rnd(24, 34) * hsc);       /* 619 6회차 — strict 만 호스트 비례(hsc 머리말) */
+    let sz = Math.round(rnd(24, 34) * hsc);         /* 619 6회차 — strict 만 호스트 비례(hsc 머리말) · 660 — 아이콘이면 아래에서 한 번 키운다 */
     el.style.width = sz + 'px'; el.style.height = sz + 'px';
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     el.style.setProperty('--c', col || FXPAL.spark);  /* 16회차 — 글로우 오브의 본색(radial 중간대) · 512 표에서만 */
@@ -37857,8 +37863,22 @@ function fxBurst(t, col, n, strict, iv, ic){
        이미 정해진 것을 그대로 쓰고, 여기서는 «구슬 대신 아이콘» 만 갈아 끼운다.
        ⚠ `curIc(k)` 에 크기를 **안 넘긴다** — 넘기면 인라인 width/height 가 박혀 위 CSS 의
          `width:100%`(= 이 알의 sz)를 못 이긴다(543 이 골드에서 겪은 «인라인과 싸운다»). */
+    /* ⚑ 660 — **아이콘은 구슬보다 크다**(`FX_CIC_SC`). 583 의 주인 지시 «알갱이 크기 더 크게» 는
+       비행 알갱이(`ics 55 × 잉크보정 × FX3_FLYS 2.1` ≈ 93~128px)가 화면을 가로지르던 시절 값이라
+       74px 짜리 버튼 안에는 산술적으로 안 들어간다. 그렇다고 구슬과 같은 크기로 두면 그 지시가
+       조용히 취소된다 — **버튼이 허용하는 만큼** 키우는 것이 두 지시를 다 지키는 자리다.
+       ⚠ 구슬(24~34px)과 달리 아이콘은 **문양이 있는 그림**이라 같은 상자에서 덜 읽힌다는 것도
+         같은 방향이다(657 «파티클 존재감 상향» 과도 어긋나지 않는다).
+       ⚠ 잉크가 버튼 밖으로 새지는 않는다 — 619 13·14회차의 가둠이 `sz/2 + FXB_INPAD` 를
+         **이 값에서 파생**시키므로 크기를 키우면 상자도 저절로 같이 좁아진다(단련 `.tb` 74 검산:
+         sz 54 ⇒ inM 31 ⇒ 세로 밴드 12px 이 남고 가로 340 은 넉넉하다). */
     if(IC){ el.className = 'fx-spark fx-cic'; el.innerHTML = curIc(IC.cur);
-      el.style.setProperty('--fxgs', fxGrainSc(ic).toFixed(4)); }
+      el.style.setProperty('--fxgs', fxGrainSc(ic).toFixed(4));
+      const sz2 = Math.round(sz * FX_CIC_SC);
+      el.style.width = sz2 + 'px'; el.style.height = sz2 + 'px';
+      el.style.margin = (-sz2/2) + 'px 0 0 ' + (-sz2/2) + 'px';
+      sz = sz2;                                      /* 아래 가둠(inM)·융합(ks)이 같은 값을 읽는다 */
+    }
     /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로(위 인자 머리말). 제거는 `fxBye` 가
        실제 애니 끝에서 재므로 따라온다(41회차 규약 — 여기서 상수를 새로 적지 않는다). */
     if(sparkMs !== FXSPARK_MS) el.style.animationDuration = sparkMs + 'ms';
