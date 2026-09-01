@@ -33744,9 +33744,18 @@ function fxHoldPump(el, iv){
   try { if(el._hpump) el._hpump.cancel(); } catch(_){}
   try {
     el._hpump = el.animate(
-      [{ outlineWidth:'17px', outlineColor:'rgba(255,236,176,1)', offset:0 },
-       { outlineWidth:'17px', outlineColor:'rgba(255,236,176,1)', offset:HOLD_PUMP_HI },
-       { outlineWidth:'9px',  outlineColor:'rgba(255,172,28,.92)', offset:1 }],
+      /* ⚠⚠ **`outline-offset` 을 두께와 **같이** 움직인다 — 안 그러면 링이 바깥으로 자란다.**
+         `outline-offset:-10px` 는 링의 **안쪽 변**을 테두리에서 10px 들이는 것이고, 링은 거기서
+         **바깥으로** 두께만큼 뻗는다 ⇒ 9px 는 «1px 안쪽» 에서 끝나지만 17px 는 **7px 밖으로 나간다.**
+         13회차 1차 채점의 두 비평가가 그 대가를 각각 세 자리에서 찍었다(EG ② 훈련 카드 붉은 알림
+         배지가 홀드 7/7 프레임에서 **41~55% 지워짐** · EG ④ 옆 «체력» 카드와의 여유 15px → **3px**
+         이고 옆 카드 검은 테두리가 (20,20,20)→(64,54,32) 로 뜸 · EG ⑮ 단련에서 아래 행 테두리를
+         **2px 덮음**). ⇒ 봉우리의 오프셋을 −18 로 같이 밀어 **바깥 변을 두 상태에서 같은 자리
+         (테두리 1px 안쪽)로 고정**한다 — 링은 «안쪽으로만» 자란다. 8회차가 box-shadow 를 버리고
+         outline 을 고른 이유(레이아웃·형제 UI 를 안 건드린다)가 이 한 줄에 달려 있다. */
+      [{ outlineWidth:'17px', outlineOffset:'-18px', outlineColor:'rgba(255,236,176,1)', offset:0 },
+       { outlineWidth:'17px', outlineOffset:'-18px', outlineColor:'rgba(255,236,176,1)', offset:HOLD_PUMP_HI },
+       { outlineWidth:'9px',  outlineOffset:'-10px', outlineColor:'rgba(255,172,28,.92)', offset:1 }],
       { duration: dur, easing:'ease-out' });
     /* 위 «startTime» 머리말 — 대기 구간을 없앤다(619 4회차 계측).
        ⚠ 시각은 `document.timeline.currentTime`(= **직전 프레임**)이 아니라 `performance.now()`(= 지금)로

@@ -155,9 +155,25 @@ const NAMED = [
   { id: 'train',   tab: 'train',  sel: '#trCards [data-tr]',      n: '★대조 훈련 카드' },
 ];
 
-/* 세 자리의 «누른 채 픽셀 변화» — 되돌림 사본에서도 같은 코드로 잰다 */
+/* 세 자리의 «누른 채 픽셀 변화» — 되돌림 사본에서도 같은 코드로 잰다.
+   ⚑ **619 13회차 이관** — 이 축이 재는 것은 «누른 그 노드가 반응했는가» 지 «그 자리에서 무엇이든
+   움직였는가» 가 아니다(위 [R-a]/[R-b] 머리말이 이미 «주 축은 픽셀이 아니라 노드 생존» 이라고 적어
+   뒀다). 619 가 홀드에 **회당 이펙트**를 얹으면서 그 구분이 깨졌다: 되돌림 사본은 «누른 노드가 죽는»
+   사본인데도 619 의 스파크(`#fxl`)와 홀드 글로우(`.fx-holding`)가 버튼 상자 안에서 계속 터져
+   [R-c] 가 룬 **32.74%** 로 빨개졌다(문턱 8%). 13회차의 `inM`(가둠 기준을 중심 → 잉크)이 입자를
+   호스트 안쪽으로 들이면서 버튼 상자에 더 겹친 것이 직접 원인이다.
+   ⇒ **문턱을 넓히지 않고**(그건 자를 무르게 푸는 것이다 — 333) **재는 동안만 이펙트 층을 가린다.**
+   가린 채로도 [R-c] 는 빨개질 수 있다(대조군 [R-d] 훈련 카드가 같은 가림 아래에서 여전히 초록이라야
+   통과다 — 이 자가 «아무거나 빨개지는 자» 가 아님을 그 항이 지킨다). */
 async function pixelRun(page) {
   const out = {};
+  await page.evaluate(() => {
+    if (document.getElementById('v491mask')) return;
+    const st = document.createElement('style');
+    st.id = 'v491mask';
+    st.textContent = '#fxl{visibility:hidden!important}.fx-holding{outline:0!important}';
+    document.head.appendChild(st);
+  });
   for (const t of NAMED) {
     await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain();
       setTrSub(k); if (typeof setRuneSub === 'function') setRuneSub('r1'); renderTrain(); }, t.tab);
@@ -180,6 +196,8 @@ async function pixelRun(page) {
     await release(page);
     out[t.id] = { px: await diffPct(page, before, down), alive: live.alive, dn: live.dn };
   }
+  /* 가림은 이 자 안에서만 산다 — 뒤에 오는 절이 이펙트 노드를 세므로 반드시 걷는다 */
+  await page.evaluate(() => { const s = document.getElementById('v491mask'); if (s) s.remove(); }).catch(() => {});
   return out;
 }
 

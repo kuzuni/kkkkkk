@@ -57,7 +57,7 @@ const med = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - 
 
 /* 홀드 동안 매 프레임 훑는 관찰자 — 함수를 감싸지 않고 **찍힌 노드**만 본다 */
 const ARM = hostSel => {
-  const P = (window.__p619c = { spill: [], pumps: [], ow: [], cross: [], buys: 0 });
+  const P = (window.__p619c = { spill: [], pumps: [], ow: [], edge: [], cross: [], buys: 0 });
   const L = document.getElementById('fxl');
   const host = document.querySelector(hostSel);
   if (!L || !host) return;
@@ -88,8 +88,14 @@ const ARM = hostSel => {
       P.spill.push(Math.max(hb.left - b.left, b.right - hb.right, hb.top - b.top, b.bottom - hb.bottom));
     }
     /* ⓑ 글로우 봉우리 — outline-width 시계열의 «상시값 위로 솟은» 구간 수 */
-    const w = parseFloat(getComputedStyle(hostNow).outlineWidth) || 0;
+    const cs = getComputedStyle(hostNow);
+    const w = parseFloat(cs.outlineWidth) || 0;
     P.ow.push(rr(w));
+    /* ⚑ 13회차 2차 — **링이 바깥으로 자라지 않는가.** `outline-offset` 은 링의 안쪽 변이고 링은 거기서
+       바깥으로 두께만큼 뻗으므로 «바깥 변 = offset + width» 다. 이 값이 0 을 넘으면 링이 호스트
+       테두리 **밖**으로 나가 형제 UI(훈련 알림 배지 · 옆 카드 · 아래 행)를 덮는다 — 1차 채점의
+       두 비평가가 그것을 세 자리에서 찍었다. 홀드 전 프레임의 **최댓값**을 적는다. */
+    if (w > 0) P.edge.push(rr((parseFloat(cs.outlineOffset) || 0) + w));
     if (prevW !== null && w > 10.5 && prevW <= 10.5) P.pumps.push(rr(w));
     if (w > 10.5 && P.pumps.length) P.pumps[P.pumps.length - 1] = Math.max(P.pumps[P.pumps.length - 1], rr(w));
     prevW = w;
@@ -145,7 +151,7 @@ const ARM = hostSel => {
     const d = await page.evaluate(() => {
       const P = window.__p619c;
       if (P.raf) cancelAnimationFrame(P.raf);
-      return { spill: P.spill.slice(), pumps: P.pumps.slice(), ow: P.ow.slice(), cross: P.cross.slice(), buys: P.buys };
+      return { spill: P.spill.slice(), pumps: P.pumps.slice(), ow: P.ow.slice(), edge: P.edge.slice(), cross: P.cross.slice(), buys: P.buys };
     });
 
     const spMax = d.spill.length ? Math.max(...d.spill) : 0;
@@ -155,22 +161,25 @@ const ARM = hostSel => {
     const ratio = d.buys ? d.pumps.length / d.buys : 0;
     const hiShare = d.ow.length ? d.ow.filter(v => v > 10.5).length / d.ow.length : 0;
     const crMin = d.cross.length ? Math.min(...d.cross) : null;
+    const edgeMax = d.edge.length ? Math.max(...d.edge) : 0;
 
     console.log('  ' + sp.n);
     console.log('    ⓐ 스파크 ' + d.spill.length + '알 · **최대 스필 ' + r2(spMax) + 'px** · 밖으로 나온 알 ' + spOut + '개');
     console.log('    ⓑ 봉우리 실린 프레임 **' + Math.round(hiShare * 100) + '%**(' + d.ow.length + '표본) · ' +
                 'outline 상시 **' + owBase + 'px** → 최대 **' + owMax + 'px** · (참고: 봉우리 구간 ' +
                 d.pumps.length + '회 ÷ 강화 ' + d.buys + '회 = ' + r2(ratio) + ')');
+    console.log('    ⓓ 링 바깥 변(offset + width) 최대 **' + r2(edgeMax) + 'px** — 0 이하라야 호스트 안이다');
     console.log('    ⓒ 줄기 넘는 동시 생존 쌍 ' + d.cross.length + '개 · **최소 Δx ' +
                 (crMin === null ? '표본 없음' : r2(crMin) + 'px') + '**');
     if (spMax > 0.5) bad++;
     if (!(owMax >= 16.5 && owBase === 9 && hiShare >= 0.12 && hiShare <= 0.70)) bad++;
+    if (edgeMax > 0) bad++;
     if (crMin !== null && crMin < INK_H) bad++;
   }
 
   console.log('─'.repeat(78));
   console.log('문턱: ⓐ 최대 스필 = 0px · ⓑ 최대 17px · 상시 9px · 봉우리 프레임 12~70% · ' +
-              'ⓒ 최소 Δx ≥ ' + INK_H + 'px(글리프 높이) 또는 표본 없음');
+              'ⓒ 최소 Δx ≥ ' + INK_H + 'px(글리프 높이) 또는 표본 없음 · ⓓ 링 바깥 변 ≤ 0px');
   console.log(bad ? 'PROBE619C — 문턱 미달 ' + bad + '건' : 'PROBE619C — 세 축 전부 문턱 통과');
   await browser.close();
   process.exit(0);
