@@ -179,6 +179,7 @@ async function openAt(browser, H) {
     const stroke = nums.length >= 4 ? nums[3] : null;
     return { img: m(img), ink: m(ink), fs: cs.fontSize, lh: cs.lineHeight, stroke,
              fill: img.getBoundingClientRect().height / b.height,
+             iconH: Math.round(img.getBoundingClientRect().height * 10) / 10,
              need, applied, inkH: Math.round((tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent) * 10) / 10,
              ratio: Math.round(img.getBoundingClientRect().height
                     / (tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent) * 100) / 100,
@@ -189,20 +190,37 @@ async function openAt(browser, H) {
     `위 ${C.img.top} · 아래 ${C.img.bot}`);
   ok(Math.abs(C.ink.left - C.ink.right) <= 3 && C.ink.left > 0,
     '[4-b] 라벨이 가로 중앙(670 [5-d] 회귀)', `좌 ${C.ink.left} · 우 ${C.ink.right}`);
-  ok(C.lh === '173px' && C.fs === '48px',
-    '[4-c] line-height = 코어 높이(173) · font-size 48(3회차 — 비평 2인 «숫자가 아이콘에 눌렸다» 반영)',
+  ok(C.lh === '173px' && C.fs === '52px',
+    '[4-c] line-height = 코어 높이(173) · font-size 52(4회차 — 비평 4인이 3회차까지 «숫자가 아이콘에 눌렸다»)',
     `fs ${C.fs} · lh ${C.lh}`);
   ok(Math.abs(C.applied - C.need) <= 0.05,
     '[4-f] ★ 3회차 — 숫자 잉크 중심 보정이 **자가 푼 값과 일치**(아이콘 중심 ↔ 숫자 잉크 중심 정렬)',
     `필요 ${C.need}px · CSS top ${C.applied}px`);
-  ok(C.ratio <= 2.8,
-    '[4-g] ★ 3회차 — 아이콘:숫자잉크 비율(2회차 3.56:1 이 «정보가 장식에 눌렸다» 로 ② 를 6점에 묶었다)',
-    `${C.ratio}:1 (아이콘 ${C.img ? '' : ''}88 · 숫자 잉크 ${C.inkH})`);
-  ok(/tabular-nums/.test(C.tab),
-    '[4-h] 3회차 — 자릿수 고정 숫자(비평 2인 «아이콘이 행마다 4px 흔들린다» — 1·3·6 자폭 차이가 원인)',
-    C.tab);
-  ok(C.fill >= 0.5 && C.fill <= 0.7,
-    '[4-d] ★ 2회차 — 세로 채움률(잉크 높이 ÷ 코어 높이)이 50~70%(1회차 29.8% 가 ② 를 4점으로 떨어뜨렸다)',
+  ok(C.ratio <= 2.0,
+    '[4-g] ★ 아이콘:숫자잉크 비율 ≤ 2.0 — 1회차 ∞(숫자 안 키움) → 2회차 3.56 → 3회차 2.59 → **4회차 1.95**'
+    + '(같은 화면 헤더 바의 같은 쌍이 1.33:1 — 비평 4인이 그 선례를 근거로 세 회차 연속 지적했다)',
+    `${C.ratio}:1 (아이콘 ${C.img.h ?? ''}${C.iconH ?? ''} · 숫자 잉크 ${C.inkH})`);
+  /* [4-h] 4회차 — 3회차의 `tabular-nums` 는 이 서체에 그 기능이 없어 **no-op 이었다**(비평 2인이
+     «흔들림이 그대로 5px» 로 잡았다). 그래서 자는 «선언이 있는가» 가 아니라 **결과**를 본다:
+     세 행의 아이콘 좌변이 실제로 같은가. 선언이 바뀌어도 결과가 같으면 초록이다. */
+  const DRIFT = await page.evaluate(() => {
+    const xs = [...document.querySelectorAll('#trTemper .tr-tp')].map(r => {
+      const b = r.querySelector('.tb').getBoundingClientRect();
+      const i = r.querySelector('.tb img.cic').getBoundingClientRect();
+      return Math.round((i.x - b.x) * 100) / 100;
+    });
+    return { xs, spread: Math.round((Math.max(...xs) - Math.min(...xs)) * 100) / 100 };
+  });
+  ok(DRIFT.spread <= 0.5,
+    '[4-h] ★ 4회차 — 세 행 아이콘 좌변이 같다(비평 2인 «행마다 4~5px 흔들린다» — 한 자리 칸 고정으로 0)',
+    `좌변 ${DRIFT.xs.join(' · ')} ⇒ 편차 ${DRIFT.spread}px`);
+  /* ⚠ [4-d] 는 4회차에 문턱을 내렸다(50 → 40%) — **비평이 서로 반대 방향으로 당긴 자리**라 기록이 필요하다:
+     1회차 비평(B)은 «잉크가 면의 6% 뿐» 이라 **키우라** 했고, 3회차 비평(E·F)은 «아이콘이 숫자를 2.6배로
+     누른다» 라 **아이콘을 줄이라** 했다(E 는 60~64px 을 지목). 둘을 동시에 만족시키는 길은 아이콘을 줄이고
+     **숫자를 키우는** 것이고, 그러면 «잉크 높이 = 아이콘 높이» 인 채움률은 필연적으로 내려간다.
+     4회차는 비율(1.95:1)을 택하고 채움률 41.6% 를 받아들였다 — 1회차 29.8% 보다는 여전히 높다. */
+  ok(C.fill >= 0.4 && C.fill <= 0.7,
+    '[4-d] 세로 채움률 40~70%(1회차 29.8% → 2·3회차 55.5/50.9% → 4회차 41.6% — 비율과 맞바꾼 값)',
     `${Math.round(C.fill * 1000) / 10}%`);
   ok(C.stroke === 8,
     '[4-e] ★ 2회차 — 검정 테 8px(같은 패널의 카드·아이콘 액자·보유 바와 통일 — 1회차 5px 는 37.5% 얇았다)',
