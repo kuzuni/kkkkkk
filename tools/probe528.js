@@ -42,7 +42,10 @@ function measure(lit) {
              rows: document.querySelectorAll('#prbList .prb-row').length,
              heads: document.querySelectorAll('#prbList .prb-gh').length };
   };
-  const probsAt = v => { const o = S.sumLv; S.sum.weapon.lv = v; const p = gradeProbs('weapon'); S.sumLv = o; return p; };
+  /* 768 — 저장·복원의 «자리» 는 714 뒤로 배너 칸이다. 496 의 공용 스칼라(`S.sumLv`)에 담으면
+     읽기는 `undefined`, 되돌리기는 **아무 데도 안 닿는 새 전역**이라 원복이 조용히 사라진다. */
+  const probsAt = v => { const o = S.sum.weapon.lv; S.sum.weapon.lv = v;
+                         const p = gradeProbs('weapon'); S.sum.weapon.lv = o; return p; };
   const MAX = SUM_MAXLV;
 
   openProbInfo('weapon', lit);  const wOld = probe();
@@ -57,16 +60,17 @@ function measure(lit) {
 
   /* [E] 3,000연 — 옛/새 상태에서 최고 등급이 실제로 나오는가 (씨앗 없이 세므로 표본을 크게) */
   const sim = v => {
-    const o = S.sumLv; S.sum.weapon.lv = v;
+    const o = S.sum.weapon.lv; S.sum.weapon.lv = v;   /* 768 — 배너 칸으로 저장·복원 */
     const got = {}; let bad = 0;
     for (let i = 0; i < 3000; i++) { const r = summonOne('weapon');
       if (!r || !r.it || !EQ[r.it.id]) { bad++; continue; } got[r.it.g] = (got[r.it.g] || 0) + 1; }
-    S.sumLv = o; return { g7: got[top] || 0, g6: got[top - 1] || 0, bad };
+    S.sum.weapon.lv = o; return { g7: got[top] || 0, g6: got[top - 1] || 0, bad };
   };
   const eOld = sim(lit), eNew = sim(MAX);
 
   return { max: MAX, lit, top,
-           live: (() => { const o = S.sumLv; S.sum.weapon.lv = lit; const v = S.sum.weapon.lv; S.sumLv = o; return v; })(),
+           live: (() => { const o = S.sum.weapon.lv; S.sum.weapon.lv = lit;
+                          const v = S.sum.weapon.lv; S.sum.weapon.lv = o; return v; })(),
            wOld, wNew, pOld, pNew,
            dOld: dOld[top], dNew: dNew[top], dOld6: dOld[top - 1], dNew6: dNew[top - 1],
            eOld, eNew };
