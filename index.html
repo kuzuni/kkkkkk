@@ -5510,8 +5510,16 @@
     box-shadow:0 3px 3px rgba(0,0,0,.3)}
 
   /* Lv 알약 — 검정 캡슐, 글자 #7DE5ED */
+  /* ⚑ 655 — z 는 2 가 아니라 **3** 이다. 측정표 10 §2 #8·주석 119 가 «경험치 바는 알약 아래로 30px
+     물린다 · 바 왼쪽 끝은 알약이 덮어 직접 못 잰다» 로 못박은 관계라, 알약은 게이지 **계열 전부**의
+     위여야 한다. 122 22회차가 검은 프레임 사본 `.stkbar` 를 z-index:2 로 얹으면서 그 사본이
+     같은 z + 나중 DOM 순서로 **알약 위**가 됐고, 사본의 왼쪽 테두리(3px 검정)가 알약 안 글자를
+     세로로 잘랐다(`probe655` — 레벨 6표본 전부 덮임, Lv.31 에서 잉크 40px).
+     z 를 3 으로 올리면 마스크가 알약의 **캡슐 모양 그대로**라 사본이 실제로 보이는 구간
+     (캡 곡선 밖 우상·우하 조각)은 그대로 남는다 — 사본을 사각으로 잘라 내는 안보다 정확하다.
+     ⚠ 광택과의 관계는 Δ0 다: `.clv` 는 5회차부터 이미 z2 = `.cfr::after`(z auto) 위였다. */
   .shp-card .clv{left:55px;top:363px;width:89px;height:44px;border-radius:22px;background:#000;
-    text-align:center;line-height:44px;z-index:2}
+    text-align:center;line-height:44px;z-index:3}
   /* 5회차 — I·J 공통 «Lv 글자 잉크 37×21 vs ref 46×18~19»(폭 −20% · 높이 +11%) */
   .shp-card .clv>i{font-size:23px;color:#7DE5ED;transform:translateY(2px) scaleX(1.216);letter-spacing:-1px}
   /* 경험치 바 — 알약 아래로 물림 */
