@@ -60,15 +60,34 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     const t = document.elementFromPoint(r.left + 820, r.top + 180);
     const card = t && t.closest('.dnc');
     if (card) card.click();
-    return { tag: t ? t.className : null, hitCard: !!card };
+    /* 617 — 눌린 카드의 id 를 같이 들고 나온다. [4] 의 기대값이 여기서 온다
+       («무엇을 눌렀는지» 를 클릭 **전에** 확정해 두어야 «엉뚱한 카드가 열렸다» 를 잡는다). */
+    return { tag: t ? t.className : null, hitCard: !!card, rcard: c.dataset.rcard || null };
   });
   await p.waitForTimeout(500);
   ok(opened.hitCard, `썸네일 위 히트 타깃이 카드다 (맞은 요소: ${opened.tag})`);
   ok(await p.evaluate(() => $('dgdw').classList.contains('on')), '04 세부 팝업이 실제로 열렸다');
 
+  /* 617 (2026-09-01) — 여기 「60초」가 리터럴로 박혀 있어 빨간 채 굳어 있었다.
+     제품이 옳고 자가 낡은 것이다: 264 에서 주인이 «dps 적은 안 죽고 데미지만 30초 만에 얼마나
+     넣는지 측정하는 용» 이라고 초를 직접 못박았고, `RAIDS` 선언 옆 주석도 그 지시를 인용해 둔다.
+     이 절이 묻는 것은 «초가 몇인가» 가 아니라 «**눌린 카드의** 세부가 열렸는가» 이므로
+     기대값을 **눌린 카드 id 로 제품 표(`RAIDS`)에서 파생**시킨다(316·443 선례 —
+     하네스가 제품 상수를 읽으면 초가 또 바뀌어도 게이트가 안 부패한다).
+     ⚠ 파생이 «그린 것 = 선언» 이 되지 않게 두 겹으로 막았다:
+       ⓐ id 는 **클릭 전에** 읽은 것이라 다른 카드가 열리면 제목이 그 자리에서 어긋난다.
+       ⓑ 표에서 못 찾거나 모양이 깨지면 그 자체가 실패다 — 표본이 사라져도 조용히 초록이 되는
+          공허한 항이 되지 않게(422 «음성항이 공허하다» 계열). */
   console.log('[4] 세부 팝업 내용이 그 레이드다 (엉뚱한 카드가 열리지 않는다)');
-  const dg = await p.evaluate(() => ({ t: $('dgdTitle').textContent, f: $('dgdFloor').textContent }));
-  ok(dg.t === 'DPS 측정장' && dg.f === '60초', `제목 «${dg.t}» · 제한 시간 «${dg.f}»`);
+  const dg = await p.evaluate((id) => {
+    const r = (typeof RAIDS !== 'undefined' && RAIDS.find((x) => x.id === id)) || null;
+    return { t: $('dgdTitle').textContent, f: $('dgdFloor').textContent,
+             en: r ? r.n : null, ef: r ? r.sec + '초' : null };
+  }, opened.rcard);
+  ok(!!dg.en && /^[0-9]+초$/.test(dg.ef || ''),
+     `기대값을 제품 표에서 읽었다 — 카드 «${opened.rcard}» → «${dg.en}» · «${dg.ef}»`);
+  ok(dg.t === dg.en && dg.f === dg.ef,
+     `제목 «${dg.t}» · 제한 시간 «${dg.f}» (제품 기대 «${dg.en}» · «${dg.ef}»)`);
   await p.evaluate(() => { const x = document.querySelector('#dgdw .x, #dgdw [data-close]');
     if (x) x.click(); else $('dgdw').classList.remove('on'); });
   await p.waitForTimeout(400);
