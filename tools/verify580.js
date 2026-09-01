@@ -42,6 +42,10 @@ const argSec = process.argv.indexOf('--sec');
 const SEC = argSec > 0 ? Number(process.argv[argSec + 1]) : Number(process.env.V580_SEC || 60);
 
 const PLAYER_BASE = 115, MOB_BASE = 110;   /* 358 · 502 가 적어 둔 «원본» */
+/* ⚑ 640 — §4·§R3 전용 시드. 8717 은 **수리 전 통과가 실제로 찍히는 판**으로 골랐다
+   (probe640 [1]·[2]: 이 판은 600프레임에서 통과 1건 · 시드 1000 은 0건). 그래서 §R3 의
+   되돌림 사본이 «우연히 초록» 이 될 수 없다 — 자가 살아 있음을 이 판이 매 실행 보증한다. */
+const TUN_SEED = 8717;
 const STAGES = [1, 50, 200, 1000];
 const TYPES = ['zombie', 'goblin', 'dark'];
 
@@ -87,7 +91,7 @@ const RUN_SPAWN = async ({ stages, types, n }) => {
 const RUN_TUNNEL = async ({ frames, st, ms }) => {
   S.stage = st; S.best = st; S.bossFarm = false;
   spawnStage();
-  let hit = 0, tun = 0, tunReady = 0, touchF = 0, seg = 0;
+  let hit = 0, tun = 0, tunReady = 0, tunMiss = 0, touchF = 0, seg = 0;
   for (let f = 0; f < frames; f++) {
     killed = 0; bossOn = false; stageWin = false; S.bossFarm = false;
     if (enemies.length + spawnQ.length < 12) queueMobs();
@@ -110,11 +114,22 @@ const RUN_TUNNEL = async ({ frames, st, ms }) => {
       t = Math.max(0, Math.min(1, t));
       const md = Math.hypot(sx + vx * t, sy + vy * t);
       if (d0 < reach) touchF++;
-      if (d0 >= reach && d1 >= reach && md < reach) { tun++; if (a.cd <= 0) tunReady++; }
+      if (d0 >= reach && d1 >= reach && md < reach) {
+        tun++;
+        if (a.cd <= 0) {
+          tunReady++;
+          /* ⚑ 640 — **여기가 이 절의 뜻이다.** `tunReady` 는 «임계를 지나갔다» 는 **기하**만 세므로
+             제품이 그 프레임에 제대로 때렸는지는 안 묻는다 — 640 의 수리가 들어간 뒤에도 그대로
+             세어져서 «고쳤는데 빨갛다» 가 된다(헛빨강). 물어야 할 것은 «지나갔는데 **접촉이 안
+             찍혔는가**» 다. 적의 공격은 `e.cd = 0.9` 로 표가 나므로, 틱 전 `cd ≤ 0` 이던 개체가
+             틱 뒤 `cd > 0` 이면 **이 프레임에 때린 것**이다(`e.cd -= dt` 만으로는 양수가 못 된다). */
+          if (!(e.cd > 0)) tunMiss++;
+        }
+      }
     }
     if (f % 900 === 0) await new Promise(r => setTimeout(r, 0));
   }
-  return { st, ms, hit, seg, touchF, tun, tunReady,
+  return { st, ms, hit, seg, touchF, tun, tunReady, tunMiss,
     hps: +(hit / (frames * ms / 1000)).toFixed(3), pSpeed: +stat.speed.toFixed(1) };
 };
 
@@ -143,17 +158,32 @@ const RUN_BOSS = async ({ frames, st }) => {
 };
 
 /* ── 실행기 ───────────────────────────────────────────────────────────── */
-async function run(browser, file, fn, arg, errs) {
+async function run(browser, file, fn, arg, errs, seed) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   page.on('pageerror', e => errs.push(String(e.message).slice(0, 160)));
-  await page.addInitScript(() => {
+  await page.addInitScript(sd => {
+    /* ⚑ 640 — 시드를 준 실행에서는 `Math.random` 을 고정한다(mulberry32). **§4 전용**이다:
+       터널링은 노출량이 아니라 **배치**에 묶인 드문 사건이라(probe640 [2] — 노출량을 4.7배로 키워도
+       계수가 안 늘었다) 판을 안 고정하면 같은 나무에서 계수가 0 ↔ 3 으로 뒤집힌다(등재문 640).
+       ⚠ 다른 절(§2·§3·§5)에는 시드를 주지 않는다 — 그 절들은 무작위 표본 위에서 «전부/서열» 을
+          묻는 절이라 판을 고정하면 묻는 것이 좁아진다. 여기만 결정적이면 된다. */
+    if (sd !== undefined && sd !== null) {
+      let s = sd >>> 0;
+      Math.random = () => {
+        s = (s + 0x6D2B79F5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), 1 | t);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
     let vt = 0; const q = [];
     window.requestAnimationFrame = cb => { q.push(cb); return q.length; };
     window.cancelAnimationFrame = () => {};
     window.__v580tick = ms => { vt += (ms || 1000 / 60); const l = q.splice(0, q.length); for (const cb of l) { try { cb(vt); } catch (e) {} } };
     try { localStorage.clear(); } catch (e) {}
-  });
+  }, seed);
   await page.goto('file://' + file.replace(/\\/g, '/'), { waitUntil: 'load' });
   await page.waitForFunction(() => typeof player !== 'undefined' && typeof enemies !== 'undefined', null, { timeout: 20000 });
   await page.evaluate(() => { for (let i = 0; i < 600; i++) window.__v580tick(1000 / 60); });
@@ -206,8 +236,8 @@ const withSc = v => RAW.replace(/const SPD_SC\s*=\s*[\d.]+\s*;/, `const SPD_SC =
     await blk('§2~§5 실측', async () => {
       C = await run(browser, SRC, RUN_CONST, {}, errs);
       SP = await run(browser, SRC, RUN_SPAWN, { stages: STAGES, types: TYPES, n: 100 }, errs);
-      T.fast = await run(browser, SRC, RUN_TUNNEL, { frames: SEC * 60, st: 200, ms: 1000 / 60 }, errs);
-      T.lag = await run(browser, SRC, RUN_TUNNEL, { frames: Math.round(SEC * 10), st: 200, ms: 100 }, errs);
+      T.fast = await run(browser, SRC, RUN_TUNNEL, { frames: SEC * 60, st: 200, ms: 1000 / 60 }, errs, TUN_SEED);
+      T.lag = await run(browser, SRC, RUN_TUNNEL, { frames: Math.round(SEC * 10), st: 200, ms: 100 }, errs, TUN_SEED);
       B = await run(browser, SRC, RUN_BOSS, { frames: 30 * 60, st: 50 }, errs);
     });
 
@@ -246,7 +276,12 @@ const withSc = v => RAW.replace(/const SPD_SC\s*=\s*[\d.]+\s*;/, `const SPD_SC =
       if (!t || t.err) { ok(false, `4 ${lab} 표본을 못 얻었다`, t && t.err); continue; }
       ok(t.seg > 5000, `4 ${lab} 표본이 충분하다(적·프레임)`, t.seg + '개');
       ok(t.touchF > 0, `4 ${lab} 그 표본 안에 «임계 안» 프레임이 실제로 있다(안 만나면 셀 것도 없다)`, t.touchF + '프레임');
-      ok(t.tunReady === 0, `4 ${lab} 때릴 준비가 된 채 통과한 프레임 0건`, `${t.tunReady}건 (통과 전체 ${t.tun}건)`);
+      /* ⚑ 640 — 판정을 `tunReady`(기하) 에서 `tunMiss`(기하 **+ 접촉이 안 찍혔다**)로 갈아 끼웠다.
+         옛 항은 «지나갔다» 만 세어서, 640 의 수리가 그 프레임에 제대로 때려도 계속 빨갰다.
+         그리고 옛 항은 **드문 사건을 == 0 으로 물어** 실행마다 0 ↔ 3 으로 뒤집혔다(640 등재문) —
+         이제 판은 시드로 고정되고(TUN_SEED) 세는 것은 «놓친 접촉» 이라 구조적으로 0 이다. */
+      ok(t.tunMiss === 0, `4 ${lab} 임계를 지나갔는데 **접촉이 안 찍힌** 프레임 0건`,
+        `${t.tunMiss}건 (지나감 ${t.tun}건 · 그 중 때릴 준비됨 ${t.tunReady}건 — 준비된 통과는 전부 접촉으로 찍혔다)`);
     }
 
     /* ── §5 체감 표(판정 없음 · 199 이관 근거) ────────────────────────── */
@@ -282,6 +317,22 @@ const withSc = v => RAW.replace(/const SPD_SC\s*=\s*[\d.]+\s*;/, `const SPD_SC =
         ok(!r.err && r.tun > 0,
           'R2 배수를 8 로 올린 사본에서는 통과가 **실제로 찍힌다** — §4 의 0 은 «세는 법» 이 아니라 제품의 값이다',
           r.err ? r.err : `통과 ${r.tun}건(때릴 준비됨 ${r.tunReady}건) / 표본 ${r.seg}`);
+      } finally { try { fs.unlinkSync(p); } catch (e) {} }
+    });
+    /* ⚑ R3(640 신설) — **수리를 떼면 §4 가 빨개진다.** R2 는 «통과가 찍히는가»(기하)만 보이므로
+       640 의 수리가 통째로 사라져도 초록이다 — 그러면 «수리가 있으나 없으나 같은 게이트» 가 된다
+       (334 가 잡은 바로 그 꼴). 그래서 스윕 가지만 `if(false)` 로 죽인 사본을 만들어
+       **놓친 접촉이 실제로 되살아나는 것**을 못박는다. 판은 TUN_SEED 로 고정 = 우연한 초록이 없다. */
+    await blk('§R3', async () => {
+      const MARK = 'if(Math.hypot(sx, sy) >= reach && Math.hypot(tx, ty) >= reach){';
+      const p = path.join(ROOT, '.v580-nosweep.html');
+      ok(RAW.indexOf(MARK) >= 0, 'R3 되돌릴 자리(640 스윕 가지)를 제품에서 찾았다', MARK.slice(0, 46) + '…');
+      fs.writeFileSync(p, RAW.replace(MARK, 'if(false){'));
+      try {
+        const r = await run(browser, p, RUN_TUNNEL, { frames: Math.round(SEC * 10), st: 200, ms: 100 }, errs, TUN_SEED);
+        ok(!r.err && r.tunMiss > 0,
+          'R3 640 의 스윕 가지를 뗀 사본에서는 «놓친 접촉» 이 되살아난다 — §4 의 0 은 수리가 만든 값이다',
+          r.err ? r.err : `놓침 ${r.tunMiss}건 (지나감 ${r.tun}건 · 준비됨 ${r.tunReady}건) / 표본 ${r.seg}`);
       } finally { try { fs.unlinkSync(p); } catch (e) {} }
     });
   } finally {
