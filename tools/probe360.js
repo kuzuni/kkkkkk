@@ -177,7 +177,11 @@ function report(tag, s) {
      (이 저장소의 index.html 은 외부 리소스를 안 쓰는 단일 파일이다). */
   let beforeFile = null;
   try {
-    const buf = execFileSync('git', ['show', `${BEFORE_REF}:index.html`], { cwd: ROOT, maxBuffer: 1 << 28 });
+    /* 756 — 얕은 클론이면 먼저 판다(규약 ①) · 못 가져오면 «환경/진짜 없음» 을 밝혀 던진다(규약 ②) */
+    const got = require('./gitrev756').show(BEFORE_REF, 'index.html');
+    if (!got.ok) throw new Error((got.env ? '[보류·환경] ' : '[빨강] ') + got.why);
+    if (got.how) console.log('[i]' + got.how);
+    const buf = got.buf;
     /* ⚠ **저장소 루트**에 둔다(229 선례). index.html 이 btn.png·hdr.png 를 상대 경로로 물고 있어
        /tmp 에 두면 리소스가 404 가 되고, 배경이 달라지면 차분으로 뜬 «찍힌 픽셀» 도 달라진다
        (1회차에 수리 전 편차가 +20.6/+20.9/−13.5% → +23.4/+18.3/−12.5% 로 흔들린 원인이다). */

@@ -21,12 +21,12 @@ const { revertMeasure } = require('./revert398');
 const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const G756 = require('./gitrev756');           /* 756 — 얕은 클론에서 고정 SHA 를 데려오는 공용 부품 */
 const ROOT = path.resolve(__dirname, '..');
 const KEY = 'idle_hunter_save_v4';
 const W = 1080, H = 2280;
 
-let pass = 0, fail = 0;
+let pass = 0, fail = 0, skip = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d !== undefined && d !== '' ? ' — ' + d : '')); };
 
 /* 옛 §R 이 들고 있던 세 조각 — 513 이 갱신한 마지막 판(cdc4758) 그대로다.
@@ -73,9 +73,13 @@ const redRv = rv => rv.passKeys.length > 1 && rv.passKeys.includes('gold')
   /* ══ §1 등재문 재현 — 513 직전 트리에서 옛 앵커가 부패해 있었다 ══════════ */
   console.log('§1 등재문 재현 — 539 등재 시점(513 직전) 트리의 옛 앵커');
   let old = null;
-  try { old = execSync('git show cdc4758^:index.html', { cwd: ROOT, maxBuffer: 1 << 28 }).toString(); } catch (e) { old = null; }
+  /* 756 — 먼저 **판아 본다**(규약 ①). 얕다고 바로 건너뛰면 재현이 가능한 자리를 버리는 것이다.
+     못 가져왔을 때만 «환경이면 보류 · 아니면 빨강» 으로 갈린다(규약 ②). */
+  const got = G756.show('cdc4758^', 'index.html');
+  if (got.ok) { old = got.buf.toString(); if (got.how) console.log('  [i]' + got.how); }
   if (!old) {
-    console.log('  ..  (얕은 클론이라 513 직전 트리를 못 읽었다 — §1 건너뜀)');
+    if (got.env) { skip++; console.log('  ⏸  §1 보류(환경) — ' + got.why + ' · §1 4항을 세지 않는다'); }
+    else ok(false, '§1 513 직전 트리를 못 읽었다', got.why);
   } else {
     /* 그 시점 §R 이 들고 있던 ATTEND 조각은 «i % 28 === 0 ? 5000» 판이다 */
     const atThen = "  const dia = i % 28 === 0 ? 5000 : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);\n  ATTEND.push({ ic:curIc('dia'), t:'다이아', dia });";
@@ -150,6 +154,7 @@ const redRv = rv => rv.passKeys.length > 1 && rv.passKeys.includes('gold')
   ok(/revertMeasure/.test(gate), '§4 되돌림은 재현기와 같은 한 벌(tools/revert398.js)을 쓴다');
 
   const total = pass + fail;
-  console.log(fail ? `\nPROBE539 ${pass}/${total} FAIL` : `\nPROBE539 ${pass}/${total} PASS`);
+  const held = skip ? ` (\ubcf4\ub958 ${skip} \u2014 \ud658\uacbd)` : '';
+  console.log(fail ? `\nPROBE539 ${pass}/${total}${held} FAIL` : `\nPROBE539 ${pass}/${total}${held} PASS`);
   process.exitCode = fail ? 1 : 0;
 })();

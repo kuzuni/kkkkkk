@@ -464,6 +464,8 @@
   git checkout main 2>/dev/null || git checkout -B main origin/main
   git branch --set-upstream-to=origin/main main 2>/dev/null
   git pull --rebase origin main
+**⚙ 얕은 클론 주의(2026-09-01, 작업 756)** — 이 환경의 클론은 **얕다**(`git rev-parse --is-shallow-repository` = true · 착수 시점 실측 55커밋 ≈ 2시간). 그래서 «수리 전 사본» 을 고정 SHA 로 꺼내는 자(`probe708`·`probe539`·`probe716`·`verify59`·`verify66`·`verify172`·`verify288`·`probe359`·`probe360`·`probe373`·`probe501`·`probe566`·`probe695`·`bisect236`·`verify356`)는 그 SHA 가 창 밖이면 **게이트 부패와 똑같은 얼굴로 빨개진다** — 756 이 그 자리를 전부 공용 부품 `tools/gitrev756.js`(사다리: 날짜 → 배수 깊이 → 전체) 뒤로 옮겨 **자가 알아서 판다**. 그래도 회귀가 «수리 전 트리를 못 꺼냈다» 로 빨가면 **내 변경을 의심하기 전에** 아래 한 줄부터 돌려라(자의 결함이 아니라 환경이다):
+  git fetch --unshallow || git fetch --deepen=640 origin main
 이후 모든 push 는 `git push origin main`. push 전에는 항상 `git pull --rebase origin main` 을 먼저 한다.
 세션 식별자를 하나 만들어 둔다: SID=sess-$(date -u +%H%M)-$RANDOM
 

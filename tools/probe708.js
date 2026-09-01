@@ -19,7 +19,8 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
+const G756 = require('./gitrev756');           /* 756 — 얕은 클론에서 고정 SHA 를 데려오는 공용 부품 */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -30,24 +31,32 @@ require('./evguard731').expect(/trDeltaTxt is not defined/);
 const ROOT = path.resolve(__dirname, '..');
 const BASE = '4757c0f';                 /* 708 착수 직전(= 수리 전) 커밋 — 고정 */
 
-let pass = 0, fail = 0;
+let pass = 0, fail = 0, skip = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail++; console.log('  ✗ ' + m + (d !== undefined ? '   → ' + d : '')); } };
+/* 756 — «환경이라 못 본다» 는 빨강이 아니라 **보류**다. 세지 않되 조용하지도 않다. */
+const na = (m, d) => { skip++; console.log('  ⏸ ' + m + (d !== undefined ? '   → ' + d : '')); };
 
 (async () => {
   /* ── ① 수리 전 자를 실제로 돌린다 ─────────────────────────────────────── */
   console.log('[1] 재현 — 수리 전 `verify486.js`(' + BASE + ')는 `[F]` 에서 즉사한다');
   const tmp = path.join(os.tmpdir(), 'probe708-verify486-' + process.pid + '.js');
   let ran = null;
-  try {
-    const old = execFileSync('git', ['show', BASE + ':tools/verify486.js'], { cwd: ROOT, encoding: 'utf8' });
+  /* 756 — 고정 SHA 는 **얕은 클론의 창 밖**일 수 있다. 공용 부품이 먼저 판아 보고(규약 ①),
+     그래도 못 가져오면 «환경이면 보류 · 아니면 빨강» 으로 갈린다(규약 ②). */
+  const got = G756.show(BASE, 'tools/verify486.js');
+  if (!got.ok) {
+    if (got.env) {
+      na('수리 전 사본을 못 꺼냈다(' + BASE + ') — ' + G756.skipNote(got));
+      na('  ↳ 이 절의 나머지 7항(즉사·예외·[F]·[G][H][R][I]·합계 줄)도 같이 보류한다');
+    } else ok(false, '수리 전 사본을 못 꺼냈다(' + BASE + ')', got.why);
+  } else {
+    if (got.how) console.log('  [i]' + got.how);
     /* 자기 자리(tools/)에서 돌아야 `./pwlaunch` 를 찾는다 — 파일만 옆에 놓는다 */
     const side = path.join(ROOT, 'tools', 'verify486.probe708-old.js');
-    fs.writeFileSync(side, old);
+    fs.writeFileSync(side, got.buf);
     try {
       ran = spawnSync(process.execPath, [side], { cwd: ROOT, encoding: 'utf8', timeout: 15 * 60e3 });
     } finally { try { fs.unlinkSync(side); } catch (e) {} }
-  } catch (e) {
-    ok(false, '수리 전 사본을 못 꺼냈다(' + BASE + ')', String(e.message || e));
   }
   if (ran) {
     const out = (ran.stdout || '') + '';
@@ -81,6 +90,7 @@ const ok = (c, m, d) => { if (c) { pass++; console.log('  ✓ ' + m); } else { f
     '  그리고 **그 다음 평가가 그대로 돈다**(뒤 절이 살아난다)', JSON.stringify(alive));
   await browser.close();
 
-  console.log('\n' + (fail === 0 ? 'PROBE708 PASS ' : 'PROBE708 FAIL ') + pass + '/' + (pass + fail));
+  console.log('\n' + (fail === 0 ? 'PROBE708 PASS ' : 'PROBE708 FAIL ') + pass + '/' + (pass + fail)
+    + (skip ? ' (보류 ' + skip + ' — 환경)' : ''));
   process.exit(fail === 0 ? 0 : 1);
 })().catch(e => { console.error(e); process.exit(1); });

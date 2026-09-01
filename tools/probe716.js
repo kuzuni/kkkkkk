@@ -19,12 +19,12 @@
  *   그래도 **화면에 찍힌 픽셀**(슬롯 중심 바로 위 r=52, 링대 47.97..56.02 안)을 같이 읽는다.
  *   계산 스타일만 믿으면 «선언은 바뀌었는데 안 그려진다» 를 못 잡는다(350 교훈).
  * ⚠ 수리 전 트리는 `git show <PRE>:index.html` 로 꺼낸다. 얕은 클론이라 그 커밋이 없으면
- *   [1]·[2]·[4] 는 «판정 보류»(실패 아님)로 건너뛴다.
+ *   756 공용 부품이 먼저 판고, 그래도 안 되면 [1]·[2]·[4] 를 «보류(환경)» 으로 둔다(실패 아님).
  */
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { execFileSync } = require('child_process');
+const G756 = require('./gitrev756');           /* 756 — 얕은 클론에서 고정 SHA 를 데려오는 공용 부품 */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -141,14 +141,16 @@ const uniq = a => Array.from(new Set(a));
 (async () => {
   const browser = await launch(chromium);
 
-  /* 수리 전 트리를 임시 파일로 꺼낸다 */
+  /* 수리 전 트리를 임시 파일로 꺼낸다 —
+     756: 얕은 클론이면 **먼저 판다**(규약 ①). 안 파고 바로 보류하면 재현이 가능한 자리를 버린다. */
   let preUrl = null, tmp = null;
-  try {
-    const html = execFileSync('git', ['show', PRE + ':index.html'], { cwd: ROOT, maxBuffer: 1 << 28 });
+  const got = G756.show(PRE, 'index.html');
+  if (got.ok) {
+    if (got.how) console.log('[i]' + got.how);
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'probe716-'));
-    fs.writeFileSync(path.join(tmp, 'index.html'), html);
+    fs.writeFileSync(path.join(tmp, 'index.html'), got.buf);
     preUrl = 'file://' + path.join(tmp, 'index.html').replace(/\\/g, '/');
-  } catch (_) { preUrl = null; }
+  }
 
   /* 등급 전수 — 스킬이 실제로 쓰는 등급마다 **첫 스킬 한 개**(cd>0 이어야 «쿨타임 도는» 상태가 선다) */
   const probe = await open(browser, CUR);
@@ -209,10 +211,15 @@ const uniq = a => Array.from(new Set(a));
 
   /* ── [1] 재현 ───────────────────────────────────────── */
   if (!pre) {
-    na('1 재현 — 수리 전 트리(' + PRE + ')에서 «파랑 고정»',
-       '얕은 클론이라 그 커밋이 없다 · `git fetch --deepen=200 origin main` 후 다시');
-    na('2 대조 — 07 시트는 같은 스킬에 등급색을 준다');
-    na('4 불변 — 상태 신호 3종(활성·미해금·빈 칸)이 두 트리에서 같다');
+    /* 756 규약 ② — **환경이면 보류 · 아니면 빨강**. 파도 안 나오는 SHA 를 조용히 보류하면
+       게이트 부패(«표본이 지워졌다»)가 «환경» 으로 위장된다. */
+    if (got.env) {
+      na('1 재현 — 수리 전 트리(' + PRE + ')에서 «파랑 고정»', G756.skipNote(got));
+      na('2 대조 — 07 시트는 같은 스킬에 등급색을 준다');
+      na('4 불변 — 상태 신호 3종(활성·미해금·빈 칸)이 두 트리에서 같다');
+    } else {
+      ok(false, '1 재현 — 수리 전 트리(' + PRE + ')를 못 꺼냈다', got.why);
+    }
   } else {
     const rp = uniq(pre.rows.map(r => r.ringPx)), wp = uniq(pre.rows.map(r => r.wellPx));
     ok(rp.length === 1 && wp.length === 1,

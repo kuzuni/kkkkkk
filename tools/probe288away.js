@@ -112,7 +112,11 @@ async function runOne(browser, url) {
   let refFile = null;
   try {
     if (REF) {
-      const out = execFileSync('git', ['show', `${REF}:index.html`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
+      /* 756 — 얕은 클론이면 먼저 판다(규약 ①) · 못 가져오면 «환경/진짜 없음» 을 밝혀 던진다(규약 ②) */
+      const got = require('./gitrev756').show(REF, 'index.html', { maxBuffer: 64 * 1024 * 1024 });
+      if (!got.ok) throw new Error((got.env ? '[보류·환경] ' : '[빨강] ') + got.why);
+      if (got.how) console.log('[i]' + got.how);
+      const out = got.buf;
       refFile = path.join(ROOT, `.p288-before-${REF.slice(0, 7)}-${process.pid}.html`);
       fs.writeFileSync(refFile, out);
     }

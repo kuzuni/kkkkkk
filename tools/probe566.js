@@ -38,7 +38,18 @@ const listAll = process.argv.slice(2).includes('--list');
 
 /* stderr 는 삼킨다 — 못 읽는 ref 는 «건너뜀» 한 줄로 말한다(git 의 fatal 이 끼면 채점표가 안 읽힌다) */
 const GOPT = { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'ignore'] };
-const gitShow = r => { try { return execFileSync('git', ['show', r], GOPT); } catch (e) { return null; } };
+/* 756 — `<rev>:<path>` 를 꺼내기 전에 **먼저 판다**(규약 ①). 못 가져오면 지금까지처럼 null 이지만
+   이유를 한 줄 찍는다(조용한 null 이 «게이트 부패» 로 읽히던 자리다 · 756 등재문). */
+const gitShow = r => {
+  const i = String(r).indexOf(':');
+  if (i > 0) {
+    const got = require('./gitrev756').show(r.slice(0, i), r.slice(i + 1), { maxBuffer: 1 << 28 });
+    if (got.ok) { if (got.how) console.error('[i]' + got.how); return got.buf.toString('utf8'); }
+    console.error('[i] ' + (got.env ? '보류(환경) — ' : '빨강 — ') + got.why);
+    return null;
+  }
+  try { return execFileSync('git', ['show', r], GOPT); } catch (e) { return null; }
+};
 const gitQ = a => { try { return execFileSync('git', a, GOPT).trim(); } catch (e) { return null; } };
 
 /* ── «수리 전» 사본은 **고정된 커밋**에서 꺼낸다 (작업 573) ────────────────────

@@ -96,7 +96,11 @@ const show = (tag, rows) => rows.forEach(x => console.log('     ' + tag.padEnd(2
   /* ── [2] 제품 드리프트 기각 — 504 당시 트리를 오늘 자로 ── */
   let old = null;
   try {
-    const html = execFileSync('git', ['show', DONE504 + ':index.html'], { cwd: ROOT, maxBuffer: 1 << 28 });
+    /* 756 — 얕은 클론이면 먼저 판다(규약 ①) · 못 가져오면 «환경/진짜 없음» 을 밝혀 던진다(규약 ②) */
+    const got756 = require('./gitrev756').show(DONE504, 'index.html');
+    if (!got756.ok) throw new Error((got756.env ? '[보류·환경] ' : '[빨강] ') + got756.why);
+    if (got756.how) console.log('[i]' + got756.how);
+    const html = got756.buf;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'probe695-'));
     const f = path.join(tmp, 'index.html');
     fs.writeFileSync(f, html);

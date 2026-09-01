@@ -39,7 +39,18 @@ const GATE = fs.readFileSync(path.join(ROOT, 'tools', 'verify125.js'), 'utf8');
  *   본문 매칭은 남의 커밋을 문다(LESSONS 571-④ · 573 1회차가 실제로 그랬다).
  * ⚠ 여러 번이면 **가장 오래된** 수리의 부모가 «수리 전» 이다. */
 const GOPT = { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'ignore'] };
-const gitShow = r => { try { return execFileSync('git', ['show', r], GOPT); } catch (e) { return null; } };
+/* 756 — `<rev>:<path>` 를 꺼내기 전에 **먼저 판다**(규약 ①). 못 가져오면 지금까지처럼 null 이지만
+   이유를 한 줄 찍는다(조용한 null 이 «게이트 부패» 로 읽히던 자리다 · 756 등재문). */
+const gitShow = r => {
+  const i = String(r).indexOf(':');
+  if (i > 0) {
+    const got = require('./gitrev756').show(r.slice(0, i), r.slice(i + 1), { maxBuffer: 1 << 28 });
+    if (got.ok) { if (got.how) console.error('[i]' + got.how); return got.buf.toString('utf8'); }
+    console.error('[i] ' + (got.env ? '보류(환경) — ' : '빨강 — ') + got.why);
+    return null;
+  }
+  try { return execFileSync('git', ['show', r], GOPT); } catch (e) { return null; }
+};
 const gitQ = a => { try { return execFileSync('git', a, GOPT).trim(); } catch (e) { return null; } };
 const BEFORE_FALLBACK = '81a4352';         /* claim(373) — 373 의 수리(wip) 직전 */
 function pickBefore() {

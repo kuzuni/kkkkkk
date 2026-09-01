@@ -29,7 +29,12 @@ function launchOpts() {
      (되돌림 사본에 «옛 두 점 표본» 을 그대로 대 보려고 — 작업 236 review §4) */
   const html = !rev ? fs.readFileSync(path.join(ROOT, 'index.html'))
              : /\.html$/i.test(rev) ? fs.readFileSync(path.resolve(ROOT, rev))
-             : cp.execFileSync('git', ['show', rev + ':index.html'], { cwd: ROOT, maxBuffer: 1 << 28 });
+             : (() => {                       /* 756 — 얕은 클론이면 먼저 판다(규약 ①) */
+                 const got = require('./gitrev756').show(rev, 'index.html');
+                 if (!got.ok) throw new Error((got.env ? '[보류·환경] ' : '[빨강] ') + got.why);
+                 if (got.how) console.log('[i]' + got.how);
+                 return got.buf;
+               })();
   fs.writeFileSync(COPY, html);
   const br = await chromium.launch(launchOpts());
   let out = null;

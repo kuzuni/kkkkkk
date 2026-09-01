@@ -182,7 +182,12 @@ async function runOne(browser, url, stage) {
 }
 
 function checkoutRef(sha) {
-  const out = execFileSync('git', ['show', `${sha}:index.html`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
+  /* 756 — 얕은 클론이면 **먼저 판다**(규약 ①). 못 가져오면 «환경이냐 진짜 없음이냐» 를 밝혀 던진다(규약 ②).
+     ⚠ 이 `checkoutRef` 는 자 여섯 벌에 **글자 그대로 복사**돼 있었다 — 판는 사다리는 부품 한 벌에 둔다. */
+  const got = require('./gitrev756').show(sha, 'index.html', { maxBuffer: 64 * 1024 * 1024 });
+  if (!got.ok) throw new Error((got.env ? '[보류·환경] ' : '[빨강] ') + got.why);
+  if (got.how) console.log('[i]' + got.how);
+  const out = got.buf;
   const p = path.join(ROOT, `.v66-before-${sha.slice(0, 7)}-${process.pid}.html`);
   fs.writeFileSync(p, out);
   return p;

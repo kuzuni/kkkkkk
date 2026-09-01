@@ -61,8 +61,20 @@ ok(!/--deepen=\d+/.test(gcCode),
 ok(/R23\.digPre\(\)/.test(gcCode), 'A7 [G-c] 가 파는 일을 `probe356r23.digPre()` 한 벌에 맡긴다');
 ok(/dug === null/.test(gcCode) && /throw new Error/.test(gcCode),
    'A8 «못 팠으면 그래도 빨갛다» 가 코드에 남아 있다(26회차 교훈 ④ — 건너뛰기 금지)');
-ok(/--shallow-since=/.test(PSRC) && /const tries = \[/.test(PSRC),
-   'A9 digPre 가 날짜 시도를 먼저 세운다');
+/* 756 이관 — 사다리가 `tools/gitrev756.js` 한 벌로 옮겨 갔다(자를 두 벌로 안 적는다 · 13회차 [R12]).
+   «날짜를 먼저 세운다» 는 뜻은 그대로 묻되 **새 자리에** 묻고, «정말 그 한 벌에 맡겼는가» 를 한 항 더 넣는다
+   (333 처방 — 자리를 비우지 않는다. 이 항이 없으면 delegate 를 끊어도 A9-b 만 보고 초록이 된다). */
+const GSRC = fs.readFileSync(path.join(ROOT, 'tools', 'gitrev756.js'), 'utf8');
+ok(/require\('\.\/gitrev756'\)\.dig\(/.test(PSRC),
+   'A9 digPre 가 파는 일을 공용 부품 한 벌(`gitrev756.dig`)에 맡긴다');
+const lad = (GSRC.split('function ladder(')[1] || '').split('\n}')[0];
+ok(/--shallow-since=/.test(lad)
+   && lad.indexOf('--shallow-since=') < lad.indexOf('--deepen=')
+   && lad.indexOf('--deepen=') < lad.indexOf('--unshallow'),
+   'A9-b 그 부품의 사다리가 **날짜 → 배수 깊이 → 전체** 순이다(깊이 상수를 먼저 세우지 않는다)',
+   lad.replace(/\s+/g, ' ').trim().slice(0, 120));
+ok(/if \(!isShallow\(cwd\)\) return null;/.test(GSRC) && /env: shallow/.test(GSRC),
+   'A9-c 그 부품이 «환경(얕다)» 과 «진짜 없다» 를 가른다 — 건너뛰기가 게이트 부패를 못 덮는다');
 
 /* ───────────────────── [B]·[C]·[R] 진짜 얕은 클론 ───────────────────── */
 const url = sh(ROOT, 'git', 'remote', 'get-url', 'origin').trim();
@@ -73,6 +85,9 @@ try {
   /* 클론은 **로컬 ROOT 에서** 뜬다(빠르다). 판는 곳은 진짜 origin 이라 축은 그대로다. */
   sh(tmp, 'git', 'clone', '--quiet', '--depth=1', '--no-tags', 'file://' + ROOT, clone);
   sh(clone, 'git', 'remote', 'set-url', 'origin', url);
+  /* 756 — 일회용 클론은 **이 트리의 HEAD** 라 아직 커밋 안 한 부품이 없다.
+     `digPre` 가 물고 있는 공용 사다리를 같이 넣어 준다(자의 편의일 뿐 축이 아니다). */
+  fs.copyFileSync(path.join(ROOT, 'tools', 'gitrev756.js'), path.join(clone, 'tools', 'gitrev756.js'));
   cloned = true;
 } catch (e) {
   ok(false, 'B0 얕은 클론을 못 세웠다', String(e.message || e).split('\n')[0]);
@@ -95,19 +110,27 @@ if (cloned) {
      '이력 ' + cnt(clone) + '커밋 · ' + ((Date.now() - c0) / 1000).toFixed(1) + 's'
      + (cFetch.code === 0 ? '' : ' · fetch 코드 ' + cFetch.code));
 
-  /* [R-a] 되돌림 — 날짜 시도를 뺀 사본(= 옛 축)은 같은 자리에서 도로 null. */
-  const SRC_R = PSRC.replace(/const tries = \[[^\]]*\];/,
-    "const tries = ['--deepen=40'];");
-  const rFile = path.join(clone, 'tools', `.v631-revert-${process.pid}.js`);
+  /* [R-a] 되돌림 — 날짜 시도를 뺀 사본(= 옛 축)은 같은 자리에서 도로 null.
+     756 이관: 사다리가 `gitrev756.js` 로 갔으므로 **수술도 그 파일에 한다**(PSRC 를 계속 째면
+     replace 가 no-op 이 되어 이 절이 통째로 헛초록이 된다).
+     ⚠ 겸사겸사 파일명 어긋남을 고쳤다 — 쓰는 이름은 `.v631-revert-<pid>.js` 인데 requiure 는
+     `./tools/.v631-revert.js` 라 **756 착수 전 R1 은 내내 빨간 자리**였다(756 baseline 19/20). */
+  const RBASE = `.v631-revert756-${process.pid}.js`;
+  const SRC_R = GSRC.replace(/return \[since \? '--shallow-since=' \+ since : null[\s\S]*?\.filter\(Boolean\);/,
+    "return ['--deepen=40'];");
+  const rFile = path.join(clone, 'tools', RBASE);
   let rOut = 'x';
-  if (SRC_R !== PSRC) {
+  if (SRC_R !== GSRC) {
     fs.writeFileSync(rFile, SRC_R);
     const r = shQ(clone, 'node', '-e',
-      "const R=require('./tools/.v631-revert.js');const d=R.digPre();console.log(JSON.stringify(d));");
+      `const G=require('./tools/${RBASE}');`
+      + `console.log(JSON.stringify(G.dig(${JSON.stringify(R23.PRE_REV)},`
+      + ` { since: ${JSON.stringify(R23.PRE_DATE)}, budgetMs: 60000 })));`);
     rOut = r.out.trim().split('\n').pop();
   }
-  ok(SRC_R !== PSRC, 'R0 되돌림 사본이 실제로 날짜 시도를 뺐다', (PSRC.length - SRC_R.length) + '자 차이');
-  ok(rOut === 'null', 'R1 옛 축(`--deepen=40`)만 남긴 사본은 같은 클론에서 도로 못 판다', 'digPre → ' + rOut);
+  ok(SRC_R !== GSRC, 'R0 되돌림 사본이 실제로 날짜 시도를 뺐다(사다리를 `--deepen=40` 하나로)',
+     (GSRC.length - SRC_R.length) + '자 차이');
+  ok(rOut === 'null', 'R1 옛 축(`--deepen=40`)만 남긴 사본은 같은 클론에서 도로 못 판다', 'dig → ' + rOut);
   try { fs.unlinkSync(rFile); } catch (e) {}
 
   /* [B] 실전 — 새 자로 판다. */

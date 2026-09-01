@@ -59,30 +59,10 @@ const PRE_DATE = process.env.P356R23_PRE_DATE || '2026-08-31T23:00:00Z';
    ⚠ «못 팠으니 건너뛴다» 는 금지다 — 26회차 교훈 ④(표본을 못 가져오면 여전히 빨갛다).
    돌려주는 문자열은 PASS 문구에 그대로 붙는 «어떻게 팠는지» 꼬리표다(빈 문자열 = 이미 있었다). */
 function digPre(rev = PRE_REV, since = PRE_DATE, budgetMs = 240000) {
-  const { execFileSync } = require('child_process');
-  const git = (args, opt) => execFileSync('git', args, Object.assign({ cwd: ROOT }, opt));
-  const have = () => {
-    try { git(['cat-file', '-e', rev], { stdio: 'ignore' }); return true; } catch (e) { return false; }
-  };
-  const count = () => {
-    try { return String(git(['rev-list', '--count', 'HEAD'], { encoding: 'utf8' })).trim(); }
-    catch (e) { return '?'; }
-  };
-  if (have()) return '';
-  const t0 = Date.now();
-  const tries = ['--shallow-since=' + since, '--deepen=160', '--deepen=640'];
-  const log = [];
-  for (const arg of tries) {
-    const left = budgetMs - (Date.now() - t0);
-    if (left <= 1000) { log.push('(시간 예산 소진)'); break; }
-    try { git(['fetch', arg, 'origin', 'main'], { stdio: 'ignore', timeout: left }); log.push(arg); }
-    catch (e) { log.push(arg + '✗'); continue; }
-    if (have()) {
-      return ` (얕은 클론이라 \`git fetch ${log.join(' → ')}\` 로 표본을 파 왔다`
-        + ` · ${((Date.now() - t0) / 1000).toFixed(1)}s · 이력 ${count()}커밋)`;
-    }
-  }
-  return null;
+  /* 756 — 사다리(날짜 → 배수 깊이 → 전체)는 **공용 부품 한 벌**에 있다. 여기는 축(표본·날짜)만 세운다.
+     ⚠ 자를 두 벌로 안 적는다(13회차 [R12]) — 631 이 이 함수에 대고 세운 [A]·[B]·[C]·[R] 은
+     그대로 서 있고, «날짜를 먼저 세운다» 는 이제 `tools/gitrev756.js` 의 `ladder()` 가 답한다. */
+  return require('./gitrev756').dig(rev, { since, budgetMs, cwd: ROOT });
 }
 
 let PASS = 0, FAIL = 0;
