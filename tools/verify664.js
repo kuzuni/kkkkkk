@@ -11,7 +11,9 @@
  *            자가 소스 상수를 베끼지 않고 제품 함수(`ownVal`·`equipVal`·`petDmg`)와 대조한다.
  *   §3 장착  **장착/착용/출전만** 막힌다 + **반려 피드백**이 있다(라벨 또는 토스트).
  *   §4 회귀  보유 칸 동작 불변 — 이름·수치·[장착] 실동작·강화 경로가 종전 그대로.
- *   §5 스코프 662(스킬)의 «?» 은닉은 **안 건드렸다**(남의 작업 구간 — 규칙 3).
+ *   §5 스코프 **대상 축이 갈려 있다** — 스킬은 662 · 장비·펫·코스튬은 664(한 규약, 두 구간).
+ *            ⚠ 728(2026-09-01)로 방향을 뒤집어 갈아 끼웠다: 662 가 완료돼 미보유 스킬도 실명으로
+ *            열린다. 옛 축(«스킬은 아직 «???» 다»)은 이제 «662 를 되돌려라» 와 같은 말이었다.
  *   §R 되돌림 옛 은닉을 도로 심은 **소스 사본**에서 §1·§2·§3 이 실제로 빨개진다
  *            — 이 절이 없으면 «축이 애초에 안 걸려 초록» 과 구별할 수 없다(334·368 규약).
  *
@@ -32,6 +34,13 @@ let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d === undefined ? '' : ' — ' + d)); };
 const blkT = t => console.log('\n=== ' + t + ' ===');
 
+/* 728 — 두 함수의 경계를 **소스에서 잰다.** §5-d 와 §R 이 같은 좌표를 쓴다:
+   §5-d 는 «두 구간이 갈려 있다» 를 말하고, §R 은 그 경계 **뒤에만** 치환을 건다. */
+const SKILL_AT   = RAW.indexOf('function showSkillDetail(id){');
+const ITEM_AT    = RAW.indexOf('function showItem(id){');
+const MTITLE_HITS = RAW.split("  $('mtitle').textContent = it.n;").length - 1;
+const lineOf = i => (i < 0 ? -1 : RAW.slice(0, i).split('\n').length);
+
 /* 세 시트의 «미보유 한 칸» 을 실제로 열어 화면이 무엇을 말하는지 통째로 걷어 온다.
    ⚠ `wpnSel`·`cosSel` 은 `let` 전역이라 **맨이름으로** 대입해야 한다(`window.` 는 딴 변수를 만든다 —
      `probe664` 가 이 함정에 걸렸다). ⚠ `fxToast` 는 스택 4장이 차면 조용히 큐로 빠지므로
@@ -44,6 +53,8 @@ const SCAN = `(async function(){
   var clearT = function(){ document.querySelectorAll('#fxl .fx-toast').forEach(function(n){ n.remove(); }); };
   var lastT = function(){ var a = [].slice.call(document.querySelectorAll('#fxl .fx-toast'));
                           return a.length ? a[a.length-1].textContent.trim() : null; };
+  var allT  = function(){ return [].slice.call(document.querySelectorAll('#fxl .fx-toast'))
+                                   .map(function(n){ return n.textContent.trim(); }); };
   window.step = function(){};                      /* 배경 전투 정지(512 규약) */
   var o = { err:null };
   try {
@@ -86,7 +97,10 @@ const SCAN = `(async function(){
       clearT();
       $('wpnBtnEq').click(); await wait(6);
       o.eq.ownEquipWorks = S.eqSlot.weapon === mine.id;
-      o.eq.ownNoToast = toasts() === 0;
+      /* 728 — 개수가 아니라 **문면**을 걷어 온다. 여기서 «0장» 을 요구하면 324/684/685 의
+         산 연출(«⚔️ 전투력 +N» — 장착으로 cp 가 오르니 정상)이 이 항을 빨갛게 만든다.
+         §4-c 가 묻는 것은 «반려가 항상 뜨는가» 이므로 **반려 문면만** 센다. */
+      o.eq.ownToasts = allT();
     }
     closeWeapon(); await wait(3);
 
@@ -168,10 +182,14 @@ const SCAN = `(async function(){
       await wait(3);
     }
 
-    /* ── 스킬 07/08 — 662 구간. **바뀌지 않았음**을 여기서 지킨다 ── */
+    /* ── 스킬 07/08 — **662 의 구간**. 664 가 대신 열지 않았음을 여기서 지킨다 ──
+       ⚠ 728(2026-09-01) 로 축이 뒤집혔다: 662 가 완료돼 미보유 스킬도 **실명**으로 열린다.
+         옛 축(«아직 «???» 다»)은 이제 «662 를 되돌려라» 와 같은 말이라 방향만 뒤집어 갈아 끼웠다. */
     var us = SKILLS.filter(function(x){ return !has(x.id); })[0];
-    o.sk = { unId: us && us.id };
+    o.sk = { unId: us && us.id, trueName: us && us.n };
     if(us){ showItem(us.id); await wait(5); o.sk.title = tx('#mtitle');
+      o.sk.desc  = tx('#mbox .sk-db p');
+      o.sk.unTag = tx('#mbox .sk-db p .sk-un');
       if(typeof closeModal === 'function') closeModal(); await wait(2); }
   } catch(e){ o.err = String(e && e.stack || e); }
   return o;
@@ -204,6 +222,10 @@ async function scan(browser, src) {
   return { page, o, errs };
 }
 
+/* 728 — «반려 피드백» 의 문면 자. §3-b(미보유에서 뜬다)와 §4-c(보유에서 안 뜬다)가 **한 자**를
+   쓰게 묶는다 — 두 항이 각자 다른 눈으로 세면 한쪽이 부패해도 다른 쪽이 안 알려 준다. */
+const REJECT = /🔒|미보유|획득하세요|착용합니다/;
+
 const pctNear = (txt, v) => {
   if (txt == null) return false;
   const m = String(txt).match(/-?\d+(?:\.\d+)?/);
@@ -213,7 +235,7 @@ const pctNear = (txt, v) => {
 
 (async () => {
   const browser = await launch(chromium);
-  let tmp = null;
+  let tmp = null, tmp2 = null;
   try {
     const { page, o, errs } = await scan(browser, SRC);
     if (o.err) ok(false, '[스캔] 페이지 안 측정이 예외 없이 끝났다', o.err.slice(0, 200));
@@ -274,7 +296,8 @@ const pctNear = (txt, v) => {
 
     blkT('§3 장착 — «장착/착용/출전만» 막히고, 막힌 이유를 말한다');
     ok(o.eq && o.eq.notEquipped === true, '§3-a 05 장비: 미보유는 [장착] 을 눌러도 장착되지 않는다');
-    ok(o.eq && o.eq.rejected === true, '§3-b 05 장비: 그리고 **반려 피드백**이 뜬다(종전 0건)',
+    ok(o.eq && o.eq.rejected === true && REJECT.test(o.eq.rejectTxt || ''),
+      '§3-b 05 장비: 그리고 **반려 피드백**이 뜬다(종전 0건 · §4-c 와 같은 문면 자)',
       JSON.stringify(o.eq && o.eq.rejectTxt));
     ok(o.eq && o.eq.btnOff === true, '§3-c 05 장비: 버튼이 «못 누르는 색»(`.off`)으로 남아 있다');
     ok(o.pet && o.pet.btnDisabled === true && o.pet.notEquipped === true,
@@ -284,7 +307,8 @@ const pctNear = (txt, v) => {
       JSON.stringify(o.pet && o.pet.btn));
     ok(o.pet && o.pet.quickBadge === false,
       '§3-f 26 펫: 카드의 빠른 장착 뱃지는 미보유에 안 붙는다(종전 그대로)');
-    ok(o.cos && o.cos.rejected === true && o.cos.notWorn === true,
+    ok(o.cos && o.cos.rejected === true && o.cos.notWorn === true
+       && REJECT.test(o.cos.rejectTxt || ''),
       '§3-g 50 코스튬: [착용] 이 막히고 토스트로 이유를 말한다(182 선례 — 회귀로 지킨다)',
       JSON.stringify(o.cos && o.cos.rejectTxt));
 
@@ -294,19 +318,45 @@ const pctNear = (txt, v) => {
       o.eq ? o.eq.ownOwnV + ' / ' + o.eq.ownEqV : '');
     ok(o.eq && o.eq.ownEquipWorks === true,
       '§4-b 05 장비: 보유 칸 [장착] 은 **실제로 장착된다**(반려 분기가 산 길을 안 막았다)');
-    ok(o.eq && o.eq.ownNoToast === true,
-      '§4-c 05 장비: 보유 칸에서는 반려 토스트가 안 뜬다(반려가 «항상» 뜨면 그건 새 결함이다)');
+    ok(o.eq && Array.isArray(o.eq.ownToasts) && o.eq.ownToasts.every(t => !REJECT.test(t)),
+      '§4-c 05 장비: 보유 칸에서는 **반려** 토스트가 안 뜬다(반려가 «항상» 뜨면 그건 새 결함이다)',
+      JSON.stringify(o.eq && o.eq.ownToasts));
     ok(o.pet && o.pet.ownBtnDisabled === false && /장착|해제/.test(o.pet.ownBtn || ''),
       '§4-d 26 펫: 보유 칸 [장착] 라벨·활성이 종전 그대로다', JSON.stringify(o.pet && o.pet.ownBtn));
     ok(o.eq && o.eq.dummyClickable === 0,
       '§4-e 05 장비: **더미 칸**(그 등급에 아이템이 없는 빈자리)은 여전히 클릭 대상이 아니다');
+    /* ⚑ 728 — §4-c 를 «모든 토스트» 에서 «반려 토스트» 로 좁혔다. **무르게 푼 것이 아님**을
+       자가 스스로 못박는다: 같은 자(REJECT)가 산 반려 문면은 잡고 산 연출 문면은 안 잡는가.
+       이 항이 초록이면 «반려가 보유 칸에 새면 §4-c 는 그대로 빨개진다» 가 성립한다. */
+    ok(REJECT.test(o.eq && o.eq.rejectTxt || '')
+       && ((o.eq && o.eq.ownToasts) || []).length > 0
+       && !((o.eq && o.eq.ownToasts) || []).some(t => REJECT.test(t)),
+      '§4-f 그 문면 자는 **가른다** — 산 반려문(§3-b)은 잡고, 산 연출문(324/684/685)은 안 잡는다',
+      JSON.stringify(o.eq && o.eq.rejectTxt) + ' ↔ ' + JSON.stringify(o.eq && o.eq.ownToasts));
 
-    blkT('§5 스코프 — 662(스킬)의 구간은 한 글자도 안 건드렸다');
-    ok(/const desc = \(own \? it\.d : '아직 획득하지 못했습니다\.<br>스킬 소환으로 획득하세요\.'\)/.test(RAW),
-      '§5-a `showSkillDetail` 의 미보유 분기가 그대로 있다(662 가 열 자리다)');
-    ok(o.sk && o.sk.title === '???',
-      '§5-b 그래서 미보유 **스킬**은 아직 «???» 다 — 664 가 남의 구간을 대신 열지 않았다',
-      JSON.stringify(o.sk && o.sk.title));
+    /* ── §5 스코프 ────────────────────────────────────────────────────
+       728(2026-09-01) 로 **축을 갈라 적었다.** 이 절의 원뜻은 «664 가 남의 구간을 대신 열지
+       않았다» 인데, 그것을 «스킬은 아직 «???» 다» 로 재고 있었다. 662(주인 지시 2026-09-02
+       00:20)가 완료되면서 그 표현이 뒤집혔고 — 남은 옛 축은 «662 를 되돌려라» 와 같은 말이다
+       (333 «두 게이트가 서로 반대를 단언» 과 같은 꼴 · 나중 지시가 옳다).
+       ⚠ 그렇다고 항을 지우면 이 절의 뜻이 통째로 사라진다. 그래서 **대상 축**으로 다시 적는다:
+         «미개방 정보 공개» 규약은 한 벌이고, **스킬은 662 가 · 장비·펫·코스튬은 664 가** 연다.
+       ⚑ §5-b 의 «가려짐» 자는 `verify662` [A](`/\?/.test(title)`)에서 **빌려 왔다** — 두 자가
+         같은 칸을 각자 다른 눈으로 세면 다음 번복에서 또 갈라진다(728 등재문 경고). */
+    blkT('§5 스코프 — 대상 축: 스킬 = 662 · 장비·펫·코스튬 = 664 (한 규약, 두 구간)');
+    ok(RAW.indexOf("'아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.'") < 0
+       && RAW.indexOf('  const desc = skillDescText(it)') >= 0,
+      '§5-a `showSkillDetail` 의 미보유 대체문이 **되살아나지 않았다**(662 가 연 자리 — 되심으면 빨개진다)');
+    ok(o.sk && !!o.sk.title && !/\?/.test(o.sk.title) && o.sk.title === o.sk.trueName,
+      '§5-b 그래서 미보유 **스킬** 제목은 **실명**이다 — 662 가 연 자리(verify662 [A] 와 같은 자)',
+      JSON.stringify(o.sk && o.sk.title) + ' ↔ ' + JSON.stringify(o.sk && o.sk.trueName));
+    ok(o.sk && /🔒/.test(o.sk.unTag || ''),
+      '§5-c 열되 **상태는 안 잃었다** — 스킬 설명에 `.sk-un` 딱지가 남아 있다(§전제-4·§2-m 과 같은 꼴)',
+      JSON.stringify((o.sk && o.sk.unTag || '').slice(0, 34)));
+    ok(SKILL_AT > 0 && ITEM_AT > SKILL_AT && MTITLE_HITS === 2,
+      '§5-d 두 자리는 **다른 함수**다 — `showSkillDetail`(662) · `showItem`(664). 664 는 제 구간만 고쳤다',
+      'showSkillDetail ' + lineOf(SKILL_AT) + '행 · showItem ' + lineOf(ITEM_AT)
+      + '행 · 제목 줄 ' + MTITLE_HITS + '자리');
 
     blkT('§6 에러');
     ok(errs.length === 0, '§6-a 콘솔·페이지 에러 0건', errs.slice(0, 2).join(' | ') || '없음');
@@ -314,16 +364,38 @@ const pctNear = (txt, v) => {
 
     /* ── §R 되돌림 ───────────────────────────────────────────────── */
     blkT('§R 되돌림 — 옛 은닉을 도로 심으면 §1·§2·§3 이 실제로 빨개진다');
-    const old = RAW
-      .replace("        +  (real ? ' data-wpn=\"' + real.id + '\"' : '')",
-               "        +  (mine ? ' data-wpn=\"' + real.id + '\"' : '')")
-      .replace("  $('wpnOwnV').innerHTML  = '<i>+' + wpct(ownVal(cur)) + '</i>';",
-               "  $('wpnOwnV').innerHTML  = '<i>+' + wpct(own ? ownVal(cur) : 0) + '</i>';")
-      .replace("  $('mtitle').textContent = it.n;",
-               "  $('mtitle').textContent = own ? it.n : '???';")
-      .replace("      + (own ? (eq ? '해제' : '장착') : '미보유') + '</b></button>'",
-               "      + (eq ? '해제' : '장착') + '</b></button>'");
-    ok(old !== RAW, '[R0] 되돌림 사본이 실제로 만들어졌다(치환 4자리)');
+    /* ⚑ 728 — 치환은 **`showItem` 부터의 꼬리에만** 건다.
+       옛 사본은 `RAW.replace('  $(\'mtitle\').textContent = it.n;', …)` 였는데,
+       662 가 `showSkillDetail` 의 `own ? it.n : '???'` 가드를 걷어내면서 **똑같은 줄이
+       스킬 함수에 먼저** 생겼다(28272행 ↔ 28443행). `String.replace(문자열, …)` 은 첫 자리
+       하나만 바꾸므로 R3 은 **662 의 구간을 되돌리고** 펫 제목은 실명 그대로였다 —
+       그래서 [R3] 이 «되돌려도 안 빨개진다» 로 빨갰다(`probe728` [3-c]~[3-e] 가 실증).
+       뿌리는 «표본이 낡았다» 가 아니라 «치환이 딴 자리를 맞았다» 였다. */
+    const subs = [
+      ["        +  (real ? ' data-wpn=\"' + real.id + '\"' : '')",
+       "        +  (mine ? ' data-wpn=\"' + real.id + '\"' : '')", 'R1 칸 클릭'],
+      ["  $('wpnOwnV').innerHTML  = '<i>+' + wpct(ownVal(cur)) + '</i>';",
+       "  $('wpnOwnV').innerHTML  = '<i>+' + wpct(own ? ownVal(cur) : 0) + '</i>';", 'R2 보유 효과'],
+      ["  $('mtitle').textContent = it.n;",
+       "  $('mtitle').textContent = own ? it.n : '???';", 'R3 제목'],
+      ["      + (own ? (eq ? '해제' : '장착') : '미보유') + '</b></button>'",
+       "      + (eq ? '해제' : '장착') + '</b></button>'", 'R4 버튼 라벨'],
+    ];
+    const head = RAW.slice(0, ITEM_AT);
+    let body = RAW.slice(ITEM_AT);
+    const hits = subs.map(([a, b]) => {
+      const n = body.split(a).length - 1;
+      if (n === 1) body = body.split(a).join(b);
+      return n;
+    });
+    const old = head + body;
+    /* ⚑ 개수를 세는 것이 [R0] 의 본체다 — «넷 중 셋만 걸려도 초록» 이던 것이 이번 부패를
+       조용히 통과시켰다(옛 [R0] 은 `old !== RAW` 하나였다 · 334·537 «개수가 아니라 목록»). */
+    ok(hits.join('/') === '1/1/1/1',
+      '[R0] 되돌림 치환 **네 자리가 각자 꼭 한 번씩** 걸렸다(하나라도 헛돌면 빨강)',
+      subs.map((s, i) => s[2] + ':' + hits[i]).join(' · '));
+    ok(old.slice(SKILL_AT, ITEM_AT).indexOf("  $('mtitle').textContent = it.n;") >= 0,
+      '[R0-b] 그리고 **662 의 구간(`showSkillDetail`)은 사본에서도 안 건드려졌다** — 되돌린 것은 664 뿐이다');
     tmp = path.join(ROOT, `index.verify664-revert-${process.pid}.html`);
     fs.writeFileSync(tmp, old);
     const r = await scan(browser, tmp);
@@ -343,9 +415,54 @@ const pctNear = (txt, v) => {
     /* ⚑ 음성항 — 되돌려도 **안 바뀌는** 축이 있어야 «사본이 통째로 딴 것» 이 아님이 선다 */
     ok(r.o.cos && r.o.cos.title === r.o.cos.trueName,
       '[R5] 그런데 코스튬은 되돌림 사본에서도 실명이다 — 664 이전부터 옳던 자리라는 증거');
+    ok(r.o.sk && r.o.sk.title === r.o.sk.trueName,
+      '[R6] **스킬**도 되돌림 사본에서 실명 그대로다 — 이 사본이 되돌린 것은 664 구간뿐이라는 증거(§5-d 와 한 벌)',
+      JSON.stringify(r.o.sk && r.o.sk.title));
     await r.page.close();
+
+    /* ── §R2 되돌림(662 쪽) ──────────────────────────────────────────
+       728 — §5 의 **새 방향**이 무르지 않음을 못박는다. 662 가 연 자리를 도로 닫은 사본에서
+       §5-a·§5-b·§5-c 가 실제로 빨개져야 한다. 치환표는 `verify662` 의 `revert()` 에서
+       **그대로 빌려 왔다** — 두 자가 다른 표를 쓰면 되돌림 시험이 서로 거짓이 된다. */
+    blkT('§R2 되돌림(662) — 스킬 쪽을 도로 닫으면 §5-a·§5-b·§5-c 가 실제로 빨개진다');
+    const skHead = RAW.slice(0, ITEM_AT), skTail = RAW.slice(ITEM_AT);
+    const s2 = [
+      ["  $('mtitle').textContent = it.n;",
+       "  $('mtitle').textContent = own ? it.n : '???';"],
+      ['  const desc = skillDescText(it)',
+       "  const desc = (own ? skillDescText(it) : '아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.')"],
+    ];
+    let h2 = skHead;
+    const h2n = s2.map(([a, b]) => { const n = h2.split(a).length - 1; if (n === 1) h2 = h2.split(a).join(b); return n; });
+    /* 셋째 자리 — 662 가 **덧붙인** 상태 딱지(`.sk-un`)를 걷어낸다. 앞 두 치환만으로는
+       딱지가 살아남아 «되돌렸는데 §5-c 는 초록» 이 된다(1회차에 실제로 그랬다) —
+       옛 세계에는 이 줄이 없었으므로 되돌림은 여기까지 가야 참이다. */
+    const UN_A = h2.indexOf('+ (own ? \'\' : \'<span class="sk-un">');
+    const UN_B = UN_A < 0 ? -1 : h2.indexOf("</span>');", UN_A);
+    if (UN_B > 0) h2 = h2.slice(0, UN_A) + ';' + h2.slice(UN_B + "</span>');".length);
+    ok(h2n.join('/') === '1/1' && UN_B > 0,
+      '[R2-0] 662 되돌림 치환 **세 자리**가 각자 꼭 한 번씩 걸렸다(`showItem` 앞 구간에서만)',
+      h2n.join('/') + ' · sk-un 딱지 ' + (UN_B > 0 ? '걷어냄' : '못 찾음'));
+    tmp2 = path.join(ROOT, `index.verify664-revert662-${process.pid}.html`);
+    fs.writeFileSync(tmp2, h2 + skTail);
+    const r2 = await scan(browser, tmp2);
+    if (r2.o.err) ok(false, '[R2] 662 되돌림 사본 측정이 예외 없이 끝났다', r2.o.err.slice(0, 160));
+    ok(h2.indexOf("'아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.'") >= 0,
+      '[R2-a] 그 사본에는 옛 대체문이 되살아나 있다(§5-a 가 빨개진다)');
+    ok(r2.o.sk && r2.o.sk.title === '???',
+      '[R2-b] 그리고 미보유 스킬 제목이 다시 «???» 다(§5-b 가 빨개진다)',
+      JSON.stringify(r2.o.sk && r2.o.sk.title));
+    ok(r2.o.sk && !/🔒/.test(r2.o.sk.unTag || ''),
+      '[R2-c] `.sk-un` 상태 딱지도 사라진다(§5-c 가 빨개진다)',
+      JSON.stringify(r2.o.sk && r2.o.sk.unTag));
+    /* 음성항 — 662 를 되돌려도 **펫은 안 바뀐다**(두 구간이 정말 갈려 있다는 증거 · §5-d 와 한 벌) */
+    ok(r2.o.pet && r2.o.pet.title === r2.o.pet.trueName,
+      '[R2-d] 그런데 **펫은 그 사본에서도 실명**이다 — 664 구간은 662 되돌림에 안 딸려 간다',
+      JSON.stringify(r2.o.pet && r2.o.pet.title));
+    await r2.page.close();
   } finally {
     if (tmp && fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    if (tmp2 && fs.existsSync(tmp2)) fs.unlinkSync(tmp2);
     await browser.close();
   }
 
