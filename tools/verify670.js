@@ -88,8 +88,12 @@ const PRE = { btn: '단련 1', room10: 1.13 };
     lab.map(r => r.imgs.join('/') + '×' + r.imgs.length).join(' · '));
   ok(!/'단련 ' *\+ *curIc\(/.test(CODE),
     '[2-d] 제품 소스에 옛 «단련 » 접두 라벨식이 0건이다');
-  ok(/btn: *curIc\('tstone', *TR_CUR_PX\) *\+ *fmt\(c\)/.test(CODE),
-    '[2-e] 라벨식이 «아이콘 + 비용» 두 항뿐이다(584 의 `TR_CUR_PX` 기준선은 그대로 읽는다)');
+  /* 686 이관 — 이 항의 뜻은 «라벨식이 «아이콘 + 비용» **두 항뿐**» 이지 «어느 상수를 읽는가» 가
+     아니었다. 686 이 단련 버튼만 173px 로 키우면서 아이콘 크기를 전용 상수 `TP_CUR_PX`(96)로
+     갈랐다 — `TR_CUR_PX`(53)는 아직 74px 인 **룬 [강화] 버튼과 공유**라 같이 못 올린다.
+     ⇒ 상수 이름을 둘 다 받아들이되 «두 항뿐» 은 그대로 잠근다. */
+  ok(/btn: *curIc\('tstone', *(TR|TP)_CUR_PX\) *\+ *fmt\(c\)/.test(CODE),
+    '[2-e] 라벨식이 «아이콘 + 비용» 두 항뿐이다(686 — 크기 상수만 단련 전용 TP_CUR_PX 로 갈렸다)');
 
   /* ══ [3] 뜻 보존 ════════════════════════════════════════════════════════ */
   console.log('\n=== [3] 뺀 말이 화면에 남아 있는가(등재문 ⚠ — 버튼이 «무슨 버튼» 인지) ===');
@@ -140,8 +144,12 @@ const PRE = { btn: '단련 1', room10: 1.13 };
     const box = row.querySelector('.tb');
     /* 자릿수 최악에서의 여유 — 584 가 340 을 고른 그 축 */
     const lab = row.querySelector('.tb i'), keep = lab.innerHTML;
-    lab.innerHTML = curIc('tstone', TR_CUR_PX) + '9,999,999,999';
-    const room10 = b.width - 10 - lab.getBoundingClientRect().width;
+    /* 686 — 단련 버튼은 전용 상수(TP_CUR_PX)와 검정 테 8px 을 쓴다. 내부 예산은 340 − 8×2 = 324. */
+    const CUR = (typeof TP_CUR_PX !== 'undefined') ? TP_CUR_PX : TR_CUR_PX;
+    lab.innerHTML = curIc('tstone', CUR) + '9,999,999,999';
+    const room10 = b.width - 16 - lab.getBoundingClientRect().width;
+    lab.innerHTML = curIc('tstone', CUR) + '99,999,999';
+    const room8 = b.width - 16 - lab.getBoundingClientRect().width;
     lab.innerHTML = keep;
     return {
       w: +b.width.toFixed(1), h: +b.height.toFixed(1),
@@ -149,11 +157,11 @@ const PRE = { btn: '단련 1', room10: 1.13 };
       curTop: +(c.top - b.top).toFixed(1), curBot: +(b.bottom - c.bottom).toFixed(1),
       inkL: +(i.left - b.left).toFixed(1), inkR: +(b.right - i.right).toFixed(1),
       gapTd: +(b.left - td.right).toFixed(1),
-      room10: +room10.toFixed(2),
+      room10: +room10.toFixed(2), room8: +room8.toFixed(2),
     };
   });
-  ok(Math.abs(geo.w - 340) < 0.5 && Math.abs(geo.h - 178) < 0.5,
-    '[5-a] ★ 버튼 **가로** 340 불변(584 자릿수 예산) · 세로는 686 이 178 로 키웠다',
+  ok(Math.abs(geo.w - 340) < 0.5 && Math.abs(geo.h - 173) < 0.5,
+    '[5-a] ★ 버튼 **가로** 340 불변(584) · 세로는 686 이 코어 173(+립 5)으로 키웠다',
     geo.w + '×' + geo.h);
   ok(Math.abs(geo.right - 26) < 0.5 && Math.abs(geo.top - 22) < 0.5,
     '[5-b] 자리 — right 26 불변(584) · top 은 686 값 22', 'right ' + geo.right + ' · top ' + geo.top);
@@ -164,9 +172,16 @@ const PRE = { btn: '단련 1', room10: 1.13 };
     '[5-d] ★ 짧아진 라벨이 버튼 안에서 **가로 중앙**이다(좌우 여백 대칭)',
     '좌 ' + geo.inkL + ' · 우 ' + geo.inkR);
   ok(geo.gapTd > 0, '[5-e] 같은 행 효과 줄(.td)과 겹침 0(210 [B] 축)', '간격 ' + geo.gapTd);
-  ok(geo.room10 > PRE.room10,
-    '[5-f] 자릿수 최악(10자리) 여유가 수리 전보다 늘었다 — 상자를 좁힐 근거가 안 생긴다',
-    `${PRE.room10} → ${geo.room10}`);
+  /* ⚑ 686 이관 — 이 항은 **방향이 바뀌었다.** 670 이 물은 것은 «라벨을 줄였는데 상자를 좁혀야
+     하나» 였고 답은 «아니다(여유가 늘기만 한다)» 였다. 686 은 그 늘어난 여유를 **의도적으로 써서**
+     라벨을 키웠다(비평 2인이 «면 대비 잉크 6%» 로 ② 를 4·5 점 줬다). 그래서 자릿수 예산은
+     10자리 → **8자리**가 된다. 8자리 = 비용 ≥ 1e7 = **Lv 44.7만**이고, 이 저장소가 스스로 «먼 값»
+     으로 쓰는 far 표본은 Lv 10만(비용 501,501 = 6자리 — `verify210` [C])이라 **4.5배 여유**다.
+     ⇒ 항을 지우지 않고 **예산 자릿수를 8로 다시 적는다**(333 처방). 되돌리려면 `.tr-tp>.tb` 의
+     font-size 42 와 `TP_CUR_PX` 96 을 내리면 10자리가 그대로 돌아온다. */
+  ok(geo.room8 > 0,
+    '[5-f] 686 — 자릿수 예산은 **8자리**다(라벨 확대의 대가 · Lv 44.7만까지 = far 표본 Lv 10만의 4.5배)',
+    `8자리 여유 ${geo.room8} · (10자리는 ${geo.room10} — 686 이 의도적으로 쓴 여유)`);
 
   /* ══ [6] 297·584 회귀 ═══════════════════════════════════════════════════ */
   console.log('\n=== [6] 297 두 경로 동일 · 584 의 나머지 축은 안 건드렸다 ===');

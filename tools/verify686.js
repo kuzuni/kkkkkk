@@ -97,16 +97,21 @@ async function openAt(browser, H) {
     return { tb: g('.tb'), ti: g('.ti'), td: g('.td'), tn: g('.tn'), tl: g('.tl'),
              row: window.__rel(host, '#trTemper') };
   });
-  ok(G.tb.y === 22 && G.tb.h === 178,
-    '[2-a] ★ 세로 — 상변 22 · 높이 178(수리 전 128 · 74)', `${G.tb.y}..${G.tb.y2} h ${G.tb.h}`);
+  /* 686 2회차 — 이 버튼은 아래로 **5px 립**(`0 5px 0` 3D 그림자)을 단다. 그래서 «같은 띠» 는
+     코어 rect 가 아니라 **그려진 실루엣**(코어 + 립)으로 재야 한다 — 코어를 178 로 두면 실루엣이
+     205 로 액자(200)보다 5px 길었고, 비평가 2인이 독립으로 그 5px 를 짚었다. */
+  const LIP = 5;
+  ok(G.tb.y === 22 && G.tb.h === 173,
+    '[2-a] ★ 세로 — 상변 22 · 코어 높이 173(+립 5 = 실루엣 178)', `${G.tb.y}..${G.tb.y2} h ${G.tb.h}`);
   ok(G.tb.x === 632 && G.tb.w === 340,
     '[2-b] ★ 가로는 584 값 Δ0 — 좌변 632 · 폭 340(자릿수 예산을 안 건드렸다)',
     `x ${G.tb.x} w ${G.tb.w}`);
-  ok(G.tb.y === G.ti.y && G.tb.y2 === G.ti.y2,
-    '[2-c] ★ 높이의 근거 — 같은 행 아이콘 상자와 **같은 세로 밴드**(행 222 − 22 − 22)',
-    `버튼 ${G.tb.y}..${G.tb.y2} ↔ 아이콘 ${G.ti.y}..${G.ti.y2}`);
-  ok(p1(G.tb.y) === p1(G.row.h - G.tb.y2),
-    '[2-d] 행 여백이 위아래 대칭', `위 ${G.tb.y} · 아래 ${p1(G.row.h - G.tb.y2)}`);
+  ok(G.tb.y === G.ti.y && G.tb.y2 + LIP === G.ti.y2,
+    '[2-c] ★ 높이의 근거 — **그려진 실루엣**(코어+립)이 아이콘 액자와 같은 띠 22..200',
+    `버튼 ${G.tb.y}..${G.tb.y2}(+립 ${LIP} = ${G.tb.y2 + LIP}) ↔ 아이콘 ${G.ti.y}..${G.ti.y2}`);
+  ok(p1(G.tb.y) === p1(G.row.h - (G.tb.y2 + LIP)),
+    '[2-d] 행 여백이 위아래 대칭(립까지 세고)',
+    `위 ${G.tb.y} · 아래 ${p1(G.row.h - (G.tb.y2 + LIP))}`);
 
   /* ══ [3] 이웃 침범 0 — 두 프레임 ═══════════════════════════════════════ */
   console.log('\n=== [3] 이웃 침범 0 — 형제 전수 × 두 프레임(404 선례) ===');
@@ -153,17 +158,29 @@ async function openAt(browser, H) {
     const m = el => { const a = el.getBoundingClientRect();
       return { top: r(a.top - b.top), bot: r(b.bottom - a.bottom),
                left: r(a.left - b.left), right: r(b.right - a.right) }; };
-    return { img: m(img), ink: m(ink), fs: getComputedStyle(btn).fontSize,
-             lh: getComputedStyle(btn).lineHeight };
+    const cs = getComputedStyle(btn);
+    /* computed boxShadow 는 «rgb(...) 0px 0px 0px 8px inset, rgb(...) 0px 5px 0px» 꼴이다 —
+       inset 항의 네 번째 길이(spread)가 테 두께다. */
+    const insetPart = cs.boxShadow.split(/,(?![^(]*\))/).find(t => /inset/.test(t)) || '';
+    const nums = (insetPart.match(/(-?[\d.]+)px/g) || []).map(parseFloat);
+    const stroke = nums.length >= 4 ? nums[3] : null;
+    return { img: m(img), ink: m(ink), fs: cs.fontSize, lh: cs.lineHeight, stroke,
+             fill: img.getBoundingClientRect().height / b.height };
   });
   ok(Math.abs(C.img.top - C.img.bot) <= 3 && C.img.top >= 5,
     '[4-a] ★ 화폐 아이콘 상하 여백 대칭(line-height 를 같이 올린 것으로 자동 성립)',
     `위 ${C.img.top} · 아래 ${C.img.bot}`);
   ok(Math.abs(C.ink.left - C.ink.right) <= 3 && C.ink.left > 0,
     '[4-b] 라벨이 가로 중앙(670 [5-d] 회귀)', `좌 ${C.ink.left} · 우 ${C.ink.right}`);
-  ok(C.lh === '178px' && C.fs === '31px',
-    '[4-c] line-height = 높이(178) · font-size 는 31 그대로(584 자릿수 예산 불변 — 위임 규약 결정)',
+  ok(C.lh === '173px' && C.fs === '38px',
+    '[4-c] line-height = 코어 높이(173) · font-size 38(2회차 — 비평 2인 «면 대비 잉크 6%» 반영 · 8자리 여유 17.3)',
     `fs ${C.fs} · lh ${C.lh}`);
+  ok(C.fill >= 0.5 && C.fill <= 0.7,
+    '[4-d] ★ 2회차 — 세로 채움률(잉크 높이 ÷ 코어 높이)이 50~70%(1회차 29.8% 가 ② 를 4점으로 떨어뜨렸다)',
+    `${Math.round(C.fill * 1000) / 10}%`);
+  ok(C.stroke === 8,
+    '[4-e] ★ 2회차 — 검정 테 8px(같은 패널의 카드·아이콘 액자·보유 바와 통일 — 1회차 5px 는 37.5% 얇았다)',
+    C.stroke + 'px');
 
   /* ══ [5] 값은 안 죽었다 ═════════════════════════════════════════════ */
   console.log('\n=== [5] 지운 것은 «설명» 이고 «값» 이 아니다 — 버튼이 구간을 따라간다 ===');
@@ -211,7 +228,7 @@ async function openAt(browser, H) {
   ok(R.r2.y === 128 && R.r2.h === 74 && R.r2.band === false,
     '[R-c] ★ 버튼을 옛 세로(128 · 74)로 되돌리면 [2-c] «아이콘과 같은 밴드» 가 깨진다',
     `되돌린 버튼 ${R.r2.y} h ${R.r2.h} · 밴드일치 ${R.r2.band}`);
-  ok(R.r2b.y === 22 && R.r2b.h === 178, '[R-d] 원복하면 686 값으로 돌아온다',
+  ok(R.r2b.y === 22 && R.r2b.h === 173, '[R-d] 원복하면 686 값으로 돌아온다',
     `${R.r2b.y} h ${R.r2b.h}`);
 
   const errs = await page.evaluate(() => (window.__err || []).length);

@@ -149,9 +149,14 @@ const openAt = async (browser, h) => {
   ok(cur.rune && near(cur.rune.w, cur.base.w, 3),
     '[2-d] ★ 룬 [강화] 화폐가 훈련 기준선과 ±3%',
     cur.rune && `${cur.rune.w} ↔ ${cur.base.w} (${p1(cur.rune.w / cur.base.w * 100)}%, 수리 전 ${PRE.rune})`);
-  ok(cur.temp && near(cur.temp.w, cur.base.w, 3),
-    '[2-e] ★ 단련 [단련] 화폐가 훈련 기준선과 ±3%',
-    cur.temp && `${cur.temp.w} ↔ ${cur.base.w} (${p1(cur.temp.w / cur.base.w * 100)}%, 수리 전 **0장**)`);
+  /* ⚑ 686 이관 — 단련 버튼만 상자가 74 → 173 이 됐다(주인 지시 «세로로 키워라»). 화폐 아이콘을
+     기준선 53 에 묶어 두면 면 대비 잉크가 6% 로 희석돼 비평 2인이 ② 를 4·5 점으로 떨어뜨렸다.
+     ⇒ **단련만** 전용 상수 `TP_CUR_PX`(96)로 갈랐다. 584 의 «기준선은 상수 한 곳» 규약은 안 죽는다 —
+     [2-b]·[2-c]·[2-d](훈련·룬)가 그대로 지키고, 이 항은 «단련은 제 상수를 **상수로** 읽는가» 로
+     방향을 옮긴다(손으로 적은 수가 아니어야 한다는 것이 584 의 뜻이다). */
+  ok(/const TP_CUR_PX = 96;/.test(CODE) && cur.temp && near(cur.temp.w, 96, 3),
+    '[2-e] ★ 686 — 단련 화폐는 전용 상수 `TP_CUR_PX`(96)를 읽는다(룬은 기준선 53 그대로 = [2-d])',
+    cur.temp && `${cur.temp.w} ↔ TP_CUR_PX 96 (기준선 ${cur.base.w} 대비 ${p1(cur.temp.w / cur.base.w * 100)}%)`);
   ok(cur.tempN === 1, '[2-f] 단련 버튼 안 화폐 아이콘은 **정확히 1장**이다', cur.tempN + '장');
   /* ⚑ 644(2026-09-01) — 이 항은 **헛초록이었다.** 옛 술어는 세 파일의 `viewBox` **문자열**이
      `0 0 64 64` 로 같은지만 보고 «상자가 같다 = 잉크가 같다» 를 주장했는데, 그 결론은 세 아트가
@@ -350,9 +355,9 @@ const openAt = async (browser, h) => {
   ok(overlap === 0, '[7-a] 210 — 단련 탭 네 줄이 여전히 겹침 0(614 — 회수 줄 없음)', reg.rows.map(r => r.y + '..' + r.y2).join(' · '));
   ok(reg.tb.x >= reg.td.x2, '[7-b] ★ 넓힌 [단련] 버튼이 같은 행 효과 줄(`.td`)과 겹치지 않는다',
     `버튼 좌변 ${reg.tb.x} ↔ .td 우변 ${reg.td.x2} (여유 ${p1(reg.tb.x - reg.td.x2)})`);
-  ok(reg.tc === null && reg.tb.y === reg.ti.y && reg.tb.y2 === reg.ti.y2,
+  ok(reg.tc === null && reg.tb.y === reg.ti.y && reg.tb.y2 + 5 === reg.ti.y2,
     '[7-c] 686 — 비용 줄(`.tc`)은 사라졌고, 버튼이 그 세로를 먹어 아이콘 상자와 같은 밴드에 선다',
-    `.tc ${reg.tc === null ? '없음' : '있음'} · 버튼 ${reg.tb.y}..${reg.tb.y2} ↔ 아이콘 ${reg.ti.y}..${reg.ti.y2}`);
+    `.tc ${reg.tc === null ? '없음' : '있음'} · 버튼 ${reg.tb.y}..${reg.tb.y2}(+립 5) ↔ 아이콘 ${reg.ti.y}..${reg.ti.y2}`);
   ok(reg.off.judge === false && reg.off.ui.alert === false,
     '[7-d] 519 — 올릴 축이 없으면 판정도 닷도 꺼진다(오점등 회귀)',
     'judge=' + reg.off.judge + ' · alert=' + reg.off.ui.alert);
