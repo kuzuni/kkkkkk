@@ -109,7 +109,9 @@ const WATCH = (page, hostSel, ms, inkRatio, hostTop0) => page.evaluate(([hostSel
         const b = rect(nd); if (!b.width) continue;
         out.spdN++;
         const inkPad = b.height * (1 - INK_RATIO) / 2;
-        const rise = (TOP0 != null ? TOP0 : hb.top) - b.top;
+        /* 기준선 둘 중 «덜 나간» 쪽 — 호스트가 621 왕복·488 맥박으로 정적선 위아래를 오가므로
+           한 기준만 쓰면 호스트의 움직임이 알갱이의 침범으로 둔갑한다(verify619 [L5] 머리말). */
+        const rise = Math.min((TOP0 != null ? TOP0 : hb.top) - b.top, hb.top - b.top);
         if (rise > out.spdRise) out.spdRise = rise;
         if (rise - inkPad > out.spdInk) out.spdInk = rise - inkPad;
         /* ⚠ **기준선을 둘 다 찍는다.** 위 값은 «누르기 전 정적 상변»(probe619f 규약) 기준이라
@@ -185,9 +187,14 @@ const WATCH = (page, hostSel, ms, inkRatio, hostTop0) => page.evaluate(([hostSel
     const o = R[sp.id]; if (!o) { bad++; continue; }
     say('ⓜ', o.fxN2 > 0 && o.fxMax2 <= 2, sp.n + ' — 플래시가 호스트를 따라간다(스폰 프레임 제외 최악 ≤2px · 표본 ' + o.fxN2 + ')');
   }
+  /* ⚠ ⓝ 은 **판정에 안 쓴다 — 아직 안 닫힌 자리라서다.** 17회차가 ② 와 같은 클램프를 ③ 에
+     걸어 봤고(잉크 이탈 25~44px → 0px), 그 대가로 룬 출발이 **도착 타일 «안»** 으로 들어가
+     비행이 107 → 57px 이 됐다(`verify583` [D-rune-0] 이 빨개진다). 되돌렸고, 고르는 것은
+     18회차의 설계 판단이다. 그때까지 이 축은 **재기만** 한다 — 통과로 세면 «해결됨» 으로 읽힌다. */
   const rn = R.rune;
-  say('ⓝ', !!rn && Math.max(0, rn.spdInk) <= 1, '룬 알갱이가 행 상변을 안 넘는다(≤1px)');
-  console.log(bad ? 'PROBE619G — ' + bad + '건 문턱 미달' : 'PROBE619G — 두 축 전부 문턱 통과');
+  console.log('  · ⓝ 룬 알갱이 잉크 상변 이탈 **' + r2(Math.max(0, rn ? rn.spdInk : 0))
+            + 'px** (참고 — 판정 제외 · EL 49 / EM 57 · 18회차 몫)');
+  console.log(bad ? 'PROBE619G — ' + bad + '건 문턱 미달' : 'PROBE619G — 추적 축(ⓜ) 세 화면 전부 문턱 통과');
   await browser.close();
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

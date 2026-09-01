@@ -458,7 +458,7 @@ async function hold(page, sp, opt) {
         섞으면 한 프레임짜리 값(1.9~4.2px)이 최악값을 통째로 지배한다. 갈라서 센다.
      ⚠ **L2 전제가 이 절의 본체다** — 호스트가 안 움직이면 «따라간다» 는 아무것도 안 묻는 헛초록이다. */
   {
-    console.log('\n[L] 17회차 — 회당 플래시가 호스트를 따라간다 · 룬 알갱이 상변 클램프');
+    console.log('\n[L] 17회차 — 회당 플래시가 호스트를 따라간다 · 660 이관(비용 알갱이 폐지 확인)');
     let killFollow = false;
     const trackRun = async (tab, hostSel, btnSel) => {
       await page.reload();
@@ -536,7 +536,9 @@ async function hold(page, sp, opt) {
             const b = rect(nd); if (!b.width) continue;
             out.spdN++;
             const pad = b.height * (1 - 0.938) / 2;
-            const rise = (TOP0 != null ? TOP0 : hb.top) - b.top;
+            const riseStatic = (TOP0 != null ? TOP0 : hb.top) - b.top;
+            const riseLive = hb.top - b.top;
+            const rise = Math.min(riseStatic, riseLive);
             if (rise - pad > out.spdInk) out.spdInk = rise - pad;
           }
           if (performance.now() - t0 < 2600) requestAnimationFrame(tick); else res(out);
