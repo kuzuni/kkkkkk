@@ -79,15 +79,42 @@ const SPOTS = [
 
     meta[sp.id] = { n: sp.n, rest: r, frames: [] };
     await shot('rest');
+
+    /* ── 실시간 계열 — **스크린샷으로 찍지 않는다** ──────────────────────────────
+       ⚠⚠ 3회차 교훈: 스크린샷을 끼워 표본하면 `page.screenshot` 지연(수백 ms)이 위상을 한쪽으로 몰아
+         **로그 자체가 거짓말**을 한다(1회차는 1.0 쪽으로, 3회차는 .94 쪽으로 몰렸고, 비평가 CI 4회차가
+         그 로그를 읽고 «10틱 중 정점 1~2회» 로 읽었다 — 같은 구간의 rAF 전수 표본은 정점 듀티 27~34% 다).
+       ⇒ 여기서는 **페이지 안 rAF 로 전수 표본**만 뜨고 그림은 안 찍는다. 그림은 아래 위상 스윕이 맡는다. */
+    await page.evaluate(sel => {
+      const P = (window.__c621rt = { on: true, s: [], sel });
+      const step = () => {
+        if (!P.on) return;
+        const el = document.querySelector(P.sel);
+        if (el) { let sc = 'none'; try { sc = getComputedStyle(el).scale; } catch (_) {}
+                  P.s.push({ t: Math.round(performance.now()), sc: parseFloat(sc) || 1,
+                             w: Math.round(el.getBoundingClientRect().width * 10) / 10 }); }
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, sp.sel);
     await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
     await page.mouse.down();
-    await page.waitForTimeout(420);                 /* 첫 발·350ms 대기를 지나 «반복» 구간에서 찍는다 */
-    for (let i = 0; i < N; i++) {
-      const m = await sample();
-      await shot('f' + String(i + 1));
-      meta[sp.id].frames.push({ i: i + 1, sc: m ? m.sc : 'n/a', w: m ? m.w : 0 });
-      await page.waitForTimeout(IV);
+    await page.waitForTimeout(1800);
+    const rt = await page.evaluate(() => { const P = window.__c621rt; P.on = false; return P.s; });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    {
+      const full = rt.filter(f => f.sc >= 0.995).length, down = rt.filter(f => f.sc <= 0.96).length;
+      meta[sp.id].realtime = { frames: rt.length,
+        fullPct: Math.round(full / rt.length * 1000) / 1000,
+        downPct: Math.round(down / rt.length * 1000) / 1000,
+        series: rt.map(f => f.sc) };
     }
+
+    /* 위상 스윕을 위해 다시 누른다 */
+    await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(500);
     /* ── 한 사이클 위상 스윕(c1~c6) — 홀드 타이머를 멈추고 같은 부품 한 번을 위상별로 정지시켜 찍는다 ── */
     const CD = 140;
     /* ⚠⚠ 2회차 교훈 — **위상을 고정해도 노드가 갈리면 그림이 어긋난다.**
@@ -132,7 +159,8 @@ const SPOTS = [
   fs.writeFileSync(path.join(OUT, '621-r' + R + '-frames.json'), JSON.stringify(meta, null, 1));
   console.log(made.length + '장 — ' + OUT);
   for (const k of Object.keys(meta)) {
-    console.log('  ' + k + ' 실시간 ' + meta[k].frames.map(f => f.i + ':' + f.sc + '/' + f.w).join('  '));
+    const rt = meta[k].realtime;
+    if (rt) console.log('  ' + k + ' 실시간(rAF ' + rt.frames + '장) 정점듀티 ' + rt.fullPct + ' · 눌림듀티 ' + rt.downPct);
     if (meta[k].cycle) console.log('  ' + k + ' 사이클 ' + meta[k].cycle.map(f => f.phase + ':' + f.sc + '/' + f.w).join('  '));
   }
   await browser.close();
