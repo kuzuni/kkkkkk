@@ -76,7 +76,11 @@ const SCENE = `async ({ open, origin }) => { try {
     fxOrig = null; fxOrigT = -1e9; fxOrigSrc = null; fxTapEl = null; fxTapT = -1e9;
     for (const k in fxAccSrc) fxAccSrc[k] = null;
   } else {
-    const host = document.querySelector('#trTemper .tp-hd .cg') || document.querySelector('#tabbar');
+    /* ⚑ 624 — 옛 첫 후보 «#trTemper .tp-hd .cg»([충전])는 613 이 없앴다. 한 번도 안 맞는 선택자가
+       남아 있으면 이 씬은 내내 폴백(«#tabbar» — 팝업 **밖**)으로 돌면서 초록이라 그것이 안 보인다.
+       ⇒ 613 이 세운 살아 있는 승계자(단련 [단련] 버튼 · 팝업 **안**)로 갈아 끼운다.
+       ⚠ 이 덩어리는 통째로 템플릿 문자열(SCENE)이다 — 주석에도 백틱을 쓰지 마라(624 에 한 번 깨졌다). */
+    const host = document.querySelector('#trTemper .tr-tp.k0 .tb') || document.querySelector('#tabbar');
     _fxAt(host);
   }
   const snapNull = (typeof fxSrc === 'function') ? (fxSrc(performance.now()) === null) : null;
@@ -176,8 +180,36 @@ async function boot(ctx, url) {
   /* ── [F] 자(cap491) — 없는 사건을 만들지 않는다 ───────────────────────── */
   console.log('\n[F] 자 — cap491 의 되돌림이 조용한가 · 두 층을 같이 비우는가');
   const cap = fs.readFileSync(CAP, 'utf8');
-  ok(/fxSeen\.tstone\s*=\s*S\.tstone/.test(cap),
-     '[F1] 2패스 재고 되돌림이 감시자 기준선을 같이 옮긴다 = 하네스의 사정이 «획득» 으로 안 읽힌다');
+  /* ⚑ 624(2026-09-01) — **[F1] 을 갈아 끼웠다.** 옛 [F1] 은 `fxSeen.tstone = S.tstone` 라는
+     **한 줄의 존재**를 물었는데, 그 줄은 [충전] 장면의 «2패스 되돌림» 안에만 있었고 613 이
+     그 버튼을 없애 장면째 사라졌다(624). 줄을 물으면 그 줄이 사라지는 순간 게이트가 빨개지고,
+     그 자리를 그냥 지우면 578 의 계약이 통째로 없어진다(333 «자리를 비우지 마라»).
+     ⇒ **한 줄이 아니라 578 의 계약 자체**를 묻는다: «하네스가 재화 값을 손대는 자리는 전부,
+     같은 `page.evaluate` 안에서 감시자 기준선을 같이 옮긴다.» 되돌림 장면이 돌아오든 안 오든
+     성립하고, 누가 기준선 없는 `S.tstone = …` 를 새로 넣으면 그 순간 빨개진다.
+     ⚠ 이 계약이 무른 게 아님은 [F1b] 가 못박는다 — 기준선 줄을 뺀 **사본**에 같은 자를 대면 빨갛다. */
+  const capBaseline = src => {
+    /* `page.evaluate` 로 끊는다 — 한 덩어리 = 페이지 안에서 한 번에 도는 코드 */
+    const bad = [];
+    const blocks = src.split('page.evaluate');
+    for (let i = 1; i < blocks.length; i++) {
+      const b = blocks[i];
+      const asn = b.match(/S\.(gold|dia|rstone|tstone|rfrag|mile)\s*=/g);
+      if (!asn) continue;
+      if (!/fxSeen/.test(b)) bad.push(asn.join(' '));
+    }
+    return bad;
+  };
+  const capBad = capBaseline(cap);
+  ok(capBad.length === 0,
+     '[F1a] 하네스가 재화 값을 손대는 `page.evaluate` 는 전부 같은 덩어리에서 감시자 기준선을 옮긴다'
+     + ' = 하네스의 사정이 «획득» 으로 안 읽힌다 — 기준선 없는 덩어리 ' + capBad.length + '개 '
+     + JSON.stringify(capBad));
+  /* 되돌림 시험 — 기준선을 말하는 줄만 뺀 사본(파일은 안 건드린다) */
+  const capNeg = cap.split('\n').filter(l => !/fxSeen/.test(l)).join('\n');
+  ok(capNeg !== cap && capBaseline(capNeg).length > 0,
+     '[F1b] 되돌림 시험 — 그 기준선을 뺀 사본에는 같은 자가 빨갛다(무르게 푼 갈아 끼움이 아니다) — '
+     + JSON.stringify(capBaseline(capNeg)));
   ok((cap.match(/for \(const id of \['fxl', 'fxlc'\]\)/g) || []).length === 2,
      '[F2] 층을 비우는 두 자리가 **둘 다** `#fxl`·`#fxlc` 를 같이 비운다(6·8회차는 한 층만 비웠다)');
   ok(/for \(const k in fxSeen\)/.test(cap),

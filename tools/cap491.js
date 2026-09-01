@@ -26,10 +26,19 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 const R = process.argv[2] || '1';
 const OUT = path.resolve(__dirname, '..', 'docs', 'review');
 
+/* ⚑ 624(2026-09-01) — **장면이 넷에서 셋이 됐다.** 613(단련석 직접 지불)이 «전환» 단계를 통째로
+   없애면서 단련 헤더의 [충전] 버튼(`#trTemper .tp-hd .cg` · `data-tpchg`)이 제품에서 사라졌다
+   (index.html 10549·13289 주석). 그 자리에 613 이 세운 것은 «보유 줄»(현재 단련석 개수)이라
+   **누를 것이 아니다** — idle/down/hold/up 네 장이 전부 같은 그림이 되므로 장면을 갈아 끼우지 않고
+   걷어냈다(333 «자리를 비우지 마라» 는 «살아 있는 대체 계약» 이 있을 때의 말이다).
+   ⚠ 이 하네스는 **죽지 않았다** — 아래 `if (!r)` 가드가 «[skip] tempchg — 요소 없음» 으로 받아
+   조용히 12장만 내놓았다(624 재현). 조용한 것이 문제라서 걷어낸다: 다음 491 세션이
+   review 8회차의 «4장면 16장» 을 읽고 12장을 받으면 무엇이 빠졌는지가 그림에 안 나온다.
+   [충전] 장면의 3~8회차 기록(홀드 자멸 · 2패스 되돌림 · 578 기준선)은 `docs/review/491-UI쥬시루프.md`
+   에 그대로 있다 — 되살릴 일이 생기면 거기서 읽는다. */
 const SCENES = [
   { id: 'rune',    tab: 'rune',   sel: '#trRunes .rbt.b1',        n: '룬 [강화] 버튼(홀드)' },
-  { id: 'tempup',  tab: 'temper', sel: '#trTemper .tr-tp.k0 .tb', n: '단련 [투자] 버튼(홀드)' },
-  { id: 'tempchg', tab: 'temper', sel: '#trTemper .tp-hd .cg',    n: '단련 [충전] 버튼(홀드)' },
+  { id: 'tempup',  tab: 'temper', sel: '#trTemper .tr-tp.k0 .tb', n: '단련 [단련] 버튼(홀드)' },
   { id: 'train',   tab: 'train',  sel: '#trCards [data-tr]',      n: '★대조 훈련 카드(64 홀드 — 주인 미지적)' },
 ];
 
@@ -43,8 +52,11 @@ const SCENES = [
   await page.evaluate(() => {
     /* 전투 캔버스는 매 프레임 달라 «달라진 픽셀» 을 오염시킨다 — 비평 대상이 아니라 가린다 */
     const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
+    /* ⚑ 624 — `S.temper.pts = 500` 을 여기서 걷어냈다. 613 이 «단련 포인트» 를 선언째 없애
+       (index.html 19782 · 20555~20566: 구 세이브의 pts 는 load() 가 단련석으로 되돌리고 필드는
+       죽는다) 이 대입은 **아무 판정도 안 읽는 필드**를 세우고 있었다 — save() 도 안 싣는다.
+       단련의 지불 수단은 이제 `S.tstone` 하나이고 그건 바로 윗줄이 세운다. */
     S.gold = 1e18; S.dia = 1e9; S.rstone = 1e6; S.tstone = 1e6;
-    if (S.temper) S.temper.pts = 500;
     /* 578 — 재고를 «채우는» 것도 제품에게는 획득이다(아래 되돌림 주석과 같은 이유).
        장면이 시작되기 전에 기준선을 맞춰 둔다 — 안 맞추면 1번 장면에 «+1,000,000» 이 얹힌다. */
     if (typeof fxSeen === 'object' && fxSeen)
@@ -69,8 +81,6 @@ const SCENES = [
       const b = document.querySelector('#trw .tr-box').getBoundingClientRect();
       return { x: Math.round(b.x) - 6, y: Math.round(b.y) - 6, width: Math.round(b.width) + 12, height: Math.round(b.height) + 12 };
     });
-    /* 8회차 — [충전] 2패스 되돌림에 쓸 «1패스 전» 잔액 */
-    const pts0 = await page.evaluate(() => (S.temper && S.temper.pts) || 0);
     const r = await page.evaluate(sel => {
       const e = document.querySelector(sel); if (!e) return null;
       const b = e.getBoundingClientRect();
@@ -113,31 +123,17 @@ const SCENES = [
     await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false);
                                 if (typeof trHoldStop === 'function') trHoldStop(false); });
     await page.waitForTimeout(400);
-    /* ⚑ 6회차 — **2패스 전에 재고를 되돌린다.** 5회차 비평가 둘이 «tempchg 의 `-up` 만 플로터 0px» 을
-       독립으로 냈는데(CC 「hold 4,758px → up 0px」 · CD 「940ms 에 소멸」), 재현해 보니 **제품이 아니라
-       하네스**였다: [충전]은 1패스에서 «보유분 전부» 를 이미 바꿔서, 2패스의 탭은 재고가 0 이라
-       `once()` 가 false 를 돌려 **beat 자체가 안 난다.** 즉 그 0px 은 «수명이 짧다» 가 아니라
-       «아무 일도 안 일어난 탭» 을 찍은 것이다(자를 고치는 쪽이 맞다 — `verify491` [6-k] 는 같은 시각에
-       α 0.46 을 재고 있었고 둘이 어긋난 이유가 이것이다). 두 패스의 상태 차이는 «시도 1회» 뿐이어야 한다.
-       ⚠ **[충전] 에서만 되돌린다.** 6회차에 네 재화를 다 되돌려 봤더니 비평가 CF 가 곧바로 잡았다 —
-       룬·투자·훈련은 1패스의 홀드가 레벨·잔액을 실제로 여러 칸 움직이는데 2패스에서 그것을 되돌리면
-       `-up` 프레임의 숫자가 `-hold` 보다 **뒤로 간다**(CF 「Lv.7 인데 잔액이 down 비트맵과 0px 동일 =
-       스테일 라벨 롤백」). 되돌림이 필요한 것은 «재고를 한 번에 다 쓰는» 이 버튼 하나뿐이다. */
-    if (s.id === 'tempchg') {
-      /* ⚑ 8회차 — 재고뿐 아니라 **포인트 잔액도** 되돌린다. 6회차는 `S.tstone` 만 되돌려서
-         2패스가 «두 번째 충전» 이 되고, `-up` 잔액이 1,000,494 → **2,000,494** 로 한 번 더 늘었다 —
-         CG·CH 가 독립으로 「재고 0인데 얻은 것만 또 는다 · 화면의 숫자만 더하면 100만이 설명되지 않는다」로
-         ③ 감점했다. 두 패스의 상태 차이는 «시도 1회» 뿐이어야 한다는 규약이 여기서도 답이다. */
-      /* ⚑ 578 — **되돌림은 «장면의 사실» 이 아니라 하네스의 사정이다.** `S.tstone = 1e6` 은 제품에게는
-         «단련석 100만을 얻었다» 와 구별할 수 없는 사건이라 `fxWatch` 가 정직하게 «+1,000,000» 을
-         띄웠고, 그 사본이 `-up` 프레임에 남아 비평가 2인이 «값이 안 바뀐 이웃 행이 +1,000,000 을
-         말한다» 로 읽었다(등재문 578 · CI y258~290 · CJ x491~670 = 프레임 (502,1250)~(681,1282)).
-         ⇒ 되돌린 «뒤에» 감시자의 기준선을 같이 옮겨 이 되돌림만 조용하게 만든다. 제품의 판정은
-         한 줄도 안 바꾼다 — 진짜 획득은 그대로 연출된다. */
-      await page.evaluate(p0 => { S.tstone = 1e6; if (S.temper) S.temper.pts = p0; renderTrain();
-        if (typeof fxSeen === 'object' && fxSeen) fxSeen.tstone = S.tstone; }, pts0);
-      await page.waitForTimeout(300);
-    }
+    /* ⚑ 624 — **2패스 되돌림(6·8회차 · 578)이 통째로 사라졌다.** 그것은 «재고를 한 번에 다 쓰는»
+       [충전] 한 장면만을 위한 것이었고(6회차가 네 재화를 다 되돌렸다가 CF 에게 «스테일 라벨 롤백» 으로
+       잡힌 뒤 그 버튼 하나로 좁힌 자리다), 613 이 그 버튼을 없앴다.
+       ⚠ **살아 있는 승계자가 없다는 것을 짐작이 아니라 재현으로 확인했다**(624 · 셋업 재고 1e6 기준):
+       1패스 홀드가 재고를 **조금씩만** 쓰고(룬강화석 −38 · 단련석 −3) **2패스의 짧은 탭이 세 장면
+       전부에서 값을 한 번 더 움직인다**(룬강화석 −13 · 단련석 −1 + 단련 Lv 3→4 · 골드 −100 ·
+       `temperUpOk` 는 내내 참) — 즉 6회차가 고치려던 «아무 일도 안 일어난 탭을 찍는다» 가
+       여기서는 일어나지 않는다. 되돌림을 남겨 두면 그 세 장면에서는 CF 가 잡은 롤백을 **새로** 만든다.
+       ⚑ 578 의 교훈(«하네스가 값을 손대면 감시자 기준선을 같이 옮겨 그 손댐이 «획득» 으로 안 읽히게
+       한다»)은 죽지 않았다 — 이 파일에서 값을 손대는 자리는 이제 셋업 하나뿐이고 그 바로 아래가
+       `fxSeen` 기준선을 맞춘다. `verify578` [F1] 을 그 자리로 갈아 끼웠다(구조 불변항 + 되돌림 시험). */
     /* 2패스 — 캡처가 끼지 않은 «진짜» 짧은 탭 */
     await page.mouse.down();
     await page.waitForTimeout(60);
