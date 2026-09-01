@@ -13,11 +13,14 @@
      [4] 전투 발 개수 ≤ 6 — clamp(3 + log10(n)*0.7, 3, 6) (93: 전투 발은 3박자를 쓰지 않는다)
      [5] 전투 발은 UI 발보다 짧다 (93 «전투 발은 현행 속도 그대로»)
      [6] 재화가 HUD 알약 «안» 에 도착한다 (골드·다이아 각각)
-     [7] 강화 피드백 3종이 한 번에 난다 — 플래시 1 · 불꽃 10 · 델타 플로터 1
-     [8] 세 씬의 «+n» 플로터 글자 크기가 공용 토큰 하나로 묶여 있다 (24회차 --fx-plus-fs)
+     [7] 강화 피드백 3종이 한 번에 난다 — 플래시 1 · 알갱이 층 · **아이콘 버스트**
+         (⚑ 732 — 종전 셋째 층 «델타 플로터» 는 659·660 이 폐지했다. 방향을 뒤집어 [7-b] «0장» 으로
+          두고 [7-c] «그 자리를 재화 아이콘 버스트가 대신한다» 를 세웠다 — 333 «자리를 비우지 마라»)
+     [8] «+n» 플로터 글자 크기가 공용 토큰 하나로 묶여 있다 (24회차 --fx-plus-fs)
+         (⚑ 732 — 표본 셋째 자리를 씬 C → **씬 D(50 코스튬 [강화])** 로 이관. 델타가 아직 사는 자리다)
      [9] 동시 DOM 상한 FXMAX(120)을 넘지 않는다
     [10] 퀘스트 수령 토스트가 300ms 안에 완전히 뜬다
-    [11] 세 씬 어디서도 콘솔 에러가 나지 않는다
+    [11] 네 씬 어디서도 콘솔 에러가 나지 않는다 (732 — 씬 D 편입)
     [12] 전투 발 경로가 우상단 ▦ 메뉴 버튼(#menub)을 관통하지 않는다 (34차 2인 공통2)
     [13] 씬 B 머묾 구간에 코인이 «모두 받기» 라벨 keep-out 을 지킨다 (34차 2인 공통1)
     [14] 씬 A 전투 발이 프레임 오른쪽으로 잘려 나가지 않는다 (36차 2인 공통)
@@ -32,7 +35,10 @@ const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 
-const URL = 'file://' + path.resolve(__dirname, '../index.html');
+/* ⚑ 732 — 소스를 갈아 끼울 수 있게 한다(`verify93` 의 `V93_SRC` 와 같은 손잡이).
+   `verify732` 가 «결함을 주입한 사본» 을 물려 «그때 그 항이 실제로 빨개지는가» 를 묻는다(334 되돌림 시험).
+   안 주면 종전과 한 값도 안 다르다. */
+const URL = 'file://' + path.resolve(__dirname, '..', process.env.V58_SRC || 'index.html');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail++; console.log('  ✗ ' + m); } };
 
@@ -74,6 +80,24 @@ async function run(scene, span, step) {
   }, scene);
   if (scene === 'quest') { await p.evaluate(() => openQuest()); await p.waitForTimeout(400); }
   if (scene === 'upg') { await p.evaluate(() => openTrain()); await p.waitForTimeout(400); }
+  /* ⚑ 732 — 씬 D(50 코스튬 [강화]). 659·660 이 훈련·단련·룬의 숫자 플로터를 폐지한 뒤
+     `fxDelta` 를 **아직 쓰는 유일한 계열**이다(`probe732` [6][7]: 주석을 걷은 `fxUpOk` 호출부
+     8곳 중 텍스트를 넘기는 곳은 34076·34202 두 자리뿐 · 둘 다 코스튬).
+     [8] 의 «세 씬 공통 토큰» 은 이 씬으로 옮겨 붙는다 — 씬 C 를 그냥 빼면 델타 자리가 자에서
+     통째로 사라져 «토큰이 풀려도 초록» 이 된다(333 «자리를 비우지 마라»).
+     클릭은 한 번의 evaluate 안에서 query+click 한다 — `renderCos()` 가 `#bCos.innerHTML` 을
+     갈아끼우면 핸들이 detach 돼 위임 핸들러가 안 탄다(LESSONS 25-⑤ · 694 가 verify93 에 쓴 그 세팅). */
+  if (scene === 'cos') {
+    await p.evaluate(() => {
+      S.stone = 1e12;
+      const a = AVATARS[0].id;
+      S.avatars = S.avatars || {}; S.avatars[a] = 1; S.avatar = a;
+      goTab('hero'); heroSubGo('cos');
+    });
+    await p.waitForTimeout(450);
+    await p.evaluate(() => { const c = document.querySelector('#bCos [data-cosit]'); if (c) c.click(); });
+    await p.waitForTimeout(300);
+  }
   if (scene === 'gain') {
     await p.waitForFunction(() => typeof enemies !== 'undefined' && enemies.length > 0, null, { timeout: 8000 })
       .catch(() => {});
@@ -99,6 +123,10 @@ async function run(scene, span, step) {
     const samples = [];
     let vk = 0;                              /* 38회차 [18] — 체크 도장에 «처음 본 순서» 표를 붙인다 */
     const t0 = performance.now();
+    /* ⚑ 732 — «강화가 실제로 일어났나» 는 연출이 아니라 **판정**에서 읽는다(씬 C 골드 · 씬 D 강화석).
+       [7-b] «훈련 «+n» 0장» 의 전제가 이 값이다 — 없으면 «폐지됐다» 와 «씬이 안 났다» 가
+       구별되지 않아, 종전 실패문의 모양 그대로 **헛초록**이 되살아난다(694 §R-d 가 같은 자리). */
+    const pay0 = sc === 'cos' ? S.stone : S.gold;
     if (sc === 'gain') {
       /* 35회차 — 발원을 `enemies[0]` 에 맡기면 **실행마다 달라** [12] 가 재현되지 않는다(32회차가
          «하네스가 적을 우단에서 집었다» 로 데인 자리의 반대판). ▦ 버튼보다 오른쪽·아래인 한 점으로
@@ -107,6 +135,8 @@ async function run(scene, span, step) {
       S.gold += 128000;
     } else if (sc === 'quest') {
       const b = document.getElementById('qAll'); if (b) b.click();
+    } else if (sc === 'cos') {
+      const b = document.querySelector('#bCos [data-cosup]'); if (b) b.click();
     } else {
       const c = document.querySelector('#trCards [data-tr="atk"]') || document.querySelector('#trCards .tr-card');
       if (c) {
@@ -133,6 +163,14 @@ async function run(scene, span, step) {
           t: Math.round(t), n: flies.length, flies,
           up: flies.filter((f) => f.up).length, lo: flies.filter((f) => f.lo).length,
           plus, spark: document.querySelectorAll('.fx-spark').length,
+          /* ⚑ 732 — 660 이 «숫자 플로터» 자리에 세운 **재화 아이콘 버스트**(`.fx-spark.fx-cic`).
+             `.fx-spark` 총수만 세면 옛 앰버 불꽃과 구별이 안 돼 «660 이 통째로 사라져도 초록» 이다
+             (694 [7-c] 가 verify93 에서 세운 양성항과 같은 뜻). 화폐 신원까지 같이 읽는다.
+             ⚠ 씬 A·B 는 타이밍 축이 샘플러 부하에 물리므로(570) 거기서는 한 줄도 더 안 돈다. */
+          cic: (sc === 'upg' || sc === 'cos') ? document.querySelectorAll('.fx-spark.fx-cic').length : 0,
+          cicCur: (sc === 'upg' || sc === 'cos')
+            ? [...new Set([...document.querySelectorAll('.fx-spark.fx-cic > img.cic')].map(i => i.dataset.curIc))] : [],
+          delta: (sc === 'upg' || sc === 'cos') ? document.querySelectorAll('.fx-plus.fx-delta').length : 0,
           /* ⚑ 583 — 강화 자리의 «알갱이» 는 이제 두 얼굴이다: 종전 방사형 불꽃(`.fx-spark`)과
              화폐 알갱이(`.fx-fly.fx-spd` — «무엇으로 샀는가»). 씬 C(훈련 강화)는 후자로 갈렸다. */
           spd: document.querySelectorAll('.fx-spd').length,
@@ -191,6 +229,8 @@ async function run(scene, span, step) {
         if (best) qlab = { x: best.left, y: best.top, w: best.width, h: best.height };
       } }
     return { samples, goldPill, diaPill, FXMAX: typeof FXMAX === 'number' ? FXMAX : 120,
+      /* 732 — [7-a]/[8] 전제. 씬 C 는 골드, 씬 D 는 강화석으로 «났다» 를 판정에서 읽는다. */
+      paid: pay0 - (sc === 'cos' ? S.stone : S.gold),
       menub: mbr ? { x: mbr.left, y: mbr.top, w: mbr.width, h: mbr.height } : null,
       qlab,
       /* 37회차 [15] — 토스트 밑변이 물면 안 되는 것(«STAGE n» 헤더). 22회차가 토스트 자리를
@@ -225,6 +265,7 @@ async function run(scene, span, step) {
   const gain = await run('gain', 1600, 8);
   const quest = await run('quest', 1900, 15);
   const upg = await run('upg', 900, 25);
+  const cos = await run('cos', 1000, 25);   /* 732 — 씬 D. `fxDelta` 가 아직 사는 유일한 자리 */
 
   /* ⚑ 32회차 — «도착» 을 무엇으로 재는가.
      처음엔 «비행 아이콘 수가 줄어든 시각» 으로 쟀는데 3회 연속 758·766·826ms 가 나왔다.
@@ -299,13 +340,35 @@ async function run(scene, span, step) {
   const upCur = [...new Set(upg.samples.flatMap(s => s.spdCur || []))];
   ok((upSpd >= 3 && upCur.length === 1 && upCur[0] === 'gold') || upSpark >= 10,
     `알갱이 층 — 화폐 알갱이 ${upSpd}개 [${upCur.join(',')}] (≥3·gold) 또는 방사형 불꽃 ${upSpark}개 (≥10)`);
-  ok(Math.max(...upg.samples.map(s => s.plus.length)) >= 1, '델타 «+n» 플로터가 난다');
+  /* ⚑⚑ 732 이관 — 종전 한 줄은 «씬 C 에 델타 «+n» 플로터가 **난다**» 였고, 659·660(주인 지시
+     «훈련·단련·룬 숫자 플로터 폐지 — 아이콘 버스트로 교체»)이 그 호스트를 없앤 뒤로 빨갛다.
+     `probe732` 12/12 가 갈래를 닫았다: **ⓐ 게이트 부패**다(제품 0줄 — 훈련 두 호출부 35063·35123 의
+     셋째 인자가 `null` · 부품 `fxDelta` 는 코스튬에서 살아 있다). 즉 이 항은 «주인이 없애라고 한 것이
+     **있어야** 통과하는 자» 가 돼 있었다 — 694 가 `verify93` [7] 에서 닫은 것과 같은 자리·같은 처방.
+     333 규약대로 **자리를 비우지 않고 방향을 뒤집는다**: 음성항 [7-b] + 양성항 [7-c].
+     ⚠ 위치 축(«스폰은 강화 버튼뿐»)은 여기서 다시 안 잰다 — `verify660` [C1]·[C2] 가 세 탭 전부
+       그것을 이미 단언한다(402 «두 벌 금지»). 여기가 지키는 것은 «한 사건에 세 층이 같이 난다» 다. */
+  ok(upg.paid > 0, `[7-a] 전제 — 훈련 강화가 실제로 났다 (골드 ${upg.paid} 지출)`);
+  ok(Math.max(...upg.samples.map(s => s.plus.length)) === 0,
+    '[7-b] 훈련 «+n» 숫자 플로터 **0장** (659·660 — 되돌아가면 여기가 빨개진다)');
+  const upCic = Math.max(...upg.samples.map(s => s.cic));
+  const upCicCur = [...new Set(upg.samples.flatMap(s => s.cicCur || []))];
+  ok(upCic >= 3 && upCicCur.length === 1 && upCicCur[0] === 'gold',
+    `[7-c] 그 자리를 재화 아이콘 버스트가 대신한다 — ${upCic}알 [${upCicCur.join(',')}] (≥3 · gold)`);
 
   console.log('[8] «+n» 플로터 글자 크기가 세 씬 공통 (24회차 --fx-plus-fs)');
+  /* ⚑ 732 — 표본 셋째 자리를 **씬 C → 씬 D(50 코스튬 [강화])** 로 갈아 끼웠다.
+     이 항이 지키는 것은 «회당 플로터가 자기 자리에 크기를 손으로 적지 않는다» 이고(491 2회차가
+     488 의 그 사고를 되돌린 자리다), 그러려면 표본은 **플로터가 실제로 사는 자리 전부**여야 한다.
+     씬 C 를 그냥 빼서 두 씬으로 줄였으면 델타 계열이 자에서 통째로 빠져 «토큰이 풀려도 초록» 이 된다.
+     ⚠ 씬 D 는 델타(`.fx-plus.fx-delta`)를 골라 읽는다 — 코스튬 화면에도 일반 «+n» 이 섞이면
+       무엇을 쟀는지 모르는 자가 된다(A1 10~12회차 «계측 정의가 다르면 일치해도 틀린다»). */
   const fs = (h) => { const s = h.samples.find(x => x.plus.length); return s ? s.plus[0] : null; };
-  const fa = fs(gain), fb = fs(quest), fc = fs(upg);
-  ok(fa && fb && fc && Math.abs(fa - fb) < 0.6 && Math.abs(fa - fc) < 0.6,
-    `씬 A ${fa} · 씬 B ${fb} · 씬 C ${fc} px`);
+  const fsDelta = (h) => { const s = h.samples.find(x => x.delta && x.plus.length); return s ? s.plus[0] : null; };
+  const fa = fs(gain), fb = fs(quest), fd = fsDelta(cos);
+  ok(cos.paid > 0, `[8-a] 전제 — 코스튬 강화가 실제로 났다 (강화석 ${cos.paid} 지출)`);
+  ok(fa && fb && fd && Math.abs(fa - fb) < 0.6 && Math.abs(fa - fd) < 0.6,
+    `[8-b] 씬 A ${fa} · 씬 B ${fb} · 씬 D(코스튬 델타) ${fd} px`);
 
   console.log('[9] 동시 DOM 상한 FXMAX');
   const mx = Math.max(...gain.samples.map(s => s.fxl), ...quest.samples.map(s => s.fxl), ...upg.samples.map(s => s.fxl));
@@ -542,8 +605,8 @@ async function run(scene, span, step) {
   }
 
   console.log('[11] 콘솔 에러 0');
-  const e = gain.errs.length + quest.errs.length + upg.errs.length;
-  ok(e === 0, `세 씬 합계 ${e}건`);
+  const e = gain.errs.length + quest.errs.length + upg.errs.length + cos.errs.length;
+  ok(e === 0, `네 씬 합계 ${e}건`);   /* 732 — 씬 D 가 늘었다 */
 
   console.log(`\nVERIFY58 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);
   process.exit(fail ? 1 : 0);
