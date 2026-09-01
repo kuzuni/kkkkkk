@@ -140,8 +140,8 @@ const boot = async (browser, h) => {
                     && card.bot <= sum.y + 0.5 && sum.bot <= up.y + 0.5,
              reads, vis };
   });
-  ok(Math.round(geo.hd.y) === 34 && Math.round(geo.hd.h) === 64,
-    '★ 헤더가 본문 머리(박스 local top 34 · h64)다', Math.round(geo.hd.y) + ' / ' + Math.round(geo.hd.h));
+  ok(Math.round(geo.hd.y) === 24 && Math.round(geo.hd.h) === 88,
+    '★ 헤더가 본문 머리(박스 local top 24 · h88 = .tp-hd 급)다', Math.round(geo.hd.y) + ' / ' + Math.round(geo.hd.h));
   ok(geo.hd.bot <= geo.bar.y + 0.5, '★ 하위 바(일반·고급·천상)가 헤더 **아래**다 — «탭 위에» 그대로',
     geo.hd.bot.toFixed(1) + ' ≤ ' + geo.bar.y.toFixed(1));
   ok(!geo.ovHB && !geo.ovHC, '헤더 ↔ 바 · 헤더 ↔ 카드 겹침 0');

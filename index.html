@@ -10665,24 +10665,27 @@
        ⚑ 687(주인 지시 2026-09-02 «룬강화석 개수를 일반룬·고급룬·천상룬 탭 **위에**») 이 맨 위에
        재화 잔량 헤더 한 줄을 세웠다 — 613 «탭 재화 잔량 헤더» 규약(단련 .tp-hd)의 룬판이고,
        보강(01:25)대로 **«(아이콘) 수량» 만 · 중앙 정렬**(한글 «룬강화석» 라벨 금지 — 688 과 한 규약).
-       헤더 64 · 사이 22 · 하위 바 98 · 사이 18 · 카드 646 · 사이 16 · 총효과 요약 40 = **904** (바닥 여유 16)
-       → 헤더 34~98 · 하위 바 120~218 · 본문 top **236** · 카드 236~882 · 요약 898~938.
-       (2회차 — 비평 2인 일치 지적 반영: 헤더 글자 fs36→46 = 서브탭 라벨과 같은 티어 ·
-        띠 56→64 · 헤더↔바 9px 이 리듬(16~26) 밖 → 22 로. 간격 수열 26/17/18/16/16.)
-       카드 −54 는 전부 **잉크 없는 세로 여백**에서 걷었다(아이콘 200 · 글줄·바 높이 전부 불변):
+       헤더 88 · 사이 20 · 하위 바 98 · 사이 16 · 카드 648 · 사이 16 · 총효과 요약 38 = **924**
+       → 헤더 **24**~112 · 하위 바 132~230 · 본문 top **246** · 카드 246~894 · 요약 910~948 · 바닥 여유 6.
+       (3회차 — 비평 2·3회차 일치 지적: «띠 64 가 바 98 대비 유일하게 얇다 · 같은 재화 아이콘이
+        버튼(53)과 다른 스케일 · 숫자가 탭 라벨보다 작다» → 띠를 단련 .tp-hd 와 **같은 88** 로,
+        아이콘 = TR_CUR_PX 53(584 기준선), fs52(잉크 ≈40 > 라벨 39). 예산은 헤더 top 34→**24** 로
+        벌었다 — «리본 자리 34» 는 훈련 탭 리본의 값이고, 띠가 선 뒤로는 위 여백 16 이
+        간격 리듬(15~20)과 맞는다. 688 이 단련 쪽을 이 부품으로 끌어올 때 top 도 같이 볼 것.)
+       카드 −52 는 전부 **잉크 없는 세로 여백**에서 걷었다(아이콘 200 · 글줄·바 높이 전부 불변):
        rd 280→256(아이콘 밑 40→16) · rst 452→428 · rbt 512→478 · rhint 632→598(버튼 밑 8 유지).
      ⚠ 카드 높이를 키우려면 이 뺄셈부터 다시 하라(게이트 verify271 [2] 가 겹침 0 을 잰다). */
   /* 687 — 재화 잔량 헤더. 껍데기는 단련 .tp-hd 와 같은 카드 베벨 체계(한 부품 꼴 — 688 이
      단련 쪽을 이 규약으로 끌어올 때 그대로 합쳐진다). 높이만 88 → 56(예산 §위 뺄셈). */
-  .rn-hd{left:24px;top:34px;width:998px;height:64px;border-radius:22px;background:#FFFDF2;
+  .rn-hd{left:24px;top:24px;width:998px;height:88px;border-radius:22px;background:#FFFDF2;
     box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823;
-    text-align:center;line-height:64px;font-size:46px;color:#2C1E10}
+    text-align:center;line-height:88px;font-size:52px;color:#2C1E10}
   .rn-hd b{color:#B4571E}
-  .rn-hd .cic{vertical-align:-6px;margin-right:10px}
-  .rn-subs{left:126px;top:120px;width:794px}
-  .tr-runes{left:24px;top:236px;width:998px;height:702px}
+  .rn-hd .cic{vertical-align:-10px;margin-right:12px}
+  .rn-subs{left:126px;top:132px;width:794px}
+  .tr-runes{left:24px;top:246px;width:998px;height:702px}
   /* 한 화면에 한 종만 — 카드는 항상 본문 머리에 붙는 **한 장**이다(203 의 `.k0/.k1/.k2` 폐기) */
-  .tr-rn{position:absolute;left:0;top:0;width:998px;height:646px;border-radius:28px;background:#FFFDF2;
+  .tr-rn{position:absolute;left:0;top:0;width:998px;height:648px;border-radius:28px;background:#FFFDF2;
     /* 카드 껍데기는 훈련 카드(.tr-card)의 베벨·그림자 체계를 그대로 쓴다 — 같은 팝업 안에서
        두 벌의 카드 문법이 생기지 않게 한다(96 «부품은 하나»). */
     box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
@@ -10775,7 +10778,7 @@
      271 부터는 «잠긴 탭을 눌러도 들어갈 수 있고, 들어가면 이 덮개가 조건을 말한다» 가 잠금 UX 다. */
   .tr-rn.lk>.rlk{display:block}
   .tr-rn>.rlk{display:none;left:8px;top:8px;right:8px;bottom:8px;border-radius:22px;
-    background:rgba(26,20,12,.72);text-align:center;line-height:630px;font-size:40px;color:#F2D8A8}   /* 687 — 카드 646: 덮개 안높이 630 */
+    background:rgba(26,20,12,.72);text-align:center;line-height:632px;font-size:40px;color:#F2D8A8}   /* 687 — 카드 648: 덮개 안높이 632 */
   /* 만렙 룬 — 두 버튼 자리를 «MAX» 한 장으로 덮는다 */
   .tr-rn>.rmax{right:44px;top:478px;width:910px;height:112px;border-radius:24px;
     text-align:center;line-height:112px;font-size:38px;color:#7A5A34;
@@ -10789,7 +10792,7 @@
   .rn-subs>.stab.lk>.sk-lock{display:block;left:auto;right:16px;top:14px;margin-left:0;
     transform:scale(.62);transform-origin:100% 0}
   /* 룬 탭 하단 총효과 요약 — 「지금 룬이 나에게 주는 것」을 한 줄로. bonus() 와 같은 식(runeSum) */
-  .tr-runes>.rsum{position:absolute;left:0;right:0;top:662px;height:40px;line-height:40px;
+  .tr-runes>.rsum{position:absolute;left:0;right:0;top:664px;height:38px;line-height:38px;
     text-align:center;font-size:31px;color:#5E4823}
 
   /* ── 210 단련 탭 (2026-08-27, 저장소 주인 지시 «훈련 팝업 3번째 탭») ──────────
@@ -34924,7 +34927,7 @@ const runeSumTxt = () => '룬 총효과 — '
    보강(01:25) — 한글 «룬강화석» 라벨 금지: 아이콘 + 수량뿐. 룬강화석은 등급 공용 재화 하나라
    (S.rstone — 등급별 재화가 아니다. 위임 규약: 표시값도 하나) 탭 전환과 무관하게 같은 값이다. */
 function runeHeadTxt(){
-  return { stone: curIc('rstone', 40) + '<b>' + fmt(Math.floor(S.rstone)) + '</b>' };
+  return { stone: curIc('rstone', TR_CUR_PX) + '<b>' + fmt(Math.floor(S.rstone)) + '</b>' };   /* 584 기준선 53 — 버튼과 같은 스케일(비평 3회차) */
 }
 function runeHeadPut(){
   const n = document.querySelector('#rnHd .pv i'); if(!n) return;
