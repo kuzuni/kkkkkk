@@ -18,8 +18,8 @@ from PIL import Image, ImageDraw
 R = sys.argv[1] if len(sys.argv) > 1 else '2'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'docs', 'review')
 SPOTS = ['train', 'rune', 'temper']
-TAGS = [('rest', '쉼(누르기 전)'), ('c1', '0%'), ('c2', '12%'), ('c3', '25%'),
-        ('c4', '40%'), ('c5', '70%'), ('c6', '100%'), ('after', '뗌 뒤')]
+TAGS = [('rest', '쉼(누르기 전)'), ('c1', '0%'), ('c2', '15%'), ('c3', '30%'), ('c4', '45%'),
+        ('c5', '60%'), ('c6', '80%'), ('c7', '100%'), ('after', '뗌 뒤')]
 GAP, PAD, BAR = 14, 10, 26
 
 meta = {}

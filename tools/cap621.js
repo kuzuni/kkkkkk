@@ -28,7 +28,7 @@ const IV = Number(process.env.C621_IV || 45);
 const N = Number(process.env.C621_N || 10);
 /* 한 사이클 위상 스윕 — 홀드 루프를 멈춘 뒤 같은 부품을 한 번 돌리고 위상을 고정해 찍는다.
    «틱 하나가 어떻게 생겼는가» 는 실시간 표본으로는 운에 맡겨야 해서 따로 만든다. */
-const PH = [0, 0.12, 0.25, 0.4, 0.7, 1];
+const PH = [0, 0.15, 0.3, 0.45, 0.6, 0.8, 1];
 
 const SPOTS = [
   { id: 'train',  tab: 'train',  sel: '#trCards [data-tr]',      n: '23 훈련 카드' },
@@ -90,15 +90,27 @@ const SPOTS = [
     }
     /* ── 한 사이클 위상 스윕(c1~c6) — 홀드 타이머를 멈추고 같은 부품 한 번을 위상별로 정지시켜 찍는다 ── */
     const CD = 140;
+    /* ⚠⚠ 2회차 교훈 — **위상을 고정해도 노드가 갈리면 그림이 어긋난다.**
+       비평가 CJ 가 2회차 룬 c3 을 «바닥에서 414px 로 되튐» 으로 읽었는데, 로그는 같은 프레임을 389 로 적었다.
+       원인은 `renderTrain` 의 지연 재렌더(`rtRenderFlush`)가 정지시킨 애니메이션의 **호스트 노드를 갈아**
+       스크린샷 때는 눌림이 통째로 없는 새 노드가 찍힌 것이다. ⇒ 스윕 동안에는 렌더러를 **멈춰** 둔다
+       (제품은 한 줄도 안 고친다 — 캡처 하네스에서만 감싼다). */
+    await page.evaluate(() => {
+      if (window.__c621stub) return;
+      window.__c621stub = { rt: window.renderTrain, rtl: window.renderTrainLive };
+      window.renderTrain = () => {}; window.renderTrainLive = () => {};
+    });
     for (let i = 0; i < PH.length; i++) {
       const m = await page.evaluate(([s, dur, frac]) => {
         const el = document.querySelector(s); if (!el) return null;
         if (window.trHold && trHold.timer) clearTimeout(trHold.timer);
         if (window.rtHold && rtHold.timer) clearTimeout(rtHold.timer);
-        jzPressTick(el, dur / 0.9);
-        const an = el.getAnimations().filter(a => a.playState !== 'finished').pop();
+        const an = jzPressTick(el, dur);      /* ⚠ `getAnimations()` 로 고르면 CSS 애니(jz-hb)를 집는다 */
         if (!an) return null;
-        an.pause(); an.currentTime = frac * dur;
+        /* ⚠⚠ 길이는 **애니에게 묻는다** — 제품은 «직전 틱과의 실측 간격» 으로 스스로 정하므로
+           하네스가 넘긴 dur 로 위상을 계산하면 엉뚱한 자리를 찍는다(3회차에 45%·60% 칸이 그렇게 바닥으로 찍혔다). */
+        const real = an.effect.getComputedTiming().duration;
+        an.pause(); an.currentTime = frac * real;
         let sc = 'none'; try { sc = getComputedStyle(el).scale; } catch (_) {}
         return { sc, w: Math.round(el.getBoundingClientRect().width * 100) / 100 };
       }, [sp.sel, CD, PH[i]]);
@@ -106,6 +118,12 @@ const SPOTS = [
       meta[sp.id].cycle = meta[sp.id].cycle || [];
       meta[sp.id].cycle.push({ i: i + 1, phase: PH[i], sc: m ? m.sc : 'n/a', w: m ? m.w : 0 });
     }
+    /* 찍은 뒤 폭을 한 번 더 물어 «그림과 로그가 같은 노드» 임을 확인한다(어긋나면 표에 적힌다) */
+    await page.evaluate(() => {
+      if (!window.__c621stub) return;
+      window.renderTrain = window.__c621stub.rt; window.renderTrainLive = window.__c621stub.rtl;
+      window.__c621stub = null;
+    });
     await page.mouse.up();
     await page.waitForTimeout(320);
     await shot('after');

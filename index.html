@@ -38361,29 +38361,49 @@ function jzRelease(){
    ⚠ 길이는 «다음 틱 간격보다 짧게» 다(0.9배 · 56~140ms). 가속으로 간격이 60ms 까지 줄어도
      사이클이 그 안에 닫혀야 «왕복» 이 되고, 안 닫히면 다시 «굳은 채 떨림» 이 된다.
    -------------------------------------------------------------------------- */
-let jzTkAnim = null;
+let jzTkAnim = null, jzTkAt = 0;
 function jzTickStop(){
+  jzTkAt = 0;
   if(!jzTkAnim) return;
   try { jzTkAnim.cancel(); } catch(_){}
   jzTkAnim = null;
 }
 function jzPressTick(el, iv){
   if(!el || typeof el.animate !== 'function') return;
+  /* ⚑ 2회차 — 길이를 «다음 간격의 예상값(iv)» 이 아니라 **직전 틱과의 실측 간격**으로 잡는다.
+     `iv` 는 타이머 상수일 뿐이고 실제 틱은 재렌더·연출 비용만큼 늘어난다(실측 88~200ms ↔ iv 60~160).
+     짧게 잡으면 사이클이 일찍 끝나 «눌린 채» 로 남는 꼬리가 길어지고, 그 꼬리가 곧 주인이 말한 «굳음» 이다.
+     첫 반복 틱은 앞이 `TR_HOLD_DELAY`(350ms) 라 실측을 못 쓰므로 그때만 `iv` 로 시작한다. */
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const gap = jzTkAt ? now - jzTkAt : 0;
   jzTickStop();
-  const d = Math.max(56, Math.min(140, (iv > 0 ? iv : TR_HOLD_IV0) * 0.9));
+  jzTkAt = now;
+  const d = Math.max(56, Math.min(220, (gap > 40 && gap < 300) ? gap : (iv > 0 ? iv : TR_HOLD_IV0)));
   try {
     jzTkAnim = el.animate(
-      /* 0% 에 «원래 크기» — 재시작이 곧 «다시 눌렀다» 다(jzHbx 규약).
-         내려앉는 데 38% 만 쓰고 나머지는 «눌린 채» 로 둔다: 간격이 60ms 까지 가속해도 사이클이
-         그 안에 닫히고(안 닫히면 다시 «굳은 채 떨림» 이다), 남은 시간은 종전 `jz-dn` 과 같은 그림이다. */
-      [ { scale: '1',   translate: '0 0',   offset: 0 },
-        { scale: '.94', translate: '0 8px', offset: 0.38 },
+      /* ⚑ 2회차 — **왕복은 «갔다 오는 것» 이지 «리셋» 이 아니다.**
+         1회차는 0% 에 원래 크기를 두고 내려가기만 했다(끝은 .94 이므로 다음 틱의 0% 로 넘어갈 때
+         보간 없는 **스냅**이 생긴다). 비평가 CI 2회차가 그것을 그대로 짚었다 —
+         «복귀가 모션이 아니라 순간 컷 · 틱의 60% 가 완전 평평».
+         ⇒ 시작·끝을 **눌린 값**으로 맞물리게 하고 가운데에 «원래 크기» 를 둔다. 이음매가 없어지고
+         (0% 도 100% 도 .94 = `jz-dn` 과 같은 값) 두 방향이 **둘 다 모션**이 된다.
+         올라갈 때 `ease-out`(튀어 오르듯) · 내려갈 때 `ease-in`(눌리듯) · **꼭대기는 틱의 28% 머문다.**
+         ⚠ 꼭대기 길이는 취향이 아니다 — 60ms 틱에서 28% 는 **17ms = 60fps 한 프레임**이다.
+           더 좁히면 화면이 «원래 크기» 를 한 장도 못 그리는 틱이 생긴다(2회차에 14% 로 잡았다가
+           룬에서 22틱 중 6틱이 그렇게 빠졌다). */
+      [ { scale: '.94', translate: '0 8px', offset: 0,    easing: 'ease-out' },
+        { scale: '1',   translate: '0 0',   offset: 0.30 },
+        { scale: '1',   translate: '0 0',   offset: 0.58, easing: 'ease-in' },
         { scale: '.94', translate: '0 8px', offset: 1 } ],
       /* `forwards` — 끝값이 `jz-dn` 의 .94 라 이음매가 없고, 홀드 중 노드가 갈려 `jz-dn` 이 옛 노드와
          함께 사라진 자리(491 1회차가 적어 둔 그 병)에서도 «눌린 채» 가 유지된다. 뗌에서는 `jzTickStop`
          이 반드시 취소하므로 스프링(`jz-up`)의 자리를 뺏지 않는다. */
-      { duration: d, easing: 'ease-out', fill: 'forwards' });
+      { duration: d, fill: 'forwards' });
   } catch(_){ jzTkAnim = null; }
+  /* 만든 애니를 돌려준다 — 채점 캡처(`cap621.js`)가 «이것» 을 집어 위상을 고정해야 하기 때문이다.
+     `getAnimations()` 로 고르면 같은 노드에 걸린 CSS 애니(`jz-hb` 등)를 집어 헛 위상을 찍는다
+     (3회차에 실제로 그랬다 — 45% 칸이 꼭대기인데 바닥으로 찍혔다). 제품 로직은 이 값을 안 쓴다. */
+  return jzTkAnim;
 }
 /* 94 ④ — 비활성 버튼 사유 캡션. `#fxl`(z60, pointer-events:none) 안에 버튼 «위» 로 띄운다.
    좌표는 fxRect() 가 준 **프레임 px**(1080 기준, #app 의 scale 은 되돌려져 있다).

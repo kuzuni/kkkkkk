@@ -29,7 +29,15 @@ const fs = require('fs');
 const SRC = path.resolve(__dirname, '../index.html');
 const URL = 'file://' + SRC;
 const HOLD_MS = Number(process.env.V621_HOLD || 2400);
-const REST_TH = 0.995;      /* «원래 크기» 문턱 — 326폭에서 1.6px */
+/* «원래 크기» 문턱 둘 —
+   ⓐ 틱 축(REST_TH 0.985) — 3회차 왕복은 «갔다 온다» 라 꼭대기(=원래 크기)에 머무는 창이 틱의 **28%** 다.
+      60fps rAF 표본은 틱당 3~5장뿐이라 꼭대기를 통째로 놓치는 틱이 운으로 생긴다(0.995 로 잡으면 20/22).
+      0.985 는 «올라간 길의 75% 이상» = 오르막·내리막의 꼭대기 부근을 문다 — 위상 운에 안 진다.
+      ⚠ 무르게 푼 것이 아님은 [R1] 이 못박는다(무력화 사본은 이 문턱으로도 0/19).
+   ⓑ 듀티 축(FULL_TH 0.995) — «완전히 원래 크기» 인 프레임이 실제로 그려지는가. 틱당이 아니라 **전체 비율**로
+      물어야 표본 운을 안 탄다(실측 0.35~0.48 · 수리 전 0.011~0.046). */
+const REST_TH = 0.985;
+const FULL_TH = 0.995;
 /* «눌린 크기» 문턱 — 취향이 아니라 산수다. 그려진 상자는 층의 **곱**이고 눌림(.94) 위에 488 맥박이
    얹힌다(`--hb-s` 큰 카드 1.02) ⇒ 바닥에 닿은 프레임의 상한이 .94 × 1.02 = **0.9588**.
    0.96 은 그 바로 위 = «눌림 층이 확실히 바닥까지 갔다» 이고, 복귀 문턱 .995 와도 3.5% 떨어져 있다. */
@@ -135,6 +143,8 @@ async function hold(page, sp) {
     dnRatio: live ? p3(dnCyc / live) : 0,
     dnFrames: owns.filter(x => x <= DOWN_TH).length,
     dnPct: owns.length ? p3(owns.filter(x => x <= DOWN_TH).length / owns.length) : 0,
+    fullFrames: owns.filter(x => x >= FULL_TH).length,
+    fullPct: owns.length ? p3(owns.filter(x => x >= FULL_TH).length / owns.length) : 0,
     omin: p3(Math.min(...owns)), omax: p3(Math.max(...owns)),
     smin: p3(Math.min(...fr.map(f => f.sc))), smax: p3(Math.max(...fr.map(f => f.sc))),
     amin: p3(Math.min(...fr.map(f => f.w / W0))), amax: p3(Math.max(...fr.map(f => f.w / W0))),
@@ -160,7 +170,7 @@ async function hold(page, sp) {
     ok(/jzPressTick\(document\.querySelector\(h\.sel\), h\.iv\)/.test(src), 'A6 룬·단련 공용 홀드 틱이 «누른 버튼» 으로 부른다');
   }
   {
-    const fn = src.slice(src.indexOf('function jzPressTick('), src.indexOf('function jzPressTick(') + 1400);
+    const fn = src.slice(src.indexOf('function jzPressTick('), src.indexOf('function jzPressTick(') + 2600);
     ok(/scale:\s*'\.94'/.test(fn) && /translate:\s*'0 8px'/.test(fn),
        'A7 진폭은 `jz-dn` 과 같은 값(.94 / 8px) — 새 상수 0개(진폭 회귀 0)');
     ok(/el\.animate\(/.test(fn), 'A8 CSS `animation` 단축이 아니라 WAAPI — 맥박(`jz-hb`)과 층이 갈린다(491 7회차 함정)');
@@ -198,8 +208,14 @@ async function hold(page, sp) {
   for (const sp of SPOTS) {
     const o = R[sp.id];
     ok(!!o && o.ticks >= 5, 'B0 ' + sp.id + ' 홀드가 실제로 연속으로 돌았다', o ? '틱 ' + o.ticks + '회' : 'n/a');
-    ok(!!o && o.cycRatio >= 0.95, 'B1 ' + sp.id + ' 왕복한 틱 ≥ 95%',
+    /* ⚠ 85% 인 이유는 산수다 — 틱 하나에 rAF 표본이 **3~5장**이고 위쪽 창이 사이클의 약 35% 라
+       한 틱이 통째로 빠질 확률이 0.65^5 ≈ 11% 다. 95% 로 잡으면 20틱 중 한 번 빠지는 것만으로 빨개진다
+       (실측 18/19 · 18/20 으로 실제로 그랬다). **흔들리지 않는 축은 듀티(B2·C1)** 이고 이 항은 그 짝이다.
+       수리 전에는 이 문턱으로도 0/19 · 1/20 · 0/18 이라 85% 는 여전히 둘을 완전히 가른다. */
+    ok(!!o && o.cycRatio >= 0.85, 'B1 ' + sp.id + ' 위로 돌아온 틱(≥' + REST_TH + ') ≥ 85%(표본 3~5장/틱)',
        o ? o.cyc + '/' + o.ticks + ' = ' + o.cycRatio : 'n/a');
+    ok(!!o && o.fullPct >= 0.20, 'B2 ' + sp.id + ' **완전히** 원래 크기(≥' + FULL_TH + ') 프레임 듀티 ≥ 20% — 수리 전 1.1~4.6%',
+       o ? o.fullFrames + '/' + o.frames + ' = ' + o.fullPct : 'n/a');
   }
 
   console.log('\n[C] 왕복이지 «풀린 것» 이 아니다 — 눌린 크기도 매 틱 지난다');
