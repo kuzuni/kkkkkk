@@ -87,8 +87,19 @@ console.log('[4] 보정치 — 표본 ≥ 6 구간 · 다섯 축 전부 유한')
 if (rep && rep.cal) {
   const c = rep.cal;
   ok(c.rows.length >= 6, `구간 표본 ${c.rows.length}개 ≥ 6`);
-  ok(c.rows.every(r => r.kills > 0), '표본마다 실제 처치가 있었다(대역 밖 표본 0)');
-  ok(c.rows.every(r => r.bossSec > 0), '표본마다 보스전이 실제로 섰다');
+  /* ⚑ 11회차 — 이 항의 **방향을 뒤집었다**(333 처방 — 자리를 비우지 않는다).
+     옛 항은 «전 행이 대역 안»(kills > 0)을 물었는데, 11회차부터 캐시는 **일부러**
+     «실패 프로브» 행(닿지 않는 앵커 · kills 0)을 같이 싣는다 — 도달 가능 화력 상한의
+     좌표가 재현 경로 없이 본문에만 있던 것이 10회차 정정7 이었다.
+     ⇒ 물어야 할 것은 «대역 밖 표본이 0인가» 가 아니라 **«대역 밖 표본이 자에서 빠져
+     있는가»** 다. 유효로 표시된 행은 예외 없이 대역 안이어야 하고(느슨해지면 화력 미달
+     표본이 κ 곡선에 섞인다), 유효 행이 하나도 없으면 그것은 자가 안 선 것이다. */
+  const okRows = c.rows.filter(r => r.valid !== false);
+  const badRows = c.rows.filter(r => r.valid === false);
+  ok(okRows.length >= 6, `자에 쓰는(유효) 표본 ${okRows.length}개 ≥ 6`);
+  ok(okRows.every(r => r.kills > 0), '유효 표본은 전부 실제 처치가 있었다(대역 밖 표본이 자에 안 섞였다)');
+  ok(badRows.every(r => !(r.kills > 0)), `실패 프로브 ${badRows.length}행은 전부 대역 밖이다(대역 안인데 «무효» 로 접힌 행 0)`);
+  ok(okRows.every(r => r.bossSec > 0), '유효 표본마다 보스전이 실제로 섰다');
   for (const k of ['kDps', 'kHp', 'kGold', 'kBoss', 'tFloor'])
     ok(isFinite(c[k]) && c[k] > 0, `${k} = ${Number(c[k]).toFixed(3)} — 유한·양수`);
   ok(c.tFloor > 0.05 && c.tFloor < 5, `tFloor ${c.tFloor.toFixed(3)}초 — 상식 범위(0.05~5)`);

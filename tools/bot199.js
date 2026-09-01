@@ -354,21 +354,52 @@ const BOT_SRC = function (cfg) {
   const sampleBoss = (s) => {
     T('cal.bossSpawn', () => { enemies.length = 0; S.bossFarm = false; bossOn = false; startBoss(); });
     const cap = Math.round((BOSS_SEC * 4 + 12) * 30);
-    let f = 0, seen = false, f0 = 0;
+    let f = 0, seen = false, f0 = 0, hp0 = 0;
     for (; f < cap; f++) {
       step(1 / 30);
-      const on = enemies.some(e => e.tk === 'boss' && e.born >= 0.3);
-      if (on && !seen) { seen = true; f0 = f; meterReset(); }
-      else if (seen && !on) break;
+      const b = enemies.find(e => e.tk === 'boss' && e.born >= 0.3);
+      if (b && !seen) { seen = true; f0 = f; hp0 = b.hp; meterReset(); }
+      else if (seen && !b) break;
     }
     const sec = seen ? (f - f0) / 30 : 0;
-    return { sec, dmg: dmgAcc, killed: seen && f < cap };
+    /* ⚑ 11회차 — «격파» 를 «보스가 필드에서 사라졌다»(seen && f < cap)로 읽던 것을 고쳤다.
+       실패 프로브 3행(s640·800·1200)이 **전부 «격파 true»** 로 나왔는데 실측은 그 반대다:
+       화력 1.17e33 · 보스 실전 2.67초에 준 피해가 보스 체력의 0.1% 다. 보스가 사라진 것은
+       격파가 아니라 **판이 끝난 것**이고(플레이어 사망 — s640 은 60초 처치 0마리인 자리다),
+       옛 자는 그 둘을 못 갈랐다.
+       ⚠ 제품 신호 `bossClear` 를 읽는 길은 막혀 있다 — 23330 안전망이 «`bossClear.md !==
+       bossMode()` 면 그 프레임에 null» 이라 보정 컨텍스트에서는 프레임 밖에서 절대 안 보인다
+       (실측: 격파 여부와 무관하게 clr 프레임 0). `S.stage` 증가도 475 가 시퀀스 끝으로 옮겨
+       같은 안전망에 걸린다.
+       ⇒ **물리로 판정한다** — 창 안에 준 피해가 창 시작 시점의 보스 체력을 덮었는가.
+       (`meterReset()` 과 `hp0` 을 같은 프레임에 잡으므로 두 값은 같은 자 위에 있다.) */
+    /* ⚠ 여유 1e-9 — `dmgAcc` 는 매 타격을 `min(dmg, e.hp)` 로 잘라 더한 값이라 격파면 합이
+       `hp0` «과 같아야» 하는데 부동소수 누적이 마지막 자리에서 모자란다(s100 실측 0.999…).
+       여유가 없으면 실제 격파가 «미격파» 로 읽힌다 — 이 자리는 문턱이 아니라 반올림이다. */
+    const killed = seen && hp0 > 0 && dmgAcc >= hp0 * (1 - 1e-9);
+    return { sec, dmg: dmgAcc, killed, hp0 };
   };
 
   /* ⚑ 10회차 — 앵커마다 **새 캐릭터**로 잰다(Node 가 앵커마다 새 페이지에서 calibrateOne 을
      부른다). 한 캐릭터로 체크포인트를 이어 돌면 소환 축이 생긴 뒤로는 앞 앵커의 화력이
      다음 앵커의 목표를 이미 넘어(실측 s200 에서 ×12.25) 내릴 방법이 없다 — 과충은 오버킬
      클리핑으로 κ_dps 를 거짓으로 깎는다. kGuess 되먹임은 Node 쪽이 행 사이에서 잇는다. */
+  /* 11회차(정정7) — 앵커가 «그 구간에 어울리는 캐릭터» 로 찍혔는가를 **행 자신이** 들고 다닌다.
+     둘 다여야 유효: ⓐ 화력이 목표에 닿았다(pump ≥ 0.5) ⓑ 몹 표본이 대역 안이다(60초 처치 > 3
+     — 231행 «60초 0마리 = 대역 밖»). r10 유효 7행은 pump 1.03~2.24 · 처치 62~153 이라 이
+     문턱 어디에도 안 걸린다 — 문턱을 표본에 맞춰 깎은 것이 아님을 그 폭이 말한다.
+     ⚠ **«보스를 잡았는가» 는 유효 조건에서 뺐다** — 넣었더니 12앵커 중 **8개가 무효**가 됐고,
+     그것이 이 회차의 두 번째 실측이다(등재 615): 보스 표본이 격파로 끝나는 것은 **4/12**
+     (s10·30·50·100)뿐이고 **s1 과 s200 이상은 전부 플레이어 사망으로 끝난다**(s1 추적 실측 —
+     체력 165 → 0 · 보스 체력 잔량 47% · `bossT` 13/15 라 시간 초과도 아니다 · 창 안 피해가
+     보스 체력의 s200 13.0% · s400 18.8% · s500 7.1% · s560 6.2%).
+     κ_boss 는 그 구간에서 «격파까지» 가 아니라 «죽기 전까지» 를 잰 값이라 축을 다시 세워야
+     하는데, 그 자리에서 κ_hp·κ_gold·κ_dps(몹 축 — 별도 60초 파밍 표본이라 이 결손과 무관)까지
+     같이 버리면 자가 통째로 선다.
+     ⇒ 몹 축은 살리고 보스 축의 결손은 **`bossKilled` 를 참말로 만들어 표에 드러낸 채** 넘긴다. */
+  const PUMP_MIN = 0.5;
+  const calValid = r => r.pump != null && isFinite(r.pump) && r.pump >= PUMP_MIN
+                     && (r.kills | 0) > 3;
   B.calibrateOne = (s, sec, kGuess) => {
     S.stage = s; S.best = Math.max(S.best, s);
     const target = eHp(s) * ETYPE.boss.hp * bossGateHp(s) / (BOSS_SEC * 0.5) / (kGuess || 1);
@@ -376,16 +407,21 @@ const BOT_SRC = function (cfg) {
     const m = sampleMobs(s, sec);
     const b = sampleBoss(s);
     const kDps = (m.dmg / sec) / (dpsNow || 1);
-    return {
+    const row = {
       s, sec, formDps: dpsNow, realDps: m.dmg / sec, kDps,
       pump: target > 0 ? dpsNow / target : null,   /* 달성/목표 비 — 1 에서 멀면 «어울리는 캐릭터» 밖 */
+      target,                                      /* 재현용 — 실패 프로브의 «목표» 가 표에 남아야 좌표가 산다 */
       kills: m.kills,
       tKill: m.kills ? sec / m.kills : null,
       kHp: m.kills ? m.hpRat / m.kills : null,
       kGold: m.kills ? m.goldRat / m.kills : null,
       bossSec: b.sec, bossKilled: b.killed,
+      /* 11회차 — «격파» 판정의 두 재료를 행에 남긴다(판정만 남기면 왜 그렇게 읽혔는지 못 캔다) */
+      bossHp0: b.hp0, bossDmg: b.dmg, bossDmgRat: b.hp0 > 0 ? b.dmg / b.hp0 : null,
       kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsNow || 1) : null,
     };
+    row.valid = calValid(row);
+    return row;
   };
   B.calibrateFloor = () => {
     S.stage = 1;
@@ -407,7 +443,10 @@ const BOT_SRC = function (cfg) {
      (빌드가 커질수록 `stat.dps` 가 실전을 **과소**평가한다 — 치명타·펫이 그 식 밖이다).
      평균 한 수로 접으면 저구간은 2배 빠르고 고구간은 3배 느린 봇이 된다. */
   const kAt = (key, s) => {
-    const rows = B.cal.rows.filter(r => r[key] != null && isFinite(r[key]) && r[key] > 0);
+    /* 11회차(정정7) — 캐시에 «실패 프로브» 행(화력이 목표에 못 닿은 앵커)이 같이 실린다.
+       그 행의 κ 는 «전장의 모양» 이 아니라 화력 미달이 만든 수라 자에서 뺀다.
+       옛 세대 캐시(r10 이하)에는 `valid` 가 없고 유효 행만 실려 있었다 → «없으면 유효». */
+    const rows = B.cal.rows.filter(r => r.valid !== false && r[key] != null && isFinite(r[key]) && r[key] > 0);
     if (!rows.length) return B.cal[key] || 1;
     if (s <= rows[0].s) return rows[0][key];
     for (let i = 1; i < rows.length; i++) {
@@ -862,12 +901,19 @@ const POLICIES = {
    s200 값 고정(클램프) 위였고 캐시가 그 오차를 7표에 복제했다. 앵커를 s1200 까지 늘리고
    `kAt` 는 마지막 앵커 밖을 클램프가 아니라 **외삽**으로 읽는다(표 머리에 외삽 경고).
    (실측 비용은 9앵커 전체 보정 포함 12초급 — verify494 의 예산(30일 1시드 ≤ 120초) 안이다.) */
-const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400];
-/* ⚠ s800·1200 앵커는 접었다(10회차 실측) — «보스를 제한 시간 절반에» 화력이 **어떤 손잡이
-   조합으로도 물리적으로 닿지 않는다**(전 축 만개 후 달성/목표 1.2e-13 · 1.1e-31). 그 자리 표본은
-   60초 0마리 = «대역 밖»(231행 규약 위반)이라 자로 쓸 수 없다. s>400 은 s200→400 기울기의
-   외삽 + 표 머리 경고로 읽는다 — 그리고 이 실측 자체가 ⚑ 상신감이다(적 곡선이 s500 언저리에서
-   도달 가능 화력 상한을 추월한다 — r9 의 s1240 도달은 s200 클램프 자 위의 그림이었을 수 있다). */
+/* ⚑ 199 11회차(정정2·정정7 — BB·CC·DD 3인 일치 1순위) — 10회차는 s800·1200 을 «접었다».
+   접은 것이 문제였다: ⓐ 상한이 s400 과 s800 사이 어디인지 좌표가 없어 s400 밖 수치(①③④)가
+   전부 외삽 위였고 ⓑ «달성/목표 1.2e-13» 이라는 이 루프 최대 실측이 본문·주석에만 있고
+   **캐시에 행이 없어 재현 경로가 없었다**(정정7).
+   ⇒ 앵커를 **s500·560·640 으로 촘촘히** 세워 상한을 좁히고, 닿지 않는 자리(s800·1200)는
+   «접는» 대신 **실패 프로브 행으로 캐시에 남긴다**. 대역 판정은 행 자신이 들고 다닌다
+   (`calibrateOne` 이 찍는 `valid` — 측정이 판정한다, 목록이 아니라) 하고, `kAt` 는
+   **유효 행만** 보간·외삽에 쓴다. 판정식은 BOT_SRC 안 `calValid` **한 곳**이다(표 두 벌 금지).
+   ⚠ 실패 행을 kAt 가 읽으면 안 된다 — pump 1e-13 자리의 κ 는 «전장의 모양» 이 아니라
+   화력 미달이 만든 수라, 자에 넣으면 10회차가 걷어낸 클램프보다 더 나쁜 거짓 곡선이 된다.
+   ⚠ r10 이하 캐시 행에는 `valid` 가 없다 — 그 세대는 유효 행만 저장했으므로 «없으면 유효» 로
+   읽는다(`r.valid !== false`). */
+const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400, 500, 560, 640, 800, 1200];
 const CAL_SEC = 60;
 /* ⚑ 199 10회차 — 일회성 장부 키를 한 곳에 모은다(스냅 `inOnce` 와 [G] 가 같은 목록을 읽어야
    ④ 의 두 자가 어긋나지 않는다). 정정4 — «우편» 을 «우편(1회성)/우편(월)» 로 갈랐다:
@@ -1054,7 +1100,11 @@ async function runOne(page, pol, seed, days, onRow) {
       const { ctx, page } = await calPage();
       const row = await page.evaluate(([st, sec, kg]) => { window.BOT.freeze(); return window.BOT.calibrateOne(st, sec, kg); }, [s, CAL_SEC, kGuess]);
       await ctx.close();
-      if (row.kills > 3) kGuess = row.kDps;             /* 다음 앵커의 목표에 되먹인다(구 calibrate 와 같은 규칙) */
+      /* 11회차 — 되먹임도 **유효 행에서만** 잇는다. 실패 프로브(s800·1200)의 kDps 는 화력
+         미달이 만든 수라, 그것을 다음 앵커 목표에 나누면 목표가 거짓으로 헐거워진다.
+         (실패 행 뒤에 유효 앵커가 오는 순서는 지금 목록엔 없지만, 앵커를 더 끼울 다음 회차가
+         이 줄을 다시 읽는다 — 순서 가정에 기대지 않는다.) */
+      if (row.valid) kGuess = row.kDps;                 /* 다음 앵커의 목표에 되먹인다(구 calibrate 와 같은 규칙) */
       rows.push(row);
     }
     const fl = await (async () => {
@@ -1063,7 +1113,8 @@ async function runOne(page, pol, seed, days, onRow) {
       await ctx.close();
       return f;
     })();
-    const avg = (k) => { const v = rows.map(o => o[k]).filter(x => x != null && isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
+    /* 11회차 — 참고 평균도 **유효 행만**(kAt 과 같은 표를 봐야 한다). */
+    const avg = (k) => { const v = rows.filter(o => o.valid !== false).map(o => o[k]).filter(x => x != null && isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
     report.cal = { rows, kDps: avg('kDps'), kHp: avg('kHp'), kGold: avg('kGold'), kBoss: avg('kBoss'),
                    tFloor: fl.tFloor, floorKills: fl.floorKills };
     /* 캐시는 nofloor 오염 전 원본으로 저장한다 — 게이트 손잡이가 캐시에 굳으면 안 된다 */
@@ -1137,18 +1188,52 @@ function writeReport(rep) {
   /* 10회차(정정2 — Z) — 시뮬 최고 스테이지가 κ 앵커 밖이면 그 구간의 ①③④ 전부가 외삽 위다.
      앵커 안이 될 때까지(또는 앵커를 늘릴 때까지) 장기 수치를 표식 없이 믿지 마라. */
   {
-    const maxAnchor = rep.cal && rep.cal.rows && rep.cal.rows.length ? rep.cal.rows[rep.cal.rows.length - 1].s : 0;
+    /* 11회차(정정2·정정7) — «마지막 행» 이 아니라 «마지막 **유효** 행» 이 앵커 끝이다.
+       실패 프로브 행이 캐시에 실리므로 마지막 행을 읽으면 s1200 이 앵커인 척한다. */
+    const calRows = (rep.cal && rep.cal.rows) || [];
+    const okRows = calRows.filter(r => r.valid !== false);
+    const badRows = calRows.filter(r => r.valid === false);
+    const maxAnchor = okRows.length ? okRows[okRows.length - 1].s : 0;
     const allRuns = [].concat(...Object.values(rep.policies || {}));
     const maxStage = allRuns.reduce((m, r) => Math.max(m, (r.final && (r.final.best || r.final.stage)) || 0), 0);
-    if (maxStage > maxAnchor) L.push(`> ⚠⚠ **κ 외삽** — 시뮬 최고 s${maxStage} > κ 앵커 s${maxAnchor}. 그 밖 구간은 log(s) 선형 외삽이다(정정2) — 앵커를 s${maxStage} 이상으로 늘려 재보정하기 전에는 그 구간 수치에 (외삽) 표식을 붙여 읽어라.`);
+    /* ⚠ 유효 앵커가 0 이어도 표는 나와야 한다 — 그 상태 자체가 실측 결과이고, 여기서 죽으면
+       «자가 그렇게 읽었다» 는 증거가 통째로 사라진다(LESSONS 319 — 즉사 대신 그 칸만 빨갛게). */
+    if (!okRows.length) L.push(`> ⛔ **유효 κ 앵커 0개** — ${calRows.length}행 전부 «대역 밖» 으로 읽혔다. 아래 ①③④ 는 자가 서 있지 않다(κ 는 폴백 1.0). [A] 표의 «자에 쓰나» 열부터 읽어라.`);
+    if (badRows.length && okRows.length) {
+      const firstBad = badRows[0], lastOk = okRows[okRows.length - 1];
+      L.push(`> ⚑⚑ **도달 가능 화력 상한 — 실측 좌표 s${maxAnchor} … s${firstBad.s} 사이**(11회차 · 정정7). 유효 앵커 마지막 = **s${maxAnchor}**(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) · 첫 실패 프로브 = **s${firstBad.s}**(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)} — 전 축 만개 후에도 목표의 그만큼). 실패 행도 [A] 표에 «✖ 대역 밖» 으로 실려 있다(재현 경로 있음).`);
+    }
+    if (maxStage > maxAnchor) L.push(`> ⚠⚠ **κ 외삽** — 시뮬 최고 s${maxStage} > κ 유효 앵커 s${maxAnchor}. 그 밖 구간은 log(s) 선형 외삽이다(정정2) — 앵커를 s${maxStage} 이상으로 늘려 재보정하기 전에는 그 구간 수치에 (외삽) 표식을 붙여 읽어라.${badRows.length ? ` ⚠ 그런데 s${badRows[0].s} 은 **물리적으로 앵커를 세울 수 없다**(위 줄) — 이 구간은 «앵커를 늘리면 풀리는» 외삽이 아니라 «적 곡선이 화력을 추월한 뒤» 다.` : ''}`);
   }
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
   L.push('');
-  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | κ_boss | pump(달성/목표) |');
-  L.push('|---|---|---|---|---|---|---|---|---|---|---|');
-  for (const r of rep.cal.rows)
-    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${r.pump == null ? '— (10회차 이전 표)' : r.pump.toFixed(2)} |`);
+  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | κ_boss | pump(달성/목표) | 자에 쓰나 |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+  for (const r of rep.cal.rows) {
+    /* 11회차 — pump 가 1e-3 아래로 내려가면 소수점 두 자리는 «0.00» 이라 좌표를 못 읽는다 */
+    const pumpTxt = r.pump == null ? '— (10회차 이전 표)' : (r.pump < 0.01 ? r.pump.toExponential(1) : r.pump.toFixed(2));
+    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${pumpTxt} | ${r.valid === false ? '✖ **대역 밖**(실패 프로브)' : '✔'} |`);
+  }
+  {
+    const bad = (rep.cal.rows || []).filter(r => r.valid === false);
+    if (bad.length) {
+      L.push('');
+      L.push(`· ✖ 행은 **자에서 뺀다**(κ 보간·외삽·참고 평균 전부) — 그 자리의 κ 는 «전장의 모양» 이 아니라 **화력 미달**이 만든 수다.`);
+      L.push(`  실패 프로브를 표에 남기는 이유는 10회차 최대 실측(«달성/목표 ${bad[0].pump == null ? '—' : bad[0].pump.toExponential(1)}»)이 본문에만 있고 재현 경로가 없었기 때문이다(정정7).`);
+      L.push(`  목표 DPS(재현용): ${bad.map(r => `s${r.s} ${fmtN(r.target)}`).join(' · ')} — 전 축(UPG·훈련·소환·일괄 강화·유물·룬·도감·소환 레벨) 만개 후의 달성치가 앞 칸 «수식 \`stat.dps\`» 다.`);
+    }
+    /* ⚑ 11회차 등재 615 — 보스 표본이 «격파» 로 끝나는 행이 몇 개인가. 옛 자는 «보스가 필드에서
+       사라졌다» 를 격파로 읽어 전 행이 참이었다(거짓 참). 물리 판정(창 안 피해 ≥ 창 시작 체력)
+       으로 바꾸자 격파가 **0건**으로 드러났다 — 감추지 말고 표가 매 실행 말하게 한다. */
+    const withBoss = (rep.cal.rows || []).filter(r => r.bossDmgRat != null);
+    const killedN = withBoss.filter(r => r.bossKilled).length;
+    if (withBoss.length && killedN < withBoss.length) {
+      L.push('');
+      L.push(`· ⚠⚠ **보스 축 결손(등재 615)** — 보정 보스 표본 ${withBoss.length}행 중 **격파 ${killedN}행**. 나머지는 창 안 피해가 보스 체력의 ${withBoss.filter(r => !r.bossKilled).map(r => (r.bossDmgRat * 100).toFixed(1) + '%').join(' · ')} 에서 끝났다(s1 실측 원인 = **플레이어 사망** · \`bossT\` 13/15 로 시간 초과 아님).`);
+      L.push(`  ⇒ **κ_boss 는 «격파까지» 가 아니라 «죽기 전까지» 를 잰 값이다.** 보스 실전(초) 칸도 «격파 소요» 가 아니라 «판이 끝난 시각» 으로 읽어라. 몹 축(κ_dps·κ_hp·κ_gold)은 이 결손과 무관하다(별도 60초 파밍 표본).`);
+    }
+  }
   L.push('');
   L.push(`**처치 간격 하한 tFloor = ${rep.cal.tFloor.toFixed(3)}초** (s1 에서 대역의 1,000배 화력 · 30초에 ${rep.cal.floorKills}마리)`);
   L.push('');
