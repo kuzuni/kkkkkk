@@ -11,6 +11,11 @@ const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
+/* 731 — 이 자의 [A] 는 **일부러** 미정의 참조를 먹인다(그것이 이 프로브의 과녁이다).
+   731 차단기는 «삼켜진 예외» 를 마감에서 빨갛게 만드는데, 여기 것은 설계이므로 미리 신고한다.
+   신고가 없으면 6/6 PASS 인 채로 종료 코드만 1 이 된다 — 그 자체가 차단기가 산다는 증거다. */
+require('./evguard731').expect(/bagUse is not defined/);
+
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 const blk = (r, m) => { if (r && r.__err) { ok(false, m + ' — 평가가 죽었다: ' + r.__err); return false; } return true; };

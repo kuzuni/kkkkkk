@@ -80,13 +80,21 @@ function findExecutable() {
    기본값은 entry 가 `verify*.js` 일 때만 — 연출 캡처 하네스(`cap*.js`)는 그대로 둔다.
    되돌림 스위치: `PW_SETTLE=0`. 자세한 근거는 `tools/settle291.js` 머리말. */
 const { armBrowser } = require('./settle291');
+/* 작업 731 — 같은 자리에 «조용한 소실» 차단기도 건다.
+   `page.evaluate` 가 페이지 안에서 죽으면(제품 전역 폐지 = `ReferenceError`) 자마다 복붙된
+   `ev()` 가 그것을 삼켜 그 절이 통째로 건너뛰어도 **종료 코드 0** 으로 끝나던 길을 닫는다.
+   예외는 그대로 다시 던지므로 자의 흐름은 한 줄도 안 바뀐다 — 바뀌는 것은 «마감» 뿐이다.
+   되돌림 스위치: `EVGUARD=0`(끔) · `EVGUARD=report`(적기만). 근거는 `tools/evguard731.js` 머리말. */
+const evguard = require('./evguard731');
+
+const arm = b => evguard.armBrowser(armBrowser(b));
 
 async function launch(chromium, opts) {
-  try { return armBrowser(await chromium.launch(opts)); } catch (e) {
+  try { return arm(await chromium.launch(opts)); } catch (e) {
     const exe = findExecutable();
     if (!exe) throw e;
     console.log('[i] 번들 브라우저 없음 → ' + exe + ' 사용');
-    return armBrowser(await chromium.launch(Object.assign({}, opts, { executablePath: exe })));
+    return arm(await chromium.launch(Object.assign({}, opts, { executablePath: exe })));
   }
 }
 
