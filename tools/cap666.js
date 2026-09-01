@@ -67,7 +67,20 @@ async function shot(T, idx) {
   /* 연출 레이어가 빈 상태에서 출발한다 */
   await p.waitForFunction(() => document.querySelectorAll('#fxl > *').length === 0, null, { timeout: 5000 }).catch(() => {});
 
-  const info = await p.evaluate(async (T) => {
+  const info = await p.evaluate(async ({ T, sd }) => {
+    /* ⚑⚑ 5회차 — **난수를 «트리거 직전» 에 다시 심는다.** 부트에서 한 번만 심으면 표본마다
+       페이지가 열려 있던 시간이 달라(로드·렌더 흔들림) 트리거 전까지 소비한 난수 횟수가 갈리고,
+       그러면 **표본마다 다른 버스트**가 찍힌다. 4회차 채점에서 비평가 둘이 독립으로 그것을 잡았다
+       («최대 반경이 315 → 296 → 314 로 뒷걸음질한다 · 표와 그림 중 하나가 거짓이다») — 게임이
+       아니라 하네스가 만든 그림이다(58 38회차 «판과 판 사이는 안 맞는다» 의 같은 함정).
+       ⇒ 여기서 다시 심으면 8장이 **한 궤적의 여덟 시각**이 된다. */
+    let s = sd >>> 0;
+    Math.random = function () {
+      s |= 0; s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
     const el = document.getElementById('rwBasin');
     const r = el.getBoundingClientRect();
     const t0 = performance.now();
@@ -101,7 +114,7 @@ async function shot(T, idx) {
       return cx < r.x || cx > r.x + r.width || cy < r.y || cy > r.y + r.height; }).length;
     return { at: Math.round(at), cnt, icon: ic.length, spread, size, outside: out,
              basin: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) } };
-  }, T);
+  }, { T, sd: SEED });
 
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '666-' + ROUND + '-' + idx + '.png');
