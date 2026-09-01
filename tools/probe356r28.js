@@ -28,7 +28,6 @@
  * ⚠ 번호·이름 주의 — `probe356r27`·[K] 는 **다른 27회차**(의사 «이름» 축)가 이미 쓴 이름이다.
  *   이 작업은 `probe356r28`·[L] 이다(등재문의 당부).
  */
-const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { SCREENS, COLLECT, URL, STEP } = require('./scan356.js');
