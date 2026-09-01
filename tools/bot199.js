@@ -70,6 +70,11 @@ const CALIB   = ARG.calib ? path.resolve(ROOT, String(ARG.calib)) : null;
    `--wallband=40` 으로 분류 주기를 제품 밴드에서 분리한다. 본 판정 표에서는 쓰지 마라
    (자연 정의 = 제품의 관문이 §0 의 자다) — 쓰면 표 머리에 경고가 찍힌다. */
 const WALLBAND = ARG.wallband ? Math.max(1, parseInt(ARG.wallband, 10)) : null;
+/* ⚑ 18회차 정정C(비평 XX8 · 13회차 II 패턴) — **사다리 끝 강제**(게이트 픽스처 전용 · 판정 실행
+   금지 · 쓰면 표 머리에 경고). 정정2 가 신설한 «창 밖 = 사다리 안/밖» 분해는 관측창이 사다리
+   (172,800분)보다 짧으면 **밖 분기가 구조적으로 0** 이라, 게이트가 그 분기를 한 번도 못 밟는다.
+   이 손잡이가 짧은 실행에서 두 분기를 다 세워 «항이 공허참이 아님» 을 증명한다. */
+const LADDEREND = ARG.ladderend ? Math.max(1, parseInt(ARG.ladderend, 10)) : null;
 /* ⚑ 199 12회차 — **보정 프로브 전용 손잡이 둘**(판정 실행 금지 · 쓰면 표 머리에 경고).
    `--pumpcap=<골드>` · `--pumprcap=<다이아>` 는 `pumpTo` 의 예산 상한(기본 1e33 · 1e12)을 연다.
    왜 필요한가: 11회차가 «도달 가능 화력 상한 = 1.17e33 dps» 라고 적었는데 그 수는 **이 두
@@ -1314,7 +1319,8 @@ if (require.main === module) (async () => {
   }
 
   const browser = await launch(chromium);
-  const report = { stamp: STAMP, days: DAYS, seeds: SEEDS, policies: {}, cal: null, viol: [], warn: [] };
+  /* 18회차 정정D — 재현줄이 정책을 찍으려면 스냅이 그것을 기억해야 한다(리플레이 포함). */
+  const report = { stamp: STAMP, days: DAYS, seeds: SEEDS, policy: POLICY, policies: {}, cal: null, viol: [], warn: [] };
 
   /* 보정치는 «깨끗한 세이브 한 벌» 에서 한 번만 찍는다 — 정책·시드와 무관한 값이다.
      9회차(정정9) — 값이 «정책·시드와 무관» 이어야 하는데 실측이 실행마다 15% 갈렸다.
@@ -1443,10 +1449,14 @@ function writeReport(rep) {
   const L = [];
   L.push(`# 199 봇 플레이 표 — ${rep.stamp}`);
   L.push('');
-  L.push(`> \`node tools/bot199.js --days=${rep.days} --seeds=${rep.seeds}\` · ${rep.replayFrom ? '리플레이 ' + rep.replayFrom : '실행 ' + rep.elapsedSec.toFixed(1) + '초'}`);
+  /* ⚑ 18회차 정정D(비평 YY 불일치②) — 재현줄이 `--policy` 를 안 찍었다. 단일 정책 표를 그
+     명령으로 재실행하면 **[G] 가 있는 다른 표**가 나온다 — 정정1 이 요구한 «원표만으로 재현»
+     이 되돌림 시험의 증거물 자신에서 깨져 있었다. */
+  L.push(`> \`node tools/bot199.js --days=${rep.days} --seeds=${rep.seeds} --policy=${rep.policy || POLICY}\` · ${rep.replayFrom ? '리플레이 ' + rep.replayFrom : '실행 ' + rep.elapsedSec.toFixed(1) + '초'}`);
   L.push('> **이 표는 계수를 안 건드린 «현재 값» 의 사진이다.** 조정은 199 몫(작업 494 등재문 마지막 줄).');
   L.push(`> [A] κ 표 ${rep.calFrom || '실측(캐시 없음)'} · **calib sha ${rep.calHash || calHashOf(rep.cal)}** — 해시가 같은 표끼리만 «같은 자로 잰 비교» 다(정정9).`);
   if (WALLBAND) L.push(`> ⚠ **벽 분류 주기 강제 ${WALLBAND}** (\`--wallband\` — 밴드 비교 전용. §0 판정에는 자연 정의 표를 써라).`);
+  if (LADDEREND) L.push(`> ⚠ **사다리 끝 강제 ${LADDEREND}분** (\`--ladderend\` — 게이트 픽스처 전용. §0 판정에는 자연 정의(172,800분) 표를 써라).`);
   if (GEO) L.push(`> ⚠ **벽 분류 = 기하 관문 격자 ${GEO[0]}×${GEO[1]}^k** (\`--wallgeo\` — 재분류 스윕 전용. §0 판정에는 자연 정의 표를 써라).`);
   if (PUMPSTEPS) L.push(`> ⚠ **보정 프로브 눈금 반복 상한 강제 ${PUMPSTEPS}** (\`--pumpsteps\` — 스윕 전용).`);
   if (PUMPCAP || PUMPRCAP) L.push(`> ⚠ **보정 프로브 예산 상한 강제** (\`--pumpcap\`${PUMPCAP ? ' 골드 ' + PUMPCAP.toExponential(1) : ''}${PUMPRCAP ? ' · 유물 다이아 ' + PUMPRCAP.toExponential(1) : ''} — «자의 지갑 ↔ 게임의 벽» 을 가르는 스윕 전용. §0 판정 표에는 쓰지 마라).`);
@@ -1627,7 +1637,9 @@ function writeReport(rep) {
     }
     if (!vals.length) return null;
     const ds = vals.map(x => x.d), ex = vals.filter(x => x.ex).length;
-    return { p50: med(ds), p50i: medI(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W };
+    /* ⚑ 18회차 정정A(비평 WW6) — 창 이름 `W` 와 **실제로 쓴 구간**은 다른 수다(days=3 이면
+       W=7 인데 실구간은 2일). 라벨이 W 만 찍으면 «말미 7일» 이라 읽히므로 실구간을 같이 돌려준다. */
+    return { p50: med(ds), p50i: medI(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W, span: rep.days - Math.max(1, rep.days - W) };
   };
   /* ⚑ 13회차(12회차 정정4 — «3회차째 미이행» 이라고 적힌 그 항) — **말미 한계 수급.**
      ④ 의 외삽은 «말미 W일 구간율» 로 미는데 그 구간율이 표에 없었다. 없으면 ④ 를 못 검산하고
@@ -1647,13 +1659,32 @@ function writeReport(rep) {
       const span = rep.days - Math.max(1, rep.days - W);
       if (span > 0) vals.push((v(end) - v(w0)) / span);
     }
-    return vals.length ? { p50: med(vals), p50i: medI(vals), n: vals.length, W } : null;
+    return vals.length ? { p50: med(vals), p50i: medI(vals), n: vals.length, W, span: rep.days - Math.max(1, rep.days - W) } : null;
   };
   /* ⚑ 18회차 — **셀 서식까지 공유한다.** 값을 같은 함수로 재도 서식이 갈리면 두 자리의 수가
      같은 수인지 눈으로도 자로도 대조할 수 없다(정정1 이 요구한 것은 «재현 가능» 이다). */
   const LEDGER = { in: '유입 장부', summon: '소환 예산 장부(결2 ⓐ 확정 2026-09-01 — ④ 의 판정 장부)' };
-  const crossCell = (x) => x ? `${x.p50.toFixed(1)} (보간 ${x.p50i.toFixed(1)}) [${x.p10.toFixed(0)}~${x.p90.toFixed(0)}]${x.ex ? ` (외삽 ${x.ex}/${x.n} · 말미 ${x.W}일 구간율)` : ' (전 시드 실측)'}` : '—';
+  /* ⚑ 18회차 정정B(비평 WW3·XX1·XX3) — **제목까지 한 벌**이다.
+     ⓐ 밴드가 `toFixed(0)` 이라 p50 24.7 이 «[25~25]» 밖으로 읽혔다(자기 값을 안 품는 범위).
+     ⓑ 제목의 «실측» 은 «교차를 검출했다» 는 뜻인데 셀의 «(외삽 n/n)» 과 한 줄에서 부딪혀
+        17-1 정정3(라벨 하나가 두 값)과 동형이었다 ⇒ 제목을 «교차 검출» 로 바꾸고 **전 시드
+        외삽** 셀에는 «§0 판정에 쓰지 마라» 를 셀 자신이 달게 한다(3일 quick 의 24.7 이 그 예다).
+     ⓒ ② 말미 라벨의 `W` 는 창 «이름» 이라 실구간(days=3 이면 2일)과 3.5배 어긋나 있었다. */
+  const crossCell = (x) => x ? `${x.p50.toFixed(1)} (보간 ${x.p50i.toFixed(1)}) [${x.p10.toFixed(1)}~${x.p90.toFixed(1)}]${x.ex ? ` (외삽 ${x.ex}/${x.n} · 말미 창 W${x.W} · 실구간 ${x.span}일 구간율)${x.ex === x.n ? ' ⚠ **전 시드 외삽 — §0 판정에 쓰지 마라**' : ' ⚠ 일부 외삽'}` : ' (전 시드 실측)'}` : '—';
   const tailCell  = (x) => x ? `${fmtN(x.p50)} (보간 ${fmtN(x.p50i)})` : '—';
+  const crossTitle = (mode) => `**④ 교차일(2,720.5만 · 교차 검출 — 판정은 이 줄) 〔${LEDGER[mode]} · ${rep.days}일 창 · p50 (보간 med) [p10~p90]〕**`;
+  const tailTitle  = (mode, t) => `② 말미 한계 수급/일 〔${LEDGER[mode]} · 창 W${t ? t.W : '—'} · 실구간 ${t ? t.span : '—'}일 · p50 (보간 med)〕 — ④ 외삽이 쓰는 기울기`;
+  /* ⚑ 18회차 정정A(비평 WW3·XX3 — 2인 일치) — W 민감도 행도 한 벌. `WS` 가 비면
+     ([3,7,14,29] 가 관측 일수보다 다 크면) 옛 [G] 는 «×1.00 (Wundefined/Wundefined)» 와
+     빈 칸을 판정 표에 인쇄했다(r18 quick 실측 2건) — 신설 [E2] 에만 가드가 있었던 것이
+     «서식까지 공유한다» 의 4분의 1 미이행이었다. */
+  const wSensOf = (pol, mode) => {
+    const WS = [3, 7, 14, 29].filter(w => w < rep.days);
+    if (!WS.length) return null;
+    const sp = WS.map(w => { const x = crossOf(pol, mode, w); return `W${w} ${x ? x.p50.toFixed(1) : '—'}`; }).join(' / ');
+    const f0 = crossOf(pol, mode, WS[0]), fL = crossOf(pol, mode, WS[WS.length - 1]);
+    return { sp, WS, swing: f0 && fL && fL.p50 > 0 ? '×' + (f0.p50 / fL.p50).toFixed(2) : '—' };
+  };
 
   for (const pol of Object.keys(rep.policies)) {
     const runs = rep.policies[pol];
@@ -1722,7 +1753,7 @@ function writeReport(rep) {
     /* ⚑ 18회차(17-7 정정2) — **사다리의 끝**. §0 목록의 마지막 칸(144,000분 = 100일)의 창 끝
        1.2t = 172,800분이 §0 이 무엇이든 말하는 마지막 좌표다. 그 밖의 정체는 «없어야 할 벽»
        이 아니라 **과녁이 없는 구간의 벽**이라, 창 밖 수를 이 선에서 갈라 찍는다. */
-    const LADDER_END = 1.2 * TARGET[TARGET.length - 1];
+    const LADDER_END = LADDEREND || 1.2 * TARGET[TARGET.length - 1];
     /* ⚑ 199 7회차 — ① 의 자 두 곳을 주인 목록에서 **역산한 값**으로 바꾼다(6회차 비평 P·Q).
        ⓐ **분모** — 30분·3h 칸은 **첫 접속 이전**이다(부지런 첫 로그인 480분 · 대충 1,260분).
           봇이 아직 한 분도 안 논 시각에 벽이 설 길이 없으므로 그 두 칸은 «못 맞힌 것» 이 아니라
@@ -1879,7 +1910,10 @@ function writeReport(rep) {
       + ` · 왼쪽 끝 좌표로는 ${med(runs.map(hitLOf))}/${tgtN})`
       + ` · **창 밖 벽 p50 = ${med(runs.map(outOf))}**(= §0 의 «없어야 할 벽»`
       + ` — **사다리 안 ${med(runs.map(r => pairOf(r).outIn))} · 사다리 밖 ${med(runs.map(r => pairOf(r).outOut))}**`
-      + ` [사다리 끝 = ${LADDER_END}분 = 마지막 칸 ${TARGET[TARGET.length - 1]}분의 창 끝 · 그 밖은 §0 이 과녁을 안 정한 구간이라 §0 대조는 «사다리 안» 으로 읽어라 — 18회차 정정2])`
+      + ` [사다리 끝 = ${LADDER_END}분${LADDEREND ? ' ⚠ **--ladderend 강제**(게이트 픽스처)' : ' = 마지막 칸 ' + TARGET[TARGET.length - 1] + '분의 창 끝'} · 그 밖은 §0 이 과녁을 안 정한 구간이라 §0 대조는 «사다리 안» 으로 읽어라 — 18회차 정정2`
+      /* 18회차 정정C(비평 XX8 · WW9) — 분해도 p50 끼리는 못 더한다. 항등 «안+밖=창밖» 은
+         시드별로만 참이므로 그 검산을 자가 직접 찍는다(17-1 정정6 과 같은 규약). */
+      + ` · 시드별 항등 «사다리안+사다리밖=창밖» 검산 ${runs.filter(r => { const q = pairOf(r); return q.outIn + q.outOut === q.out; }).length}/${runs.length}])`
       /* ⚑ 17회차(16-8 정정6 — QQ5) — «창 밖 p50 + 중복 p50 = 잉여 p50» 은 시드가 다르면
          성립하지 않는 p50 끼리의 산수다(r16 부지런 3+12=15 ↔ 잉여 16 이 그 자리). 항등
          «창밖+중복=잉여» 는 **시드별**로만 참이라, 그 검산(전 시드)을 자가 직접 찍고
@@ -2032,18 +2066,13 @@ function writeReport(rep) {
     L.push('|---|---|');
     for (const mode of ['in', 'summon']) {
       const c = crossOf(pol, mode), t = tailRate(pol, mode);
-      L.push(`| **④ 교차일(2,720.5만 · 실측 — 판정은 이 줄) 〔${LEDGER[mode]} · ${rep.days}일 창 · p50 (보간 med) [p10~p90]〕** | ${c ? crossCell(c) : '(스냅에 누적 장부 없음 — 10회차 이전 --json)'} |`);
+      L.push(`| ${crossTitle(mode)} | ${c ? crossCell(c) : '(스냅에 누적 장부 없음 — 10회차 이전 --json)'} |`);
       const goalPct = t ? ` — 목표 ${fmtN(GOAL_DAY)}의 ${(100 * t.p50 / GOAL_DAY).toFixed(1)}%` : '';
-      L.push(`| ② 말미 ${t ? t.W : '—'}일 한계 수급/일 〔${LEDGER[mode]} · p50 (보간 med)〕 — ④ 외삽이 쓰는 기울기${goalPct} | ${tailCell(t)} |`);
+      L.push(`| ${tailTitle(mode, t)}${goalPct} | ${tailCell(t)} |`);
       /* [G] 와 같은 규약 — 외삽 시드가 0 이면 W 를 흔들어도 같은 수라 민감도 행을 생략한다
          (그 사실 자체가 판정의 강도다 · 13회차). */
-      if (c && c.ex) {
-        const WS = [3, 7, 14, 29].filter(w => w < rep.days);
-        const sp = WS.map(w => { const x = crossOf(pol, mode, w); return `W${w} ${x ? x.p50.toFixed(1) : '—'}`; }).join(' / ');
-        const f0 = crossOf(pol, mode, WS[0]), fL = crossOf(pol, mode, WS[WS.length - 1]);
-        const swing = f0 && fL && fL.p50 > 0 ? ' — 흔들림 ×' + (f0.p50 / fL.p50).toFixed(2) : '';
-        if (WS.length) L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${LEDGER[mode]} · p50〕 | ${sp}${swing} |`);
-      }
+      const ws = c && c.ex ? wSensOf(pol, mode) : null;
+      if (ws) L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${LEDGER[mode]} · p50〕 | ${ws.sp} — 흔들림 ${ws.swing} (W${ws.WS[0]}/W${ws.WS[ws.WS.length - 1]}) |`);
     }
     L.push('');
   }
@@ -2196,7 +2225,7 @@ function writeReport(rep) {
            «소환 예산 ④ 의 외삽이 앞으로 입장권 지출 0 을 가정한다» 는 뜻이라는 점이다. */
         const same = mode === 'summon' && t[0] && t[1]
           && Math.abs(t[0].p50 - (tailRate(pols[0], 'in') || {}).p50) < 0.5;
-        L.push(`| **② 말미 ${(t[0] || t[1]).W}일 한계 수급/일 〔${nm} · p50 (보간 med)〕 — ④ 외삽이 쓰는 기울기**${goalPct}${same ? ' ⚠ **유입 장부와 동일값** — 말미 창에 소환 외 씽크가 0 이라, 이 장부의 ④ 외삽은 «앞으로 입장권 교환 지출 0» 을 가정한다' : ''} | ${t.map(cell).join(' | ')} | ${ratio} |`);
+        L.push(`| **${tailTitle(mode, t[0] || t[1])}**${goalPct}${same ? ' ⚠ **유입 장부와 동일값** — 말미 창에 소환 외 씽크가 0 이라, 이 장부의 ④ 외삽은 «앞으로 입장권 교환 지출 0» 을 가정한다' : ''} | ${t.map(cell).join(' | ')} | ${ratio} |`);
       }
       /* 10회차(정정1·11) — ④ 판정 줄 = 교차 실측. p50 옆에 산포(p10~p90)와 외삽 시드 수를
          같이 찍는다(외삽 = 측정 일수 안에 목표를 못 지나 말미 구간율로 민 시드). */
@@ -2209,16 +2238,15 @@ function writeReport(rep) {
         }
         const cell = crossCell;   /* 18회차 — 함수 스코프의 공유 서식 */
         const ratio = c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : '-';
-        L.push(`| **④ 교차일(2,720.5만 · 실측 — 판정은 이 줄) 〔${nm} · ${rep.days}일 창 · p50 (보간 med) [p10~p90]〕** | ${c.map(cell).join(' | ')} | ${ratio} |`);
+        L.push(`| ${crossTitle(mode)} | ${c.map(cell).join(' | ')} | ${ratio} |`);
         /* ⚑ 13회차 — 같은 줄의 **말미 창 민감도**. 외삽 시드가 0 이면 W 가 안 쓰이므로 생략한다
            (전 시드 실측이면 W 를 흔들어도 같은 수다 — 그 사실 자체가 판정의 강도다). */
-        if (c.some(x => x && x.ex)) {
-          const WS = [3, 7, 14, 29].filter(w => w < rep.days);
-          const scell = (p) => WS.map(w => { const x = crossOf(p, mode, w); return `W${w} ${x ? x.p50.toFixed(1) : '—'}`; }).join(' / ');
-          const sp = pols.map(scell);
-          const first = crossOf(pols[0], mode, WS[0]), last = crossOf(pols[0], mode, WS[WS.length - 1]);
-          const swing = first && last && last.p50 > 0 ? '×' + (first.p50 / last.p50).toFixed(2) : '—';
-          L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${nm} · p50〕 | ${sp.join(' | ')} | ${swing} (W${WS[0]}/W${WS[WS.length - 1]} · ${POLICIES[pols[0]].name}) |`);
+        /* 18회차 정정A — 민감도도 [E2] 와 **같은 함수**다. `WS` 가 비면 행 자체를 안 찍는다
+           (옛 코드는 `Wundefined` 와 빈 칸을 인쇄했다 — r18 quick 2건). */
+        const wsA = pols.map(p => c.some(x => x && x.ex) ? wSensOf(p, mode) : null);
+        if (wsA[0]) {
+          const W0 = wsA[0].WS;
+          L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${nm} · p50〕 | ${wsA.map(x => x ? x.sp : '—').join(' | ')} | ${wsA[0].swing} (W${W0[0]}/W${W0[W0.length - 1]} · ${POLICIES[pols[0]].name}) |`);
         }
       }
       L.push('');
