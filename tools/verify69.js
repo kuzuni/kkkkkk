@@ -541,14 +541,49 @@ async function fresh(browser, w = 1080, h = 2280) {
     const persisted = await page.evaluate(() => mailLeft());
     persisted === 0 ? ok('새로고침 후에도 수령 상태 유지') : fail('새로고침 후 미수령 ' + persisted + '통으로 되돌아감');
 
-    /* 92 — 닫기 경로는 바닥 ✕ 하나뿐이다 */
+    /* 92 — 닫기 경로는 바닥 ✕ 하나뿐이다.
+       ── 645 (2026-09-01) — 여기 있던 «클릭 → 고정 대기 200ms → `!on && !ml69`» 한 항을 **둘로 갈랐다.**
+       그 한 항은 서로 다른 두 사실을 한 번에 물어서, 둘째 사실의 **시각**에 첫째 판정이 끌려갔다:
+         ⓐ «✕ 를 누르면 닫힌다» — `closeModal()` 은 동기다(27253). **시간 축이 아예 없다.**
+         ⓑ «껍데기(ml69)를 놓는다» — **345 가 일부러 되붙인다**(`jzShellBack` 39196: 퇴장 연출 0.12s 동안
+            팝업이 제 치수를 잃지 않게 껍데기를 되살리고 `done()`(39251)에서 뗀다).
+       `probe645` 실측: 껍데기는 클릭 **7.8~20.6ms** 에 되붙어 **169ms**(단독) / **196.6~255.8ms**(3병렬)에
+       놓인다 — 즉 옛 상수 200 은 퇴장 연출의 길이 **바로 위**에 얹혀 있었고, 부하가 끼면 넘어간다
+       (3병렬 6표본 중 **3개 빨강** · 단독 6회는 전부 초록 = 등재문의 «2회 중 1회» 그대로).
+       ⚠ **상수를 200 → 600 으로 올리는 처방은 안 쓴다**(334·638-③ 규약) — 어떤 상수를 골라도
+       다음 부하에서 다시 깨지고, 그때는 «연출이 길어졌다» 와 «안 닫힌다» 를 또 못 가른다.
+       ⇒ ⓐ 는 **클릭과 같은 tick** 에서 읽어 시간 축을 없애고(옛 자보다 **좁다** — 200ms 안의 지연도 못 봐준다),
+          ⓑ 는 제품이 스스로 내는 «연출 중» 신호 `#modal.__jzBusy`(39237·39258)를 **읽기만 하며** 기다린다.
+       ⚠ 폴링은 읽기 전용이고 상한(4000ms > 제품 자신의 폴백 2500ms · 39265)이 있다 —
+          «더 긴 고정 대기와 무엇이 다른가» 는 아래 **[R2] 되돌림 시험 3항**이 답한다(638-④). */
     await page.evaluate(() => openMail());
     await page.waitForTimeout(250);
-    await page.evaluate(() => { document.getElementById('mailX').click(); });
-    await page.waitForTimeout(200);
-    let closed = await page.evaluate(() => !document.getElementById('modal').classList.contains('on')
-      && !document.getElementById('modal').classList.contains('ml69'));
-    closed ? ok('✕ 로 닫힘 + ml69 해제') : fail('✕ 가 안 닫힌다');
+    const clo = await page.evaluate(() => new Promise((res) => {
+      const m = document.getElementById('modal');
+      const t0 = performance.now();
+      const has = (c) => m.classList.contains(c);
+      document.getElementById('mailX').click();
+      const sync = { on: has('on'), ml69: has('ml69') };          /* ⓐ 같은 tick — 시간 축 없음 */
+      let sawBusy = false;                                        /* ⓑ 퇴장 연출이 끝날 때까지 «읽기만» 한다 */
+      /* ⚠ 판정은 **첫 rAF 부터** 센다. 되붙이는 쪽(345 jzClose)은 `#modal` class 를 보는
+         **MutationObserver**(39537)라 그 콜백은 이 tick 의 마이크로태스크에서 돌고, rAF 는 그 뒤다
+         — 즉 «되붙기 전에 훔쳐보는» 창이 **구조적으로** 없다. 상수로 막은 게 아니다. */
+      (function tick() {
+        requestAnimationFrame(() => {
+          const t = performance.now() - t0;
+          if (m.__jzBusy) sawBusy = true;
+          if ((!has('on') && !has('ml69') && !m.__jzBusy) || t > 4000)
+            return res({ sync, ms: Math.round(t), sawBusy, on: has('on'), ml69: has('ml69'), busy: !!m.__jzBusy });
+          tick();
+        });
+      })();
+    }));
+    (!clo.sync.on && !clo.sync.ml69)
+      ? ok('[4-a] ✕ 클릭과 **같은 tick** 에 on·ml69 가 떨어진다(closeModal 동기)')
+      : fail(`[4-a] ✕ 를 눌렀는데 같은 tick 에 on=${clo.sync.on} ml69=${clo.sync.ml69}`);
+    (!clo.busy && !clo.on && !clo.ml69)
+      ? ok(`[4-b] 퇴장 연출(345)이 끝나면 껍데기도 놓는다 — ${clo.ms}ms (상한 4000 · 연출 감지 ${clo.sawBusy})`)
+      : fail(`[4-b] 연출이 끝났는데 on=${clo.on} ml69=${clo.ml69} busy=${clo.busy} (${clo.ms}ms)`);
     /* 다른 모달을 열면 ml69 가 남지 않는다 */
     await page.evaluate(() => { openMail(); if (typeof openQuest === 'function') openQuest(); });
     await page.waitForTimeout(300);
@@ -624,6 +659,94 @@ async function fresh(browser, w = 1080, h = 2280) {
         ? ok(`[R-4] 한 틱(${r.tick}) > 옛 허용치 바닥 ±4 — 옛 자가 «4회 중 1~3회» 빨갰던 이유 그 자체`)
         : ok(`[R-4] 한 틱 ${r.tick} ≤ 4 — 이 표본에서는 옛 바닥값 안이다(스테이지·배수에 따라 달라진다)`);
       if (s.errs.length) fail(`[R] 콘솔 에러 ${s.errs.length}`);
+      await s.ctx.close();
+    }
+
+    /* ---------- R2. 되돌림 시험 (645) ----------------------------------------
+       [4] 의 «닫힘» 항을 고정 대기 200ms 에서 **제품 신호 폴링**으로 갈았다.
+       638-④ — 고정 대기를 폴링으로 바꾸는 순간 «영원히 초록» 의 위험이 생긴다. 폴링이
+       «더 긴 고정 대기» 와 무엇이 다른지를 세 방향으로 못박는다:
+         [R2-a] ✕ 핸들러를 떼면 → [4-a] 규칙(같은 tick 에 on 이 떨어진다)이 **빨갛게** 본다.
+         [R2-b] 제품의 «연출 중» 신호를 1 에 고정하면 → 폴링은 **상한(4000ms)까지 다 쓰고** 빨갛다
+                (= 폴링이 스스로 끝내지 않는다 · 읽기만 한다는 증거).
+         [R2-c] 껍데기 제거만 막으면(연출은 정상 종료) → busy 는 0 이 되는데 ml69 가 남아
+                [4-b] 가 **빨갛다** (= 92·465 가 지키던 «껍데기 누수» 단언이 그대로 살아 있다).
+       ⚠ 세 사본 모두 **원복하면 다시 초록**인지까지 같은 페이지에서 확인한다. */
+    console.log('[R2] 되돌림 시험(645) — 폴링이 «더 긴 고정 대기» 가 아님을 못박는다');
+    {
+      /* 새 자와 **같은 절차**로 재는 공용 측정자 — 사본이 무엇을 바꾸든 자는 한 벌이다 */
+      const measure = (page) => page.evaluate(() => new Promise((res) => {
+        const m = document.getElementById('modal');
+        const t0 = performance.now();
+        const has = (c) => m.classList.contains(c);
+        document.getElementById('mailX').click();
+        const sync = { on: has('on'), ml69: has('ml69') };
+        (function tick() {
+          requestAnimationFrame(() => {
+            const t = performance.now() - t0;
+            if ((!has('on') && !has('ml69') && !m.__jzBusy) || t > 4000)
+              return res({ sync, ms: Math.round(t), on: has('on'), ml69: has('ml69'), busy: !!m.__jzBusy });
+            tick();
+          });
+        })();
+      }));
+      const s = await fresh(browser);
+      const open = async () => { await s.page.evaluate(() => openMail()); await s.page.waitForTimeout(250); };
+
+      /* [R2-a] ✕ 핸들러 제거 */
+      await open();
+      await s.page.evaluate(() => { document.getElementById('mailX').onclick = null; });
+      const ra = await measure(s.page);
+      ra.sync.on
+        ? ok(`[R2-a] ✕ 핸들러를 떼니 [4-a] 가 빨갛다 — 같은 tick 에 on=${ra.sync.on}`)
+        : fail('[R2-a] 핸들러를 뗐는데도 닫혔다 — [4-a] 가 «클릭» 을 안 재고 있다');
+      await s.page.evaluate(() => closeModal());
+      await s.page.waitForTimeout(400);
+
+      /* [R2-b] «연출 중» 신호 고정 — 폴링이 상한을 다 써야 한다 */
+      await open();
+      await s.page.evaluate(() => {
+        const m = document.getElementById('modal');
+        m.__jzBusyBak = m.__jzBusy;
+        Object.defineProperty(m, '__jzBusy', { get: () => 1, set: () => {}, configurable: true });
+      });
+      const t0 = Date.now();
+      const rb = await measure(s.page);
+      const spent = Date.now() - t0;
+      (rb.busy && rb.ms > 3900 && spent > 3900)
+        ? ok(`[R2-b] busy 를 1 에 고정하니 폴링이 상한을 다 썼다 — ${rb.ms}ms (벽시계 ${spent}ms) · 빨강`)
+        : fail(`[R2-b] busy 고정인데 폴링이 ${rb.ms}ms 만에 끝났다 — 폴링이 제품 신호를 안 읽는다`);
+      await s.page.evaluate(() => {
+        const m = document.getElementById('modal');
+        delete m.__jzBusy; m.__jzBusy = 0;
+      });
+      await s.page.waitForTimeout(400);
+
+      /* [R2-c] 껍데기 제거만 막는다(연출은 정상 종료) */
+      await open();
+      await s.page.evaluate(() => {
+        const cl = document.getElementById('modal').classList;
+        cl.__rm0 = cl.remove.bind(cl);
+        cl.remove = (...a) => cl.__rm0(...a.filter((c) => c !== 'ml69'));
+      });
+      const rc = await measure(s.page);
+      (!rc.busy && rc.ml69)
+        ? ok(`[R2-c] 껍데기 제거를 막으니 연출은 끝나는데(busy 0 · ${rc.ms}ms) ml69 가 남아 [4-b] 가 빨갛다`)
+        : fail(`[R2-c] 껍데기를 못 떼게 했는데 자가 초록이다 — ml69=${rc.ml69} busy=${rc.busy} (${rc.ms}ms)`);
+      await s.page.evaluate(() => {
+        const cl = document.getElementById('modal').classList;
+        if (cl.__rm0) { cl.remove = cl.__rm0; delete cl.__rm0; }
+        cl.remove('ml69');
+      });
+      await s.page.waitForTimeout(400);
+
+      /* 원복 확인 — 세 사본을 걷으면 같은 자가 다시 초록이다 */
+      await open();
+      const rz = await measure(s.page);
+      (!rz.sync.on && !rz.sync.ml69 && !rz.busy && !rz.on && !rz.ml69)
+        ? ok(`[R2-d] 셋을 전부 원복하니 같은 자가 다시 초록 — ${rz.ms}ms`)
+        : fail(`[R2-d] 원복했는데 초록이 아니다 — sync.on=${rz.sync.on} on=${rz.on} ml69=${rz.ml69} busy=${rz.busy}`);
+      if (s.errs.length) fail(`[R2] 콘솔 에러 ${s.errs.length}`);
       await s.ctx.close();
     }
   } finally {
