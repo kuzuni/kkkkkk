@@ -41,7 +41,15 @@ const ARM = () => {
   const L = document.getElementById('fxl');
   const kindOf = el => {
     const c = (el.className || '') + '';
-    if (/fx-cic/.test(c))   return 'icon';    /* 660·666 — 재화 아이콘 버스트 */
+    /* ⚑⚑ 683 이관 — **이 화면에는 이제 이미터가 둘이다.** 666 의 규약(«스폰은 버튼뿐»)은
+       **지불 버스트 이미터**의 것이고, 683(주인 지시 2026-09-02 00:33 «유물소환했을때 해당 유물쪽에
+       해당 유물 파티클떠야함»)이 «획득 유물 카드» 를 원점으로 하는 **별도 이미터**를 세웠다.
+       ⇒ 아래 [C1][C2] 는 «전부» 가 아니라 **지불 이미터의 알**만 묻도록 이관됐다(333 처방 —
+       항을 지우지 않고 방향을 좁혔다). 획득 이미터 쪽은 `tools/verify683.js` 가 따로 단언한다.
+       ⚠ `.fx-rlic` 를 `.fx-cic` 보다 **먼저** 본다 — 두 클래스가 겹치지는 않지만, 갈래의 뜻이
+         «무엇으로 그려졌나» 가 아니라 «어느 이미터가 낳았나» 라는 것을 순서로도 못박는다. */
+    if (/fx-rlic/.test(c))  return 'rlic';    /* 683 — 획득 이미터(그 유물 글리프) */
+    if (/fx-cic/.test(c))   return 'icon';    /* 660·666 — 재화 아이콘 버스트(지불 이미터) */
     if (/fx-spark/.test(c)) return 'spark';   /* 종전 크림 구슬 */
     if (/fx-spd/.test(c))   return 'spend';   /* 583 화폐 비행(658 이 폐지) */
     if (/fx-delta/.test(c)) return 'delta';   /* «이름 Lv.n» 텍스트 델타(666 폐지 대상) */
@@ -77,6 +85,18 @@ const ARM = () => {
       const fx = parseFloat(nd.style.getPropertyValue('--dx')), fy = parseFloat(nd.style.getPropertyValue('--dy'));
       if(Number.isFinite(fx)) rec.dx = fx;
       if(Number.isFinite(fy)) rec.dy = fy;
+      /* ⚑⚑ 683 이관 — **갈래도 «최종» 으로 다시 읽는다.** 3회차가 이동값에서 배운 것과 **같은 교훈**이다:
+         제품이 스폰 «직후» 에 손보는 자리가 또 하나 생겼다 — 683 의 획득 이미터는 `fxBurst` 가
+         `.fx-cic`(재화 `<img>`)로 낳은 알을 그 자리에서 `.fx-rlic`(유물 글리프)로 갈아 끼운다.
+         append 훅에서만 읽으면 **획득 알이 지불 알로 잡혀** [C1] 이 «밖 30/72» 로 빨개진다
+         (이관 전 실측이 정확히 그 값이었다 — 갈래를 안 고치고 [C1] 을 손대면 «지불 이미터가
+         버튼 밖에서 나도 초록» 인 헛초록이 된다). 그림 축(`img`·`txt`)도 같이 최종값으로 갱신한다. */
+      const k2 = kindOf(nd);
+      if(k2 !== rec.k) rec.k = k2;
+      const im2 = nd.querySelector && nd.querySelector('img.cic');
+      rec.img = !!im2;
+      rec.cur = im2 ? (im2.getAttribute('data-cur-ic') || '') : '';
+      rec.txt = (nd.textContent || '').trim().slice(0, 24);
     });
   };
   const ap = L.appendChild.bind(L);
@@ -129,7 +149,9 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   ok(body.length > 0 && !/fxUpOk\(|fxDelta\(|fxBurst\(/.test(body),
      'A1 `summonRelic()` 본체에 연출 호출 0건 — 텍스트 델타·격자 발 버스트가 통째로 빠졌다',
      body ? '본문 ' + body.length + '자' : '본문을 못 찾았다');
-  ok(/function rwSummonFx\(it, first\)\{/.test(code),
+  /* 683 이관 — 셋째 인자 `iv`(다음 틱까지의 간격)가 붙었다. **«한 함수» 라는 뜻은 그대로**이고
+     바뀐 것은 인자 하나라, 모양을 그 자리에서 넓히되 «first» 는 계속 요구한다(첫 발/틱 갈래의 뿌리). */
+  ok(/function rwSummonFx\(it, first(, iv)?\)\{/.test(code),
      'A2 회당 연출이 **한 함수**(`rwSummonFx`)다 — 첫 발·홀드 틱이 같은 자리를 지난다(1:1 축의 뿌리)');
   ok(/fxRect\(\$\('rwBasin'\)\)/.test(code) && /fxBurst\(\{ x:r\.x[^;]*PAY_CUR\.relic\)/.test(code)
      && /const RW_FX_Y = [\d.]+, RW_FX_FLY = [\d.]+, RW_FX_UP = [\d.]+;/.test(code),
@@ -143,7 +165,9 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   ok(/, FXPAL\.up, n, false, null, PAY_CUR\.relic\)/.test(code) && /RW_FX_FLY\)\.toFixed\(1\)/.test(code),
      'A5b `iv` 는 안 넘기고(수명 그대로) **이동만** 이 자리에서 `RW_FX_FLY` 로 늘린다 — 공용 상수는 불변(3회차)');
   const rw = nc((code.split('function rwHoldTick(){')[1] || '').split('\n[\'pointerup\'')[0]);
-  ok(/rwSummonFx\(it, false\)/.test(rw) && /rwSummonFx\(it, true\)/.test(rw),
+  /* 683 이관 — 홀드 틱은 이제 그 틱의 간격을 같이 넘긴다(`rwSummonFx(it, false, h.iv)`).
+     ⚠ 첫 발은 **안 넘기는 것이 정답**이다(단발이라 «다음 틱» 이 없다 — 넘기면 수명이 반토막 난다). */
+  ok(/rwSummonFx\(it, false(, h\.iv)?\)/.test(rw) && /rwSummonFx\(it, true\)/.test(rw),
      'A6 두 호출부(홀드 틱 · 첫 발)가 그 함수를 지난다', rw ? '' : 'rwHold 절을 못 찾았다');
   ok(rw.length > 0 && (rw.match(/hbBeat\('#rwBasin', true, null, null\)/g) || []).length === 2,
      'A7 맥박은 남고 «−n» 비용 인자는 두 자리 모두 `null` 이다(숫자 플로터 폐지)',
@@ -186,12 +210,19 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   /* ── [C] 자리 ─────────────────────────────────────────────────────── */
   /* 주인 지목: «유물소환 버튼에서 유물화폐 아이콘 파티클 이펙트». 660 이 세운 «스폰은 버튼뿐».
      ⚠ 여유 2px 은 반올림 한 칸이다 — 619 의 가둠 상자가 중심을 이미 버튼 안으로 들여 놓는다. */
-  console.log('\n[C] 자리 — 스폰 중심이 «소환 버튼» 상자 안이다 (격자 칸 발 0건) · 그리고 실제로 날아간다');
+  console.log('\n[C] 자리 — **지불 이미터**의 스폰 중심이 «소환 버튼» 상자 안이다 (격자 칸 발 0건) · 그리고 실제로 날아간다');
+  /* ⚑⚑ 683 이관 — 묻는 대상이 «이 화면의 모든 알» 에서 **«지불 이미터의 알»** 로 좁혀졌다.
+     주인 지시 683 이 «획득 유물 카드» 를 원점으로 하는 둘째 이미터를 세웠기 때문이고, 그쪽은
+     `tools/verify683.js` 가 «획득 카드에서 난다 · 미획득 카드 0건» 으로 따로 단언한다.
+     ⚠ **항을 지우지 않았다**(333 처방) — 지불 알이 한 알이라도 버튼 밖에서 나면 여전히 빨갛고,
+       그것이 666 이 주인에게서 받은 지시(«유물소환 버튼에서 유물화폐 아이콘 파티클»)의 전부다.
+     ⚠ [C2] 는 **공허한 음성항이 아니다**(422 교훈) — `.fx-rlic` 만 빠졌을 뿐 지불 아이콘·크림 구슬이
+       격자에서 나면 그대로 빨개진다. 되돌림 [R2] 가 매 실행 그것을 실제로 빨갛게 만들어 보인다. */
   const outs = icons.filter(a => !inBox(a, H.btn, 2));
-  ok(icons.length > 0 && outs.length === 0, 'C1 ★ **탄생 좌표**가 전부 버튼 상자 안이다(스폰 = 버튼뿐)',
+  ok(icons.length > 0 && outs.length === 0, 'C1 ★ **지불 알의 탄생 좌표**가 전부 버튼 상자 안이다(지불 스폰 = 버튼뿐)',
      '밖 ' + outs.length + '/' + icons.length);
   const gridSpawn = H.add.filter(a => (a.k === 'icon' || a.k === 'spark') && !inBox(a, H.btn, 2) && inBox(a, H.grid, 0));
-  ok(gridSpawn.length === 0, 'C2 ★ 격자(슬롯) 발 파티클 0건 — 수리 전 여기가 유일한 발화점이었다',
+  ok(gridSpawn.length === 0, 'C2 ★ 격자(슬롯) 발 **지불** 파티클 0건 — 수리 전 여기가 유일한 발화점이었다',
      gridSpawn.length + '알');
   /* ⚑⚑ 2회차 신설 — **«터진다» 는 이동으로만 성립한다.** 1회차(요소 버스트)는 [C1][C2] 를 통과하고도
      비평가 2인이 독립으로 «단 하나» 를 같은 말로 냈다: «380ms 내내 버튼 상자를 못 나간다 · 총 이동

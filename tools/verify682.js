@@ -81,6 +81,14 @@ const WATCH = () => {
     for (const nd of l.children) {
       if (seen.has(nd)) continue;
       if (!/fx-spark/.test(nd.className + '')) continue;
+      /* ⚑⚑ 683 이관 — **이 화면에는 이제 이미터가 둘이다.** 682 가 재는 축(«3방향으로만 퍼진다»)은
+         **지불 버스트 이미터**(원점 = 소환 버튼 · 상향 원뿔)의 것이고, 683(주인 지시 2026-09-02 00:33)이
+         «획득 유물 카드» 를 원점으로 하는 획득 이미터를 따로 세웠다. 그쪽은 카드를 **둘러싸는 링**이라
+         상향 원뿔([D])도 버튼 상자([E1])도 **일부러** 안 따른다 — 섞어 세면 [C][D][E1] 이 통째로
+         빨개진다(이관 전 실측: 갈래 모자람 6/9 · 아래로 16알 · 밖 33/79).
+         ⇒ 이 자는 지불 이미터만 본다. 획득 이미터는 `tools/verify683.js` 가 자기 축으로 단언한다.
+         ⚠ **항을 하나도 안 지웠다**(333 처방) — 지불 알이 3방향으로 다시 접히면 그대로 빨갛다. */
+      if (/fx-rlic/.test(nd.className + '')) continue;
       const dx = parseFloat(nd.style.getPropertyValue('--dx'));
       const dy = parseFloat(nd.style.getPropertyValue('--dy'));
       if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
@@ -94,10 +102,19 @@ const WATCH = () => {
       const l = L(), seen = new Set(l ? l.children : []);
       const r = o.apply(this, arguments);
       const got = scan(seen);
-      if (got.length) window.__v682[bucket].push(got);
+      if (got.length && !window.__v682.inGain) window.__v682[bucket].push(got);
       return r;
     };
   };
+  /* ⚑ 683 이관 — «raw» 는 `fxBurst` 를 감싸 **후처리 전** 값을 잡는데, 그 시점에는 획득 알이
+     아직 `.fx-cic` 라 위 `scan` 의 클래스 자로는 못 가른다(`rwGainFx` 가 `fxBurst` 가 돌아온 **뒤**에
+     `.fx-rlic` 로 갈아 끼운다 — 666 3회차가 이동값에서 배운 «append 시점에 읽지 마라» 와 같은 함정).
+     ⇒ 획득 이미터가 도는 동안만 깃발을 세워 그 버스트를 «raw» 에서 뺀다. */
+  { const g = window.rwGainFx;
+    if (typeof g === 'function') window.rwGainFx = function () {
+      window.__v682.inGain = 1;
+      try { return g.apply(this, arguments); } finally { window.__v682.inGain = 0; }
+    }; }
   wrap('fxBurst', 'raw');            /* 후처리 **전** — [R1] 이 옛 뒤집기를 다시 걸 원본 */
   wrap('rwSummonFx', 'fin');         /* 후처리 **후** — 제품이 실제로 그리는 방향 */
   /* 소환 횟수(1:1 축) */
@@ -113,7 +130,13 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
   /* 주석을 벗겨서 본다 — 안 벗기면 자가 자기 설명문(옛 코드를 인용한 머리말)을 «살아 있는 호출» 로
      읽어 영원히 빨갛다(verify666 1회차 A1·A8 이 그랬다 · 295-②·399·460 규약의 짝) */
   const nc = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-  const body = nc((code.split('function rwSummonFx(it, first){')[1] || '').split('\nfunction rwHoldTick()')[0]);
+  /* ⚑ 683 이관 — `rwSummonFx` 에 셋째 인자 `iv`(다음 틱까지의 간격)가 붙었다. 본문을 «머리 문자열»
+     로 자르던 자리라 **서명이 한 글자만 바뀌어도 [A] 절 일곱 항이 통째로 전제 실패**로 죽는다
+     (이관 전 실측: A0~A6 전부 빨강 · 본문 «못 찾았다»). ⇒ 자르는 자를 정규식으로 넓힌다 —
+     묻는 것(«이 함수의 본문»)은 한 글자도 안 바뀌었다. */
+  const mHead = code.match(/function rwSummonFx\(it, first(?:, iv)?\)\{/);
+  const body = nc((mHead ? code.slice(code.indexOf(mHead[0]) + mHead[0].length) : '')
+                  .split('\nfunction rwHoldTick()')[0]);
 
   blk('A] 구조 — 뒤집기 폐지 · 층화 난수 · 죽은 상수 0개');
   ok(body.length > 0, 'A0 `rwSummonFx` 본문을 찾았다(전제)', body ? body.length + '자' : '못 찾았다');

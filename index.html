@@ -3999,6 +3999,23 @@
   .fx-spark.fx-cic>.cic{display:block;width:100%;height:100%;object-fit:contain}
   #app:not(:has(#shopw.on .shp-list.coin)) .fx-spark.fx-cic>.cic{transform:scale(var(--fxgs,1))}
 
+  /* ⚑⚑ 683(주인 지시 2026-09-02 00:33 «유물소환했을때 해당 유물쪽에 해당 유물 파티클떠야함.
+     그리고 연속소환일때도 그런식으로 되게») — **획득 이미터의 알갱이는 «그 유물의 문양» 이다.**
+     ⚠ 660 과 **같은 방식**이다 — `.fx-spark` 의 몸을 그대로 쓰고 «무엇이 그려지는가» 만 바꾼다.
+       그래야 619 가 16회차에 걸쳐 세운 링 기하(탄생 타원·융합 회피·가둠 상자·틱 수명)가
+       한 줄도 안 갈라진 채 따라온다. 상자(width/height/margin)는 `fxBurst` 가 적은 값 그대로 두고
+       **글리프만** 그 안에 앉히므로 619 13·14회차의 «잉크가 액자 안에서 끝난다» 도 그대로 성립한다.
+     ⚠ `.fx-cic`(660 재화 아이콘)와 갈라 놓는 이유는 **그림의 출처가 다르다**는 것 하나다 —
+       재화는 `CUR_ICON` 의 `<img>` 이고 유물은 `RELICS[].ic` **글리프**다. 상자·크기 규약은 같으므로
+       값을 두 벌로 안 적는다(크기는 `fxBurst` 의 `FX_CIC_SC` 한 곳에서 이미 정해져 내려온다).
+     ⚠ 크림 구슬의 radial-gradient·검정 링은 660 과 같은 이유로 끈다(문양 위에 얹히면 안 읽힌다).
+     ⚑ `--c`(= 그 유물 칸의 글로우 색 `RW_GLOW[i][1]`)는 **죽은 값이 아니다** — 배경을 끈 자리를
+       드롭섀도가 대신 받아 «어느 유물의 알인가» 를 색으로도 말한다(카드 글로우와 같은 색이라
+       파티클이 그 칸에서 떨어져 나온 것으로 읽힌다). */
+  .fx-spark.fx-rlic{background:none;box-shadow:none;border-radius:0;
+    display:flex;align-items:center;justify-content:center;line-height:1;
+    filter:drop-shadow(0 0 6px var(--c,#FFE07A))}
+
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
      innerHTML 로 통째로 재렌더돼(25 교훈 5) 대상에 붙인 클래스가 그 프레임에 날아간다. */
@@ -31073,9 +31090,71 @@ const RW_FX_N0 = 10;                     /* 첫 발 — 619 어휘(`fxUpOk` 의 
 const RW_FX_Y = 0.28, RW_FX_FLY = 2.0, RW_FX_UP = 0;
 const RW_FX_JIT = 0.30;                  /* 682 — 칸 폭 대비 ±지터. 0 이면 고정 부채 · 0.5 면 완전 난수(뭉침) */
 let rwFxW = 0;                           /* 682 — 버스트마다 도는 저불일치 위상(황금비 · 619 6회차와 같은 수열) */
-function rwSummonFx(it, first){
+
+/* ⚑⚑ 683(주인 지시 2026-09-02 00:33) — **획득 이미터.** 주인 원문: «유물소환했을때 해당 유물쪽에
+   해당 유물 파티클떠야함. 그리고 연속소환일때도 그런식으로 되게».
+   `probe683` 재현(수리 전) — 첫 발 10알 · 홀드 16버스트(9종 당첨) 전부 **획득 카드 원점 0알**이었다
+   (등재문 ⓐⓑ 가 그대로 참). 666 이 회당 연출을 통째로 버튼으로 옮기면서 «어느 유물을 얻었는가» 를
+   말하는 자리가 플래시 하나만 남았던 것이다.
+   ⚑ **이 이미터는 지불 버스트와 «별도» 다** — 666 의 «버튼 밖 스폰 0건» 은 지불 버스트 이미터의
+     규약이고(그 규약은 `verify666` 에서 «버스트 이미터의 원점 = 버튼» 으로 이관됐다), 이 획득
+     이미터는 원점이 **획득 유물 카드**다. 주인 지시가 우선한다.
+   ⚑⚑ **`ic`(아이콘 경로)로 부르는 것이 이 함수의 핵심 결정이다.** `.rw-c` 는
+     `background:radial-gradient(...)` 를 가진 칸이라 `fxbTextHoles` 의 «그림 잉크» 판정(43회차 ⓐ)에
+     **카드 전체가 걸린다** — 여기에 keep-out 을 물리면 여유 19px(FXB_KOS)까지 얹혀 빈자리가 0 이 되고
+     `strict` 의 «끝까지 글자 위면 버린다» 가 **버스트당 보장 1알만** 남긴다(= «터진다» 가 아니라
+     «한 알씩 튄다»). 660 이 단련 버튼에서 실측으로 겪은 바로 그 자리이고, 그때의 처방이
+     **«아이콘 버스트는 글자 구멍을 안 판다»**(`kh = (r && !IC) ? … : []`)였다. 그 길을 그대로 탄다.
+     부수 이득 둘: ① 크기가 `FX_CIC_SC` 로 커지고 그 값이 `fxBurst` **안에서** `sz` 에 되먹여져
+     가둠(`inM`)이 저절로 따라온다(밖에서 키우면 잉크만 액자를 넘는다) ② `--fxgs` 잉크 등가 보정.
+   ⚑ `strict = true` 로 부르는 이유 셋 — ① **682 규약**(버스트마다 황금비 위상 · 연속 소환이 같은
+     그림이 되지 않는다) ② 융합 회피(`ks` — 한 칸 안에서 알이 겹쳐 «판때기» 가 되지 않는다)
+     ③ 틱 수명(`fxTickLife` — 한 세대가 다음 틱까지 안 산다). 셋 다 619 가 «회당 발화» 를 위해
+     세운 축이고 연속 소환이 정확히 그 상황이다. keep-out 만 위 ⓐ 때문에 안 타는데, `IC` 가 있으면
+     `kh` 가 비어 **버리기 규칙 자체가 안 걸린다**(`if(strict && kh.length && …)`) — 알이 조용히
+     사라지는 일이 없다.
+   ⚑ 마지막 한 걸음만 이 함수가 한다 — **`.fx-cic`(재화 `<img>`)를 `.fx-rlic`(그 유물 글리프)로.**
+     상자(width/height/margin)는 `fxBurst` 가 적은 값을 **한 픽셀도 안 바꾼다** — 바꾸면 위 ①의
+     가둠 산수가 깨진다. 글리프는 그 상자 «안에» 앉힌다(`RW_GAIN_GS`).
+   ⚠ **화면 밖 카드에는 안 쏜다**(518 «쌩뚱맞은 곳에서 이펙트» 재발 방지) — 페이지가 닫혀 있거나
+     짧은 프레임에서 칸이 잘려 나가면 파티클만 허공에 뜬다. `rwCardShown()` 이 그 자다.
+   ↩ 되돌림: `rwGainFx()` 호출 한 줄(아래 `rwSummonFx` 첫 줄)을 지우면 666 상태와 픽셀 동일하다. */
+const RW_GAIN_N0 = 6, RW_GAIN_N = 3;     /* 첫 발 / 홀드 틱당 알 수 — 지불 버스트(10 / 4)보다 가볍게 */
+const RW_GAIN_GS = 0.86;                 /* 알 상자 대비 글리프 font-size — 잉크가 상자 안에서 끝나는 값 */
+/* 칸이 «지금 화면에 온전히 있는가». 프레임과 89 페이지 두 상자에 다 들어와야 한다
+   (`#relw` 는 `overflow:visible` 이라 짧은 프레임에서 격자가 페이지 밖으로 나갈 수 있다). */
+function rwCardShown(r){
+  if(!r || !$('relw').classList.contains('on')) return false;
+  const pr = (typeof fxRect === 'function') ? fxRect($('relw')) : null;
+  if(!pr) return false;
+  return r.x >= 0 && r.y >= 0 && r.x + r.w <= FRAME_W && r.y + r.h <= frameH
+      && r.y >= pr.y - 1 && r.y + r.h <= pr.y + pr.h + 1;
+}
+function rwGainFx(it, el, first, iv){
+  if(!it || !el) return false;
+  const L = (typeof fxL === 'function') ? fxL() : null;
+  const r = (typeof fxRect === 'function') ? fxRect(el) : null;
+  if(!L || !rwCardShown(r)) return false;
+  const gi = RELICS.indexOf(it);
+  const col = (RW_GLOW[gi] && RW_GLOW[gi][1]) || FXPAL.spark;
+  const n = Math.max(1, Math.min(first ? RW_GAIN_N0 : RW_GAIN_N, FXMAX - L.childElementCount - 1));
+  const before = new Set(L.children);
+  fxBurst(el, col, n, true, iv, PAY_CUR.relic);
+  let made = 0;
+  for(const nd of L.children){
+    if(before.has(nd)) continue;
+    /* 상자는 그대로 — 그린 것만 바꾼다(위 머리말) */
+    const sz = parseFloat(nd.style.width);
+    nd.className = 'fx-spark fx-rlic';
+    nd.textContent = it.ic;
+    if(Number.isFinite(sz)) nd.style.fontSize = Math.round(sz * RW_GAIN_GS) + 'px';
+    made++;
+  }
+  return made > 0;
+}
+function rwSummonFx(it, first, iv){
   const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
-  if(el){ fxFlash(el); fxHitEl(el); }
+  if(el){ fxFlash(el); fxHitEl(el); rwGainFx(it, el, first, first ? null : iv); }
   const L = (typeof fxL === 'function') ? fxL() : null;
   const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
   if(!L || !r) return false;
@@ -31115,8 +31194,11 @@ function rwHoldTick(){
      것을 플로터가 되풀이하지 않는다»). 그래서 `relicCost()` 를 여기서 읽던 지역 변수도 같이 걷었다
      (죽은 코드 금지 — 295-②·399·460). */
   hbBeat('#rwBasin', true, null, null);
-  rwSummonFx(it, false);
+  /* 683 — 다음 틱까지의 간격을 **먼저** 정해 획득 버스트에 넘긴다(619 14회차 `fxTickLife` 규약 —
+     한 세대가 다음 틱까지 살면 연속 소환에서 알이 겹쳐 쌓인다). 값·순서는 종전과 같다:
+     `h.iv` 갱신은 `hbBeat`·`rwSummonFx` 와 무관하고 타이머는 아래에서 같은 값으로 걸린다. */
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  rwSummonFx(it, false, h.iv);
   h.timer = setTimeout(rwHoldTick, h.iv);
 }
 $('rwBasin').addEventListener('pointerdown', () => {
