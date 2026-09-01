@@ -74,6 +74,11 @@ const bad = (m) => { fail++; console.log('  ❌ ' + m); };
    (그림문자 판정·조상 누적), 공유할 수 없는 것만 새로 적는다(의사 요소는 rect 가 없다). */
 const COLLECT_PSEUDO = function (opt) {
   const PIC = /\p{Extended_Pictographic}/u;
+  /* 27회차 — **의사 이름을 인자로 받는다.** 26회차는 `['::before','::after']` 를 여기 박아 뒀고
+     그 인계문은 이미 «인자로 받는다» 고 적혀 있었다(§34-7). 그 문장을 참으로 만든 한 줄이다.
+     기본값 세 이름은 `probe356r27` 이 실측으로 고른 «transform 이 먹는» 전부다 —
+     나머지 이름을 넣지 않은 이유는 [K-d]·[K-e] 가 **자로** 말한다(«없어서 안 넣었다» 금지). */
+  const PES = (opt && opt.pseudo) || ['::before', '::after', '::placeholder'];
   const app = document.getElementById('app');
   if (!app) return [];
 
@@ -116,8 +121,22 @@ const COLLECT_PSEUDO = function (opt) {
   }
 
   /* `content` 계산값을 «무엇을 그리는가» 로 가른다.
-     ⚠ 계산값은 따옴표째 온다(`"🔒"`). `none`·`normal` 은 «의사 요소가 없다» 는 뜻이다. */
-  function contentKind(cs) {
+     ⚠ 계산값은 따옴표째 온다(`"🔒"`). `none`·`normal` 은 «의사 요소가 없다» 는 뜻이다.
+
+     ⚑ **27회차 — `::placeholder` 만 «그리는 것» 이 `content` 가 아니다.** 계산된 `content` 는
+        선언을 받아 적기는 해도 **화면에 그 글자가 뜨지 않고**, 실제로 그려지는 것은 호스트의
+        `placeholder` **속성**이다. 이 갈래를 안 세우면 그 이름은 한 줄도 안 걸려 또 «못 봐서 0»
+        이 된다(11·21·26회차와 같은 모양). 규율은 그대로다 — 그림문자«만» 이면 아이콘,
+        글자가 섞이면 라벨이라 안 센다. 글자만 있는 placeholder 는 `empty`(= 읽기는 했다)로
+        돌려 [J-b0] 전제의 표본이 되게 한다. */
+  function contentKind(cs, pe, el) {
+    if (pe === '::placeholder') {
+      const t = (el.getAttribute && el.getAttribute('placeholder')) || '';
+      const raw = t.replace(/[\s‍️︎]/g, '');
+      if (!raw) return null;                       /* placeholder 가 없으면 그릴 것도 없다 */
+      for (const ch of raw) if (!PIC.test(ch)) return 'empty';   /* 글자가 섞이면 라벨 */
+      return 'pic';
+    }
     const c = cs.content;
     if (!c || c === 'none' || c === 'normal') return null;
     if (/^url\(/.test(c)) return 'img';
@@ -140,10 +159,10 @@ const COLLECT_PSEUDO = function (opt) {
     const hr = el.getBoundingClientRect();
     if (!hr.width || !hr.height) continue;
 
-    for (const pe of ['::before', '::after']) {
+    for (const pe of PES) {
       let cs;
       try { cs = getComputedStyle(el, pe); } catch (e) { continue; }
-      const kind = contentKind(cs);
+      const kind = contentKind(cs, pe, el);
       if (!kind) continue;
       /* ⚠ `empty`(장식 상자)도 **돌려준다**. 판정에서는 빼지만 «이 자가 의사 요소를 실제로 읽고
          있는가» 를 재는 전제 항의 표본이 그것뿐이다 — 아이콘이 0개일 때 «눈이 없어서 0» 과
@@ -193,10 +212,13 @@ function stripComments(src) {
 }
 const PIC_SRC = /\p{Extended_Pictographic}/u;
 
-function sourceCensus(rawHtml) {
+function sourceCensus(rawHtml, names) {
   const src = stripComments(rawHtml);
   const rules = [];
-  const rx = /([^{}\n;]*::(?:before|after)[^{}]*)\{([^{}]*)\}/g;
+  /* 27회차 — 이름을 인자로 받는다(판정 집합과 인구조사 집합이 어긋나면 [J-a] 가 거짓말을 한다).
+     기본값은 `COLLECT_PSEUDO` 의 기본 세 이름과 **같아야 한다** — 그 일치를 [K-b2] 가 못박는다. */
+  const NS = (names || ['before', 'after', 'placeholder']).map((n) => n.replace(/^::/, ''));
+  const rx = new RegExp('([^{}\\n;]*::(?:' + NS.join('|') + ')[^{}]*)\\{([^{}]*)\\}', 'g');
   let m;
   while ((m = rx.exec(src))) {
     const line = src.slice(0, m.index).split('\n').length;
@@ -205,7 +227,12 @@ function sourceCensus(rawHtml) {
     const c = body.match(/content\s*:\s*(?:(['"])([\s\S]*?)\1|([^;}]+))/);
     const lit = c ? (c[2] !== undefined ? c[2] : (c[3] || '').trim()) : '';
     let kind = 'deco';
-    if (c && /^url\(/.test(lit)) kind = 'img';
+    /* 27회차 — `::placeholder` 는 소스로 «무엇을 그리는지» 알 수 없다. 그리는 것이 이 규칙 안이
+       아니라 **호스트의 `placeholder` 속성**이기 때문이다. `attr()`/`var()` 와 같은 급이므로
+       `dyn` 으로 센다 — [J-a2] 가 «안전으로 안 접는다» 고 세어 말하고 판정은 [J-b] 가 화면에서 한다.
+       ⚠ 이 자리를 `deco` 로 두면 «장식 상자» 로 접혀 인구조사가 조용해진다(25회차가 데인 그 모양). */
+    if (/::placeholder\b/.test(sel)) kind = 'dyn';
+    else if (c && /^url\(/.test(lit)) kind = 'img';
     else if (c && /^(var|attr|counter)\(/.test(lit)) kind = 'dyn';   /* 소스로는 못 읽는 꼴 */
     else if (lit && PIC_SRC.test(lit)) kind = 'pic';
     else if (/\burl\(/.test(body)) kind = 'bg';

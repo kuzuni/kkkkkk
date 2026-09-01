@@ -2189,6 +2189,129 @@ async function sweep(browser, inject) {
     else bad(`[J-d2] 음성항 ⓑ 실패 — 라벨의 scaleX 를 결함이라 부른다(${lbl.length}자리)`);
   }
 
+  /* ── [K] 27회차 — **의사 «이름» 축**: `::before`/`::after` 말고 다른 이름은? ────────
+     26회차는 «DOM 노드가 아닌 것» 을 열었지만 **이름을 둘만** 물었다. 이 절이 묻는 것은
+     «그 둘이 전부인가» 이고, 답은 **아니다** 였다 — 그리고 인계문이 적어 준 목록과는
+     **정반대 모양**이었다(재현 `tools/probe356r27.js` 8/8):
+
+       · 인계문이 지목한 `::marker`·`::first-letter`·`::selection` 은 **속성 제한**이라
+         `transform` 이 아예 안 먹는다(선언해도 계산값 `none`) ⇒ 넣어도 **잡을 것이 없다.**
+       · 인계문이 지목한 `::part`/`::slotted` 는 `getComputedStyle` 이 **못 읽는다** —
+         없는 이름 `::bogus-xyz` 와 **같은 빈 문자열**이라 넣으면 «0» 이 «눈이 없어서 0» 이 된다.
+       · 인계문이 **빠뜨린** `::placeholder` 하나가 `::before`/`::after` 와 같은 자격이고,
+         **이 저장소에 이미 있다**(`index.html` `.ch-in::placeholder` · 103 채팅 입력창).
+
+     ⚑ **이 절의 본체는 [K-e] 다** — «안 넣었다» 를 **대조군으로** 말한다. 24회차가 경고한 것은
+        «없어서 0» 을 안전으로 접는 것이었고, 여기서 새로 나온 모양은 그 반대편 둘이다:
+        **«못 찌그러져서 0»**(사정권 밖)과 **«눈이 없어서 0»**(헛초록). 세 0 은 다른 말이라
+        자가 셋을 갈라 적어야 한다.
+
+     ⚠ `::placeholder` 는 **그리는 것이 `content` 가 아니라 호스트의 `placeholder` 속성**이다.
+        `COLLECT_PSEUDO.contentKind()` 에 그 갈래를 세웠고, [K-c] 되돌림이 그것을 못박는다
+        (속성에 그림문자를 넣고 `scaleX(.8)` 을 심으면 잡히고, 글자만이면 라벨이라 안 잡는다). */
+  console.log('\n[K] 27회차 — 의사 이름 축: `::placeholder` 편입 · 나머지 이름은 «왜 안 넣는가» 를 자로');
+  {
+    const R27 = require('./probe356r27.js');
+    const ONE = SCREENS[0];
+    const CHAT = ['103 채팅', ['#botleft .ubtn[data-util="chat"]']];
+
+    /* 제품 페이지에서 한 번 열고, 그 위에 분류기·수집기를 갈아 대는 공용 손
+       (25회차 규율 — «화면 진입 비용을 두 번 내지 마라») */
+    const on = async (screen, css, fn, arg) => {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(900);
+      for (const st of screen[1]) { try { await STEP(page, st); } catch (_) {} await page.waitForTimeout(260); }
+      if (css) { await page.addStyleTag({ content: css }); await page.waitForTimeout(150); }
+      const got = await page.evaluate(fn, arg);
+      await ctx.close();
+      return got;
+    };
+
+    /* ⓐ 전제 — 소스 인구조사와 화면 판정이 **같은 이름 집합**을 보는가.
+       두 집합이 어긋나면 [J-a] 의 수가 [J-b] 의 0 을 설명하지 못한다(566 이 데인 «표가 거짓말» 의 모양). */
+    const cenK = R26.sourceCensus(fs.readFileSync(HTML, 'utf8'), R27.PSEUDO_ON);
+    const phRules = cenK.rules.filter((r) => /::placeholder\b/.test(r.sel));
+    if (phRules.length) ok(`[K-a] 소스 인구조사에 \`::placeholder\` 규칙 ${phRules.length}건 (${phRules.map((r) => r.line + '행').join(' · ')}) — 26회차 인계문의 «제품에 0건» 은 자기가 센 다섯 이름에 대해서만 참이었다`);
+    else ok('[K-a] 소스에 `::placeholder` 규칙 0건 — 그래도 축은 선다(«0개» 를 «축이 필요 없다» 로 읽지 마라 · 26회차 규율)');
+
+    /* ⓑ 전제 — 화면에서 그 이름이 **실제로 읽히는가**. 0 이면 [K-c] 아래는 전부 헛초록이다. */
+    const phLive = await on(CHAT, null, function (sel) {
+      const el = document.querySelector(sel);
+      if (!el) return { miss: true };
+      const cs = getComputedStyle(el, '::placeholder'), hs = getComputedStyle(el);
+      return { miss: false, blind: cs.transform === '' && cs.fontSize === '',
+        col: cs.color, hostCol: hs.color, ph: el.getAttribute('placeholder') || '' };
+    }, R27.HOST_PH);
+    if (!phLive.miss && !phLive.blind && phLive.col !== phLive.hostCol)
+      ok(`[K-b] 전제 — 살아 있는 \`${R27.HOST_PH}::placeholder\` 를 실제로 읽는다 (색 ${phLive.col} ≠ 호스트 ${phLive.hostCol} · placeholder «${phLive.ph}»)`);
+    else bad(`[K-b] 전제 실패 — \`${R27.HOST_PH}::placeholder\` 를 못 읽었다(${phLive.miss ? '호스트 없음' : phLive.blind ? '빈 문자열' : '호스트와 같은 값'}). 아래 0 은 «눈이 없어서 0» 이다`);
+
+    /* ⓒ 되돌림 — 이 절의 본체 ①. **속성에 그림문자를 넣고** 눌러야 잡힌다.
+       ⚠ `content:'🔥'` 로는 안 된다 — `::placeholder` 가 그리는 것은 `content` 가 아니다.
+          그 사실 자체를 [K-c2] 음성항이 못박는다(같은 주입을 `content` 로 하면 0자리다). */
+    const PH_HIT = R27.HOST_PH + '::placeholder{transform:scaleX(.8)}';
+    const setPh = (t) => `(() => { const e = document.querySelector('${R27.HOST_PH}'); if (e) e.setAttribute('placeholder', '${t}'); })()`;
+    const shotPh = async (css, ph) => {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(900);
+      for (const st of CHAT[1]) { try { await STEP(page, st); } catch (_) {} await page.waitForTimeout(260); }
+      await page.evaluate(setPh(ph));
+      if (css) await page.addStyleTag({ content: css });
+      await page.waitForTimeout(150);
+      const got = await page.evaluate(COLLECT_PSEUDO, { all: false });
+      await ctx.close();
+      return got.filter((r) => r.pe === '::placeholder' && r.kind !== 'empty' && Math.abs(r.ratio - 1) > TOL);
+    };
+
+    const hitPh = await shotPh(PH_HIT, '🔥');
+    if (hitPh.length) ok(`[K-c] 되돌림 — 살아 있는 \`::placeholder\` 에 그림문자를 넣고 \`scaleX(.8)\` 을 심으면 ${hitPh.length}자리로 잡는다 (${hitPh[0].sel} ${hitPh[0].ratio})`);
+    else bad('[K-c] 되돌림 실패 — 주입해도 0자리. `::placeholder` 편입이 아무것도 못 보는 자다');
+
+    /* 음성항 ⓐ — 글자 placeholder 는 라벨이라 안 센다(3회차 `u.pr` 선례 · 제품의 «메시지 보내기...» 가 그것) */
+    const lblPh = await shotPh(PH_HIT, '메시지 보내기...');
+    if (!lblPh.length) ok('[K-c2] 음성항 ⓐ — 글자 placeholder 는 같은 `scaleX(.8)` 에도 0자리 (라벨의 scaleX 는 이 지시의 대상이 아니다)');
+    else bad(`[K-c2] 음성항 ⓐ 실패 — 라벨의 scaleX 를 결함이라 부른다(${lblPh.length}자리)`);
+
+    /* 음성항 ⓑ — 등방은 결함이 아니다(23회차 [G-d] 규율) */
+    const isoPh = await shotPh(R27.HOST_PH + '::placeholder{transform:scale(.8)}', '🔥');
+    if (!isoPh.length) ok('[K-c3] 음성항 ⓑ — 등방 `scale(.8)` 주입은 0자리 (크기 변경은 결함이 아니다)');
+    else bad(`[K-c3] 음성항 ⓑ 실패 — 등방 주입에도 ${isoPh.length}자리를 결함이라 부른다`);
+
+    /* ⓓ 판정 — 지금 제품의 `::placeholder` 비균등 0자리.
+       위 [J-b] 스윕이 이미 세 이름을 다 걷어 왔으므로 그 안에서 이 이름만 갈라 본다. */
+    const phRows = rowsP.filter((r) => r.pe === '::placeholder');
+    const phBad = phRows.filter((r) => r.kind !== 'empty' && Math.abs(r.ratio - 1) > TOL);
+    if (!phBad.length) ok(`[K-d] \`::placeholder\` 비균등 0자리 — 관측 ${phRows.length}개 (그중 아이콘 ${phRows.filter((r) => r.kind !== 'empty').length}개) · ${SCREENS.length}화면`);
+    else bad(`[K-d] \`::placeholder\` 비균등 ${phBad.length}자리: ` + phBad.slice(0, 5).map((r) => `${r.sel} ${r.ratio}`).join(' · '));
+
+    /* ⓔ **이 절의 본체 ②** — «나머지 이름을 왜 안 넣는가» 를 **제자리에서 잰다.**
+       제품 페이지의 실제 호스트에 같은 선언을 심고 세 부류를 갈라 적는다.
+       ⚠ 이 항이 없으면 [K] 는 «다섯 이름을 없어서 안 넣었다» 가 되어 24회차가 경고한 꼴이 된다. */
+    const cls = await on(CHAT, R27.probeCss([R27.HOST_PH], R27.NAMES.concat([R27.BOGUS])),
+      R27.CLASSIFY, { names: R27.NAMES, bogus: R27.BOGUS, hosts: [{ key: 'ch', sel: R27.HOST_PH }] });
+    const byK = R27.fold(cls, R27.NAMES.concat([R27.BOGUS]));
+    const offHit = R27.PSEUDO_OFF.filter((n) => byK.has(n) && !byK.get(n).blind && !byK.get(n).tr);
+    const blindHit = R27.PSEUDO_BLIND.filter((n) => byK.has(n) && byK.get(n).blind);
+    const bogusBlind = byK.get(R27.BOGUS) && byK.get(R27.BOGUS).blind;
+
+    if (offHit.length === R27.PSEUDO_OFF.length)
+      ok(`[K-e] «못 찌그러져서 0» ${offHit.length}종 — ${offHit.map((n) => '::' + n).join(' · ')} 은 속성 제한이라 \`transform:scaleX(.5)\` 를 심어도 계산값이 \`none\` 이다 (넣어도 잡을 것이 없다 — 26회차 인계문이 지목한 셋이 여기 있다)`);
+    else bad(`[K-e] 사정권 밖이어야 할 이름 중 ${R27.PSEUDO_OFF.length - offHit.length}종이 실측과 다르다 — 다시 가르고 \`PSEUDO_OFF\` 를 고쳐라 (실측 통과 ${offHit.join(' · ') || '없음'})`);
+
+    if (blindHit.length === R27.PSEUDO_BLIND.length && bogusBlind)
+      ok(`[K-e2] «눈이 없어서 0» ${blindHit.length}종 — ${blindHit.map((n) => '::' + n).join(' · ')} 은 \`getComputedStyle\` 이 **빈 문자열**을 돌려준다. 없는 이름 \`::${R27.BOGUS}\` 와 값이 같으므로 넣으면 «0» 을 «없어서 0» 과 못 가른다(헛초록) ⇒ **안 넣는 것이 판정이다**`);
+    else bad(`[K-e2] «눈이 없어서 0» 축이 무너졌다 — 대조군 \`::${R27.BOGUS}\` blind=${bogusBlind} · ${R27.PSEUDO_BLIND.map((n) => n + '=' + (byK.get(n) ? byK.get(n).blind : '?')).join(' · ')}`);
+
+    const onHit = R27.PSEUDO_ON.map((n) => n.replace(/^::/, '')).filter((n) => byK.has(n) && byK.get(n).tr);
+    if (onHit.length === R27.PSEUDO_ON.length)
+      ok(`[K-e3] 음성 대조 — 사정권 세 이름(${onHit.map((n) => '::' + n).join(' · ')})은 **같은 주입에 transform 이 먹는다**. 위 두 항의 «안 먹는다» 가 자의 눈이 먼 탓이 아니라는 실측`);
+    else bad(`[K-e3] 사정권 이름 중 ${R27.PSEUDO_ON.length - onHit.length}종이 같은 주입에 안 먹는다 — [K-e]·[K-e2] 의 «안 먹는다» 가 자의 눈 탓일 수 있다`);
+  }
+
   await browser.close();
   const total = oks.length + fails.length;
   console.log(`\nVERIFY356 ${oks.length}/${total} ` + (fails.length ? 'FAIL' : 'PASS'));
