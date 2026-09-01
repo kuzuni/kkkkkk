@@ -33465,6 +33465,22 @@ function setShopCatTabs(cat){
   });
 }
 
+/* 723 — «보유/요구» 잉크가 그릇을 넘지 않게 폭에만 맞춘다(150 규약 — 한 글자도 안 버린다).
+   `.sk-bar` 는 폭 157 · `overflow:hidden` 이라 종전 클램프가 사라진 뒤로는 자릿수가 자라면
+   글자가 **잘린다**. 07·26 이 같은 부품이므로 자도 한 벌만 둔다(53 가방 `bagGrid` 선례).
+   ⚠ 값이 짧을 때는 `fitNum` 을 아예 안 부른다 — 인라인 fs 를 남기지 않아야 104·141 같은
+     기존 잉크 자들이 원본 CSS 를 그대로 읽는다(150 «넘치지 않으면 인라인 스타일 없음»).
+     문턱 9자는 실측 여유다(fs21 숫자 한 글자 ≈ 11.7px ⇒ 13자에서 157 을 넘는다).
+   ⚠ `setBody` 는 내용이 같으면 `null` 을 돌려준다 — 그때는 노드가 그대로라 다시 잴 것도 없다. */
+function skBarFit(root){
+  if(!root) return;
+  root.querySelectorAll('.sk-bar>b').forEach(e => {
+    if((e.textContent || '').length < 9) return;
+    const w = e.parentElement.getBoundingClientRect().width;
+    if(w > 0) fitNum(e, w);
+  });
+}
+
 function renderSkill(){
   const eq = S.eqSkill;
   let h = '<div class="sk-head"><i class="ol5">스킬</i></div>';
@@ -33501,7 +33517,13 @@ function renderSkill(){
   h += '<div class="sk-gp">';
   SKILLS.forEach((it, i) => {
     const own = has(it.id), on = skillEquipped(it.id), lv = own ? oLv(it.id) : 1;
-    const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
+    /* 723 (주인 보고 2026-09-02 04:00) — «보유» 를 요구치로 누르지 않는다. 종전 `Math.min(…, need)`
+       은 1002개를 가져도 «3/3» 으로 적어 **모은 양을 화면에서 지웠다**(주인 문면 «1002/3 이런식으로
+       존나 많을 상황»). 05 장비 카드(`wpnBarT` = `got + '/' + need`)가 처음부터 초과를 그대로 적고
+       있었으므로 규약은 그쪽이 맞고 07·26 만 어긋나 있었다 — 그 한 자리를 장비에 맞춘다.
+       ⚠ 저장은 멀쩡했다: `probe723` [3] 이 `save()`→`load()` 왕복 뒤에도 1002 임을 못박는다
+         (표시 결함이지 데이터 손실이 아니다 — 719 합성 재료·환급 계산은 영향 없음). */
+    const need = fragNeed(lv), have = own ? frag(it.id) : 0;
     const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
     const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
     /* 283 — ② «그 항목» 카드에도 레드닷. 조건은 일괄 강화 판정과 같은 `canLevel` 한 자다
@@ -33515,7 +33537,10 @@ function renderSkill(){
       +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-skeq="' + it.id + '"></s>' : '')
       +  (canLevel(it) ? '<s class="updot"></s>' : '')                      /* 283 */
       +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
-      +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
+      /* 723 — 게이지 «폭» 만 요구 기준으로 가둔다(05 장비 `wpnBarF` 와 같은 식).
+         눈금은 «다음 강화까지» 이므로 초과 보유는 가득 참으로 읽는 것이 맞고,
+         안 가두면 1002/2 에서 폭이 50100% 가 되어 그릇을 넘는다. */
+      +  '<div class="sk-bar"><i style="width:' + Math.min(100, have/need*100) + '%"></i>'
       +  '<b class="ol1">' + have + '/' + need + '</b></div></div>';
   });
   /* 86 — 절대배치 카드만으로는 스크롤 높이가 서지 않으므로 스페이서로 내용 높이를 세운다 */
@@ -33542,7 +33567,7 @@ function renderSkill(){
        (레퍼런스는 3·4번 칸이 잠금이지만 우리 게임 설계는 UI-REFERENCE 설계 확정 16번). */
   h += subTabs('sk', 'sktab');
 
-  setBody('bSk', h);
+  skBarFit(setBody('bSk', h));      /* 723 */
 }
 $('bSk').addEventListener('click', e => {
   const un = e.target.closest('[data-skun]');       /* 272 — [─] 뱃지에만 걸린다 */
@@ -33603,7 +33628,9 @@ function renderPet(){
   h += '<div class="sk-gp">';
   PETS.forEach((it, i) => {
     const own = has(it.id), on = petEquipped(it.id), lv = own ? oLv(it.id) : 1;
-    const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
+    /* 723 — 07 스킬 격자와 **같은 줄**이다(26 은 07 구조의 복제라 결함도 같이 복제돼 있었다).
+       한쪽만 고치면 같은 부품이 화면마다 다른 말을 하게 되므로 같이 편다. */
+    const need = fragNeed(lv), have = own ? frag(it.id) : 0;
     const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
     const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
     /* 283 — ② 카드 레드닷(07 스킬 격자와 같은 부품·같은 조건) */
@@ -33618,7 +33645,7 @@ function renderPet(){
       +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-pteq="' + it.id + '"></s>' : '')
       +  (canLevel(it) ? '<s class="updot"></s>' : '')                      /* 283 */
       +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
-      +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
+      +  '<div class="sk-bar"><i style="width:' + Math.min(100, have/need*100) + '%"></i>'   /* 723 */
       +  '<b class="ol1">' + have + '/' + need + '</b></div></div>';
   });
   /* 106 — 절대배치 카드만으로는 스크롤 높이가 서지 않으므로 스페이서로 내용 높이를 세운다(86 교훈 1) */
@@ -33644,7 +33671,8 @@ function renderPet(){
 
   /* 174 — 캔버스는 innerHTML 로 «내용» 이 안 따라온다. 갈아끼운 «직후» 에만 그린다
      (건너뛴 렌더는 null 이 오고, 그때는 이미 그려진 캔버스가 그대로 살아 있다 — 87 cosPaint 와 같은 규약) */
-  petPaint(setBody('bPet', h));
+  const pb = setBody('bPet', h);
+  petPaint(pb); skBarFit(pb);       /* 723 */
 }
 $('bPet').addEventListener('click', e => {
   const un = e.target.closest('[data-ptun]');       /* 272 — [─] 뱃지에만 걸린다 */
