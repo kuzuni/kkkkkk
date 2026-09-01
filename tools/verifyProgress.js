@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-/* PROGRESS 완료행 부패 탐지 — 끝난 작업이 표에서 «미착수» 로 읽히는 것을 잡는다 (작업 374 · 388 · 557 · 571)
+/* PROGRESS 완료행 부패 탐지 — 끝난 작업이 표에서 «미착수» 로 읽히는 것을 잡는다 (작업 374 · 388 · 557 · 571 · 733)
  *
- * 자가 넷이다. **뿌리가 다르고, 하나가 다른 하나를 대신하지 못한다.**
+ * 자가 다섯이다. **뿌리가 다르고, 하나가 다른 하나를 대신하지 못한다.**
  *   §1 되돌림  (374) — 완료행이 **병합으로** 등재문으로 되돌아간다. 이력(그 done 커밋)과 대조한다.
  *   §2 자기모순(388) — **되돌림이 아니다.** `done(<ID>)` 커밋 **자신**이 완료문을 비고 칸
  *                      «끝에만» 덧붙이고 구현 칸·루프 횟수·비고 머리말을 등재 상태로 남긴다.
@@ -14,12 +14,17 @@
  *                      그 뒤 `git add -A` 가 표시째 커밋한다 — §1~§3 이 읽을 표 자체가 깨진다.
  *                      모든 워커의 push 전 게이트가 이 자 하나뿐이라 여기에 세운다(지시서 [4]).
  *
+ *   §5 추적 파일 급감(733) — 앞의 넷은 전부 **`PROGRESS.md` 만** 본다. 그래서 `git add -A` 가 자기 주제와
+ *                      무관한 남의 파일(`docs/LESSONS.md` 25,424줄 → 0)을 통째로 삼켰을 때 **아무 자도
+ *                      안 짖었고 15분간 아무도 몰랐다.** 표가 아니라 **추적 파일의 크기**를 본다.
+ *
  *   node tools/verifyProgress.js                 작업 트리의 docs/PROGRESS.md 를 본다
  *   node tools/verifyProgress.js --rev <rev>     그 리비전의 PROGRESS 를 본다(§R 되돌림 시험용)
  *   node tools/verifyProgress.js --file <path>   파일 하나를 본다(합성 시험용)
  *   node tools/verifyProgress.js --quiet         빨간 항목만 찍는다
  *   node tools/verifyProgress.js --no-gate       §3 이 자를 실행하지 않는다(빠름 — 대신 «안 쟀다» 를 찍는다)
  *   node tools/verifyProgress.js --gate-timeout <초>   §3 의 자 실행 상한(기본 180)
+ *   node tools/verifyProgress.js --allow-shrink <path> §5 — «줄어드는 것이 이 작업의 몫» 이라고 밝힌다(여러 번 가능)
  *
  * 종료 코드: 0 = 되돌아간 행 없음 · 1 = 되돌아간 행 있음(내용은 stdout) · 2 = 도구 오류
  *
@@ -75,13 +80,15 @@ const gitQ = (...a) => { try { return git(...a); } catch (e) { return null; } };
 /* ── 인자 ── */
 const argv = process.argv.slice(2);
 let rev = null, file = null, quiet = false, noGate = false, gateTimeout = 180;
+const allowShrink = [];      /* §5 — «줄어드는 것이 이 작업의 몫» 이라고 밝힌 경로 (작업 733) */
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--rev') rev = argv[++i];
   else if (argv[i] === '--file') file = argv[++i];
   else if (argv[i] === '--quiet') quiet = true;
   else if (argv[i] === '--no-gate') noGate = true;
   else if (argv[i] === '--gate-timeout') gateTimeout = Number(argv[++i]);
-  else { console.error('사용법: node tools/verifyProgress.js [--rev <rev>] [--file <path>] [--quiet] [--no-gate] [--gate-timeout <초>]'); process.exit(2); }
+  else if (argv[i] === '--allow-shrink') allowShrink.push(String(argv[++i] || '').replace(/^\.\//, ''));
+  else { console.error('사용법: node tools/verifyProgress.js [--rev <rev>] [--file <path>] [--quiet] [--no-gate] [--gate-timeout <초>] [--allow-shrink <path>]…'); process.exit(2); }
 }
 if (!(gateTimeout > 0)) { console.error('--gate-timeout 은 양수 초여야 한다'); process.exit(2); }
 
@@ -413,6 +420,68 @@ if (!skipRev) {
 const seen = new Set(conflicted.map(x => x.f));
 for (const f of unmergedIdx) if (!seen.has(f)) conflicted.push({ f, at: 0, to: 0, idx: true });
 
+/* ── §5 추적 파일 급감 판정 (작업 733) ──────────────────────────────────────────
+ * §4 가 «표가 깨진 채 커밋되는» 자리라면, 여기는 그보다 한 칸 더 앞이다 —
+ * **자기 주제와 무관한 남의 파일이 커밋에 통째로 딸려 들어가는** 자리.
+ *   2026-09-01 `2e8c90a done(684,685)`(전투력 알림 작업)이 `docs/LESSONS.md` 를 **25,424줄 삭제**해
+ *   0바이트로 만들었다. 커밋 메시지에도 나머지 diff 에도 그 파일 이야기는 한 줄도 없다 ⇒ 의도가 아니라
+ *   `git add -A` 사고다(571·363 의 «병합 표시 잔재» 와 같은 계열 — 셋 다 트리를 통째로 담아서 났다).
+ *   ⚠ **이 사고가 비싼 이유**: 지시서 [0].1 이 «화면을 잡기 전에 LESSONS 를 한 번 읽는다» 를 못박는다.
+ *   비어 있는 15분 동안 착수한 워커는 축적된 교훈을 **못 읽고** 같은 실수를 다시 밟는다.
+ *   그리고 **아무 자도 안 짖었다** — §1~§4 는 전부 `PROGRESS.md` 만 본다.
+ *
+ * ── 무엇을 재는가 ──────────────────────────────────────────────────────────
+ * «내 가지가 상류(origin/main)에서 갈라진 뒤 지금 작업 트리까지» 의 diff 한 벌 —
+ * 커밋했지만 아직 push 안 한 것 + staged + unstaged 가 **한꺼번에** 들어온다(사고의 모양 그대로).
+ * 기준은 `merge-base(origin/main, HEAD)` 다. `origin/main` 자체를 기준으로 삼으면 **남이 방금 올린 추가분**이
+ * 내 쪽 «삭제» 로 읽혀 헛빨강이 난다(4개 워커가 상시 push 하는 저장소다).
+ *
+ * ── 문턱은 실측이다 (355 커밋 · 2026-09-01 13:41Z~17:44Z) ─────────────────────
+ *   한 파일 **순삭**(삭제−추가) 최댓값: 사고 25,424줄 · **그다음이 50줄**(`tools/verify504.js` 재작성) ·
+ *   그 아래 17 · 9 · 5 · 1. 커밋 하나의 전 파일 합계로도 사고를 빼면 최대 16줄.
+ *   ⇒ **200줄**은 실측 정상치의 4배이자 사고의 1/127 이라 양쪽에서 넉넉하다(헛빨강 0건 · 사고 확실히 걸림).
+ *   작은 공용 파일이 통째로 비는 것은 200줄에 안 걸리므로 **비율 축**을 따로 둔다(밑동 50줄 이상 · 90% 이상 소실).
+ *   50~200줄 구간은 «관찰» 로만 찍는다 — 못 본 것을 초록으로 부르지 않되 push 를 막지도 않는다.
+ *
+ * ── 왜 «공용 파일 목록» 이 아니라 전 추적 파일인가 ───────────────────────────
+ * 사고는 자리를 옮겨 가며 난다(571 = PROGRESS·LESSONS · 363 = UI-REFERENCE · 733 = LESSONS).
+ * 목록으로 막으면 목록에 없는 다음 파일에서 그대로 재발한다. 대신 «줄어드는 것이 이 작업의 몫» 인
+ * 정당한 작업(죽은 코드 선언째 철거 등)은 **밝히고 지나가게** 한다: `--allow-shrink <path>`.
+ * ⚠ 사고의 본질은 «지웠다» 가 아니라 «아무도 모르게 지웠다» 이므로, 빠져나가는 문은 **말하는 문**이어야 한다.
+ *   `docs/claims/*.lock` 은 해제가 곧 삭제(1줄)라 처음부터 제외한다. */
+const SHRINK_ABS = 200;        /* 한 파일 순삭 줄수 — 빨강 */
+const SHRINK_WATCH = 50;       /* 관찰 시작 — 실측 정상치의 최댓값 */
+const SHRINK_RATIO = 0.9;      /* 또는 밑동의 90% 이상이 사라졌다 — 빨강 */
+const SHRINK_MIN_BASE = 50;    /* 비율 축은 밑동이 이만큼은 돼야 본다 */
+const LOCK_RE = /^docs\/claims\/[^/]+\.lock$/;
+const shrunk = [];             /* 빨강 — 급감 */
+const shrinkWatch = [];        /* 관찰 — 문턱 아래이거나 --allow-shrink 로 밝힌 것 */
+let shrinkBase = null;
+if (!skipRev) {
+  const up = gitQ('rev-parse', '--verify', '--quiet', 'origin/main');
+  shrinkBase = (up && (gitQ('merge-base', 'origin/main', 'HEAD') || '').trim()) || (gitQ('rev-parse', '--verify', '--quiet', 'HEAD') || '').trim() || null;
+  const num = shrinkBase ? gitQ('diff', '--numstat', shrinkBase, '--') : null;
+  for (const line of (num || '').split('\n')) {
+    const g = /^(\d+|-)\t(\d+|-)\t(.*)$/.exec(line);
+    if (!g || g[1] === '-' || g[2] === '-') continue;         /* 바이너리는 줄로 못 잰다 */
+    let f = g[3];
+    const ren = /^(?:.*)\{(?:.*) => (.*)\}(.*)$/.exec(f);      /* rename 표기 */
+    if (ren) f = null; else if (/ => /.test(f)) f = null;
+    if (f == null) continue;                                   /* 이름만 바뀐 것은 소실이 아니다 */
+    if (LOCK_RE.test(f)) continue;
+    const net = Number(g[2]) - Number(g[1]);
+    if (net < SHRINK_WATCH) continue;
+    const allowed = allowShrink.includes(f);
+    let baseLines = null;
+    const blob = gitQ('show', shrinkBase + ':' + f);
+    if (blob != null) baseLines = blob.split('\n').length - (blob.endsWith('\n') ? 1 : 0);
+    const gone = baseLines != null && baseLines >= SHRINK_MIN_BASE && net >= baseLines * SHRINK_RATIO;
+    const red = net >= SHRINK_ABS || gone;
+    const rec = { f, net, base: baseLines, gone, allowed };
+    if (red && !allowed) shrunk.push(rec); else shrinkWatch.push(rec);
+  }
+}
+
 /* ── 출력 ── */
 if (!quiet) {
   console.log('PROGRESS 되돌림 검사 — ' + curLabel + ' · done() 기록 ' + newestDone.size + '건');
@@ -447,6 +516,15 @@ if (!quiet) {
     console.log('  §4 병합 표시 잔재 — 빨강 ' + conflicted.length + '건 · 짝을 못 이룬 표시(인용일 수 있다) ' + halfMark.length + '건'
                 + ' · 인덱스 unmerged ' + unmergedIdx.length + '건');
     for (const h of halfMark) console.log('    ⚠  ' + h.f + ':' + h.at + ' — 관찰 · 열림 표시는 있는데 «' + MK_MID + '»·닫힘이 그 뒤에 없다(인용으로 읽는다)');
+  }
+  if (skipRev) {
+    console.log('  §5 추적 파일 급감 — 건너뜀(--rev): 급감은 **작업 트리**의 것이라 옛 리비전과 짝이 안 맞는다');
+  } else {
+    console.log('  §5 추적 파일 급감 — 빨강 ' + shrunk.length + '건 · 관찰 ' + shrinkWatch.length + '건 · 기준 ' +
+                (shrinkBase ? shrinkBase.slice(0, 8) + '(merge-base origin/main HEAD)' : '없음 — ⚠ 기준을 못 잡아 이 절이 안 돌았다') +
+                ' · 문턱 순삭 ' + SHRINK_ABS + '줄 또는 밑동의 ' + Math.round(SHRINK_RATIO * 100) + '%');
+    for (const w of shrinkWatch) console.log('    ⚠  ' + w.f + ' — 관찰 · 순삭 ' + w.net + '줄' +
+      (w.base != null ? '/밑동 ' + w.base : '') + (w.allowed ? ' · --allow-shrink 로 밝혔다' : ' · 문턱 아래'));
   }
 }
 for (const b of bad) console.log('  ✗ ' + b.id + ' — ' + b.why + ' · ' + b.detail);
@@ -530,6 +608,22 @@ if (conflicted.length) {
   console.log('    지금은 claim.js 가 그 자리에서 멈춘다(작업 571). 재현: node tools/probe571.js');
 }
 
+for (const s of shrunk) console.log('  ✗ ' + s.f + ' — 추적 파일 급감 · 순삭 ' + s.net + '줄'
+  + (s.base != null ? ' / 밑동 ' + s.base + '줄' : '')
+  + (s.gone ? ' = 사실상 통째로 사라졌다' : ''));
+
+if (shrunk.length) {
+  console.log('\nTRACKED FILE COLLAPSE ' + shrunk.length + '건 — ' + shrunk.map(s => s.f).join(' '));
+  console.log('  뜻: 내 가지가 상류에서 갈라진 뒤 그 파일이 통째로 줄었다. 이 작업이 정말 그 파일을 지우는 일이 아니라면');
+  console.log('    **`git add -A` 가 남의 파일을 삼킨 것**이다(2026-09-01 2e8c90a 이 docs/LESSONS.md 를 25,424줄 → 0 으로 만들었다. 작업 733).');
+  console.log('  고치는 법: ① 마지막 정상판을 찾아 되살린다 —');
+  console.log('    git log --oneline -- <파일>   → git checkout <그 앞 sha> -- <파일>   → git add -- <파일>');
+  console.log('    ② 커밋은 `git add -A` 가 아니라 **내가 만진 파일만 이름으로** 담는다(지시서 [4]·[6]).');
+  console.log('  ⚠ 줄어드는 것이 이 작업의 몫이라면(죽은 코드 선언째 철거 등) 밝히고 지나가라 —');
+  console.log('    node tools/verifyProgress.js --allow-shrink <파일>   (그 경로는 «관찰» 로만 찍힌다)');
+  console.log('    그리고 그 삭제를 커밋 메시지·review 에 한 줄로 남겨라. 사고의 본질은 «지웠다» 가 아니라 «아무도 모르게 지웠다» 다.');
+}
+
 if (bad.length) {
   console.log('\nPROGRESS REVERTED ' + bad.length + '건 — ' + bad.map(b => b.id).join(' '));
   console.log('  고치는 법: 그 `done(<ID>)` 커밋의 행을 그대로 되살린다.');
@@ -538,7 +632,7 @@ if (bad.length) {
   console.log('    있었으면 그것까지 살린다(규칙 8 «양쪽 행을 모두 살린다» 그대로).');
   process.exit(1);
 }
-if (contra.length || muteWatch.length || unclosed.length || conflicted.length) process.exit(1);
-if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순·판정 불가 행 없음 · 마감 누락 행 없음 · 병합 표시 잔재 없음' +
-                        (skipRev ? ' (§3·§4 는 --rev 라 안 돌았다)' : noGate ? ' (§3 의 자 실행은 --no-gate 로 껐다)' : ''));
+if (contra.length || muteWatch.length || unclosed.length || conflicted.length || shrunk.length) process.exit(1);
+if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순·판정 불가 행 없음 · 마감 누락 행 없음 · 병합 표시 잔재 없음 · 추적 파일 급감 없음' +
+                        (skipRev ? ' (§3·§4·§5 는 --rev 라 안 돌았다)' : noGate ? ' (§3 의 자 실행은 --no-gate 로 껐다)' : ''));
 process.exit(0);
