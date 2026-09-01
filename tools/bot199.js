@@ -567,8 +567,13 @@ const BOT_SRC = function (cfg) {
       kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsBoss || 1) : null,
     };
     row.valid = calValid(row);
-    /* 13회차 — «왜 무효인가» 를 행이 들고 다닌다(판정만 남기면 다음 세대가 원인을 못 캔다). */
+    /* 13회차 — «왜 무효인가» 를 행이 들고 다닌다(판정만 남기면 다음 세대가 원인을 못 캔다).
+       ⚠ 한 행이 **둘 다** 어길 수 있다(s800 은 화력도 미달이고 앞 앵커와 같은 캐릭터이기도
+       하다). 그때의 이름은 «화력 미달» 이다 — 좌표 문장이 읽는 것이 그 갈래이고, 접기는
+       «앵커가 남아돈다» 는 뜻일 뿐 좌표와 무관하다. */
     row.sameBuild = row.buildRat != null && row.buildRat < BUILD_MIN;
+    row.powerOk = row.pump0 != null && isFinite(row.pump0) && row.pump0 >= PUMP_MIN && (row.kills | 0) > 3;
+    row.failBy = row.valid ? null : (row.powerOk ? 'build' : 'power');
     row.bossValid = bossValid(row);
     return row;
   };
@@ -1393,7 +1398,16 @@ function writeReport(rep) {
        실패 프로브 행이 캐시에 실리므로 마지막 행을 읽으면 s1200 이 앵커인 척한다. */
     const calRows = (rep.cal && rep.cal.rows) || [];
     const okRows = calRows.filter(r => r.valid !== false);
-    const badRows = calRows.filter(r => r.valid === false);
+    /* ⚑ 13회차 — 무효 행이 **두 종류**가 됐다. 「화력 미달」(pump0 < 0.5 — «이 지갑으로는 못
+       세운다» 는 그 좌표) 과 「같은 캐릭터」(화력비 < 1.05 — 앵커가 남아돈다는 뜻일 뿐,
+       좌표와 무관하다). 둘을 섞으면 머리글이 «끝 = s639 … s580» 처럼 **거꾸로** 찍힌다
+       (13회차 1회차 실측 — sameBuild 로 접힌 s580 이 `badRows[0]` 이 됐다).
+       ⇒ 좌표 문장은 **화력 미달 행으로만** 쓴다. */
+    /* `failBy` 는 판정 자리(`calibrateOne`)가 붙인다. 13회차 이전 캐시에는 없으므로 그때만
+       저장된 칸에서 되짚는다 — 판정을 다시 하는 것이 아니라 **이미 난 판정의 이름**만 붙인다. */
+    const failOf = (r) => r.failBy || (r.powerOk === true || (r.pump0 != null && isFinite(r.pump0) && r.pump0 >= 0.5 && (r.kills | 0) > 3) ? 'build' : 'power');
+    const foldRows = calRows.filter(r => r.valid === false && failOf(r) === 'build');
+    const badRows = calRows.filter(r => r.valid === false && failOf(r) === 'power');
     const maxAnchor = okRows.length ? okRows[okRows.length - 1].s : 0;
     const allRuns = [].concat(...Object.values(rep.policies || {}));
     const maxStage = allRuns.reduce((m, r) => Math.max(m, (r.final && (r.final.best || r.final.stage)) || 0), 0);
@@ -1418,6 +1432,9 @@ function writeReport(rep) {
         L.push(`> ⚑ **그 좌표는 기본 지갑 아래에서 한 칸이다 — 밴드 경계 s${firstBad.s}**(12회차). 경계 직전 칸 s${maxAnchor} 은 닿고(pump ${lastOk.pump == null ? '—' : lastOk.pump.toFixed(2)}) 경계 첫 칸 s${firstBad.s} 은 못 닿는다(pump ${firstBad.pump == null ? '—' : firstBad.pump.toExponential(1)}) — 한 칸 사이 목표 ×${jump == null ? '—' : jump.toPrecision(3)}(⚠ \`kGuess\` 되먹임 포함 — 제품항만의 계단은 \`eHp·bossGateHp\` 비로 따로 재라. 12회차 실측 ×71.26). 밴드 안 오르막이 아니라 **경계 계단**이 화력을 추월한다(밴드 폭 ${BANDA} · 관문 배수 포함).`);
       }
     }
+    /* ⚑ 13회차 — 접힌 앵커를 머리글이 직접 말한다. 12회차가 «앵커를 끼워 창을 줄였다» 고
+       적은 자리가 여기다 — 접힌 개수가 곧 «그 주장이 몇 칸에서 성립 안 했나» 다. */
+    if (foldRows.length) L.push(`> ⚑ **같은 캐릭터로 접힌 앵커 ${foldRows.length}개 — s${foldRows.map(r => r.s).join(' · s')}**(13회차 · 12회차 정정4). 직전 유효 앵커 대비 화력비가 ×1.05 미만이라 «새 캐릭터로 잰 새 좌표» 가 아니다(실측 화력비 ${foldRows.map(r => '×' + (r.buildRat == null ? '—' : r.buildRat.toPrecision(3))).join(' · ')}). 12회차가 이 앵커들을 끼우고 «창을 s620…s640 으로 줄였다» 고 적었으나, 접고 나면 그 주장이 근거로 삼은 칸이 사라진다 — 남는 것은 창이 아니라 **κ 잡음**이다.`);
     if (maxStage > maxAnchor) L.push(`> ⚠⚠ **κ 외삽** — 시뮬 최고 s${maxStage} > κ 유효 앵커 s${maxAnchor}. 그 밖 구간은 log(s) 선형 외삽이다(정정2) — 앵커를 s${maxStage} 이상으로 늘려 재보정하기 전에는 그 구간 수치에 (외삽) 표식을 붙여 읽어라.${badRows.length ? ` ⚠ 그런데 s${badRows[0].s} 은 **이 지갑으로는 앵커를 세울 수 없다**(위 줄) — 12회차 실측으로는 «앵커를 늘리면 풀리는» 외삽도 아니고 «적 곡선이 화력을 추월한 뒤» 도 아니다: **지갑을 열면 앵커가 선다**(§12).` : ''}`);
   }
   L.push('');
@@ -1441,12 +1458,18 @@ function writeReport(rep) {
        다음 세대가 또 «창을 줄였다» 고 읽는다(12회차 정정4 가 그렇게 났다). */
     const brTxt = r.buildRat == null ? '— (첫 유효 앵커)'
                 : `×${r.buildRat.toPrecision(3)}${r.sameBuild ? ' ⚠ **같은 캐릭터**' : ''}`;
-    const badTxt = r.valid === false
-      ? (r.sameBuild ? '✖ **같은 캐릭터**(화력비 < 1.05)' : '✖ **대역 밖**(실패 프로브)') : '✔';
+    /* 13회차 — 이름은 «둘 다 어기면 화력 미달» 규약(`failBy`). 옛 캐시는 저장된 칸에서 되짚는다. */
+    const failWhy = r.valid === false
+      ? (r.failBy || (r.pump0 != null && isFinite(r.pump0) && r.pump0 >= 0.5 && (r.kills | 0) > 3 ? 'build' : 'power')) : null;
+    const badTxt = failWhy === 'build' ? '✖ **같은 캐릭터**(화력비 < 1.05)'
+                 : failWhy === 'power' ? '✖ **대역 밖**(실패 프로브)' : '✔';
     L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${endTxt} | ${svTxt} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${pumpTxt} | ${p0Txt} | ${brTxt} | ${badTxt} | ${r.bossValid === false ? '✖ **대역 밖**' : '✔'} |`);
   }
   {
-    const bad = (rep.cal.rows || []).filter(r => r.valid === false);
+    /* 13회차 — 이 절은 «화력 미달» 행의 재현 경로다. 접힌 행(같은 캐릭터)은 목표에 닿았으므로
+       여기 섞으면 «달성/목표» 문장이 거짓이 된다(머리글과 같은 갈래). */
+    const bad = (rep.cal.rows || []).filter(r => r.valid === false
+      && (r.failBy ? r.failBy === 'power' : !(r.pump0 != null && isFinite(r.pump0) && r.pump0 >= 0.5 && (r.kills | 0) > 3)));
     if (bad.length) {
       L.push('');
       L.push(`· ✖ 행은 **자에서 뺀다**(κ 보간·외삽·참고 평균 전부) — 그 자리의 κ 는 «전장의 모양» 이 아니라 **화력 미달**이 만든 수다.`);
@@ -1879,6 +1902,9 @@ function writeReport(rep) {
          상수가 27,300,000 이면 교차일이 +0.5일급으로 밀린다. 산수 쪽으로 정오한다
          (옛 값 27,300,000 — 1~9회차 표의 도달일은 그 상수 위 수다). */
       const GOAL_DIA = 27205000;
+      /* 13회차 — §0 ② 의 «하루 27만» (주인 확정 2026-08-31 00:30). 지금까지 회차마다 손으로
+         나눠 왔고 12회차가 «50.7%» 를 본문에만 적었다 — 자가 찍는다(정정7 계열). */
+      const GOAL_DAY = 270000;
       /* ⚑ 199 8회차(정정1 · S·T 독립 일치) — 7회차의 «비 1.840» 은 **시드별 도달일의 중앙값끼리
          나눈 값**이었다. 도달일 두 칸의 분자는 같은 (목표 − 일회성) 이므로 비는 **반드시 지속
          수급의 비와 같아야 한다**(정책이 일회성을 같은 값으로 받으므로). med(비) ≠ 비(med) 라
@@ -1930,6 +1956,26 @@ function writeReport(rep) {
         const ds = vals.map(x => x.d), ex = vals.filter(x => x.ex).length;
         return { p50: med(ds), p50i: medI(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W };
       };
+      /* ⚑ 13회차(12회차 정정4 — «3회차째 미이행» 이라고 적힌 그 항) — **말미 한계 수급.**
+         ④ 의 외삽은 «말미 W일 구간율» 로 미는데 그 구간율이 표에 없었다. 없으면 ④ 를 못 검산하고
+         (외삽 20/20 이면 ④ 는 **전부** 이 수의 함수다), «수급을 어디서 올릴까» 도 못 정한다 —
+         30일 평균은 일회성·초반 미션이 섞여 말미의 실제 기울기보다 크다.
+         같은 장부(`inAll` / `inAll − outNS`)·같은 창(W)을 `crossOf` 와 공유한다(표 두 벌 금지). */
+      const tailRate = (pol, mode, wOpt) => {
+        const runs = rep.policies[pol];
+        const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
+                       : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));
+        const v = (s) => (mode === 'summon' ? s.inAll - s.outNS : s.inAll);
+        const vals = [];
+        for (const r of runs) {
+          const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
+          const end = day(rep.days), w0 = day(Math.max(1, rep.days - W));
+          if (!end || end.inAll == null || !w0) continue;
+          const span = rep.days - Math.max(1, rep.days - W);
+          if (span > 0) vals.push((v(end) - v(w0)) / span);
+        }
+        return vals.length ? { p50: med(vals), p50i: medI(vals), n: vals.length, W } : null;
+      };
       L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
       L.push('');
       /* 10회차(정정10 — AA 처방3) — 판정 줄마다 **(장부 · 창 · 통계)** 라벨을 병기한다.
@@ -1967,6 +2013,17 @@ function writeReport(rep) {
         const ratio = inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
                           : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
         L.push(`| ${name} | ${v.map(fmt).join(' | ')} | ${ratio} |`);
+      }
+      /* ⚑ 13회차 — ④ 바로 위에 **그 외삽이 쓰는 기울기**를 놓는다. 두 줄을 나란히 읽으면
+         «④ 가 왜 그 값인가» 가 나눗셈 한 번으로 검산된다: (목표 − 30일 누적) ÷ 이 값 + 30. */
+      for (const mode of ['in', 'summon']) {
+        const nm = mode === 'in' ? '유입 장부' : '소환 예산 장부(결2 ⓑ)';
+        const t = pols.map(p => tailRate(p, mode));
+        if (t.every(x => !x)) continue;
+        const cell = (x) => x ? `${fmtN(x.p50)} (보간 ${fmtN(x.p50i)})` : '—';
+        const ratio = t[0] && t[1] && t[1].p50 ? (t[0].p50 / t[1].p50).toFixed(3) : '-';
+        const goalPct = t[0] ? ` — 목표 27만의 ${(100 * t[0].p50 / GOAL_DAY).toFixed(1)}%` : '';
+        L.push(`| **② 말미 ${(t[0] || t[1]).W}일 한계 수급/일 〔${nm} · p50 (보간 med)〕 — ④ 외삽이 쓰는 기울기**${goalPct} | ${t.map(cell).join(' | ')} | ${ratio} |`);
       }
       /* 10회차(정정1·11) — ④ 판정 줄 = 교차 실측. p50 옆에 산포(p10~p90)와 외삽 시드 수를
          같이 찍는다(외삽 = 측정 일수 안에 목표를 못 지나 말미 구간율로 민 시드). */

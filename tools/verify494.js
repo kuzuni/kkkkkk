@@ -98,7 +98,24 @@ if (rep && rep.cal) {
   const badRows = c.rows.filter(r => r.valid === false);
   ok(okRows.length >= 6, `자에 쓰는(유효) 표본 ${okRows.length}개 ≥ 6`);
   ok(okRows.every(r => r.kills > 0), '유효 표본은 전부 실제 처치가 있었다(대역 밖 표본이 자에 안 섞였다)');
-  ok(badRows.every(r => !(r.kills > 0)), `실패 프로브 ${badRows.length}행은 전부 대역 밖이다(대역 안인데 «무효» 로 접힌 행 0)`);
+  /* ⚑ 199 13회차 — **무효의 이유가 둘이 됐다.** 「화력 미달」(대역 밖 · 60초 처치 0 또는
+     `pump0 < 0.5`) 과 「같은 캐릭터」(직전 유효 앵커 대비 `formDps` 화력비 < 1.05 — 목표엔
+     닿았으나 새 좌표가 아니라 κ 잡음만 늘리는 행). 옛 항은 «무효 = 대역 밖» 을 전제해서
+     후자를 즉시 빨갛게 만들었다(13회차 실측 s580·s620·s630 3행 · kills 106~193).
+     ⇒ 333 처방대로 **방향을 뒤집어 갈아 끼운다** — 그냥 지우면 «이유 없이 접힌 행» 을
+     아무도 안 묻게 되므로, 물음을 «전부 대역 밖인가» 에서 **«무효 행마다 실제로 해당하는
+     이유가 있는가»** 로 옮기고, 이름별 짝 항 둘로 각 이유의 실체를 따로 못박는다.
+     무르게 푼 것이 아님: ⓐ 세 이유 중 어디에도 안 걸리는 무효 행은 그대로 빨갛고
+     ⓑ «같은 캐릭터» 라고 이름 붙은 행이 실제로는 화력이 오른 행이면 빨갛다. */
+  const PUMP_MIN = 0.5, BUILD_MIN = 1.05;
+  const powerBadOf = r => !(r.kills > 0) || !(r.pump0 != null && isFinite(r.pump0) && r.pump0 >= PUMP_MIN);
+  const buildBadOf = r => r.buildRat != null && r.buildRat < BUILD_MIN;
+  ok(badRows.every(r => powerBadOf(r) || buildBadOf(r)),
+     `무효 ${badRows.length}행은 전부 이유가 있다(화력 미달 또는 같은 캐릭터 — 이유 없이 접힌 행 0)`);
+  ok(badRows.filter(r => r.failBy === 'power').every(r => powerBadOf(r)),
+     '«화력 미달» 로 이름 붙은 행은 전부 실제로 대역 밖이다(옛 항의 이빨을 이 자리로 옮겼다)');
+  ok(badRows.filter(r => r.failBy === 'build').every(r => buildBadOf(r) && r.kills > 0),
+     '«같은 캐릭터» 로 접힌 행은 화력비 < 1.05 이면서 표본은 대역 «안» 이다(두 이유가 안 섞였다)');
   ok(okRows.every(r => r.bossSec > 0), '유효 표본마다 보스전이 실제로 섰다');
   for (const k of ['kDps', 'kHp', 'kGold', 'kBoss', 'tFloor'])
     ok(isFinite(c[k]) && c[k] > 0, `${k} = ${Number(c[k]).toFixed(3)} — 유한·양수`);
