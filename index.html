@@ -39655,9 +39655,40 @@ function jzHostOf(el){
   const h = el.closest(JZ_HOST_SEL);
   return (h && h !== el) ? h : null;
 }
+/* ⚑ 656 (주인 보고 2026-09-01) — «버튼이 작아지면서 뒤에 검정 테두리 찌꺼기가 보인다».
+   `probe656` 재현이 뿌리를 이름으로 집었다: **122 22회차가 만든 «획 사본» `.stk`** 이다.
+   그 사본은 버튼의 검은 링을 카드 전면 광택 «위» 로 올리려고 **형제 노드**로 따로 그린 것이라
+   (버튼 «안» 에서는 `.cbtn{overflow:hidden}` 이 padding box 에서 잘라 덮을 수가 없다),
+   버튼이 눌려 `scale:.94`/`translate:0 8px` 로 물러나도 **혼자 원래 크기로 남는다** ⇒ 유령 획.
+   실측(수리 전): 쉴 때 검은 획이던 화소가 눌린 뒤에도 새까만 비율 **0.976~0.977**(3쌍 전부).
+   ⚠ 사본을 버튼 «안» 으로 넣는 길은 막혀 있다 — 그것이 곧 122 22회차를 되돌리는 것이다
+     (광택이 다시 검은 획 위를 지나간다 · 실측 루마 +12.5~15.9, 화소 최대 +63.9).
+   ⇒ 사본을 없애지 말고 **같이 물러나게** 한다. 값을 새로 적지 않고 **같은 어휘(`jz-dn`/`jz-up`)**
+     를 그대로 건다 — 진폭·이징·트랜지션이 한 곳(위 CSS)에서만 정의되므로 회귀가 0 이다.
+   ⚠ 짝은 클래스 이름이 아니라 **그려진 상자**로 찾는다(350 판) — `stk1/stk2/stk3`·`btstk` 처럼
+     이름이 자리마다 다르고, 앞으로 늘어도 목록을 고칠 데가 없다. 형제 중 «같은 상자(±2px)» 하나뿐이다.
+   ⚠ `jz-dn` 의 `filter:brightness(1.10)` 은 이 노드에서 무해하다 — 배경이 `none` 이고 획이 순흑이라
+     1.10 을 곱해도 #000 그대로다(픽셀 Δ0). */
+let jzDownStk = null;
+function jzStkOf(el){
+  const par = el && el.parentElement;
+  if(!par) return null;
+  const r = el.getBoundingClientRect();
+  if(!r.width || !r.height) return null;
+  const near = (a, b) => Math.abs(a - b) <= 2;
+  for(const d of par.children){
+    if(d === el || !d.classList || !d.classList.contains('stk')) continue;
+    const q = d.getBoundingClientRect();
+    if(near(q.x, r.x) && near(q.y, r.y) && near(q.width, r.width) && near(q.height, r.height)) return d;
+  }
+  return null;
+}
 function jzRelease(){
   /* 491 7회차 — 호스트 눌림은 트랜지션이라 «떼면» 같은 곡선으로 되돌아간다(위 CSS 머리말) */
   if(jzDownHost){ jzDownHost.classList.remove('jz-hdn'); jzDownHost = null; }
+  /* 656 — 획 사본은 버튼과 **같은 순간에** 풀고 같은 스프링을 탄다. 여기(이른 return 앞)에 두는
+     이유는 `jzDownHost` 와 같다 — 버튼 쪽이 이미 정리된 뒤에도 사본이 눌린 채 남으면 안 된다. */
+  if(jzDownStk){ jzDownStk.classList.remove('jz-dn'); jzOn(jzDownStk, 'jz-up', 200); jzDownStk = null; }
   jzTickStop();                      /* 621 — 뗌 스프링(jz-up)에 자리를 넘긴다(아래 머리말 ⚠) */
   if(!jzDown) return;
   const el = jzDown; jzDown = null;
@@ -40157,6 +40188,10 @@ function jzInit(){
     jzRelease();
     sfx('tap');                                          /* 78 — 버튼 탭 */
     jzDown = el; el.classList.add('jz-dn');
+    /* 656 — 이 버튼의 «획 사본»(`.stk`)이 있으면 같은 어휘로 같이 누른다(위 `jzStkOf` 머리말).
+       없으면 no-op 이라 사본이 없는 화면은 한 프레임도 안 바뀐다. */
+    const stk = jzStkOf(el);
+    if(stk){ jzDownStk = stk; stk.classList.add('jz-dn'); }
     /* 491 7회차 — 호스트도 같이 누른다(위 `JZ_HOST_SEL` 머리말). 죽은 버튼은 위에서 이미 return 했다. */
     const hst = jzHostOf(el);
     if(hst){ jzDownHost = hst; hst.classList.add('jz-hdn'); }
