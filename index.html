@@ -22081,7 +22081,26 @@ const CORPSE_FPS = 10, CORPSE_LIFE = 1.6;
    격파와 ⑵ 사이에 1초를 넣어 둔 것도 둘이 다른 사건이기 때문이다). 그래서 **끄는 것은 ⑴ 뿐**이되,
    나중에 «그것도 빼라» 가 왔을 때 자리를 세 군데 다시 찾지 않도록 판정을 여기 한 표에 모은다.
    ⚠ 이 표는 «그리기» 스위치다 — 재화 자체(`S.gold += …`)는 어느 값에서도 그대로 들어온다. */
-const FX_COMBAT_FX = { kill:false, stageClear:true, waveBonus:true };
+/* ⚑ 654 (저장소 주인 보고 2026-09-01 «골드 획득 이펙트 하지말라했는데 보스 끝났더니 뜨더라») —
+   592 가 남겨 둔 «그것도 빼라» 가 실제로 왔다. `probe654` 재현이 등재문의 **가설 둘을 다 확인**했다:
+     ⓐ ⑵⑶ 이 켜진 채라 보스 격파(→ 클리어 보너스)·파도 전멸에서 코인이 그대로 났다([A] 4개 · [B] 4개)
+     ⓑ 던전 «황금 동굴» 클리어 보상이 512 의 `fxReward` 경로를 타 코인이 났다([C] 6개)
+   ⇒ 위임 규약(2026-09-01) 채택 — **전투·보스·클리어 계열의 골드 연출은 전부 무음**으로 넓힌다.
+     비전투 수령(우편·출석·패스·룰렛·교환)의 512 연출은 **그대로 유지**한다([E] 6개가 그 경계 표본).
+   ⚠ **되돌림은 이 표 한 줄이다** — 어느 항이든 `true` 로 되돌리면 그 자리의 종전 그림이 그대로 온다
+     (`verify654` §R 이 세 항 전부에 대해 그것을 실제로 재서 못박는다. 그래서 아래 `combat` 기계는
+      «소비처가 0» 이 아니라 **스위치의 반대쪽**이다 — 592 의 죽은 코드 규칙이 걷어내라는 것은
+      되살릴 방법이 없는 선언이지, 한 낱말로 되살아나는 갈래가 아니다. 35240 원장 참조).
+   ⚠ `clearGold` 는 앞 셋과 **기계가 다르다**: ⑴⑵⑶ 은 «전투 발원 표시(fxAt)를 안 찍는다» 인데
+     클리어·전투 결과 보상은 `giveReward` 를 지나므로 «지급하면서 그 몫을 fxSilent 로 적는다» 다
+     (아래 `fxClearMute()`). 표에 같이 둔 이유는 주인이 다음에 또 «그것도» 라고 할 자리가
+     여기 하나로 모여 있어야 하기 때문이다. */
+const FX_COMBAT_FX = { kill:false, stageClear:false, waveBonus:false, clearGold:false };
+/* ⚑ 654 — 「클리어·전투 결과 보상에서 연출 없이 줄 재화」 목록. 표의 `clearGold` 를 켜면 빈 목록이
+   되어 512 의 종전 그림(골드 색 버스트 + 코인 비행)이 그대로 돌아온다.
+   ⚠ 목록이지 불리언이 아닌 이유 — 이 자리에 다음에 올 지시가 «다이아도 빼라» 일 수 있고,
+     그때 호출부 네 곳을 다시 찾지 않게 한다(592 가 이 표를 만든 것과 같은 이유). */
+const fxClearMute = () => FX_COMBAT_FX.clearGold ? [] : ['gold'];
 function killEnemy(e){
   const i = enemies.indexOf(e);
   if(i < 0) return;
@@ -26134,7 +26153,13 @@ function delReadMail(){
 /* ==========================================================================
    출석 · 룰렛 · 던전 · 상점 · 승급전
    ========================================================================== */
-function giveReward(r){
+/* ⚑ 654 — 두 번째 인자 `mute` 는 «지급은 하되 연출은 걸지 않을» 재화 키 목록이다(보통 `fxClearMute()`).
+   판정을 **부르는 쪽**에 둔 이유: «전투인가 아닌가» 는 지급 함수가 아니라 호출 문맥만 안다 —
+   같은 `giveReward` 가 던전 클리어(전투)와 우편·룰렛(비전투)을 둘 다 지나간다.
+   ⚠ 무음 처리는 592 와 **같은 기계**(`fxSilent` → `fxMute`)를 쓴다. 「kinds 에서 빼기만」 하면
+     코인은 안 나도 그 증가분이 `fxWatch` 델타에 그대로 남아 `fxSrc` 가 «마지막으로 누른 버튼» 을
+     추측으로 집어 UI 발(#fxl · 팝업 **위**)로 만든다 — 592 머리말이 세 번 겪었다고 적어 둔 그 함정. */
+function giveReward(r, mute){
   /* ⚑ 512 — 종전에는 **함수 입구**에서 `fxReward()` 를 불렀다. 그 자리는 «무엇을 주는지 알기 전»
      이라 색이 재화를 따라갈 수가 없다(등재문 ⓐ). 지급을 다 한 **뒤**로 옮기고 종류를 넘긴다.
      ⚠ 181 규약과 충돌하지 않는다 — 룰렛은 «돌리는 순간» 이 아니라 `roulFinish` 에서 이 함수를
@@ -26143,15 +26168,21 @@ function giveReward(r){
        두 패스(93 3회차)가 같은 프레임에 전 재화를 한 묶음으로 본다(종전에는 입구에서 flush 해
        버려 이번 지급분은 다음 프레임 몫이었다). */
   const out = [], kinds = [];
-  if(r.dia){     S.dia += r.dia;     kinds.push('dia');    out.push(curIc('dia') + ' ' + fmt(r.dia)); }
-  if(r.rel){     S.relic += r.rel;   kinds.push('relic');  out.push(curIc('relic') + ' ' + fmt(r.rel)); }
+  /* 654 — 「이 지급에서 무음으로 돌린 재화 수」. 0 이면 종전과 한 값도 안 다르다. */
+  let muted = 0;
+  const add = (k, n) => {
+    if(mute && mute.indexOf(k) >= 0){ fxSilent(k, n); muted++; }
+    else kinds.push(k);
+  };
+  if(r.dia){     S.dia += r.dia;     add('dia', r.dia);    out.push(curIc('dia') + ' ' + fmt(r.dia)); }
+  if(r.rel){     S.relic += r.rel;   add('relic', r.rel);  out.push(curIc('relic') + ' ' + fmt(r.rel)); }
   /* 194 — 강화석(코스튬 강화 전용). 다이아·유물조각과 같은 «숫자 그대로» 표기(150) */
-  if(r.stone){   S.stone += r.stone; kinds.push('stone');  out.push(curIc('stone') + ' ' + fmt(r.stone)); }
+  if(r.stone){   S.stone += r.stone; add('stone', r.stone); out.push(curIc('stone') + ' ' + fmt(r.stone)); }
   /* 203 — 룬강화석(룬 강화 전용). 강화석과 같은 «숫자 그대로» 표기(150) */
-  if(r.rstone){  S.rstone += r.rstone; kinds.push('rstone'); out.push(curIc('rstone') + ' ' + fmt(r.rstone)); }
+  if(r.rstone){  S.rstone += r.rstone; add('rstone', r.rstone); out.push(curIc('rstone') + ' ' + fmt(r.rstone)); }
   /* 210·613 — 단련석(단련에 직접 지불). 강화석 계열과 같은 «숫자 그대로» 표기(150) */
-  if(r.tstone){  S.tstone += r.tstone; kinds.push('tstone'); out.push(curIc('tstone') + ' ' + fmt(r.tstone)); }
-  if(r.gold){    S.gold += r.gold;   kinds.push('gold');   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
+  if(r.tstone){  S.tstone += r.tstone; add('tstone', r.tstone); out.push(curIc('tstone') + ' ' + fmt(r.tstone)); }
+  if(r.gold){    S.gold += r.gold;   add('gold', r.gold);  out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
   /* 399 — `r.goldMul`(스테이지 환산 골드) 분기는 지웠다. 이 표를 쓰던 곳은 ATTEND 하나뿐이었고
      그 28칸이 전부 dia 가 되면서 실제로 죽은 코드가 됐다(155 §2 가 «살아 있어야 한다» 고 박아 둔 못도
      같이 뽑았다 — `verify398` §2 가 그 자리를 «ATTEND 는 dia 하나뿐» 으로 갈아 끼웠다).
@@ -26165,7 +26196,15 @@ function giveReward(r){
     out.push('🧩 재료 ' + r.frag);
     markDirty();
   }
-  fxReward(null, kinds);                      /* 58·512 — 지급이 끝난 뒤, 받은 재화의 색으로 */
+  /* ⚑ 654 — **무음 처리한 재화«만»** 받은 지급은 보상 버스트도 안 터뜨린다.
+     그냥 `fxReward(null, [])` 로 떨어뜨리면 공용 크림 `FXPAL.reward`(#FFE9A8)가 터지는데,
+     그 색은 골드 알약색(#FFDE6A)과 한 계열이라 **512 가 «주인이 본 골드» 로 지목했던 바로 그 색**이다
+     (512 머리말: 룰렛 실경로 버스트 #FFE9A8 = «보상 표가 아니라 연출 색»). 코인만 끄고 이것을
+     남기면 «보스 끝났더니 금색이 터진다» 가 그대로 남아 이번 지시를 절반만 지킨 꼴이 된다.
+     ⚠ 조건이 «muted > 0» 이 아니라 «남은 kinds 가 0» 인 것이 핵심 — 아레나처럼 골드와 함께
+       다이아·강화석을 주는 지급은 그 둘의 색으로 **그대로 터진다**(무음은 골드 한 축뿐이다).
+     ⚠ `muted === 0` 이면 종전 그대로다 — 재화가 아닌 보상(`r.frag`)의 공용 크림 버스트는 산다. */
+  if(kinds.length || !muted) fxReward(null, kinds);   /* 58·512 — 지급이 끝난 뒤, 받은 재화의 색으로 */
   return out.join(' · ');
 }
 /* 70 — 팝업 안에서 «오늘 카드»를 탭해 수령한다. 레퍼런스에 결과 팝업이 없으므로
@@ -26753,7 +26792,10 @@ function finishDunRun(r, cleared){
          어떤 경로로든 옛 층을 클리어해도 진행이 **뒤로 가지 않는다**. */
     if(isTower(d)) towerSetFloor(d, f + 1);      /* 210 — 탑마다 제 진행 키에 쓴다 */
     else S.dun[d.id]++;
-    giveReward(d.rw(f));
+    /* ⚑ 654 — **던전·탑 클리어 보상은 «클리어 계열»** 이라 골드 축이 무음이다(`fxClearMute()`).
+       골드를 주는 던전은 「황금 동굴」 하나지만(`DUNGEONS[0].rw`), 판정을 그 한 던전이 아니라
+       **지급 경로**에 두는 것은 402 의 교훈이다 — 손으로 적은 목록은 던전이 늘면 그대로 뒤처진다. */
+    giveReward(d.rw(f), fxClearMute());
     uiDirty = true; save();
     openDunClear(d, f, false, r.auto);           /* 31 던전 클리어 화면 — 339 로 «연속 도전» 스냅샷을 넘긴다 */
   }else{
@@ -26849,7 +26891,9 @@ function sweepDungeon(d){
   if(f < 1){ notify('먼저 <b>레벨 1</b>을 클리어해야 소탕합니다'); return; }
   if(S.dunTk[d.id] <= 0){ notify('<b>' + d.n + '</b> 입장권이 없습니다 — 출석 보상마다 <b>+' + DUN_TRY + '장</b>'); return; }
   S.dunTk[d.id]--; S.cnt.dungeon++;
-  giveReward(d.rw(f));
+  /* 654 — 소탕도 «던전 클리어 보상» 이다(같은 `d.rw(f)` · 같은 31 클리어 화면). 위 finishDunRun 과
+     같은 무음을 쓴다 — 한쪽만 끄면 «직접 깨면 조용하고 소탕하면 코인이 난다» 가 된다. */
+  giveReward(d.rw(f), fxClearMute());
   uiDirty = true; save();
   /* 31 — 소탕도 «클리어 보상» 결과 화면을 그대로 쓴다.
      339 ⑤ — 소탕에는 «다음 층» 이 없다(대상은 언제나 최고층−1 하나). 그래서 이 화면의 자동 도전은
@@ -29807,7 +29851,12 @@ function endRaid(record, died){
        이 콘텐츠의 목적과 보상이 같은 방향을 보게 한다. */
     /* 203 ③ — 같은 자리에 **룬강화석**도 붙는다(주인 지시 «DPS 측정장 보상에도 추가»).
        「룬의 제단」이 주 수급처가 되게 소액이고, 신기록 2배 규칙은 강화석과 같다. */
-    const st = giveReward({ stone: COS_ST_RAID * (rec ? 2 : 1), rstone: RUNE_ST_RAID * (rec ? 2 : 1) });
+    /* ⚑ 654 — DPS 측정장도 **전투 결과 보상**이라 같은 무음 목록을 지난다. 지금 이 지급에는 골드가
+       없어 그림은 한 픽셀도 안 바뀌지만(강화석·룬강화석 연출 그대로), 자리를 여기 적어 두는 것이
+       **스코프 구멍 방지**다 — 뒤에 이 보상에 골드가 붙으면 그때 코인이 되살아나 주인이 네 번째로
+       같은 보고를 하게 된다(610 꼴). `verify654` [B] 가 «전투 결과 지급 네 곳이 전부 이 목록을
+       지난다» 를 정적으로 물어 새 자리가 그냥 생기지 못하게 막는다. */
+    const st = giveReward({ stone: COS_ST_RAID * (rec ? 2 : 1), rstone: RUNE_ST_RAID * (rec ? 2 : 1) }, fxClearMute());
     save(); uiDirty = true;
     /* 206 — 결과 통보라 토스트다. 총 피해·최고 기록은 03 던전 페이지의 레이드 카드
        (`renderDunPage` → `raidBest`)가 항상 띄워 두므로 한 줄에서 뺀다 — 남기는 것은
@@ -29915,7 +29964,10 @@ function endArena(win){
     showMsg('아레나 중단');                            /* 94 — 12자 이내 */
   }else{
     if(win) S.arena.w++; else S.arena.l++;
-    const got = giveReward(arenaReward(win));
+    /* ⚑ 654 — 아레나 결과 보상도 **전투 결과**다(`arenaReward` 는 골드·다이아·강화석을 준다).
+       무음은 골드 한 축뿐이라 다이아·강화석 연출은 그대로 난다 — 위임 규약의 «전투 계열 골드는
+       전부 무음» 을 스코프 구멍 없이 적용한 자리이고, 되돌림은 `FX_COMBAT_FX.clearGold` 한 낱말이다. */
+    const got = giveReward(arenaReward(win), fxClearMute());
     uiDirty = true; save();
     openArenaResult(win, a, got);
   }
@@ -35248,7 +35300,17 @@ const FXFLY_MAX_C = 12;                              /* 전투 발 — 77 이전
      · `fxOrigBurstT`(35404 발원 버스트) ← 같음
      · combat 롤링 분기(35414·35417)     ← 같음
      · `fxLC()`/`#fxlc`(z7 층)          ← 위 둘 **＋ 518·578 의 «묻는» 경로**(`buried`) = 킬 드랍과 무관하게 산다
-     · `fxSrc` 의 `combat:true` 갈래(35232) ← ⑵⑶ (그리고 `FX_COMBAT_FX` 를 다시 켤 때의 ⑴) */
+     · `fxSrc` 의 `combat:true` 갈래(35232) ← ⑵⑶ (그리고 `FX_COMBAT_FX` 를 다시 켤 때의 ⑴)
+   ⚑⚑ **654 정오표 — 이 원장의 «⑵⑶» 소비처는 이제 기본값에서 0 이다.** 654 가 표의 세 항을
+     전부 `false` 로 내렸으므로 `fxAt(…, 'combat')` 은 기본 설정에서 한 번도 안 불린다
+     ⇒ `FXFLY_MAX_C` · `fxOrigBurstT` · combat 롤링 분기 · `fxSrc` 의 combat 갈래는
+     **런타임 도달이 0** 이다(`fxLC()`/`#fxlc` 만 518·578 의 `buried` 와 27165 `jzFx` 로 계속 산다).
+   ⚠ **그래도 걷어내지 않는다** — 295-②·399·460 의 «죽은 코드 금지» 가 걷어내라는 것은
+     **되살릴 방법이 없어진** 선언이다(399 의 `goldMul` 은 그 표를 쓰는 곳이 통째로 사라져
+     어떤 설정으로도 다시 못 닿았다). 여기는 다르다: 위 표의 한 낱말(`stageClear:true`)이
+     네 소비처를 **전부 그 자리에서** 되살리고, 592 는 그 되살아남을 위해 이 표를 만들었다.
+     그 «되살아난다» 가 말뿐이 아님은 `verify654` §R 이 세 항에 대해 실제로 코인을 다시 세어 못박는다
+     — 그 절이 빨개지면 이 블록은 그때 진짜 죽은 코드이니 선언째 걷어내라. */
 /* 93 3박자 타이밍(초). 도착은 «첫 0.56s → 마지막 1.26s» 로 균등 분배한다 —
    퍼짐(0.22) + 머묾(0.12~0.20) + 스태거(35ms·최대 0.50) 를 빼고 남는 만큼이 흡수 비행 길이다.
    이렇게 두면 아이콘 수(8~16)가 달라져도 «첫 도착·마지막 도착» envelope 이 고정된다. */
