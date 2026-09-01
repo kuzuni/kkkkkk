@@ -205,7 +205,9 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      1회차는 [C1][C2] 를 통과하고도 비평가 둘이 독립으로 «최대 반경 65 < 카드 반폭 75 라 수명 내내
      한 알도 카드 밖으로 못 나간다 · 총 이동 14px = 자기 지름의 37% · 카드에 붙은 데칼» 로 3점을 줬다.
      게이트가 «태어난 자리» 만 물으면 그 그림을 못 잡는다. */
-  const HALF = 151 / 2, PITCH_HALF = 176 / 2;         /* 카드 반폭 · 세로 이웃 칸 중심까지 */
+  /* 카드 반폭 · **이웃 칸의 가까운 변**까지(3회차 정정 — 침범의 경계는 이웃 «중심»(88)이 아니다:
+     세로 피치 176 · 카드 151 ⇒ 칸 사이 틈 25 ⇒ 중심에서 75.5 + 25 = 100.5px 부터 이웃 칸이다) */
+  const HALF = 151 / 2, NEIGH = 151 / 2 + (176 - 151);
   /* ⚠ 자를 «중심» 이 아니라 **«잉크»** 로 든다 — 619 13회차가 배운 것과 같다(사람이 보는 것은
      입자 중심이 아니라 «액자 밖으로 나온 잉크» 다). [C6] 의 이웃 칸 산수도 같은 자여야 짝이 맞는다. */
   let travTot = 0, farBad = 0, minTrav = 1e9, maxInk = 0, burstOut = 0, burstN = 0;
@@ -219,7 +221,7 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
       const ink = Math.hypot(q.x + q.dx - cx, q.y + q.dy - cy) + q.w / 2;
       travTot++; minTrav = Math.min(minTrav, t);
       bMax = Math.max(bMax, ink); maxInk = Math.max(maxInk, ink);
-      if (ink > PITCH_HALF) farBad++;
+      if (ink > NEIGH) farBad++;
     }
     burstN++; if (bMax > HALF) burstOut++;
   }
@@ -230,7 +232,7 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      'C5 ★ 버스트마다 잉크가 **카드 테(반폭 75.5) 를 넘는다** — «카드 안에서만 논다» 가 아니다',
      burstOut + '/' + burstN + '버스트 · 최대 잉크 끝 ' + Math.round(maxInk) + 'px');
   ok(farBad === 0,
-     'C6 ★ 그래도 **이웃 칸(세로 피치 반 88px)에는 안 닿는다** — 잉크 바깥 끝 기준',
+     'C6 ★ 그래도 **이웃 칸(가까운 변 100.5px)에는 안 닿는다** — 잉크 바깥 끝 기준',
      '넘은 알 ' + farBad + ' · 최대 잉크 끝 ' + Math.round(maxInk) + 'px');
 
   /* ── [D] 그림·연속 ───────────────────────────────────────────────── */
@@ -268,6 +270,26 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   ok(BS.length > 0 && laneBad === 0,
      'D6 ★ 한 버스트 안 두 알의 최소 각 간격 ≥ 15° — 갈래 수가 알 수와 같다(682 규약)',
      '어긋난 버스트 ' + laneBad + ' · 최소 ' + (laneMin === 999 ? '—' : laneMin.toFixed(1) + '°'));
+  /* ⚑⚑ 3회차 신설 — **«태어날 때 이미 갈라져 있는가».** 2회차의 «8점을 막는 단 하나» 가
+     «탄생 링 R0(16~18) < 글리프(22~24) 라 여섯 알이 한 덩어리로 쌓인다» 였다(원반 채움 122~140%).
+     각도만 물으면([D6]) 그 그림을 못 잡는다 — 각이 고르게 갈려 있어도 **반경이 작으면** 링 위
+     이웃 간격 `2·R·sin(π/n)` 이 글리프보다 좁아 겹친다. ⇒ **탄생 순간의 실제 간격**을 센다.
+     문턱 1.3 은 비평가가 처방문에 적은 값 그대로다(«분리 조건 2·R·sin(π/n) ≥ 1.3·글리프»). */
+  let sepBad = 0, sepMin = 1e9;
+  for (const b of BS) {
+    const g = b.born.filter(isGain);
+    const cr = b.cards[b.id]; if (!cr || g.length < 2) continue;
+    const cx = cr.x + cr.w / 2, cy = cr.y + cr.h / 2;
+    const R = g.reduce((s, q) => s + Math.hypot(q.x - cx, q.y - cy), 0) / g.length;
+    const ink = g.reduce((s, q) => s + (q.fs || q.w), 0) / g.length;
+    const gap = 2 * R * Math.sin(Math.PI / g.length);
+    const ratio = ink > 0 ? gap / ink : 0;
+    sepMin = Math.min(sepMin, ratio);
+    if (ratio < 1.3) sepBad++;
+  }
+  ok(BS.length > 0 && sepBad === 0,
+     'D7 ★ **탄생 순간** 이웃 간격이 글리프의 1.3배 이상 — 2회차의 «한 덩어리로 쌓인다» 가 빨개지는 자리',
+     '어긋난 버스트 ' + sepBad + ' · 최소 비 ' + (sepMin === 1e9 ? '—' : sepMin.toFixed(2)));
   /* 682 규약 — 연속 두 버스트가 «같은 방향 시퀀스» 면 안 된다(황금비 위상이 돌고 있는가) */
   let sameN = 0, pairs = 0;
   for (let i = 1; i < BS.length; i++) {

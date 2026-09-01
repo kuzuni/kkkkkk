@@ -90,6 +90,12 @@ const TALLY = () => {
    DOM 을 세는 자와 «화면에 칠해진 것» 이 갈릴 수 있다는 것을 1회차가 비싸게 배웠다 ⇒
    정답표가 스스로를 검산하게 만든다: 방금 찍은 PNG 를 페이지로 되돌려 당첨 카드 상자 안의
    밝은 잉크 픽셀을 센다. «획득 알 N» 과 이 값이 같이 0 이거나 같이 크지 않으면 표가 거짓이다. */
+/* ⚑ 3회차 — 재는 상자를 **카드 + 24px** 로 넓혔다. `RW_GAIN_R1` 80 이면 알이 카드 테(75.5) 밖으로
+   나가므로 카드 상자만 세면 «퍼진 뒤» 프레임이 되레 작아 보인다(A6·A7). 24 인 이유는 이웃 칸의
+   가까운 변이 중심에서 100.5px 이라 75.5 + 24 = 99.5 가 이웃을 안 물고 잡을 수 있는 최대치다. */
+const EXP = 24;
+const grow = b => b && { x: Math.max(0, b.x - EXP), y: Math.max(0, b.y - EXP), w: b.w + 2 * EXP, h: b.h + 2 * EXP };
+
 async function paintedPx(p, file, box) {
   if (!box) return -1;
   const url = 'data:image/png;base64,' + fs.readFileSync(file).toString('base64');
@@ -107,6 +113,34 @@ async function paintedPx(p, file, box) {
     }
     return n;
   }, { url, b: box });
+}
+
+/* ⚑⚑ 3회차 신설 — **기준선.** 2회차의 «찍힌 잉크 px» 는 카드 상자 안 밝은 픽셀을 통째로 세서
+   **카드 자기 아이콘까지** 포함했다(비평가 지적: «A8 은 0알인데 7,030px — 그 열은 파티클을 못 가려낸다»).
+   ⇒ 연출이 하나도 없는 정착 화면을 한 장 찍어 **칸마다** 기준선을 만들고, 표에는 **Δ(그 프레임 − 기준선)**
+   을 적는다. 그러면 «알이 0인데 값이 크다» 가 구조적으로 안 나온다. */
+async function baseline() {
+  const { b, p } = await open(SEED);
+  await p.evaluate(() => {
+    try { document.getAnimations().forEach(a => { a.pause(); try { a.finish(); } catch (_) { a.currentTime = 1e7; } }); } catch (e) {}
+    const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+  });
+  const boxes = await p.evaluate(() => {
+    const out = {};
+    for (const el of document.querySelectorAll('#rwGrid [data-rw]')) {
+      const r = el.getBoundingClientRect();
+      out[el.getAttribute('data-rw')] = { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
+    }
+    return out;
+  });
+  fs.mkdirSync(OUT, { recursive: true });
+  const file = path.join(OUT, '683-' + ROUND + '-base.png');
+  await p.screenshot({ path: file });
+  const out = {};
+  for (const k of Object.keys(boxes)) out[k] = await paintedPx(p, file, grow(boxes[k]));
+  await b.close();
+  try { fs.unlinkSync(file); } catch (e) {}
+  return out;
 }
 
 const FREEZE = () => {
@@ -168,14 +202,32 @@ async function shotA(T, idx) {
     el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
     el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     eval('(' + freeze + ')')();
+    /* ⚑⚑ 3회차 — **감는 대상을 연출 레이어로 좁혔다.** 2회차는 `getAnimations()` **전부**에
+       `currentTime = T` 를 걸어서, 격자 카드의 «등장» 애니까지 t=T 로 **되감겼다** ⇒ t=0·40ms 프레임에
+       카드 아이콘·«Lv.n» 이 아직 안 그려진 채 알만 만개한 그림이 찍혔다. 비평가 **둘이 독립으로**
+       그것을 «버스트가 제 숙주보다 130ms 먼저 켜진다» 로 감점했는데 **제품이 아니라 하네스가 만든 그림**이다
+       (`probe683b` 로 이웃 칸을 세어 보면 A1·A2 에서 이웃 카드 잉크가 0px = 격자가 통째로 덜 그려졌다).
+       ⇒ `#fxl` 안(연출)만 T 로 감고, **나머지는 «끝난 상태» 로 보낸다**(무한 반복이라 `finish()` 가
+       던지면 큰 값으로 감아 정착시킨다). 58 36회차의 «캡처가 시각을 흐리면 정답표가 거짓» 의 반대편 —
+       **연출 아닌 것까지 같이 흐리면 배경이 거짓**이 된다. */
     let at = 0;
-    try { document.getAnimations().forEach(a => { a.pause(); try { a.currentTime = T; at = T; } catch (e) {} }); } catch (e) {}
+    try {
+      document.getAnimations().forEach(a => {
+        const tg = a.effect && a.effect.target;
+        const inFx = !!(tg && tg.closest && tg.closest('#fxl'));
+        a.pause();
+        try {
+          if (inFx) { a.currentTime = T; at = T; }
+          else { try { a.finish(); } catch (_) { a.currentTime = 1e7; } }
+        } catch (e) {}
+      });
+    } catch (e) {}
     return Object.assign({ at: Math.round(at) }, eval('(' + tally + ')')());
   }, { T, sd: SEED, tally: TALLY.toString(), freeze: FREEZE.toString(), seedfn: SEEDFN.toString() });
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '683-' + ROUND + '-A' + idx + '.png');
   await p.screenshot({ path: file });
-  const px = await paintedPx(p, file, info.card);
+  const px = await paintedPx(p, file, grow(info.card));
   await b.close();
   return { T, file, info, px, errs: errs.length };
 }
@@ -197,7 +249,7 @@ async function shotB(T, idx) {
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '683-' + ROUND + '-B' + idx + '.png');
   await p.screenshot({ path: file });
-  const px = await paintedPx(p, file, info.card);
+  const px = await paintedPx(p, file, grow(info.card));
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }).catch(() => {});
   await b.close();
   return { T, file, info, px, errs: errs.length };
@@ -205,23 +257,30 @@ async function shotB(T, idx) {
 
 const row = (tag, i, r) => '| ' + tag + (i + 1) + ' | ' + r.T + ' | ' + r.info.name + ' ' + r.info.ic
   + ' | ' + JSON.stringify(r.info.card) + ' | ' + r.info.gain + ' | ' + r.info.onCard + ' | ' + r.info.other
-  + ' | ' + r.info.glyph + ' | ' + r.info.gsz + 'px | ' + r.info.gsp + 'px | ' + r.px
+  + ' | ' + r.info.glyph + ' | ' + r.info.gsz + 'px | ' + r.info.gsp + 'px | ' + r.dpx
   + ' | ' + r.info.pay + ' | ' + r.info.bead + ' | ' + r.info.text + ' | ' + r.info.flash + ' |';
 
 (async () => {
+  const BASE = await baseline();
   const A = [], B = [];
   for (let i = 0; i < STOPS.length; i++) A.push(await shotA(STOPS[i], i + 1));
   for (let i = 0; i < HOLDS.length; i++) B.push(await shotB(HOLDS[i], i + 1));
+  /* 기준선을 빼서 «파티클·플래시가 더한 잉크» 만 남긴다(위 baseline 머리말) */
+  for (const r of A.concat(B)) {
+    const b0 = BASE[r.info.id];
+    r.dpx = (Number.isFinite(b0) && Number.isFinite(r.px)) ? (r.px - b0) : r.px;
+  }
   console.log('\n# 683 ' + ROUND + ' 정답표 (시드 ' + SEED + ')');
   console.log('\n«획득» = 683 이 신설한 획득 이미터(`.fx-rlic`, 원점 = 획득 유물 카드)');
   console.log('«지불» = 666 의 지불 이미터(`.fx-cic`, 원점 = 소환 버튼) — 이 작업이 안 건드린 축\n');
-  console.log('| # | t(ms) | 당첨 유물 | 당첨 카드 상자 | 획득 알 | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 평균 크기 | 최대 반경 | **찍힌 잉크 px** | 지불 알 | 구슬 | 글자 | 플래시 |');
+  console.log('| # | t(ms) | 당첨 유물 | 당첨 카드 상자 | 획득 알 | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 평균 크기 | 최대 반경 | **찍힌 잉크 Δpx** | 지불 알 | 구슬 | 글자 | 플래시 |');
   console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   A.forEach((r, i) => console.log(row('A', i, r)));
   B.forEach((r, i) => console.log(row('B', i, r)));
   console.log('\nA = 단발(트리거 = 0ms · `currentTime` 으로 감은 정확한 시각) · B = 연속 홀드(실시간 ms)');
   const c = A[0].info.card;
   console.log('당첨 카드 상자(A씬): ' + JSON.stringify(c));
+  console.log('기준선(연출 0인 정착 화면, 칸별 밝은 px): ' + JSON.stringify(BASE));
   console.log('콘솔 에러: ' + A.concat(B).reduce((s, r) => s + r.errs, 0) + '건');
   console.log('캡처: ' + path.join(OUT, '683-' + ROUND + '-*.png'));
 })();
