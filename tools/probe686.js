@@ -191,7 +191,9 @@ async function openAt(browser, H) {
   });
   sweep.forEach(s => console.log(`      fs ${s.fs}px: 최악(${s.digits}자리) 잉크 ${s.worst} · 내부 ${s.inner} · 여유 ${s.slack}`));
   const cur = sweep.find(s => s.fs === 31);
-  ok(cur.slack > 0, 'ⓓ-1 현행 fs 31 은 자릿수 최악에서도 안 넘친다(584 예산이 지금 지켜지고 있다)',
+  /* ⚠ 이 스윕은 fs 를 **직접 넣어 가며** 잰다(제품의 현재 값이 아니다 — 4회차 현재 제품은 52).
+     «31» 은 686 이 손대기 전의 값이고, 이 항은 «수리 전 예산이 지켜지고 있었나» 를 남기는 기록이다. */
+  ok(cur.slack > 0, 'ⓓ-1 수리 전 크기(fs 31)는 자릿수 최악에서도 안 넘쳤다(584 예산의 출발점)',
     `여유 ${cur.slack}px`);
   const over = sweep.filter(s => s.slack <= 0).map(s => s.fs);
   ok(true, 'ⓓ-2 (기록) 라벨을 키우면 넘치기 시작하는 크기',
