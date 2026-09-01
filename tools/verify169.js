@@ -225,6 +225,20 @@ async function openList(p) {
        C2·E1 두 자리만 그 규약을 못 받았다. `onclick → sweepDungeon → giveReward` 는 전부
        동기라 클릭과 읽기 사이에 프레임이 못 낀다 = 배경분이 섞일 창 자체가 없다.
        ⚠ 기대값을 36868 로 고쳐 적는 재기준은 반려다(334 규약) — 고칠 것은 **자의 측정 방식**이다. */
+    /* ⚑ 649(2026-09-01) — HUD 시작값은 **지급 앞**에서 읽는다. 643 이 C2 에서 고친 것과 같은 결함이
+       한 칸 아래에도 있었다: 종전에는 이 값을 클릭 **뒤**(정착 확인 직전, 클릭 + 500ms)에서 읽고
+       `hud.txt !== hudStart` 로 «굴러가는 것을 봤는가» 를 물었는데, 58 재화 흡수 롤(`fxVal`)이
+       그 샘플보다 **먼저** 끝나면 시작값이 이미 정착값이라 거짓 빨강이 된다
+       (`probe649` 실측 — 5병렬 25판에서 **13판 FAIL(52%)**, 실패 로그는 예외 없이 «36.9A» → «36.9A»
+        이고 `S` 도 36.9A = **값은 내내 옳고 축만 어긋났다**. 통과한 판은 12.3A·18.4A·24.6A·30.7A =
+        롤 한복판을 우연히 집은 것이다. 단독 실행은 롤이 느려 거의 늘 통과라 한 번만 돌리면 안 보인다).
+       ⚠ `hud.txt !== hudStart` 항을 빼는 길은 반려다(334·643 규약) — 그러면 «HUD 가 아예 안 움직여도
+       초록» 이 된다. 고칠 것은 **읽는 시점**이고, 지급 전 값(0골드 → «0»)을 기준선으로 삼으면
+       ⓐ 롤이 언제 끝나든 축이 살고 ⓑ «0 → 36.9A» 라 뜻이 오히려 또렷해진다.
+       되돌림 시험은 `probe649` §2(이 줄을 도로 아래로 옮긴 사본은 같은 부하에서 빨개진다)와
+       아래 E4(HUD 를 얼린 사본은 이 항이 빨개진다) 둘이 함께 못박는다.
+       638(`verify102` 고정 대기 900ms)이 같은 «부하에서만 죽는 자» 계열의 선례다. */
+    const hudStart = await p.evaluate(() => document.getElementById('goldN').textContent); /* 649-ANCHOR-PRE */
     const paid = await p.evaluate(() => {
       const g0 = S.gold;
       document.getElementById('dgdSweep').click();
@@ -249,8 +263,10 @@ async function openList(p) {
     chk(after.saved === after.left, 'C7 세이브(S)에 반영된다', `저장 ${after.saved} / 메모리 ${after.left}`);
     /* HUD 골드는 `#goldN` 이고 58 «재화 흡수» 연출(`fxVal`)이 값을 굴려서 올린다 —
        클릭 직후가 아니라 **정착한 값**을 봐야 한다(93 교훈: 굴러가는 중간값을 재면 게이트가 흔들린다).
-       ⚠ 시작값(0골드 → 표기 «0»)과 다른 값으로 «정착» 하는지를 함께 본다. */
-    const hudStart = await p.evaluate(() => document.getElementById('goldN').textContent);
+       ⚠ 시작값(0골드 → 표기 «0»)과 다른 값으로 «정착» 하는지를 함께 본다 —
+       그 시작값 `hudStart` 는 **위(지급 앞)에서** 읽어 둔 것이다(649). 여기서 읽으면 롤이 이미
+       끝난 판에서 «시작 = 정착» 이 되어 자가 부하에 따라 흔들린다. */
+    /* 649-ANCHOR-POST */
     const settled = await p.waitForFunction(
       () => document.getElementById('goldN').textContent === fmtG(S.gold),
       null, { timeout: 8000 }).then(() => true).catch(() => false);
@@ -398,6 +414,45 @@ async function openList(p) {
         `지급 ${n.paid.toFixed(0)} vs 기대 ${n.want.toFixed(0)} (차 ${(n.paid - n.want).toFixed(0)})`);
       await ctx.close();
     } finally { rmNeg(NEG3); }
+
+    /* ⚑ E4 — 649 되돌림 시험. C8 의 시작값을 «지급 앞» 으로 옮겼으니, 그 새 식이
+       **여전히 진짜 결함을 잡는지**를 못박아야 한다(334·643 규약 — 무르게 푼 수리 금지).
+       가장 무른 수리는 `hud.txt !== hudStart` 항을 빼는 것이고, 그러면 «HUD 가 아예 안 움직여도
+       초록» 이 된다. 그래서 **HUD 골드를 얼린 사본**(58 롤 대입 한 줄을 no-op 으로)에서
+       C8 과 **똑같은 식**이 반드시 빨개져야 한다.
+       ⚠ 정착 대기는 3000ms 로 줄인다 — 실측 롤은 500ms 안에 끝나므로(`probe649` §3) 넉넉하고,
+         C8 의 8000ms 를 그대로 쓰면 얼어붙은 사본에서 매 실행 8초를 버린다.
+       ⚠ 이 사본은 `giveReward` 를 안 건드린다 — `S.gold` 는 정상으로 오르고 **표시만** 얼어야
+         «다른 화면에 반영» 이라는 C8 의 뜻이 그대로 시험된다. */
+    const NEG4 = negPath(4);
+    const HUDLINE = "$('goldN').textContent = fmtG(fxVal('gold'));";
+    const hit4 = src.split(HUDLINE).length - 1;
+    chk(hit4 === 1, 'E0d 음성항 사본 — HUD 골드 대입 자리를 한 곳으로 집었다', `${hit4}곳`);
+    fs.writeFileSync(NEG4, src.replace(HUDLINE, '/* E4: HUD 골드 표시를 얼린다 */'));
+    try {
+      const { ctx, p } = await boot(b, 2280, 'file://' + NEG4);
+      await openList(p);
+      await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
+      await p.waitForTimeout(300);
+      const nStart = await p.evaluate(() => document.getElementById('goldN').textContent);
+      const nPaid = await p.evaluate(() => {
+        const g0 = S.gold;
+        document.getElementById('dgdSweep').click();
+        return S.gold - g0;
+      });
+      await p.waitForTimeout(500);
+      const nSettled = await p.waitForFunction(
+        () => document.getElementById('goldN').textContent === fmtG(S.gold),
+        null, { timeout: 3000 }).then(() => true).catch(() => false);
+      const nHud = await p.evaluate(() => ({
+        txt: document.getElementById('goldN').textContent, want: fmtG(S.gold),
+      }));
+      /* C8 과 같은 식으로 재서 **빨개져야** 통과다. 지급 자체는 살아 있어야 시험이 성립한다. */
+      chk(nPaid > 0 && !(nSettled && nHud.txt !== nStart),
+        'E4 음성항 — HUD 골드를 얼리면 C8 의 새 식이 그대로 빨개진다 (시작값을 앞으로 옮겨도 축은 살아 있다)',
+        `지급 +${nPaid.toFixed(0)} · «${nStart}» → «${nHud.txt}» (S ${nHud.want}) · 정착=${nSettled}`);
+      await ctx.close();
+    } finally { rmNeg(NEG4); }
   }
 
   /* ================= [F] 회귀 — 도전 버튼·팝업 흐름 불변 ================= */
