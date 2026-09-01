@@ -411,39 +411,86 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   });
   await p.waitForTimeout(450);
   const HTS = [700, 1400, 2200, 3000];
-  const hb = await (async () => {
+  /* ⚑⚑ 729 — **«순간» 이 아니라 «창» 을 본다**(574·630 선례. 제품 `index.html` 0줄).
+     [H1] 은 상수 시각 4개를 «찍어» 봤는데, **첫 자리(700ms)가 사다리가 가장 얇은 창 한복판**이다:
+     반복은 `TR_HOLD_DELAY` 350ms 뒤에 시작해 `TR_HOLD_IV0` **160ms** 에서 60ms 까지 가속하고
+     플로터 수명은 `HB_LIFE` **310ms** 인데 여기 필터가 `opacity > 0.08` 이라, **간격이 가장 넓은 초반**에만
+     «앞장이 0.08 밑으로 내려간 뒤 다음 장이 아직 안 뜬» 틈이 생긴다. 부하는 그 틈을 만들지 않고 **옮긴다** —
+     CPU 6줄 부하 18회 실측에서 «동시 최대 장수» 는 **18회 전부 2** 이고 겹친 쌍은 조밀 표본 전체에서 **0** 인데,
+     상수 700ms 자리만 **2/18(≈11%)** 로 1장이 잡혔다(1400·2200·3000 은 54회 전부 2장). ⇒ 제품이 아니라 «언제 보는가» 다.
+     ⚠ **문턱은 한 칸도 안 건드렸다**(`n >= 2` 그대로) — `n >= 1` 로 내리면 이 항이 막는 실패 모드
+       («한 장 뜨고 마는 것») 자체가 사라진다. 옮긴 것은 **시각**뿐이다.
+     ⇒ 목표 시각 t 부터 «≥2장» 이 보일 때까지 `HB_SLACK` 안에서 폴링하고, 그 사이 표본을 **전부** 남긴다.
+       슬랙은 실측으로 정했다 — 부하 10회 × 4자리 = 40표본에서 앞대기 **최대 77ms · 못 채운 창 0** ⇒ **250ms(3.2배)**.
+     ⚑ [H2]·[H3]·[H4] 는 이제 창의 **모든** 표본을 본다 — 표본이 4개에서 수십 개로 늘어 **오히려 조여졌다**.
+     ⚑ 무르게 푼 수리가 아님은 **[H1n] 되돌림 시험**이 못박는다(아래). 재현기는 `tools/probe729.js`. */
+  const HB_SLACK = 250, HB_POLL = 10;
+  const hbShot = () => p.evaluate(() => {
+    const rs = [...document.querySelectorAll('#fxl .fx-plus.hb')]
+      .filter(n => parseFloat(getComputedStyle(n).opacity) > 0.08)
+      .map(n => n.getBoundingClientRect());
+    let ov = 0;
+    for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+      const a = rs[i], b = rs[j];
+      if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0 &&
+          Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0) ov++;
+    }
+    return { n: rs.length, ov, w: rs.length ? Math.round(Math.max(...rs.map(r => r.width))) : 0 };
+  });
+  /* 한 홀드에서 창 4개를 재는 팔 — [H] 본절과 [H1n] 되돌림 시험이 **같은 자**를 쓰게 공용으로 둔다 */
+  const hbWindows = async () => {
     const c = await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1');
     const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
     const t0 = Date.now(); const rows = [];
     for (const t of HTS) {
       while (Date.now() - t0 < t) await new Promise(r => setTimeout(r, 5));
-      rows.push(await p.evaluate(tt => {
-        const rs = [...document.querySelectorAll('#fxl .fx-plus.hb')]
-          .filter(n => parseFloat(getComputedStyle(n).opacity) > 0.08)
-          .map(n => n.getBoundingClientRect());
-        let ov = 0;
-        for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
-          const a = rs[i], b = rs[j];
-          if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0 &&
-              Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0) ov++;
-        }
-        return { t: tt, n: rs.length, ov, w: rs.length ? Math.round(rs[0].width) : 0 };
-      }, t));
+      const smp = []; let wait = -1;
+      while (Date.now() - t0 < t + HB_SLACK) {
+        const s = await hbShot();
+        smp.push(s);
+        if (s.n >= 2) { wait = Date.now() - t0 - t; break; }
+        await new Promise(r => setTimeout(r, HB_POLL));
+      }
+      rows.push({
+        t, wait, smp: smp.length,
+        n: Math.max(...smp.map(s => s.n), 0),
+        ov: Math.max(...smp.map(s => s.ov), 0),
+        w: Math.max(...smp.map(s => s.w), 0),
+      });
     }
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await st.catch(() => {});
     await p.waitForTimeout(250);
     return rows;
-  })();
-  hb.forEach(r => console.log('  · t=' + String(r.t).padStart(4) + 'ms · 동시 ' + r.n + '장 · 겹친 쌍 ' + r.ov + ' · 잉크 폭 ' + r.w));
+  };
+  const hb = await hbWindows();
+  hb.forEach(r => console.log('  · t=' + String(r.t).padStart(4) + 'ms · 창 표본 ' + r.smp +
+    '개 · 앞대기 ' + (r.wait < 0 ? '슬랙(' + HB_SLACK + ')을 못 채움' : r.wait + 'ms') +
+    ' · 동시 최대 ' + r.n + '장 · 겹친 쌍 ' + r.ov + ' · 잉크 폭 ' + r.w));
   ok(hb.every(r => r.n >= 2), '[H1] 홀드 내내 여러 장이 «흐르고» 있다(한 장 뜨고 마는 게 아니다)',
-     hb.map(r => r.n).join('·'));
+     hb.map(r => r.n).join('·') + ' · 앞대기 ' + hb.map(r => r.wait).join('·') + 'ms ≤ ' + HB_SLACK);
   ok(hb.every(r => r.ov === 0), '[H2] ★ 서로 겹친 쌍 0 — 칸 5개 × 간격 80px 이 수명 .3s 를 정확히 덮는다',
-     hb.map(r => r.ov).join('·'));
+     hb.map(r => r.ov).join('·') + ' (표본 ' + hb.reduce((a, r) => a + r.smp, 0) + '개)');
   ok(hb.every(r => r.w <= HB_SLOT_W_JS), '[H3] 플로터 잉크 폭이 칸 간격(80px)보다 좁다 — 옆 칸과 안 겹치는 근거',
      hb.map(r => r.w).join('·') + ' ≤ ' + HB_SLOT_W_JS);
   ok(hb.every(r => r.n <= 10), '[H4] 동시 생존이 10장을 안 넘는다(FXMAX 120 · 눈이 읽을 수 있는 상한)',
      hb.map(r => r.n).join('·'));
+
+  /* ⚑⚑ 729 [H1n] — **새 축(«창») 의 되돌림 시험.** 368·334 규약: 자리를 옮겼으면 «옮긴 자리가 여전히
+     결함을 잡는가» 를 같은 실행에서 증명한다. `hbFloat` 를 «첫 한 장만 통과» 로 깎으면 제품이 정확히
+     [H1] 이 막는 실패 모드(«한 장 뜨고 마는 것»)가 되고, 그러면 창 4개 중 적어도 하나는 슬랙을 못 채워야 한다. */
+  await p.evaluate(() => {
+    window.__hbF0 = window.hbFloat;
+    let once = false;
+    window.hbFloat = function () { if (once) return false; once = true; return window.__hbF0.apply(this, arguments); };
+  });
+  await p.waitForTimeout(400);
+  const hbN = await hbWindows();
+  await p.evaluate(() => { if (window.__hbF0) { window.hbFloat = window.__hbF0; window.__hbF0 = null; } });
+  console.log('  · (되돌림) 동시 최대 ' + hbN.map(r => r.n).join('·') + '장 · 앞대기 ' + hbN.map(r => r.wait).join('·'));
+  ok(hbN.some(r => r.n < 2),
+     '[H1n] ★ 되돌림 시험 — «첫 한 장만» 으로 깎은 사본에서 창 규칙이 빨개진다(새 축은 무르지 않다)',
+     '동시 최대 ' + hbN.map(r => r.n).join('·') + ' (수리된 자는 ' + hb.map(r => r.n).join('·') + ')');
 
   /* ══ [J] 애니메이션이 규격대로 끝까지 도는가 (4회차 신설) ═════════ */
   console.log('[J] 플로터 수명·α — 3회차에 «뒤 1/4 이 한 프레임도 안 나온다» 로 잡힌 자리');
