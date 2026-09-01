@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 1 48 52" width="64" height="64" shape-rendering="geometricPrecision">
   <!-- 화폐 아이콘 · 강화석 — 작업 194(코스튬 강화 전용 재화) · 125 단일 출처 -->
   <path d="M32 3l14 9 8 15-8 15-14 9-14-9-8-15 8-15z" fill="#C25A18" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
   <path d="M32 10l10 6.5 5.5 10.5-5.5 10.5L32 44l-10-6.5L16.5 27 22 16.5z" fill="#FF9B3D"/>

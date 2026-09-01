@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 2 60 60" width="64" height="64" shape-rendering="geometricPrecision">
   <!-- 화폐 아이콘 · 다이아(보석) — 작업 125 단일 출처 -->
   <path d="M20 4h24l16 18-28 38L4 22z" fill="#2FA7D8" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
   <path d="M20 4l-6 18 18 38 18-38-6-18z" fill="#67D8F7" stroke="#0E6E96" stroke-width="2.5" stroke-linejoin="round"/>
