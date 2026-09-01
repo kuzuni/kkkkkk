@@ -3696,10 +3696,14 @@
     72%{opacity:1;transform:translate(-50%,-17px) scale(1)}
     100%{opacity:0;transform:translate(-50%,-24px) scale(.98)}}
   /* 비용은 «빠져나간다» — 58 결제 어휘 그대로 **아래로** 진다(방향이 곧 뜻이다) */
+  /* ⚑ 619 7회차 — 반복 하강도 `--hb-fall`(기본 24px = 종전 값 그대로). 491 2회차가 잉크를 32 → 43 으로
+     키운 뒤로 룬 비용 띠(224..280 = 56px)에 «잉크 43 + 하강 24 = 67» 이 물리적으로 안 들어가
+     하강 끝이 «다음 +n%» 라벨 상단을 8px 물었다(실측 14/243 프레임). 룬만 12px 로 신고한다 —
+     늘리는 방향은 여전히 금지다(위 6회차 머리말 — 사다리 세로 겹침). */
   @keyframes fxHbDn{0%{opacity:.6;transform:translate(-50%,0) scale(.9)}
-    10%{opacity:1;transform:translate(-50%,4px) scale(1)}
-    72%{opacity:1;transform:translate(-50%,17px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,24px) scale(.96)}}
+    10%{opacity:1;transform:translate(-50%,calc(var(--hb-fall,24px) * .167)) scale(1)}
+    72%{opacity:1;transform:translate(-50%,calc(var(--hb-fall,24px) * .708)) scale(1)}
+    100%{opacity:0;transform:translate(-50%,calc(var(--hb-fall,24px) * 1)) scale(.96)}}
   /* ⚑ 491 2회차 — 회당 플로터를 **공용 토큰으로 되돌린다**(잉크 30 → `--fx-plus-fs` 34px · 테 5 → 7px).
      58 24회차가 «세 씬을 한 값으로 묶으라» 며 세운 토큰이 `--fx-plus-fs` 인데 488 이 이 자리에만
      30px/5px 로 따로 적어 두어, 1회차 비평가 둘이 **독립으로** «플로터 규격이 3종»(대조군 80×75 풀대비 /
@@ -3751,10 +3755,13 @@
     8%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * -.146)) scale(1)}
     72%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * -.708)) scale(1)}
     100%{opacity:0;transform:translate(-50%,calc(var(--hb-rise,48px) * -1)) scale(.98)}}
+  /* ⚑ 619 7회차 — 하강 거리는 `--hb-fall`(기본 = `--hb-rise`). 룬 비용 줄기의 띠(224..280)는 바로
+     아래가 «다음 +n%» 라벨이라 48px 하강이 라벨을 뚫는다 — 위 6회차 후반 규약 그대로 «이동 거리는
+     호스트가 정한다» 를 하강에도 편다(오르기·내리기의 띠가 같은 폭일 이유가 없다). */
   @keyframes fxHbLngDn{0%{opacity:.6;transform:translate(-50%,0) scale(.9)}
-    8%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * .146)) scale(1)}
-    72%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * .708)) scale(1)}
-    100%{opacity:0;transform:translate(-50%,calc(var(--hb-rise,48px) * 1)) scale(.96)}}
+    8%{opacity:1;transform:translate(-50%,calc(var(--hb-fall,var(--hb-rise,48px)) * .146)) scale(1)}
+    72%{opacity:1;transform:translate(-50%,calc(var(--hb-fall,var(--hb-rise,48px)) * .708)) scale(1)}
+    100%{opacity:0;transform:translate(-50%,calc(var(--hb-fall,var(--hb-rise,48px)) * 1)) scale(.96)}}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   /* 24회차 — 23차 비평 AN·AP 가 2인 공통으로 «세 씬 간 글자 크기 일관성이 깨졌다» 를 냈다
@@ -13241,7 +13248,16 @@
        걸려 **마지막 간격만 −12.3%** 로 찌그러졌다(BV 실측 74.00 · 73.92 · 74.08 · **64.92**). 중심을 798 로 두면
        끝 칸(941)이 상한(941) 안에 스스로 들어와 **클램프가 한 칸도 안 민다**(게이트 [K3]). 위로는 `.rb` 바가 224 에서 끝나고
        아래로는 `.rd` 효과줄이 280 에서 시작하니 봉투가 정확히 그 사이에 앉는다. */
-  .tr-rn{--hb-y:248;--hb-x:.432;--hb-y2:224;--hb-x2:.8026;--hb-sw:70}
+  /* ⚑ 619 7회차 — 룬은 세로 지터를 끈다(`--hb-jy:0`). 두 줄기의 띠 224..280 은 3회차가 잰
+     «진행바 아래 ~ 요약줄 위» **여유 0 의 최대 빈 띠**라(y2 를 170 으로 올려 봤다가 `verify488` [I1]
+     «비용 봉투가 진행바를 밟는다» 로 즉시 빨개져 되돌렸다) 위·아래 어느 쪽 지터도 남의 자리다.
+     스폰 변주는 칸 순환 + 가로 지터가 맡는다.
+     첫 발(lone)의 하강은 `--hb-fall:12px` 로 줄인다 — 기본 48 이면 잉크 43 + 48 = 315 로 바로 아래
+     «다음 +n%» 라벨(293..321)을 뚫는다(비평가 DR·DS 2인 공통 — 실측 13/248 프레임 겹침 · 줄이면 0).
+     224 + 43 + 12 = 279 ≤ 띠 하단 280. 값이 작은 선례는 단련 헤더 `--hb-rise:22`(6회차 후반 — 띠가
+     좁으면 이동을 띠에 맞춘다). ⚠ x2 를 .62(아래 빈 복도)로 옮기는 길은 [I3] «두 줄기 좌우 분리» 가
+     막는다 — 결과 사다리(291..571)와 겹친다. */
+  .tr-rn{--hb-y:248;--hb-x:.432;--hb-y2:224;--hb-x2:.8026;--hb-sw:70;--hb-jy:0;--hb-fall:12px}
   /* ⚑ 3회차 — 훈련 비용 띠를 132 → **180** 으로 내렸다. 132 는 아이콘 띠 안이긴 한데 하필
      **카드 누름 방울**(Ø31px · 카드기준 x7–37 · y117–146) 자리라, BP 가 «「−53」 글자 상자의 41% 가
      방울에 덮여 «5» 가 안 읽힌다» 로 잡았다(BO 도 같은 자리를 «금화 파티클이 60% 가린다» 로 냈다).
@@ -36631,16 +36647,26 @@ function fxSpendFrom(cur, host){
   }
   const hr = host ? fxRect(host) : null;
   const hc = hr ? { x:hr.x + hr.w/2, y:hr.y + hr.h/2 } : null;
+  /* ⚑ 619 7회차 — **형제 부품 안의 아이콘도 제외한다.** «가장 가까운 밖 아이콘» 이 단련 k0 행에서
+     바로 아래 k1 행의 [단련] 버튼 아이콘을 집어, 파편이 **이웃 카드를 가로질러** 날았다(비평가
+     DR·DS 2인 공통 — «f1 파편이 호스트를 80~170px 이탈해 이웃 행 라벨에 닿는다»). 호스트와 같은
+     부품 클래스의 «다른 개체» 안 아이콘은 출발지가 아니다 — 남는 것이 헤더의 보유 표시(의도한 ②)다. */
+  const hostCls = host && host.classList && host.classList[0];
   let best = null, bd = Infinity;
   for(const im of document.querySelectorAll('img.cic[data-cur-ic="' + cur + '"]')){
     if(host && host.contains && host.contains(im)) continue;
+    if(hostCls){ const sib = im.closest('.' + CSS.escape(hostCls)); if(sib && sib !== host) continue; }
     const r = fxRect(im); if(!r || !r.w) continue;
     const q = { x:r.x + r.w/2, y:r.y + r.h/2 };
     const d = hc ? Math.hypot(q.x - hc.x, q.y - hc.y) : 0;
     if(d < bd){ bd = d; best = q; }
   }
   if(best) return best;
-  return hc ? { x:hc.x, y:Math.max(60, hr.y - 200) } : null;
+  /* ⚑ 619 7회차 — ③ 폴백을 «호스트 위 200px» → **상변 안쪽 30px** 로. 200px 위는 룬에서 서브탭
+     바(호스트 상단 −95..−55) 한복판이라 젬이 다른 UI «위에서» 태어났다(DR «상단 탭 라벨을 절반
+     덮고 화면 y0 에서 잘림» · DS «잠금 탭 위 통과»). 상변에서 스며 중심으로 흐르면(≈320px 여정)
+     방향은 그대로 읽히고 잉크(반경 ≈54)가 위 형제를 물지 않는다(−40 위로 안 올라간다). */
+  return hc ? { x:hc.x, y:hr.y + 30 } : null;
 }
 function fxSpend(cur, host){
   const C = FXCUR[cur]; if(!C) return false;
@@ -36705,7 +36731,10 @@ const FXB_M = 6, FXB_K = 0.20, FXB_RMIN = 22, FXB_RMAX = 260;
    ⓑ 반경 방향으로는 못 뺀다 — 끝점이 이미 bbox 테두리라 밖으로 밀 여유가 없다. 그래서 **접선 방향**이다.
    ⓒ 못 피하면 마지막 후보를 그대로 쓴다(FX3_MTRY 와 같은 규약) — 링이 무너지는 것보다 낫다. */
 const FXB_KTRY = 9, FXB_KSTEP = 0.26;
-const FXB_KOS = 14;                                  /* 619 — strict 회피의 여유 = 스파크 반경 13 + 1 */                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
+const FXB_KOS = 19;                                  /* 619 — strict 회피의 여유. 4회차 14(스파크 «평균» 반경 13+1)는
+                                                        6회차 링 숨쉬기(rr)가 입자를 안쪽으로 들이자 최대 입자(34px)의
+                                                        상자 모서리가 글자 상자를 스쳤다([E2] 0.12) — 최대 반경 17+2 로. */                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
+let fxbW = 0, fxbR = 0.5;                            /* 619 6회차 — strict 위상·반경 저불일치 수열(황금비) 누산기 */
 /* ⚑ 43회차 — 42차 **2인 공통ㄷ** «upg 불꽃이 가격 «코인 아이콘» 을 덮는다»
    (BI «코인 43×44 를 4프레임 전부 **20~35%**» · BJ «f1 **18.5%** · f2 10% · 총 ≈200ms»).
    42회차의 keep-out 은 **텍스트 노드**만 훑는다 — 그래서 «Lv. 1»·«53» 은 비웠는데 바로 옆
@@ -36797,10 +36826,27 @@ function fxBurst(t, col, n, strict){
      프레임 위로 나가 **그냥 안 보였다**(가로만 클램프돼 있던 비대칭).
      ⚠ 요소(bbox) 대상은 손대지 않는다 — 28회차가 «시작점과 이동 끝점을 모두 bbox 안에» 로 닫은 자리다. */
   /* 42회차 — 공통ㄹ. 대상 «자기» 글자 keep-out(버스트당 1회 스캔). 좌표 대상은 글자가 없다. */
-  /* 619 4회차 — `strict` 는 스파크 반경(13)에서 나온 여유로 다시 잰다(위 fxbTextHoles 머리말) */
-  const kh = r ? fxbTextHoles(t, strict ? FXB_KOS : undefined) : [];
+  /* ⚑ 619 6회차 — `strict` 의 스파크는 **호스트 넓이(기하평균 √wh)에 비례**해 커진다(hsc).
+     크기 24~34 는 훈련 카드(326×510 · √wh 408)에서 온 값이라 룬 패널(998×700)에서는 폭의 2.9% 로
+     줄어들어 «버스트로 체감 안 된다» 로 읽혔다(비평가 DQ ② 6 · 실측 훈련 8.9% vs 룬 2.9% = 3배).
+     ⚠ 기준을 대각으로 잡았던 1차 시도는 **좁은 띠에서 과했다** — 단련 행(998×222)이 배율 1.65 를
+     받아 스파크가 띠 높이의 22% 가 되고 keep-out(×1.65)이 좁은 빈자리를 더 좁혀 좌표 중복이
+     19% → 24~27% 로 되레 올랐다. 기하평균은 짧은 변이 얇으면 배율도 낮아(단련 1.15 · 룬 1.9)
+     그 함정이 없다. 훈련은 배율 1 그대로(«크기 어휘» 불변). keep-out 여유(FXB_KOS)도 같은 배율로
+     따라간다(여유는 입자 크기에서 나온다는 4회차 규칙 그대로). */
+  const hsc = (strict && r) ? clamp(Math.sqrt(r.w * r.h) / 410, 1, 1.9) : 1;
+  const kh = r ? fxbTextHoles(t, strict ? Math.round(FXB_KOS * hsc) : undefined) : [];
   const PB_M = FXB_RMIN + 80;
-  const phase = strict ? Math.random() * Math.PI * 2 / cnt : 0;   /* 619 5회차 — strict 에서만(기존 호출은 0) */
+  /* ⚑ 619 6회차 — 5회차의 «무작위 위상» 을 **황금비 저불일치 수열**로 바꾸고(무작위는 연속 두
+     버스트가 우연히 같은 값을 뽑을 수 있다 — DP 지적의 실체가 바로 «연속 프레임에서 같은 자리»다),
+     **링 반경도 같은 수열로 숨쉰다**(rr 0.76~1.00). 반경을 흔드는 이유: 탄생 타원(반축+FXB_M)이
+     이미 bbox 밖이라 아래 clamp 가 입자를 **테두리 위 같은 자리**에 눌러붙인다(개체차 jt 1.18 도
+     clamp 로 증발) — 5회차 위상 굴림만으로 중복이 34% → 29% 에 멈춘 뿌리다. 수열이라 연속 버스트의
+     위상·반경이 **반드시** 다르다(등간격·가둠 상자·이동량은 불변 — 기존 호출은 phase 0 · rr 1).
+     ⚠ 안쪽으로 들어온 입자가 글자에 앉는 것은 strict 의 «버리기» 가 그대로 막는다([E] 게이트). */
+  const phase = strict ? (fxbW = (fxbW + 0.6180339887) % 1) * Math.PI * 2 / cnt : 0;
+  const rr = strict ? 0.82 + 0.18 * (fxbR = (fxbR + 0.3819660113) % 1) : 1;
+  let made = 0;                                      /* 619 6회차 — strict «버스트당 최소 1개» 보장(아래) */
   if(!r && p){
     p.x = clamp(p.x, PB_M, FRAME_W - PB_M);
     p.y = clamp(p.y, PB_M, Math.max(PB_M, frameH - PB_M));
@@ -36821,7 +36867,7 @@ function fxBurst(t, col, n, strict){
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
-    const sz = Math.round(rnd(24, 34));
+    const sz = Math.round(rnd(24, 34) * hsc);       /* 619 6회차 — strict 만 호스트 비례(hsc 머리말) */
     el.style.width = sz + 'px'; el.style.height = sz + 'px';
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     el.style.setProperty('--c', col || FXPAL.spark);  /* 16회차 — 글로우 오브의 본색(radial 중간대) · 512 표에서만 */
@@ -36874,8 +36920,8 @@ function fxBurst(t, col, n, strict){
     for(let k = 0; k <= (kh.length ? FXB_KTRY : 0); k++){
       /* 0, +step, −step, +2step, −2step … 원래 각에서 가장 가까운 쪽부터 본다 */
       ang = a + (k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k/2) * FXB_KSTEP);
-      sx0 = clamp(p.x + Math.cos(ang)*rx*jt, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» */
-      sy0 = clamp(p.y + Math.sin(ang)*ry*jt, by0, by1);
+      sx0 = clamp(p.x + Math.cos(ang)*rx*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
+      sy0 = clamp(p.y + Math.sin(ang)*ry*jt*rr, by0, by1);
       ex = r ? sx0 : clamp(sx0 + Math.cos(ang)*d, bx0, bx1);
       ey = r ? sy0 : clamp(sy0 + Math.sin(ang)*d, by0, by1);
       sx = r ? p.x + (ex - p.x)*(1 - FXB_K) : sx0;
@@ -36885,14 +36931,17 @@ function fxBurst(t, col, n, strict){
       if(!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey)) break;
       hitK = k;
     }
-    /* 619 4회차 — `strict` 면 «끝까지 글자 위» 인 입자는 버린다(위 머리말) */
-    if(strict && kh.length && hitK >= FXB_KTRY
+    /* 619 4회차 — `strict` 면 «끝까지 글자 위» 인 입자는 버린다(위 머리말).
+       6회차 — 단 **버스트당 최소 1개는 남긴다**: 링 숨쉬기·키운 여유(FXB_KOS×hsc)로 «4개 전부
+       버려지는 틱» 이 생기면 발화 노드가 0 이 되어 «강화마다 터진다»([B]) 가 깨진다. 마지막
+       입자까지 왔는데 아직 하나도 못 남겼으면 그 입자는 42회차 규약대로 마지막 후보에 앉힌다. */
+    if(strict && kh.length && hitK >= FXB_KTRY && (made || i < cnt - 1)
        && (fxbHit(kh, sx, sy) || fxbHit(kh, (sx + ex)/2, (sy + ey)/2) || fxbHit(kh, ex, ey))) continue;
     el.style.left = sx + 'px';
     el.style.top  = sy + 'px';
     el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');
     el.style.setProperty('--dy', (ey - sy).toFixed(1) + 'px');
-    L.appendChild(el);
+    L.appendChild(el); made++;
     fxBye(el, 300);                                  /* 21회차 수명 .26s → 41회차 공용 퇴장 규약 */
   }
 }
@@ -37125,7 +37174,15 @@ const HB_POP = 80, HB_SHAKE = 100, HB_LIFE = 310;   /* 3회차 — 애니 .3s �
      (칸 5 × 간격 80px)는 60ms 주기로 쏟아지는 그쪽 압력에서 나온 값이고, lone 은 정의상 400ms 안에
      이웃이 없다(`HB_LONE_GAP`). 그래서 이 상수는 [H] 를 한 항도 안 움직인다(5회차 실행으로 확인). */
 const HB_LIFE_LONE = 1300, HB_LONE_GAP = 400;
-const hbAt = new WeakMap();
+/* ⚑ 619 7회차 — WeakMap(노드 키) → Map. 홀드의 live 재렌더가 호스트 노드를 매 틱 갈아끼우는
+   화면(룬·단련)에서는 노드 키가 **매 beat 미스**라 반복분 전부가 «한 발»(1.3s) 로 분류됐다 —
+   1.3s × 5칸 순환(≈550ms)이라 같은 칸에 lng 와 반복분이 동시에 살아 겹쳤다(`verify488` [H2] 가
+   간헐로 빨간 뿌리 · 수리 «전» 커밋에서도 같은 쌍이 찍힘을 대조로 확인). 호출부가 문자열 셀렉터를
+   주면 그 **문자열을 키**로 써서 재렌더를 건너 이어 센다(LESSONS 50-① «재렌더에 진 클릭» 의 hb 판).
+   키가 원소인 자리는 소수(고정 노드)라 Map 보존 비용이 없다. */
+const hbAt = new Map();
+const hbAtKey = (host, el0) => (typeof host === 'string') ? host : el0;
+const hbLng = new Map();   /* 619 7회차 — 줄기별 «살아 있는 lng(1.3s) 가 점유한 칸» [{slot,die}] — 반복분이 그 칸을 건너뛴다 */
 /* 연속으로 나오는 플로터가 **정확히 같은 자리에 겹치지 않게** 가로로 흩는다.
    ⚑ 칸 수·간격·수명은 눈대중이 아니라 **홀드 주기에서 역산한 값**이다(1회차 실측으로 갈았다):
      · 홀드는 `TR_HOLD_IVMIN` 60ms 까지 가속한다 ⇒ 한 줄기에 «수명 ÷ 60ms» 장이 동시에 산다.
@@ -37141,7 +37198,12 @@ const HB_SLOTS = 5, HB_SLOT_W = 80;
    잉크 실측 폭 69px 를 빼고 남는 폭을 4등분한 값과 80 중 **작은 쪽**을 쓴다(326 → 64px). */
 const hbSlotW = (w, n, dec) => Number.isFinite(dec) ? dec
   : Math.max(34, Math.min(HB_SLOT_W, (w - 70) / Math.max(1, n - 1)));
-let hbSeq = 0;
+/* ⚑ 619 7회차 — 칸 순번을 **줄기(결과/비용)별로** 센다. 종전 전역 하나(hbSeq)는 한 beat 가 두 줄기를
+   쏘면 순번이 **beat 당 +2** 씩 뛰어, 칸 수가 짝수인 호스트(단련 `--hb-slots:2`)에서 결과는 늘 짝수 칸 ·
+   비용은 늘 홀수 칸 = **두 플로터가 영원히 같은 자리**가 된다(비평가 DR 실측 «+1 이 f2~f7 내내
+   (127,268)±4px — 아이콘에 인쇄된 장식으로 읽힌다»). 위 머리말의 «n 장이 n 칸을 한 바퀴» 는
+   줄기당 +1 로 세야 성립한다. 홀드가 아닌 한 발짜리 호출은 어느 쪽이든 그림이 같다. */
+const hbSeqK = { res:0, pay:0 };
 const hbHost = h => (typeof h === 'string' ? document.querySelector(h) : h);
 function hbPulse(host, ok){
   const el = hbHost(host);
@@ -37169,7 +37231,7 @@ function hbFloat(host, txt, kind, lone){
   const d = document.createElement('b');
   d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '') + (lone ? ' lng' : '');
   d.style.color = kind === 'ok' ? '#2E7D14' : kind === 'no' ? '#B01B2E' : '#7A3A10';
-  const i = hbSeq++, pay = kind === 'pay';
+  const pay = kind === 'pay';                        /* 619 7회차 — 순번(i)은 칸 산수(st·n) 뒤에서 뽑는다(lng 칸 회피) */
   /* 2회차 — 두 줄기의 자리는 **호스트가 신고한 빈 띠**(`--hb-y`/`--hb-y2` · `--hb-x`/`--hb-x2`)다.
      신고가 없으면 종전 기본값(세로 30% / 66% · 가로 한가운데)으로 떨어진다 — 작은 호스트
      (`.sk-lv`·`#rwBasin`)는 덮을 정보가 없어 기본값으로 충분하다. */
@@ -37179,13 +37241,41 @@ function hbFloat(host, txt, kind, lone){
   const cx   = num(pay ? '--hb-x2' : '--hb-x', 0.5);
   const n    = Math.max(2, Math.round(num('--hb-slots', HB_SLOTS)));
   const sw   = hbSlotW(r.w, n, num('--hb-sw', NaN));
-  d.style.left = (r.x + r.w * cx + ((i % n) - (n - 1) / 2) * sw) + 'px';
-  d.style.top  = (r.y + lane) + 'px';
+  /* ⚑ 619 7회차 — 칸 «안» 미세 지터(황금비 수열 · 가로 ±8 · 세로 기본 ±10). 홀드 반복에서 같은 칸이
+     다시 올 때(수명 .3s × 칸 n 한 바퀴) 픽셀까지 같은 자리면 «새 사건» 이 아니라 «깜빡이는 배지» 로
+     읽힌다(DR·DS 2인 공통 — 스폰마다 새 오프셋). 가로 진폭은 칸 여유(sw − 잉크 69 의 절반) 안이고,
+     세로는 **호스트가 `--hb-jy` 로 신고한 진폭**을 쓴다 — 빈 띠에 여유가 없는 호스트(룬 224..280 은
+     봉투와 폭이 같다)는 0 으로 끈다. 한 발짜리 호출은 ±10px 안 오차라 그림 유지. */
+  /* 가로 진폭은 **칸 여유에 물린다**(잉크 69 기준) — 칸 간격이 잉크에 딱 맞는 호스트(룬·훈련 sw 70~72)
+     에서 ±8 을 그대로 쓰면 이웃 칸끼리 겹쳐 `verify488` [H2] «겹친 쌍 0» 이 빨개진다(실측 1쌍).
+     그런 호스트는 0 으로 떨어지고, 여유가 있는 단련(sw 88)만 ±8 을 쓴다. */
+  /* 칸 보폭은 n 과 서로소인 2(홀수 n)/3(짝수 n) — **연속 스폰이 이웃 칸에 앉지 않게**(간격 70px 는
+     잉크 69px 와 1px 차라 동시 생존 두 장이 스친다 = [H2]). 종전 전역 순번의 +2 가 룬(n5)에서 우연히
+     보장하던 성질을 줄기별 순번에서도 의도로 만든다. n 칸 한 바퀴(중복 0)는 서로소라 그대로다. */
+  const st = n % 2 ? 2 : 3, seqk = pay ? 'pay' : 'res';
+  let i = hbSeqK[seqk]++;
+  /* ⚑ 619 7회차 — **lng 가 점유한 칸은 건너뛴다.** 첫 발(그리고 홀드 지연 350ms 가 GAP 400 에 걸리는
+     둘째 beat)은 1.3s 를 살고, 반복분의 칸 순환(수명 .3s × n칸 ≈ 550ms)이 그 안에 같은 칸을 다시
+     쓰므로 lng × 반복분이 같은 칸에서 겹친다([H2] 간헐 빨강의 두 번째 뿌리 — 수리 전 커밋에서도
+     같은 쌍이 찍힌다). lng 의 칸·수명을 줄기별로 적어 두고, 살아 있는 동안 그 칸을 비워 둔다. */
+  {
+    const hk0 = hbAtKey(host, el), nowF = performance.now();
+    const lk = (typeof hk0 === 'string' ? hk0 : '·') + '|' + seqk;
+    const liveL = (hbLng.get(lk) || []).filter(o => o.die > nowF);
+    for(let g = 0; g < n && liveL.some(o => o.slot === (i * st) % n); g++) i = hbSeqK[seqk]++;
+    if(lone) liveL.push({ slot: (i * st) % n, die: nowF + HB_LIFE_LONE });
+    hbLng.set(lk, liveL);
+  }
+  const jyA = num('--hb-jy', 10), jxA = Math.min(8, Math.max(0, (sw - 70) / 2));
+  const jx = ((i * 0.6180339887) % 1 - 0.5) * 2 * jxA, jy = ((i * 0.3819660113) % 1 - 0.5) * 2 * jyA;
+  d.style.left = (r.x + r.w * cx + (((i * st) % n) - (n - 1) / 2) * sw + jx) + 'px';
+  d.style.top  = (r.y + lane + jy) + 'px';
   /* ⚠ 6회차 — **`--hb-rise` 는 «상속» 으로 못 받는다.** 이 노드는 `#fxl`(오버레이) 자식이지 호스트의
      자손이 아니다 — 커스텀 속성은 DOM 을 타고 내려오므로, 호스트에만 적으면 키프레임의 `var()` 가
      기본값 48px 로 떨어진다(6회차에 실제로 그렇게 났다: `verify491` [6-l] 이 «잉크가 헤더 위 테두리에
      얹힌다» 로 빨갛게 잡았다). 자리 값들과 **같은 길**로 — 호스트에서 읽어 노드에 직접 적는다. */
   { const rise = num('--hb-rise', NaN); if(Number.isFinite(rise)) d.style.setProperty('--hb-rise', rise + 'px'); }
+  { const fall = num('--hb-fall', NaN); if(Number.isFinite(fall)) d.style.setProperty('--hb-fall', fall + 'px'); }   /* 619 7회차 — 하강도 같은 길(위 «상속으로 못 받는다» 머리말 그대로) */
   d.textContent = txt;
   L.appendChild(d);
   /* ⚑ 4회차 계측 — **애니메이션이 붙자마자 시작하지 않는다.** 노드를 넣어도 CSS 애니메이션의
@@ -37243,8 +37333,9 @@ function hbBeat(host, ok, txt, cost){
      둘째 줄기가 첫째를 보고 «반복» 이라고 읽으면 안 된다. */
   const el0 = hbHost(host);
   const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-  const lone = !el0 || !(now - (hbAt.get(el0) || -1e9) < HB_LONE_GAP);
-  if(el0) hbAt.set(el0, now);
+  const hk = hbAtKey(host, el0);                     /* 619 7회차 — 재렌더를 건너는 키(위 hbAt 머리말) */
+  const lone = !el0 || !(now - (hbAt.get(hk) || -1e9) < HB_LONE_GAP);
+  if(el0) hbAt.set(hk, now);
   hbPulse(host, ok);
   if(txt)  hbFloat(host, txt, ok ? 'ok' : 'no', lone);
   if(cost) hbFloat(host, cost, 'pay', lone);
