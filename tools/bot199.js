@@ -1752,7 +1752,11 @@ function writeReport(rep) {
        세면서 왼쪽 끝을 좌표로 읽었고, 그것이 정정10 의 3중 계상이 안 보이던 이유다. */
     {
       const r0 = runs[0];
-      const ws0 = r0 ? r0.walls.filter(w => isWall(w, r0.band)) : [];
+      /* ⚑ 13회차 비평 HH(R5) — 헤드라인 적중은 `wallsOf` 로 잘린 정체를 빼는데 **[D] 표의
+         배정 칸은 안 뺐다.** 같은 회차에 «판정을 늘리면 읽는 쪽도 갈라라» 를 적어 놓고
+         읽는 쪽을 하나 더 빠뜨린 자리다(대충에서 표 2 ↔ 헤드라인 1 로 실제로 갈렸다).
+         `wallsOf` 와 **같은 필터**를 쓴다 — 두 벌로 적지 않는다. */
+      const ws0 = r0 ? r0.walls.filter(w => isWall(w, r0.band) && w.trunc !== true) : [];
       const seat = new Map();                       /* 벽 → 배정된 칸 (1:1) */
       if (r0) {
         const cand = [];
