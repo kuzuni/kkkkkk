@@ -142,7 +142,8 @@ const ok = (b, name, detail) => {
     return { badMono, badEdge, oldBad, total: PETS.length,
              dist: tiers.map(t => t.length).join(',') };
   });
-  ok(B.total === 36 && B.dist === '5,5,5,5,5,5,5,1', 'B1 펫 36종 · 분포 5,5,5,5,5,5,5,1', B.dist);
+  /* 757 이관(2026-09-02) — 펫 «불멸» 1종 폐지. 묻는 성질(«등급마다 5종»)은 그대로고 값만 내려간다 */
+  ok(B.total === 35 && B.dist === '5,5,5,5,5,5,5,0', 'B1 펫 35종 · 분포 5×7 · 불멸 0 (757)', B.dist);
   ok(B.badMono.length === 0, 'B2 8티어 전부 세기(1/cd) 단조 증가 (481 축 이동)', B.badMono.slice(0, 4).join(' / ') || '위반 0');
   ok(B.badEdge.length === 0, 'B3 등급 경계 비역전', B.badEdge.join(' / ') || '위반 0');
   ok(B.oldBad.length === 0, 'B4 구 9종이 등급·자리 그대로 (481 이관 — m·cd 오버라이드 폐지)', B.oldBad.join(',') || '전부 일치');
@@ -188,7 +189,7 @@ const ok = (b, name, detail) => {
       derivedMismatch
     };
   });
-  ok(D.total === 144 && D.uniq, 'D1 장비 108 + 펫 36 = 144종 · id 유일', String(D.total));
+  ok(D.total === 143 && D.uniq, 'D1 장비 108 + 펫 35 = 143종 · id 유일 (757)', String(D.total));
   ok(D.oldEqMiss === 0, 'D2 구 54종 장비 id 전부 생존', '누락 ' + D.oldEqMiss);
   ok(D.oldPtMiss === 0, 'D3 구 9종 펫 id 전부 생존', '누락 ' + D.oldPtMiss);
   ok(D.derivedMismatch > 0, 'D4 재배치가 실제로 일어났다(파생식 id ≠ 실제 id 인 항목 존재)',
@@ -234,8 +235,8 @@ const ok = (b, name, detail) => {
     });
     return { bad, seen, total: COLL_SETS.length };
   });
-  ok(E4.bad.length === 0 && E4.seen === 32, 'E4 21 도감 세트 나열 순서 = 배열(약→강) 순서',
-    E4.bad.slice(0, 4).join(' / ') || ('장비 24 + 펫 8 = ' + E4.seen + '세트 대조 · 전부 일치'));
+  ok(E4.bad.length === 0 && E4.seen === 31, 'E4 21 도감 세트 나열 순서 = 배열(약→강) 순서',
+    E4.bad.slice(0, 4).join(' / ') || ('장비 24 + 펫 7 = ' + E4.seen + '세트 대조 · 전부 일치 (757)'));
 
   /* ── [F] 구 세이브 ──────────────────────────────────────── */
   const F = await page.evaluate(() => {

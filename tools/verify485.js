@@ -72,7 +72,7 @@ const ok = (b, name, detail) => {
     return { bad, vsEq, n: PETS.length, hasJ: PETS.every(p => typeof p.j === 'number'),
              src: petEquipVal.toString() };
   });
-  ok(A.n === 36, 'A1 펫 36종', String(A.n));
+  ok(A.n === 35, 'A1 펫 35종 (757 — 불멸 1종 폐지)', String(A.n));
   ok(A.hasJ, 'A2 펫에 티어(`j` = 260 이 정한 등급 안 자리)가 실려 있다');
   ok(/EQ_BASE/.test(A.src), 'A3 `petEquipVal` 이 장비 표(EQ_BASE)를 **그대로 부른다**(상수 두 벌 아님)', A.src.trim());
   ok(A.bad.length === 0, 'A4 36종 전부 petEquipVal(Lv1) = EQ_BASE(등급, 티어)', A.bad.join(' / ') || '위반 0');
@@ -89,14 +89,19 @@ const ok = (b, name, detail) => {
       if (!tiers[g].length || !tiers[g + 1].length) continue;
       edge.push(Math.min(...tiers[g + 1].map(at1)) / Math.max(...tiers[g].map(at1)));
     }
-    return { inStep, edge, g7: tiers[7].length };
+    /* 757 — «최고 등급 칸» 을 7 로 적어 두면 등급이 접힌 날 undefined 를 읽는다 */
+    return { inStep, edge, g7: (tiers[7] || []).length, gTop: topG('pet'),
+             gTopN: tiers[topG('pet')].length };
   });
   const near = (a, x) => Math.abs(a - x) < 1e-6;
   ok(B.inStep.every(r => near(r, 1.5)), 'B1 등급 안 티어 한 칸 = ×1.5',
      B.inStep.length + '칸 · ' + Math.min(...B.inStep).toFixed(4) + '~' + Math.max(...B.inStep).toFixed(4));
   ok(B.edge.every(r => near(r, 3)), 'B2 등급 경계 = ×3',
      B.edge.length + '경계 · ' + Math.min(...B.edge).toFixed(4) + '~' + Math.max(...B.edge).toFixed(4));
-  ok(B.g7 === 1, 'B3 불멸(g7)은 1종 = t0 하나', String(B.g7));
+  /* 757 이관 — 펫 불멸(1종)이 폐지됐다. 묻는 것을 «최고 등급 칸이 비지 않았는가» 로 옮기고
+     «불멸은 정말 없는가» 를 짝으로 세운다(333 처방 — 자리를 비우지 않는다). */
+  ok(B.g7 === 0 && B.gTop === 6 && B.gTopN === 5,
+     'B3 펫 불멸 0종 · 최고 등급은 초월(g6) 5종 (757)', 'g7=' + B.g7 + ' · top g' + B.gTop + ' ' + B.gTopN + '종');
 
   /* ── [C] 합산 ───────────────────────────────────────────── */
   const C = await page.evaluate(() => {

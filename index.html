@@ -19132,11 +19132,22 @@ const PET_NAMES = [
     { id:'pet6_0', n:'차원의 용', sp:'dragon', tint:'#4fe3c4' },
     { id:'pet6_3', n:'무한의 비룡', sp:'dragon', tint:'#b0ffe8' },
     { id:'pet6_1', n:'시간의 파수기', sp:'robo', tint:'#ffe08a' },
-    { id:'pet6_4', n:'초신성 기갑', sp:'robo', tint:'#ff9de0' } ],
-  /* 7 불멸 */
-  [
-    { id:'pet7_0', n:'만물의 수호룡', sp:'dragon', tint:'#f0edd2' } ]
+    { id:'pet6_4', n:'초신성 기갑', sp:'robo', tint:'#ff9de0' } ]
+  /* 757 (2026-09-02, 저장소 주인 보강 «펫도 만렙 100으로 하고 불멸 등급 없애고») —
+     여기 있던 «7 불멸» 행(`pet7_0` 만물의 수호룡 1종)을 **통째로 걷어냈다.**
+     ⇒ 펫의 최고 등급은 **초월(g6)** 이고, 그 사실은 손으로 적힌 곳이 한 군데도 없다:
+       `topG`(최고 등급 판정)·`rollOf`(소환 확률표 행 수)·`COLL_SETS`(도감 세트)가 전부
+       `PETS` 에서 파생하므로 이 배열만 고치면 나머지가 따라온다(368 «제품에게 물어라»).
+     ⚠ `PET_CD` 는 **한 글자도 안 건드린다** — `PET_CD[g] = 1.30 × (0.40/1.30)^(g/7)` 은
+       GRADE 8단을 타는 곡선이고, 살아남는 g0~g6 의 값이 수리 전과 픽셀 하나 안 다르다
+       (불멸 칸 0.40 은 장비가 계속 쓴다 · 481 [B2] 무수정).
+     ⚠ 구 세이브가 들고 있던 `pet7_0` 은 **버리지 않는다** — `PET_RETIRED` 가 승계처를 적고
+       `load()` 가 조각·레벨·장착을 합산 이관한다(740 «손해 0»). */
 ];
+/* 757 — 폐지된 펫 → 승계할 종. «남는 최고 등급의 맨 끝 자리»(= 가장 센 초월 펫)로 보낸다.
+   표를 손으로 적는 대신 파생하면 다음에 등급이 또 접힐 때 이 줄이 조용히 뒤처진다(LESSONS 106-1) —
+   그래서 **폐지된 id 만** 적고 승계처는 `PETS` 에서 뽑는다. */
+const PET_RETIRED_IDS = ['pet7_0'];
 const PETS = [];
 /* 485 — `j`(등급 안 자리 = 260 이 정한 약→강 순서)를 실어 둔다. 장비(`EQUIPS[].j`)와 같은 이름·같은
    뜻이고, `petEquipVal` 이 이것을 «티어» 로 읽어 `EQ_BASE` 를 탄다. 값·순서는 한 개도 안 바뀐다. */
@@ -19150,6 +19161,11 @@ PET_NAMES.forEach((tier, g) => tier.forEach((x, j) => {
     cd: Math.round(PET_CD[g] / v * 1000) / 1000   /* 481 — 등급이 표를 정하고 자리가 그 안을 가른다 */
   });
 }));
+/* 757 — 폐지된 펫의 승계처. **표가 아니라 `PETS` 에서 뽑는다**: 남는 최고 등급의 맨 끝 자리
+   (= 그 등급에서 가장 센 종). 등급이 또 접혀도 이 줄은 안 바뀐다. */
+const PET_HEIR = (() => { const top = PETS.reduce((m, p) => Math.max(m, p.g), 0);
+  const pool = PETS.filter(p => p.g === top);
+  return pool.length ? pool[pool.length - 1].id : null; })();
 /* ⚠ 587 — `faceRight` 세 줄을 여기서 **걷어냈다**. 원본 방향은 이제 `SPRITE_FACE` 한 표에서만 온다
    (두 벌 금지). 펫이 그 표를 지나도 **거동은 한 줄도 안 바뀐다** — 셋 다 `true` 였고 표에도 `true` 다. */
 const PET_SP = {
@@ -19486,7 +19502,14 @@ const GRADE_ROLL_EQ = GRADE_ROLL.concat([
   { unlock:40,            p0:0.00, p1:TRANSCEND_P1 },
   { unlock:SUM_MAXLV - 1, p0:0.00, p1:IMMORTAL_P1 }   /* 496 — «만렙 직전 1레벨 램프» 는 규칙이다 */
 ]);
-const rollOf = b => BANNERS[b].g8 ? GRADE_ROLL_EQ : GRADE_ROLL;
+/* 757 — 「그 배너가 몇 등급까지 뽑나」도 플래그가 아니라 **그 배너가 파는 종 목록**이 정한다.
+   구: `g8 ? GRADE_ROLL_EQ : GRADE_ROLL` — 펫에서 불멸을 걷어낸 순간 «뽑히는데 그 등급 종이
+   한 마리도 없는» 확률표가 되어 소환이 undefined 를 낼 자리였다(85 가 [E] 로 지키던 사고).
+   신: 8행 표를 그 배너의 최고 등급까지 자른다 ⇒ 스킬 6행 · **펫 7행** · 장비 8행이 자동으로 나온다
+   (`gradeProbs` 가 총합으로 재정규화하므로 자르기만 하면 확률이 맞는다).
+   ⚠ `g8` 필드는 남는다 — 그 이름의 다른 쓰임(`prbSteps()` 의 «11 확률 팝업 단계 목록»)이 있고,
+     그쪽은 «등급 수» 가 아니라 «레벨 단계» 축이라 이번 변경과 무관하다. */
+const rollOf = b => GRADE_ROLL_EQ.slice(0, topG(BANNERS[b].coll) + 1);
 /* 196 — 필요 경험치는 «식» 이 아니라 **주인 확정표**다. 표는 Lv1→2 부터 Lv16→17 까지 16칸이고,
    그 뒤(Lv17~24)는 마지막 값 5,000 을 유지한다. 경험치 1 = 소환 1회(`sumAddExp(b, times)`)이므로
    만렙까지 총 **76,450 회** 다(표 합 36,450 + 5,000×8). Lv25 는 만렙이라 need 를 읽지 않는다. */
@@ -21316,10 +21339,31 @@ function load(){
                     : { n:v.n|0, l:v.l || 1 };
       delete b.own[o];
     });
+    /* 757 — 펫 «불멸» 폐지의 세이브 이관. **아래 `eqPet` 걸러내기보다 먼저** 해야 한다 —
+       뒤에 두면 `filter(PT[i])` 가 폐지된 종을 «없는 펫» 으로 먼저 버려서 장착이 조용히 풀린다.
+       규칙(740 «보유분은 남는 1종에 합산 이관 = 손해 0»): 조각은 **더하고**, 레벨은 **큰 쪽**,
+       장착 중이었으면 승계 종으로 옮긴다. 옛 키를 지우므로 두 번 돌아도 결과가 같다(멱등).
+       KEY 는 안 올린다 — 저장 «구조» 가 아니라 종 하나가 이사한 것이다(44 교훈 2 · 204 선례). */
+    if(PET_HEIR) PET_RETIRED_IDS.forEach(old => {
+      const o = b.own[old];
+      if(o){
+        const h = b.own[PET_HEIR] || (b.own[PET_HEIR] = { n:0, l:1 });
+        h.n = Math.max(0, (h.n | 0) + (o.n | 0));
+        h.l = Math.max(1, h.l | 0, o.l | 0);
+        delete b.own[old];
+      }
+      if(Array.isArray(d.eqPet) && d.eqPet.indexOf(old) >= 0)
+        d.eqPet = d.eqPet.map(x => (x === old ? PET_HEIR : x));
+    });
     const eqSeen = {};
     b.eqSkill = (d.eqSkill || []).map(i => SK193_MOVE[i] || i)
                                  .filter(i => SK[i] && !eqSeen[i] && (eqSeen[i] = 1));
-    b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
+    /* 757 — 승계로 같은 id 가 둘이 될 수 있다(원래 초신성 기갑도 출전 중이었던 세이브) → 중복 제거 */
+    { const seen = {};
+      b.eqPet = (d.eqPet || []).filter(i => PT[i] && !seen[i] && (seen[i] = 1)); }
+    /* 757 — 폐지된 펫 등급의 도감 세트 키는 아무도 안 읽는 죽은 값이다(365 ② 와 같은 처방).
+       기준은 «지금 COLL_SET 에 없는 pet 세트» 라 등급이 또 접혀도 이 줄은 안 바뀐다. */
+    Object.keys(b.coll).forEach(k => { if(k.slice(0,4) === 'pet:' && !COLL_SET[k]) delete b.coll[k]; });
     /* 89 — 유물 장착·재료(n) 폐기: eqRelic 은 버리고, own.rl* 은 l(=Lv)만 남긴다 */
     delete b.eqRelic;
     Object.keys(b.own).forEach(k => { if(k.slice(0,2) === 'rl' && RL[k] && b.own[k]) b.own[k].n = 0; });
@@ -25805,7 +25849,16 @@ const catOf = it => SK[it.id] ? 'skill' : PT[it.id] ? 'pet' : RL[it.id] ? 'relic
    isTopGrade 를 GRADE.length 로 판정하면 신화 스킬의 MAX 표기·합성 차단이 통째로 깨진다.
    106 — **펫도 8등급**이 됐다(장비와 같은 종 수·같은 확률표). 다만 «무한 강화» 는 `maxLv` 가
    `catOf === 'equip'` 로 따로 막으므로 불멸 장비 전용 그대로다 — 불멸 동료는 Lv100 상한이다. */
-const topG = cat => (cat === 'equip' || cat === 'pet') ? GRADE.length-1 : 5;
+/* 757 — 「어느 카테고리가 몇 등급까지 있나」를 **손으로 적지 않는다**. 위 두 주석이 기록하듯
+   이 한 줄은 85(장비 8등급) · 106(펫도 8등급) · 757(펫 불멸 폐지)에서 **세 번** 손질됐고,
+   그때마다 «표를 고쳤는데 이 줄을 안 고쳐서» 만렙 표기·합성 차단이 깨질 자리였다.
+   ⇒ 데이터에게 묻는다(368 규약) — 종 목록의 최대 등급이 곧 그 카테고리의 최고 등급이다.
+     지금 값: 장비 7(불멸) · 펫 6(초월 — 757 이 불멸 1종을 걷어냈다) · 스킬·유물 5(신화). */
+const TOP_G = { skill: SKILLS.reduce((m, x) => Math.max(m, x.g), 0),
+                pet:   PETS.reduce((m, x) => Math.max(m, x.g), 0),
+                relic: RELICS.reduce((m, x) => Math.max(m, x.g), 0),
+                equip: EQUIPS.reduce((m, x) => Math.max(m, x.g), 0) };
+const topG = cat => (cat in TOP_G) ? TOP_G[cat] : TOP_G.equip;
 const isTopGrade = it => it.g >= topG(catOf(it));
 const maxLv = it => (catOf(it) === 'equip' && isTopGrade(it)) ? Infinity : MAX_LEVEL;
 const atMax = it => has(it.id) && oLv(it.id) >= maxLv(it);

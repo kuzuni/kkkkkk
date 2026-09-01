@@ -135,16 +135,21 @@ const ok = (b, name, detail) => {
   /* [C] 최고 등급 판정 */
   const C = await page.evaluate(() => ({
     e7: isTopGrade(EQ.weapon7), e6: isTopGrade(EQ.weapon6), s5: isTopGrade(SK.holy),
-    /* 106 — 동료가 8등급이 되면서 «펫 top = 신화» 는 폐기됐다. 이제 펫 top 은 g7(불멸)이고
-       구 최고 등급이던 drag2(신화)는 top 이 아니다. 무한 강화는 여전히 불멸 «장비» 전용. */
-    p7: isTopGrade(PT.pet7_0), p5: !isTopGrade(PT.drag2), r5: isTopGrade(RL.rl8),
-    lvP: maxLv(PT.pet7_0) === MAX_LEVEL,
+    /* 106 — 동료가 8등급이 되면서 «펫 top = 신화» 는 폐기됐다. 무한 강화는 여전히 불멸 «장비» 전용.
+       ⚑ 757 이관(2026-09-02, 주인 보강) — 펫 불멸이 폐지돼 **펫 top 은 초월(g6)** 이다.
+         id 를 손으로 적어 두면 등급이 접히는 날 자가 통째로 죽는다(실제로 `PT.pet7_0` 이
+         undefined 가 돼 이 evaluate 가 즉사했다) ⇒ **가장 센 펫을 데이터에서 고른다**. */
+    p7: isTopGrade(PETS.reduce((m, x) => (x.g > m.g || (x.g === m.g && x.j > m.j)) ? x : m, PETS[0])),
+    pTopName: GRADE[topG('pet')].n, pTopG: topG('pet'),
+    p5: !isTopGrade(PT.drag2), r5: isTopGrade(RL.rl8),
+    lvP: maxLv(PETS[PETS.length - 1]) === MAX_LEVEL,
     lvInf: maxLv(EQ.weapon7) === Infinity, lv6: maxLv(EQ.weapon6) === MAX_LEVEL, lvS: maxLv(SK.holy) === MAX_LEVEL
   }));
   ok(C.e7 && !C.e6, 'C1 장비 top = g7 (g6 은 아님)');
   ok(C.s5 && C.r5, 'C2 스킬·유물은 신화(g5)가 top — «신화 = MAX» 유지');
-  ok(C.p7 && C.p5, 'C2b 106 — 동료 top 은 불멸(g7), 구 신화 동료는 top 아님');
-  ok(C.lvP, 'C2c 불멸 동료도 Lv100 상한(무한 강화는 불멸 장비 전용)');
+  ok(C.p7 && C.p5 && C.pTopG === 6,
+    'C2b 106 → 757 — 펫 top 은 초월(g6), 구 신화 동료는 top 아님', C.pTopName + '(g' + C.pTopG + ')');
+  ok(C.lvP, 'C2c 최고 등급 펫도 Lv100 상한(무한 강화는 불멸 장비 전용)');
   ok(C.lvInf && C.lv6 && C.lvS, 'C3 무한 강화는 불멸 장비만 (g6 장비·신화 스킬은 Lv100 상한)');
 
   /* [D] 확률 — **만렙에서** 재는 절이다.

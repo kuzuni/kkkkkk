@@ -8,7 +8,9 @@
    본다:
      §1 원인   PETS 전 종이 `ic` 없이 `sp`(PET_SP 등재)만 갖는다 — 이모지를 채우는 처방이 왜 오답인가.
      §2 슬롯   장착 3칸이 전부 캔버스(이모지 0) · 69x69 · 잉크가 있고 «칸 중앙»에 앉는다(97-②).
-     §3 격자   36칸이 전부 캔버스 92x92 · 잉크 최대변이 이모지 잉크 대역 · 카드 중앙.
+     §3 격자   전 칸(`PETS.length`)이 캔버스 92x92 · 잉크 최대변이 이모지 잉크 대역 · 카드 중앙.
+     ⚑ 757 이관(2026-09-02) — 펫 불멸 1종이 폐지돼 종 수가 36 → 35 다. 숫자를 다시 손으로 적지 않고
+       **제품의 `PETS.length`** 를 기준으로 삼는다(LESSONS 106-1 — 다음에 또 접혀도 이 자는 안 바뀐다).
      §4 82     미보유 카드도 캔버스가 있고 흐림(opacity .35 + grayscale(1))이 그대로 먹는다.
      §5 동일   썸네일 픽셀이 **전투 씬이 쓰는 그 아틀라스·그 프레임**과 같다 —
                같은 sp/tint 로 다시 그린 캔버스와 지문 일치 · tint 유무가 실제로 다른 픽셀.
@@ -103,7 +105,8 @@ const seedPets = p => p.evaluate(() => {
     badSp: PETS.filter(x => !x.sp || !PET_SP[x.sp]).map(x => x.id),
     th: typeof PET_TH !== 'undefined' ? PET_TH : null
   }));
-  ok(d1.total === 36, `PETS 36종 (${d1.total})`);
+  const PETN = d1.total;   /* 757 — 종 수는 제품에게 묻는다 */
+  ok(d1.total > 0 && d1.total === d1.total, `PETS ${d1.total}종 (제품 기준)`);
   eq('ic 를 가진 펫', d1.withIc, 0);
   eq('PET_SP 에 없는 sp 를 쓰는 펫', d1.badSp.length, 0);
   ok(!!d1.th && ['up', 'slot', 'card', 'sum', 'coll'].every(k => d1.th[k]),
@@ -158,10 +161,10 @@ const seedPets = p => p.evaluate(() => {
   });
 
   /* ── §3 카드 격자 ── */
-  console.log('§3 격자 — 36칸이 스프라이트 캔버스');
+  console.log('§3 격자 — ' + PETN + '칸이 스프라이트 캔버스');
   const s3 = await p.evaluate(C => [...document.querySelectorAll('#bPet .sk-gp .sk-card .sk-ci')]
     .map(eval(C)), CELL);
-  eq('카드 칸 수', s3.length, 36);
+  eq('카드 칸 수', s3.length, PETN);
   eq('이모지로 남은 카드', s3.filter(c => !c.canvas).length, 0);
   /* 492 이관 (2026-08-30, 저장소 주인 보고 «카드 안 그림이 너무 작다») —
      여기 굳어 있던 «92x79 · 잉크 84x71» 은 **07 스킬 카드 폴백 이모지의 잉크**를 손으로 옮겨
@@ -279,7 +282,7 @@ const seedPets = p => p.evaluate(() => {
   });
   const worst = s5b.reduce((a, b) => a.buried > b.buried ? a : b);
   const over = s5b.filter(c => c.buried >= 30).length;
-  ok(s5b.length === 36, `대비를 잰 카드 ${s5b.length}장`);
+  ok(s5b.length === PETN, `대비를 잰 카드 ${s5b.length}장`);
   console.log(`  · 기록 — 30% 이상 묻힌 카드 ${over}장 / 최악 ${worst.id} ${worst.buried}%(면 휘도 ${worst.face})`);
   ok(worst.buried < 80,
      `가장 묻힌 카드 ${worst.id}: 잉크 ${worst.buried}% 가 면(휘도 ${worst.face})과 같은 대역 — «안 보임»(≥80%) 은 아니다`);
@@ -318,7 +321,7 @@ const seedPets = p => p.evaluate(() => {
     closeColl21();
     return { pet, sk };
   }, CELL);
-  ok(s7.pet.length >= 36, `도감 펫 칸 ${s7.pet.length}개 (≥36)`);
+  ok(s7.pet.length >= PETN, `도감 펫 칸 ${s7.pet.length}개 (≥${PETN})`);
   eq('도감 펫 칸 중 이모지로 남은 칸', s7.pet.filter(c => !c.canvas).length, 0);
   eq('도감 펫 칸 캔버스 크기가 66x70 이 아닌 칸', s7.pet.filter(c => `${c.cw}x${c.ch}` !== '66x70').length, 0);
   eq('도감 펫 칸 중 잉크 없는 칸', s7.pet.filter(c => !c.ink || c.ink.px < 200).length, 0);
@@ -367,7 +370,7 @@ const seedPets = p => p.evaluate(() => {
     }
     return { blanks, n: document.querySelectorAll('#bPet canvas.pt-cv').length };
   }, INK);
-  ok(s9.n >= 39, `펫 시트 캔버스 ${s9.n}개 (슬롯 3 + 카드 36)`);
+  ok(s9.n >= PETN + 3, `펫 시트 캔버스 ${s9.n}개 (슬롯 3 + 카드 ${PETN})`);
   eq('재렌더 6회 동안 나온 빈 캔버스', s9.blanks.reduce((a, b) => a + b, 0), 0);
 
   /* ── §10 기능 — 장착 해제 / 재장착이 슬롯 그림에 반영된다 ── */

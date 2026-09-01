@@ -252,9 +252,97 @@ async function boot(browser, url, h) {
   ok(H && !H.imm, 'H3 스킬 소환에서 불멸 확률 0', H ? String(H.imm) : 'n/a');
   ok(H && H.maxSkillLv === 100, 'H4 스킬 만렙 100 (무한 강화 아님)', H ? String(H.maxSkillLv) : 'n/a');
 
+  /* ── [P] 펫 «불멸» 폐지 ───────────────────────────────────────────── */
+  blk('P — 757 보강 : 펫에 «불멸» 이 없다 · 만렙 100 · 장비 불멸은 그대로');
+  const P = await ev(page, () => {
+    const topPet = PETS.reduce((m, p) => Math.max(m, p.g), 0);
+    const probs = gradeProbs('pet');
+    /* 만렙에서 30연을 300번 — 불멸 등급이 한 번이라도 나오면(또는 undefined 가 나오면) 빨강 */
+    sumOf('pet').lv = SUM_MAXLV;   /* 714 — 소환 레벨은 배너별이다(`S.sumLv` 는 없다) */
+    let g7 = 0, undef = 0, top = 0;
+    for (let i = 0; i < 300; i++) for (let k = 0; k < 30; k++) {
+      const _r = summonOne('pet'), it = _r && _r.it;   /* summonOne 은 { it, isNew } 를 돌려준다 */
+      if (!it || it.g === undefined) { undef++; continue; }
+      if (it.g === 7) g7++;
+      if (it.g === topPet) top++;
+    }
+    return { topPet, topName: GRADE[topPet].n, immPets: PETS.filter(p => p.g === 7).length,
+             roll: rollOf('pet').length, rollEq: rollOf('weapon').length, rollSk: rollOf('skill').length,
+             p7: probs[7], probLen: probs.length, sum: probs.reduce((a, x) => a + x, 0),
+             g7, undef, top, maxPetLv: maxLv(PETS[0]),
+             topGpet: topG('pet'), topGeq: topG('equip'), topGsk: topG('skill'),
+             collPet7: COLL_SETS.filter(s => s.key === 'pet:7').length,
+             collPet6: COLL_SETS.filter(s => s.key === 'pet:6').length,
+             eqImm: EQUIPS.filter(e => e.g === 7).length, heir: PET_HEIR };
+  });
+  if (P) {
+    ok(P.immPets === 0 && P.topName === '초월', 'P1 펫 최고 등급 = 초월(불멸 0종)',
+       P.topName + '(g' + P.topPet + ') · 불멸 ' + P.immPets + '종');
+    ok(P.roll === 7 && P.rollSk === 6 && P.rollEq === 8,
+       'P2 확률표 행 수가 종 목록에서 파생한다 — 스킬 6 · 펫 7 · 장비 8',
+       '스킬 ' + P.rollSk + ' / 펫 ' + P.roll + ' / 장비 ' + P.rollEq);
+    ok(!P.p7 && Math.abs(P.sum - 1) < 1e-9, 'P3 펫 확률표에 불멸 칸이 없고 합 = 1',
+       'p7=' + P.p7 + ' 합 ' + P.sum.toFixed(6));
+    ok(P.g7 === 0 && P.undef === 0 && P.top > 0,
+       'P4 만렙 30연 ×300(9,000뽑) — 불멸 0건 · undefined 0건 · 초월은 실제로 나온다',
+       '불멸 ' + P.g7 + ' · undefined ' + P.undef + ' · 초월 ' + P.top);
+    ok(P.maxPetLv === 100, 'P5 펫 만렙 100 (주인 «펫도 만렙 100으로»)', String(P.maxPetLv));
+    ok(P.topGpet === 6 && P.topGsk === 5 && P.topGeq === 7,
+       'P6 topG 가 카테고리별 데이터에서 파생 — 펫 6 · 스킬 5 · 장비 7',
+       [P.topGsk, P.topGpet, P.topGeq].join('/'));
+    ok(P.collPet7 === 0 && P.collPet6 === 1, 'P7 도감도 따라온다 — «불멸 펫» 세트 0 · «초월 펫» 세트 1',
+       'pet:7 ' + P.collPet7 + ' · pet:6 ' + P.collPet6);
+    ok(P.eqImm === 3, 'P8 ★ 장비 불멸은 그대로다(740 장비 항은 757 이 안 건드린다 — 부위마다 1종)',
+       String(P.eqImm));
+    ok(P.heir === 'pet6_4', 'P9 승계처는 남는 최고 등급의 맨 끝 종', String(P.heir));
+  } else ok(false, 'P 읽기');
+
   blk('K — 콘솔');
   ok(errs.length === 0, 'K1 콘솔 에러 0건', errs.slice(0, 2).join(' | '));
   await ctx.close();
+
+  /* ── [M] 구 세이브 이관 — 불멸 펫을 들고 있던 세이브는 손해 0 ──────── */
+  blk('M — 구 세이브: 폐지된 불멸 펫이 승계 종으로 «합산» 이관된다(손해 0)');
+  {
+    const m = await boot(browser, URL);
+    const M = await ev(m.page, () => {
+      /* 승계처도 이미 갖고 있고 출전 중인 «가장 까다로운» 세이브를 만든다.
+         ⚠ `localStorage` 를 직접 써 놓고 reload 하면 **돌고 있는 게임의 autosave 가 그 사이에
+           덮어쓴다**(실제로 그래서 1회차에 이 절이 통째로 빨갰다). 살아 있는 `S` 를 고치고
+           제품의 `save()` 로 내보내야 «심은 세이브» 가 남는다. */
+      S.own.pet7_0 = { n: 5, l: 40 };
+      S.own.pet6_4 = { n: 2, l: 7 };
+      S.eqPet = ['pet7_0', 'pet6_4'];
+      S.coll['pet:7'] = 1;
+      save();
+      const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+      return !!(raw.own && raw.own.pet7_0 && raw.own.pet7_0.n === 5);
+    });
+    ok(M === true, 'M0 구 세이브를 심었다(pet7_0 조각5·Lv40 출전 + pet6_4 조각2·Lv7 출전)');
+    await m.page.reload();
+    await m.page.waitForFunction(() => typeof S !== 'undefined' && typeof goTab === 'function');
+    await m.page.waitForTimeout(500);
+    const R1 = await ev(m.page, () => ({
+      old: !!S.own.pet7_0, heir: S.own.pet6_4, eq: S.eqPet.slice(),
+      coll7: 'pet:7' in S.coll, know: !!PT.pet7_0
+    }));
+    ok(R1 && !R1.know, 'M1 `pet7_0` 은 더 이상 존재하지 않는 종이다');
+    ok(R1 && !R1.old, 'M2 세이브에서 옛 키가 사라졌다(멱등의 근거)');
+    ok(R1 && R1.heir && R1.heir.n === 7, 'M3 ★ 조각은 «합산» — 5 + 2 = 7', R1 && R1.heir ? String(R1.heir.n) : 'n/a');
+    ok(R1 && R1.heir && R1.heir.l === 40, 'M4 ★ 레벨은 «큰 쪽» — max(40, 7) = 40', R1 && R1.heir ? String(R1.heir.l) : 'n/a');
+    ok(R1 && R1.eq.length === 1 && R1.eq[0] === 'pet6_4',
+       'M5 출전 슬롯도 승계된다 · 중복은 한 칸으로 접힌다', R1 ? JSON.stringify(R1.eq) : 'n/a');
+    ok(R1 && !R1.coll7, 'M6 폐지된 등급의 도감 키도 정리된다(365 ② 처방)');
+    /* 멱등 — 한 번 더 로드해도 값이 안 늘어난다 */
+    await m.page.reload();
+    await m.page.waitForFunction(() => typeof S !== 'undefined' && typeof goTab === 'function');
+    await m.page.waitForTimeout(400);
+    const R2 = await ev(m.page, () => ({ n: S.own.pet6_4 && S.own.pet6_4.n, l: S.own.pet6_4 && S.own.pet6_4.l,
+                                         eq: S.eqPet.length }));
+    ok(R2 && R2.n === 7 && R2.l === 40 && R2.eq === 1, 'M7 멱등 — 두 번 로드해도 그대로',
+       R2 ? R2.n + '/' + R2.l + '/' + R2.eq : 'n/a');
+    await m.ctx.close();
+  }
 
   /* ── [E] 자동 추종 ──────────────────────────────────────────────── */
   blk('E — ★ 소환가를 바꾼 사본에서 환급가가 저절로 따라온다');

@@ -6,15 +6,18 @@
  * 지시서 [3]-(가) 기계적·기능 작업 — 비평가 없이 헤드리스 실동작만 본다.
  * (카드·격자 기하는 07/26 규격 그대로라 레이아웃 채점 대상이 아니다. 늘어난 것은 «종 수» 뿐이다.)
  *
- *   [A] 데이터   PETS 36종 · 분포 (5,5,5,5,5,5,5,1) · 무기 종 수와 동일 · id 중복 0 · 구 9종 id·이름·등급 보존
+ *   [A] 데이터   PETS 35종 · 분포 (5×7 · 불멸 0) · 무기 종 수 − 불멸 1 과 동일 · id 중복 0 · 구 9종 id·이름·등급 보존
+ *       ⚑ 757 이관(2026-09-02, 주인 보강 «펫도 … 불멸 등급 없애고») — 106 이 세운 «장비와 같은
+ *         8등급 36종» 이 **7등급 35종**이 됐다. 자리를 비우지 않고 방향만 뒤집었다(333 처방):
+ *         묻는 것은 그대로 «등급마다 5종» 이고, 거기에 «불멸 칸이 정말 비었는가» 가 더해졌다.
  *   [B] 곡선     (481 이관) 피해 계수 축 폐지 · PET_CD = 1.30·(0.40/1.30)^(g/7) · 36종 cd = PET_CD[g]/v
  *                · 등급 간 세기(1/cd) 단조(등급 g 최댓값 < 등급 g+1 최솟값)
- *   [C] 확률표   rollOf('pet') = 8행(GRADE_ROLL_EQ) · 해금 Lv20/24(196) · 확률 합 1 · 이정표 8개
+ *   [C] 확률표   rollOf('pet') = 7행(8행 표의 앞 7행) · 초월 해금 · 불멸 행 없음 · 확률 합 1
  *   [D] 상점     SHOP_BOXES 5장 · «펫 상자» 카드 DOM · 가격 = 나머지 배너와 동일(195: 1,000/3,000) · 무료 2/2
  *   [E] 실동작   10연 → 다이아 차감 · 결과 팝업 10장 · S.cnt.sumPet +10 · 보유 종 수 증가 · 소환 경험치 연동(196)
  *   [F] 구 세이브 구 9종 보유 + eqPet 3마리 세이브를 로드해도 보유·장착·레벨 그대로
  *   [G] 26 시트  카드 36장 · 격자 안쪽 스크롤 성립 · [동료 소환] → 상점 동료 상자로 이동
- *   [H] 도감     pet 세트 8개 · 구성원 합 36 · 세트 키 pet:0~7
+ *   [H] 도감     pet 세트 7개 · 구성원 합 35 · 세트 키 pet:0~6
  *   [I] 콘솔 에러 0건
  */
 const path = require('path');
@@ -130,15 +133,21 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
     const allIds = SKILLS.concat(EQUIPS, PETS, RELICS).map(x => x.id);
     return {
       len: PETS.length, dist, weapons: EQUIPS.filter(e => e.slot === 'weapon').length,
+      /* 757 — «장비와 같은 종 수» 는 이제 «장비에서 불멸을 뺀 종 수» 다 */
+      wImm: EQUIPS.filter(e => e.slot === 'weapon' && e.g === topG('equip')).length,
+      petImm: PETS.filter(p => p.g === 7).length,
       uniq: new Set(ids).size, bad, badN: PETS.filter(p => !p.n || /^\d|^$/.test(p.n)).length,
       crossDup: allIds.length - new Set(allIds).size,
       sp: [...new Set(PETS.map(p => p.sp))].sort().join(','),
       noSprite: PETS.filter(p => !PET_SP[p.sp]).length
     };
   });
-  ok(A.len === 36, 'A1 PETS 36종', String(A.len));
-  ok(JSON.stringify(A.dist) === '[5,5,5,5,5,5,5,1]', 'A2 등급 분포 (5,5,5,5,5,5,5,1)', JSON.stringify(A.dist));
-  ok(A.len === A.weapons, 'A3 무기 부위 종 수와 동일', A.len + ' vs ' + A.weapons);
+  /* 757 이관 — 아래 셋은 «불멸 1종» 만큼 값이 내려갔다. 묻는 성질은 안 바뀐다. */
+  ok(A.len === 35, 'A1 PETS 35종 (757 — 불멸 1종 폐지)', String(A.len));
+  ok(JSON.stringify(A.dist) === '[5,5,5,5,5,5,5,0]' && A.petImm === 0,
+    'A2 등급 분포 5×7 · 불멸 칸 0 (757)', JSON.stringify(A.dist));
+  ok(A.len === A.weapons - A.wImm, 'A3 무기 부위 종 수 − 불멸 종 수와 동일',
+    A.len + ' vs ' + A.weapons + '−' + A.wImm);
   ok(A.uniq === A.len && A.crossDup === 0, 'A4 id 중복 0 (계열 간 포함)', 'uniq=' + A.uniq + ' cross=' + A.crossDup);
   ok(A.bad.length === 0, 'A5 구 9종 id·이름·등급 보존 (481 이관 — m 폐지 · cd 는 파생)',
     A.bad.join(',') || '전부 일치');
@@ -185,14 +194,18 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
     return { cErr: Math.max.apply(null, cErr), off, mLeft,
              vMin: Math.min.apply(null, vs), vMax: Math.max.apply(null, vs),
              mono: mono.every(Boolean), monoN: mono.length,
-             top: Math.max.apply(null, dps[7]) / Math.min.apply(null, dps[0]) };
+             /* 757 — «최고 등급» 을 7 로 적어 두면 등급이 접힌 순간 -Infinity 가 나온다 */
+             topG: Math.max.apply(null, PETS.map(p => p.g)),
+             top: Math.max.apply(null, dps[Math.max.apply(null, PETS.map(p => p.g))]) / Math.min.apply(null, dps[0]) };
   });
   ok(B.mLeft.length === 0, 'B1 피해 계수 축(PET_M·항목 m)은 폐지됐다 (481)', B.mLeft.join(',') || '남은 m 0종');
   ok(B.cErr <= 1e-9, 'B2 PET_CD = 1.30 × (0.40/1.30)^(g/7) (481 곡선)', '최대 오차 ' + B.cErr.toFixed(6));
   ok(B.off.length === 0, 'B3 36종 전부 cd = PET_CD[g] / v', B.off.join(',') || '전부 곡선 위');
   ok(B.vMin >= 0.90 && B.vMax <= 1.15, 'B4 개체차 v 는 0.90~1.15', B.vMin + '~' + B.vMax);
-  ok(B.mono && B.monoN === 7, 'B5 등급 간 세기(1/cd) 단조 (g 최대 < g+1 최소)', B.monoN + '경계');
-  console.log('     · 불멸/일반 펫 DPS 배수 = ×' + B.top.toFixed(2));
+  /* 757 — 등급이 8 → 7 이 되면서 «경계» 도 7 → 6 이다(등급 수 − 1). 값을 손으로 안 적는다. */
+  ok(B.mono && B.monoN === B.topG, 'B5 등급 간 세기(1/cd) 단조 (g 최대 < g+1 최소)',
+    B.monoN + '경계 / 최고 등급 g' + B.topG);
+  console.log('     · 최고 등급(초월)/일반 펫 DPS 배수 = ×' + B.top.toFixed(2));
 
   /* ---------------- [C] 확률표 ---------------- */
   const C = await page.evaluate(() => {
@@ -201,24 +214,29 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
     prbBank = 'pet';
     const steps = prbSteps().join(',');
     prbBank = 'weapon';
-    return { rows: r.length, eq: r === GRADE_ROLL_EQ, u6: r[6] && r[6].unlock, u7: r[7] && r[7].unlock,
+    /* 757 — 표는 이제 «8행 표를 그 배너 최고 등급까지 자른 것» 이다(같은 배열이 아니라 사본).
+       그래서 동일성(`===`)이 아니라 **앞 7행이 같은가** 를 묻는다. */
+    const eq = r.length === 7 && r.every((g, i) => g === GRADE_ROLL_EQ[i]);
+    return { rows: r.length, eq, u6: r[6] && r[6].unlock, u7: r[7] && r[7].unlock,
              /* 196 — «만렙» 을 리터럴 100 으로 적지 않는다(만렙이 또 바뀌면 여기가 먼저 굳는다).
                 해금 직전 레벨도 표에서 뽑는다: 초월 unlock−1 · 불멸 unlock−1. */
              len: at(SUM_MAXLV).length, s100: sum(at(SUM_MAXLV)), s1: sum(at(1)),
-             p6at54: at(r[6].unlock - 1)[6], p7at74: at(r[7].unlock - 1)[7],
+             p6at54: at(r[6].unlock - 1)[6], p7at74: r[7] ? at(r[7].unlock - 1)[7] : 0,
              p6at100: at(SUM_MAXLV)[6], p7at100: at(SUM_MAXLV)[7],
              nan: at(SUM_MAXLV).concat(at(1)).some(x => !isFinite(x)), steps, maxlv: SUM_MAXLV,
              skillRows: rollOf('skill').length };
   });
-  ok(C.rows === 8 && C.eq, 'C1 rollOf(\'pet\') = 8행 표(GRADE_ROLL_EQ)', String(C.rows));
+  ok(C.rows === 7 && C.eq, 'C1 rollOf(\'pet\') = 7행 (8행 표의 앞 7행 — 757)', String(C.rows));
   /* 196 — 만렙 25 로 축소되며 사다리가 20/24 로 옮겨졌다(85 와 «동일» 이라는 단언은 그대로). */
   /* 496 — 사다리 비례 이동(만렙 25 → 50). 불멸은 만렙에서 역산해 적는다(LESSONS 106-1) */
-  ok(C.u6 === 40 && C.u7 === C.maxlv - 1,
-    'C2 초월 Lv40 · 불멸 만렙−1 해금(85 와 동일 · 196 → 496)', C.u6 + '/' + C.u7);
+  /* 757 이관 — «불멸 해금 = 만렙−1» 은 이제 장비만의 규칙이다(verify85 [B4] 가 계속 지킨다).
+     펫에는 그 행이 아예 없어야 하므로 방향을 뒤집어 «없는가» 를 묻는다(333 처방). */
+  ok(C.u6 === 40 && C.u7 === undefined,
+    'C2 초월 Lv40 해금 · 불멸 행은 없다(757)', C.u6 + ' / 불멸행 ' + (C.u7 === undefined ? '없음' : C.u7));
   ok(near(C.s100, 1, 1e-9) && near(C.s1, 1, 1e-9) && !C.nan, 'C3 확률 합 1 · NaN 0',
     C.s100.toFixed(6) + ' / ' + C.s1.toFixed(6));
-  ok(C.p6at54 === 0 && C.p7at74 === 0 && C.p6at100 > 0 && C.p7at100 > 0,
-    'C4 해금 전 0 · 만렙 >0', '초월해금−1 g6=' + C.p6at54 + ' · 불멸해금−1 g7=' + C.p7at74
+  ok(C.p6at54 === 0 && C.p6at100 > 0 && C.p7at100 === 0,
+    'C4 해금 전 0 · 만렙 >0 · 불멸은 만렙에서도 0(757)', '초월해금−1 g6=' + C.p6at54 + ' · 불멸해금−1 g7=' + C.p7at74
     + ' · 만렙 g6=' + (C.p6at100 * 100).toFixed(2) + '% g7=' + (C.p7at100 * 100).toFixed(2) + '%');
   /* 250 — 이정표 8개 폐기. 동료 배너(g8)도 단계는 소환 레벨 1..만렙 연속이다. */
   ok(C.steps === Array.from({ length: C.maxlv }, (_, i) => i + 1).join(','),
@@ -317,7 +335,8 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
   }));
   ok(E7.lv === 'MAX', 'E7-a 전제 — 확률 팝업이 실제로 MAX 단계를 열었다(만렙 ' + E7.max + ')',
     '단계 «' + E7.lv + '»');
-  ok(E7.on && E7.rows === 36 && E7.heads === 8, 'E7 11 확률 팝업 — 8등급 · 36행',
+  /* 757 이관 — 확률 팝업도 `rollOf`·`PETS` 에서 파생하므로 불멸 폐지가 그대로 내려온다 */
+  ok(E7.on && E7.rows === 35 && E7.heads === 7, 'E7 11 확률 팝업 — 7등급 · 35행 (757)',
     E7.heads + '등급 / ' + E7.rows + '행');
   ok(E7.empty === 0 && E7.q === 0, 'E8 확률 팝업 아이콘 빈칸·❔ 0건', 'empty=' + E7.empty + ' ❔=' + E7.q);
   await page.evaluate(() => closeProbInfo());
@@ -334,7 +353,7 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
              bad, lastTop: last ? parseFloat(last.style.top) : 0,
              sp: !!document.querySelector('#bPet .sk-gsp') };
   });
-  ok(G.cards === 36, 'G1 26 시트 카드 36장', String(G.cards));
+  ok(G.cards === 35, 'G1 26 시트 카드 35장 (757 — 불멸 1종 폐지)', String(G.cards));
   ok(G.sp && G.sh > G.ch, 'G2 격자 안쪽 스크롤 성립(스페이서)', G.sh + ' > ' + G.ch);
   ok(G.bad === 0, 'G3 카드 색 undefined 0건(SK_FILL/SK_RIM 8단)', String(G.bad));
 
@@ -382,9 +401,10 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
              dist: sets.map(s => s.it.length).join(','),
              tabs: COLL_TABS.length };
   });
-  ok(H.n === 8, 'H1 도감 펫 세트 8개(등급별)', String(H.n));
-  ok(H.keys === 'pet:0,pet:1,pet:2,pet:3,pet:4,pet:5,pet:6,pet:7', 'H2 세트 키 pet:0~7', H.keys);
-  ok(H.members === 36 && H.dist === '5,5,5,5,5,5,5,1', 'H3 구성원 합 36 · 분포 유지', H.dist);
+  /* 757 이관 — 도감 세트는 `PETS` 에서 파생하므로 불멸 폐지가 그대로 내려온다 */
+  ok(H.n === 7, 'H1 도감 펫 세트 7개(등급별 · 757)', String(H.n));
+  ok(H.keys === 'pet:0,pet:1,pet:2,pet:3,pet:4,pet:5,pet:6', 'H2 세트 키 pet:0~6', H.keys);
+  ok(H.members === 35 && H.dist === '5,5,5,5,5,5,5', 'H3 구성원 합 35 · 분포 유지', H.dist);
   ok(H.tabs === 6, 'H4 도감 탭 6개 유지(회귀)', String(H.tabs));
 
   /* ---------------- [I] 콘솔 에러 ---------------- */
@@ -418,7 +438,7 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
     'F5 ★ 구 세이브 소환 진행도 보존 — 구 Lv12/exp3 = ' + v496Pulls(12, 3).toLocaleString()
       + ' 뽑이 **펫 배너 칸으로** 그대로 옮겨졌다(714 배너 독립 이관)',
     'Lv' + F.lv + '/' + F.exp + ' = ' + F.back.toLocaleString() + ' 뽑');
-  ok(F.lost.length === 0 && F.total === 36, 'F6 구 펫 id 전부 새 표에 존재 · 36종',
+  ok(F.lost.length === 0 && F.total === 35, 'F6 구 펫 id 전부 새 표에 존재 · 35종 (757)',
     F.lost.join(',') || (F.total + '종'));
   ok(F0.errs.length === 0, 'F7 구 세이브 로드 콘솔 에러 0건', F0.errs.slice(0, 3).join(' | ') || '없음');
   await F0.ctx.close();

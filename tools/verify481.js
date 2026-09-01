@@ -156,7 +156,11 @@ async function open(browser, seed) {
   /* ── [D] 소비처 ───────────────────────────────────────────── */
   const D = await page.evaluate(async () => {
     S.own = {}; S.coll = {}; markDirty();
-    const a = PT['bird0'], b = PT['pet7_0'];
+    /* 757 이관 — «최고 등급 펫» 을 id 로 적어 두면 등급이 접히는 날 자가 통째로 죽는다
+       (실제로 757 이 불멸 1종을 걷어내자 `PT['pet7_0']` 이 undefined 가 됐다).
+       ⇒ 이름 대신 **가장 센 펫**(등급 → 등급 안 자리)을 데이터에서 고른다. */
+    const a = PT['bird0'];
+    const b = PETS.reduce((m, p) => (p.g > m.g || (p.g === m.g && p.j > m.j)) ? p : m, PETS[0]);
     S.own[a.id] = { l: 1 }; S.own[b.id] = { l: 1 };
     /* ⚠ 두 상태의 `stat.dps` 를 그냥 나누면 안 된다 — 펫을 «보유·장착» 하는 것만으로 `b.atk` 가
        움직인다(보유 효과 ownVal · 485 장착 효과 petEquipVal). 그래서 **스킬 칸을 비워** dps 를
@@ -188,7 +192,8 @@ async function open(browser, seed) {
   const E = await page.evaluate(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     const t = s => ((document.querySelector(s) || {}).textContent || '').trim();
-    const a = PT['bird0'], b = PT['pet7_0'];
+    const a = PT['bird0'];                       /* 757 이관 — 위 [D] 와 같은 이유 */
+    const b = PETS.reduce((m, p) => (p.g > m.g || (p.g === m.g && p.j > m.j)) ? p : m, PETS[0]);
     S.own[a.id] = { l: 5 }; S.own[b.id] = { l: 5 }; markDirty();
     closeModal(); showItem(a.id); await sleep(160);
     const o = { hd: t('#mbox .sk-ct .hd .nt b'), vl: t('#mbox .sk-ct .vl .nt b'),
@@ -199,14 +204,20 @@ async function open(browser, seed) {
     closeModal(); showItem(b.id); await sleep(160);
     o.emB = [].map.call(document.querySelectorAll('#mbox .sk-db p em'), e => e.textContent.trim());
     o.vlB = t('#mbox .sk-ct .vl .nt b');
+    /* 기대값도 제품에서 만든다 — 08 세부가 쓰는 그 식(`it.cd.toFixed(2) + '초'`) 그대로 */
+    o.wantA = a.cd.toFixed(2) + '초'; o.wantB = b.cd.toFixed(2) + '초';
+    o.topName = b.n + '(' + GRADE[b.g].n + ')';
     closeModal();
     delete S.own[a.id]; delete S.own[b.id]; markDirty();
     return o;
   });
   ok(E.hd === '피해량', 'E1 08 세부 표 헤더 «피해량»', E.hd);
   ok(E.lines === 3, 'E2 설명문 3줄 유지 (`.sk-db` 750×290 고정)', String(E.lines));
-  ok(E.emA[0] === '1.30초' && E.emB[0] === '0.40초',
-    'E3 «주기» 가 등급마다 다르게 찍힌다 (일반 꼬마 새 ↔ 불멸 수호룡)', E.emA[0] + ' ↔ ' + E.emB[0]);
+  /* 757 이관 — «0.40초» 는 불멸 칸의 값이었다. 값을 손으로 적는 대신 제품의 식과 대조하고,
+     «등급마다 다르다» 는 성질은 두 값이 실제로 갈리는 것으로 못박는다(333 처방). */
+  ok(E.emA[0] === E.wantA && E.emB[0] === E.wantB && E.emA[0] !== E.emB[0],
+    'E3 «주기» 가 등급마다 다르게 찍힌다 (일반 꼬마 새 ↔ ' + E.topName + ')',
+    E.emA[0] + ' ↔ ' + E.emB[0]);
   ok(E.vl === E.vlB, 'E4 «피해량» 칸은 두 등급이 같은 값 — 화면이 새 규칙을 말한다', E.vl + ' = ' + E.vlB);
 
   /* ── [F] 구 세이브 ────────────────────────────────────────── */
