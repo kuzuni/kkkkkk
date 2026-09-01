@@ -9,7 +9,8 @@
  *   [A] 선언  — 왕복 부품이 **한 곳**(`jzPressTick`)이고 홀드 세 자리가 그것을 부른다 ·
  *               뗌에서 반드시 취소된다(`jzTickStop` 이 `jzRelease` 안에 있다) ·
  *               진폭은 `jz-dn` 과 **같은 값**(.94 / 8px)을 쓴다(새 상수 0개)
- *   [B] 실동작 — 홀드 반복 구간에서 **틱마다** 「원래 크기(≥.995) 프레임」이 있다.
+ *   [B] 실동작 — 홀드 반복 구간에서 원래 크기 부근 듀티·완전 복귀 프레임이 실재하고(B1),
+ *               왕복 에피소드가 반복해서 그려진다(B2) — 632: 틱을 분모로 삼는 축은 fps 를 타서 폐기.
  *               ⚠ 자는 «찍힌 상자»(getBoundingClientRect) 이고, 룬·단련은 491 이 **호스트에도**
  *                 눌림(`jz-hdn` .985 · 누르고 있는 동안 유지 = 주인 승인 설계)을 걸어 두 층이
  *                 곱해지므로 **호스트 배율을 나눈 «버튼 자기 층»** 으로 잰다(훈련은 «누른 것 =
@@ -29,15 +30,31 @@ const fs = require('fs');
 const SRC = path.resolve(__dirname, '../index.html');
 const URL = 'file://' + SRC;
 const HOLD_MS = Number(process.env.V621_HOLD || 2400);
-/* «원래 크기» 문턱 둘 —
-   ⓐ 틱 축(REST_TH 0.985) — 3회차 왕복은 «갔다 온다» 라 꼭대기(=원래 크기)에 머무는 창이 틱의 **28%** 다.
-      60fps rAF 표본은 틱당 3~5장뿐이라 꼭대기를 통째로 놓치는 틱이 운으로 생긴다(0.995 로 잡으면 20/22).
-      0.985 는 «올라간 길의 75% 이상» = 오르막·내리막의 꼭대기 부근을 문다 — 위상 운에 안 진다.
-      ⚠ 무르게 푼 것이 아님은 [R1] 이 못박는다(무력화 사본은 이 문턱으로도 0/19).
-   ⓑ 듀티 축(FULL_TH 0.995) — «완전히 원래 크기» 인 프레임이 실제로 그려지는가. 틱당이 아니라 **전체 비율**로
-      물어야 표본 운을 안 탄다(실측 0.35~0.48 · 수리 전 0.011~0.046). */
+/* «원래 크기» 문턱 둘 — ⚠ 632 개정: «틱마다 REST_TH 프레임이 잡혔는가»(cycRatio) 로 B1/R2 를 가르던
+   축은 폐기했다. 그 축은 **컨테이너 fps 가 곧 값**이다 — 등재 컨테이너(60fps 근처)에서도 틱당 표본
+   3~5장이라 0.667~0.941 로 흔들렸고(문턱 0.85/0.95 바로 아래), 루틴 워커 컨테이너(rAF 실측 ~20~24fps)
+   에서는 0.588~0.933 까지 내려가 42항 중 1~6건이 실행마다 갈렸다(probe632 실측표 · review 632 §2).
+   ⚠ «틱별 최대의 중앙값(tm50)» 도 시도했다 폐기했다 — 부하 스파이크 한 번에 틱별 꼭대기 포착률이
+   0.41 로 내려가 중앙값째 0.974 로 떨어진다(8회 중 1회 실측). **틱을 분모로 삼는 축은 어떤 변형이든
+   fps 를 탄다.** 같은 나쁜 실행에서도 안 흔들린 것은 프레임 전체 비율(듀티)뿐이다.
+   갈아 끼운 축 둘은 fps 에 무디다(probe632 원본 ↔ 무력화 분리폭):
+   ⓐ 듀티 축 restPct — own ≥ REST_TH 프레임의 **전체 비율**(원본 0.245~0.34 · 무력화 ≤0.036).
+      페인트가 타임라인을 고르게 표본하는 한 fps 가 줄어도 기대값이 안 변한다. 구 FULL_TH 듀티
+      (문턱 0.20)는 꼭대기 한 점의 듀티라 저fps 에서 0.085 까지 내려갔다 — 듀티는 REST_TH 로 재고,
+      «완전히 원래 크기(FULL_TH)» 는 듀티가 아니라 **실재**(omax)로 묻는다.
+   ⓑ 왕복 에피소드 축 ep — 시간 순 프레임에서 «내려갔다(≤EP_LO 0.965) 올라옴(≥REST_TH)» 상승 교차의
+      횟수. «작아진 채 진동»(수리 전)은 위쪽에 한 번도 못 가 0 이고, 왕복은 틱마다 하나씩 쌓인다
+      (원본 7~12 · 무력화 0~1 — 무력화의 1 은 재렌더 노드 교체 순간의 표류 프레임).
+   ⚠ 무르게 푼 것이 아님은 [R1] 이 같은 두 축으로 못박는다(무력화 사본 restPct ≤0.05 · ep ≤2). */
 const REST_TH = 0.985;
 const FULL_TH = 0.995;
+/* 632 — 위 두 축의 문턱. probe632 분리폭(원본 최저 ↔ 무력화 최고)의 가운데가 아니라 **양쪽에서
+   먼 자리**로: restPct 0.12(원본 0.245~0.34 / 무력화 ≤0.036) · ep 4(원본 최악 7 / 무력화 ≤1).
+   ⚠ ep 문턱은 HOLD_MS 2400(틱 13~18개)에 물려 있다 — 홀드를 늘리면 무력화 쪽 표류 프레임도
+   같이 늘어나므로 DEAD_EP 를 같이 다시 재라. */
+const REST_DUTY = 0.12;                                /* [B1]·[R2] 듀티 문턱 */
+const EP_LO = 0.965, EP_MIN = 4;                       /* [B2] 왕복 에피소드(내림 ≤EP_LO → 오름 ≥REST_TH) */
+const DEAD_DUTY = 0.05, DEAD_EP = 2;                   /* [R1] 무력화 사본 상한 */
 /* «눌린 크기» 문턱 — 취향이 아니라 산수다. 그려진 상자는 층의 **곱**이고 눌림(.94) 위에 488 맥박이
    얹힌다(`--hb-s` 큰 카드 1.02) ⇒ 바닥에 닿은 프레임의 상한이 .94 × 1.02 = **0.9588**.
    0.96 은 그 바로 위 = «눌림 층이 확실히 바닥까지 갔다» 이고, 복귀 문턱 .995 와도 3.5% 떨어져 있다. */
@@ -123,9 +140,11 @@ async function hold(page, sp) {
   const fr = d.frames.filter(f => f.t >= rep[0] - 8 && f.t <= rep[rep.length - 1] + 90);
   const owns = fr.map(own);
   let cyc = 0, dnCyc = 0, live = 0, gone = 0;
+  const tickMax = [];                                 /* 632 — 틱별 최대 자기 배율 */
   for (let i = 0; i < rep.length; i++) {
     const a = rep[i] - 8, b = (i + 1 < rep.length) ? rep[i + 1] - 8 : rep[i] + 90;
     const seg = d.frames.filter(f => f.t >= a && f.t < b);
+    if (seg.length) tickMax.push(Math.max(...seg.map(own)));
     if (seg.some(f => own(f) >= REST_TH)) cyc++;
     /* ⚠ «눌림 층이 통째로 없는» 틱은 세지 않는다 — 그 틱은 재렌더가 버튼 노드를 갈아 `jz-dn` 도
        같이 사라진 자리다(491 1회차가 적어 둔 구조 · 이 행이 만든 것이 아니다). 몇 틱인지는 찍는다. */
@@ -137,9 +156,18 @@ async function hold(page, sp) {
   const rel = d.frames.filter(f => f.t > upT);
   const relMax = rel.length ? Math.max(...rel.map(f => f.w / W0)) : 0;
 
+  tickMax.sort((x, y) => x - y);
+  const tm50 = tickMax.length ? tickMax[Math.floor(tickMax.length / 2)] : 0;
+  /* 632 — 왕복 에피소드: 시간 순으로 «눌림 쪽(≤EP_LO)에 갔다가 원래 크기 부근(≥REST_TH)으로 올라옴» */
+  let ep = 0, epLow = false;
+  for (const x of owns) { if (x <= EP_LO) epLow = true; else if (epLow && x >= REST_TH) { ep++; epLow = false; } }
+
   return {
+    ep,
     id: sp.id, ticks: rep.length, frames: fr.length, w0: p3(W0),
     cyc, cycRatio: p3(cyc / rep.length), dnCyc, live, gone,
+    tm50: p3(tm50), tmN: tickMax.length,
+    restPct: owns.length ? p3(owns.filter(x => x >= REST_TH).length / owns.length) : 0,
     dnRatio: live ? p3(dnCyc / live) : 0,
     dnFrames: owns.filter(x => x <= DOWN_TH).length,
     dnPct: owns.length ? p3(owns.filter(x => x <= DOWN_TH).length / owns.length) : 0,
@@ -208,14 +236,18 @@ async function hold(page, sp) {
   for (const sp of SPOTS) {
     const o = R[sp.id];
     ok(!!o && o.ticks >= 5, 'B0 ' + sp.id + ' 홀드가 실제로 연속으로 돌았다', o ? '틱 ' + o.ticks + '회' : 'n/a');
-    /* ⚠ 85% 인 이유는 산수다 — 틱 하나에 rAF 표본이 **3~5장**이고 위쪽 창이 사이클의 약 35% 라
-       한 틱이 통째로 빠질 확률이 0.65^5 ≈ 11% 다. 95% 로 잡으면 20틱 중 한 번 빠지는 것만으로 빨개진다
-       (실측 18/19 · 18/20 으로 실제로 그랬다). **흔들리지 않는 축은 듀티(B2·C1)** 이고 이 항은 그 짝이다.
-       수리 전에는 이 문턱으로도 0/19 · 1/20 · 0/18 이라 85% 는 여전히 둘을 완전히 가른다. */
-    ok(!!o && o.cycRatio >= 0.85, 'B1 ' + sp.id + ' 위로 돌아온 틱(≥' + REST_TH + ') ≥ 85%(표본 3~5장/틱)',
-       o ? o.cyc + '/' + o.ticks + ' = ' + o.cycRatio : 'n/a');
-    ok(!!o && o.fullPct >= 0.20, 'B2 ' + sp.id + ' **완전히** 원래 크기(≥' + FULL_TH + ') 프레임 듀티 ≥ 20% — 수리 전 1.1~4.6%',
-       o ? o.fullFrames + '/' + o.frames + ' = ' + o.fullPct : 'n/a');
+    /* 632 — 구 축(위로 돌아온 틱 비율 ≥ 0.85)은 fps 를 타서 폐기(파일 머리말 참조).
+       듀티는 REST_TH 로 잰다(구 FULL_TH 듀티 0.20 은 저fps 에서 0.085 까지 흔들렸다).
+       «완전히 원래 크기» 는 듀티가 아니라 실재(omax ≥ FULL_TH)로 묻는다 — 수리 전(무력화와 같은 꼴)은
+       둘 다 죽는다(restPct ≤0.036 · omax ≤0.959). 구 틱 비율은 진단으로 계속 찍는다. */
+    ok(!!o && o.restPct >= REST_DUTY && o.omax >= FULL_TH,
+       'B1 ' + sp.id + ' 원래 크기 부근(≥' + REST_TH + ') 듀티 ≥ ' + REST_DUTY + ' · 완전 복귀(≥' + FULL_TH + ') 프레임 실재',
+       o ? 'restPct ' + o.restPct + ' · omax ' + o.omax + ' (완전 복귀 ' + o.fullFrames + '장 · 틱별 꼭대기 표본 ' + o.cyc + '/' + o.ticks + ')' : 'n/a');
+    /* 632 — «틱마다 왕복» 의 페인트 쪽 증거. 틱을 분모로 삼지 않고 왕복 에피소드의 **횟수**만 묻는다
+       (원본 최악 7 · 무력화 ≤1). 틱마다 부품이 불리는 것 자체는 [A5]·[A6] 정적 축이 이미 진다. */
+    ok(!!o && o.ep >= EP_MIN,
+       'B2 ' + sp.id + ' 왕복 에피소드(≤' + EP_LO + ' → ≥' + REST_TH + ' 상승 교차) ≥ ' + EP_MIN + '회',
+       o ? 'ep ' + o.ep + ' (틱 ' + o.ticks + '개 · tm50 ' + o.tm50 + ')' : 'n/a');
   }
 
   console.log('\n[C] 왕복이지 «풀린 것» 이 아니다 — 눌린 크기도 매 틱 지난다');
@@ -251,12 +283,16 @@ async function hold(page, sp) {
   await page.evaluate(() => { if (window.__jzPT0) window.jzPressTick = window.__jzPT0; });
   for (const sp of SPOTS) {
     const o = rv[sp.id];
-    ok(!!o && o.cycRatio <= 0.2, 'R1 ' + sp.id + ' 무력화 사본은 왕복이 사라진다(≤0.2)',
-       o ? o.cyc + '/' + o.ticks + ' = ' + o.cycRatio : 'n/a');
+    /* 632 — [B1]·[B2] 가 갈아탄 두 축 **그대로** 사본을 밀어야 «무르게 풀지 않았다» 가 선다.
+       무력화 실측: restPct ≤ 0.036 · ep ≤ 1(재렌더 노드 교체 순간의 표류 프레임 한 장까지). */
+    ok(!!o && o.restPct <= DEAD_DUTY && o.ep <= DEAD_EP,
+       'R1 ' + sp.id + ' 무력화 사본은 왕복이 사라진다(restPct ≤ ' + DEAD_DUTY + ' · ep ≤ ' + DEAD_EP + ')',
+       o ? 'restPct ' + o.restPct + ' · ep ' + o.ep : 'n/a');
   }
   {
     const o = await hold(page, SPOTS[0]);
-    ok(!!o && o.cycRatio >= 0.95, 'R2 원복하면 같은 자로 다시 초록', o ? o.cyc + '/' + o.ticks + ' = ' + o.cycRatio : 'n/a');
+    ok(!!o && o.restPct >= REST_DUTY && o.ep >= EP_MIN, 'R2 원복하면 같은 자([B1]·[B2] 축)로 다시 초록',
+       o ? 'restPct ' + o.restPct + ' · ep ' + o.ep : 'n/a');
   }
   /* ⚑ R3 — 579 회귀를 «절대값» 이 아니라 **대조**로 본다. 뗌 스프링(`jz-up` 1.04 오버슈트)이 실제로
      찍히는 자리는 훈련뿐이다 — 룬·단련은 뗌에서 `rtHoldStop → end()` 가 통짜 렌더로 버튼 노드를 갈아
