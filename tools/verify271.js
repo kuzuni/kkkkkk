@@ -107,23 +107,24 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     openTrain(); setTrSub('train'); setRuneSub(null);
     const before = KEYS.map(loc);
     setTrSub('rune');
-    const up = loc('#trSubs'), dn = loc('#rnSubs');
+    const up = loc('#trSubs'), dn = loc('#rnSubs'), hd = loc('#rnHd');
     const card = [...document.querySelectorAll('.tr-rn')].map(e => e.getBoundingClientRect());
     const sum = document.querySelector('.tr-runes .rsum').getBoundingClientRect();
     const barU = document.getElementById('trSubs').getBoundingClientRect();
     const barD = document.getElementById('rnSubs').getBoundingClientRect();
+    const hdR = document.getElementById('rnHd').getBoundingClientRect();
     const sheet = document.querySelector('.tr-sheet').getBoundingClientRect();
-    /* 세로로 겹치는 쌍이 하나라도 있으면 안 된다(하위 바 · 카드 · 요약 · 상위 바) */
-    const all = [barD].concat(card, [sum], [barU]);
+    /* 세로로 겹치는 쌍이 하나라도 있으면 안 된다(687 헤더 · 하위 바 · 카드 · 요약 · 상위 바) */
+    const all = [hdR, barD].concat(card, [sum], [barU]);
     let overlap = 0;
     for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++)
       if (all[i].bottom > all[j].top + 0.5 && all[j].bottom > all[i].top + 0.5) overlap++;
     setTrSub('train');
     const after = KEYS.map(loc);
     return {
-      up, dn, card: card.length, overlap,
-      order: barD.bottom <= card[0].top + 0.5 && card[0].bottom <= sum.top + 0.5
-             && sum.bottom <= barU.top + 0.5,
+      up, dn, hd, card: card.length, overlap,
+      order: hdR.bottom <= barD.top + 0.5 && barD.bottom <= card[0].top + 0.5
+             && card[0].bottom <= sum.top + 0.5 && sum.bottom <= barU.top + 0.5,
       inSheet: barD.top >= sheet.top - 0.5 && barU.bottom <= sheet.bottom + 0.5,
       pinned: KEYS.every((k, i) => JSON.stringify(before[i]) === JSON.stringify(PIN[k])),
       same: JSON.stringify(before) === JSON.stringify(after), before
@@ -136,11 +137,17 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
      하변만 2px 올라온다(세로 예산 §9411 주석의 «하위 바 34~133» → 34~131, 여유 19 → 21). */
   /* 437 (2026-08-30) 이관 — 부품 높이 97 → **98**(셸 98 / 테두리 7 / 칸 84 한 덩어리 · probe437).
      `.rn-subs` 는 **상단 앵커**(top:34)라 상변은 여전히 Δ0 이고 하변만 1 내려간다. */
-  ok(geo.dn[1] === 34 && geo.dn[3] === 98,
-    '하위 바가 본문 머리(박스 local top 34) · 부품 높이 98', geo.dn[1] + ' / ' + geo.dn[3]);
+  /* 687 (2026-09-02) 이관 — 주인 지시 «룬강화석 개수를 탭 **위에**» 가 본문 머리(local 34)를
+     재화 잔량 헤더(#rnHd 24/34/998/56)에 내주고 하위 바는 그 아래(104)로 내려왔다.
+     «top 34» 를 그냥 지우지 않고 방향을 뒤집어 갈아 끼운다(333 처방) — 머리 자리의 주인이
+     바 → 헤더로 바뀌었다는 것까지 단언한다(헤더가 사라지면 이 항이 빨개진다). */
+  ok(geo.hd && geo.hd[1] === 34 && geo.hd[3] === 56,
+    '★ 687 — 재화 잔량 헤더가 본문 머리(박스 local top 34) · 높이 56', geo.hd && geo.hd[1] + ' / ' + geo.hd[3]);
+  ok(geo.dn[1] === 104 && geo.dn[3] === 98,
+    '하위 바가 헤더 아래(박스 local top 104 = 34+56+14) · 부품 높이 98', geo.dn[1] + ' / ' + geo.dn[3]);
   ok(geo.card === 1, '★ 한 화면에 룬 카드 1장(행 나열 폐기)', String(geo.card));
-  ok(geo.overlap === 0, '하위 바 · 카드 · 총효과 요약 · 상위 바 서로 겹침 0건', String(geo.overlap));
-  ok(geo.order, '세로 순서 — 하위 바 → 카드 → 총효과 요약 → 상위 바');
+  ok(geo.overlap === 0, '687 헤더 · 하위 바 · 카드 · 총효과 요약 · 상위 바 서로 겹침 0건', String(geo.overlap));
+  ok(geo.order, '세로 순서 — 687 헤더 → 하위 바 → 카드 → 총효과 요약 → 상위 바');
   ok(geo.inSheet, '두 바 모두 시트 안에 들어간다(잘림 0)');
   ok(geo.pinned, '★ 훈련 5요소의 박스 local 좌표가 203 이전 값과 Δ0 — 하위 바를 세워도 23 이 안 밀렸다',
     geo.pinned ? '' : JSON.stringify(geo.before));

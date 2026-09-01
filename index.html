@@ -10643,10 +10643,10 @@
   .tr-subs{left:126px;bottom:42px;width:794px}
   /* 탭 상태 — 훈련/룬 중 하나만 보인다. `.tr-box.rune` 한 클래스가 다섯 요소를 한꺼번에 뒤집는다
      (렌더 함수가 style 을 직접 만지면 «재렌더에 진» 상태가 생긴다 — LESSONS 50-①). */
-  .tr-box>.tr-runes,.tr-box>.rn-subs{display:none}
+  .tr-box>.tr-runes,.tr-box>.rn-subs,.tr-box>.rn-hd{display:none}
   .tr-box.rune>.tr-rib,.tr-box.rune>.tr-prog,.tr-box.rune>.tr-up,
   .tr-box.rune>.tr-qty,.tr-box.rune>.tr-cards{display:none}
-  .tr-box.rune>.tr-runes,.tr-box.rune>.rn-subs{display:block}
+  .tr-box.rune>.tr-runes,.tr-box.rune>.rn-subs,.tr-box.rune>.rn-hd{display:block}
   /* ── 271 — 룬 3종을 «행 나열» 이 아니라 «하위 탭» 으로 (2026-08-27, 저장소 주인 정정) ──
      203 은 «룬 탭 안에 3종이 나란히» 로 지었는데 주인 정정: «일반룬·고급룬·천상룬이 **탭으로**
      나눠져 있게». 한 화면에 한 종만 보이므로 카드가 268 → 697 로 커지고, 남는 자리에
@@ -10662,13 +10662,25 @@
         (훈련 탭에서는 `.rn-subs` 가 display:none — `.tr-runes` 와 같은 «번갈아 쓰는 형제» 규약).
 
      세로 예산 재계산 — 쓸 수 있는 자리는 리본 자리(박스 local 34)부터 상위 바 위(954)까지 **920**:
-       하위 바 99 · 사이 24 · 카드 700 · 사이 32 · 총효과 요약 46 = **901** (바닥 여유 19)
-       → 하위 바 34~133 · 본문 top **157** · 카드 157~857 · 요약 889~935.
+       ⚑ 687(주인 지시 2026-09-02 «룬강화석 개수를 일반룬·고급룬·천상룬 탭 **위에**») 이 맨 위에
+       재화 잔량 헤더 한 줄을 세웠다 — 613 «탭 재화 잔량 헤더» 규약(단련 .tp-hd)의 룬판이고,
+       보강(01:25)대로 **«(아이콘) 수량» 만 · 중앙 정렬**(한글 «룬강화석» 라벨 금지 — 688 과 한 규약).
+       헤더 56 · 사이 14 · 하위 바 99 · 사이 19 · 카드 656 · 사이 20 · 총효과 요약 46 = **910** (바닥 여유 10)
+       → 헤더 34~90 · 하위 바 104~203 · 본문 top **221** · 카드 221~877 · 요약 897~943.
+       카드 −44 는 전부 **잉크 없는 세로 여백**에서 걷었다(아이콘 200 · 글줄·바 높이 전부 불변):
+       rd 280→264(아이콘 밑 40→24) · rst 452→436 · rbt 512→486 · rhint 632→606(버튼 밑 8 유지).
      ⚠ 카드 높이를 키우려면 이 뺄셈부터 다시 하라(게이트 verify271 [2] 가 겹침 0 을 잰다). */
-  .rn-subs{left:126px;top:34px;width:794px}
-  .tr-runes{left:24px;top:157px;width:998px;height:778px}
+  /* 687 — 재화 잔량 헤더. 껍데기는 단련 .tp-hd 와 같은 카드 베벨 체계(한 부품 꼴 — 688 이
+     단련 쪽을 이 규약으로 끌어올 때 그대로 합쳐진다). 높이만 88 → 56(예산 §위 뺄셈). */
+  .rn-hd{left:24px;top:34px;width:998px;height:56px;border-radius:22px;background:#FFFDF2;
+    box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823;
+    text-align:center;line-height:56px;font-size:36px;color:#2C1E10}
+  .rn-hd b{color:#B4571E}
+  .rn-hd .cic{vertical-align:-7px;margin-right:8px}
+  .rn-subs{left:126px;top:104px;width:794px}
+  .tr-runes{left:24px;top:221px;width:998px;height:722px}
   /* 한 화면에 한 종만 — 카드는 항상 본문 머리에 붙는 **한 장**이다(203 의 `.k0/.k1/.k2` 폐기) */
-  .tr-rn{position:absolute;left:0;top:0;width:998px;height:700px;border-radius:28px;background:#FFFDF2;
+  .tr-rn{position:absolute;left:0;top:0;width:998px;height:656px;border-radius:28px;background:#FFFDF2;
     /* 카드 껍데기는 훈련 카드(.tr-card)의 베벨·그림자 체계를 그대로 쓴다 — 같은 팝업 안에서
        두 벌의 카드 문법이 생기지 않게 한다(96 «부품은 하나»). */
     box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
@@ -10704,7 +10716,7 @@
        fs36 에서 정확히 910px 를 넘겨 두 줄로 접히고, 접힌 줄이 아래 줄 위로 올라탄다.
        첫 구현이 그렇게 짜여 있었고 이 카드처럼 «절대좌표 한 줄 상자» 가 많은 곳의 고질이다.
        줄로 쪼개면 제일 긴 줄이 «골드 획득 +3136%»(fs34, 약 340px) 뿐이라 구조적으로 못 넘친다. */
-  .tr-rn>.rd{left:44px;top:280px;right:44px;height:162px}
+  .tr-rn>.rd{left:44px;top:264px;right:44px;height:162px}   /* 687 — 아이콘 밑 40→24 (예산 §271) */
   .tr-rn>.rd>.rw{position:absolute;left:0;right:0;height:54px;line-height:54px}
   .tr-rn>.rd>.rw.e0{top:0}
   .tr-rn>.rd>.rw.e1{top:54px}
@@ -10713,11 +10725,11 @@
   .tr-rn>.rd>.rw>s{position:absolute;right:0;width:300px;text-align:right;
     font-size:28px;color:#7A5A34;text-decoration:none}
   /* 지금 밟고 있는 계단(197 문법) — 「1레벨의 무게」가 어디서 커지는지 한 줄로 */
-  .tr-rn>.rst{left:44px;top:452px;right:44px;height:40px;line-height:40px;font-size:28px;color:#7A5A34}
+  .tr-rn>.rst{left:44px;top:436px;right:44px;height:40px;line-height:40px;font-size:28px;color:#7A5A34}
   /* 490 — 시도 버튼은 **하나**다(주인 지시 «룬 강화는 룬강화석으로만»). 구 `.b2`(다이아 칸)는
      선언째 걷어냈다. 남은 한 칸은 **카드 가로 중앙**으로 옮겼다 — 크기(420×112)·세로(512)는
      그대로라 카드 안 다른 요소는 한 픽셀도 안 움직인다(left 289 = (998 − 420) / 2). */
-  .tr-rn>.rbt{top:512px;width:420px;height:112px;border-radius:24px;cursor:pointer;
+  .tr-rn>.rbt{top:486px;   /* 687 — 512→486 (예산 §271) */width:420px;height:112px;border-radius:24px;cursor:pointer;
     text-align:center;line-height:112px;font-size:38px;color:#fff;
     background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #3F7412}
@@ -10755,15 +10767,15 @@
      기준선에서 11.5px 더 내려 상하 29.5 로 맞춘다 — 같은 줄 숫자 잉크와도 중심이 맞는다. */
   .tr-rn>.rbt .cic{vertical-align:-15.5px;margin-right:6px}
   /* 실패해도 레벨이 안 내려간다는 사실은 이 시스템에서 제일 자주 묻는 것이다 — 버튼 밑에 상시 적는다 */
-  .tr-rn>.rhint{left:44px;top:632px;right:44px;height:40px;line-height:40px;
+  .tr-rn>.rhint{left:44px;top:606px;right:44px;height:40px;line-height:40px;
     text-align:center;font-size:28px;color:#8B7A5E}
   /* 잠긴 룬 — 카드를 어둡게 덮고 개방 조건만 읽히게 한다(186 관례).
      271 부터는 «잠긴 탭을 눌러도 들어갈 수 있고, 들어가면 이 덮개가 조건을 말한다» 가 잠금 UX 다. */
   .tr-rn.lk>.rlk{display:block}
   .tr-rn>.rlk{display:none;left:8px;top:8px;right:8px;bottom:8px;border-radius:22px;
-    background:rgba(26,20,12,.72);text-align:center;line-height:684px;font-size:40px;color:#F2D8A8}
+    background:rgba(26,20,12,.72);text-align:center;line-height:640px;font-size:40px;color:#F2D8A8}   /* 687 — 카드 656: 덮개 안높이 640 */
   /* 만렙 룬 — 두 버튼 자리를 «MAX» 한 장으로 덮는다 */
-  .tr-rn>.rmax{right:44px;top:512px;width:910px;height:112px;border-radius:24px;
+  .tr-rn>.rmax{right:44px;top:486px;width:910px;height:112px;border-radius:24px;
     text-align:center;line-height:112px;font-size:38px;color:#7A5A34;
     background:#E4D6BC;box-shadow:inset 0 0 0 5px #141414}
   /* 하위 탭의 자물쇠 — 잠긴 룬 칸은 라벨을 죽이고 자물쇠를 얹는다(272 `.sk-lock` 부품 재사용).
@@ -10775,7 +10787,7 @@
   .rn-subs>.stab.lk>.sk-lock{display:block;left:auto;right:16px;top:14px;margin-left:0;
     transform:scale(.62);transform-origin:100% 0}
   /* 룬 탭 하단 총효과 요약 — 「지금 룬이 나에게 주는 것」을 한 줄로. bonus() 와 같은 식(runeSum) */
-  .tr-runes>.rsum{position:absolute;left:0;right:0;top:732px;height:46px;line-height:46px;
+  .tr-runes>.rsum{position:absolute;left:0;right:0;top:676px;height:46px;line-height:46px;
     text-align:center;font-size:31px;color:#5E4823}
 
   /* ── 210 단련 탭 (2026-08-27, 저장소 주인 지시 «훈련 팝업 3번째 탭») ──────────
@@ -10791,7 +10803,7 @@
   .tr-box>.tr-temp{display:none}
   .tr-box.temper>.tr-rib,.tr-box.temper>.tr-prog,.tr-box.temper>.tr-up,
   .tr-box.temper>.tr-qty,.tr-box.temper>.tr-cards,.tr-box.temper>.tr-runes,
-  .tr-box.temper>.rn-subs{display:none}
+  .tr-box.temper>.rn-subs,.tr-box.temper>.rn-hd{display:none}
   .tr-box.temper>.tr-temp{display:block}
   .tr-temp{left:24px;top:34px;width:998px;height:900px}
   .tr-temp>*{position:absolute}
@@ -16374,6 +16386,11 @@
              ⚠ 마크업을 **정적으로** 둔다 — renderRunes 가 0.35초마다 도는데 이 바까지 갈아 끼우면
                pointerdown~click 사이에 칸이 사라져 탭이 유실된다(LESSONS 50-① · 작업 74·142).
                잠금·레드닷·활성은 classList 토글로만 바꾼다(#trSubs 와 같은 규약). -->
+        <!-- 687 — 룬강화석 잔량 헤더(주인 지시 2026-09-02 «일반룬 고급룬 천상룬 탭 위에 표시»).
+             613 «탭 재화 잔량 헤더» 규약의 룬판 — 보강(01:25)대로 «(아이콘) 수량» 만 · 중앙 정렬.
+             마크업은 하위 바와 같은 이유로 **정적**이다(renderRunes 0.35초 재렌더 — LESSONS 50-①).
+             값 갱신은 renderRunes/liveRunes 가 <i> 안만 고쳐 쓴다(홀드 중에도 실시간 감소 반영). -->
+        <div class="rn-hd" id="rnHd"><span class="pv"><i></i></span></div>
         <div class="stabs sp3 rn-subs" id="rnSubs">
           <!-- 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 배지 노드 자체를 뗐다(죽은 마크업 금지 — 134/166 관례) -->
           <div class="stab on" data-runesub="r1"><i class="ol3">일반룬</i><span class="sk-lock"></span></div>
@@ -34711,6 +34728,17 @@ function runeCardTxt(r){
 }
 const runeSumTxt = () => '룬 총효과 — '
   + Object.keys(RUNE_AXIS).map(k => RUNE_AXIS[k] + ' +' + pct(runeSum(k))).join(' · ');
+/* 687 — 룬 헤더는 «현재 룬강화석 개수» 한 줄이다(613 temperHeadTxt 와 같은 꼴).
+   보강(01:25) — 한글 «룬강화석» 라벨 금지: 아이콘 + 수량뿐. 룬강화석은 등급 공용 재화 하나라
+   (S.rstone — 등급별 재화가 아니다. 위임 규약: 표시값도 하나) 탭 전환과 무관하게 같은 값이다. */
+function runeHeadTxt(){
+  return { stone: curIc('rstone', 36) + ' <b>' + fmt(Math.floor(S.rstone)) + '</b>' };
+}
+function runeHeadPut(){
+  const n = document.querySelector('#rnHd .pv i'); if(!n) return;
+  const t = runeHeadTxt().stone;
+  if(n.innerHTML !== t) n.innerHTML = t;
+}
 function renderRunes(){
   const box = document.querySelector('#trw .tr-box');
   if(box){
@@ -34736,6 +34764,7 @@ function renderRunes(){
      `dataset.sig` 를 갱신하지 않으므로 손을 뗀 «뒤» 첫 렌더가 저절로 통짜로 돈다. */
   /* 491 4회차 — 단련 헤더와 **같은 조건**으로 넓힌다(위 `rtDownIn` 머리말). 룬은 재료가 떨어지면
      홀드가 같은 꼴로 자멸하므로 병도 같다 — 한 부품으로 둘을 같이 막는다(④ 일관성). */
+  runeHeadPut();   /* 687 — 헤더는 정적 노드(#trRunes 밖)라 sig 경로와 무관하게 여기서 값만 맞춘다 */
   if(rtHoldOn('rune') || rtDownIn('#trRunes')){ liveRunes(curId); rtPendRender = 1; return; }
   /* ⚠ 이 함수는 `renderTrainLive()` 를 타고 **0.35초마다** 불린다. 무조건 innerHTML 을 갈아 끼우면
      pointerdown 과 click 사이에 버튼 노드가 사라져 탭이 통째로 유실된다
@@ -34781,6 +34810,7 @@ function renderRunes(){
    만렙에 닿으면 구조가 바뀌므로(버튼 2개 → `.rmax`) 통짜 렌더에 넘긴다 — 그 시점엔
    `runeTryOk` 가 false 라 홀드도 다음 틱에 스스로 멈춘다. */
 function liveRunes(curId){
+  runeHeadPut();   /* 687 — 홀드 반복 중에도 잔량이 실시간으로 줄어 보인다 */
   const w = $('trRunes'); if(!w) return;
   const r = RN[curId || curRuneId()]; if(!r) return;
   const card = w.querySelector('.tr-rn[data-rune="' + CSS.escape(r.id) + '"]');
