@@ -1538,7 +1538,7 @@ function writeReport(rep) {
     const actTot = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
     const ACT = med(runs.map(actTot)) || (rep.days * 1440);
     const faceOf = (r) => {
-      const w = r.walls.filter(x => isWall(x, r.band)); const f = [];
+      const w = r.walls.filter(x => isWall(x, r.band) && x.trunc !== true); const f = [];
       for (let i = 0; i + 1 < w.length; i++) f.push(wA(w[i + 1]) - (wA(w[i]) + w[i].len));
       return f;
     };
@@ -1550,8 +1550,11 @@ function writeReport(rep) {
          · 벽당 실오르막 = 상승면 하나에서 그 안의 멈춤을 뺀 값 (목표: 벽당 ≥ 60분 급) */
     const stallOf   = (r) => r.walls.reduce((a, w) => a + w.len, 0);
     const netOf     = (r) => Math.max(0, actTot(r) - stallOf(r));
+    /* ⚑ 13회차 비평 II(R2·R9) — ③ 도 `wallsOf` 와 **같은 벽 목록**을 써야 한다. 안 그러면
+       한 표 안에서 대충 벽이 ① 에서는 2개 · ③ 에서는 3개다(같은 회차에 세 번째 «읽는 쪽을
+       안 갈랐다» 사고). 잘린 정체는 «벽 끝» 이 관측 밖이라 상승면의 끝점이 될 수 없다. */
     const faceNetOf = (r) => {
-      const w = r.walls.filter(x => isWall(x, r.band)); const f = [];
+      const w = r.walls.filter(x => isWall(x, r.band) && x.trunc !== true); const f = [];
       for (let i = 0; i + 1 < w.length; i++) {
         const a = wA(w[i]) + w[i].len, b = wA(w[i + 1]);
         const pause = r.walls.filter(x => !isWall(x, r.band) && wA(x) >= a && wA(x) < b)
@@ -1712,11 +1715,18 @@ function writeReport(rep) {
       + ` · 창 안 중복 p50 = ${med(runs.map(dupOf))} (합 = 잉여 ${med(runs.map(extraOf))})`
       + ` · 첫 벽(배정) p50 = ${med(runs.map(firstOf))}분 (목표 = 첫 도달 가능 칸 ${REACH[0] || '—'}분`
       + ` · 배정 안 가린 첫 벽 ${med(runs.map(firstAnyOf))}분)`
-      + ` · 벽 간격 기하평균 p50 = ${med(runs.map(spanOf)).toFixed(2)} (목표 ×${SPAN_T.toFixed(3)})**`);
+      /* ⚑ 13회차 비평 JJ(R12) — 배정 벽이 2개 미만이면 `spanOf` 는 «간격 0» 이 아니라
+         **미정의**를 뜻하는 0 을 돌려준다. 그것을 «0.00 (목표 ×1.904)» 로 찍으면 측정치로
+         읽힌다(대충이 실제로 그랬다). 미정의는 미정의라고 적는다. */
+      + ` · 벽 간격 기하평균 p50 = ${med(runs.map(spanOf)) > 0 ? med(runs.map(spanOf)).toFixed(2) : '— (미정의 · 배정 벽 2개 미만)'} (목표 ×${SPAN_T.toFixed(3)})**`);
     L.push('');
     L.push(`_⚠ **널 기준선** — ±20% 창의 합이 측정 구간(${HOR}분)의 **${covPc.toFixed(2)}%** 라`
       + ` 벽 ${med(wallsAll)}개를 **아무 데나 뿌려도 기대 적중 ${nullE.toFixed(2)}/${tgtN}** 이다.`
-      + ` 적중은 이 값과의 차로만 읽어라(지금 **+${(med(runs.map(hitOf)) - nullE).toFixed(2)}칸**)._`);
+      /* ⚑ 13회차 비평 II(R3) — 부호를 `'+'` 로 **박아** 두어서 차가 음수가 된 첫 회차에
+         «+-0.36칸» 이라는 부호 불능 문자열이 찍혔다(대충 적중 1 < 널 1.36 = **난수 이하**).
+         이 루프는 세 회차 동안 «적중은 널과의 차로만 읽어라» 를 규약으로 적어 놓고, 그 차가
+         처음 음수가 된 자리에서 그것을 못 읽었다. 부호를 값에서 뽑고, 음수면 말로도 적는다. */
+      + ` 적중은 이 값과의 차로만 읽어라(지금 **${(med(runs.map(hitOf)) - nullE) >= 0 ? '+' : ''}${(med(runs.map(hitOf)) - nullE).toFixed(2)}칸**${med(runs.map(hitOf)) < nullE ? ' ⚠ **널 기준선 아래 = 난수 산포보다 나쁘다**' : ''})._`);
     L.push('');
     L.push(`_도달 가능 칸(정책별 · 창 끝 1.2t 까지 쌓인 활성 분 ≥ ${WALL_MIN} — 벽 검출과 같은 비교자)`
       + ` = ${REACH.join(' · ')}분_`);
@@ -2027,7 +2037,12 @@ function writeReport(rep) {
         const cell = (x) => x ? `${fmtN(x.p50)} (보간 ${fmtN(x.p50i)})` : '—';
         const ratio = t[0] && t[1] && t[1].p50 ? (t[0].p50 / t[1].p50).toFixed(3) : '-';
         const goalPct = t[0] ? ` — 목표 27만의 ${(100 * t[0].p50 / GOAL_DAY).toFixed(1)}%` : '';
-        L.push(`| **② 말미 ${(t[0] || t[1]).W}일 한계 수급/일 〔${nm} · p50 (보간 med)〕 — ④ 외삽이 쓰는 기울기**${goalPct} | ${t.map(cell).join(' | ')} | ${ratio} |`);
+        /* ⚑ 13회차 비평 JJ(R12) — 말미 창에 소환 외 씽크가 0 이면 두 장부가 **같은 수**다.
+           정보량 0 인 줄이 판정 표에 두 줄로 서는 것보다 나쁜 것은, 그 동일성이 곧
+           «소환 예산 ④ 의 외삽이 앞으로 입장권 지출 0 을 가정한다» 는 뜻이라는 점이다. */
+        const same = mode === 'summon' && t[0] && t[1]
+          && Math.abs(t[0].p50 - (tailRate(pols[0], 'in') || {}).p50) < 0.5;
+        L.push(`| **② 말미 ${(t[0] || t[1]).W}일 한계 수급/일 〔${nm} · p50 (보간 med)〕 — ④ 외삽이 쓰는 기울기**${goalPct}${same ? ' ⚠ **유입 장부와 동일값** — 말미 창에 소환 외 씽크가 0 이라, 이 장부의 ④ 외삽은 «앞으로 입장권 교환 지출 0» 을 가정한다' : ''} | ${t.map(cell).join(' | ')} | ${ratio} |`);
       }
       /* 10회차(정정1·11) — ④ 판정 줄 = 교차 실측. p50 옆에 산포(p10~p90)와 외삽 시드 수를
          같이 찍는다(외삽 = 측정 일수 안에 목표를 못 지나 말미 구간율로 민 시드). */

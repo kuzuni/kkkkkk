@@ -112,6 +112,12 @@ if (rep && rep.cal) {
   const buildBadOf = r => r.buildRat != null && r.buildRat < BUILD_MIN;
   ok(badRows.every(r => powerBadOf(r) || buildBadOf(r)),
      `무효 ${badRows.length}행은 전부 이유가 있다(화력 미달 또는 같은 캐릭터 — 이유 없이 접힌 행 0)`);
+  /* ⚑ 13회차 비평 II(R10) — **이 항이 없으면 아래 짝 둘이 공허참이다.** `failBy` 가 안 실린
+     캐시에서는 `filter(r => r.failBy === 'power')` 가 빈 배열이라 `.every()` 가 그냥 통과한다
+     — 이빨이 있던 옛 항을 내리고 그 자리에 0행 매칭 항을 올린 꼴이었다. 이름이 **있는가**를
+     먼저 묻는다: 판정 자리(`calibrateOne`)가 이유를 안 붙이면 여기서 빨개진다. */
+  ok(badRows.every(r => r.failBy === 'power' || r.failBy === 'build'),
+     `무효 ${badRows.length}행마다 판정 자리가 이유 이름을 붙였다(\`failBy\` — 아래 짝 항이 공허참이 되지 않게 하는 항)`);
   ok(badRows.filter(r => r.failBy === 'power').every(r => powerBadOf(r)),
      '«화력 미달» 로 이름 붙은 행은 전부 실제로 대역 밖이다(옛 항의 이빨을 이 자리로 옮겼다)');
   ok(badRows.filter(r => r.failBy === 'build').every(r => buildBadOf(r) && r.kills > 0),
