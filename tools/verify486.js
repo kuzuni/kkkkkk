@@ -169,7 +169,7 @@ const shot = page => ev(page, () => {
   }
 
   /* ══════════════════ [D] MAX / «상한» 경로 유지 ══════════════════ */
-  sec('[D] 상한 카드 — 알약 «MAX» · 버튼 «상한» (verify64·verify326 계약을 안 깼다)');
+  sec('[D] 상한 카드 — 알약 «MAX» · 버튼 «MAX»(689 이관) (verify64·verify326 계약을 안 깼다)');
   {
     const { ctx, page, errs } = await open(browser, SRC, save(3, 0));
     const r = await ev(page, () => {
@@ -182,7 +182,9 @@ const shot = page => ev(page, () => {
     });
     if (blk(r, '[D] 상한 카드')) {
       eq('  상한 카드 알약', r.full, 'MAX');
-      eq('  상한 카드 버튼', r.btn, '상한');
+      /* 689 이관(2026-09-01) — 버튼도 «MAX» 다(주인 지시). 486 의 주장(«알약은 최종값이고
+         상한이면 MAX»)은 그대로고, 바뀐 것은 옆 칸의 표기뿐이라 항은 방향만 뒤집는다. */
+      eq('  상한 카드 버튼', r.btn, 'MAX');
       ok(/\bfull\b/.test(r.cls), '  상한 카드에 .full 클래스', r.cls);
       eq('  같은 화면의 상한 아닌 카드는 최종값 그대로', r.other, r.otherNow);
     }

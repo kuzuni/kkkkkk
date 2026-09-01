@@ -285,10 +285,12 @@ async function reset(page, o){
   await page.waitForTimeout(400);
   b = await snap(page);
   ok('단계 상한(100)에서 자동 정지', b.atk === 100, 'Lv ' + b.atk);
-  ok('상한 카드는 MAX/상한 표기', await page.evaluate(s => {
+  /* 689 이관(2026-09-01) — 비용 줄이 «상한» → «MAX»(주인 지시). 64 의 주장은 «단계 상한에서
+     자동 정지하고 카드가 상한 표기로 바뀐다» 이고 그 말은 그대로다 — 문자열만 갈아 끼운다. */
+  ok('상한 카드는 알약·버튼 둘 다 MAX 표기(689)', await page.evaluate(s => {
     const e = document.querySelector(s);
     return e.classList.contains('full') && e.querySelector('.cv i').textContent === 'MAX'
-        && e.querySelector('.cb i').textContent === '상한';
+        && e.querySelector('.cb i').textContent === 'MAX';
   }, CARD));
 
   /* ── §7 배수 탭 ── */

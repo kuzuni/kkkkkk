@@ -34668,7 +34668,7 @@ function renderTrainLive(){
     const set = (sel, v) => { const n = el.querySelector(sel); if(n && n.textContent !== v) n.textContent = v; };
     set('.ch i', c.lvTxt);
     set('.cv i', c.full ? 'MAX' : c.now);          /* 486 — 증가분 → 지금 최종값 */
-    set('.cb i', c.full ? '상한' : c.cost);
+    set('.cb i', c.full ? 'MAX' : c.cost);         /* 689 — «상한» → «MAX»(주인 지시 2026-09-02 01:30) */
     el.classList.toggle('no', !c.ok);
     el.classList.toggle('full', !!c.full);
     const dot = el.querySelector(':scope > em.dot');
@@ -34696,7 +34696,12 @@ function renderTrain(){
     + '<span class="ci">' + c.icon + '</span>'
     + '<span class="cv"><i>' + (c.full ? 'MAX' : c.now) + '</i></span>'   /* 486 — 지금 최종값 */
     + '<span class="cn"><i>' + c.name + '</i></span>'
-    + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? '상한' : c.cost) + '</i></span>'
+    /* 689 — 상한 카드 비용 줄은 «상한» 이 아니라 «MAX»(주인 지시 2026-09-02 01:30).
+       같은 카드의 알약(`.cv`)이 486 부터 이미 «MAX» 였다 — 새 표기가 아니라 **한 카드 안의 통일**이다.
+       ⚠ 380(라틴 폴백) 걱정은 여기서는 구조적으로 없다: GameKR 서브셋이 ASCII 를 포함하고(서두 @font-face),
+         폭 예산은 비용 문자열이 정한다(최장 «999.99AA» 잉크 208.98px ≫ «MAX» 92.83px · 밴드 안쪽 299px).
+         실측은 `tools/probe689.js` [D]. */
+    + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? 'MAX' : c.cost) + '</i></span>'
     + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
   renderRunes();                                        /* 203 — 룬 탭 본문 + 탭 상태 */
   renderTemper();                                       /* 210 — 단련 탭 본문 */

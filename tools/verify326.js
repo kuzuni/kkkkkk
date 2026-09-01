@@ -191,8 +191,12 @@ const head = page => page.evaluate(() => ({
     btn: document.querySelector('#trCards > [data-tr="atk"] .cb i').textContent,
     val: document.querySelector('#trCards > [data-tr="atk"] .cv i').textContent }));
   ok('  상한이면 살 수 없다', full3.bi.full === true && full3.bi.n === 0, JSON.stringify(full3.bi));
-  eq('  상한 카드 버튼 표기', full3.btn, '상한');
+  /* 689 이관(2026-09-01) — 주인 지시로 비용 줄 표기가 «상한» → «MAX» 로 뒤집혔다.
+     항을 지우지 않고 **방향만** 뒤집는다(333 처방). 알약과 버튼이 이제 같은 말을 하므로
+     «둘이 같다» 는 항을 한 줄 더 세워 둔다 — 한쪽만 되돌아가면 여기가 빨개진다. */
+  eq('  상한 카드 버튼 표기', full3.btn, 'MAX');
   eq('  상한 카드 증가분 표기', full3.val, 'MAX');
+  eq('  상한 카드는 알약·버튼이 같은 표기(689 통일)', full3.btn, full3.val);
 
   /* ---- [F] 세이브 이관 — 483 이 «없음» 판정을 반만 확인해 줬고 517 이 양방향으로 넓혔다 ----
      원래 이 절은 «이관 없음이 맞다» 를 단언했다. 두 가지가 틀렸다(작업 483):
