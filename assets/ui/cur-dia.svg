@@ -1,8 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 2 60 60" width="64" height="64" shape-rendering="geometricPrecision">
-  <!-- 화폐 아이콘 · 다이아(보석) — 작업 125 단일 출처 -->
-  <path d="M20 4h24l16 18-28 38L4 22z" fill="#2FA7D8" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M20 4l-6 18 18 38 18-38-6-18z" fill="#67D8F7" stroke="#0E6E96" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M14 22h36" stroke="#0E6E96" stroke-width="2.5"/>
-  <path d="M20 4l12 18L44 4" fill="none" stroke="#0E6E96" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M22 24l6 24-14-26z" fill="#CFF6FF" opacity=".9"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 다이아(보석) — 작업 125 단일 출처
+       ⚑ 671(2026-09-01) 외곽선 규격 재작도. 몸통(마름모)·면 분할·색은 **한 자도 안 바꿨다** —
+       바꾼 것은 «검정 테를 어떻게 두르는가» 하나다.
+       옛 규격: 몸통 path 에 stroke 4 를 straddle 로 걸었다 ⇒ 색 잉크가 축마다 다르게 깎였다
+         · 가로는 좌우 꼭짓점이 뾰족해 테가 2/sin(θ/2)=2.6 씩 파고들고(색÷실루엣 .848)
+         · 세로는 면 분할선(#0E6E96 2.5)이 위·아래 꼭짓점에서 테 **위로 삐져나와**(.973)
+       ⇒ 등방이어야 할 «색÷실루엣» 이 1.147 배 어긋났다(`probe671` [B]). ref·코인은 둘 다 .875 등방.
+       새 규격: 실루엣을 **몸통의 1.0714배 자리에 4폭 라운드 조인**으로 따로 깔고(바깥 끝 = viewBox 0..64),
+       몸통은 stroke 없이 그 위에 얹고, 면 분할선은 **몸통으로 클립**해 테를 못 밟게 한다
+       ⇒ 색 잉크 bbox = 몸통 bbox = 56×56 = 실루엣의 **.875 (두 축 모두)** = ref 실측값.
+       ⚠ viewBox == 잉크 bbox 불변식(644)은 그대로다 — 실루엣이 0..64 를 정확히 채운다. -->
+  <defs>
+    <clipPath id="diaBody"><path d="M20 4h24l16 18-28 38L4 22z"/></clipPath>
+  </defs>
+  <path d="M19.143 2h25.714l17.143 19.286-30 40.714-30-40.714z" fill="#000" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <g clip-path="url(#diaBody)">
+    <path d="M20 4h24l16 18-28 38L4 22z" fill="#2FA7D8"/>
+    <path d="M20 4l-6 18 18 38 18-38-6-18z" fill="#67D8F7" stroke="#0E6E96" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M14 22h36" stroke="#0E6E96" stroke-width="2.5"/>
+    <path d="M20 4l12 18L44 4" fill="none" stroke="#0E6E96" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M22 24l6 24-14-26z" fill="#CFF6FF" opacity=".9"/>
+  </g>
 </svg>

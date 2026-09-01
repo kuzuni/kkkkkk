@@ -157,20 +157,19 @@ async function capInk(page, kind, sel) {
     /* ── [2] 우리 잉크가 ref 에 붙는다 ── */
     console.log('\n[2] 03 던전 재화 바 — 색 잉크가 ref 에 붙었나 (72 비평가 6명이 −14~21% 로 지적한 자리)');
     const cap = { gold: await capInk(page, 'gold', '#dunw .pcb-g>i'), dia: await capInk(page, 'dia', '#dunw .pcb-d>i') };
-    /* ★ 356 이관(주인 지시 2026-08-29 «아이콘은 원본 비율») — **젬만 기대값이 뒤집혔다.**
-       340 은 «HUD 와 같은 손잡이» 로 젬 이미지에 `scaleX(1.16)` 을 걸어 폭 −12.5% 를 회수했다.
-       356 이 그 한 줄을 폐기했다 — 그것이 정확히 «가로로 편 아이콘» 이기 때문이다.
-       ⇒ 젬 폭은 다시 자연값(ref 대비 **−12.5%**)이고, 그 차이는 이제 **자산 몫**이다
-         (`cur-dia.svg` 의 마름모가 viewBox 64 안에서 56 뿐 — 125 단일 출처, «아트 대기»).
-       ⚠ 항을 지우지 않고 **기대값을 그 −12.5% 로 박는다**: 누가 scaleX 를 되살리면 0% 로 올라가
-         빨개지고(356 회귀 감지), 자산이 고쳐지면 여기 값을 0 으로 되돌린다. 코인은 그대로 ref 다. */
-    const DIA_356 = -12.5, DIA_TOL = 3;
+    /* ★ 671 이관(2026-09-01) — **«자산이 고쳐지면 여기 값을 0 으로 되돌린다» 던 그 회차가 왔다.**
+       356 이 `scaleX(1.16)` 을 폐기한 뒤 젬 폭은 자연값 **−12.5%** 였고, 이 자는 그 값을
+       기대값으로 박아 두고 «자산 몫» 이라고 적었다. 671 이 그 자산을 고쳤다 —
+       뿌리는 «테가 얇다» 가 아니라 **색÷실루엣이 등방이 아니었던 것**이다(`probe671` [B]
+       가로 .848 · 세로 .973 = 1.147배). 테 규격을 .875 등방으로 다시 그리고 상자를 코인과 같은
+       65.3 으로 모으자 젬 폭이 코인과 **같은 −1.8%** 로 붙었다.
+       ⇒ 기대값을 코인과 **같은 술어**(ref ±3 · 오차 ≤6%)로 되돌린다. 이 항은 여전히 음성항이다:
+         누가 `scaleX(1.16)` 을 되살리거나 아트의 테를 다시 비등방으로 만들면 즉시 빨개진다
+         (그 되돌림은 §R 이 실제로 굴려서 못박는다. 옛 상수 DIA_356/−12.5% 는 이제 §R 이 주입한
+         «보정 없는 상자 57» 의 값이라 상수로 둘 자리가 없다 — §R 이 문턱으로 직접 적는다). */
     for (const k of ['gold', 'dia']) {
       const dw = (cap[k].col.w - REF[k].col[0]) / REF[k].col[0] * 100;
-      if (k === 'dia') {
-        ok('[2] dia 색 잉크 폭 = 356 이 남긴 ' + DIA_356 + '%±' + DIA_TOL + ' (scaleX 되살리면 빨개진다)',
-          Math.abs(dw - DIA_356) <= DIA_TOL, dw.toFixed(1) + '%');
-      } else {
+      {
         near('[2] ' + k + ' 색 잉크 w', cap[k].col.w, REF[k].col[0], 3);
         ok('[2] ' + k + ' 색 잉크 폭 오차 ≤6% (지적된 −14~21% 가 회수됐다)', Math.abs(dw) <= 6,
           dw.toFixed(1) + '%');
@@ -188,9 +187,11 @@ async function capInk(page, kind, sel) {
        가로로 두껍고 세로로 얇은데 scaleX 는 그 아웃라인까지 늘리기 때문이다(A3 6회차가 HUD 에서
        받아들인 것과 같은 대가). 몸통(위 단언)이 목적이고 이 줄은 «보정이 달아나지 않는지» 를 본다 —
        누가 scaleX 를 1.3 쯤으로 올리면 여기서 빨개진다. 자산이 고쳐지면 둘 다 ref 로 붙는다. */
-    near('[2] 젬 실루엣 w — 몸통을 맞춘 대가(+5px)까지만 허용', cap.dia.sil.w, REF.dia.sil[0], 6);
-    ok('[2] 젬 실루엣 세로는 자산 몫이라 ref −5px 다 (기록만 — 아트 필요표 340)',
-      cap.dia.sil.h > 0, cap.dia.sil.h + ' vs ref ' + REF.dia.sil[1]);
+    /* ⚑ 671 이관 — 이 두 줄은 «자산 몫» 이라 느슨했던 자리다(w ±6 · h 는 기록만).
+       671 이 테를 다시 그려 실루엣도 ref 에 붙었으므로(w 59→65 · h 60→66) **코인과 같은 ±3** 으로 조인다.
+       느슨한 채로 두면 아트가 다시 작아져도 초록이라 이번 회차의 회수분을 못 지킨다. */
+    near('[2] 젬 실루엣 w', cap.dia.sil.w, REF.dia.sil[0], 3);
+    near('[2] 젬 실루엣 h', cap.dia.sil.h, REF.dia.sil[1], 3);
 
     /* ── [3] 기전 — 상자는 그대로, 움직인 것은 이미지뿐 ── */
     console.log('\n[3] 기전 — 알약·그릇을 건드리지 않았다(235 의 186.5 그릇 불변)');
@@ -216,15 +217,15 @@ async function capInk(page, kind, sel) {
     /* 356 이관 — 젬 쪽 손잡이가 사라졌다. «기전이 같다» 는 뜻도 같이 바뀐다:
        코인은 상자 키우기(그대로) · 젬은 **override 없음**(63×63 · transform none). */
     const noTf = (t) => t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)';
-    /* ⚑ 644(2026-09-01) — 젬 상자 63 → **59.06**. 그려지는 잉크는 **Δ0** 이다:
-       644 가 `cur-dia.svg` 의 viewBox 를 잉크 bbox 로 잘라 채움비 .9375 → 1.0 이 되었으므로
-       종전 63 이 그리던 잉크(63 × .9375 = 59.06)를 그대로 내려면 상자가 59.06 이어야 한다.
-       ⇒ 이 이관의 **음성항은 바로 위 [2]**다 — 잉크(색 잉크 −12.5%±3 · h ref 57 ±3)를 재는 그 절이
-       **수리 전과 같은 값으로** 초록인 한, 여기서 상자 숫자를 옮긴 것은 무르게 푼 것이 아니다.
-       코인 65.3 은 그대로다(`cur-gold.svg` 는 원래 채움비 1.0 이라 644 가 안 건드린 유일한 아트다). */
-    ok('[3] 코인 = 상자 키우기 65.3×65.3 · 젬 = override 없음 59.06×59.06 (356 scaleX 폐기 · 644 상자=잉크) — HUD(A3)와 같은 기전',
+    /* ⚑ 671(2026-09-01) — 젬 상자 59.06 → **65.3 = 코인과 같은 값**.
+       644 는 «아트가 비등방인 채로» 잉크를 Δ0 으로 보존하느라 두 재화의 상자를 다르게 뒀고(비 1.106),
+       671 이 아트를 .875 등방으로 다시 그려 **같은 상자가 같은 잉크를 내게** 만들었다.
+       ⇒ 이 이관의 **음성항은 바로 위 [2]** 다 — 색 잉크(ref ±3)·실루엣(ref ±3)이 초록인 한
+       여기서 두 숫자를 한 값으로 모은 것은 무르게 푼 것이 아니다. 이제 한 술어가 둘을 같이 잰다. */
+    ok('[3] 코인·젬 모두 상자 65.3×65.3 (671 — 같은 아트 규격 · 같은 상자 · 같은 잉크) — HUD(A3)와 같은 기전',
       Math.abs(mech.gold.img[0] - 65.3) <= 1 && Math.abs(mech.gold.img[1] - 65.3) <= 1
-      && Math.abs(mech.dia.img[0] - 59.06) <= 1.5 && Math.abs(mech.dia.img[1] - 59.06) <= 1
+      && Math.abs(mech.dia.img[0] - 65.3) <= 1 && Math.abs(mech.dia.img[1] - 65.3) <= 1
+      && Math.abs(mech.gold.img[0] - mech.dia.img[0]) <= 0.5
       && noTf(mech.gold.itf) && noTf(mech.dia.itf),
       'gold ' + mech.gold.img.join('×') + ' tf ' + mech.gold.itf + ' · dia ' + mech.dia.img.join('×') + ' tf ' + mech.dia.itf);
     /* 235 가 «알약 콘텐츠 폭 186.5 = 254 − padding 53/14.5» 를 고정해 두었다. 아이콘은 절대배치라
@@ -250,8 +251,9 @@ async function capInk(page, kind, sel) {
     for (const nm of ['shop', 'relic']) {
       const o = other[nm];
       ok('[4] ' + nm + ' 코인 65.3×65.3', !!o.g && Math.abs(o.g[0] - 65.3) <= 1 && Math.abs(o.g[1] - 65.3) <= 1, JSON.stringify(o.g));
-      ok('[4] ' + nm + ' 젬 59.06×59.06 (356 이관 — scaleX(1.16) 폐기 · 644 이관 — 상자 = 잉크)',
-        !!o.d && Math.abs(o.d[0] - 59.06) <= 1.5 && Math.abs(o.d[1] - 59.06) <= 1, JSON.stringify(o.d));
+      ok('[4] ' + nm + ' 젬 65.3×65.3 (671 이관 — 코인과 한 값으로 모았다 · 비 1.106 → 1.000)',
+        !!o.d && Math.abs(o.d[0] - 65.3) <= 1 && Math.abs(o.d[1] - 65.3) <= 1
+        && !!o.g && Math.abs(o.d[0] - o.g[0]) <= 0.5, JSON.stringify(o.d));
     }
 
     /* ── [R] 되돌림 시험 — 보정을 걷어내면 §2 가 다시 빨개진다 ── */
@@ -265,17 +267,20 @@ async function capInk(page, kind, sel) {
       (bad.gold.col.w - REF.gold.col[0]) / REF.gold.col[0] * 100 < -10,
       bad.gold.col.w + ' vs ref ' + REF.gold.col[0] + ' ('
         + ((bad.gold.col.w - REF.gold.col[0]) / REF.gold.col[0] * 100).toFixed(1) + '%)');
-    ok('R-2 보정을 걷어내면 젬 시안 몸통이 −15% 아래로 떨어진다',
-      (bad.dia.col.w - REF.dia.col[0]) / REF.dia.col[0] * 100 < -15,
+    /* 671 이관 — 상자를 57 로 되돌리면 젬도 코인과 **같은 기전으로** 떨어진다(57 × .875 = 49.9).
+       옛 문턱 −15 는 «비등방 아트 + 59.06 상자» 시절의 값이라 이제 −12.5% 를 못 잡는다 ⇒ −8 로 조인다.
+       (문턱을 느슨하게 푼 것이 아니다 — 회수분 −1.8% 와 자연값 −12.5% 사이는 여전히 10%p 다) */
+    ok('R-2 보정을 걷어내면 젬 시안 몸통이 −8% 아래로 떨어진다',
+      (bad.dia.col.w - REF.dia.col[0]) / REF.dia.col[0] * 100 < -8,
       bad.dia.col.w + ' vs ref ' + REF.dia.col[0] + ' ('
         + ((bad.dia.col.w - REF.dia.col[0]) / REF.dia.col[0] * 100).toFixed(1) + '%)');
     await page.evaluate(() => { const s = document.querySelectorAll('style'); s[s.length - 1].remove(); });
     await page.waitForTimeout(200);
     const back = { gold: await capInk(page, 'gold', '#dunw .pcb-g>i'), dia: await capInk(page, 'dia', '#dunw .pcb-d>i') };
-    /* 356 이관 — 젬은 «ref 로 돌아온다» 가 아니라 «356 이 남긴 −12.5% 로 돌아온다» 가 정상이다 */
+    /* 671 이관 — 젬도 이제 **ref 로** 돌아온다(356 이 남긴 −12.5% 는 §R 이 주입한 상태의 값이 됐다) */
     ok('R-3 주입을 걷어내면 다시 초록 (술어를 무르게 푼 것이 아니다)',
       Math.abs(back.gold.col.w - REF.gold.col[0]) <= 3
-      && Math.abs((back.dia.col.w - REF.dia.col[0]) / REF.dia.col[0] * 100 - DIA_356) <= DIA_TOL,
+      && Math.abs(back.dia.col.w - REF.dia.col[0]) <= 3,
       'gold ' + back.gold.col.w + ' · dia ' + back.dia.col.w);
 
     console.log('\n[5] 콘솔');
