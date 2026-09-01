@@ -8,8 +8,11 @@
  *   [A] 선언 — 세 슬롯의 computed `text-decoration-line` 이 none.
  *   [B] 찍힌 픽셀 — «지금» 과 «밑줄을 도로 켠 사본» 이 **달라야** 한다. 같으면 밑줄이 애초에 안 그려지는
  *       자리라는 뜻이고, 그러면 [A] 는 아무것도 안 지키는 헛초록이다(334 처방 · 되돌림 시험).
- *   [C] 기하 Δ0 — 561 은 밑줄 하나다. 아이콘 상자 48×48 @ (16,8)·`--icfs`·`--icsx` 3칸이 그대로여야 한다
+ *   [C] 기하 Δ0 — 561 은 밑줄 하나다. 아이콘 상자 48×48 @ (16,8)·`--icfs` 3칸이 그대로여야 한다
  *       (56 은 ①~④ 8점으로 마감된 화면이다).
+ *       ⚠ **배율 축은 641 에서 갈아 끼웠다** — 옛 [C6] 은 `--icsx`(비균등 scaleX) 3칸을 «불변» 으로
+ *       굳혔는데 그 관행을 356(주인 지시 «아이콘은 원본 비율»)이 폐기하고 변수를 걷어냈다.
+ *       지금은 [C6] 이 «`--icsx` 0건» · [C6b] 가 «찍힌 행렬이 등방» · [C7] 이 «등방 `--icsc` 불변» 이다.
  *   [D] 사각지대 두 종을 **이름으로** 등재한다 — `<img>` 만 든 슬롯 3, 글자가 `position:absolute` 손자에
  *       있는 `.sv-st>s`. 둘 다 audit148 의 판정 밖이고, 후자는 **그리기에도 안 나온다**(probe561 [F]).
  *       여기 적어 두지 않으면 다음 세션이 같은 자리를 «놓친 결함» 으로 다시 판다.
@@ -49,9 +52,16 @@ const near = (m, a, b, tol) => ok(Math.abs(a - b) <= tol, m, a + ' vs ' + b + ' 
        있어서 그 자는 **그려진 잉크 상자**를 돌려준다(슬롯 1 은 23.06, 슬롯 3 은 7.5 로 읽힌다).
        561 이 지키려는 것은 «레이아웃 상자» 이므로 변환 전 값인 `offsetLeft/offsetTop` 을 쓴다. */
     const cs = getComputedStyle(u);
+    /* 641 — 찍힌 행렬의 a·d. `matrix(a,b,c,d,e,f)` 에서 a === d 면 등방이다.
+       `none`(배율 없음)도 등방으로 센다 — 3행은 이미지라 배율을 아예 안 받는다. */
+    const m = /matrix\(([^)]+)\)/.exec(cs.transform);
+    const v = m ? m[1].split(',').map(Number) : null;
     return { i: i + 1,
              txt: [...u.childNodes].filter(n => n.nodeType === 3).map(n => n.data).join('').trim(),
              deco: cs.textDecorationLine, color: cs.color,
+             a: v ? +v[0].toFixed(5) : 1, d: v ? +v[3].toFixed(5) : 1,
+             iso: !v || Math.abs(v[0] - v[3]) <= 1e-6,
+             icsc: cs.getPropertyValue('--icsc').trim(),
              icfs: cs.getPropertyValue('--icfs').trim(), icsx: cs.getPropertyValue('--icsx').trim(),
              left: u.offsetLeft, top: u.offsetTop, offParent: u.offsetParent && u.offsetParent.className,
              w: +cs.width.replace('px', ''), h: +cs.height.replace('px', '') };
@@ -69,8 +79,23 @@ const near = (m, a, b, tol) => ok(Math.abs(a - b) <= tol, m, a + ' vs ' + b + ' 
   }
   ok(slots[0].icfs === '39.3px' && slots[1].icfs === '40.2px' && slots[2].icfs === '42px',
      '[C5] `--icfs` 3칸 불변(39.3 · 40.2 · 42)', slots.map(s => s.icfs).join(' · '));
-  ok(slots[0].icsx === '.706' && slots[1].icsx === '.862' && slots[2].icsx === '.833',
-     '[C6] `--icsx` 3칸 불변(.706 · .862 · .833)', slots.map(s => s.icsx).join(' · '));
+  /* ★ 641(T1 게이트 부패) — 여기 있던 «`--icsx` 3칸 불변(.706 · .862 · .833)» 은 **뒤집어 갈아 끼웠다**.
+     561 이 굳혀 둔 `--icsx` 는 «fs 를 올린 만큼 scaleX 로 폭을 되돌린다» 는 관행의 손잡이인데,
+     그 관행 자체를 **주인 지시(356 «아이콘은 원본 비율» · 비균등 스케일 금지)가 폐기**했고
+     356 11회차가 세 칸에서 그 변수를 걷어냈다(3행 `.833` 은 «죽은 재료» 로 명시 삭제).
+     ⇒ 게이트가 요구하던 값이 **제품에 더는 없다** — 561 은 한 줄도 안 틀렸는데 자만 빨갛던 자리다.
+     ⚠ 항을 그냥 지우면 «비균등 배율이 이 화면에 되살아나도 초록» 인 게이트가 된다(333 처방).
+     그래서 방향을 뒤집어 **356 규약을 지키는 항**으로 만들고, 561 이 원래 지키려던 «상자 Δ0» 은
+     사라진 축이 아니라 **지금 있는 축**(등방 `--icsc`)으로 옮겨 [C7] 이 이어받는다.
+     ⚠ [C6b] 는 변수 이름이 아니라 **찍힌 행렬**을 본다 — 다른 이름으로 scaleX 를 다시 달아도 빨개진다. */
+  ok(slots.every(s => s.icsx === ''),
+     '[C6] `--icsx` 3칸 0건 — 356 규약(비균등 스케일 금지)이 걷어낸 축이다',
+     slots.map(s => JSON.stringify(s.icsx)).join(' · '));
+  ok(slots.every(s => s.iso), '[C6b] 세 슬롯 transform 이 등방이다(a === d) — 이름을 바꿔 단 scaleX 도 잡는다',
+     slots.map(s => s.a + '/' + s.d).join(' · '));
+  ok(slots[0].icsc === '.89744' && slots[1].icsc === '.93333' && slots[2].icsc === '',
+     '[C7] 등방 배율 `--icsc` 불변(.89744 · .93333 · 3행은 이미지라 없음) = 561 은 상자를 안 움직였다',
+     slots.map(s => JSON.stringify(s.icsc)).join(' · '));
 
   /* ── 픽셀 도구(probe561 과 같은 자) ────────────────────────── */
   const shot = async (clip) => (await page.screenshot({ clip })).toString('base64');
