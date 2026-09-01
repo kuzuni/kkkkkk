@@ -45,6 +45,10 @@ const R23_HOOK = require('./probe356r23.js');
 const { COLLECT_MEDIA, verdict: MEDIA_VERDICT } = require('./probe356r29.js');
 /* [N] 30회차 — 같은 매체 축의 «두 프레임 짝짓기». 짝짓기·합성 표본을 `probe356r30` 에서 받아 쓴다(13회차 [R12]). */
 const R30 = require('./probe356r30.js');
+/* [O] 31회차 — 같은 매체 축의 «한 주기». 접기(`foldScreen`)·합성 표본을 `probe356r31` 에서,
+   위상 못박기(`PIN`)·주기 칸수(`PHASES`)는 그 파일을 거쳐 `probe356r25` 것을 받아 쓴다(13회차 [R12]). */
+const R31 = require('./probe356r31.js');
+const { PIN: PIN_PHASE } = require('./probe356r25.js');
 const { COLLECT_PSEUDO } = R26;
 
 const TOL = 0.02;
@@ -234,6 +238,7 @@ async function sweep(browser, inject) {
   const seenG = [];       /* [L] 캔버스 축 — 화면별 `window.__r23` 스냅샷 (28회차 · 작업 634) */
   const rowsM = [];       /* [M] 매체 «내용 좌표계 ↔ 표시 상자» 축 — 같은 페이지에서 한 번 더 수집 (29회차) */
   const rowsMF = [];      /* [N] 같은 매체 축을 **리사이즈 뒤**(1080×1600)에 한 번 더 수집한 것 (30회차) */
+  const seenO = [];       /* [O] 같은 매체 축을 **한 주기**(위상 16칸) 훑어 화면분으로 접은 것 (31회차) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
@@ -284,6 +289,29 @@ async function sweep(browser, inject) {
       const gotM = await page.evaluate(COLLECT_MEDIA);
       for (const g of gotM) rowsM.push(Object.assign({ screen: label }, g));
 
+      /* ── [O] 매체 축 × 시간 (31회차) — [J]·[L]·[M]·[N] 과 **같은 손**이다: 스윕을 한 벌 더 돌지 않고
+         이미 열려 있는 이 페이지에서 위상만 옮겨 가며 `evaluate` 를 더 한다.
+         [M]·[N] 이 재는 것은 «가라앉은 뒤의 **한 점**» 이라, 상자가 애니메이션으로 흔들리는 매체는
+         그 점에서 초록이어도 주기 한복판에서 비트맵 비와 어긋날 수 있다
+         (배율은 한 줄도 안 걸리므로 [A]·[I]·[F] 도 못 본다 — `probe356r31` [2]·[4] 가 실측한다).
+         ⚠ 리사이즈 **전**에 돈다 — [M] 과 같은 프레임(2280)이어야 «[M] 이 도는 그 순간에
+            [M] 이 못 보는 것» 이 실측이 된다. 끝나면 `PIN(null)` 로 되돌려 [F]·[N] 이 안 물든다.
+         ⚠ 화면분을 **바로 접는다**(`R31.foldScreen`) — 16위상 × 71화면 × 1100행을 통째로 들고 있지 않는다. */
+      let foldO = null, pinnedO = 0, animO = null;
+      try {
+        animO = await page.evaluate(R31.MEDIA_ANIM);
+        pinnedO = await page.evaluate(PIN_PHASE, 0);
+        const perPhase = [];
+        for (let k = 0; k < R31.PHASES; k++) {
+          await page.evaluate(PIN_PHASE, k / R31.PHASES);
+          const got = await page.evaluate(COLLECT_MEDIA);
+          perPhase.push({ at: k / R31.PHASES, rows: got.map((g) => Object.assign({ screen: label }, g)) });
+        }
+        foldO = R31.foldScreen(perPhase, TOL);
+      } catch (e) { foldO = null; }
+      try { await page.evaluate(PIN_PHASE, null); } catch (e) { /* 되돌리기 실패는 아래 [F]·[N] 값이 말한다 */ }
+      seenO.push({ label, pinned: pinnedO, fold: foldO, anim: animO });
+
       /* ── [F] 프레임 축 (14회차) — **스윕을 한 벌 더 돌지 않는다** ──────────────────
          비용의 거의 전부는 위의 ①컨텍스트 ②goto ③단계 클릭이고 `COLLECT` 는 evaluate 한 번이다.
          그래서 같은 페이지를 9:13.3 으로 **줄여서 한 번 더 수집**한다 —
@@ -317,7 +345,7 @@ async function sweep(browser, inject) {
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF };
+  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO };
 }
 
 (async () => {
@@ -334,7 +362,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -2711,6 +2739,141 @@ async function sweep(browser, inject) {
       const gD = ghost(rowsM), gF = ghost(rowsMF);
       ok(`[N-g] 상자 비로 쟀으면 헛빨강이었을 제품 SVG — 2280 ${gD.ghost}/${gD.total}자리 · 1600 ${gF.ghost}/${gF.total}자리. `
         + `판정축이 \`preserveAspectRatio\` 라 실제 빨강은 0 이다 (29회차가 «안 셌다» 고 적어 넘긴 수 — [M-e] 의 합성 2자리에 대한 제품 대조군)`);
+    }
+  }
+
+  /* ── [O] 31회차 — **매체 축 × 시간(한 주기)** ────────────────────────────────
+     30회차는 열한째 프런티어(매체 축 × 프레임)를 닫으면서 다음 자리를 **이름까지 적어** 넘겼다(§37-8 ⓐ):
+     «[I] 가 [A] 축에 대해 한 한 주기 위상 스윕을 이 층은 안 한다. 캔버스 상자를 애니메이션으로
+       흔드는 자리가 생기면 두 프레임의 **한 점**만 보는 지금 자는 못 본다.»
+     24회차 규율이 그것을 이 회차의 일로 만든다 — «자기 한계를 글로 넘긴 회차는 그 한계를 안 닫은 것이다.»
+
+     ⚠ **이 절이 [I] 의 사본이 아닌 이유**(둘 다 위상을 못박지만 보는 층이 다르다):
+        [I] 는 [A] 축 = **노드에 걸린 배율**이 키프레임 안에서 종횡이 갈리는 것을 본다.
+        이 절은 **배율이 한 줄도 안 걸린 채** `width`/`height` 가 키프레임으로 움직여 **상자만** 흔들리고
+        내용 좌표계(비트맵·viewBox·원본)는 그대로 있는 자리를 본다. 그 노드는 [A]·[I] 에게
+        `transform:none` 이고 [M]·[N] 에게는 «가라앉은 한 점» 이라 **셋 다 초록**이다
+        (`probe356r31` [2]·[4] 가 합성으로 실측: 한 점 0자리 ↔ 한 주기 1자리 · [A] 는 ratio 1).
+     ⚠ **«한 점에서 0» 은 «한 주기에서 0» 의 근거가 못 된다** — 29·30회차가 되풀이한 규율의 시간 판이다.
+     ⚑ **대표 화면으로 안 접었다.** 26회차 인계문은 «[G]·[I] 는 [A] 가 이미 도는 축의 다른 각도라
+        접어도 된다» 고 적었고 28회차(작업 634)가 그 분류로 [G] 를 넓혔다. 이 절은 [M]·[N] 과 같은
+        **전 화면** 커버리지를 갖는다 — 스윕에 얹으면 «evaluate 몇 번» 값이라 접을 이유가 없기 때문이다. */
+  console.log('\n[O] 31회차 — 매체 축을 «한 주기» 로 잰다: 배율 없이 «상자만» 흔들려 어긋나는 층');
+  {
+    const okO = seenO.filter((s) => s.fold);
+    const sum = (f) => okO.reduce((a, s) => a + f(s), 0);
+    const rowsO = sum((s) => s.fold.rows);
+    const pinnedO = sum((s) => s.pinned || 0);
+    const movedO = sum((s) => s.fold.boxMoved);
+    const restO = sum((s) => s.fold.restBad);
+    const cycO = okO.reduce((a, s) => a.concat(s.fold.cycBad.map((x) => Object.assign({ screen: s.label }, x))), []);
+    const animSelf = seenO.reduce((a, s) => a + (s.anim ? s.anim.self : 0), 0);
+    const animAnc = seenO.reduce((a, s) => a + (s.anim ? s.anim.anc : 0), 0);
+    const worst = okO.reduce((m, s) => (s.fold.maxDev > (m ? m.fold.maxDev : -1) ? s : m), null);
+
+    /* ⓐ 전제 — 아무것도 못 본 자는 언제나 0건이다(11·21·26·29·30회차) */
+    if (okO.length && rowsO && pinnedO)
+      ok(`[O-a] 전제 — ${okO.length}/${SCREENS.length}화면 × 주기 ${R31.PHASES}칸 · 매체 ${rowsO}행 · 못박은 애니 노드 ${pinnedO}개`);
+    else bad(`[O-a] 전제 실패 — 화면 ${okO.length} · 매체 ${rowsO}행 · 못박은 애니 노드 ${pinnedO} (0 이면 아래 초록은 전부 헛초록)`);
+
+    /* ⓐ2 **무음 실패 감시** — [N-a2] 와 같은 규율의 시간 판. 위상을 열여섯 번 바꿨는데 상자가
+       한 자리도 안 움직였으면 이 절은 **같은 순간을 열여섯 번 잰 것**이고 그 0 은 헛초록이다. */
+    if (movedO > 0)
+      ok(`[O-a2] 위상 사이에 상자가 실제로 움직인 매체 ${movedO}자리 — 이 절의 0 은 «한 점을 열여섯 번 잰 0» 이 아니다`);
+    else bad('[O-a2] 위상을 옮겼는데 상자가 한 자리도 안 움직였다 — 못박기가 안 먹었거나 이 층에 흔들리는 매체가 없다 (헛초록 방지)');
+
+    /* ⓐ3 «0» 의 뜻을 가른다 — 애니메이션이 걸린 매체가 아예 0 이면 그 0 은 «없어서 0» 이다(27회차 규율) */
+    if (animSelf + animAnc > 0)
+      ok(`[O-a3] 애니메이션이 걸린 매체 ${animSelf + animAnc}자리(자신 ${animSelf} · 조상 ${animAnc}) — 이 축은 제품에 실재하는 자리를 훑는다`);
+    else bad('[O-a3] 애니메이션이 걸린 매체 0자리 — 이 절의 0 은 «없어서 0» 이다. 그 사실을 초록으로 세지 마라');
+
+    /* ⓑ 판정 — 지금 트리 */
+    if (!cycO.length) ok(`[O-b] 주기 ${R31.PHASES}칸 어느 위상에도 매체 비균등 0자리 (한 점 ${restO}자리 · [M] 과 같은 0)`);
+    else bad(`[O-b] 주기 안에서 비균등 ${cycO.length}자리: `
+      + cycO.slice(0, 6).map((x) => `${x.screen} ${x.row.sel} d=${x.row.d} @위상 ${(x.at * 100).toFixed(0)}%`).join(' · '));
+
+    /* ⓒ **이 절의 존재 이유** — «한 주기에서만» 어긋나는 자리. [N-c]·[F-c] 와 같은 규율:
+       [O-b] 가 0 이면 정의상 0 이지만, 수를 따로 찍는 것이 이 절이 무엇을 위해 있는지를 말한다. */
+    const onlyCyc = cycO.length - restO;
+    if (onlyCyc <= 0) ok(`[O-c] «한 주기에서만» 어긋나는 매체 0자리 — [M]·[N] 의 한 점이 못 보는 시간 전용 결함이 없다`);
+    else bad(`[O-c] «한 주기에서만» 어긋나는 매체 ${onlyCyc}자리 — [M]·[N] 이 구조적으로 못 보는 자리다`);
+
+    /* ⓓ **문턱까지 얼마나 남았나** — 0/1 판정만 찍으면 «허용 오차 바로 아래» 와 «구조적으로 0» 이 같은 줄이 된다.
+       ⚠ 이 수는 결함이 아니다. 최악 자리는 주인 승인 설계(121 지시 ⑥ 스쿼시·스트레치 `thBob`)일 수 있고
+          [I] 가 그 자리에서 «소스 리터럴로 판정하면 주인 승인 설계를 결함이라 부르는 자가 된다» 고 못박았다.
+          그래서 이 항은 **재서 적을 뿐 판정하지 않는다**. */
+    if (worst)
+      ok(`[O-d] 제품 최악 편차 ${worst.fold.maxDev.toFixed(4)} (허용 ${TOL} 의 ${(worst.fold.maxDev / TOL * 100).toFixed(0)}%) @«${worst.label}» — `
+        + `문턱 아래이지만 0 이 아니다 ⇒ 이 축은 제품에서 실제로 움직인다 (판정 아님 · 스쿼시는 주인 승인 설계다)`);
+    else bad('[O-d] 화면분 접기가 한 장도 안 남았다 — 위 초록의 근거가 없다');
+
+    /* ⓔ **되돌림(합성)** — 이 자가 «시간 전용» 자리를 정말 보는가 + 음성항.
+       ⚠ 이 항이 없으면 [O-b] 의 0 은 «위상을 바꿔도 아무것도 안 보는 자» 의 0 일 수 있다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 600, height: 500 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.setContent(R31.SYN_T);
+        await page.waitForTimeout(150);
+        await page.evaluate(PIN_PHASE, 0);
+        const per = [];
+        for (let k = 0; k < R31.PHASES; k++) {
+          await page.evaluate(PIN_PHASE, k / R31.PHASES);
+          per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA) });
+        }
+        await page.evaluate(PIN_PHASE, null);
+        const f = R31.foldScreen(per, TOL);
+        const sq = f.cycBad.find((x) => x.key.indexOf('#cSq') >= 0);
+        const prop = f.cycBad.find((x) => x.key.indexOf('#cProp') >= 0);
+        if (sq && !f.restBad)
+          ok(`[O-e] 되돌림 — 상자 «높이만» 흔들리는 캔버스(비트맵 200×100 고정): 한 점 ${f.restBad}자리 ↔ 한 주기 ${f.cycBad.length}자리 `
+            + `(최악 d=${sq.row.d} @위상 ${(sq.at * 100).toFixed(0)}%) ⇒ [O-b] 의 0 은 «안 보는 자» 의 0 이 아니다`);
+        else bad(`[O-e] 되돌림 실패 — 한 점 ${f.restBad} / 한 주기 ${f.cycBad.length} (시간 전용 자리를 못 본다)`);
+        if (!prop) ok('[O-e2] 음성항 — 종횡이 «같이» 흔들리는 상자는 어느 위상에도 안 빨개진다 (애니메이션이 걸렸다는 이유만으로는 결함이 아니다)');
+        else bad(`[O-e2] 음성항 실패 — 멀쩡한 등방 애니메이션을 결함이라 부른다: d=${prop.row.d}`);
+      } catch (e) { bad('[O-e] 합성 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+
+    /* ⓕ **제품 되돌림** — [M-g]·[N-f] 와 같은 손이되 축이 시간이다.
+       ⚠ 합성만으로 닫으면 «자는 사는데 **스윕에는** 안 물려 있다» 를 못 가른다(26회차 [J] 가 데인 자리).
+       ⚠ 화면 **한 장**이다 — 스윕을 한 벌 더 돌지 않는다.
+       주입은 **상자를 흔드는 키프레임**이다(배율이 아니다 — 이 층의 표본은 `transform:none` 인 채 어긋난 자리다).
+       0%·100% 를 원래 높이로 두므로 **위상 0(= [M] 이 재는 그 점)에서는 여전히 초록**이어야 한다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.goto(URL, { waitUntil: 'load' });
+        await page.waitForTimeout(700);
+        const hit = await page.evaluate(() => {
+          const app = document.getElementById('app');
+          const c = [...app.querySelectorAll('canvas')].find((x) => { const r = x.getBoundingClientRect(); return r.width > 8 && r.height > 8 && x.width && x.height; });
+          if (!c) return null;
+          const r = c.getBoundingClientRect();
+          const st = document.createElement('style');
+          st.textContent = `@keyframes __o31box{0%,100%{height:${r.height}px}50%{height:${r.height * 0.55}px}}`;
+          document.head.appendChild(st);
+          c.style.width = r.width + 'px';
+          c.style.animation = '__o31box 40s linear infinite';
+          return c.id || c.getAttribute('class') || '(익명)';
+        });
+        await page.waitForTimeout(200);
+        const per = [];
+        await page.evaluate(PIN_PHASE, 0);
+        for (let k = 0; k < R31.PHASES; k++) {
+          await page.evaluate(PIN_PHASE, k / R31.PHASES);
+          per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA) });
+        }
+        await page.evaluate(PIN_PHASE, null);
+        const f = R31.foldScreen(per, TOL);
+        if (!hit) bad('[O-f] 되돌림 표본이 없다 — 02 메인에 잴 수 있는 캔버스가 한 자리도 없다');
+        else if (!f.restBad && f.cycBad.length)
+          ok(`[O-f] 제품 되돌림 — 02 메인의 실제 캔버스 «${hit}» **상자만** 흔드는 키프레임을 심으면 `
+            + `한 점 ${f.restBad}자리(= [M] 은 여전히 초록) ↔ 한 주기 ${f.cycBad.length}자리로 갈린다 ⇒ 이 절이 제품 스윕에 정말 물려 있다`);
+        else bad(`[O-f] 제품 되돌림 실패 — 한 점 ${f.restBad}자리 / 한 주기 ${f.cycBad.length}자리 (표본 «${hit}»)`);
+      } catch (e) { bad('[O-f] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
     }
   }
 
