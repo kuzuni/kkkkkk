@@ -46,7 +46,15 @@ async function measure(p, opts = {}) {
     width: Math.round(g.pill.x2 - g.pill.x1) + 12, height: Math.round(g.pill.y2 - g.pill.y1) + 12
   };
   /* 상자 = 알약 rect ∩ 잉크 bbox(+2). 캡슐 코너 «밖» 을 넣으면 카드 `filter:drop-shadow` 가
-     `.cbar` 를 감출 때 실루엣째 다시 래스터돼 그 자리가 흔들린다(probe655 널 대조). */
+     `.cbar` 를 감출 때 실루엣째 다시 래스터돼 그 자리가 흔들린다(probe655 널 대조).
+     ⚑ 669 이관 — 그 «넣으면 안 되는 코너» 를 **rect 로는 못 뺀다.** 알약은 stadium(r=22)이라
+     글자가 커져 잉크 bbox 가 캡슐의 곧은 구간보다 넓어지는 순간 상자가 코너 «밖» 을 도로 삼킨다
+     (669 가 fs 23 → 28 로 키우자 실제로 그랬다 — 회차마다 다른 레벨이 2~16px 로 빨개졌고
+     `diag669` 로 세어 보니 그 픽셀이 **예외 없이 캡슐 밖**이었다: 캡슐안 0 · 캡슐밖 1~2).
+     ⇒ 상자를 좁히는 대신 **세는 마스크를 캡슐 모양으로** 깎는다. 이건 무르게 푸는 것이 아니다 —
+     캡슐 밖은 카드 본문이지 «알약 잉크» 가 아니고, 진짜 덮임은 잉크 픽셀에서 일어나며 그 잉크는
+     캡슐 안에 여유 3.6px 로 들어 있다(`probe669` [B1b]). 되돌림 [R1] 이 여전히 빨간 것이 증거다. */
+  const CAP_R = 22;
   const box = {
     x1: Math.max(Math.round(g.pill.x1) + 1, Math.floor(g.ink.x1) - 2) - clip.x,
     x2: Math.min(Math.round(g.pill.x2) - 1, Math.ceil(g.ink.x2) + 2) - clip.x,
@@ -67,21 +75,36 @@ async function measure(p, opts = {}) {
   const C = await setVis([...BAR_SEL, ...hideExtra, '.clv>i']);
   await setVis(hideExtra);
 
-  const px = await p.evaluate(async ({ a, b, c, w, h, box }) => {
+  const px = await p.evaluate(async ({ a, b, c, w, h, box, cap }) => {
     const load = s => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = 'data:image/png;base64,' + s; });
     const [A, B, C] = await Promise.all([load(a), load(b), load(c)]);
     const g = im => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); x.drawImage(im, 0, 0); return x.getImageData(0, 0, w, h).data; };
     const [dA, dB, dC] = [g(A), g(B), g(C)];
     const d = (p, q, i) => Math.max(Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2]));
+    /* 캡슐(stadium) 안인가 — 좌표는 clip 안 픽셀 좌표, cap 은 그 좌표계로 옮겨 온 알약 상자다 */
+    const inCap = (x, y) => {
+      const px2 = x - cap.x, py = y - cap.y;
+      if (px2 < 0 || py < 0 || px2 > cap.w || py > cap.h) return false;
+      const cx = px2 < cap.r ? cap.r : (px2 > cap.w - cap.r ? cap.w - cap.r : px2);
+      const cy = py < cap.r ? cap.r : (py > cap.h - cap.r ? cap.h - cap.r : py);
+      return (px2 - cx) * (px2 - cx) + (py - cy) * (py - cy) <= cap.r * cap.r;
+    };
     let ink = 0, killed = 0;
     for (let y = box.y1; y < box.y2; y++) for (let x = box.x1; x < box.x2; x++) {
+      if (!inCap(x, y)) continue;
       const i = (y * w + x) * 4;
       if (d(dB, dC, i) <= 40) continue;
       ink++;
       if (d(dA, dB, i) > 40 && d(dA, dC, i) <= 40) killed++;
     }
     return { ink, killed };
-  }, { a: A, b: B, c: C, w: clip.width, h: clip.height, box });
+  }, {
+    a: A, b: B, c: C, w: clip.width, h: clip.height, box,
+    cap: {
+      x: g.pill.x1 - clip.x, y: g.pill.y1 - clip.y,
+      w: g.pill.x2 - g.pill.x1, h: g.pill.y2 - g.pill.y1, r: CAP_R
+    }
+  });
   return { ...g, ...px };
 }
 
