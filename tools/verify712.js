@@ -65,12 +65,83 @@ const nude = t => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm
    696 이 미리 적어 둔 함정이다: 폐지를 **확인하는 음성 단언**(`!/const OFF_MAX_H/.test(src)`)
    도 그 이름을 적어야 하므로, 리터럴을 안 걷어내면 «폐지를 지키는 자» 가 곧바로 거짓 빨강이
    된다(1회차에 `verify696` 이 실제로 그렇게 잡혔다). 잡아야 할 것은 페이지 안에서 **식별자로
-   읽는 것** 하나뿐이다. */
-const bare = t => nude(t)
-  .replace(/'(?:\\.|[^'\\])*'/g, "''")
-  .replace(/"(?:\\.|[^"\\])*"/g, '""')
-  .replace(/`(?:\\.|[^`\\])*`/g, '``')
-  .replace(/\/(?![*/])(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\n])+\/[gimsuy]*/g, '/RE/');
+   읽는 것** 하나뿐이다.
+   ⚠ 정규식 다발이 아니라 **한 번 훑는 스캐너**다(작업 755). 옛 꼴(교체 4연발)은
+   «따옴표를 품은 정규식»(`verify385.js` 125행 `/--sx:'\s*\+/`)에서 문자열 짝을 잘못 물어
+   뒤가 통째로 엉키고, 정규식 리터럴 패턴의 문자클래스 갈래가 줄을 넘어 되짚으며
+   지수 폭발했다(verify385 에서 20초+ — 자가 영영 안 끝났다). 스캐너는 선형이고,
+   `${…}` 보간 안은 코드로 계속 읽는다(페이지 코드를 템플릿으로 빚는 자도 잡는다).
+   회귀는 `tools/probe755.js` — 이 함수의 몸통을 바꾸면 그 자를 같이 보라. */
+/* bare:begin (probe755 가 이 표식 사이를 그대로 꺼내 잰다) */
+const bare = t => {
+  const KW = new Set(['return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete',
+                      'void', 'throw', 'case', 'do', 'else', 'yield', 'await']);
+  let i = 0, out = '', last = '', word = '';
+  const put = s => { out += s; };
+  const sig = ch => { last = ch; word = /[A-Za-z0-9_$]/.test(ch) ? word + ch : ''; };
+  const regexAllowed = () => {
+    if (KW.has(word)) return true;
+    if (!last) return true;                       /* 파일 첫 유효 문자 */
+    return !/[A-Za-z0-9_$)\]'"`]/.test(last);     /* 값 뒤의 / 는 나눗셈 */
+  };
+  const str = q => {                              /* '…' · "…" — 줄 안에서 닫힌다 */
+    i++;
+    while (i < t.length && t[i] !== q && t[i] !== '\n') { if (t[i] === '\\') i++; i++; }
+    i++; put(q + q); last = q; word = '';
+  };
+  const re = () => {                              /* /…/flags — 줄을 못 넘는다 */
+    i++;
+    let cls = false;
+    while (i < t.length && t[i] !== '\n') {
+      const c = t[i];
+      if (c === '\\') { i += 2; continue; }
+      if (cls) { if (c === ']') cls = false; }
+      else if (c === '[') cls = true;
+      else if (c === '/') { i++; break; }
+      i++;
+    }
+    while (i < t.length && /[dgimsuy]/.test(t[i])) i++;
+    put('/RE/'); last = ')'; word = '';           /* 리터럴 = 값 — 뒤의 / 는 나눗셈 */
+  };
+  const code = inTmpl => {                        /* inTmpl: `${…}` 안 — 짝 안 맞은 } 에서 복귀 */
+    let depth = 0;
+    while (i < t.length) {
+      const c = t[i], d = t[i + 1];
+      if (c === '/' && d === '/') { while (i < t.length && t[i] !== '\n') i++; continue; }
+      if (c === '/' && d === '*') {
+        i += 2;
+        while (i < t.length && !(t[i] === '*' && t[i + 1] === '/')) i++;
+        i += 2; continue;
+      }
+      if (c === "'" || c === '"') { str(c); continue; }
+      if (c === '`') { tmpl(); continue; }
+      if (c === '/') {
+        if (regexAllowed()) { re(); continue; }
+        put('/'); sig('/'); i++; continue;
+      }
+      if (inTmpl) {
+        if (c === '{') depth++;
+        else if (c === '}') { if (!depth) { i++; return; } depth--; }
+      }
+      put(c);
+      if (!/\s/.test(c)) sig(c);
+      i++;
+    }
+  };
+  const tmpl = () => {                            /* `…${코드}…` — 보간 안은 code() 로 */
+    i++; put('`');
+    while (i < t.length) {
+      if (t[i] === '\\') { i += 2; continue; }
+      if (t[i] === '`') { i++; break; }
+      if (t[i] === '$' && t[i + 1] === '{') { i += 2; put('${'); code(true); put('}'); continue; }
+      i++;
+    }
+    put('`'); last = '`'; word = '';
+  };
+  code(false);
+  return out;
+};
+/* bare:end */
 
 const V498 = path.join(TOOLS, 'verify498.js');
 const P498 = path.join(TOOLS, 'probe498.js');
@@ -177,11 +248,10 @@ function sweep(extra) {
     .map(f => ({ f, t: fs.readFileSync(path.join(TOOLS, f), 'utf8') }))
     .concat(extra || []);
   for (const { f, t } of files) {
-    /* ⚠ 이 자 자신만 스코프 밖이다 — `bare()` 는 «따옴표를 품은 정규식» 에서 무너지는데
-       그런 정규식을 가진 파일이 저장소에 정확히 하나, `bare()` 를 선언한 이 파일이다
-       (1회차에 실제로 자기 자신을 false 로 잡았다). 스윕이 «항상 0» 인 헛자가 아님은
-       [E2]·[E3] 유령 표본이 못박는다 — 696 이 [E] 를 그렇게 세운 것과 같은 자리다. */
-    if (f === path.basename(__filename)) continue;
+    /* 자기 자신도 스코프 안이다(작업 755) — 옛 «자신만 제외» 는 옛 bare() 가
+       «따옴표를 품은 정규식» 에서 무너져 1회차에 자신을 false 로 잡았기 때문인데,
+       스캐너는 그 자리를 바로 읽는다(같은 꼴의 verify385 도 이제 스코프 안이다).
+       스윕이 «항상 0» 인 헛자가 아님은 [E2]·[E3] 유령 표본이 못박는다. */
     if (/OFF_MAX_H/.test(bare(t))) hit.push(f);
   }
   return hit;
