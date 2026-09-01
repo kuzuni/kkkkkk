@@ -33579,7 +33579,12 @@ $('trw').addEventListener('click', e => {
      델타 문구는 `hbBeat` 사다리가 이미 말한다(58 «같은 수가 두 곳에서» 재발 금지).
    ⚠ **324 토스트는 손대지 않는다**(지시 ③) — 전투력 «+X» 의 홀드 묶음(합계 1장)은 주인 승인 설계다.
    -------------------------------------------------------------------------- */
-const UPFX_N   = 6;      /* 반복 1틱당 파티클 수 — 첫 발(10)보다 가볍게. 60ms 간격에서 겹쳐도 «잡음» 이 안 되는 값 */
+const UPFX_N   = 4;      /* 반복 1틱당 파티클 수 — 첫 발(10)보다 가볍게. 60ms 간격에서 겹쳐도 «잡음» 이 안 되는 값.
+                            ⚑ 4회차 6 → 4: 비평가 DN·DO 2인 공통 ③ «파티클이 카드 글자 위에 앉는다» 의 노출을 줄인다.
+                            뿌리는 `fxBurst` 의 두 규약이 부딪히는 자리라 이 행이 고칠 것이 아니다(623 등재) —
+                            28회차가 «밖으로 새지 마라» 로 입자를 bbox 안에 가뒀고, 42회차의 글자 회피는
+                            «각도만 굴린다» 라 **자리가 없으면 그냥 앉는다**(실측 스파크 100개 중 36개가 글자 위).
+                            그 안에서 이 행이 쥔 손잡이는 «회당 몇 개» 하나뿐이다. */
 const UPFX_CAP = 36;     /* 한 자리가 `#fxl` 에서 동시에 쓰는 노드 상한(FXMAX 120 의 30%) */
 /* ⚑ 619 3회차 — **«타격 순간» 몫**. 화폐 알갱이(583)는 HUD 알약·아이콘에서 **날아오는** 그림이라
    출발 뒤 200~350ms 동안 호스트 근처가 비어 있다. 직접 재 봤다(호스트 ±60px 안 노드 수):
@@ -33611,7 +33616,9 @@ function upFx(key, host, cur, n, noFlash){
   /* 583 규약 그대로 — 화폐 키가 있으면 화폐 알갱이, 못 쏘면(레이어 포화·260ms 재시작 간격) 종전 앰버.
      619 3회차 — 알갱이가 서면 **타격 순간 몫**(UPFX_NOW)만 같이 쏜다(위 상수 머리말 — 합 10개로 583 상한 안). */
   const grain = !!(cur && typeof fxSpend === 'function' && fxSpend(cur, el));
-  if(typeof fxBurst === 'function') fxBurst(el, FXPAL.up, grain ? UPFX_NOW : cnt);
+  /* 619 4회차 — `strict`: 글자 위에 앉을 입자는 버린다(fxBurst 머리말). 회당 6회 터지는 자리라
+     한 번짜리 호출과 같은 확률이 «수치가 계속 가려진다» 로 읽힌다(DN·DO 2인 공통 ③). */
+  if(typeof fxBurst === 'function') fxBurst(el, FXPAL.up, grain ? UPFX_NOW : cnt, true);
   const gen = [];
   for(const nd of L.children) if(!before.has(nd)) gen.push(nd);
   if(gen.length) q.push(gen);
@@ -36654,7 +36661,8 @@ const FXB_M = 6, FXB_K = 0.20, FXB_RMIN = 22, FXB_RMAX = 260;
       28회차의 bbox 가둠이 이미 막는다). 버스트당 1회만 훑는다.
    ⓑ 반경 방향으로는 못 뺀다 — 끝점이 이미 bbox 테두리라 밖으로 밀 여유가 없다. 그래서 **접선 방향**이다.
    ⓒ 못 피하면 마지막 후보를 그대로 쓴다(FX3_MTRY 와 같은 규약) — 링이 무너지는 것보다 낫다. */
-const FXB_KTRY = 9, FXB_KSTEP = 0.26;                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
+const FXB_KTRY = 9, FXB_KSTEP = 0.26;
+const FXB_KOS = 14;                                  /* 619 — strict 회피의 여유 = 스파크 반경 13 + 1 */                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
 /* ⚑ 43회차 — 42차 **2인 공통ㄷ** «upg 불꽃이 가격 «코인 아이콘» 을 덮는다»
    (BI «코인 43×44 를 4프레임 전부 **20~35%**» · BJ «f1 **18.5%** · f2 10% · 총 ≈200ms»).
    42회차의 keep-out 은 **텍스트 노드**만 훑는다 — 그래서 «Lv. 1»·«53» 은 비웠는데 바로 옆
@@ -36669,8 +36677,13 @@ const FXB_KTRY = 9, FXB_KSTEP = 0.26;                /* 각도 굴림 시도 횟
    ⓒ 안전판 24 는 유지하되, 그림이 글자를 밀어내지 않도록 **한 번의 순회에서 둘을 같이** 담는다
       (요소 순서 = DOM 순서라 «가격 행» 처럼 뒤에 오는 것이 잘려 나가는 일은 지금 대상들에서 없다.
        실측: 훈련 카드 8개 · 퀘스트 «모두 받기» 4개 · 행 버튼 3개). */
-function fxbTextHoles(t){
+/* ⚑ 619 4회차 — 두 번째 인자 `m`(선택) = 구멍을 부풀리는 여유. 안 주면 종전 `FX3_KOM` 그대로다.
+   그 상수는 **93 재화 코인**(잉크 반경 61.5 — 543 이 3배로 키웠다)의 «중심 여유» 라, 26px 스파크에
+   그대로 쓰면 구멍이 링을 통째로 덮어 **빈 각이 하나도 안 남는다**(619 4회차 실측: strict 로 걸었더니
+   훈련 카드에서 입자 100% 가 버려졌다 = 연출이 통째로 사라진다). 여유는 **입자 크기에서** 나와야 한다. */
+function fxbTextHoles(t, m){
   const f = fxSc(); if(!f || !t || t.nodeType !== 1) return [];
+  const KOM = Number.isFinite(m) ? m : FX3_KOM;
   const out = [], rg = document.createRange();
   const els = [t, ...t.querySelectorAll('*')];
   const INK = { IMG:1, SVG:1, CANVAS:1, VIDEO:1 };
@@ -36687,8 +36700,8 @@ function fxbTextHoles(t){
     if(has){ rg.selectNodeContents(el); b = rg.getBoundingClientRect(); }
     else b = el.getBoundingClientRect();
     if(!b.width || !b.height) continue;
-    out.push({ x:(b.left - f.x)/f.s - FX3_KOM, y:(b.top - f.y)/f.s - FX3_KOM,
-               w:b.width/f.s + 2*FX3_KOM, h:b.height/f.s + 2*FX3_KOM });
+    out.push({ x:(b.left - f.x)/f.s - KOM, y:(b.top - f.y)/f.s - KOM,
+               w:b.width/f.s + 2*KOM, h:b.height/f.s + 2*KOM });
     if(out.length >= 24) break;                      /* 안전판 — 글자가 많은 대상에서 루프 폭주 방지 */
   }
   return out;
@@ -36697,7 +36710,14 @@ function fxbHit(holes, x, y){
   for(const h of holes) if(x > h.x && x < h.x + h.w && y > h.y && y < h.y + h.h) return true;
   return false;
 }
-function fxBurst(t, col, n){
+/* ⚑ 619 4회차 — 네 번째 인자 `strict`(선택). **줄 때만** 동작이 달라진다(기존 25 자리는 한 값도 안 바뀐다):
+   42회차의 글자 회피는 «각도만 굴린다» 이고 굴려도 자리가 없으면 **그냥 앉는다** — 28회차가 입자를
+   bbox «안» 에 가둬 뒀기 때문에(형제 UI 로 새지 말라는 2인 공통 처방) 글자가 빽빽한 큰 호스트에서는
+   빈 각이 아예 없을 수 있다. 한 번 터지는 자리에서는 그것이 옳았지만, 619 는 **초당 6회** 터지므로
+   같은 확률이 «수치가 계속 가려진다» 로 읽힌다(비평가 DN ③4 · DO ③6 2인 공통 · 실측 스파크의 36%).
+   ⇒ `strict` 를 준 호출에서는 **자리를 못 찾은 입자를 그냥 버린다**(옮기지 않는다 — 옮기면 링이 무너진다).
+   ⚠ 링 기하·반경·이동량·수명은 한 값도 안 건드렸다. 버리는 것은 «글자 위에 앉을 뻔한» 입자뿐이다. */
+function fxBurst(t, col, n, strict){
   /* 77 — 좌표 대상에 combat 태그가 있으면 팝업 아래 레이어. (현재 전투 킬은 캔버스 burst() 를
      쓰므로 실사용 경로는 없지만, 새 전투 발 호출이 생겨도 규칙이 자동 적용되게 맞춰 둔다) */
   const L = (t && t.combat) ? fxLC() : fxL(), p = fxPt(t); if(!L || !p) return;
@@ -36734,7 +36754,8 @@ function fxBurst(t, col, n){
      프레임 위로 나가 **그냥 안 보였다**(가로만 클램프돼 있던 비대칭).
      ⚠ 요소(bbox) 대상은 손대지 않는다 — 28회차가 «시작점과 이동 끝점을 모두 bbox 안에» 로 닫은 자리다. */
   /* 42회차 — 공통ㄹ. 대상 «자기» 글자 keep-out(버스트당 1회 스캔). 좌표 대상은 글자가 없다. */
-  const kh = r ? fxbTextHoles(t) : [];
+  /* 619 4회차 — `strict` 는 스파크 반경(13)에서 나온 여유로 다시 잰다(위 fxbTextHoles 머리말) */
+  const kh = r ? fxbTextHoles(t, strict ? FXB_KOS : undefined) : [];
   const PB_M = FXB_RMIN + 80;
   if(!r && p){
     p.x = clamp(p.x, PB_M, FRAME_W - PB_M);
@@ -36801,7 +36822,7 @@ function fxBurst(t, col, n){
        ⚠ 좌표(점) 대상은 종전 그대로다 — 반경 22 원에서 80~150px 산포라 원래 확장이 있다. */
     /* 42회차 — 공통ㄹ. 시작·끝점이 대상 글자에 걸리면 **각도만** 좌우로 번갈아 굴려 피한다
        (반경 rx·ry·jt, 가둠 상자 bx/by, 이동량 FXB_K 는 그대로 — 링 기하는 안 건드린다). */
-    let ang = a, sx0 = 0, sy0 = 0, ex = 0, ey = 0, sx = 0, sy = 0;
+    let ang = a, sx0 = 0, sy0 = 0, ex = 0, ey = 0, sx = 0, sy = 0, hitK = -1;
     for(let k = 0; k <= (kh.length ? FXB_KTRY : 0); k++){
       /* 0, +step, −step, +2step, −2step … 원래 각에서 가장 가까운 쪽부터 본다 */
       ang = a + (k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k/2) * FXB_KSTEP);
@@ -36814,7 +36835,11 @@ function fxBurst(t, col, n){
       if(!kh.length) break;
       /* 시작·중간·끝 세 점으로 본다 — 이동이 짧아 세 점이면 선분 전체를 대표한다 */
       if(!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey)) break;
+      hitK = k;
     }
+    /* 619 4회차 — `strict` 면 «끝까지 글자 위» 인 입자는 버린다(위 머리말) */
+    if(strict && kh.length && hitK >= FXB_KTRY
+       && (fxbHit(kh, sx, sy) || fxbHit(kh, (sx + ex)/2, (sy + ey)/2) || fxbHit(kh, ex, ey))) continue;
     el.style.left = sx + 'px';
     el.style.top  = sy + 'px';
     el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');

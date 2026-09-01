@@ -153,6 +153,56 @@ async function hold(page, sp) {
   }
   ok(errs.length === 0, 'D2 콘솔 에러 0', errs.slice(0, 3).join(' | '));
 
+  /* ── [E] 가독성 — 회당 파티클이 «호스트 자기 글자» 위에 앉지 않는다 ───────── */
+  /* 비평가 DN·DO 가 2인 공통 ③ 으로 낸 축이다(「Lv. 라벨의 L 을 덮는다」 · 실측 스파크의 36%).
+     한 번 터지는 자리에서는 42회차의 «각도만 굴린다» 로 충분했지만 619 는 초당 6회라 같은 확률이
+     «수치가 계속 가려진다» 로 읽힌다. 그래서 자를 **찍힌 자리**로 댄다 — 겹친 스파크의 비율. */
+  console.log('\n[E] 가독성 — 회당 스파크가 호스트 글자 위에 앉는 비율');
+  const overlapRun = async () => {
+    await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, 'train');
+    await page.waitForTimeout(420);
+    const r = await page.evaluate(() => { const e = document.querySelector('#trCards [data-tr]');
+      const b = e.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; });
+    await page.mouse.move(r.x, r.y);
+    await page.mouse.down();
+    const out = await page.evaluate(async () => {
+      const card = document.querySelector('#trCards [data-tr]'), L = document.getElementById('fxl');
+      const rects = () => { const o = [], rg = document.createRange();
+        for (const el of [card, ...card.querySelectorAll('*')]) {
+          let has = false; for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { has = true; break; }
+          if (!has) continue; rg.selectNodeContents(el); const b = rg.getBoundingClientRect();
+          if (b.width && b.height) o.push(b); }
+        return o; };
+      const seen = new Set(); let n = 0, ov = 0;
+      for (let i = 0; i < 12; i++) {
+        await new Promise(z => setTimeout(z, 120));
+        const T = rects();
+        for (const nd of L.children) {
+          if (seen.has(nd) || !/fx-spark/.test((nd.className || '') + '')) continue;
+          seen.add(nd); n++;
+          const b = nd.getBoundingClientRect();
+          if (T.some(t => Math.min(b.right, t.right) - Math.max(b.left, t.left) > 0
+                       && Math.min(b.bottom, t.bottom) - Math.max(b.top, t.top) > 0)) ov++;
+        }
+      }
+      return { n, ov };
+    });
+    await page.mouse.up();
+    await page.waitForTimeout(350);
+    return out;
+  };
+  const E = await overlapRun();
+  ok(E.n >= 20, 'E1 표본이 있다 — 홀드 동안 스파크가 실제로 뜬다(연출이 «없어서» 안 겹치는 게 아니다)', '스파크 ' + E.n + '개');
+  ok(E.n > 0 && E.ov / E.n <= 0.05, 'E2 ★ 그 스파크가 카드 글자 위에 앉는 비율 ≤ 5%',
+     E.ov + '/' + E.n + ' = ' + p2(E.n ? E.ov / E.n : 0));
+  /* 되돌림 — `strict` 를 무시하는 사본에서는 겹침이 되살아난다(위 항이 «이미 참인 것» 이 아니다) */
+  await page.evaluate(() => { window.__burst0 = window.fxBurst;
+    window.fxBurst = function (t, c, n) { return window.__burst0(t, c, n); }; });
+  const E0 = await overlapRun();
+  await page.evaluate(() => { if (window.__burst0) window.fxBurst = window.__burst0; });
+  ok(E0.n > 0 && E0.ov / E0.n >= 0.15, 'E3 ★ 되돌림 — `strict` 를 무시하면 겹침이 되살아난다(≥0.15)',
+     E0.ov + '/' + E0.n + ' = ' + p2(E0.n ? E0.ov / E0.n : 0));
+
   /* ── [R] 되돌림 ───────────────────────────────────────────────────── */
   console.log('\n[R] 되돌림 — `upFx` 를 무력화하면 [B2] 가 빨개진다');
   await page.evaluate(() => { window.__upFx0 = window.upFx; window.upFx = () => false; });
