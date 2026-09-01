@@ -389,9 +389,11 @@ async function pixelRun(page) {
      모았다(첫 발과 반복분이 다른 부품이면 ④ 일관성이 깨진다). 583 이관과 **같은 꼴**로 자리만 따라간다 —
      묻는 뜻 셋(① 첫 발 자리에서 부른다 ② 대조군과 같은 갈아 끼움 규칙 ③ 화폐 키는 `PAY_CUR` 한 표)은
      그대로다. 헐거워지지 않는다: `fxBurst(el, FXPAL.up, …)` 폴백이 사라지거나 첫 발이 10개를 안 쏘면 빨개진다. */
+  /* 619 9회차 이관 — 플래시 대상이 `--flash-to` 신고를 지나 `fel` 이 됐다(신고 없으면 = el, 룬만
+     아이콘으로 좁힘 — 전면 워시 방지). 갈아 끼움 사다리(플래시 → 알갱이 → 앰버 폴백)의 뜻은 그대로다. */
   ok(/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\], o\.key\);/.test(src)
      && /function rtFirstFx\(sel, cur, key\)\{[\s\S]{0,400}?upFx\(key \|\| \('first:' \+ sel\), sel, cur, 10\)/.test(src)
-     && /function upFx\(key, host, cur, n, noFlash\)\{[\s\S]{0,2400}?fxFlash\(el\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,400}?fxBurst\(el, FXPAL\.up, grain \? UPFX_NOW : cnt, true\)/.test(src),
+     && /function upFx\(key, host, cur, n, noFlash\)\{[\s\S]{0,3200}?fxFlash\(fel\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,400}?fxBurst\(el, FXPAL\.up, grain \? UPFX_NOW : cnt, true\)/.test(src),
      '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 화폐 축 · 619 공용 부품)');
   ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \}/.test(src)
      && /fxUpOk\(card, card, txt, bi0\.cur\)/.test(src),

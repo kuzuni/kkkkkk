@@ -75,7 +75,9 @@ const INSTALL = () => {
   const src = fs.readFileSync(SRC, 'utf8');
 
   console.log('[A] 구조 — 부품 하나 · 표 하나 · 새 크기 상수 0개');
-  ok(/function fxSpend\(cur, host\)\{/.test(src) && /function fxSpendFrom\(cur, host\)\{/.test(src),
+  /* 619 9회차 이관 — fxSpendFrom 이 도착 중심(toC)을 받는다(폴백 출발 x 를 도착 위로 — 경로가
+     라벨을 관통하지 않게). 부품·출발 자리의 존재를 묻는 뜻은 그대로다. */
+  ok(/function fxSpend\(cur, host\)\{/.test(src) && /function fxSpendFrom\(cur, host, toC\)\{/.test(src),
      '[A1] 소모 알갱이 부품 `fxSpend` / 출발 자리 `fxSpendFrom` 이 있다');
   ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \};/.test(src),
      '[A2] ★ «이 자리는 무엇으로 사는가» 가 **한 표**다(자리마다 화폐 문자열 금지 — 402 «표 두 벌» 방지)');

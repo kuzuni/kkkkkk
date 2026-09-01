@@ -3931,7 +3931,10 @@
      글로우·스파크 동시 0» · DU ① «7프레임 중 2 소등» — 2인 공통). 성공 신호가 아니라 «누르고 있다»
      신호라 실패 틱에도 켜 둘 수 있다. transform 이 아니라 outline — 621 의 눌림 왕복(scale)·60 쥬시와
      층이 안 겹친다. 세 화면이 같은 클래스를 쓴다(한 어휘). */
-  .fx-holding{outline:5px solid rgba(255,192,46,.55);outline-offset:-1px}   /* radius 는 호스트 자신의 것을 따른다 */
+  /* 9회차 — 5px·α.55 는 비평가 둘 다 «없다/감쇠» 로 읽었다(DW «3/7 프레임 소등» · DV «실패 구간 ~4px»
+     — 클래스는 붙어 있었다, 실측 19/19). 성공 플래시가 없는 프레임에서도 혼자 «누르는 중» 을 말할
+     두께·명도로 올린다. box-shadow 는 호스트 자신의 그림자를 밀어내므로 안 쓴다(outline 만). */
+  .fx-holding{outline:9px solid rgba(255,172,28,.95);outline-offset:-3px}   /* radius 는 호스트 자신의 것을 따른다 */
   .fx-spark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
     background:radial-gradient(circle at 42% 38%, #FFF 0%, #FFF 26%, var(--c,#FFE07A) 62%, rgba(0,0,0,0) 88%);
   /* 21회차 — 수명 .58s 는 «무엇을 얻었는지» 를 가린다. 20회차 비평 AG·AH 공통(#3·#5):
@@ -13263,7 +13266,8 @@
      224 + 43 + 12 = 279 ≤ 띠 하단 280. 값이 작은 선례는 단련 헤더 `--hb-rise:22`(6회차 후반 — 띠가
      좁으면 이동을 띠에 맞춘다). ⚠ x2 를 .62(아래 빈 복도)로 옮기는 길은 [I3] «두 줄기 좌우 분리» 가
      막는다 — 결과 사다리(291..571)와 겹친다. */
-  .tr-rn{--hb-y:248;--hb-x:.432;--hb-y2:224;--hb-x2:.8026;--hb-sw:70;--hb-jy:0;--hb-fall:12px}
+  .tr-rn{--hb-y:248;--hb-x:.432;--hb-y2:224;--hb-x2:.8026;--hb-sw:70;--hb-jy:0;--hb-fall:12px;
+    --spend-to:.ri;--flash-to:.ri}   /* 619 9회차 — 알갱이 도착·성공 플래시를 좌측 룬 아이콘으로(전면 워시·경로 관통 방지) */
   /* ⚑ 3회차 — 훈련 비용 띠를 132 → **180** 으로 내렸다. 132 는 아이콘 띠 안이긴 한데 하필
      **카드 누름 방울**(Ø31px · 카드기준 x7–37 · y117–146) 자리라, BP 가 «「−53」 글자 상자의 41% 가
      방울에 덮여 «5» 가 안 읽힌다» 로 잡았다(BO 도 같은 자리를 «금화 파티클이 60% 가린다» 로 냈다).
@@ -13307,7 +13311,8 @@
      ⚠ 칸은 104 → **88** · pad 는 훈련 카드와 같은 **12** — 중심 115 에서 104 면 왼 칸(63)이
      클램프 하한(잉크/2+pad)에 걸려 11px 밀리고([K3]), 88 이면 최악 잉크(sw−8=80)까지
      양끝이 액자 안(31..199 ⊂ 26..204)이다. */
-  .tr-tp{--hb-y:116;--hb-x:.1152;--hb-y2:20;--hb-x2:.1152;--hb-slots:2;--hb-sw:88;--hb-pad:12}
+  .tr-tp{--hb-y:116;--hb-x:.1152;--hb-y2:20;--hb-x2:.1152;--hb-slots:2;--hb-sw:88;--hb-pad:12;
+    --spend-to:.ti}   /* 619 9회차 — 첫 발 알갱이 도착을 좌측 아이콘 타일로(비행이 타이틀·Lv 를 관통하지 않게) */
   /* 613 — [충전] 회당 피드백 호스트(.tp-hd)의 hbBeat 신고는 버튼과 함께 걷어냈다 —
      헤더는 더 이상 누를 수 있는 부품이 아니다(491 4·8회차의 사다리 기하 기록은 review 491 §31). */
   /* 08/50 세부 팝업 — 호스트가 «레벨 행»(139×70)이라 **띠를 카드(`.skd` 800×701) 좌표로 신고한다**
@@ -33683,7 +33688,15 @@ function upFx(key, host, cur, n, noFlash){
   /* ② 그래도 레이어 상한에 걸리면 내 세대를 전부 걷는다 — 발화가 조용히 빠지면 «회당 터짐» 이 깨진다 */
   if(L.childElementCount + cnt + 1 > FXMAX){ while(q.length) upFxDrop(q.shift()); }
   const before = new Set(L.children);
-  if(!noFlash && typeof fxFlash === 'function') fxFlash(el);
+  /* ⚑ 619 9회차 — 플래시 자리를 호스트가 `--flash-to`(자식 셀렉터)로 좁힐 수 있다. 룬 호스트는
+     998×700 패널 통짜라 성공 플래시가 «화면 전면 워시» 로 읽혔다(비평가 DV·DW 2인 공통 — f3 틴트로
+     전 텍스트 대비 저하). 신고가 없으면 종전 그대로 호스트 전체다. */
+  if(!noFlash && typeof fxFlash === 'function'){
+    let fel = el;
+    try { const s = getComputedStyle(el).getPropertyValue('--flash-to').trim();
+      if(s){ const c = el.querySelector(s); if(c) fel = c; } } catch(_){}
+    fxFlash(fel);
+  }
   /* 583 규약 그대로 — 화폐 키가 있으면 화폐 알갱이, 못 쏘면(레이어 포화·260ms 재시작 간격) 종전 앰버.
      619 3회차 — 알갱이가 서면 **타격 순간 몫**(UPFX_NOW)만 같이 쏜다(위 상수 머리말 — 합 10개로 583 상한 안). */
   const grain = !!(cur && typeof fxSpend === 'function' && fxSpend(cur, el));
@@ -36656,7 +36669,7 @@ const fxSpendT = new WeakMap();
      ② 호스트 **밖**의 그 화폐 아이콘(`[data-cur-ic]`)   — 단련석(단련 헤더의 «가진 단련석»)
      ③ 호스트 위 200px                                    — 룬강화석(비용 표기가 카드 «안» 뿐이라 밖에 없다)
    ⚠ ②에서 호스트 안 아이콘을 제외하는 이유는 «흐름» 이다 — 목적지 안에서 출발하면 방향이 안 보인다. */
-function fxSpendFrom(cur, host){
+function fxSpendFrom(cur, host, toC){
   const C = FXCUR[cur]; if(!C) return null;
   const pill = fxPill(C);
   if(pill){
@@ -36686,8 +36699,10 @@ function fxSpendFrom(cur, host){
   /* ⚑ 619 7회차 — ③ 폴백을 «호스트 위 200px» → **상변 안쪽 30px** 로. 200px 위는 룬에서 서브탭
      바(호스트 상단 −95..−55) 한복판이라 젬이 다른 UI «위에서» 태어났다(DR «상단 탭 라벨을 절반
      덮고 화면 y0 에서 잘림» · DS «잠금 탭 위 통과»). 상변에서 스며 중심으로 흐르면(≈320px 여정)
-     방향은 그대로 읽히고 잉크(반경 ≈54)가 위 형제를 물지 않는다(−40 위로 안 올라간다). */
-  return hc ? { x:hc.x, y:hr.y + 30 } : null;
+     방향은 그대로 읽히고 잉크(반경 ≈54)가 위 형제를 물지 않는다(−40 위로 안 올라간다).
+     9회차 — 가로는 **도착 자리 위**에서 출발한다(toC — 수직 낙하). 상변 «중앙» 출발이면 대각 경로가
+     «Lv. n/500»·진행바를 관통한다(비평가 DV·DW 2인 공통 «경로가 라벨 관통»). */
+  return hc ? { x:(toC ? toC.x : hc.x), y:hr.y + 30 } : null;
 }
 function fxSpend(cur, host){
   const C = FXCUR[cur]; if(!C) return false;
@@ -36695,12 +36710,21 @@ function fxSpend(cur, host){
   if(!el0 || !el0.getBoundingClientRect) return false;
   const now = performance.now();
   if(now - (fxSpendT.get(el0) || -1e9) < FX_SPEND_GAP) return false;
-  const L = fxL(), hr = fxRect(el0), from = fxSpendFrom(cur, el0);
-  if(!L || !hr || !hr.w || !from) return false;
-  const cnt = clamp(Math.floor(hr.w / FX3_BSPITCH), 3, 6);
+  const L = fxL(), hr = fxRect(el0);
+  if(!L || !hr || !hr.w) return false;
+  /* ⚑ 619 9회차 — 도착 자리를 호스트가 `--spend-to`(자식 셀렉터)로 좁힐 수 있다. 기본(신고 없음)은
+     종전 그대로 호스트 중심. 룬·단련은 **좌측 아이콘 타일**로 신고한다 — 중심 도착이면 비행 경로가
+     타이틀·«Lv. n/500»·진행바를 관통한다(비평가 DV «8점을 막는 단 하나» · DW ③ 2인 공통). 아이콘은
+     장식이라 잠깐 지나도 정보 손실이 없고, «이 항목이 재화를 먹었다» 는 뜻도 그대로다. */
+  let tr = hr;
+  try { const s = getComputedStyle(el0).getPropertyValue('--spend-to').trim();
+    if(s){ const c = el0.querySelector(s); const r2 = c && fxRect(c); if(r2 && r2.w) tr = r2; } } catch(_){}
+  const to = { x:tr.x + tr.w/2, y:tr.y + tr.h/2 };
+  const from = fxSpendFrom(cur, el0, to);
+  if(!from) return false;
+  const cnt = clamp(Math.floor(tr.w / FX3_BSPITCH), 3, 6);
   if(L.childElementCount + cnt > FXMAX) return false;  /* 543 규약 — 반쯤 난 무리는 안 쏜다 */
   fxSpendT.set(el0, now);
-  const to = { x:hr.x + hr.w/2, y:hr.y + hr.h/2 };
   const sc = fxGrainSc(cur).toFixed(4);
   for(let i=0;i<cnt;i++){
     const el = document.createElement('b');
@@ -36712,7 +36736,7 @@ function fxSpend(cur, host){
     const sx = from.x + rnd(-26, 26), sy = from.y + rnd(-16, 16);
     /* 도착은 호스트 «중심 근처» 로 흩는다 — 한 점에 모으면 여섯 장이 겹쳐 한 장으로 읽힌다.
        ±18% 는 잉크(108)가 호스트 밖으로 새지 않는 폭이다(훈련 카드 326×510 검산: ±59/±92). */
-    const tx = to.x + rnd(-hr.w*0.18, hr.w*0.18), ty = to.y + rnd(-hr.h*0.18, hr.h*0.18);
+    const tx = to.x + rnd(-tr.w*0.18, tr.w*0.18), ty = to.y + rnd(-tr.h*0.18, tr.h*0.18);   /* 9회차 — 산포도 도착 자리 기준 */
     const pose = (x, y, s) => 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'
                             + ' translate(-50%,-50%) rotate(0deg) scale(' + s.toFixed(3) + ')';
     el.style.transform = pose(sx, sy, FX3_FLYS);
