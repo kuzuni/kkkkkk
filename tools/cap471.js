@@ -45,6 +45,28 @@ const STEPS = [
      **A↔A2 도 달라진 것(스스로 다시 그리는 화소)을 뺀다** — `probe471 --ink`·`probe471c` 와 같은 규칙이라
      시트와 자가 같은 것을 본다(385 «자매 자 드리프트» 방지). 문턱도 같은 core(>60):
      번짐(glow·shadow)까지 세면 사람이 «변» 으로 보는 모양이 아니게 된다. */
+  /* ⚑⚑ 742 (2026-09-01) — **재는 동안 «형제 칸» 이 계속 뛰고 있었다.**
+     아래 `grab()` 은 호스트 subtree 와 **조상**만 세운다(7회차). 그런데 잉크는 «호스트 상자 + 여백 30»
+     을 잘라 재고, 02 사이드는 피치 134 · 칸 높이 114 라 **아래 여백 30 이 다음 칸을 10px 먹는다**.
+     그 자리에 있는 것이 이웃 칸 닷의 바깥 링(box-shadow 7.5px)이고 그 닷은 `jzDotPulse ∞×2000` 으로
+     **계속 부풀었다 줄었다** 한다 ⇒ A↔B 사이에 위상이 바뀌면 그 링 화소가 «달라진 화소» 로 잡히고,
+     A↔A2 는 (주기가 2초라) 같은 위상으로 돌아와 배제 규칙(j≤10)도 통과한다.
+     ⇒ 이웃의 링이 **내 글리프의 잉크**로 실려 우변이 136 → 146~151.5 로 튄다(실측 `probe742`:
+     20회 중 2회 · 튄 값 151.5/151 · 튄 화소 (145.5~146, 301.5~303) = 이웃 #2 닷 링).
+     `verify471` [T] 두 항(«상자 밖 0» · «자매 자 드리프트 ≤1px»)이 실행마다 갈리던 것이 이것이다 —
+     146 − 136 = 10.00 이 등재문의 «드리프트 10.00px» 과 같은 수인 것이 한 사건임을 말한다.
+     ⇒ **`probe471c` 와 같은 규칙으로 화면 전체를 세운다**(무한은 0프레임 · 유한은 끝). 자매 자를
+     맞추는 것이 이 파일의 원칙이고(385), 문턱은 한 칸도 안 넓혔다. */
+  const settleAll = () => page.evaluate(() => {
+    for (let k = 0; k < 12; k++) {
+      document.getAnimations().forEach(a => { try {
+        const t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null;
+        if (t && t.iterations === Infinity) { a.currentTime = 0; a.pause(); } else { a.finish(); }
+      } catch (_) {} });
+    }
+    return document.getAnimations().filter(a => a.playState === 'running').length;
+  });
+
   const inkCorner = async (hostSel, idx, box) => {
     const clip = {
       x: Math.max(0, Math.floor(box.x - 30)), y: Math.max(0, Math.floor(box.y - 30)),
@@ -78,6 +100,9 @@ const STEPS = [
     const view = (show) => page.evaluate(sh => {
       const v = document.getElementById('view'); if (v) v.style.visibility = sh ? '' : 'hidden';
     }, show);
+    /* 742 — 세 장을 찍기 **직전**에 세운다(장면마다 새 애니가 난다 — 한 번 세워 두는 것으로는 부족하다).
+       `P471_NOSETTLE=1` 은 되돌림 시험용 손잡이다(`verify742` §R) — 평소에는 쓰지 않는다. */
+    if (process.env.P471_NOSETTLE !== '1') await settleAll();
     await view(true);
     await dot(false);
     const A = await page.screenshot({ clip });
