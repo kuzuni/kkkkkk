@@ -107,7 +107,12 @@ const strays = (pat) => fs.readdirSync(ROOT).filter(f => pat.test(f));
 
   /* ================= §R 되돌림 시험 — 고정 이름으로 되돌리면 죽는가 ================= */
   {
-    const REV = path.join(__dirname, '.v646-rev169.js');
+    /* ⚑ 이 자 자신도 같은 함정을 밟으면 안 된다 — 되돌림 사본 이름에 **내 pid** 를 섞어
+       verify646 을 둘 이상 동시에 돌려도 서로의 사본을 지우지 않게 한다.
+       사본이 뽑는 음성항 이름도 마찬가지로 «내 pid» 로 묶는다 — 한 판 안의 P개는 서로
+       겹쳐야(그게 시험이다) 하지만 다른 판과는 겹치면 안 된다. */
+    const REV = path.join(__dirname, `.v646-rev169-${process.pid}.js`);
+    const REVPFX = `.v646rev-${process.pid}-neg`;
     /* 되돌림은 «수리 전 트리» 그대로다: ⓐ 고정 이름 ⓑ `try/finally` 를 걷고 맨 unlinkSync.
        이름만 `.v646rev-neg<n>.html` 로 갈라 동시에 도는 진짜 게이트와 겹치지 않게 한다.
        ⚠ `try {` 를 `{` 로 되돌리는 것을 빼먹으면 사본이 **SyntaxError 로** 죽는다 —
@@ -115,21 +120,21 @@ const strays = (pat) => fs.readdirSync(ROOT).filter(f => pat.test(f));
          그래서 R1 은 종료 코드가 아니라 **ENOENT unlink 문자열**로만 판정한다. */
     let rev = rawSrc
       .replace('const negPath = n => path.join(ROOT, `.v169-neg${n}-${process.pid}.html`);',
-               'const negPath = n => path.join(ROOT, `.v646rev-neg${n}.html`);')
+               'const negPath = n => path.join(ROOT, `' + REVPFX + '${n}.html`);')
       .replace(/\)\);\n    try \{\n/g, '));\n    {\n')
       .replace(/\} finally \{ rmNeg\((NEG\d)\); \}/g, '}\n    fs.unlinkSync($1);');
     const nUnlink = (rev.match(/fs\.unlinkSync\(NEG\d\);/g) || []).length;
-    const revOk = rev.includes('.v646rev-neg${n}.html') && !/finally \{ rmNeg/.test(rev)
+    const revOk = rev.includes(REVPFX + '${n}.html') && !/finally \{ rmNeg/.test(rev)
       && !/\n    try \{\n/.test(rev) && nUnlink === 3;
     chk(revOk, 'R0 되돌림 사본 — 고정 이름 + `try/finally` 제거 + 맨 `unlinkSync` 3자리로 갈아 끼웠다',
-      `이름=${rev.includes('.v646rev-neg${n}.html')} · 남은 try ${/\n    try \{\n/.test(rev)} · 맨 unlink ${nUnlink}곳`);
+      `이름=${rev.includes(REVPFX + '${n}.html')} · 남은 try ${/\n    try \{\n/.test(rev)} · 맨 unlink ${nUnlink}곳`);
     fs.writeFileSync(REV, rev);
     try {
       /* 죽는 비율이 2/3 안팎이라 한 판이 통째로 살아남는 일이 있다 — 죽을 때까지 최대 2판. */
       let enoent = 0, rounds = 0, seen = [];
       for (; rounds < 2 && enoent === 0; rounds++) {
         const rs = await runAll(REV, PAR);
-        enoent = rs.filter(r => /ENOENT[\s\S]*unlink[\s\S]*v646rev-neg/.test(r.errOut + r.out)).length;
+        enoent = rs.filter(r => new RegExp('ENOENT[\\s\\S]*unlink[\\s\\S]*' + REVPFX).test(r.errOut + r.out)).length;
         seen.push(`${enoent}/${PAR}`);
       }
       chk(enoent > 0,
@@ -137,11 +142,11 @@ const strays = (pat) => fs.readdirSync(ROOT).filter(f => pat.test(f));
         `${rounds}판 — 즉사 ${seen.join(' · ')}`);
     } finally {
       try { fs.unlinkSync(REV); } catch (e) { if (e.code !== 'ENOENT') console.log(`WARN 되돌림 사본 정리 실패 (${e.code})`); }
-      for (const f of strays(/^\.v646rev-neg/)) {
+      for (const f of strays(new RegExp('^' + REVPFX.replace('.', '\\.')))) {
         try { fs.unlinkSync(path.join(ROOT, f)); } catch (_) {}
       }
     }
-    const left = strays(/^\.v646rev-neg/);
+    const left = strays(new RegExp('^' + REVPFX.replace('.', '\\.')));
     chk(left.length === 0, 'R2 되돌림 시험이 남긴 사본 0(즉사가 남긴 것까지 치웠다)',
       left.length ? left.join(' ') : '0개');
   }
