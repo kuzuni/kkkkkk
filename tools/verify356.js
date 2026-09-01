@@ -2241,12 +2241,17 @@ async function sweep(browser, inject) {
       const el = document.querySelector(sel);
       if (!el) return { miss: true };
       const cs = getComputedStyle(el, '::placeholder'), hs = getComputedStyle(el);
+      const app = document.getElementById('app');
+      const r = el.getBoundingClientRect();
       return { miss: false, blind: cs.transform === '' && cs.fontSize === '',
-        col: cs.color, hostCol: hs.color, ph: el.getAttribute('placeholder') || '' };
+        col: cs.color, hostCol: hs.color, ph: el.getAttribute('placeholder') || '',
+        /* ⚠ 스윕 수집기는 `#app.querySelectorAll('*')` 안에서만 돈다 — 호스트가 그 밖이거나
+           rect 가 0 이면 [K-d] 의 0 은 «못 봐서 0» 이다. 전제가 그 둘을 같이 물어야 한다. */
+        inApp: !!(app && app.contains(el)), rect: [Math.round(r.width), Math.round(r.height)] };
     }, R27.HOST_PH);
-    if (!phLive.miss && !phLive.blind && phLive.col !== phLive.hostCol)
-      ok(`[K-b] 전제 — 살아 있는 \`${R27.HOST_PH}::placeholder\` 를 실제로 읽는다 (색 ${phLive.col} ≠ 호스트 ${phLive.hostCol} · placeholder «${phLive.ph}»)`);
-    else bad(`[K-b] 전제 실패 — \`${R27.HOST_PH}::placeholder\` 를 못 읽었다(${phLive.miss ? '호스트 없음' : phLive.blind ? '빈 문자열' : '호스트와 같은 값'}). 아래 0 은 «눈이 없어서 0» 이다`);
+    if (!phLive.miss && !phLive.blind && phLive.col !== phLive.hostCol && phLive.inApp && phLive.rect[0] && phLive.rect[1])
+      ok(`[K-b] 전제 — 살아 있는 \`${R27.HOST_PH}::placeholder\` 를 실제로 읽는다 (색 ${phLive.col} ≠ 호스트 ${phLive.hostCol} · placeholder «${phLive.ph}» · \`#app\` 안 ${phLive.rect[0]}×${phLive.rect[1]})`);
+    else bad(`[K-b] 전제 실패 — \`${R27.HOST_PH}::placeholder\` 를 못 읽었다(${phLive.miss ? '호스트 없음' : phLive.blind ? '빈 문자열' : !phLive.inApp ? '`#app` 밖이라 스윕이 못 본다' : (!phLive.rect[0] || !phLive.rect[1]) ? 'rect 0 이라 안 센다' : '호스트와 같은 값'}). 아래 0 은 «눈이 없어서 0» 이다`);
 
     /* ⓒ 되돌림 — 이 절의 본체 ①. **속성에 그림문자를 넣고** 눌러야 잡힌다.
        ⚠ `content:'🔥'` 로는 안 된다 — `::placeholder` 가 그리는 것은 `content` 가 아니다.
@@ -2291,8 +2296,14 @@ async function sweep(browser, inject) {
     /* ⓔ **이 절의 본체 ②** — «나머지 이름을 왜 안 넣는가» 를 **제자리에서 잰다.**
        제품 페이지의 실제 호스트에 같은 선언을 심고 세 부류를 갈라 적는다.
        ⚠ 이 항이 없으면 [K] 는 «다섯 이름을 없어서 안 넣었다» 가 되어 24회차가 경고한 꼴이 된다. */
-    const cls = await on(CHAT, R27.probeCss([R27.HOST_PH], R27.NAMES.concat([R27.BOGUS])),
-      R27.CLASSIFY, { names: R27.NAMES, bogus: R27.BOGUS, hosts: [{ key: 'ch', sel: R27.HOST_PH }] });
+    /* ⚠ **호스트가 하나면 [K-e3] 이 거짓으로 빨개진다** — `.ch-in` 은 `<input>`(대체 요소)이라
+       `::before`/`::after` 를 **원래 안 만든다.** 그 위에서 «안 먹는다» 를 보고 «사정권 밖» 이라
+       읽으면 자가 자기 축을 스스로 부정한다. ⇒ 대체 요소 하나(`::placeholder` 가 사는 자리)와
+       보통 요소 하나(`::before`/`::after` 가 사는 자리)를 **같이** 준다. 이름별 접기는
+       «어느 호스트에서든 먹었으면 먹는다» 라 두 자리가 서로를 메운다. */
+    const K_HOSTS = [{ key: 'ch-in(input)', sel: R27.HOST_PH }, { key: 'chw(div)', sel: '#chw' }];
+    const cls = await on(CHAT, R27.probeCss(K_HOSTS.map((h) => h.sel), R27.NAMES.concat([R27.BOGUS])),
+      R27.CLASSIFY, { names: R27.NAMES, bogus: R27.BOGUS, hosts: K_HOSTS });
     const byK = R27.fold(cls, R27.NAMES.concat([R27.BOGUS]));
     const offHit = R27.PSEUDO_OFF.filter((n) => byK.has(n) && !byK.get(n).blind && !byK.get(n).tr);
     const blindHit = R27.PSEUDO_BLIND.filter((n) => byK.has(n) && byK.get(n).blind);
