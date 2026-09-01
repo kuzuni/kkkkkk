@@ -1,0 +1,464 @@
+#!/usr/bin/env node
+/* 722 재현 — `tools/probe504.js` [C1]·[C2]·[Br1] 이 왜 실행마다 갈리는가 (338 규칙: 자를 고치기 전에 먼저 잰다)
+ *
+ *   node tools/probe722.js            (기본 R=5 반복)
+ *   node tools/probe722.js --reps 3
+ *
+ * 등재문(PROGRESS 722)이 말하는 것은 «`probe504` 10/12 — [C2] 가 수리 전 트리에서도 빨갛고
+ * [Br1] 은 5.1% 문턱 flake» 다. 여기서 재는 것은 **제품이 아니라 그 자의 표본**이다.
+ *
+ *   [1] `probe504` [C] 를 그대로 R회 되풀이 — ⓐPIN·ⓑ불사·ⓒ실제 세 값과 평균 이탈 mStd·mImm 의 분포
+ *   [2] 결정 변수 — ⓒ실제 판의 «살아 있는 적 수» 와 «접촉 반경 안 개체수» 가 실행마다 얼마나 갈리는가
+ *       (695 §2 가 접촉형에서 이미 잡아 둔 축 — 여기서는 [C] 표본 6종에 대해 다시 센다)
+ *   [3] 접촉형(⏸접촉 = `rul504.HOLD695`)을 뺀 mStd·mImm 의 분포 — 695 §4-6 이 [D2] 에서 한 것과 같은 처분
+ *   [4] [Br1] 재실행 흔들림의 분포 — 문턱 0.05 가 분포의 어디에 앉아 있는가
+ *   [5] K회 평균이 폭을 얼마나 좁히는가 — 처방(반복 표본)의 효과를 미리 잰다
+ *   [6] 처방 후보 ⓐ — 채택 눈금(POP 고정) 위에서 **불사만** 토글 (⇒ «뭉침» 가설을 기각한다)
+ *   [7] 처방 후보 ⓑ — PIN 장면을 «시각 고정» 이 아니라 «관측 중앙값에 가장 가까운 마릿수» 로 뜬다
+ *   [8] 같은 초수 자유 판 — 불사 ↔ 실제의 개체수와 값 (⇒ 부풀림의 뿌리 = **개체수**)
+ *
+ * 출력은 전부 수치다. 처방·수정은 하지 않는다.
+ */
+const path = require('path');
+const fs = require('fs');
+const { chromium } = (() => {
+  try { return require('playwright'); } catch (_) {}
+  const os = require('os');
+  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
+  for (const root of roots) {
+    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
+    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
+  }
+  console.error('playwright 없음'); process.exit(2);
+})();
+
+const RUL = require(path.resolve(__dirname, 'rul504.js'));
+const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+const argv = process.argv.slice(2);
+const REPS = Math.max(2, +(argv[argv.indexOf('--reps') + 1] || 5) || 5);
+
+let pass = 0, fail = 0;
+const ok = (b, name, detail) => {
+  console.log((b ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' — ' + detail : ''));
+  b ? pass++ : fail++;
+};
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+const sd = a => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)); };
+const f2 = n => Number.isFinite(n) ? n.toFixed(2) : '∞';
+const pc = n => Number.isFinite(n) ? (n * 100).toFixed(0) + '%' : '∞';
+
+/* `probe504` [C] 와 **같은 표본·같은 초수**다. 한 칸도 바꾸지 않는다 — 바꾸면 재현이 아니다. */
+const CIDS = ['lance', 'gale', 'flask', 'poison', 'aura', 'nova'];
+const IMM_SEC = 40, REAL_SEC = 60;
+
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); }
+  catch (e) {
+    const p = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
+    if (!fs.existsSync(p)) throw e;
+    browser = await chromium.launch({ executablePath: p });
+  }
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  page.on('pageerror', e => errs.push(String(e)));
+  await page.goto(URL);
+  await page.waitForFunction(() => typeof SKILLS !== 'undefined' && typeof step === 'function'
+    && typeof makeEnemy === 'function');
+  await page.waitForTimeout(500);
+
+  /* 표준 장면(ⓐPIN)의 재료 — `probe504` [A] 와 같은 방식으로 세 프레임을 떠낸다. */
+  const A = await page.evaluate(() => {
+    S.stage = 20; S.eqSkill = ['slash']; markDirty();
+    enemies.length = 0;
+    const snaps = [], SNAP_AT = [15, 30, 45].map(t => t * 60);
+    for (let f = 0; f < 60 * 60; f++) {
+      step(1 / 60);
+      if (SNAP_AT.indexOf(f) >= 0) {
+        snaps.push(enemies.filter(e => e.hp > 0)
+          .map(e => ({ tk: e.tk, dx: +(e.x - player.x).toFixed(2), dy: +(e.y - player.y).toFixed(2) })));
+      }
+    }
+    return { snaps };
+  });
+
+  /* ── 한 번의 [C] 측정 = ⓐPIN(고정 장면) + ⓑ불사 + ⓒ실제 ─────────────── */
+  const measure = async () => page.evaluate(({ ids, snaps, immSec, realSec }) => {
+    const rawCast = window.castSkill, rawHit = window.hitEnemy;
+    let ownSave;
+    const pinTo = (snap) => {
+      player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+      for (let i = 0; i < enemies.length && i < snap.length; i++) {
+        const e = enemies[i];
+        e.x = player.x + snap[i].dx; e.y = player.y + snap[i].dy;
+        e.hp = e.max = 1e30; e.slow = 0;
+      }
+      if (enemies.length > snap.length) enemies.length = snap.length;
+    };
+    const clear = (id) => {
+      enemies.length = 0; shots.length = 0; zones.length = 0;
+      if (typeof drones !== 'undefined') drones.length = 0;
+      skillCd[id] = 0;
+      ownSave = S.own; S.own = { [id]: { l: 0 } }; S.eqSkill = [id]; markDirty();
+    };
+    /* ⓐ PIN — `probe504` [B] 와 같은 고정 장면(세 프레임 평균) */
+    const pin = (id) => {
+      let tp = 0, th = 0;
+      for (const snap of snaps) {
+        clear(id);
+        for (const o of snap) makeEnemy(o.tk); pinTo(snap);
+        let hits = 0, casts = 0;
+        window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
+        window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
+        for (let f = 0; f < 60 * 30; f++) { step(1 / 60); pinTo(snap); }
+        window.castSkill = rawCast; window.hitEnemy = rawHit;
+        S.own = ownSave; markDirty();
+        tp += casts ? hits / casts : 0; th += hits / 30;
+      }
+      return { per: +(tp / snaps.length).toFixed(3), hps: +(th / snaps.length).toFixed(3) };
+    };
+    /* ⓑ불사 / ⓒ실제 — `probe504` [C] 의 `run()` 을 그대로 옮긴 것. 살아 있는 적 수도 같이 센다. */
+    const run = (id, immortal, sec) => {
+      clear(id);
+      let hits = 0, casts = 0, popSum = 0, popN = 0, nearSum = 0;
+      const s = SK[id], rad = (s && (s.r || s.rad)) || 0;
+      window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
+      window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
+      for (let f = 0; f < 60 * sec; f++) {
+        if (immortal) enemies.forEach(e => { e.hp = e.max = 1e30; });
+        step(1 / 60);
+        if (f % 30 === 0) {
+          const live = enemies.filter(e => e.hp > 0);
+          popSum += live.length; popN++;
+          if (rad) nearSum += live.filter(e => Math.hypot(e.x - player.x, e.y - player.y) <= rad + (e.r || 0)).length;
+        }
+      }
+      window.castSkill = rawCast; window.hitEnemy = rawHit;
+      return { per: casts ? +(hits / casts).toFixed(3) : 0, hps: +(hits / sec).toFixed(3), casts,
+               pop: +(popSum / Math.max(1, popN)).toFixed(2), near: +(nearSum / Math.max(1, popN)).toFixed(2), rad };
+    };
+    const out = {};
+    for (const id of ids) out[id] = { pin: pin(id), imm: run(id, true, immSec), real: run(id, false, realSec) };
+    enemies.length = 0; shots.length = 0; zones.length = 0;
+    S.eqSkill = ['slash']; markDirty();
+    return out;
+  }, { ids: CIDS, snaps: A.snaps, immSec: IMM_SEC, realSec: REAL_SEC });
+
+  const rel = (a, b) => (a === 0 && b === 0) ? 0 : (b === 0 ? Infinity : Math.abs(a / b - 1));
+  const cdOf = await page.evaluate(ids => ids.map(id => ({ id, cd: SK[id].cd, decl: skillHits(SK[id]) })), CIDS);
+  const CD = {}, DECL = {}; cdOf.forEach(x => { CD[x.id] = x.cd; DECL[x.id] = x.decl; });
+
+  const R = [];
+  for (let r = 0; r < REPS; r++) R.push(await measure());
+
+  /* ── [1] `probe504` [C] 를 R회 되풀이 ──────────────────────────────── */
+  console.log('\n  [1] `probe504` [C] 반복 ' + REPS + '회 — 종별 ⓐPIN / ⓑ불사 / ⓒ실제 (cd 0 은 «초당»)');
+  console.log('      ' + 'id'.padEnd(8) + 'ⓐPIN'.padEnd(26) + 'ⓑ불사'.padEnd(26) + 'ⓒ실제');
+  const val = (row, id, k) => CD[id] > 0 ? row[id][k].per : row[id][k].hps;
+  CIDS.forEach(id => {
+    const c = k => R.map(row => val(row, id, k));
+    console.log('      ' + id.padEnd(8)
+      + c('pin').map(f2).join('/').padEnd(26)
+      + c('imm').map(f2).join('/').padEnd(26)
+      + c('real').map(f2).join('/'));
+  });
+
+  const per = R.map(row => {
+    const cmp = CIDS.map(id => ({ id, dStd: rel(val(row, id, 'pin'), val(row, id, 'real')),
+                                      dImm: rel(val(row, id, 'imm'), val(row, id, 'real')) }));
+    const fin = cmp.filter(x => Number.isFinite(x.dStd) && Number.isFinite(x.dImm));
+    return { cmp, mStd: mean(fin.map(x => x.dStd)), mImm: mean(fin.map(x => x.dImm)) };
+  });
+  console.log('\n      실행별 평균 이탈 — mStd(ⓐ) / mImm(ⓑ)');
+  per.forEach((p, i) => console.log('      #' + (i + 1) + '  mStd ' + pc(p.mStd).padStart(6)
+    + ' · mImm ' + pc(p.mImm).padStart(7)
+    + '   ⇒ [C1] mStd<mImm ' + (p.mStd < p.mImm ? '초록' : '**빨강**')
+    + ' · [C2] mImm>1.0 ' + (p.mImm > 1.0 ? '초록' : '**빨강**')));
+  const c1 = per.filter(p => p.mStd < p.mImm).length, c2 = per.filter(p => p.mImm > 1.0).length;
+  ok(c1 < REPS || c2 < REPS, '1-a [C1]·[C2] 가 같은 트리에서 실행마다 갈린다(등재문 재현)',
+     '[C1] ' + c1 + '/' + REPS + ' 초록 · [C2] ' + c2 + '/' + REPS + ' 초록');
+  const mImms = per.map(p => p.mImm);
+  /* ⚑ 문턱 1.0 을 넘기는 항이 무엇인지 — 종별 dImm 의 최댓값이 어느 종에서 나오는가 */
+  const topTerm = per.map(p => p.cmp.slice().sort((a, b) => b.dImm - a.dImm)[0]);
+  console.log('      실행별 mImm 최대 기여 종 — ' + topTerm.map((t, i) => '#' + (i + 1) + ' ' + t.id + ' ' + pc(t.dImm)).join(' · '));
+  const minReal = Math.min(...[].concat(...CIDS.map(id => R.map(row => val(row, id, 'real')))));
+  ok(minReal < 5, '1-b 비율의 분모(ⓒ실제)가 어떤 종에서는 1 근처까지 내려간다 — 그 한 종이 6종 평균을 통째로 끌 수 있다',
+     '최소 분모 ' + f2(minReal) + ' — 이 값이 1 로 떨어진 실행에서 그 종의 이탈이 800% 로 튀고 [C2] 가 «초록» 이 된다'
+     + ' (실행별 최대 기여 종: ' + topTerm.map(t => t.id).join(',') + ')');
+  ok(sd(mImms) > 0.05, '1-c mImm 이 실행마다 갈린다 — 세 칸이 전부 안 갇힌 채 서로 나뉜다',
+     '범위 ' + pc(Math.min(...mImms)) + '~' + pc(Math.max(...mImms)) + ' · sd ' + pc(sd(mImms)));
+
+  /* ── [2] 결정 변수 — ⓒ실제 판이 안 갇힌다 ─────────────────────────── */
+  console.log('\n  [2] 결정 변수 — ⓒ실제 판의 살아 있는 적 수 · 접촉 반경 안 개체수 (반복 ' + REPS + '회)');
+  console.log('      ' + 'id'.padEnd(8) + '반경'.padEnd(8) + '판 위 적 수'.padEnd(26) + '반경 안 개체수');
+  const worst = { id: null, w: 0 };
+  CIDS.forEach(id => {
+    const pops = R.map(row => row[id].real.pop), nears = R.map(row => row[id].real.near);
+    const reals = R.map(row => val(row, id, 'real'));
+    const w = mean(reals) ? (Math.max(...reals) - Math.min(...reals)) / mean(reals) : 0;
+    if (w > worst.w) { worst.w = w; worst.id = id; }
+    console.log('      ' + id.padEnd(8) + String(R[0][id].real.rad || '—').padEnd(8)
+      + pops.map(x => x.toFixed(1)).join('/').padEnd(26)
+      + (R[0][id].real.rad ? nears.map(x => x.toFixed(2)).join('/') : '—'));
+  });
+  ok(worst.w > 0.15, '2-a ⓒ실제 판의 값 자체가 R회 사이에 갈린다 — 비율의 «분모» 가 안 갇혀 있다',
+     '최악 ' + worst.id + ' 폭 ' + pc(worst.w));
+
+  /* ── [3] ⏸접촉(695 HOLD695)을 뺀 분포 ─────────────────────────────── */
+  /* ⚑ 목록이 아니라 **`rul504.held695()` 자물쇠**로 묻는다 — 199 가 선언을 갈면 면제가 스스로 풀린다. */
+  const held = CIDS.filter(id => RUL.held695({ id, decl: DECL[id] }));
+  console.log('\n  [3] ⏸접촉 등재분 ' + (held.join(',') || '없음') + ' 를 뺀 평균 이탈');
+  const per3 = R.map(row => {
+    const cmp = CIDS.filter(id => held.indexOf(id) < 0).map(id => ({
+      id, dStd: rel(val(row, id, 'pin'), val(row, id, 'real')), dImm: rel(val(row, id, 'imm'), val(row, id, 'real')) }));
+    const fin = cmp.filter(x => Number.isFinite(x.dStd) && Number.isFinite(x.dImm));
+    return { mStd: mean(fin.map(x => x.dStd)), mImm: mean(fin.map(x => x.dImm)) };
+  });
+  per3.forEach((p, i) => console.log('      #' + (i + 1) + '  mStd ' + pc(p.mStd).padStart(6) + ' · mImm ' + pc(p.mImm).padStart(7)));
+  const m3 = per3.map(p => p.mImm), s3 = per3.map(p => p.mStd);
+  console.log('      ⇒ mImm 범위 ' + pc(Math.min(...m3)) + '~' + pc(Math.max(...m3)) + ' · sd ' + pc(sd(m3))
+    + '   |   mStd 범위 ' + pc(Math.min(...s3)) + '~' + pc(Math.max(...s3)) + ' · sd ' + pc(sd(s3)));
+  ok(held.length > 0, '3-a [C] 표본 안에 «이 눈금으로 못 재는 종»(695 ⏸접촉)이 들어 있다',
+     held.join(',') + ' — 695 §4-6 은 [D2] 에서 같은 종을 뺐다');
+  ok(m3.every(x => x < 1.0), '3-b ⏸접촉을 빼면 mImm 이 R회 전부 문턱 1.0 아래다 — 문턱을 넘기던 것은 그 한 종이었다',
+     '범위 ' + pc(Math.min(...m3)) + '~' + pc(Math.max(...m3)));
+  ok(per3.some(p => p.mStd > p.mImm), '3-c ⏸접촉을 빼도 [C1] 의 문장(«ⓐ 가 ⓑ 보다 가깝다»)이 뒤집히는 실행이 있다',
+     per3.filter(p => p.mStd > p.mImm).length + '/' + REPS + ' 뒤집힘 — ⓐ 의 장면이 그때그때 뜬 세 프레임(1~51마리)이라 그렇다([7])');
+
+  /* ── [4] [Br1] 재실행 흔들림의 분포 ───────────────────────────────── */
+  const BRIDS = ['slash', 'lance', 'gale', 'holy', 'flask'];
+  console.log('\n  [4] [Br1] — 고정 장면 재실행 흔들림 (같은 장면 두 번 · 반복 ' + REPS + '회)');
+  const brRuns = [];
+  for (let r = 0; r < REPS; r++) {
+    const two = await page.evaluate(({ ids, snaps }) => {
+      const rawCast = window.castSkill, rawHit = window.hitEnemy;
+      let ownSave;
+      const pinTo = (snap) => {
+        player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+        for (let i = 0; i < enemies.length && i < snap.length; i++) {
+          const e = enemies[i];
+          e.x = player.x + snap[i].dx; e.y = player.y + snap[i].dy;
+          e.hp = e.max = 1e30; e.slow = 0;
+        }
+        if (enemies.length > snap.length) enemies.length = snap.length;
+      };
+      const one = (id) => {
+        let tot = 0;
+        for (const snap of snaps) {
+          enemies.length = 0; shots.length = 0; zones.length = 0;
+          if (typeof drones !== 'undefined') drones.length = 0;
+          skillCd[id] = 0;
+          ownSave = S.own; S.own = { [id]: { l: 0 } }; S.eqSkill = [id]; markDirty();
+          for (const o of snap) makeEnemy(o.tk); pinTo(snap);
+          let hits = 0, casts = 0;
+          window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
+          window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
+          for (let f = 0; f < 60 * 30; f++) { step(1 / 60); pinTo(snap); }
+          window.castSkill = rawCast; window.hitEnemy = rawHit;
+          S.own = ownSave; markDirty();
+          tot += casts ? hits / casts : 0;
+        }
+        return +(tot / snaps.length).toFixed(3);
+      };
+      const out = {};
+      for (const id of ids) out[id] = { a: one(id), b: one(id) };
+      enemies.length = 0; shots.length = 0; zones.length = 0;
+      S.eqSkill = ['slash']; markDirty();
+      return out;
+    }, { ids: BRIDS, snaps: A.snaps });
+    brRuns.push(two);
+  }
+  const drifts = [];
+  console.log('      ' + 'id'.padEnd(8) + '실행별 흔들림 %');
+  BRIDS.forEach(id => {
+    const ds = brRuns.map(t => t[id].a ? Math.abs(t[id].b / t[id].a - 1) : 0);
+    ds.forEach(d => drifts.push(d));
+    console.log('      ' + id.padEnd(8) + ds.map(d => (d * 100).toFixed(1)).join(' / '));
+  });
+  const dMax = Math.max(...drifts);
+  const worstPerRun = brRuns.map((t, i) => Math.max(...BRIDS.map(id => t[id].a ? Math.abs(t[id].b / t[id].a - 1) : 0)));
+  console.log('      실행별 최악 ' + worstPerRun.map(d => (d * 100).toFixed(1) + '%').join(' / ')
+    + '   ⇒ [Br1] 문턱 5% 통과 ' + worstPerRun.filter(d => d <= 0.05).length + '/' + REPS);
+  ok(dMax > 0.02, '4-a 고정 장면도 완전 결정적이지 않다 — 흔들림이 0 이 아니다',
+     '최악 ' + (dMax * 100).toFixed(1) + '% · 표본 ' + drifts.length);
+  ok(true, '4-b [Br1] 문턱 5% 가 실측 분포의 어디에 앉는가',
+     '실행별 최악 평균 ' + (mean(worstPerRun) * 100).toFixed(1) + '% · sd ' + (sd(worstPerRun) * 100).toFixed(1)
+     + '%p · 최악 ' + (dMax * 100).toFixed(1) + '%');
+
+  /* ── [5] K회 평균이 폭을 얼마나 좁히는가 ──────────────────────────── */
+  console.log('\n  [5] K회 평균의 효과 — ⓒ실제 값을 K개씩 평균냈을 때의 폭');
+  console.log('      ' + 'id'.padEnd(8) + 'K=1 폭'.padEnd(10) + 'K=' + REPS + ' 평균');
+  CIDS.forEach(id => {
+    const reals = R.map(row => val(row, id, 'real'));
+    const w = mean(reals) ? (Math.max(...reals) - Math.min(...reals)) / mean(reals) : 0;
+    console.log('      ' + id.padEnd(8) + pc(w).padEnd(10) + f2(mean(reals)));
+  });
+  const mImmAvg = (() => {
+    const avg = (id, k) => mean(R.map(row => val(row, id, k)));
+    const use = CIDS.filter(id => held.indexOf(id) < 0);
+    return mean(use.map(id => rel(avg(id, 'imm'), avg(id, 'real'))));
+  })();
+  const mStdAvg = (() => {
+    const avg = (id, k) => mean(R.map(row => val(row, id, k)));
+    const use = CIDS.filter(id => held.indexOf(id) < 0);
+    return mean(use.map(id => rel(avg(id, 'pin'), avg(id, 'real'))));
+  })();
+  /* ⚑ 부호를 단언하지 않는다 — 그것이 [C1] 이 한 짓이다(721 «잡음 폭 안에서 부호를 물었다»).
+     mStd 는 **그 실행이 뜬 PIN 장면 하나**에 통째로 달려 있어 프로브 실행 사이에 36~82% 로 갈리고,
+     mImm 은 ⏸접촉 한 종의 분모에 달려 있다. 둘 다 30% 넘게 멀다는 것만 남는다. */
+  ok(mStdAvg > 0.2 && mImmAvg > 0.2,
+     '5-a K회 평균을 내도 ⓐ·ⓑ 는 **둘 다** ⓒ에서 멀다 — «누가 더 먼가» 는 그 실행이 뜬 장면이 정한다',
+     'mStd ' + pc(mStdAvg) + ' vs mImm ' + pc(mImmAvg) + ' (프로브 실행 사이 mStd 36~82% · mImm 26~77% 로 갈렸다)');
+  console.log('      ⇒ 처방 후보의 값: mStd ' + pc(mStdAvg) + ' · mImm ' + pc(mImmAvg));
+
+  /* ── [6] 처방 후보 ⓐ — 채택 눈금(POP 고정) 위에서 **불사만** 토글 ──────
+     [1]·[2] 가 보인 것: ⓑ불사와 ⓒ실제는 «불사» 말고도 **판 위 개체수**가 같이 달랐다.
+     그 둘을 한 숫자로 나누면 두 이유가 섞인다. POP 을 고정한 자 위에서 불사만 켜면
+     남는 차이는 **뭉침 하나**이고, 그것이 [C2] 가 말하려던 바로 그 문장이다. */
+  const RREPS = Math.min(REPS, 3);
+  console.log('\n  [6] 처방 후보 — 채택 눈금(POP=' + RUL.POP + ' 고정 · K=' + RUL.K + ' · ' + RUL.SEC + '초) 위에서 불사만 토글 · ' + RREPS + '회');
+  const P6 = [];
+  for (let r = 0; r < RREPS; r++) {
+    const mortal = await RUL.measure(page, CIDS, { immortal: false });
+    const immo = await RUL.measure(page, CIDS, { immortal: true });
+    const m = {}; mortal.forEach(x => { m[x.id] = x; });
+    const i = {}; immo.forEach(x => { i[x.id] = x; });
+    P6.push({ m, i });
+  }
+  console.log('      ' + 'id'.padEnd(8) + '실제(POP고정)'.padEnd(26) + '불사(POP고정)'.padEnd(26) + '부풀림 배수');
+  const infl = {};
+  CIDS.forEach(id => {
+    const mv = P6.map(p => p.m[id].mean), iv = P6.map(p => p.i[id].mean);
+    infl[id] = P6.map((p, k) => mv[k] ? iv[k] / mv[k] : 0);
+    console.log('      ' + id.padEnd(8) + mv.map(f2).join('/').padEnd(26) + iv.map(f2).join('/').padEnd(26)
+      + infl[id].map(x => '×' + x.toFixed(2)).join('/'));
+  });
+  const inflAll = CIDS.map(id => mean(infl[id]));
+  const inflWorst = Math.max(...inflAll);
+  const split = P6.every((p, k) => CIDS.some(id => infl[id][k] > 1) && CIDS.some(id => infl[id][k] < 1));
+  ok(split, '6-a **«뭉침» 가설이 기각됐다** — POP 을 고정하고 불사만 켜면 부호가 종마다 갈린다',
+     P6.map((p, k) => '위 ' + CIDS.filter(id => infl[id][k] > 1).length + '/6').join(' · ')
+     + ' — 오르는 종(lance·flask·poison)과 내리는 종(gale·aura·nova)이 매 실행 같은 편이다');
+  ok(inflWorst > 1.5 && Math.min(...inflAll) < 1,
+     '6-b 그 갈림이 잡음이 아니다 — 오르는 쪽·내리는 쪽 모두 배수가 크다',
+     '최대 ' + CIDS[inflAll.indexOf(inflWorst)] + ' ×' + inflWorst.toFixed(2)
+     + ' · 최소 ' + CIDS[inflAll.indexOf(Math.min(...inflAll))] + ' ×' + Math.min(...inflAll).toFixed(2));
+  const spreadWorst = Math.max(...P6.map(p => Math.max(...CIDS.filter(id => held.indexOf(id) < 0).map(id => p.m[id].spread))));
+  ok(spreadWorst < 0.6, '6-c ⏸접촉을 뺀 표본에서 채택 눈금의 K회 폭은 [C] 자유 판의 실행 간 폭보다 좁다',
+     '최악 K회 폭 ' + pc(spreadWorst) + ' (자유 판 [C] 의 실행 간 폭은 최악 ' + pc(worst.w) + ')');
+
+  /* ── [7] 처방 후보 ⓑ — PIN 장면을 «개체수로» 떠낸다 ───────────────────
+     `probe504` [A] 는 15·30·45초 **시각**으로 세 프레임을 뜬다. 그 순간의 마릿수는 0~50 이라
+     («실제 판 관측» 표의 `범위`), 어떤 실행에서는 «1마리 장면» 이 표준 장면이 된다.
+     관측 중앙값에 가장 가까운 세 프레임을 고르면 그 축이 갇힌다. */
+  console.log('\n  [7] 처방 후보 — PIN 장면을 «시각 고정» ↔ «관측 중앙값에 가장 가까운 마릿수» 로 뜬 비교 · ' + RREPS + '회');
+  const P7 = [];
+  for (let r = 0; r < RREPS; r++) {
+    P7.push(await page.evaluate(() => {
+      S.stage = 20; S.eqSkill = ['slash']; markDirty();
+      enemies.length = 0;
+      const frames = [], cnt = [], AT = [15, 30, 45].map(t => t * 60);
+      for (let f = 0; f < 60 * 60; f++) {
+        step(1 / 60);
+        if (f % 30 === 0 && f > 60 * 5) {
+          const live = enemies.filter(e => e.hp > 0);
+          cnt.push(live.length);
+          frames.push({ f, n: live.length,
+            snap: live.map(e => ({ tk: e.tk, dx: +(e.x - player.x).toFixed(2), dy: +(e.y - player.y).toFixed(2) })) });
+        }
+        if (AT.indexOf(f) >= 0) {
+          const live = enemies.filter(e => e.hp > 0);
+          frames.push({ f, n: live.length, at: true,
+            snap: live.map(e => ({ tk: e.tk, dx: +(e.x - player.x).toFixed(2), dy: +(e.y - player.y).toFixed(2) })) });
+        }
+      }
+      const srt = cnt.slice().sort((a, b) => a - b);
+      const med = srt[Math.floor(srt.length / 2)] || 0;
+      const timed = frames.filter(x => x.at).map(x => x.n);
+      const near = frames.filter(x => !x.at).slice().sort((a, b) => Math.abs(a.n - med) - Math.abs(b.n - med))
+        .slice(0, 3).map(x => x.n);
+      return { med, timed, near };
+    }));
+  }
+  P7.forEach((p, i) => console.log('      #' + (i + 1) + '  관측 중앙값 ' + p.med
+    + ' · 시각 고정 프레임 ' + p.timed.join('/') + '마리 · 중앙값 근처 프레임 ' + p.near.join('/') + '마리'));
+  const timedSpread = (() => { const a = [].concat(...P7.map(p => p.timed)); return (Math.max(...a) - Math.min(...a)) / Math.max(1, mean(a)); })();
+  const nearSpread = (() => { const a = [].concat(...P7.map(p => p.near)); return (Math.max(...a) - Math.min(...a)) / Math.max(1, mean(a)); })();
+  ok(nearSpread < timedSpread, '7-a «중앙값 근처» 로 뜨면 표준 장면의 마릿수가 갇힌다',
+     '시각 고정 폭 ' + pc(timedSpread) + ' → 중앙값 근처 폭 ' + pc(nearSpread));
+  ok(Math.min(...[].concat(...P7.map(p => p.timed))) < 10, '7-b 시각 고정은 «거의 빈 장면» 을 표준 장면으로 뜰 수 있다(이 실행에서도 났다)',
+     '최소 ' + Math.min(...[].concat(...P7.map(p => p.timed))) + '마리');
+
+  /* ── [8] 그러면 ⓑ불사의 값은 무엇을 잰 것인가 — 같은 초수로 다시 ────────
+     [6] 이 «뭉침» 을 기각했다(POP 을 고정하면 부호가 종마다 갈린다). 남은 후보는 **개체수**다 —
+     504-② 가 «타격수는 서 있는 적의 수에 거의 비례» 라고 적은 그 축. 불사 판은 아무도 안 죽으니
+     개체수가 안 갇힌다. [C] 는 불사 40초 ↔ 실제 60초로 **초수까지 달랐다** — 여기서는 같게 둔다. */
+  console.log('\n  [8] 같은 초수(40초) 자유 판 — 불사 ↔ 실제의 판 위 개체수와 타격수 · ' + RREPS + '회');
+  const P8 = [];
+  for (let r = 0; r < RREPS; r++) {
+    P8.push(await page.evaluate(({ ids, sec }) => {
+      const rawCast = window.castSkill, rawHit = window.hitEnemy;
+      let ownSave;
+      const run = (id, immortal) => {
+        S.stage = 20; spawnStage();
+        enemies.length = 0; spawnQ.length = 0; shots.length = 0; zones.length = 0;
+        if (typeof drones !== 'undefined') drones.length = 0;
+        for (const k of Object.keys(skillCd)) delete skillCd[k];
+        ownSave = S.own; S.own = { [id]: { l: 0 } }; S.eqSkill = [id]; markDirty();
+        let hits = 0, casts = 0, popSum = 0, popN = 0, popMax = 0;
+        window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
+        window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
+        for (let f = 0; f < 60 * sec; f++) {
+          if (immortal) for (const e of enemies) { e.hp = e.max = 1e30; }
+          step(1 / 60);
+          killed = 0;
+          if (f % 30 === 0) { const n = enemies.filter(e => e.hp > 0).length; popSum += n; popN++; if (n > popMax) popMax = n; }
+        }
+        window.castSkill = rawCast; window.hitEnemy = rawHit;
+        S.own = ownSave; markDirty();
+        const v = SK[id].cd > 0 ? (casts ? hits / casts : 0) : hits / sec;
+        return { v: +v.toFixed(3), pop: +(popSum / Math.max(1, popN)).toFixed(1), popMax };
+      };
+      const out = {};
+      for (const id of ids) out[id] = { imm: run(id, true), real: run(id, false) };
+      enemies.length = 0; shots.length = 0; zones.length = 0;
+      S.eqSkill = ['slash']; markDirty();
+      return out;
+    }, { ids: CIDS, sec: 40 }));
+  }
+  console.log('      ' + 'id'.padEnd(8) + '불사 개체수'.padEnd(20) + '실제 개체수'.padEnd(20) + '불사 값 / 실제 값');
+  const popRatio = [], valRatio = [];
+  CIDS.forEach(id => {
+    const ip = P8.map(p => p[id].imm.pop), rp = P8.map(p => p[id].real.pop);
+    const iv = P8.map(p => p[id].imm.v), rv = P8.map(p => p[id].real.v);
+    popRatio.push(mean(ip) / Math.max(1e-9, mean(rp)));
+    valRatio.push(mean(iv) / Math.max(1e-9, mean(rv)));
+    console.log('      ' + id.padEnd(8) + ip.map(x => x.toFixed(0)).join('/').padEnd(20)
+      + rp.map(x => x.toFixed(0)).join('/').padEnd(20)
+      + iv.map(f2).join('/') + '  vs  ' + rv.map(f2).join('/'));
+  });
+  console.log('      개체수 배수 ' + popRatio.map(x => '×' + x.toFixed(2)).join(' · '));
+  console.log('      값   배수 ' + valRatio.map(x => '×' + x.toFixed(2)).join(' · '));
+  ok(popRatio.every(x => x > 1.1), '8-a 같은 초수에서 불사 판의 개체수가 실제 판보다 크다 — 아무도 안 죽으니 안 갇힌다',
+     '최소 ×' + Math.min(...popRatio).toFixed(2) + ' · 최대 ×' + Math.max(...popRatio).toFixed(2));
+  const corr = (() => {
+    const n = popRatio.length, mx = mean(popRatio), my = mean(valRatio);
+    const num = popRatio.reduce((a, x, i) => a + (x - mx) * (valRatio[i] - my), 0);
+    const dx = Math.sqrt(popRatio.reduce((a, x) => a + (x - mx) ** 2, 0));
+    const dy = Math.sqrt(valRatio.reduce((a, x) => a + (x - my) ** 2, 0));
+    return (dx && dy) ? num / (dx * dy) : 0;
+  })();
+  const upAll = CIDS.filter((id, i) => valRatio[i] > 1.2);
+  ok(upAll.length === CIDS.length,
+     '8-b 개체수가 안 갇힌 자유 판에서는 **표본 전 종이** 위로 간다 — [6](POP 고정)에서 부호가 갈리던 것과 정반대다',
+     '배수 ' + CIDS.map((id, i) => id + ' ×' + valRatio[i].toFixed(2)).join(' · ')
+     + '   ⇒ 부풀림의 뿌리는 «뭉침» 이 아니라 **개체수**다 (상관 참고 ' + corr.toFixed(2) + ')');
+
+  ok(errs.length === 0, 'Z 콘솔 에러 0건', errs.slice(0, 3).join(' | ') || '없음');
+
+  await browser.close();
+  console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail));
+  process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });

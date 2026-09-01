@@ -41,9 +41,17 @@ const offOf = (mean, decl) => (decl ? Math.abs(mean / decl - 1) : 1);
    있는 이유는 하나 — **«무엇이 값을 정하는가» 를 가르기 위해서**다. 판 위 개체수(POP)는 이 자가
    고정하지만 «닿는 거리 안의 개체수» 는 안 갇히고, 닿는 거리가 몸 주위 한 뼘인 종은 후자가 값을
    정한다. 같은 종을 free ↔ freeze 로 나란히 재면 그 갈림이 배수로 드러난다(695 [4]·[5]). */
+/* ⚑ 722 — `immortal` 도 **장면 손잡이**다(`freeze` 와 같은 자리·같은 규약, 기본값 `false`).
+   켜면 `verify484` [E] 가 쓰던 대로 매 프레임 적의 hp 를 무한으로 눌러 «아무도 안 죽는 판» 을
+   만든다. 눈금의 값이 아니고, 이것으로 잰 값을 선언에 넣어서도 안 된다.
+   있는 이유는 하나 — 위 첫 ⚠(«불사로 만들면 안 된다»)의 근거를 **한 변수만 토글해서** 재기
+   위해서다. `probe504` [C] 는 그 근거를 «불사 자유 판 ↔ 실제 자유 판» 으로 쟀는데 그 둘은
+   불사 말고도 **판 위 개체수가 같이 달랐다**(둘 다 안 갇힌 채 20~70 으로 흔들린다) — 두 이유가
+   한 숫자에 섞였고, 그래서 실행마다 부호가 갈렸다(722 재현 [1]·[2]). POP 을 고정한 이 자 위에서
+   불사만 켜면 남는 차이는 **뭉침 하나**다. */
 async function measure(page, ids, opts) {
-  const o = Object.assign({ K, SEC, POP, freeze: false }, opts || {});
-  return page.evaluate(({ ids, K, SEC, POP, freeze }) => {
+  const o = Object.assign({ K, SEC, POP, freeze: false, immortal: false }, opts || {});
+  return page.evaluate(({ ids, K, SEC, POP, freeze, immortal }) => {
     const rawCast = window.castSkill, rawHit = window.hitEnemy;
     let ownSave;
     const one = (id) => {
@@ -79,8 +87,11 @@ async function measure(page, ids, opts) {
       window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
       window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
       for (let f = 0; f < 60 * SEC; f++) {
+        /* 722 — 장면 손잡이(위 주석). 기본값 false 라 눈금 자체는 한 칸도 안 움직인다.
+           `verify484` [E] 와 같은 자리(step 직전)에서 누른다. */
+        if (immortal) for (const e of enemies) { e.hp = e.max = 1e30; }
         step(1 / 60);
-        while (enemies.length > POP) {           /* 넘치면 **가장 먼** 것부터 — 가까운 것을 지우면 교전 밀도가 꺼진다 */
+        while (enemies.length > POP) {         /* 넘치면 **가장 먼** 것부터 — 가까운 것을 지우면 교전 밀도가 꺼진다 */
           let wi = 0, wd = -1;
           for (let i = 0; i < enemies.length; i++) {
             const d = (enemies[i].x - player.x) ** 2 + (enemies[i].y - player.y) ** 2;
@@ -118,7 +129,7 @@ async function measure(page, ids, opts) {
     }
     S.eqSkill = ['slash']; markDirty();
     return out;
-  }, { ids, K: o.K, SEC: o.SEC, POP: o.POP, freeze: o.freeze });
+  }, { ids, K: o.K, SEC: o.SEC, POP: o.POP, freeze: o.freeze, immortal: o.immortal });
 }
 
 /* ── ⏸199 대기 (680, 2026-09-01 — 326 `ck199` 선례) ──────────────────────────
