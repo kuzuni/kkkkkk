@@ -37,10 +37,17 @@ const SRC = fs.readFileSync(SRCF, 'utf8');
 /* 표 두 장 — 기준선(하향 전) 과 이 회차. 파일 이름을 여기 한 곳에만 적는다.
    ⚠ 기준선은 **.md 만** 커밋돼 있다(22회차가 격리 사본으로 굴린 열 — json 은 남기지 않았다).
    그래서 기준선은 [E] 표를 파싱해 읽고, 이 회차는 json 을 읽는다. 두 경로가 **같은 수**를
-   내는지는 [C1e] 가 이 회차 표를 양쪽으로 읽어 대조한다(자가 자기 파서를 먼저 잰다). */
-const BASE_M = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r22-base.md');
-const CUR_J  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r23-both.json');
-const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r23-both.md');
+   내는지는 [C1e] 가 이 회차 표를 양쪽으로 읽어 대조한다(자가 자기 파서를 먼저 잰다).
+   ⚑ **24회차(23정정10 · AAL 1순위) — 분모를 κ 맞춘 열로 갈았다.** 23회차의 판정 줄은
+   calib sha 가 서로 다른 두 표의 나눗셈이었다(base 3cc6898718c1 ÷ r23 6a013a86ea41). 24회차가
+   기준선 트리(`adeb739^` = 22회차 직전)를 **이 회차의 κ 캐시로** 다시 굴려 두 표의 sha 를 맞췄고,
+   [S1] 이 그것을 자로 못박는다. */
+const BASE_M = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-base-k.md');
+const BASE_J = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-base-k.json');
+const CUR_J  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-both.json');
+const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-both.md');
+/* 23회차 표 — [S4] 가 «이 자가 그 결함을 실제로 잡는가» 를 되돌림 표본으로 쓴다(PM=15 세대) */
+const R23_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r23-both.md');
 
 /* 옛 계수 — 되돌림 시험의 «빨강 표본» 이자 [E2] 의 기준선 설명값 */
 const OLD_PM = 75;
@@ -89,6 +96,22 @@ function incOfMd(md, pol) {
   const total = Object.values(axes).reduce((a, b) => a + b, 0);
   return { axes, total, sum };
 }
+/* [E3] «말미 창 축별 기울기» 표 — ② 를 **말미 창**에서도 재기 위해(23정정2·3).
+   23회차가 값을 고른 부등식이 바로 이 창의 것이라, 이 표를 안 재면 자기 자로 자기를 안 잰 것이 된다. */
+function tailOfMd(md, pol) {
+  const head = '### [E3] ② 말미 창 안 **축별 기울기** — ' + POLNAME[pol];
+  const i = md.indexOf(head);
+  if (i < 0) return null;
+  const axes = {};
+  for (const line of md.slice(i).split('\n').slice(1)) {
+    if (/^\|\s*\*\*합\*\*/.test(line)) break;
+    const m = line.match(/^\|\s*([^|*_]+?)\s*\|\s*([\d,]+)\s*\|/);
+    if (m) axes[m[1]] = Number(m[2].replace(/,/g, ''));
+  }
+  const total = Object.values(axes).reduce((a, b) => a + b, 0);
+  return total ? { axes, total } : null;
+}
+function calShaOf(md) { return ((md.match(/calib sha\s+\*{0,2}([0-9a-f]{12})/) || [])[1]) || null; }
 function maxAxis(axes, total) {
   let name = null, v = -1;
   Object.entries(axes).forEach(([k, x]) => { if (x > v) { v = x; name = k; } });
@@ -101,6 +124,9 @@ function maxAxis(axes, total) {
   const mPm = SRC.match(/const\s+OFF_DIA_PM\s*=\s*(\d+)\s*;/);
   yes('[A1] 제품에 `OFF_DIA_PM` 선언이 있다', !!mPm);
   const PM = mPm ? parseInt(mPm[1], 10) : NaN;
+  /* ⚠ 23정정10 — 초판은 여기서 `PM < 75` 만 물어 **0~74 아무 값이나 통과**했다. 값을 못박는 항이
+     [E1] 하나뿐이었다는 뜻이다. 지금은 [A2] 가 «측정표가 실제로 이 값으로 굴러갔는가» 를 물어
+     상수와 표를 **한 항 안에서** 묶는다(둘이 어긋나면 여기서 먼저 빨개진다). */
   yes('[A2] `OFF_DIA_PM` 이 옛 계수(' + OLD_PM + ')에서 내려왔다 — 758 하향이 살아 있다',
       Number.isFinite(PM) && PM < OLD_PM, '현행 ' + PM);
   /* 오프라인 다이아의 분당 축은 이 상수 하나여야 한다 — 사본이 생기면 하향이 반쪽이 된다 */
@@ -213,7 +239,12 @@ function maxAxis(axes, total) {
     const offDayCur = cur.d.axes['오프라인'] / days;
     const offDayBase = base.d.axes['오프라인'] / days;
     near('[E1] 이 회차 표의 부지런 오프라인/일이 **현 `OFF_DIA_PM`** 으로 설명된다',
-         offDayCur, Number(capMin) * PM, 0.06, '하루 예산 ' + capMin + '분 × ' + PM);
+         offDayCur, Number(capMin) * PM, 0.05, '하루 예산 ' + capMin + '분 × ' + PM);
+    /* 23정정10 — [E1] 의 허용 오차(옛 6%)가 상수 한 눈금(1/15 = 6.67%)과 거의 같아 PM 이 한 칸
+       흘러도 통과할 수 있었다. **정수로 못박는 항**을 따로 세운다 — 이 항이 [A2] 의 «75 미만»
+       을 실제 값으로 좁히는 자리다(둘이 어긋나면 표나 상수 중 하나가 낡은 것이다). */
+    eq('[E1b] 표에서 역산한 분당 값 = 제품 상수 (정수 일치 — 상수를 못박는 항)',
+       Math.round(offDayCur / Number(capMin)), PM);
     near('[E2] [전제] 기준선 표의 오프라인/일은 **옛 계수(' + OLD_PM + ')** 로 설명된다 (두 표는 다른 세대다)',
          offDayBase, Number(capMin) * OLD_PM, 0.06, '하루 예산 ' + capMin + '분 × ' + OLD_PM);
 
@@ -234,9 +265,38 @@ function maxAxis(axes, total) {
     yes('[R2] 되돌리면 최대 축이 «오프라인» 으로 돌아온다 (하향이 축 지배를 실제로 갈았다)',
         mRev.name === '오프라인' && mRev.share > maxAxis(cur.d.axes, cur.d.total).share,
         mRev.name + ' ' + pct(mRev.share) + ' ↔ 현행 ' + maxAxis(cur.d.axes, cur.d.total).name + ' ' + pct(maxAxis(cur.d.axes, cur.d.total).share));
-    /* 음성항 — 되돌림이 «무엇이든 빨갛게 하는» 손이 아님을 보인다(현행 표는 [C2]·[D1] 초록) */
-    yes('[R3] [음성항] 같은 산수를 현행 표에 대면 초록이다 (되돌림이 만능 빨강이 아니다)',
-        (cur.d.total / base.d.total) <= WIN_HI && maxAxis(cur.d.axes, cur.d.total).share <= AXIS_CAP);
+    /* ⚠ 23정정10(AAM·AAN 일치) — 초판 [R3] 은 «[C2] 의 상한 ∧ [D1]» 을 글자 그대로 되풀이해
+       독립 정보가 **0** 이었다(«음성항» 이라는 이름만 붙은 동어반복). 진짜 음성항으로 갈았다:
+       **다른 세대의 실제 표**(r22 = 하향 중간 세대, 부지런 6,887,905)를 이 자에 대면 창 밖이다.
+       손으로 만든 표본이 아니라 저장소에 커밋된 실측 표라, 이 항이 초록이면 자가 «세대를 실제로
+       가른다» 는 뜻이고 빨개지면 자가 아무 표나 통과시킨다는 뜻이다. */
+    const r22m = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r22-both.md');
+    const r22 = fs.existsSync(r22m) ? incOfMd(fs.readFileSync(r22m, 'utf8'), 'diligent') : null;
+    yes('[R3] [음성항] **다른 세대의 실제 표**(r22 · 하향 중간)를 이 자에 대면 창 밖으로 빨개진다',
+        !!r22 && (r22.total / base.d.total) > WIN_HI,
+        r22 ? fmt(r22.total) + ' / ' + fmt(base.d.total) + ' = ' + pct(r22.total / base.d.total) : '(r22 표 없음)');
+
+    /* ── [S] κ 대조 + ② 말미 창 ──────────────────────────────────────────── */
+    console.log('\n[S] 같은 자로 잰 비교인가 · ② 를 말미 창에서도 잰다 (23정정2·3·10)');
+    const shaB = calShaOf(bmd), shaC = calShaOf(cmd);
+    /* AAL 1순위 — 23회차의 판정 줄은 calib sha 가 다른 두 표의 나눗셈이었다(정정9 경고 위반).
+       24회차가 기준선 트리를 이 회차의 κ 캐시로 다시 굴려 맞췄다. 그 사실을 자가 지킨다. */
+    eq('[S1] **판정에 쓰는 두 표의 calib sha 가 같다** (정정9 — 해시가 같은 표끼리만 비교다)', shaC, shaB);
+    /* ② 는 30일 누적 창만으로는 못 닫는다 — 23회차가 값을 고른 부등식이 말미 창의 것이다. */
+    const tD = tailOfMd(cmd, 'diligent'), tC = tailOfMd(cmd, 'casual');
+    const mtD = tD && maxAxis(tD.axes, tD.total), mtC = tC && maxAxis(tC.axes, tC.total);
+    yes('[S2] ② **말미 창** — 부지런 최대 축 ≤ 50%', !!mtD && mtD.share <= AXIS_CAP,
+        mtD ? mtD.name + ' ' + pct(mtD.share) : '(표 없음)');
+    yes('[S3] ② **말미 창** — 대충 최대 축 ≤ 50%', !!mtC && mtC.share <= AXIS_CAP,
+        mtC ? mtC.name + ' ' + pct(mtC.share) : '(표 없음)');
+    /* [전제] — 이 자가 그 결함을 **실제로 잡는가**. 23회차 표(PM=15)에서는 두 항이 빨갛다
+       (부지런 52.0% · 대충 56.1%). 이 항이 빨개지면 [S2]·[S3] 은 아무것도 안 지키는 것이다. */
+    const r23m = fs.existsSync(R23_M) ? fs.readFileSync(R23_M, 'utf8') : null;
+    const t3D = r23m && tailOfMd(r23m, 'diligent'), t3C = r23m && tailOfMd(r23m, 'casual');
+    const m3D = t3D && maxAxis(t3D.axes, t3D.total), m3C = t3C && maxAxis(t3C.axes, t3C.total);
+    yes('[S4] [전제] 23회차 표(PM=15)에서는 [S2]·[S3] 가 **빨갛다** (자가 그 결함을 실제로 잡는다)',
+        !!m3D && !!m3C && m3D.share > AXIS_CAP && m3C.share > AXIS_CAP,
+        m3D && m3C ? '부지런 ' + pct(m3D.share) + ' · 대충 ' + pct(m3C.share) : '(r23 표 없음)');
   }
 
   /* ── 결과 ─────────────────────────────────────────────────────────────── */
