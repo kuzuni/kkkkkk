@@ -53,6 +53,9 @@ const R30 = require('./probe356r30.js');
 const R31 = require('./probe356r31.js');
 /* 32회차 — 매체 축 × 시간 × 짧은 프레임([P]). 합성 표본 `SYN_FT` 와 두 프레임 짝짓기 `pairCycle` 을 받아 쓴다. */
 const R32 = require('./probe356r32.js');
+/* 33회차 — 매체 축 × 시간 × **WAAPI**([Q]). `PIN` 이 닿지 못하는 매체를 못박는 손(`PIN_WA`)과
+   그 인구조사(`WA_CENSUS`)·한 주기 훑기(`sweepCycle`)를 `probe356r33` 에서 받아 쓴다(13회차 [R12]). */
+const R33 = require('./probe356r33.js');
 const { PIN: PIN_PHASE } = require('./probe356r25.js');
 const { COLLECT_PSEUDO } = R26;
 
@@ -245,6 +248,7 @@ async function sweep(browser, inject) {
   const rowsMF = [];      /* [N] 같은 매체 축을 **리사이즈 뒤**(1080×1600)에 한 번 더 수집한 것 (30회차) */
   const seenO = [];       /* [O] 같은 매체 축을 **한 주기**(위상 16칸) 훑어 화면분으로 접은 것 (31회차) */
   const seenP = [];       /* [P] 같은 «한 주기» 를 **리사이즈 뒤**(1080×1600)에 한 번 더 훑은 것 (32회차) */
+  const seenQ = [];       /* [Q] 화면별 «WAAPI 로 도는 애니» 인구조사 — `PIN` 이 못 세는 매체 (33회차) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
@@ -294,6 +298,16 @@ async function sweep(browser, inject) {
             «[A] 가 도는 그 순간에 [A] 가 못 보는 것» 이 실측이 된다. */
       const gotM = await page.evaluate(COLLECT_MEDIA);
       for (const g of gotM) rowsM.push(Object.assign({ screen: label }, g));
+
+      /* ── [Q] 매체 축 × 시간 × WAAPI (33회차) — [J]·[L]·[M] 과 **같은 손**: `evaluate` 한 번이다.
+         [O]·[P] 가 주기를 훑는 손(`PIN`)은 **CSS 애니메이션에만** 닿는다(`animation-delay` 를 민다).
+         `Element.animate()` 로 상자를 흔드는 노드는 `animationName` 이 `none` 이라
+         그 손이 **세지도 못박지도 못한다** ⇒ 열여섯 칸 스윕이 그 노드에 대해서만
+         «자기가 도착한 순간» 을 열여섯 번 읽는다(`probe356r33` [2] 가 «주기의 0.06% 만 봤다» 로 실측).
+         ⚠ 이 자리에서는 **세기만** 한다 — 이 저장소의 WAAPI 두 자리는 둘 다 «누르는 동안» 만 살아서
+            가라앉은 화면에서는 0 이다. 그 0 을 커버리지로 읽지 않으려고 판정은 아래 [Q] 절이
+            **제품의 틱을 깨워서** 한다(§[Q-c]). 여기 수는 «지금 트리에 상시 WAAPI 가 없다» 는 관측이다. */
+      seenQ.push({ label, wa: await page.evaluate(R33.WA_CENSUS) });
 
       /* ── [O] 매체 축 × 시간 (31회차) — [J]·[L]·[M]·[N] 과 **같은 손**이다: 스윕을 한 벌 더 돌지 않고
          이미 열려 있는 이 페이지에서 위상만 옮겨 가며 `evaluate` 를 더 한다.
@@ -379,7 +393,7 @@ async function sweep(browser, inject) {
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP };
+  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP, seenQ };
 }
 
 (async () => {
@@ -396,7 +410,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP, seenQ } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -3111,6 +3125,170 @@ async function sweep(browser, inject) {
           ok(`[P-f2] 같은 주입을 1600 에서 «이 절 전용»(배율 없이 움직인 상자) 으로도 ${fShort.boxMovedTrFree}자리 세었다 ⇒ [P-a2b] 의 분류기가 눈먼 0 을 찍는 자가 아니다`);
         else if (hit) bad(`[P-f2] 배율을 안 걸고 상자만 흔들었는데 1600 «전용» 으로 0자리 — [P-a2b] 의 분류기가 이 갈래를 못 본다`);
       } catch (e) { bad('[P-f] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+  }
+
+  /* ── [Q] 33회차 — **매체 축 × 시간 × WAAPI**. 32회차 인계문 §39-8 의 «다음 자리 후보 ⓑ»:
+        > `PIN` 은 **CSS 애니메이션**을 `animation-delay` 로 못박는다. `Element.animate()` 로 상자를
+        > 흔드는 자리가 생기면 [O]·[P] **둘 다** 그 위상을 못 잡는다. **이제 그물이 넷이라 이 구멍이 제일 크다.**
+     24회차 규율이 그것을 이 회차의 일로 만든다 — «자기 한계를 글로 넘긴 회차는 그 한계를 안 닫은 것이다.»
+
+     ⚠ **이 절이 [O]·[P] 의 사본이 아닌 이유** — 넷이 보는 것은 같은 «상자 ↔ 비트맵» 이고
+        갈리는 것은 **못박는 손**이다. [M]·[N]·[O]·[P] 는 전부 `PIN`(CSS) 하나에 매여 있어서
+        `animationName:none` 인 노드에 대해서는 **열여섯 칸이 전부 «지금 이 순간»** 이다
+        (`probe356r33` [2] 실측 — 같은 결함을 CSS 로 걸면 d=0.7006 으로 잡히는데
+         WAAPI 로 걸면 최악 편차 0.0010 = 초록. 그 스윕이 본 구간은 주기의 **0.06%**).
+     ⚑ **이것은 가정이 아니라 제품에 있는 매체다** — `jzPressTick`(621 «홀드 틱마다 원래 크기 ↔ 눌린 크기»)이
+        `scale`·`translate` 를 WAAPI 로 걸고, 583·584 이후 그 버튼 **안에 화폐 아이콘**이 산다.
+        지금 값은 등방(`scale:.94`)이라 결함이 아니다 — 이 절이 닫는 것은 **그물의 구멍**이다.
+     ⚠ 제품의 WAAPI 두 자리는 둘 다 «누르는 동안» 만 산다 ⇒ **가라앉은 화면의 0 은 «없어서 0»** 이다.
+        그래서 판정은 [Q-b] 가 **제품 자신의 함수로 틱을 깨워서** 한다(합성만으로 안 닫는다 · 26회차 [J] 규율). */
+  console.log('\n[Q] 33회차 — 매체 축 «한 주기» 를 **WAAPI 로 도는 애니**에서도 훑는다: `PIN` 이 닿지 못하는 매체');
+  {
+    const okQ = seenQ.filter((s) => s.wa);
+    const sumQ = (f) => okQ.reduce((a, s) => a + f(s), 0);
+    const waRest = sumQ((s) => s.wa.inApp);
+    const cssRest = sumQ((s) => s.wa.css);
+    /* «상시 WAAPI 가 **매체를 품은** 자리» — 래칫이다. 하나라도 생기면 [O]·[P] 는 그 노드를
+       구조적으로 못 보므로 이 축을 그 화면까지 넓혀야 한다(그때 이 항이 빨개진다). */
+    const waMedia = okQ.flatMap((s) => (s.wa.wa || []).filter((w) => w.media > 0).map((w) => `${s.label} ${w.sel}(매체 ${w.media})`));
+
+    /* ⓐ 전제 — 인구조사가 정말 돌았는가(아무것도 못 본 자는 언제나 0건이다 · 11·21·26·29~32회차) */
+    if (okQ.length && cssRest)
+      ok(`[Q-a] 전제 — ${okQ.length}/${SCREENS.length}화면에서 애니 인구조사가 돌았다 (CSS 애니 ${cssRest}개를 실제로 세었다) · `
+        + `그중 **WAAPI 로 도는 것 ${waRest}개** — 이 저장소의 «.animate(» 두 자리(jzPressTick·fxHoldPump)는 «누르는 동안» 만 살아서 `
+        + '가라앉은 화면에서는 0 이다. **이 0 은 «없어서 0» 이지 커버리지가 아니다**(근거는 [Q-b]·[Q-c]·[Q-d])');
+    else bad(`[Q-a] 전제 실패 — 인구조사 화면 ${okQ.length}/${SCREENS.length} · CSS 애니 ${cssRest}개 (0 이면 아래 초록은 전부 헛초록)`);
+
+    /* ⓐ2 래칫 — «상시 WAAPI + 그 안에 매체» 가 생기면 [O]·[P] 가 구조적으로 못 보는 자리가 생긴 것이다 */
+    if (!waMedia.length) ok('[Q-a2] 상시(가라앉은 화면) WAAPI 애니가 매체를 품은 자리 0곳 — [O]·[P] 의 스윕이 «못박히지 않은 채» 읽는 아이콘이 지금은 없다');
+    else bad(`[Q-a2] 상시 WAAPI 애니가 매체를 품은 자리 ${waMedia.length}곳 — [O]·[P] 는 이 노드의 위상을 못박지 못한다: ${waMedia.slice(0, 5).join(' · ')}`);
+
+    /* ⓑ **판정** — 제품의 홀드 틱(621)을 **제품 자신의 함수로** 깨워 그 한 주기를 훑는다.
+       ⚠ 합성 키프레임을 주입하지 않는다 — 주입으로만 닫으면 «자는 사는데 제품에는 안 물려 있다» 를 못 가른다. */
+    {
+      const PICKQ = ['23 훈련', '23 룬', '23 단련'];
+      const HOST = 'button, .rbt, .tr-up, .ifbtn, .cbtn, [class*="btn"]';
+      let woke = 0, pinnedQ = 0, movedQ = 0, mediaQ = 0, badQ = [], maxDevQ = 0, hostMedia = 0;
+      for (const name of PICKQ) {
+        const found = SCREENS.find((s) => s[0] === name);
+        if (!found) continue;
+        const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+        const page = await ctx.newPage();
+        try {
+          await page.goto(URL, { waitUntil: 'load' });
+          await page.waitForTimeout(600);
+          for (const st of (found[1] || [])) { try { await STEP(page, st); } catch (_) {} await page.waitForTimeout(200); }
+          await page.waitForTimeout(250);
+          const w = await page.evaluate((s) => {
+            const els = [...document.querySelectorAll(s)].filter((e) => {
+              const r = e.getBoundingClientRect();
+              return r.width > 0 && r.height > 0 && e.querySelectorAll('canvas, svg, img').length > 0;
+            });
+            let n = 0, m = 0;
+            for (const el of els.slice(0, 4)) {
+              if (typeof jzPressTick === 'function') { jzPressTick(el, 3000); n++; m += el.querySelectorAll('canvas, svg, img').length; }
+            }
+            return { woke: n, media: m };
+          }, HOST);
+          woke += w.woke; hostMedia += w.media;
+          const arm = await R33.sweepCycle(page, name, 'wa');
+          pinnedQ += arm.pinnedWa; movedQ += arm.fold.boxMoved; mediaQ += arm.fold.rows;
+          maxDevQ = Math.max(maxDevQ, arm.fold.maxDev);
+          badQ = badQ.concat(arm.cyc.bad.map((x) => Object.assign({ screen: name }, x)));
+        } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 */ }
+        await ctx.close();
+      }
+      if (!woke || !pinnedQ) bad(`[Q-b] 전제 실패 — 홀드 틱을 깨운 호스트 ${woke}개 · 못박은 WAAPI 애니 ${pinnedQ}개 (0 이면 아래 판정은 헛초록)`);
+      else if (!movedQ) bad(`[Q-b] 못박기는 했는데 위상 사이에 상자가 한 자리도 안 움직였다 — 이 0 은 같은 순간을 ${R31.PHASES}번 잰 0 이다`);
+      else if (badQ.length) bad(`[Q-b] WAAPI 한 주기 안에서 매체 비균등 ${badQ.length}자리: `
+        + badQ.slice(0, 5).map((x) => `${x.screen} ${x.row.sel} d=${x.row.d} @위상 ${(x.at * 100).toFixed(0)}%`).join(' · '));
+      else ok(`[Q-b] 제품 — 홀드 틱을 ${woke}자리에서 깨워(그 안의 매체 ${hostMedia}개) WAAPI 애니 ${pinnedQ}개를 못박고 주기 ${R31.PHASES}칸을 훑었다: `
+        + `매체 ${mediaQ}행 · 위상 사이 상자 이동 ${movedQ}자리 · 비균등 **0자리** · 최악 편차 ${maxDevQ.toFixed(4)} `
+        + `⇒ 621 의 눌림은 등방(scale 한 값)이라 이 0 은 «값이 옳아서 0» 이다`);
+    }
+
+    /* ⓒ **되돌림(합성)** — 같은 결함을 CSS 와 WAAPI 로 **나란히** 걸어 «못 보는 것이 결함의 모양이 아니라
+       못박는 손» 임을 못박는다. ⓞ(WAAPI)·ⓟ(CSS) 는 값·길이가 한 글자도 안 다르다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.setContent(R33.SYN_WA);
+        await page.waitForTimeout(200);
+        const cssArm = await R33.sweepCycle(page, 'syn', 'css');
+        const waArm = await R33.sweepCycle(page, 'syn', 'wa');
+        const pick = (c, id) => c.bad.find((x) => x.key.indexOf('#' + id) >= 0);
+        const seenAll = (c, id) => c.all.find((x) => x.key.indexOf('#' + id) >= 0);
+        const missed = !pick(cssArm.cyc, 'cWaKf'), twin = pick(cssArm.cyc, 'cCssKf'), caught = pick(waArm.cyc, 'cWaKf');
+        if (missed && twin && caught)
+          ok(`[Q-c] 되돌림 — 같은 결함(한 축만 200→140px)을 CSS 로 걸면 [O]·[P] 의 손이 d=${twin.row.d} 로 잡는데 `
+            + `WAAPI 로 걸면 최악 편차 ${seenAll(cssArm.cyc, 'cWaKf').dev.toFixed(4)} = 초록(그 스윕이 본 구간은 주기의 ${(cssArm.seenFrac * 100).toFixed(2)}%) `
+            + `↔ \`PIN_WA\` 를 얹으면 같은 페이지·같은 수집기에서 d=${caught.row.d} @위상 ${(caught.at * 100).toFixed(0)}% 로 빨개진다 `
+            + `⇒ [Q-b] 의 0 은 «안 보는 자» 의 0 이 아니다`);
+        else bad(`[Q-c] 되돌림 실패 — WAAPI 놓침 ${missed} · CSS 쌍둥이 ${!!twin} · PIN_WA 로 잡힘 ${!!caught}`);
+
+        const prop = pick(waArm.cyc, 'cWaProp'), propAll = seenAll(waArm.cyc, 'cWaProp');
+        if (!prop && propAll)
+          ok(`[Q-c2] 음성항 — WAAPI 로 «종횡을 같이» 미는 상자(제품 621 의 꼴)는 어느 위상에도 안 빨개진다 (최악 편차 ${propAll.dev.toFixed(4)}) `
+            + `— «WAAPI 가 걸렸으니 뭐라도 어긋나겠지» 로 재면 이것이 헛빨강이 된다`);
+        else bad(`[Q-c2] 음성항 실패 — 멀쩡한 등방 WAAPI 애니메이션을 결함이라 부른다: ${JSON.stringify(prop ? prop.row : null)}`);
+      } catch (e) { bad('[Q-c] 합성 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+
+    /* ⓓ **제품 되돌림** — [O-f]·[P-f] 와 같은 손이되 거는 매체가 WAAPI 다.
+       02 메인의 **실제 캔버스**에 한 축만 미는 WAAPI 애니를 걸고, 두 팔([O]·[P] 의 손 ↔ 이 절의 손)로
+       같은 페이지를 훑어 갈리는지 본다. ⓓ2 는 그 자리에서 **결정성**까지 못박는다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.goto(URL, { waitUntil: 'load' });
+        await page.waitForTimeout(700);
+        const hit = await page.evaluate(() => {
+          const app = document.getElementById('app');
+          const c = [...app.querySelectorAll('canvas')].find((x) => { const r = x.getBoundingClientRect(); return r.width > 8 && r.height > 8 && x.width && x.height; });
+          if (!c) return null;
+          const r = c.getBoundingClientRect();
+          c.style.height = r.height + 'px';
+          if (!c.id) c.id = '__q33';                      /* ⓓ2 가 «그 노드» 를 다시 집을 수 있게 */
+          /* 한 축만 민다 — 배율은 한 줄도 안 걸고 상자만 흔든다([A]·[I] 는 구조적으로 못 본다) */
+          c.animate([{ width: r.width + 'px' }, { width: (r.width * 0.7).toFixed(2) + 'px' }, { width: r.width + 'px' }],
+            { duration: 200000, iterations: Infinity, easing: 'linear' });
+          return c.id;
+        });
+        await page.waitForTimeout(200);
+        const cssArm = await R33.sweepCycle(page, '02 메인', 'css');
+        const waArm = await R33.sweepCycle(page, '02 메인', 'wa');
+        if (!hit) bad('[Q-d] 되돌림 표본이 없다 — 02 메인에 잴 수 있는 캔버스가 한 자리도 없다');
+        else if (!cssArm.cyc.bad.length && waArm.cyc.bad.length)
+          ok(`[Q-d] 제품 되돌림 — 02 메인의 실제 캔버스 «${hit}» 에 **WAAPI 로 한 축만** 미는 애니를 걸면 `
+            + `[O]·[P] 의 손으로는 ${cssArm.cyc.bad.length}자리(초록) ↔ 이 절의 손으로는 ${waArm.cyc.bad.length}자리 `
+            + `(최악 d=${waArm.cyc.bad[0].row.d} @위상 ${(waArm.cyc.bad[0].at * 100).toFixed(0)}%) `
+            + `⇒ 이 절이 합성에서만 사는 자가 아니라 **제품 화면에 정말 물려 있다**`);
+        else bad(`[Q-d] 제품 되돌림 실패 — PIN 만 ${cssArm.cyc.bad.length}자리 / PIN+PIN_WA ${waArm.cyc.bad.length}자리 (표본 «${hit}»)`);
+
+        /* ⓓ2 결정성 — 못박은 위상에서 두 번 읽으면 비트까지 같고, 풀어 주면 흐른다.
+           안 그러면 이 절의 0 은 «흔들리는 0» 이고 [Q-b] 의 초록도 우연이다. */
+        if (hit) {
+          await page.evaluate(R33.PIN_WA, 0.5);
+          const a1 = await page.evaluate(COLLECT_MEDIA);
+          await page.waitForTimeout(260);
+          const a2 = await page.evaluate(COLLECT_MEDIA);
+          await page.evaluate(R33.PIN_WA, null);
+          await page.waitForTimeout(300);
+          const a3 = await page.evaluate(COLLECT_MEDIA);
+          /* ⚠ «제일 큰 매체» 로 고르면 전투 캔버스(1080폭)를 집는다 — **주입한 그 노드**를 집어야 한다 */
+          const g = (rowsArr) => rowsArr.find((r) => r.sel.indexOf('#' + hit) >= 0) || null;
+          const w1 = g(a1), w2 = g(a2), w3 = g(a3);
+          const same = w1 && w2 && Math.abs(w1.w - w2.w) < 0.01;
+          const flowed = w3 && w2 && Math.abs(w3.w - w2.w) > 0.01;
+          if (same && flowed) ok(`[Q-d2] 결정성 — 못박은 채 260ms 뒤 다시 읽어도 같은 값(${w1.w}px)이고, 풀어 주면 300ms 만에 ${w3.w}px 로 흐른다 ⇒ 못박기가 실제로 시간을 세운다`);
+          else bad(`[Q-d2] 결정성 실패 — 못박음 ${w1 && w1.w} → ${w2 && w2.w} · 푼 뒤 ${w3 && w3.w}`);
+        }
+      } catch (e) { bad('[Q-d] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
       await ctx.close();
     }
   }
