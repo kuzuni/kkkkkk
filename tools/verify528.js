@@ -115,21 +115,31 @@ const PAT = [
       return { lv: document.getElementById('prbLv').textContent, imm: /불멸/.test(h),
                rows: document.querySelectorAll('#prbList .prb-row').length,
                heads: document.querySelectorAll('#prbList .prb-gh').length }; };
+    /* 773 — 기대하는 «등급 수 · 행 수» 도 손 상수가 아니라 제품에서 파생한다(probe528 과 같은 식).
+       757 이 확률표를 그 배너가 파는 종까지 자른 뒤 펫 8등급/36행이 7등급/35행이 됐고,
+       자만 옛 수에 굳어 [B1]·[R3] 이 빨갰다. 표(rollOf)와 종 목록에게 직접 묻는다. */
+    const specOf = b => { const tab = rollOf(b), gs = new Set(BANNERS[b].list.map(x => x.g));
+      return { heads: [...gs].filter(g => g < tab.length).length,
+               rows:  BANNERS[b].list.filter(x => x.g < tab.length).length,
+               gated: tab.some(g => g.unlock > lit) }; };
     openProbInfo('weapon', lit);       const wOld = shot();
     openProbInfo('weapon', SUM_MAXLV); const wNew = shot();
     openProbInfo('pet',    lit);       const pOld = shot();
     openProbInfo('pet',    SUM_MAXLV); const pNew = shot();
     closeProbInfo();
-    return { max: SUM_MAXLV, wOld, wNew, pOld, pNew };
+    return { max: SUM_MAXLV, wOld, wNew, pOld, pNew,
+             spec: { pet: specOf('pet'), weapon: specOf('weapon') } };
   };
 
   const LIT = 100;                     /* 528 이 걷어낸 그 수 */
   const now = await open(IDX);
   const B = await now.evaluate(read, LIT);
   await now.close();
-  ok(B.wNew.lv === 'MAX' && B.wNew.imm && B.pNew.rows === 36 && B.pNew.heads === 8,
+  ok(B.wNew.lv === 'MAX' && B.wNew.imm
+     && B.pNew.rows === B.spec.pet.rows && B.pNew.heads === B.spec.pet.heads,
      'B1 openProbInfo(bank, SUM_MAXLV) 가 실제로 MAX 단계를 연다 (85 [G0]·106 [E7-a] 의 뿌리)',
-     '무기 단계=' + B.wNew.lv + ' 불멸행=' + B.wNew.imm + ' · 펫 ' + B.pNew.rows + '행/' + B.pNew.heads + '등급');
+     '무기 단계=' + B.wNew.lv + ' 불멸행=' + B.wNew.imm + ' · 펫 ' + B.pNew.rows + '행/' + B.pNew.heads
+     + '등급(파생 ' + B.spec.pet.rows + '행/' + B.spec.pet.heads + '등급)');
   ok(B.wOld.lv === B.wNew.lv && B.pOld.rows === B.pNew.rows,
      'B2 지금 만렙(' + B.max + ')에서는 옛 형태와 새 형태가 **구별되지 않는다** — [A] 래칫이 유일한 방벽이다',
      '옛 단계=' + B.wOld.lv + '/' + B.pOld.rows + '행 ↔ 새 ' + B.wNew.lv + '/' + B.pNew.rows + '행');
@@ -146,9 +156,14 @@ const PAT = [
   ok(R.wOld.lv === String(LIT) && !R.wOld.imm && R.wNew.lv === 'MAX' && R.wNew.imm,
      'R2 되돌림 — 만렙이 오르면 옛 형태는 «MAX 단계» 가 아니라 Lv' + LIT + ' 을 열고 불멸 행을 잃는다 · 새 형태는 그대로',
      '옛 단계=' + R.wOld.lv + ' 불멸행=' + R.wOld.imm + ' ↔ 새 단계=' + R.wNew.lv + ' 불멸행=' + R.wNew.imm);
-  ok(R.pOld.rows < R.pNew.rows && R.pNew.rows === 36 && R.pNew.heads === 8,
-     'R3 되돌림 — 106 [E7] 이 세는 36행도 옛 형태에선 무너진다',
-     '옛 ' + R.pOld.rows + '행/' + R.pOld.heads + '등급 ↔ 새 ' + R.pNew.rows + '행/' + R.pNew.heads + '등급');
+  ok(R.pNew.rows === R.spec.pet.rows && R.pNew.heads === R.spec.pet.heads
+     && (R.spec.pet.gated ? R.pOld.rows < R.pNew.rows : R.pOld.rows === R.pNew.rows)
+     && R.spec.weapon.gated && R.wOld.rows < R.wNew.rows,
+     'R3 되돌림 — 106 [E7] 이 세는 행은 «만렙 문턱 행» 이 있는 표에서만 옛 형태에서 무너진다 '
+     + '(757 이 펫에서 불멸을 걷어내 지금 무너지는 쪽은 무기다 — 대조군)',
+     '펫 옛 ' + R.pOld.rows + '행/' + R.pOld.heads + '등급 ↔ 새 ' + R.pNew.rows + '행/' + R.pNew.heads
+     + '등급(파생 ' + R.spec.pet.rows + '행/' + R.spec.pet.heads + '등급 · 문턱행 '
+     + (R.spec.pet.gated ? '있음' : '없음') + ') · 무기 옛 ' + R.wOld.rows + '행 ↔ 새 ' + R.wNew.rows + '행');
 
   await browser.close();
   console.log('\nVERIFY528 ' + (fail === 0 ? 'PASS' : 'FAIL') + ' — ' + pass + '/' + (pass + fail));

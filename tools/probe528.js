@@ -47,6 +47,16 @@ function measure(lit) {
   const probsAt = v => { const o = S.sum.weapon.lv; S.sum.weapon.lv = v;
                          const p = gradeProbs('weapon'); S.sum.weapon.lv = o; return p; };
   const MAX = SUM_MAXLV;
+  /* 773 — «몇 등급 · 몇 행이 나와야 하나» 도 손 상수가 아니라 **제품에서 파생**한다.
+     757 이 확률표를 «그 배너가 파는 종» 까지 자른 뒤 펫이 8등급/36행 → 7등급/35행이 됐는데
+     자만 옛 수에 굳어 [A2]·[B3] 이 빨갰다(제품이 옳고 자가 낡았다). 숫자만 7·35 로 내리면
+     종이 다시 늘어나는 날 같은 자리가 또 부패하므로(처방 ⓑ 기각) 표와 종 목록에게 직접 묻는다.
+     `gated` = «그 표에 옛 리터럴보다 늦게 열리는 행이 있나» — 되돌림 시험의 갈래 축이다. */
+  const specOf = b => { const tab = rollOf(b), gs = new Set(BANNERS[b].list.map(x => x.g));
+    return { heads: [...gs].filter(g => g < tab.length).length,
+             rows:  BANNERS[b].list.filter(x => x.g < tab.length).length,
+             gated: tab.some(g => g.unlock > lit) }; };
+  const spec = { pet: specOf('pet'), weapon: specOf('weapon') };
 
   openProbInfo('weapon', lit);  const wOld = probe();
   openProbInfo('weapon', MAX);  const wNew = probe();
@@ -68,7 +78,7 @@ function measure(lit) {
   };
   const eOld = sim(lit), eNew = sim(MAX);
 
-  return { max: MAX, lit, top,
+  return { max: MAX, lit, top, spec,
            live: (() => { const o = S.sum.weapon.lv; S.sum.weapon.lv = lit;
                           const v = S.sum.weapon.lv; S.sum.weapon.lv = o; return v; })(),
            wOld, wNew, pOld, pNew,
@@ -98,9 +108,12 @@ function measure(lit) {
   ok(A.wOld.lv === 'MAX' && A.wOld.lv === A.wNew.lv && A.wOld.imm === A.wNew.imm,
      'A1 재현 — openProbInfo(weapon, ' + A.lit + ') 는 «cur 이하 가장 높은 단계» 규칙에 걸려 MAX 로 튕긴다',
      '옛 단계=' + A.wOld.lv + ' 불멸행=' + A.wOld.imm + ' ↔ 새(SUM_MAXLV) 단계=' + A.wNew.lv + ' 불멸행=' + A.wNew.imm);
-  ok(A.pOld.rows === A.pNew.rows && A.pOld.heads === A.pNew.heads && A.pOld.heads === 8,
-     'A2 재현 — openProbInfo(pet, ' + A.lit + ') 도 같은 이유로 MAX 와 구별되지 않는다(106 E7 이 세는 36행)',
-     '옛 ' + A.pOld.rows + '행/' + A.pOld.heads + '등급 ↔ 새 ' + A.pNew.rows + '행/' + A.pNew.heads + '등급');
+  ok(A.pOld.rows === A.pNew.rows && A.pOld.heads === A.pNew.heads
+     && A.pNew.heads === A.spec.pet.heads && A.pNew.rows === A.spec.pet.rows,
+     'A2 재현 — openProbInfo(pet, ' + A.lit + ') 도 같은 이유로 MAX 와 구별되지 않는다'
+     + '(106 E7 이 세는 ' + A.spec.pet.rows + '행 — 773 이후 rollOf(pet) 파생)',
+     '옛 ' + A.pOld.rows + '행/' + A.pOld.heads + '등급 ↔ 새 ' + A.pNew.rows + '행/' + A.pNew.heads
+     + '등급 · 파생 ' + A.spec.pet.rows + '행/' + A.spec.pet.heads + '등급');
   ok(A.live === A.lit && Math.abs(A.dOld - A.dNew) < 1e-12,
      'A3 재현 — S.sum.weapon.lv = ' + A.lit + ' 은 496 별칭 뷰에 setter 클램프가 없어 그대로 들어가지만, '
      + 'gradeProbs 의 t 가 1 로 clamp 돼 만렙과 **같은 확률**이 된다',
@@ -132,9 +145,14 @@ function measure(lit) {
      + '(verify85 [G1] 이 뜻을 잃는다) · 새 형태는 그대로 MAX',
      '옛 단계=' + B.wOld.lv + ' 불멸행=' + B.wOld.imm + ' 초월행=' + B.wOld.tr
      + ' ↔ 새 단계=' + B.wNew.lv + ' 불멸행=' + B.wNew.imm);
-  ok(B.pOld.rows < B.pNew.rows && B.pNew.rows === 36 && B.pNew.heads === 8,
-     'B3 되돌림 — 106 [E7] 이 세는 36행도 옛 형태에선 줄어든다',
-     '옛 ' + B.pOld.rows + '행/' + B.pOld.heads + '등급 ↔ 새 ' + B.pNew.rows + '행/' + B.pNew.heads + '등급');
+  ok(B.pNew.rows === B.spec.pet.rows && B.pNew.heads === B.spec.pet.heads
+     && (B.spec.pet.gated ? B.pOld.rows < B.pNew.rows : B.pOld.rows === B.pNew.rows)
+     && B.spec.weapon.gated && B.wOld.rows < B.wNew.rows,
+     'B3 되돌림 — 106 [E7] 이 세는 행은 «만렙 문턱 행» 이 있는 표에서만 옛 형태에서 줄어든다 '
+     + '(757 이 펫에서 불멸을 걷어내 지금 줄어드는 쪽은 무기다 — 대조군)',
+     '펫 옛 ' + B.pOld.rows + '행/' + B.pOld.heads + '등급 ↔ 새 ' + B.pNew.rows + '행/' + B.pNew.heads
+     + '등급(파생 ' + B.spec.pet.rows + '행/' + B.spec.pet.heads + '등급 · 문턱행 '
+     + (B.spec.pet.gated ? '있음' : '없음') + ') · 무기 옛 ' + B.wOld.rows + '행 ↔ 새 ' + B.wNew.rows + '행');
   ok(B.dOld === 0 && B.dNew > 0,
      'B4 되돌림 — [D2] «Lv' + B.lit + ' 에서 최고 등급 확률 > 0» 은 그 날 거짓이 된다(해금 전이라 0)',
      '옛 g' + B.top + ' 확률=' + (B.dOld * 100).toFixed(4) + '% ↔ 새 ' + (B.dNew * 100).toFixed(4) + '%');
