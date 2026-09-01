@@ -245,11 +245,25 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(D.fPay === D.tries && D.nodeDn === D.fPay, '[D4] «−n 조각» 수 = 시도 수 · 전부 아래로 진다', D.fPay + ' / ' + D.tries);
 
   /* ══ [E] 89 유물 소환 홀드(rwHold) ═════════════════════════════════ */
-  console.log('[E] 89 유물 소환 홀드 — 결과 문구는 격자 칸(fxUpOk)이 맡고 여기는 맥박 + 비용만');
+  /* ⚑⚑ 666 이관(2026-09-01, 주인 지시 2026-09-02 00:40 «유물소환부분도 텍스트로 존나 이펙트 하는거
+     빼기. 그리고 유물소환 버튼에서 유물화폐 아이콘 파티클 이펙트 떠야함») — **[E3] 의 방향을 뒤집었다.**
+     488 이 여기서 ««−n» 수 = 시도 수» 를 단언한 것은 «돈을 쓰고 있구나» 를 회당 말하라는 뜻이었는데,
+     주인이 그 말을 **숫자가 아니라 그림**으로 하라고 다시 정했다(660 이 훈련·단련·룬에서 같은 값을
+     걷은 것과 한 규약). 그래서 항을 **지우지 않고**(333 처방) 같은 축의 반대편으로 갈아 끼운다:
+       · [E3]  «−n» 플로터 **0건**            ← 폐지된 어휘가 되살아나면 빨개진다
+       · [E3b] 그 자리를 대신하는 것이 실재한다 — 아이콘 버스트가 **시도 수 이상** 떴다.
+         (없으면 «666 이 통째로 사라져도 초록인 게이트» 가 된다 — 328·329 이관 교훈.)
+     ⚠ 맥박 [E2] 는 한 글자도 안 바꿨다 — 회당 «보이는 사건» 의 뿌리는 그것이다. */
+  console.log('[E] 89 유물 소환 홀드 — 회당 맥박 + 버튼에서 터지는 유물조각 아이콘(666 이관)');
   await p.evaluate(() => {
     try { closeModal(); closeTrain(); } catch (_) {}
     S.relic = 1e12; S.dia = 1e12;
     openRelw();
+    /* 666 — 아이콘 버스트는 수명이 짧아 «끝난 뒤 세면» 이미 지워져 있다. 붙는 순간을 센다. */
+    window.__E666 = 0;
+    const L = document.getElementById('fxl'), ap = L.appendChild.bind(L);
+    L.appendChild = nd => { const r = ap(nd);
+      if (nd.nodeType === 1 && /fx-cic/.test((nd.className || '') + '')) window.__E666++; return r; };
   });
   await p.waitForTimeout(500);
   await countTries('summonRelic'); await reset();
@@ -261,8 +275,12 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      4~10회 사이로 흔들린다. 5 로 조이면 살아 있는 게이트가 매번 빨개진다. */
   ok(E.tries >= 4, '[E1] 유물 홀드가 여러 번 시도한다(전제)', E.tries + '회');
   ok(E.hb === E.tries, '[E2] ★ 맥박 수 = 시도 수', E.hb + ' / ' + E.tries);
-  ok(E.fPay === E.tries, '[E3] «−n» 수 = 시도 수', E.fPay + ' / ' + E.tries);
-  ok(E.fOk === 0 && E.fNo === 0, '[E4] ★ 결과 문구는 안 띄운다 — 격자 칸의 «이름 Lv.n» 델타와 두 벌이 되면 안 된다', (E.fOk + E.fNo) + '건');
+  const E666 = await p.evaluate(() => window.__E666 || 0);
+  ok(E.fPay === 0, '[E3] ★ 666 — «−n» 비용 플로터 **0건**(숫자 플로터 폐지 · 비용은 `#rwCost` 알약이 상시로 말한다)',
+     E.fPay + '건');
+  ok(E666 >= E.tries, '[E3b] ★ 666 — 그 자리를 대신하는 아이콘 버스트가 시도 수 이상 떴다',
+     E666 + '알 / 시도 ' + E.tries);
+  ok(E.fOk === 0 && E.fNo === 0, '[E4] ★ 결과 문구는 안 띄운다(666 — 격자 칸의 «이름 Lv.n» 델타도 같이 폐지됐다)', (E.fOk + E.fNo) + '건');
 
   /* ══ [F] 23 훈련 카드 홀드(64) ═════════════════════════════════════ */
   console.log('[F] 23 훈련 카드 홀드 — 64 의 «정지 시 정산» 은 그대로 두고 회당 맥박만 얹었다');

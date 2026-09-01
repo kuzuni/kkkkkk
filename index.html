@@ -27585,7 +27585,11 @@ function trainQty(){ return TRAIN_QTYS.includes(S.buyQty) ? S.buyQty : 1; }
    그대로 재발한다). 키는 `FXCUR`/`CUR_ICON` 과 공유하는 화폐 키다.
    ⚠ 룬 결제가 다이아에서 룬강화석으로 바뀐 것이 490 이다 — 그런 변경이 또 오면 **여기 한 줄**만
      바뀌고 연출·아이콘·색이 전부 따라온다. */
-const PAY_CUR = { train:'gold', rune:'rstone', temper:'tstone' };
+/* ⚑ 666(주인 지시 2026-09-02 00:40) — **표에 네 번째 자리가 들어왔다: 89 유물 소환**(`relic`).
+   660 이 «버스트 아이콘 = 그 자리가 내는 재화» 로 규약을 굳혔으므로, 유물 소환도 화폐 문자열을
+   호출부에 손으로 적지 않고 여기서 읽는다(402 «표 두 벌» 부패 방지 — 위 머리말과 같은 이유).
+   ⚠ 표의 뜻은 «23 훈련 세 탭» 이 아니라 **«이 자리는 무엇으로 사는가»** 다 — 자리가 늘면 줄이 는다. */
+const PAY_CUR = { train:'gold', rune:'rstone', temper:'tstone', relic:'relic' };
 function trainBuyInfo(id){
   const u = U[id], l = lv(id), room = Math.max(0, trainCap() - l);
   const n = Math.min(trainQty(), room);
@@ -30489,8 +30493,17 @@ function summonRelic(quiet){
   S.summons++; S.cnt.sumRelic++;
   markDirty(); uiDirty = true; save();
   renderRelw();
-  const el = $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
-  if(el) fxUpOk(el, el, it.n + ' Lv.' + oLv(it.id));
+  /* ⚑⚑ 666(주인 지시 2026-09-02 00:40 «유물소환부분도 텍스트로 존나 이펙트 하는거 빼기. 그리고
+     유물소환 버튼에서 유물화폐 아이콘 파티클 이펙트 떠야함») — **여기서 연출을 걷어냈다.**
+     종전 한 줄은 `fxUpOk(el, el, it.n + ' Lv.' + oLv(it.id))` 였고 그 한 줄이 셋을 같이 했다:
+       ① 당첨 칸 플래시·펄스  ② 크림 스파크 10알을 **그 칸에서**  ③ «이름 Lv.n» 텍스트 델타.
+     주인이 뺀 것은 ③ 이고, 새로 지시한 자리는 «버튼» 이라 ② 도 자리가 틀렸다(660 규약 «스폰 위치는
+     버튼뿐 · 아이콘/슬롯 쪽 이펙트 0건» — 이 화면의 «슬롯» 이 곧 격자 칸이다).
+     ⇒ 회당 연출은 **버튼 경로가 통째로 맡는다**(`rwSummonFx()` — 아래 rwHold 절).
+     ⚑ 이 함수를 «연출 없음» 으로 되돌린 것이 부수 이득 하나를 준다 — `tools/bot199.js` 는 봇 하루에
+       이 함수를 수천 번 지나면서 5회차 프로파일에서 «하루의 절반» 을 여기서 태웠다(그 주석 그대로).
+       연출 호출이 UI 경로로 올라가면 봇은 그 자리를 아예 안 지난다(스텁 목록에 기대지 않는다).
+     ⚠ 되돌리려면 위 한 줄을 되살리고 `rwSummonFx()` 호출 둘을 지운다. */
   return it;
 }
 function openRelw(){
@@ -30543,23 +30556,45 @@ function rwHoldStop(bad){
   rwHold = null; clearTimeout(h.timer);
   if(bad && typeof jzOn === 'function') jzOn($('rwBasin'), 'jz-sh', 380);
 }
+/* ⚑⚑ 666 — **소환 1회의 연출 한 벌**(주인 지시 2026-09-02 00:40). 660 이 세운 규약을 그대로 쓴다:
+     · 버스트는 **소환 버튼(`#rwBasin`)에서만** 태어난다 — 격자 칸·아이콘 쪽 스폰 0건.
+     · 버스트의 그림은 **지불 재화**(유물조각 `relic`)의 125 규약 자산이다(이모지 금지 · `FXCUR.relic`).
+     · 발화는 **소환당 1회**(첫 발·홀드 틱 모두 이 한 함수를 지난다 = 게이트의 1:1 축).
+     · **캔슬-재시작 금지** — `iv` 를 버스트에 안 넘긴다. 660 이 뒤집은 그 축 그대로,
+       입자는 제 수명(`FXSPARK_MS` 380ms)을 끝까지 살고 세대가 겹친다(겹침이 곧 «연속으로 터진다»).
+       상한은 `upFx` 가 «개수를 줄이는» 쪽으로 지킨다(660 — 앞 세대를 걷지 않는다).
+   ⚑ **당첨 칸은 살린다 — 텍스트가 아니라 «어느 칸인가» 이기 때문이다.** 주인이 뺀 것은 «텍스트
+     이펙트» 이고, 칸의 흰 플래시·펄스는 10종 중 무엇이 올랐는지를 말하는 **유일한 채널**이다
+     (숫자 델타가 사라진 지금은 더 그렇다). 파티클은 안 쏜다 — 자리가 버튼으로 옮겨졌다.
+   ⚠ 플래시는 버튼에 **안** 건다(`noFlash`) — 버튼의 회당 신호는 `hbBeat` 의 맥박이 이미 맡고 있고,
+     625 «한 자리에 플래시 한 장» 과 겹치면 안 된다.
+   ⚠ 개수는 619 어휘 그대로 **첫 발 10 · 반복분 `UPFX_N`(4)** 이다 — 새 상수를 만들지 않는다. */
+function rwSummonFx(it, first){
+  const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
+  if(el){ fxFlash(el); fxHitEl(el); }
+  upFx('relic', $('rwBasin'), PAY_CUR.relic, first ? 10 : null, true, null);
+}
 function rwHoldTick(){
   const h = rwHold; if(!h) return;
   if(!$('relw').classList.contains('on')){ rwHoldStop(false); return; }
-  const cost = relicCost();               /* 488 — «내기 전» 값 */
-  if(!summonRelic(true)){ rwHoldStop(true); return; }
-  /* 488 — `summonRelic` 은 이미 격자 칸에 `fxUpOk` 를 건다(회당 «보이는 사건» 이 원래 있었다).
-     여기서 더하는 것은 **누르고 있는 버튼 자신의 맥박과 «−n»** 이다 — 눈이 그릇에 있기 때문이다.
-     결과 문구는 안 띄운다(칸의 «이름 Lv.n» 델타와 두 벌이 된다). */
-  hbBeat('#rwBasin', true, null, '−' + fmt(cost));
+  const it = summonRelic(true);
+  if(!it){ rwHoldStop(true); return; }
+  /* 488 — 누르고 있는 버튼 자신의 회당 피드백. 666 — 남는 것은 **맥박**뿐이다:
+     «−n» 비용 플로터는 숫자 플로터라 이 지시로 폐지됐고(660 이 훈련·단련·룬에서 같은 값을 걷은 것과
+     한 규약), 비용은 버튼 아래 `#rwCost` 알약이 **상시로** 말한다(58 26회차 «바로 아래 줄이 말하는
+     것을 플로터가 되풀이하지 않는다»). 그래서 `relicCost()` 를 여기서 읽던 지역 변수도 같이 걷었다
+     (죽은 코드 금지 — 295-②·399·460). */
+  hbBeat('#rwBasin', true, null, null);
+  rwSummonFx(it, false);
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
   h.timer = setTimeout(rwHoldTick, h.iv);
 }
 $('rwBasin').addEventListener('pointerdown', () => {
   rwHoldStop(false);
-  const cost0 = relicCost();                    /* 488 3회차 — «내기 전» 값 */
-  if(!summonRelic()){ if(typeof jzOn === 'function') jzOn($('rwBasin'), 'jz-sh', 380); return; }
-  hbBeat('#rwBasin', true, null, '−' + fmt(cost0));   /* 488 3회차 — 첫 발도 회당 피드백 */
+  const it = summonRelic();
+  if(!it){ if(typeof jzOn === 'function') jzOn($('rwBasin'), 'jz-sh', 380); return; }
+  hbBeat('#rwBasin', true, null, null);   /* 488 3회차 — 첫 발도 회당 피드백(666 — 맥박만) */
+  rwSummonFx(it, true);
   rwHold = { iv: TR_HOLD_IV0, timer: setTimeout(rwHoldTick, TR_HOLD_DELAY) };
 });
 ['pointerup','pointercancel','pointerleave'].forEach(ev =>
