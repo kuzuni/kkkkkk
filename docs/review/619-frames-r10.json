@@ -1,0 +1,170 @@
+[
+ {
+  "scene": "train",
+  "frame": 0,
+  "ms": -1,
+  "file": "619-train-r10-f0.png",
+  "note": "누르기 전(대조)"
+ },
+ {
+  "scene": "train",
+  "frame": 1,
+  "ms": 92,
+  "file": "619-train-r10-f1.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "train",
+  "frame": 2,
+  "ms": 542,
+  "file": "619-train-r10-f2.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "train",
+  "frame": 3,
+  "ms": 909,
+  "file": "619-train-r10-f3.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "train",
+  "frame": 4,
+  "ms": 1283,
+  "file": "619-train-r10-f4.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "train",
+  "frame": 5,
+  "ms": 1678,
+  "file": "619-train-r10-f5.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "train",
+  "frame": 6,
+  "ms": 2056,
+  "file": "619-train-r10-f6.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "train",
+  "frame": 7,
+  "ms": 2451,
+  "file": "619-train-r10-f7.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "rune",
+  "frame": 0,
+  "ms": -1,
+  "file": "619-rune-r10-f0.png",
+  "note": "누르기 전(대조)"
+ },
+ {
+  "scene": "rune",
+  "frame": 1,
+  "ms": 91,
+  "file": "619-rune-r10-f1.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "rune",
+  "frame": 2,
+  "ms": 542,
+  "file": "619-rune-r10-f2.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "rune",
+  "frame": 3,
+  "ms": 933,
+  "file": "619-rune-r10-f3.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "rune",
+  "frame": 4,
+  "ms": 1381,
+  "file": "619-rune-r10-f4.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "rune",
+  "frame": 5,
+  "ms": 1863,
+  "file": "619-rune-r10-f5.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "rune",
+  "frame": 6,
+  "ms": 2266,
+  "file": "619-rune-r10-f6.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "rune",
+  "frame": 7,
+  "ms": 2736,
+  "file": "619-rune-r10-f7.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "temper",
+  "frame": 0,
+  "ms": -1,
+  "file": "619-temper-r10-f0.png",
+  "note": "누르기 전(대조)"
+ },
+ {
+  "scene": "temper",
+  "frame": 1,
+  "ms": 91,
+  "file": "619-temper-r10-f1.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "temper",
+  "frame": 2,
+  "ms": 426,
+  "file": "619-temper-r10-f2.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "temper",
+  "frame": 3,
+  "ms": 823,
+  "file": "619-temper-r10-f3.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "temper",
+  "frame": 4,
+  "ms": 1200,
+  "file": "619-temper-r10-f4.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "temper",
+  "frame": 5,
+  "ms": 1572,
+  "file": "619-temper-r10-f5.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "temper",
+  "frame": 6,
+  "ms": 1967,
+  "file": "619-temper-r10-f6.png",
+  "note": "홀드 중"
+ },
+ {
+  "scene": "temper",
+  "frame": 7,
+  "ms": 2342,
+  "file": "619-temper-r10-f7.png",
+  "note": "홀드 중"
+ }
+]
