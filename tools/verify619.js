@@ -263,6 +263,172 @@ async function hold(page, sp, opt) {
        d ? '시도 ' + d.tries + '회' : 'n/a');
   }
 
+  /* ── [K] 16회차 — 배지 keep-out ──────────────────────────────────────
+     15회차 채점에서 두 비평가(EJ·EK)가 **독립으로 같은 진단**을 냈다: 회당 플래시가 훈련 카드
+     알림 배지를 덮어 지운다(붉은 픽셀 보존 −45.7%). 그리고 둘 다 «상자를 안으로 들여서는 못 닫는
+     자리» 라고 못박았다 — 배지가 카드 footprint **안쪽**에 앉아 있어 상자를 들이면 흰 밴드가
+     오히려 배지 쪽으로 다가오기 때문이다.
+     ⇒ 16회차 처방은 «배지를 플래시 «위에» 다시 그린다»(`fxFlashKeep`). 이 절이 그것을 못박는다.
+     ⚠ K3 가 이 절의 본체다 — 되돌림이 없으면 «배지가 원래 안 지워졌을 뿐» 인 헛초록과 못 가른다. */
+  console.log('\n[K] 16회차 — 회당 플래시가 알림 배지를 덮지 않는다(keep-out)');
+  /* ⚠ **이 절은 맨 뒤에 두고 페이지를 새로 연다.** K 는 훈련 카드를 세 번 더 홀드하는데, 그러면
+     훈련 단계 상한에 먼저 닿아 **뒤에 오는 [R2] 가 «살 것이 없어» 0/0 으로 빨개졌다**(3회 중 2회).
+     자가 자를 방해한 것이라 순서를 바꾸고 상태를 다시 깐다 — [B]~[R] 은 내 변경 전과 **같은 상태**에서
+     돌고, K 는 K 대로 깨끗한 세이브에서 돈다. */
+
+  {
+    /* 홀드 중 «배지를 덮는 keep-out 패치가 실제로 섰는가» 를 센다. 배지는 `.tr-card>.dot` 이고,
+       패치는 `#fxl` 안 `.fx-keep` 이다 — 패치가 배지 bbox 를 **품어야** 덮은 것이다. */
+    let killKeep = false;
+    /* ⚠⚠ **세이브를 «리로드 전에» 지우면 안 된다(363 교훈).** 게임은 `beforeunload → save()` 라
+       `localStorage.clear()` 뒤에 리로드하면 **떠나는 길에 그 키가 되살아난다** — 앞 회차에서 상한까지
+       올려 둔 훈련 단계가 그대로 돌아와 홀드가 한 번도 안 먹고, 되돌림 절(K4)이 요구하는 «패치 0» 과
+       «홀드가 안 먹어서 0» 이 구분되지 않는다(K5 가 실제로 0/0 으로 빨갰다).
+       ⇒ **새 문서가 뜨기 전**에 지운다 — `addInitScript` 는 페이지 스크립트보다 먼저 도므로
+         게임은 매번 «세이브 없는» 상태에서 부팅한다. */
+    await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    /* ⚠ **매 회 페이지를 새로 연다.** 한 페이지에서 훈련 카드를 세 번 홀드하면 **단계 상한**에 닿아
+       뒤 회차가 «살 것이 없어» 0/0 으로 빨개진다(K5 가 실제로 그랬다 — 자가 자를 방해한 것이다).
+       되돌림 시험(K4)이 «패치가 0» 을 요구하는 절이라, «홀드가 안 먹어서 0» 과 반드시 갈라야 한다. */
+    const keepRun = async (tab, sel) => {
+      await page.reload();
+      await page.waitForFunction(() => typeof S !== 'undefined' && typeof openTrain === 'function');
+      await page.waitForTimeout(700);
+      await page.evaluate(() => {
+        const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
+        S.gold = 1e18; S.dia = 1e9; S.rstone = 1e9; S.tstone = 1e9;
+        if (S.temper) S.temper.pts = 1e6;
+        openTrain();
+      });
+      await page.waitForTimeout(400);
+      if (killKeep) await page.evaluate(() => { window.fxFlashKeep = () => []; });
+      await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, tab);
+      await page.waitForTimeout(420);
+      const r = await page.evaluate(s => { const e = document.querySelector(s);
+        const b = e.getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, sel);
+      /* 배지 창 = 배지 bbox + 사방 24px. 대조(누르기 전) 붉은 픽셀을 먼저 센다. */
+      /* ⚠ 창은 **배지 주변**이 아니라 **카드 전체 + 40px** 다. 배지 창(bbox+24)으로 좁게 잡았더니
+         홀드 중 카드가 621 왕복으로 흔들려 배지가 **창 밖으로 나가는** 프레임이 생겼고, 그것이
+         «붉은 픽셀 3.7%» 라는 헛빨강으로 읽혔다(실행마다 뒤집혔다). 카드 안 붉은 원반은 배지
+         하나뿐이라 창을 넓혀도 세는 대상은 안 바뀐다(probe619e ⓘ 와 같은 처리). */
+      const win = await page.evaluate(() => { const c = document.querySelector('#trCards [data-tr]');
+        if (!c) return null; const b = c.getBoundingClientRect();
+        const x = Math.max(0, Math.round(b.x) - 40), y = Math.max(0, Math.round(b.y) - 40);
+        return { x, y, width: Math.min(1080 - x, Math.round(b.width) + 80),
+                 height: Math.min(2280 - y, Math.round(b.height) + 80) }; });
+      const reds = async () => { if (!win) return 0;
+        const png = 'data:image/png;base64,' + (await page.screenshot({ clip: win })).toString('base64');
+        return page.evaluate(async src => {
+          const im = await new Promise(z => { const i = new Image(); i.onload = () => z(i); i.src = src; });
+          const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+          const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
+          const D = x.getImageData(0, 0, im.width, im.height).data;
+          let n = 0;
+          /* probe619e ⓘ 와 **같은 판정** — «붉다» 를 r−g 차로만 물으면 앰버 글로우(255,186,54)가
+             통째로 걸려 «보존 121%» 라는 헛수가 나온다. 배지 원반은 G·B 가 둘 다 낮다. */
+          for (let i = 0; i < D.length; i += 4) if (D[i] > 150 && D[i + 1] < 90 && D[i + 2] < 90) n++;
+          return n; }, png); };
+      const red0 = await reds();
+      await page.mouse.move(r.x, r.y);
+      await page.mouse.down();
+      /* ⚠ **«최저 한 프레임» 이 아니라 «성한 프레임의 비율» 로 묻는다.** keep-out 이 책임지는 것은
+         **회당 플래시**가 배지를 덮지 않는 것인데, 최저값으로 물으면 지나가는 **화폐 알갱이**
+         (`fx-spd` — 잉크 지름 115.5px)가 배지를 스치는 한 프레임에 통째로 뒤집힌다(실행마다
+         7~9% ↔ 97% 로 갈렸다). 알갱이 가림은 축이 다르고(회차 기록 §17 로 넘겼다) 상시가 아니다.
+         ⇒ 6번 찍어 «보존 ≥90% 인 표본의 비율» 을 쓴다. 수리 전에는 플래시가 **모든** 틱에서 덮으므로
+           그 비율이 0 이고(probe619e 최저 4.44%), 수리 후에는 알갱이가 스친 한둘만 빠진다. */
+      let redMin = Infinity, redOkN = 0, redN = 0;
+      const sampler = (async () => { for (let i = 0; i < 6; i++) {
+        await page.waitForTimeout(160); const q = await reds();
+        if (red0 > 0) { redN++; const f = q / red0;
+          redMin = Math.min(redMin, f); if (f >= 0.9) redOkN++; } } })();
+      const out = await page.evaluate(async () => {
+        const L = document.getElementById('fxl');
+        /* ⚠ **배지는 매 프레임 다시 찾는다.** `renderTrain()` 이 홀드 중에도 카드를 다시 그리므로
+           («강화 가능» 조건이 바뀌면 `.dot` 자체가 붙었다 떨어진다) 참조를 잡아 두면 **떼어진 노드**의
+           rect(0,0,0,0)를 재게 되어 «중심 어긋남 20px» 같은 헛수가 나온다. 배지가 없는 프레임은
+           지킬 것이 없는 프레임이므로 **표본에서 뺀다**(0 을 통과로도 실패로도 세지 않는다). */
+        const DOT = () => document.querySelector('#trCards [data-tr] .dot');
+        let frames = 0, withKeep = 0, cover = 0, flashOnly = 0, maxD = 0, dotFrames = 0;
+        for (let i = 0; i < 14; i++) {
+          await new Promise(z => setTimeout(z, 90));
+          frames++;
+          const keeps = [...L.querySelectorAll('.fx-keep')];
+          if (L.querySelector('.fx-flash')) flashOnly++;
+          const dot = DOT();
+          if (!dot || !dot.isConnected) continue;
+          const d = dot.getBoundingClientRect();
+          if (!d.width) continue;
+          dotFrames++;
+          if (!keeps.length) continue;
+          withKeep++;
+          const dc = { x: d.x + d.width / 2, y: d.y + d.height / 2 };
+          let best = Infinity, bk = null;
+          for (const k of keeps) { const b = k.getBoundingClientRect();
+            const kc = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+            const q = Math.hypot(kc.x - dc.x, kc.y - dc.y);
+            if (q < best) { best = q; bk = b; } }
+          if (best > maxD) maxD = best;
+          /* 코어 = `.tr-card>.dot` 의 radial-gradient 반지름 15×16 (상자 42×42) — CSS 가 적어 둔 비다 */
+          const cw = d.width * (30 / 42) / 2, ch = d.height * (32 / 42) / 2;
+          if (bk && bk.left <= dc.x - cw && bk.right >= dc.x + cw
+                 && bk.top <= dc.y - ch && bk.bottom >= dc.y + ch) cover++;
+        }
+        return { frames, withKeep, cover, flashOnly, dotFrames, maxD: Math.round(maxD * 100) / 100 };
+      });
+      await sampler;
+      await page.mouse.up();
+      await page.waitForTimeout(350);
+      out.red0 = red0;
+      out.redMin = (redMin < Infinity) ? Math.round(redMin * 1000) / 10 : 0;
+      out.redKeep = redN ? redOkN / redN : 0;      /* «성한 프레임» 비율 */
+      return out;
+    };
+    const K = await keepRun('train', '#trCards [data-tr]');
+    ok(K.flashOnly > 0, 'K1 표본이 있다 — 홀드 동안 회당 플래시가 실제로 뜬다',
+       '플래시 프레임 ' + K.flashOnly + '/' + K.frames);
+    ok(K.withKeep > 0, 'K2 그 플래시와 같이 keep-out 패치가 선다', 'keep 프레임 ' + K.withKeep + '/' + K.frames);
+    ok(K.dotFrames >= 4, 'K2b 표본이 있다 — 배지가 실제로 떠 있는 프레임이 있다',
+       '배지 프레임 ' + K.dotFrames + '/' + K.frames);
+    /* ⚑⚑ **여기서부터는 rect 가 아니라 «찍힌 픽셀» 로 묻는다(350 규칙).**
+       rect 로 «패치가 배지를 품는가» 를 물었더니 66 표본 중 30 이 17~19px 어긋난 것으로 나왔는데,
+       **그것은 렌더 결과가 아니라 자의 읽는 순서 탓**이었다: `getBoundingClientRect` 는 애니메이션
+       중인 배지를 **지금 시각**으로 계산해 돌려주는 반면, 패치의 인라인 좌표는 **직전 rAF** 에 쓴 값이다.
+       브라우저는 rAF 를 전부 돌린 «뒤» 합성하므로 **실제로 찍히는 프레임에서는 둘이 같은 시각**이다
+       (probe619e 가 스크린샷으로 배지 보존 95.82% 를 찍어 그것을 못박는다).
+       ⇒ 두 비평가가 실제로 센 축(«배지 붉은 픽셀»)을 그대로 쓴다 — 자가 눈보다 엄격한 척하다가
+         **렌더에 없는 결함**을 잡는 일이 없어진다. */
+    ok(K.redKeep >= 0.66, 'K3 ★ 홀드 프레임의 2/3 이상에서 배지 **붉은 픽셀**이 보존된다(≥90%)',
+       '성한 표본 ' + Math.round(K.redKeep * 100) + '% · 최저 ' + K.redMin + '% · 대조 ' + K.red0 + 'px');
+    /* ★ 되돌림 — keep-out 을 무력화하면 패치가 사라지고 **배지가 다시 지워진다**.
+       이 항이 이 절의 본체다: 없으면 «배지가 원래 안 지워졌을 뿐» 인 헛초록과 못 가른다. */
+    killKeep = true;
+    const K0 = await keepRun('train', '#trCards [data-tr]');
+    killKeep = false;
+    ok(K0.flashOnly > 0 && K0.dotFrames >= 4 && K0.withKeep === 0 && K0.redKeep <= 0.33,
+       'K4 ★ 되돌림 — keep-out 을 무력화하면 패치가 사라지고 **붉은 픽셀이 무너진다**',
+       'keep ' + K0.withKeep + ' · 성한 표본 ' + Math.round(K0.redKeep * 100) + '% · 최저 ' + K0.redMin + '%');
+    /* 원복이 «자를 무르게 잡아서» 통과한 게 아님을 못박는다 — 같은 자로 다시 초록이어야 한다 */
+    const K2 = await keepRun('train', '#trCards [data-tr]');
+    ok(K2.dotFrames >= 4 && K2.withKeep > 0 && K2.redKeep >= 0.66,
+       'K5 원복하면 같은 자로 다시 초록',
+       'keep ' + K2.withKeep + ' · 성한 표본 ' + Math.round(K2.redKeep * 100) + '% · 최저 ' + K2.redMin + '%');
+    /* keep-out 은 `inset` 을 준 호출(= 619 회당 발화)에서만 돈다 — 단발 플래시는 한 값도 안 바뀐다.
+       ⚠ 이 항이 없으면 09·12·17·코스튬·장비의 단발 연출에 패치가 새로 끼는 회귀를 못 잡는다. */
+    const one = await page.evaluate(async () => {
+      const L = document.getElementById('fxl');
+      const card = document.querySelector('#trCards [data-tr]');
+      for (const nd of [...L.querySelectorAll('.fx-keep,.fx-flash')]) nd.remove();
+      fxFlash(card);                                  /* inset 없이 = 단발 호출 */
+      await new Promise(z => setTimeout(z, 60));
+      return { flash: L.querySelectorAll('.fx-flash').length, keep: L.querySelectorAll('.fx-keep').length };
+    });
+    ok(one.flash > 0 && one.keep === 0,
+       'K6 ★ `inset` 없는 단발 플래시에는 패치가 안 붙는다(09·12·17 불변)',
+       '플래시 ' + one.flash + ' · keep ' + one.keep);
+  }
+
+
   console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
   await browser.close();
   process.exit(fail ? 1 : 0);

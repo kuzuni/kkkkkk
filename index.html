@@ -37431,9 +37431,17 @@ function fxBurst(t, col, n, strict, iv){
 const FXKEEP_SEL = '.dot,.updot,.bdg,.nw';          /* 배지 부품 이름 — 13558 의 «같은 손맛» 목록과 같은 넷 */
 const FXKEEP_PAD = 4;                               /* 두 비평가가 같이 적은 여유(«원반 bbox + 4px») */
 /* 배지 원반을 플래시 «위에» 다시 그린다 — 되살린 노드 목록을 돌려준다(앞 장과 같이 걷히게). */
-function fxFlashKeep(el, host){
+function fxFlashKeep(el, host, owner){
   const L = fxL(), out = [];
   if(!L || !el || !el.querySelectorAll) return out;
+  /* ⚑⚑ **먼저 앞 패치를 전부 걷는다 — 625 가 플래시에 하는 것과 같은 «한 자리에 한 장» 이다.**
+     안 걷으면 앞 틱의 패치가 남아 **새 플래시 «밑» 에 깔린다**(실측 DOM 순서 `keep|flash|keep`).
+     깔린 패치는 배지를 못 지키므로 «패치는 있는데 배지는 지워진» 프레임이 나오고, 그것이 실행마다
+     배지 보존 6~9% ↔ 97% 로 뒤집히던 뿌리였다. 패치는 그리는 순서가 곧 위아래라 **살아 있는 장이
+     반드시 마지막**이어야 한다. 걷는 비용은 보통 1개다(틱마다 한 장). */
+  for(const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))){
+    try { nd.remove(); } catch(_){}
+  }
   for(const k of el.querySelectorAll(FXKEEP_SEL)){
     if(L.childElementCount >= FXMAX) break;
     let cs; try { cs = getComputedStyle(k); } catch(_){ continue; }
@@ -37444,10 +37452,32 @@ function fxFlashKeep(el, host){
                 r.y + r.h < host.y || r.y > host.y + host.h)) continue;
     const s = document.createElement('s');
     s.className = 'fx-keep';
-    s.style.left = (r.x - FXKEEP_PAD) + 'px'; s.style.top = (r.y - FXKEEP_PAD) + 'px';
-    s.style.width = (r.w + 2*FXKEEP_PAD) + 'px'; s.style.height = (r.h + 2*FXKEEP_PAD) + 'px';
     /* 그림은 배지 자신에게서 읽는다(손으로 베끼지 않는다 — 위 머리말) */
     s.style.background = cs.background; s.style.borderRadius = cs.borderRadius;
+    /* ⚑⚑ 16회차 — **패치는 배지를 «따라간다».** 자리를 한 번만 찍으면 안 되는 것이 실측으로
+       드러났다: 홀드 중 배지 중심이 패치에서 **최대 25.5px** 벗어나고 배지 폭도 39.5~45.6 사이를
+       오간다. 뿌리는 621(주인 지시 «틱마다 원래 크기 ↔ 눌린 크기 왕복»)이다 — 카드가 **틱마다**
+       크기를 오가는데 배지는 카드 우상단 코너라 그 배율차가 곧 큰 이동이 된다(중심에서 ~198px
+       떨어져 있어 배율 1% 가 2px 다). 정지 패치는 그래서 «배지를 덮는» 게 아니라 **엉뚱한 자리에
+       붉은 원반을 하나 더 그리는** 것이 된다 — 픽셀 «수» 로만 재면 초록으로 보이는 헛초록이다.
+       ⇒ 노드가 살아 있는 동안 rAF 로 자리를 다시 읽는다. 노드가 걷히면(`isConnected`) 저절로 멎어
+         타이머를 따로 걷을 것이 없다(41회차 퇴장 규약과 같은 꼴).
+       ⚠ 비용은 «살아 있는 패치 수 × 프레임» 인데 625 가 같은 자리의 앞 장을 걷으므로 보통 1개다. */
+    const put = () => { const q = fxRect(k); if(!q || !q.w) return;
+      s.style.left = (q.x - FXKEEP_PAD) + 'px'; s.style.top = (q.y - FXKEEP_PAD) + 'px';
+      s.style.width = (q.w + 2*FXKEEP_PAD) + 'px'; s.style.height = (q.h + 2*FXKEEP_PAD) + 'px'; };
+    put();
+    /* ⚠ **원본이 사라지면 패치도 죽는다.** 이 노드가 하는 일은 «저 배지를 다시 그린다» 하나뿐이라,
+       배지가 재렌더로 갈리면 패치는 «없는 것을 그리는 유령» 이 된다 — 그 자리에 새 배지가 다른
+       좌표로 서면 화면에 **붉은 원반이 둘** 이 된다(자가 실제로 중심 어긋남 20.19px 로 잡아냈다).
+       `fxRect` 가 null 을 돌려주는 순간(= 떼어진 노드)과 같은 조건이라 판정도 한 줄이다. */
+    /* ⚠ **수명은 플래시의 수명이다**(셋째 인자 `owner`). 패치가 하는 일은 «이 플래시가 덮는 동안
+       배지를 되살린다» 뿐이라, 플래시보다 오래 살면 덮을 것이 없는데 남아 있는 판때기가 된다 —
+       홀드 틱은 60~175ms 인데 `fxBye` 폴백은 500ms 라 실제로 다섯 겹까지 쌓였다. */
+    const follow = () => { if(!s.isConnected) return;
+      if(!k.isConnected || (owner && !owner.isConnected)){ try { s.remove(); } catch(_){} return; }
+      put(); requestAnimationFrame(follow); };
+    requestAnimationFrame(follow);
     L.appendChild(s); out.push(s);
   }
   return out;
@@ -37494,7 +37524,7 @@ function fxFlash(el, iv, inset){
   { const ms = fxTickLife(iv, FXFLASH_MS); if(ms !== FXFLASH_MS) d.style.animationDuration = ms + 'ms'; }
   L.appendChild(d);
   /* ⚑ 619 16회차 — 배지 keep-out(위 `fxFlashKeep` 머리말). 플래시 **뒤에** 붙어야 그 위에 그려진다. */
-  if(inset){ d.__fxKeep = fxFlashKeep(el, r); for(const kp of d.__fxKeep) fxBye(kp, 500); }
+  if(inset){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
   /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
      500 고정은 그래서 138ms 를 투명한 채 남긴다(p58au 실측 — 40차 «upg-5 플래시 1 → 0»). */
   fxBye(d, 500);                                      /* 애니메이션이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
