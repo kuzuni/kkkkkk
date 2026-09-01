@@ -35150,6 +35150,12 @@ let offPend = null;                         /* {sec, gold, dia} — 아직 안 �
 
 const hhmm = sec => Math.floor(sec/3600) + '시간 ' + Math.floor(sec%3600/60) + '분';
 
+/* 650 — «광고를 봐도 실효 이득이 0» 인가를 **한 곳에서만** 묻는다. 199 4회차(결손A)가 세운
+   문턱을 라벨(showOfflineReward)·클릭(ofrGet15)·가드(claimOffline) 셋이 같이 읽는다 —
+   같은 문턱을 세 곳에 손으로 적으면 402 의 «표 두 벌» 부패가 그대로 재발한다.
+   ⚠ 이 주석에 문턱 값을 **숫자로 다시 적지 마라** — 그 사본이 곧 402 다(`verify650` A1 이 센다). */
+const offNoGain = () => !!offPend && offPend.gain !== undefined && offPend.gain <= 1.0005;
+
 /* 보상을 계산해 팝업을 띄운다. mul 배를 곱해 지급한다. */
 function showOfflineReward(sec, gold, dia){
   offPend = { sec: sec, gold: gold, dia: dia, date: today() };
@@ -35161,9 +35167,16 @@ function showOfflineReward(sec, gold, dia){
   const room = Math.max(0, OFF_DAY_CAP_MIN - (S.daily.offMin || 0));
   const gain = sec >= 60 ? Math.min(1.5, room / (sec / 60)) : 1.5;
   offPend.gain = gain;
-  const b15 = $('ofrGet15'), noGain = gain <= 1.0005;
-  b15.querySelector('i').textContent = noGain ? '내일 다시' : gain < 1.4995 ? '×' + gain.toFixed(2) + ' 받기' : '1.5배 받기';
+  /* 650 처방 ⓑ — 이 상태의 라벨이 «내일 다시» 였다. 그런데 오늘 받을 것은 **남아 있다**
+     (같은 표를 [받기]로 누르면 그대로 지급된다 — `probe650` R4). 즉 손실이 아니라 유도 실패라
+     라벨이 거짓말을 하고 있었다. ⇒ 광고 이득이 0 이라는 사실만 말하고, 버튼은 «그냥 받기»(×1)로
+     동작한다(onclick 에서 `offNoGain()` 이 배수를 고른다). 지급식·계수는 한 줄도 안 건드린다.
+     ▶AD 뱃지는 같이 감춘다 — 광고를 태우지 않는 누름이라 뱃지가 남으면 그것이 새 거짓말이 된다
+     (`#app.noads .ofr-ad{display:none}` 와 같은 뜻의 두 번째 자리). */
+  const b15 = $('ofrGet15'), noGain = offNoGain();
+  b15.querySelector('i').textContent = noGain ? '광고 이득 없음' : gain < 1.4995 ? '×' + gain.toFixed(2) + ' 받기' : '1.5배 받기';
   b15.style.opacity = noGain ? .45 : '';
+  document.querySelector('#offw .ofr-ad').style.display = noGain ? 'none' : '';
   /* ⚑ 199 21회차 — 상한 줄이 말하는 것이 «1회 6h» 에서 **하루 예산**으로 바뀌었다(결3 ⓑ).
      이용권은 시간이 아니라 배율이므로 보유 시 그 배율을 같은 줄에 적는다(156 «표기·지급 한 벌»). */
   $('ofrMax').textContent = '최대 ' + Math.floor(OFF_DAY_CAP_MIN / 60) + '시간 0분'
@@ -35184,8 +35197,11 @@ function claimOffline(mul){
   if(offPend.date !== today() && offPend.at){
     const lt = offPend.at; closeOfflineReward(); dailyCheck(); offlineReward(lt); return;
   }
-  /* 199 4회차 결손A — 실효 이득 0 인 ×1.5 는 받지 않는다(광고만 보고 지급은 ×1 과 같아지는 상태) */
-  if(mul > 1 && offPend.gain !== undefined && offPend.gain <= 1.0005){
+  /* 199 4회차 결손A — 실효 이득 0 인 ×1.5 는 받지 않는다(광고만 보고 지급은 ×1 과 같아지는 상태).
+     650 — 이 가드는 «광고를 헛되이 태우지 않는다» 는 **불변식**이라 그대로 둔다. 다만 650 이후
+     버튼은 이 상태에서 애초에 ×1 로 부르므로(위 onclick) 이 자리는 UI 가 아니라 API 쪽 난간이다
+     — `probe650` §R R9 가 «직접 호출은 여전히 안 준다» 로 이 난간을 못박는다. */
+  if(mul > 1 && offNoGain()){
     fxToast('오늘 오프라인 보상 한도를 모두 받았어요'); return;
   }
   /* 199 3회차 — 하루 발행 예산(OFF_DAY_CAP_MIN)에서 이번 수령의 분 환산(배수 포함)을 꺼내 쓴다.
@@ -39014,7 +39030,10 @@ loadAtlases(() => {
   /* 레퍼런스 팝업은 헤더에 ✕ 가 없다(22·07·06·03 전부). 대신 딤을 눌러도 닫히게 한다 */
   $('modal').onclick = e => { if(e.target === $('modal')) closeModal(); };
   $('ofrGet').onclick = () => claimOffline(1);
-  $('ofrGet15').onclick = () => claimOffline(1.5);
+  /* 650 처방 ⓑ — 실효 이득이 0 인 상태에서는 이 버튼이 «그냥 받기»(×1)다. 예전에는 ×1.5 로 불러
+     가드에 막혀 **아무것도 안 주고** 돌아갔고(하루 예산의 23.4% 가 통째로 버려졌다 — `probe650` R3),
+     라벨이 «내일 다시» 라 유저는 오늘 받을 것이 남았다는 것을 읽을 수도 없었다. */
+  $('ofrGet15').onclick = () => claimOffline(offNoGain() ? 1 : 1.5);
   /* 작업 68 — 구버전 패널 상점 대신 10 상점 페이지를 연다(이 [이동] 이 파란 구 UI 로 떨어지던 버그)
      164 — 그런데 그 [이동] 은 바로 위 «오프라인 보상 최대 시간 4시간 증가» 홍보(.ofr-t1/.ofr-t2)의
      버튼이다. 파는 곳은 **이용권 탭**(124 신설 · 151 이 그 탭에 «+4시간» 카드를 넣는다)인데
