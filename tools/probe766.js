@@ -62,7 +62,9 @@ async function observe(browser, scene, waitMs) {
   const r = await page.evaluate(({ scene }) => {
     S.stage = 20; S.eqSkill = ['slash']; markDirty();
     /* 장면을 잡기 **직전**의 부팅 상태 — 옛 장면에서 값을 정하는 것이 이것이다 */
-    const pre = { en: enemies.length, q: spawnQ.length, killed: (typeof killed !== 'undefined' ? killed : -1) };
+    const pre = { en: enemies.length, q: spawnQ.length, killed: (typeof killed !== 'undefined' ? killed : -1),
+                  /* 779 — 파도 정원은 **제품에서 읽는다**(아래 [2] 가 손 상수 50 을 안 쓰게) */
+                  pop: (typeof ENEMY_COUNT !== 'undefined' ? ENEMY_COUNT : -1) };
     if (scene === 'new') spawnStage(); else enemies.length = 0;
     const cnt = [], snaps = [], kind = {};
     const SNAP_AT = [15, 30, 45].map(t => t * 60);
@@ -121,9 +123,25 @@ async function observe(browser, scene, waitMs) {
      '1 옛 장면의 값은 [A2] 상한에 **붙어 산다** — 그래서 실행마다 갈린다(등재문 재현)',
      '중앙값 ' + old.map(r => r.nMed).join(',') + ' (상한 ' + band.hi + ') · 최소 여유 ' + mgOld5
      + ' · 이번 ' + K + '회 중 밴드 밖 ' + oldOut.length + '회');
-  ok(old.every(r => r.pre.en + r.pre.q === 50) && old.some(r => r.pre.q > 0),
-     '2 옛 장면의 시작점은 **부팅 파도가 반쯤 나온 상태**다(en + q = 50 · q > 0)',
-     old.map(r => r.pre.en + '+' + r.pre.q).join(' · '));
+  /* ⚑ 779 — 이 항의 전칭은 `en + q === 50` 이었고 **4회 중 1회 빨갰다**(등재 실측 `30+19` = 49).
+     50 은 «부팅 파도 정원» 으로 맞는 수지만, 그 등식이 성립하는 것은 **첫 킬이 나기 전까지**다 —
+     `waitForTimeout(500)` 창 안에서 한 마리라도 죽으면 곧바로 깨진다(`probe779` [1]·[2]:
+     첫 킬 중앙값 ~790ms · 최소 여유 132ms ⇒ 500ms 는 그 분포의 **어깨 위**다. 시계가 흔들리면
+     단언도 같이 흔들리는 자리이고, 문턱을 다시 뽑는 길은 695·759·766·775 가 네 번 기각했다).
+     ⇒ **킬을 셈에 넣어 항등식으로 다시 적는다** — 부팅 파도의 한 마리는 예외 없이
+     «판에 나왔거나(en) · 대기 큐에 남았거나(q) · 죽었거나(killed)» 셋 중 하나다
+     (`killEnemy` 가 잡몹을 지우는 **유일한 경로**이고 그 줄이 곧 `killed++` 다 — index.html 22837·22848).
+     ⚑ **뜻은 한 글자도 안 바뀌었다** — 이 항이 말하는 것은 여전히 «시작 위상이 부팅 파도 한복판이다»
+       이고, 그것을 지탱하는 `q > 0` 은 그대로 남아 있다(766 의 결론이라 자리를 비우면 안 된다 · 333).
+     ⚠ 정원도 손 상수가 아니라 제품의 `ENEMY_COUNT` 를 읽는다(자가 둘이 되면 한쪽만 늙는다 · 680).
+     ⚠ 무르게 푼 것이 아님은 `probe779` [R]([0] 과 한 벌)이 못박는다 — 부팅 파도에서 한 마리를
+       «죽이지 않고» 지우면 이 항등식은 곧바로 빨개진다. */
+  ok(old.every(r => r.pre.killed >= 0 && r.pre.pop > 0
+                    && r.pre.en + r.pre.q + r.pre.killed === r.pre.pop)
+     && old.some(r => r.pre.q > 0),
+     '2 옛 장면의 시작점은 **부팅 파도가 반쯤 나온 상태**다(en + q + killed = ENEMY_COUNT · q > 0)',
+     old.map(r => r.pre.en + '+' + r.pre.q + '+' + r.pre.killed).join(' · ')
+     + ' = ' + (old[0] ? old[0].pre.pop : '?'));
 
   /* ── [2] 새 장면 — 620 규약(`spawnStage()` + `killed` 고정) ────────────── */
   console.log('\n  [2] 새 장면(`spawnStage()` — 판을 통째로 되돌린다) × ' + K);
