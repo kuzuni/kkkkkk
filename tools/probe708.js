@@ -23,6 +23,10 @@ const { execFileSync, spawnSync } = require('child_process');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
+/* 731 — [2] 는 **일부러** 660 이 지운 `trDeltaTxt` 를 부른다(그것이 이 프로브의 과녁이다).
+   731 차단기에 미리 신고해 둔다 — 안 그러면 PASS 인 채로 종료 코드만 1 이 된다. */
+require('./evguard731').expect(/trDeltaTxt is not defined/);
+
 const ROOT = path.resolve(__dirname, '..');
 const BASE = '4757c0f';                 /* 708 착수 직전(= 수리 전) 커밋 — 고정 */
 
