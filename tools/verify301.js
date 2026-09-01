@@ -161,7 +161,11 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
       if (T.prog() < (i + 1) * T.step) break;
       if (!S.pass.got['stage:' + i + ':0']) { const r = passRw(i, 0); want[r.k] += r.n; n++; }
     }
-    return { gold: S.gold, dia: S.dia, relic: S.relic, want, n };
+    /* 647 — 기대 지급액 문자열을 제품의 표기 함수(`won`)에서 파생한다.
+       토스트는 `won(sum)`(29936 `toLocaleString('en-US')` = 쉼표 구분)으로 찍는데
+       옛 자는 `\+3797\b` 를 찾아 493 이 want.dia 를 4자리 위로 밀자 쉼표에서 갈렸다.
+       정규식을 넓혀 «지나가게» 만들면(334·643 규약 반려) 표기 규칙이 또 바뀔 때 재부패한다. */
+    return { gold: S.gold, dia: S.dia, relic: S.relic, want, n, diaTxt: won(want.dia) };
   });
   await page.click('#psAll');
   /* 493 이관(2026-08-31) — 토스트는 **클릭이 돌아온 직후**에 읽는다.
@@ -205,8 +209,11 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
      '[5] ★ 398 — 일괄 받기가 골드·유물조각은 한 톨도 안 준다',
      'Δgold ' + (after.gold - before.gold) + ' · Δrelic ' + (after.relic - before.relic));
   ok(after.savedGot === before.n, '[5] 세이브에 수령 기록 ' + before.n + '칸', String(after.savedGot));
-  ok(/일괄 받기/.test(toastLive) && new RegExp('\\+' + before.want.dia + '\\b').test(toastLive),
-     '[5] 토스트가 같은 사실을 말한다(156) — 문구 + 지급액 +' + before.want.dia,
+  /* 647 — 쉼표 구분자는 받되(diaTxt = 제품 `won` 출력), 뒤에 숫자가 더 붙으면(다른 액수) 빨개진다
+     = 옛 `\b` 의 경계 뜻을 유지한다. diaTxt 의 쉼표·숫자는 정규식 특수문자가 아니지만 방어적으로 escape. */
+  const diaRe = new RegExp('\\+' + before.diaTxt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?!\\d)');
+  ok(/일괄 받기/.test(toastLive) && diaRe.test(toastLive),
+     '[5] 토스트가 같은 사실을 말한다(156) — 문구 + 지급액 +' + before.diaTxt,
      toastLive.slice(0, 60));
 
   /* ── [6] 음성 — 전부 받으면 네 자리 모두 꺼진다 ── */
