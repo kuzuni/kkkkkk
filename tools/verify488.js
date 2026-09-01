@@ -463,13 +463,27 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     try { closeModal(); closeRelw(); } catch (_) {}
     S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 1e12;
     openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
-    /* 만든 시각을 노드에 적어 «나이 ↔ 애니 진행» 을 맞대게 한다 */
+    /* 만든 시각을 노드에 적는다.
+       ⚑⚑ 709 — **시계를 둘 적는다.** 4회차가 적어 둔 것은 `performance.now()` 하나였고, 그것을
+         애니메이션의 시계(`currentTime` = 타임라인 시계)와 맞대는 바람에 [J2] 가 «애니가 제때
+         시작하는가» 가 아니라 **두 시계의 위상차**를 같이 쟀다(`probe709` [3] — 실측 위상차 중앙
+         45.5ms · 최대 61.7 · 프레임 33.3). 러너가 바쁘면 제품이 한 줄도 안 바뀌어도 문턱 25 를 넘는다.
+       ⇒ 판정은 **타임라인 시계 하나로만** 한다: `born_tl` ↔ `animation.startTime`.
+         이 등식이 곧 488 4회차 처방 ⓐ 가 제품에 박아 둔 그 줄이다(index.html ~38807
+         `a.startTime = document.timeline.currentTime`). ⚠ `bornTl` 은 **반올림하지 않는다** —
+         새 축의 실측 폭이 0.0ms 라 반올림 잡음(±0.5)이 신호보다 크다. */
     if (!window.__hbBorn) {
       window.__hbBorn = true;
+      window.__j2rev = false;                     /* 709 [J2n] 되돌림 팔 스위치 */
       const of = window.hbFloat;
       window.hbFloat = function () { const r = of.apply(this, arguments);
         const L = document.getElementById('fxl'), n = L && L.lastElementChild;
-        if (n && /fx-plus/.test(n.className || '')) n.dataset.born = Math.round(performance.now());
+        if (n && /fx-plus/.test(n.className || '')) {
+          n.dataset.born = Math.round(performance.now());          /* 옛 축 — 기록만 */
+          n.dataset.bornTl = String(document.timeline.currentTime); /* 새 축 — 판정 */
+          /* [J2n] — 제품의 «시작 시각 못박기» 를 벗긴 수리 전 거동(«다음 스타일 플러시에 정해지게») */
+          if (window.__j2rev) { try { const a = n.getAnimations()[0]; if (a) a.startTime = null; } catch (_) {} }
+        }
         return r; };
     }
   });
@@ -485,6 +499,10 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
         return [...document.querySelectorAll('#fxl .fx-plus.hb')].map(n => {
           const a = n.getAnimations()[0];
           return { age: now - (+n.dataset.born || now), ct: a ? (a.currentTime || 0) : -1,
+                   /* 709 — 새 축의 두 값. `stTime` 이 null 이면 «아직 시작 시각이 안 정해졌다» 는 뜻이라
+                      그 자체가 결함이다(수리 전 거동) — 표본에서 빼지 말고 따로 센다. */
+                   stTime: a && a.startTime != null ? a.startTime : null,
+                   bornTl: +n.dataset.bornTl,
                    op: parseFloat(getComputedStyle(n).opacity), dn: /\bdn\b/.test(n.className) };
         });
       }));
@@ -522,8 +540,31 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   const streamMax = Math.max(...J.map(s => Math.max(s.filter(r => r.dn).length, s.filter(r => !r.dn).length)), 0);
   console.log('  · 표본 ' + Jf.length + ' · 나이−진행 중앙 ' + n1(lagMed) + 'ms(최대 ' + n1(lagMax) + ') · α=1 표본 ' + opaque + ' · 줄기당 최대 ' + streamMax + '장 · 꼬리 표본 ' + TAIL.length + '(>200ms ' + tailLate + ')');
   ok(Jf.length >= 8, '[J1] 표본이 충분하다(홀드 중 동시 생존 플로터)', Jf.length + '개');
-  ok(lagMed <= 25, '[J2] ★ 애니메이션이 «만든 그 순간» 시작한다 — 나이와 진행의 차(중앙값) ≤ 25ms',
-     n1(lagMed) + 'ms · 최대 ' + n1(lagMax) + ' (3회차엔 86~131ms 였다)');
+  /* ⚑⚑ 709 — **[J2] 의 축을 옮겼다(뜻 유지 · 시계 통일 · 문턱은 «내린» 것이 아니라 다른 자다).**
+     옛 판정 `|나이 − 진행| 중앙값 ≤ 25ms` 는 문턱에 붙어 흔들렸다(등재문: 6회 중 1회 빨강 · 중앙 27ms).
+     `tools/probe709.js` 가 그 값을 세 항으로 갈랐다 — `lag = ⟨A_snap⟩ − ⟨A_birth⟩ + ⟨B⟩`:
+       ⟨A⟩ = `performance.now() − document.timeline.currentTime` = «마지막 프레임이 시작된 뒤 흐른 시간».
+             실측 중앙 **45.5ms · 최대 61.7**(프레임 33.3ms) — 태어남과 스냅숏이 서로 무관한 위상이라
+             그 **차가 통째로 잡음**이고, 그 폭이 문턱 25 보다 크다. 부하가 걸리면 프레임이 늘어(최대 83.3)
+             그대로 빨개진다 — 실제로 CPU 6줄을 걸고 돌리니 3회 중 1회 중앙 28ms 로 빨강이었다.
+       ⟨B⟩ = `animation.startTime − born_tl` = 이 항이 재려던 **바로 그것**이고, 두 값이 같은 타임라인
+             시계라 위상이 안 낀다. 실측 **0.0ms(24표본 전부 · 회차 간 폭 0.0)**.
+     ⇒ 판정을 ⟨B⟩ 로 옮긴다. **문턱 8ms 는 «잰 값» 에서 왔다**(504-④): 정상은 0.0, 되돌린 사본은
+       한 프레임(16.7~33.3ms) 또는 «startTime 미정» 이라 8 은 빈 띠 한복판이다.
+     ⚠ 무르게 푼 것이 아님은 **[J2n] 되돌림 시험**이 못박는다 — 제품의 그 한 줄을 벗기면 빨개진다.
+     ⚠ 문턱을 25 → 더 큰 값으로 늘리는 처방은 334 가 기각한 ② 와 같은 꼴이라 쓰지 않았다
+       (늘리면 «애니가 한 프레임 늦게 시작해도 초록» 이 되어 3회차 결함을 다시 못 잡는다). */
+  const Jb = Jf.filter(r => Number.isFinite(r.bornTl));
+  const j2NoStart = Jb.filter(r => r.stTime == null).length;
+  const j2 = Jb.filter(r => r.stTime != null).map(r => Math.abs(r.stTime - r.bornTl)).sort((a, b) => a - b);
+  const j2Med = j2.length ? j2[Math.floor(j2.length / 2)] : Infinity,
+        j2Max = j2.length ? j2[j2.length - 1] : Infinity;
+  ok(j2NoStart === 0 && j2Med <= 8,
+     '[J2] ★ 애니메이션이 «만든 그 순간» 시작한다 — 시작 시각 ↔ 만든 시각(타임라인 시계 하나로) 중앙값 ≤ 8ms',
+     n1(j2Med) + 'ms · 최대 ' + n1(j2Max) + ' · 시작 시각 미정 ' + j2NoStart + '장 / ' + Jb.length +
+     ' (709: 옛 축은 두 시계의 위상차를 같이 쟀다)');
+  console.log('  · (기록만 · 709) 옛 축 «나이 − 진행» 중앙 ' + n1(lagMed) + 'ms(최대 ' + n1(lagMax) +
+    ') — 두 시계 위상차(실측 ±한 프레임)가 섞인 값이라 판정에서 뺐다. 3회차 결함 때는 86~131ms 였다');
   /* ⚑ 630 — **[J3] 을 갈아 끼웠다(뜻 유지 · 자리 이동 · 임계 200 불변).**
      옛 [J3] 은 «홀드 중 스냅숏에 ct>200 표본이 있다» 였는데, 그 자보다 뒤에 들어온 설계가 뜻을 뒤집었다
      (LESSONS 627-③ 꼴) — 619 8회차 «줄기당 동시 생존 상한 2» 가 3장째 스폰에서 가장 오래된 것을 걷으므로,
@@ -538,6 +579,37 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      [J3] 이동의 근거가 무너졌음을 알린다. */
   ok(streamMax <= 2 && streamMax > 0, '[J3b] ★ 홀드 중 줄기당 동시 생존 ≤ 2 — 619 8회차 상한(3장째가 뜨면 가장 오래된 것을 걷는다)이 살아 있다', '최대 ' + streamMax + '장');
   console.log('  · (기록만 · 630) 옛 축 «홀드 중 ct>200 표본» ' + late + '개 — 위상 운에 걸려 판정에서 뺐다(0~2개로 흔들리던 자리)');
+
+  /* ⚑⚑ 709 [J2n] — **[J2] 새 축의 되돌림 시험.** 368·334 규약: 축을 옮겼으면 «옮긴 축이 여전히
+     결함을 잡는가» 를 같은 자 안에서 못박는다. 제품의 한 줄(index.html ~38807
+     `a.startTime = document.timeline.currentTime`)을 벗긴 수리 전 거동을 만들고 같은 축으로 잰다 —
+     그러면 시작 시각이 «다음 스타일 플러시» 로 밀려 ⟨B⟩ 가 한 프레임으로 뛰거나 아예 미정이 된다.
+     ⚠ 이 팔은 룬 확률이 0 으로 고정된 채라 레벨·재화를 안 건드린다(뒤 절의 상태 전제 불변). */
+  const J2N = await (async () => {
+    await p.evaluate(() => { window.__j2rev = true; });
+    const c3 = await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1');
+    if (!c3) return null;
+    const st3 = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c3.x, y: c3.y }] });
+    const t3 = Date.now(); const rr = [];
+    for (const t of [900, 1400]) {
+      while (Date.now() - t3 < t) await new Promise(r => setTimeout(r, 5));
+      rr.push(...await p.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')].map(n => {
+        const a = n.getAnimations()[0];
+        return { stTime: a && a.startTime != null ? a.startTime : null, bornTl: +n.dataset.bornTl };
+      })));
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await st3.catch(() => {});
+    await p.evaluate(() => { window.__j2rev = false; });
+    await p.waitForTimeout(400);
+    const b = rr.filter(r => Number.isFinite(r.bornTl));
+    const noSt = b.filter(r => r.stTime == null).length;
+    const v = b.filter(r => r.stTime != null).map(r => Math.abs(r.stTime - r.bornTl)).sort((a, x) => a - x);
+    return { n: b.length, noSt, med: v.length ? v[Math.floor(v.length / 2)] : Infinity };
+  })();
+  ok(!!J2N && J2N.n >= 4 && (J2N.noSt > 0 || J2N.med > 8),
+     '[J2n] ★ 되돌림 시험 — 제품의 «시작 시각 못박기» 를 벗기면 [J2] 가 빨개진다(새 축은 무르지 않다)',
+     J2N ? '표본 ' + J2N.n + ' · 시작 시각 미정 ' + J2N.noSt + '장 · 중앙 ' + n1(J2N.med) + 'ms > 8' : '표본 없음');
 
   /* ⚑ 574 — **[J4] 는 «표본의 α» 를 세던 자리였고, 그것이 재던 것은 설계가 아니라 «위상» 이었다.**
      옛 판정 `α=1 표본 / 전체 표본 ≥ 0.5` 는 문턱에 붙어 흔들렸다(등재문: 7회 중 2회 빨강 · 16/36 · 18/38).
