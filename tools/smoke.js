@@ -59,6 +59,21 @@ function report() {
   setTimeout(() => process.exit(code), 5000).unref();
 }
 
+/* 639 — 오프너 클릭은 «페이지 안에서» 한다.
+   `page.click` 은 셀렉터 resolve → 액션어빌리티 → 히트테스트 → 입력 디스패치로 렌더러를 여러 번
+   왕복하는데, 89 유물 페이지는 부하 아래에서 **1.5fps** 라 그 왕복 하나하나가 프레임을 기다린다.
+   ⚑ **«아직 안 그려졌다» 가 아니다** — `probe639` 가 죽는 순간을 찍어 보니 노드는 그때도
+   attached · visible · 상자 254×49 · pointer-events auto 였다. 굶은 것은 왕복이지 렌더가 아니다.
+   그래서 처방 ⓑ(타임아웃만 올리기)는 뿌리가 아니다 — 멈춤이 길어지면 새 상한도 같이 넘는다.
+   이 파일의 다른 오프너 열 곳이 이미 같은 이유로 페이지 안 클릭이다
+   (o.hero·o.dun·o.tr·o.cos·o.rel·o.prof·o.coll·o.quest·o.legal·o.shop — LESSONS 50-①).
+   ⚠ **«붙었는지» 는 그대로 기다린다** — 오프너가 통째로 사라진 것은 여전히 빨개야 한다.
+   그 대기만 `page.click` 의 3000 을 물려받지 않고 6000 을 쓴다(붙기는 렌더가 아니라 파싱이다). */
+async function clickIn(page, sel) {
+  await page.waitForSelector(sel, { state: 'attached', timeout: 6000 });
+  await page.$eval(sel, (el) => el.click());
+}
+
 async function fresh(browser, vw, vh) {
   const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -189,8 +204,12 @@ if (process.argv.includes('--selftest')) {
          새 화면이 재화 아이콘을 추가해도 여기 목록이 자동으로 늘어난다(작업 33). */
       const curs = await page.$$eval('[data-cur]', (els) => els.map((e) => e.dataset.cur)).catch(() => []);
       /* 89 — «유물조각» 알약은 #relw 페이지 안에만 있어 유물 탭을 먼저 연다(pre) */
+      /* 639 — `want` 는 «이 오프너를 누르면 무엇이 켜져야 하는가» 다. 페이지 안 클릭(clickIn)은
+         히트테스트를 안 거치므로, 이것이 없으면 «클릭은 던졌는데 아무것도 안 열린» 헛초록이
+         [2] 의 통과 조건(콘솔 에러 0 · NaN 문자열 0)을 그대로 통과한다.
+         세 오프너 전부 `#ciw` 를 연다는 것은 전수로 확인했다(gold·dia·relic 3/3). */
       [...new Set(curs)].forEach((c) => openers.push({ label: 'cur:' + c, sel: `[data-cur="${c}"]`,
-        pre: c === 'relic' ? '.tab[data-t="box"]' : null }));
+        pre: c === 'relic' ? '.tab[data-t="box"]' : null, want: '#ciw.on' }));
       /* 영웅 서브탭 (있으면) */
       const subs = await page.$$eval('#panel [id^="b"][class*="sub"], #panel .sub [data-sub], #panel .subtab', (els) => els.map((e) => e.id || e.dataset.sub || e.textContent.trim()).filter(Boolean)).catch(() => []);
       subs.forEach((s) => openers.push({ label: 'sub:' + s, sel: null, sub: s }));
@@ -278,8 +297,8 @@ if (process.argv.includes('--selftest')) {
       const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       try {
         if (o.sel) {
-          if (o.pre) { await page.click(o.pre, { timeout: 3000, force: true }); await page.waitForTimeout(400); }
-          await page.click(o.sel, { timeout: 3000, force: true });
+          if (o.pre) { await clickIn(page, o.pre); await page.waitForTimeout(400); }
+          await clickIn(page, o.sel);
         }
         else if (o.hero) {
           await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true });
@@ -365,6 +384,13 @@ if (process.argv.includes('--selftest')) {
           const el = await page.$(`#${o.sub}`); if (el) await el.click({ force: true });
         }
         await page.waitForTimeout(500);
+        /* 639 — 오프너가 «정말 열었는지». 부하에서 늦게 열릴 수 있으므로 한 번 더 기다려 준다.
+           ⚠ 이 항이 없으면 페이지 안 클릭이 삼켜져도 [2] 는 초록이다(아래 두 항은 «에러가 없다»
+           와 «NaN 이 없다» 라, «아무 일도 안 일어났다» 를 통과로 읽는다).
+           ⚠ 예산은 6000 이다(위 «붙었는지» 대기와 같은 값). 조이면 내가 방금 고친 병이
+           이 항으로 옮겨 붙는다 — 삼켜진 클릭은 **예산이 얼마든 영원히 안 열리므로** 넉넉해도 이빨은 안 빠진다. */
+        if (o.want) await page.waitForSelector(o.want, { timeout: 6000 })
+          .catch(() => { throw new Error(`클릭은 갔는데 ${o.want} 가 안 열렸다`); });
         const bt = await badText(page);
         if (errs.length) errs.forEach((e) => fail(`${o.label} 열 때 ${e}`));
         else if (bt) fail(`${o.label} 열었더니 화면 텍스트에 ${bt}`);
