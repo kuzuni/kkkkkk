@@ -10,8 +10,10 @@
  *
  * 절:
  *   §1 소스   — `.jz-dn` 이 정적 값이고 진폭(.94 / 8px)·램프 길이(.06s)가 그대로다 · 죽은 키프레임 0건
- *   §2 실동작 — 훈련 카드 홀드 1.2초 rAF 전수 표본: 램프 뒤 **전 프레임**이 누름 값을 든다
- *   §3 곱셈   — 맥박이 **죽지도 않았다**: 같은 프레임의 실측 폭이 rest × .94 × (1.00~1.02) 안이다
+ *   §2 실동작 — 훈련 카드 홀드 1.2초 rAF 전수 표본: 램프 뒤 누름 층이 **한 프레임도 안 사라진다**
+ *               (⚑ 621 이관 2026-09-01 — 옛 「전 프레임이 .94 를 든다」는 주인 지시로 폐기되고
+ *                «none 0장 + 듀티 ≥45%» 로 방향을 뒤집어 갈아 끼웠다. §2 본문 주석 참조)
+ *   §3 곱셈   — 맥박이 **죽지도 않았다**: 맥박 층(폭 ÷ 그 프레임의 누름 값)이 1.00~1.02 안이다
  *   §4 뗌     — `jz-up` 프레임의 승자가 전부 `jzUp` 이고 오버슈트(>1.0)가 실제로 찍힌다
  *   §5 대조   — «누른 것 ≠ 호스트»(룬 [강화] 버튼)는 수리 전에도 100% 였다 = 이 자는 겹침만 본다
  *   §R 되돌림 — ⓐ 정적 값 → `animation` 사본에서 §2 가 빨개진다
@@ -130,7 +132,15 @@ function duty(run) {
      둘 다 `transform` 을 쓰므로 팝이 도는 동안의 폭 변화는 맥박의 것이 아니다(1회차에 이것 때문에
      되돌림 항 [R-c] 이 «맥박을 죽였는데도» 0.054 로 흔들렸다). */
   const hbPure = hb.filter(r => !/(^| )fx-hit( |$)/.test(r.cls));
-  return { dn, hb, hbPure, down, hbDown: hb.filter(isDown), cls,
+  /* ⚑ 621 이관 — «누름 층이 통째로 빠진 프레임» 이 579 가 잡던 병의 **서명**이다(캐스케이드에 지면
+     `getComputedStyle(el).scale` 이 `none` 이 된다). 값 자체는 621 이 틱마다 1 ↔ .94 로 왕복시키므로
+     «전 프레임이 .94 를 든다» 는 더 이상 참일 수 없다 — 그 자리를 이 축이 잇는다. */
+  /* ⚠ 창을 «도착 뒤» 가 아니라 **`jz-dn` 이 붙은 전 구간**으로 잡는다 — 621 의 왕복(WAAPI)이
+     첫 반복 틱부터 누름 층을 대신 몰기 때문에, «도착» 앵커 뒤만 보면 병이 사는 구간
+     (첫 발 ~ 첫 틱, 아직 왕복이 없는 350ms)을 통째로 건너뛴다([R-a] 가 실제로 그렇게 헛초록이 됐다). */
+  const gone = cls.filter(r => !r.sc || r.sc === 'none');
+  const hbGone = hb.filter(r => !r.sc || r.sc === 'none');
+  return { dn, hb, hbPure, down, hbDown: hb.filter(isDown), cls, gone, hbGone,
            arrived: !!arr, lag: arr ? arr.t - t0 : -1, lagN: ai,
            pct: dn.length ? down.length / dn.length * 100 : 0 };
 }
@@ -187,24 +197,38 @@ function spring(run) {
          + Math.max(4, Math.floor(d.cls.length * ARRIVE_FRAC)) + '장' : '한 장도 도착 안 함');
     ok(d.dn.length >= 10, '[2-a] 전제 — 도착 뒤 표본이 10장 이상이다', d.dn.length + '장');
     ok(d.hb.length >= 5, '[2-b] 전제 — 그중 상당수에 488 맥박이 실제로 겹친다', d.hb.length + '장');
-    ok(d.pct >= 99, '[2-c] ★★ 도착 뒤 **전 프레임**이 누름 값(scale .94)을 든다 — 수리 전 4.8~27.3%',
+    /* ⚑ 621 이관(2026-09-01) — 주인 지시로 **누름이 «유지» 가 아니라 «틱마다 왕복» 이 됐다**
+       («원래 크기로 돌아오고 누른크기 되고를 반복해야함»). 옛 [2-c] 「도착 뒤 전 프레임이 .94 를 든다」는
+       그 지시와 정면이라 **지우지 않고 방향을 뒤집어 갈아 끼웠다**(333 처방):
+         · 579 가 실제로 잡던 병 = «누름 층이 맥박에 져서 통째로 사라진다»(computed `scale` 이 `none`)
+           ⇒ [2-c] 는 그 서명을 직접 센다 — `none` 프레임 **0장**. 왕복이 있어도 이 축은 안 흔들린다.
+         · 눌림이 «살아 있는가» 의 양성항은 듀티로 남긴다 — 수리 전 4.8~27.3% ↔ 621 이후 실측 60~70%
+           이라 45% 문턱이 둘을 여전히 가른다(되돌림 [R-a] 가 그것을 못박는다). */
+    ok(d.gone.length === 0, '[2-c] ★★ `jz-dn` 이 붙은 **전 프레임**에서 누름 층이 산다(`scale:none` = 맥박에 진 서명)',
+       d.gone.length + '/' + d.cls.length + '장이 none');
+    ok(d.pct >= 45, '[2-c2] ★★ 누름 값(≤.96)을 든 프레임이 다수다 — 수리 전 4.8~27.3% · 621 왕복 뒤 60~70%',
        p2(d.pct) + '% (' + d.down.length + '/' + d.dn.length + ')');
-    ok(d.hb.length ? d.hbDown.length === d.hb.length : false,
-       '[2-d] ★★ 맥박이 겹친 프레임도 **한 장도 안 빠진다**(수리 전 0/13~19)',
-       d.hbDown.length + '/' + d.hb.length);
+    ok(d.hb.length ? d.hbGone.length === 0 : false,
+       '[2-d] ★★ 맥박이 겹친 프레임도 누름 층을 든다(수리 전 13~19장 전부 none)',
+       (d.hb.length - d.hbGone.length) + '/' + d.hb.length);
 
     console.log('\n§3 곱셈 — 맥박도 같이 산다(누름만 살리고 맥박을 죽이면 안 된다)');
-    const ratios = d.hbPure.map(r => r.w / restW);
-    const lo = Math.min(...ratios), hi = Math.max(...ratios);
+    /* ⚑ 621 이관 — 폭은 **두 층의 곱**이고 621 이 아래층(누름)을 틱마다 움직이게 했으므로
+       폭을 그대로 재면 맥박이 죽어도 진폭이 0.06 으로 커진다([R-c] 가 실제로 그렇게 헛초록이 됐다).
+       ⇒ 그 프레임의 누름 값(computed `scale`)으로 **나눠서** 맥박 층만 남긴다. 뜻은 그대로 —
+       «맥박이 1.00~1.02 사이에서 실제로 뛴다». 맥박을 죽이면 이 값이 1.000 에 굳어 [R-c] 가 다시 빨갛다. */
+    const ratios = d.hbPure.filter(r => r.sc && r.sc !== 'none')
+                           .map(r => (r.w / restW) / parseFloat(r.sc));
+    const lo = ratios.length ? Math.min(...ratios) : 0, hi = ratios.length ? Math.max(...ratios) : 0;
     ok(d.hbPure.length >= 5, '[3-0] 전제 — 팝(`fx-hit`)이 안 겹친 맥박 프레임이 5장 이상이다',
        d.hbPure.length + '/' + d.hb.length + '장');
-    /* 맥박은 0% 에 1.02 로 시작해 100% 에 1 로 붙는다 ⇒ 곱한 폭 비는 .94 ~ .9588 사이를 오간다.
-       ⚠ 위쪽 여유 0.002 는 렌더 반올림 몫이다 — 넓히지 마라(맥박이 죽으면 폭이 .94 에 굳는다). */
-    ok(lo >= 0.935 && hi <= 0.961,
-       '[3-a] 맥박 프레임의 실측 폭이 rest × .94 × (1.00~1.02) 안이다',
+    /* 맥박은 0% 에 1.02 로 시작해 100% 에 1 로 붙는다 ⇒ 누름 층을 나눈 값이 1.000 ~ 1.02 를 오간다.
+       ⚠ 여유 0.002 는 렌더 반올림 몫이다 — 넓히지 마라(맥박이 죽으면 이 값이 1.000 에 굳는다). */
+    ok(lo >= 0.996 && hi <= 1.022,
+       '[3-a] 맥박 층(폭 ÷ 그 프레임의 누름 값)이 1.00~1.02 안이다',
        'rest ' + p2(restW) + 'px · ×' + p4(lo) + ' ~ ×' + p4(hi));
     ok(hi - lo >= 0.004,
-       '[3-b] ★ 그 안에서 **실제로 뛴다** — 맥박이 살아 있다는 증거(폭이 .94 에 굳으면 빨강)',
+       '[3-b] ★ 그 안에서 **실제로 뛴다** — 맥박이 살아 있다는 증거(1.000 에 굳으면 빨강)',
        '진폭 ' + p4(hi - lo) + ' (≥ 0.004)');
 
     console.log('\n§4 뗌 — 스프링이 맥박에 안 진다');
@@ -229,8 +253,10 @@ function spring(run) {
   if (!runR) ok(false, '[5-0] 룬 [강화] 버튼 표본을 못 얻었다');
   else {
     const d = duty(runR);
-    ok(d.pct >= 99, '[5-a] 대조군은 그대로 100% — 이 자는 «겹치는 자리» 만 본다',
-       p2(d.pct) + '% (' + d.down.length + '/' + d.dn.length + ')');
+    /* 621 이관 — 대조군도 같은 홀드 부품이라 이제 왕복한다(`rtHoldTick` → `jzPressTick`).
+       이 절이 지키는 뜻은 «겹침이 없는 자리에서는 누름 층이 한 번도 안 사라진다» 다. */
+    ok(d.gone.length === 0, '[5-a] 대조군은 누름 층이 한 프레임도 안 사라진다(맥박이 안 겹치는 자리)',
+       d.gone.length + '/' + d.cls.length + '장이 none · 듀티 ' + p2(d.pct) + '%');
     ok(d.hb.length === 0, '[5-b] 그 버튼에는 맥박이 안 붙는다(맥박 호스트는 카드 `.tr-rn`)', d.hb.length + '장');
   }
   ok(c1.errs.length === 0, '[5-Z] 실행 중 콘솔 에러 0', c1.errs.slice(0, 2).join(' | '));
@@ -246,8 +272,12 @@ function spring(run) {
       check: async page => {
         const r = await hold(page, '#trCards [data-tr]', 1200);
         const d = duty(r);
-        return { red: d.pct < 60, why: '누름 듀티 ' + p2(d.pct) + '% · 맥박 프레임 '
-          + d.hbDown.length + '/' + d.hb.length + '장만 눌림' };
+        /* 621 이관 — 되돌린 사본의 서명은 «듀티가 낮다» 가 아니라 «누름 층이 사라진다» 다.
+           621 의 왕복(WAAPI)이 애니메이션 오리진에서 CSS 애니를 이기므로 듀티만으로는 안 갈린다 —
+           갈리는 것은 왕복이 아직 없는 첫 발 구간의 맥박 프레임이고, 거기서 `scale` 이 `none` 이 된다. */
+        return { red: d.gone.length > 0 || d.pct < 45,
+          why: '누름 층이 사라진 프레임 ' + d.gone.length + '/' + d.cls.length
+            + '장(맥박 겹침 중 ' + d.hbGone.length + '/' + d.hb.length + ') · 듀티 ' + p2(d.pct) + '%' };
       } },
     { id: 'b', n: 'ⓑ `jzRelease` 의 맥박 제거 한 줄을 뺀다',
       rev: s0 => s0.replace("  el.classList.remove('jz-hb', 'jz-hbx');\n", ''),
@@ -275,9 +305,12 @@ function spring(run) {
       check: async page => {
         const r = await hold(page, '#trCards [data-tr]', 1200);
         const d = duty(r), restW = r.rest.w;
-        const ratios = d.hbPure.map(x => x.w / restW);
+        /* 621 이관 — §3 과 같은 자(누름 층을 나눈 맥박 층)로 본다. 폭 그대로 재면 621 의 왕복이
+           진폭을 대신 만들어 «맥박을 죽였는데도 초록» 이 된다(실제로 그렇게 빨개졌다). */
+        const ratios = d.hbPure.filter(x => x.sc && x.sc !== 'none')
+                               .map(x => (x.w / restW) / parseFloat(x.sc));
         const span = ratios.length ? Math.max(...ratios) - Math.min(...ratios) : 0;
-        return { red: span < 0.004, why: '맥박 프레임 폭 진폭 ' + p4(span) + ' (< 0.004 = 굳었다)' };
+        return { red: span < 0.004, why: '맥박 층 진폭 ' + p4(span) + ' (< 0.004 = 굳었다)' };
       } },
   ];
   for (const R of REV) {
