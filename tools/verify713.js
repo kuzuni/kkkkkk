@@ -38,7 +38,7 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
 
 const BAR_L = 36, BAR_W = 724, SHELL_H = 98;   /* 자리·폭·공용 셸 높이 */
 const BAR_BOT = 15, SK_BOT = 36;               /* 띠 [15,113] — 바가 띠를 꽉 채우고 토글은 그 한가운데 */
-const CHROME = 15, PAD_BOT = 113;              /* `.sm-panel::after` · padding-bottom */
+const CHROME = 15, MARGIN = 0, PAD_BOT = 113;  /* `.sm-panel::after` · 여유(잔여 739) · padding-bottom */
 const GH = 868, PITCH = 170;                   /* --sm-gh · 결과 그리드 행 pitch */
 const WORST = 868;                             /* 스크롤 0 을 지키는 그리드 하한(배지 돌출 + 중앙정렬 몫) */
 
@@ -130,7 +130,7 @@ const GEO = () => {
       tag + '[A4] 좌 36(그리드 좌단) · 폭 724 · 공용 셸 높이 98',
       '좌 ' + (g.bar.l - g.panel.l) + ' · 폭 ' + g.bar.w + ' · 높이 ' + g.bar.h);
     ok(near(g.panel.b - g.bar.b, BAR_BOT, .5),
-      tag + '[A5] 띠 [15,113] 을 꽉 채운다(패널 하변 기준 bottom 15 = 크롬 바로 위)',
+      tag + '[A5] 띠 [15,113] 을 꽉 채운다(bottom 15 = 크롬 바로 위 · 여유는 잔여 739)',
       'bottom ' + (g.panel.b - g.bar.b).toFixed(2));
     ok(g.padBot === PAD_BOT && g.chrome === CHROME && g.gh === GH + 'px',
       tag + '[A6] [전제] 띠 산수 — padding-bottom 113 · 크롬 15 · --sm-gh 868',
@@ -141,7 +141,7 @@ const GEO = () => {
       '바 ' + g.bar.cy + ' ↔ 토글 ' + g.skip.cy);
     ok(g.bar.r < g.skip.l - 1, tag + '[B2] 바와 토글이 안 겹친다',
       '바 우 ' + g.bar.r + ' ↔ 토글 좌 ' + g.skip.l + ' (여유 ' + (g.skip.l - g.bar.r).toFixed(2) + ')');
-    ok(g.bar.t >= g.grid.b - .5 && g.bar.b <= g.panel.b - CHROME + .5,
+    ok(g.bar.t >= g.grid.b - .5 && g.bar.b <= g.panel.b - CHROME - MARGIN + .5,
       tag + '[B3] 바가 그리드도 하단 크롬도 안 침범한다',
       '그리드 하변 ' + g.grid.b + ' ≤ 바 ' + g.bar.t + '..' + g.bar.b
       + ' ≤ 크롬 상변 ' + (g.panel.b - CHROME));

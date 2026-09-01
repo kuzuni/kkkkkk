@@ -318,7 +318,12 @@ const HARNESS = () => {
         const br = btn.getBoundingClientRect();
         btn.querySelectorAll('.lab i,.cost i').forEach(u => {
           const ir = u.getBoundingClientRect();
-          const lim = { l: br.left + 12, r: br.right - 12 };      /* 검정 6 + 안쪽 림 6 */
+          /* 735 이관 — 임계는 «검정 테두리(6) 안쪽» 이다. 713 이 잠깐 12(검정 6 + 밝은 림 6)로 잡았는데,
+             그러면 ×1000 라벨(advance 224.4)이 0.7px 모자라 **글자 크기 계단**을 켜야 하고 그것이
+             주인이 «커졌다 작아졌다» 로 지목한 바로 그 출렁임이었다(735). 잘림은 검정 테두리가 기준이고
+             `.sm-b` 는 `overflow:visible` 이라 실제로 잘리지도 않는다 — 림을 스치는 0.7px 은
+             네 상태의 글자를 한 크기로 두는 값으로 받아들였다(`probe735` [3]·[4] 가 그 불변을 지킨다). */
+          const lim = { l: br.left + 6, r: br.right - 6 };        /* 검정 테두리 6 */
           if (ir.width > 0 && (ir.left < lim.l - .5 || ir.right > lim.r + .5))
             out.push('×' + m + ' ' + id + ' ' + u.parentElement.className
               + ' ink ' + ir.left.toFixed(1) + '..' + ir.right.toFixed(1)
