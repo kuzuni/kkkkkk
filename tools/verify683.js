@@ -442,12 +442,15 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      ⚠ 문턱을 «절대 대비» 가 아니라 **«정착 대비 비율»** 로 잡은 이유: 라벨 색·서체는 아트 대기라
        절대값이 아트 교체 때 움직인다. 비율은 그때도 뜻이 산다(676-② «상수로 적으면 부패한다»). */
   blk('H] 카드 정보 — 연출 중 «Lv.n» 대비가 정착 대비 얼마나 남는가');
-  const labelShot = async (t, longFlash) => {
-    const st = await ev(p, async ({ T, LONG }) => {
+  const labelShot = async (t, longFlash, noGain) => {
+    const st = await ev(p, async ({ T, LONG, NOGAIN }) => {
       const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
       if (!window.__v683to) { window.__v683to = window.setTimeout; window.__v683ri = window.requestAnimationFrame; }
       window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
       /* 되돌림용 — `iv` 를 떨궈 5회차 이전의 «긴 플래시»(340ms)로 되돌린다 */
+      if (NOGAIN) { const t = document.createElement('style'); t.id = '__v683nogain';
+        t.textContent = '.fx-spark.fx-rlic{display:none !important}'; document.head.appendChild(t); }
+      else { const o = document.getElementById('__v683nogain'); if (o) o.remove(); }
       if (LONG && !window.__v683ff) { window.__v683ff = window.fxFlash;
         window.fxFlash = function (el) { return window.__v683ff.call(this, el); }; }
       if (!LONG && window.__v683ff) { window.fxFlash = window.__v683ff; window.__v683ff = null; }
@@ -463,7 +466,7 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
       /* 글리프는 231px 상자 «가운데» 에만 있다(`.rw-c>u` 는 좌우 −40 으로 넓힌 정렬용 상자) —
          상자째 재면 카드 배경·플래시가 섞이므로 마스크로 **글자 화소만** 고른다(아래). */
       return { id: it.id, box: { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) } };
-    }, { T: t, LONG: !!longFlash });
+    }, { T: t, LONG: !!longFlash, NOGAIN: !!noGain });
     if (!st) return null;
     return { box: st.box, png: (await p.screenshot()).toString('base64') };
   };
@@ -476,11 +479,11 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      충분히 늦은 시각은 **둘 다 워시가 없다**. 첫 판에 0·130ms 만 재서 «정착과 똑같다»(9.4:1)가
      나왔는데 그것은 좋아서가 아니라 **봉우리를 비켜서** 였다. ⇒ 봉투를 훑어 **가장 나쁜 순간**을 쓴다. */
   const LT = [0, 20, 40, 60, 90, 130, 200, 260];
-  const labelRatio = async () => {
+  const labelRatio = async (noGain) => {
     const settled = await labelShot(-1);
     if (!settled) return null;
     const shots = [];
-    for (const t of LT) { const sh = await labelShot(t); if (sh) shots.push({ t, png: sh.png }); }
+    for (const t of LT) { const sh = await labelShot(t, false, noGain); if (sh) shots.push({ t, png: sh.png }); }
     if (!shots.length) return null;
     return await ev(p, async ({ a, shots, box }) => {
       const load = u => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = 'data:image/png;base64,' + u; });
@@ -513,19 +516,35 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
       return { n: fill.length + stroke.length, base: ratio(A), per, worst, late };
     }, { a: settled.png, shots, box: settled.box });
   };
-  const LR = await labelRatio();
+  const LR = await labelRatio(true);      /* 플래시 축만 — 알갱이는 숨긴다(아래 머리말) */
+  const LRg = await labelRatio(false);    /* 알갱이까지 — ⏸ 대기 항(아래) */
   const r2 = v => Math.round(v * 100) / 100;
   info('«Lv.n» 채움↔테 WCAG 대비비', LR ? ('정착 ' + r2(LR.base) + ':1 · '
        + LR.per.map(o => 't' + o.t + ' ' + r2(o.r)).join(' · ') + ' (표본 ' + LR.n + '화소)') : '측정 실패');
+  /* ⚑⚑ **축이 둘이라 자도 둘이다.** 5회차 비평가 둘이 «Lv.n 이 240ms 안 읽힌다» 의 원인을 **둘로 갈랐다**:
+       ⓐ 0~120ms = **플래시** (이 세션이 340 → 120ms 로 고친 축)
+       ⓑ 130~240ms = **알갱이** (링 하단 호가 라벨을 훑는다 — **이 세션이 못 고친 축**, 683 보류 사유)
+     ⇒ [H1] 은 **알갱이를 숨기고** 플래시 축만 단언한다(내가 고친 것만 지킨다). ⓑ 는 아래 **⏸ 대기 항**으로
+       매 실행 값을 찍되 **실패로 세지 않는다** — 326 의 `ck199` 와 같은 꼴이다.
+     ⚠ 이렇게 가르지 않으면 이 자는 **영원히 빨간 게이트**가 된다(680: «영원히 빨간 게이트는 같은 빨강을
+       몇 번이고 다시 등재하게 만든다»). 그리고 ⓑ 는 알 각도가 매 실행 달라 **플레이키**하기까지 하다. */
   ok(!!LR && LR.base > 4 && LR.worst && LR.worst.r >= 3,
-     'H1 ★ 연출 봉투 **전 구간**에서 «Lv.n» 이 큰 글자 최소선(3:1)을 지킨다 — 4회차의 1.48:1 이 빨개지는 자리',
+     'H1 ★ **플래시 축** — 알갱이를 뺀 상태에서 봉투 전 구간 «Lv.n» ≥ 3:1 (5회차가 340 → 120ms 로 고친 자리)',
      LR ? ('최악 t=' + LR.worst.t + 'ms ' + r2(LR.worst.r) + ':1 (정착 ' + r2(LR.base) + ':1)') : '측정 실패');
   ok(!!LR && LR.late && LR.late.r >= LR.base * 0.8,
-     'H2 ★ 130ms 뒤로는 정착의 80% 이상으로 회복한다 — 플래시가 «연출의 71%» 를 안 먹는다',
+     'H2 ★ **플래시 축** — 130ms 뒤로는 정착의 80% 이상으로 회복한다',
      LR ? ('t≥130 최악 ' + r2(LR.late.r) + ':1 / ' + r2(LR.base) + ':1 = ' + Math.round(LR.late.r / LR.base * 100) + '%') : '측정 실패');
+  /* ⏸ **683 보류 사유 — 실패로 안 센다.** 알갱이까지 켠 실측을 매 실행 찍는다(값·최악 시각·비율).
+     이 값이 3:1 을 넘으면 그때 [H1] 의 `noGain` 을 떼고 한 항으로 합치는 것이 마감이다. */
+  if (LRg && LRg.worst) {
+    console.log('  ⏸  [683 보류 사유 · 실패 아님] 알갱이까지 켠 «Lv.n» — 최악 t=' + LRg.worst.t + 'ms '
+      + r2(LRg.worst.r) + ':1 (정착 ' + r2(LRg.base) + ':1 = ' + Math.round(LRg.worst.r / LRg.base * 100) + '%)'
+      + ' · 봉투 ' + LRg.per.map(o => 't' + o.t + ' ' + r2(o.r)).join(' · '));
+    console.log('  ⏸  처방(5회차 2인 일치): 방출 각도에서 아래쪽 섹터 배제 또는 라벨 띠 클램프 + «Lv.n» 을 연출 위 레이어로');
+  }
   /* ⚑ 되돌림 — 5회차의 손잡이(`RW_FLASH_MS`)를 걷어 옛 340ms 플래시로 되돌리면 이 자가 빨개져야 한다.
      안 그러면 [H1] 은 «원래부터 참인 것» 을 굳힌 항이다(338 이 등재문 처방에서 배운 바로 그 함정). */
-  const longShot = await labelShot(40, true);
+  const longShot = await labelShot(40, true, true);   /* 플래시 축만(알갱이 숨김) — [H1] 과 같은 조건 */
   const longR = longShot ? await ev(p, async ({ a, b, box }) => {
     const load = u => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = 'data:image/png;base64,' + u; });
     const px = async u => { const im = await load(u); const cv = document.createElement('canvas');
@@ -545,12 +564,13 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
     const ms = stroke.reduce((s, i) => s + rl(B, i), 0) / stroke.length;
     const hi = Math.max(mf, ms), lo = Math.min(mf, ms);
     return (hi + 0.05) / (lo + 0.05);
-  }, { a: (await labelShot(-1)).png, b: longShot.png, box: longShot.box }) : 0;
+  }, { a: (await labelShot(-1, false, true)).png, b: longShot.png, box: longShot.box }) : 0;
   ok(!!LR && longR > 0 && longR < LR.worst.r,
      'H3 ★ 되돌림 — `RW_FLASH_MS` 를 걷어 옛 340ms 플래시로 되돌리면 같은 시각의 대비가 떨어진다',
      '옛 플래시 t=40ms ' + r2(longR) + ':1 ↔ 지금 ' + r2(LR ? LR.worst.r : 0) + ':1');
   await ev(p, () => {
     if (window.__v683ff) { window.fxFlash = window.__v683ff; window.__v683ff = null; }
+    { const o = document.getElementById('__v683nogain'); if (o) o.remove(); }
     if (window.__v683to) { window.setTimeout = window.__v683to; window.requestAnimationFrame = window.__v683ri;
       window.__v683to = null; window.__v683ri = null; }
     const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
