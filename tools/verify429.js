@@ -245,8 +245,34 @@ const openRel = async (page) => {
 
   /* ── [D][E][F] 세부 팝업 ──────────────────────────────────────────── */
   console.log('\n[D][E][F] 유물 세부 팝업 — 공통 2줄은 없고, 그 유물 하나만 말한다');
-  const D = await page.evaluate((A) => {
+  const D = await page.evaluate(async (A) => {
     const { MOVED, PARTS } = A;
+    /* 764 — **재기 전에 상자 개폐 연출을 정착시킨다.**
+       `.mbox` 는 열 때 `jzBoxIn`(scale .92 → **1.02** → 1), 닫을 때 `jzBoxOut`(`to{scale:.94}` ·
+       fill `both`)을 탄다. 이 블록은 «닫고 곧바로 다시 열어» 재므로, 직전 닫기의 채움이 아직
+       걷히지 않은 프레임을 잡으면 bbox 가 **통째로 등방 축소**돼 읽힌다 — F1 은 유물↔펫 *상대*
+       비교라 둘 다 같이 눌려 초록이고 **F2 만** 빨개진다(`705.07×272.63` = 750·290 × .9401).
+       ⚠ «몇 ms 기다린다» 로는 못 닫는다 — `jzBoxIn` 이 62% 에서 1.02 로 넘겼다 돌아오므로
+       고정 대기는 축소(690)나 확대(765) 중 한쪽을 잡는다(`tools/probe764.js` [1] 위상 스윕).
+       ⚠ 공용 `settle291()`(291·353)을 `jzBox…` 로 넓혀 쓰는 길은 **두 이유로 안 잡았다**:
+       ⓐ 그 자는 `waitForTimeout` 훅으로 게이트 44개를 전부 지나가는데, 64·262·107 처럼 **시간
+          자체를 재는** 자는 rAF 두 프레임이 얹히면 문턱을 넘는다(그 파일 PENDING_SRC 주석).
+       ⓑ 사다리가 «부를 때 pending 이 0 이면 곧바로 끝낸다» 라서, 연출이 **다음 프레임에 붙는**
+          이 자리의 창은 못 닫는다(실측: 그대로 쓰면 g200·g300 에서 `jzBoxIn` 0% = 690 을 잡는다).
+       ⇒ 여기서는 «**두 프레임 연속으로 돌 것이 없을 때만** 끝낸다» 로 세운다. 상한 1500ms 는
+          291 과 같은 값 — 어떤 이유로든 `finished` 가 안 오면 자를 멈추지 않고 지나간다.
+       되돌림: `settleBox` 선언과 두 호출을 지우면 종전 동작 그대로. */
+    const settleBox = async () => {
+      const pend = () => (document.getAnimations ? document.getAnimations() : [])
+        .filter((a) => /^jzBox/.test(a.animationName || '') && a.playState !== 'finished');
+      const t0 = performance.now();
+      for (let quiet = 0; quiet < 2 && performance.now() - t0 < 1500;) {
+        const P = pend();
+        if (P.length) { await Promise.all(P.map((a) => a.finished.catch(() => 0))); quiet = 0; }
+        else quiet++;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      }
+    };
     const readParts = () => {
       const box = document.getElementById('mbox'), b = box.getBoundingClientRect();
       return PARTS.map((s) => { const el = box.querySelector(s);
@@ -269,6 +295,7 @@ const openRel = async (page) => {
       out.own.push((document.querySelector('#mbox .sk-ow .v b') || {}).textContent);
       if (r === RELICS[0]) { out.pb = (document.querySelector('#mbox .sk-pb b') || {}).textContent;
                              out.sl = (document.querySelector('#mbox .sk-sl') || {}).textContent;
+                             await settleBox();
                              out.parts = readParts();
                              out.lines = p ? Math.round(p.getBoundingClientRect().height
                                / parseFloat(getComputedStyle(p).lineHeight)) : 0; }
@@ -282,7 +309,7 @@ const openRel = async (page) => {
     closeModal(); S.own[one] = keep;
     /* [F] 대조군 — 펫 세부(같은 08 껍데기) */
     const pet = PETS[0].id; S.own[pet] = S.own[pet] || { n: 0, l: 1 };
-    showItem(pet); out.petParts = readParts(); closeModal();
+    showItem(pet); await settleBox(); out.petParts = readParts(); closeModal();
     return out;
   }, { MOVED, PARTS });
   ok(D.hits.every((n) => n === 0), 'D1 옮겨 간 두 줄이 유물 ' + D.n + '종 전수에서 0건',
