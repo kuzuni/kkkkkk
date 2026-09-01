@@ -47,9 +47,40 @@ const MOVED = ['보유</em>만으로', '만으로 항상 적용', '소환할 때
 /* 08 껍데기 부품 8개 — 268 §2·269 [F] 와 같은 읽기 */
 const PARTS = ['.sk-ic', '.sk-gr', '.sk-lv', '.sk-pb', '.sk-ct', '.sk-sl', '.sk-db', '.sk-ow'];
 
+/* 771 — **재기 전에 페이지 개폐 연출을 스스로 정착시킨다.**
+   `#relw` 는 열 때 `.jz-o.jz-pg` 로 `jzPgIn .12s`(`@keyframes jzPgIn{0%{scale:.985}}` ·
+   index.html 13960)를 탄다. 이 아래 [A] 는 그 직후의 rect 를 재므로, 0% 프레임을 잡으면
+   `#relw` 가 **프레임 중심 기준 0.985 배로 등방 축소**돼 읽힌다 — `[?]` 좌상단이
+   `(24,16)` 대신 `(31.74,27.19)`(= 540+(24−540)·.985 · 1140+(16−1140)·.985)가 되고
+   A2(76×76)·A5·A7·A9 가 같이 물린다. 등재문(771)의 부하 4회 중 1회가 그 값이다.
+   ⚠ **여태 초록이던 것은 이 자의 힘이 아니었다** — 공용 `settle291` 훅(`launch()` 가
+   `verify*.js` 에만 자동으로 심는다 · `tools/pwlaunch.js`)이 `waitForTimeout` 뒤에
+   대신 정착해 줬다. 그 사다리에는 창이 하나 남아 있다: 선검사(`PENDING_SRC`)가
+   «부를 때 pending 이 0 이면 곧바로 끝낸다» 라, 연출이 **다음 프레임에 붙는** 순간을
+   그대로 통과시킨다(`tools/probe771.js` [3] · 764 가 `settleBox` 를 따로 세운 이유 ⓑ 와 같은 구멍).
+   ⚠ 그 창을 `settle291` 쪽에서 닫는 길은 **안 잡았다** — 그 자는 게이트 44개를 전부 지나가는데
+   64·262·107 처럼 **시간 자체를 재는** 자는 rAF 두 프레임이 얹히면 문턱을 넘는다
+   (그 파일 `PENDING_SRC` 주석). 그래서 764 와 같이 **자리 쪽**에서 세운다.
+   ⇒ 「**두 프레임 연속으로 `jzPg…` 가 없을 때만** 끝낸다」. 상한 1500ms 는 291·764 와 같은 값 —
+   어떤 이유로든 `finished` 가 안 오면 자를 멈추지 않고 지나간다.
+   되돌림: `settlePg` 선언과 `openRel` 안 한 줄을 지우면 종전 동작 그대로
+   (`tools/probe771.js` 가 그 상태를 [1] 로 재현한다). */
+const settlePg = async (page) => page.evaluate(async () => {
+  const pend = () => (document.getAnimations ? document.getAnimations() : [])
+    .filter((a) => /^jzPg/.test(a.animationName || '') && a.playState !== 'finished');
+  const t0 = performance.now();
+  for (let quiet = 0; quiet < 2 && performance.now() - t0 < 1500;) {
+    const P = pend();
+    if (P.length) { await Promise.all(P.map((a) => a.finished.catch(() => 0))); quiet = 0; }
+    else quiet++;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
+});
+
 const openRel = async (page) => {
   await page.evaluate(() => { closeModal(); openRelw(); });
   await page.waitForTimeout(300);
+  await settlePg(page);
 };
 
 (async () => {
