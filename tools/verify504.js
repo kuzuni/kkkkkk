@@ -50,7 +50,14 @@ const { K, SEC, POP, TOL_FLOOR } = RUL;
 const PROBE = ['slash', 'bolt', 'drain',              /* 대조군 — 504 가 안 건드린 종 */
                'nova', 'holy', 'laser', 'meteor',     /* 폭발·빔 — 이탈이 가장 컸던 자리 */
                'poison', 'flask',                     /* 장판 */
-               'lance', 'boom'];                      /* 관통·폭발 */
+               'lance', 'boom',                       /* 관통·폭발 */
+               'orbit', 'aura', 'whirl'];             /* 695 — 접촉형(cd 0 지속형 2 + 링) */
+/* ⚑ **695 — 표본이 구조 한 종류를 통째로 안 덮고 있었다.** 위 열하나에는 `cd 0` 이 하나도
+   없었고 «닿는 거리가 몸 주위» 인 종도 하나도 없었다 ⇒ 이 게이트는 그 구조를 **한 번도 재 본 적이
+   없다.** 680 이 27종으로 넓히자 셋이 한꺼번에 밴드 밖(71~85%)으로 나왔고, 그것이 695 다.
+   ⚠ 셋은 «틀린 선언» 이 아니라 **«이 눈금으로 못 재는 종»** 으로 들어온다(rul504 `HOLD695` 주석).
+   넣은 이유는 값을 판정하려는 것이 아니라 **못 잰다는 사실이 표에 매 실행 찍히게** 하려는 것이다 —
+   [C3] 이 그 구조 덮개를 자로 지킨다(356-㉞ «인계문에 적을 것을 자로 옮겨라»). */
 /* [R] 되돌림 재료 — 504 이전의 «한 적이 받는 수» 선언. 이 표는 옛 값이므로 갱신하지 마라.
    ⚠ **`lance` 는 일부러 뺐다.** 옛 3 과 새 4.45 의 거리가 [C] 의 허용 오차(±40%) 안이라
    «되돌리면 잡힌다» 를 이 자로는 **증명할 수 없다**(실행마다 37~52% 로 걸쳤다 안 걸렸다 한다).
@@ -59,17 +66,21 @@ const PROBE = ['slash', 'bolt', 'drain',              /* 대조군 — 504 가 �
 const OLD_HITS = { nova: 1, holy: 1, laser: 1.7, meteor: 1, poison: 5, flask: 4.5, boom: 1 };
 
 /* ⏸199 대기 — 선언·판정은 `rul504.js` 한 곳에 있다(680). 왜 그렇게 했는지도 거기 적혀 있다. */
-const { HOLD199, held199 } = RUL;
+const { HOLD199, held199, HOLD695, held695 } = RUL;
 
 let pass = 0, fail = 0, held = 0;
 const ok = (b, name, detail) => {
   console.log((b ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' — ' + detail : ''));
   b ? pass++ : fail++;
 };
-/* 326 `ck199` 와 같은 칸 — 실패로 안 세되 표에는 «⏸199» 로 남는다 */
-const hold = (name, detail) => {
-  console.log('⏸199 ' + name + (detail ? ' — ' + detail : ''));
-  held++;
+/* 326 `ck199` 와 같은 칸 — 실패로 안 세되 표에는 «⏸» 로 남는다.
+   ⚠ 695 — 칸이 **둘**이고 뜻이 다르다: `⏸199` 는 «뿌리 진단이 끝났고 계수만 199 몫» 이고,
+   `⏸접촉` 은 «이 눈금이 그 구조를 못 잰다»(판정 자체가 없다) 다. 한 표식으로 합치면
+   «못 잰다» 가 «199 가 값만 넣으면 된다» 로 읽힌다 — 695 §5 가 그 오독을 금지한다. */
+let heldC = 0;
+const hold = (name, detail, tag) => {
+  console.log((tag || '⏸199') + ' ' + name + (detail ? ' — ' + detail : ''));
+  tag === '⏸접촉' ? heldC++ : held++;
 };
 
 (async () => {
@@ -134,7 +145,8 @@ const hold = (name, detail) => {
   rows.forEach(x => console.log('     ' + x.id.padEnd(8) + String(x.decl).padEnd(9)
     + String(x.mean).padEnd(11) + ((x.off * 100).toFixed(0) + '%').padEnd(9)
     + ('±' + (x.tol * 100).toFixed(0) + '%').padEnd(8) + x.each.join('/')
-    + (held199(x) ? '   ⏸199(' + HOLD199[x.id].ref + ')' : '')));
+    + (held199(x) ? '   ⏸199(' + HOLD199[x.id].ref + ')' : '')
+    + (held695(x) ? '   ⏸접촉(' + HOLD695[x.id].ref + ' — 이 눈금 미적용)' : '')));
   /* ⚑ 620 [C0] «전제» — [C1] 보다 **먼저** 묻는다. 판이 22708 의 가드가 닫힌 채로 시작하면
      그 판은 «약한 종» 이 아니라 «잰 적이 없는 종» 이고, 그때 [C1]·[C2] 가 말하는 «미발동» 은
      스킬이 아니라 하네스를 가리킨다. 이 항이 없으면 굳은 판이 다시 생겨도 이유가 표에 안 남는다
@@ -142,16 +154,23 @@ const hold = (name, detail) => {
   ok(rows.every(x => x.shut === 0), 'C0 전제 — 재는 동안 22708 가드가 **한 프레임도** 안 닫혔다(473 `preFight` · 475 `bossClear`)',
      rows.filter(x => x.shut).map(x => x.id + ' ' + x.shut + '프레임').join(' / ')
      || '닫힌 프레임 0 / ' + (PROBE.length * K * SEC * 60) + '프레임');
-  ok(rows.every(x => x.casts > 0), 'C1 표본 ' + PROBE.length + '종이 실제 전투에서 발동했다',
-     rows.filter(x => !x.casts).map(x => x.id).join(',') || '미발동 0종');
+  /* ⚑ 695 — `casts` 는 `castSkill` 을 지난 수다. **cd 0 지속형은 그 문을 안 지난다**
+     (`orbit`·`aura` 는 `step()` 안에서 매 프레임 스스로 돈다) ⇒ 옛 문장 그대로 표본에 넣으면
+     «발동 0» 으로 **헛빨강**이 난다. 물어야 할 것은 «그 종이 이번 판에서 일을 했는가» 이고,
+     그 답은 cd > 0 이면 발동 수, cd = 0 이면 **타격이 났는가**다(620-② «0 은 두 가지 뜻» 과
+     같은 자리 — 자가 못 본 것을 «안 했다» 로 읽지 않게 뜻을 갈라 적는다). */
+  const idle = rows.filter(x => (x.cd > 0 ? x.casts : x.mean) <= 0);
+  ok(idle.length === 0, 'C1 표본 ' + PROBE.length + '종이 실제 전투에서 일했다(cd>0 은 발동 · cd0 지속형은 타격)',
+     idle.map(x => x.id).join(',') || '미발동 0종 · cd0 ' + rows.filter(x => !x.cd).length + '종은 타격으로 확인');
   /* [C2] 는 **199 대기분을 뺀 나머지**를 하드로 단언한다. 대기분은 아래 [C2-199] 가 받는다.
      ⚠ 대기 목록에 없는 종이 새로 벗어나면 그 종은 그대로 빨개진다 — `probe680` [5] 가 못박는다. */
-  const { bad: cBad, hold: cHold } = RUL.c2Split(rows);
+  const { bad: cBad, hold: cHold, contact: cCon } = RUL.c2Split(rows);
   ok(cBad.length === 0, 'C2 선언 ↔ 실측(504-RUL) — 종마다 «잰» 허용 오차 안(⏸199 대기분 제외)',
      cBad.map(x => x.id + ' ' + (x.off * 100).toFixed(0) + '% > ' + (x.tol * 100).toFixed(0) + '%').join(' / ')
-     || '최악 ' + rows.filter(x => !held199(x)).reduce((a, b) => a.off > b.off ? a : b).id + ' '
-        + (Math.max(...rows.filter(x => !held199(x)).map(x => x.off)) * 100).toFixed(0) + '%'
-        + (cHold.length ? ' · ⏸199 ' + cHold.length + '종은 아래 칸' : ''));
+     || '최악 ' + rows.filter(x => !held199(x) && !held695(x)).reduce((a, b) => a.off > b.off ? a : b).id + ' '
+        + (Math.max(...rows.filter(x => !held199(x) && !held695(x)).map(x => x.off)) * 100).toFixed(0) + '%'
+        + (cHold.length ? ' · ⏸199 ' + cHold.length + '종은 아래 칸' : '')
+        + (cCon.length ? ' · ⏸접촉 ' + cCon.length + '종은 아래 칸' : ''));
   /* ⏸199 — 값·이탈%·«199 가 넣을 한 벌» 을 매 실행 찍는다(326 ck199 · verify498 §6 과 같은 꼴).
      한 벌 재역산 식은 484 의 약속 그 자체다: m = SK_DPS_REF × cd ÷ hits.
      ⚠ `hits` 만 갈면 [D1] 이 즉시 빨개진다(622 실측 1.0001 → 1.8281) — 그래서 «한 벌» 이다. */
@@ -163,6 +182,26 @@ const hold = (name, detail) => {
          + x.mean + ' · m ' + HOLD199[x.id].staleM + ' → ≈' + newM
          + ' (= SK_DPS_REF ' + SK_DPS_REF + ' × cd ' + x.cd + ' ÷ ' + x.mean + ')');
   });
+  /* ⏸접촉(695) — «틀렸다» 가 아니라 «이 눈금으로 못 잰다». 값·이탈%·K회 폭을 매 실행 찍되
+     실패로 안 센다(504-④ «못 잡는 것은 안 잡는다고 적어라»). 자물쇠는 «낡은 선언 그 값일 때만». */
+  rows.filter(x => held695(x)).forEach(x => {
+    hold('C2-접촉 `' + x.id + '` — 닿는 거리가 몸 주위라 이 눈금(판 위 개체수 고정)이 못 잰다(695)',
+         '선언 ' + x.decl + ' ↔ 실측 ' + x.mean + ' = 이탈 ' + (x.off * 100).toFixed(0) + '%'
+         + ' (허용 ±' + (x.tol * 100).toFixed(0) + '%) · K회 폭 ' + (x.spread * 100).toFixed(0) + '%'
+         + ' · 재실행 사이 평균이 배로 갈린다 ⇒ **판정 불가**(선언이 틀렸다는 뜻이 아니다) · 695 §5',
+         '⏸접촉');
+  });
+  /* ── [C3] 표본이 «구조 종류» 를 덮는가 (695 신설) ─────────
+     695 의 뿌리는 «선언이 틀렸다» 가 아니라 **표본에 그 구조가 아예 없었다** 는 것이다.
+     한 종을 이름으로 지키면 그 종만 지켜지므로, 지키는 것은 이름이 아니라 **구조 축**이다:
+     ⓐ cd 0 지속형이 표본에 있는가 ⓑ 접촉형(HOLD695 등재분)이 전부 표본 안인가.
+     ⚠ 이 항이 없으면 다음 세션이 «느리다» 며 셋을 빼도 게이트는 초록으로 넘어간다(356-㉞). */
+  const cd0 = rows.filter(x => !x.cd).map(x => x.id);
+  ok(cd0.length > 0, 'C3-a 표본이 `cd 0` 지속형을 덮는다 — 504~680 동안 한 번도 안 재던 구조',
+     cd0.join(',') || '표본에 cd 0 종 0개 — 구조가 통째로 안 보인다');
+  const missing = Object.keys(HOLD695).filter(id => !PROBE.includes(id));
+  ok(missing.length === 0, 'C3-b ⏸접촉 등재분이 전부 표본 안 — 못 잰다는 사실이 매 실행 표에 남는다',
+     missing.join(',') || Object.keys(HOLD695).length + '종 전부 표본 안');
 
   /* ── [D] 결과 — 등급 안 «실제» DPS 가 평탄해졌나 ────────── */
   const D = await page.evaluate(measured => {
@@ -173,10 +212,15 @@ const hold = (name, detail) => {
       const d = t.map(s => s.cd > 0 ? s.m * skillHits(s) / s.cd : s.m * skillHits(s));
       rows.push({ g, ratio: Math.max(...d) / Math.min(...d) });
     });
-    /* 실측이 있는 종만 «실제 DPS»(= m × 실측발수 / cd)로 다시 재서 표본 안 편차를 본다 */
-    const r = measured.map(x => { const s = SK[x.id]; return s.cd > 0 ? s.m * x.mean / s.cd : s.m * x.mean; });
+    /* 실측이 있는 종만 «실제 DPS»(= m × 실측발수 / cd)로 다시 재서 표본 안 편차를 본다.
+       ⚠ 695 — «이 눈금이 못 잰다» 고 방금 적은 종(⏸접촉)은 여기서 **뺀다**. 판정 불가라고
+       말해 놓고 그 값을 편차 단언에 넣으면 자가 자기 말을 뒤집는 것이고, 그 빨강은 결함이
+       아니라 표본을 넓힌 대가로 생긴 헛빨강이다(504-④ «못 잡는 것은 안 잡는다고 적어라»).
+       ⏸199(poison)은 뺀 게 아니다 — 그쪽은 값이 재현되고 뿌리도 닫혀 계수만 남은 자리다. */
+    const r = measured.filter(x => !x.contact)
+      .map(x => { const s = SK[x.id]; return s.cd > 0 ? s.m * x.mean / s.cd : s.m * x.mean; });
     return { rows, realMin: Math.min(...r), realMax: Math.max(...r), realRatio: Math.max(...r) / Math.min(...r) };
-  }, rows.map(x => ({ id: x.id, mean: x.mean })));
+  }, rows.map(x => ({ id: x.id, mean: x.mean, contact: held695(x) })));
   D.rows.forEach(r => console.log('     g' + r.g + ' 선언 기준 등급 안 최대/최소 ' + r.ratio.toFixed(4)));
   ok(D.rows.every(r => r.ratio <= 1.03), 'D1 선언 기준 등급 안 DPS 동일(484 의 약속)이 유지된다',
      '최악 ' + Math.max(...D.rows.map(r => r.ratio)).toFixed(4));
@@ -221,7 +265,14 @@ const hold = (name, detail) => {
     console.log('    실패로 안 세되 값·이탈%·한 벌 재역산은 위에 매 실행 찍힌다. 199 가 `hits` 를 넣는 순간');
     console.log('    이 칸은 스스로 하드 단언으로 돌아온다(면제 조건 = «낡은 선언 그 값일 때만»).');
   }
+  if (heldC) {
+    console.log('\n  ⏸ 접촉 ' + heldC + '칸(695) — 이 셋은 «선언이 틀렸다» 가 아니라 **이 눈금이 못 잰다**.');
+    console.log('    닿는 거리가 몸 주위 한 뼘이라 값을 정하는 것은 판 위 개체수(이 자가 고정)가 아니라');
+    console.log('    반경 안 개체수(안 갇힘)이고, 그래서 같은 자·같은 트리인데 평균이 재실행 사이에 배로 갈린다.');
+    console.log('    ⚠ 여기 찍힌 실측을 선언에 옮겨 적지 마라 — 값·계수는 199 몫이다(`probe695` §3·§5).');
+  }
   console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail)
-    + (held ? ' · ⏸' + held + ' → 199 대기' : ''));
+    + (held ? ' · ⏸' + held + ' → 199 대기' : '')
+    + (heldC ? ' · ⏸' + heldC + ' → 접촉(눈금 미적용 · 695)' : ''));
   process.exit(fail ? 1 : 0);
 })();

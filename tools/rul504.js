@@ -35,9 +35,15 @@ const offOf = (mean, decl) => (decl ? Math.abs(mean / decl - 1) : 1);
    ⚠ 개체수를 안 잡으면 안 된다 — 타격수는 «서 있는 적의 수» 에 거의 비례하고(poison:
      평균 13.8 / 27.4 / 52 마리에서 14.75 / 49.1 / 96.5), 레벨 0 스킬 아래서 그 수가 안 갇힌다.
      고정하지 않으면 같은 종이 실행마다 2배씩 갈린다(504 1회차에 실제로 그랬다). */
+/* ⚑ 695 — `freeze` 는 **장면 손잡이**이지 눈금이 아니다.
+   켜면 매 프레임 플레이어를 판 한복판에 못박아 «카이팅이 없는 판» 을 만든다. 이 눈금의 값이
+   아니고, 이것으로 잰 값을 선언에 넣어서도 안 된다(695 §5 가 그 금지의 근거다).
+   있는 이유는 하나 — **«무엇이 값을 정하는가» 를 가르기 위해서**다. 판 위 개체수(POP)는 이 자가
+   고정하지만 «닿는 거리 안의 개체수» 는 안 갇히고, 닿는 거리가 몸 주위 한 뼘인 종은 후자가 값을
+   정한다. 같은 종을 free ↔ freeze 로 나란히 재면 그 갈림이 배수로 드러난다(695 [4]·[5]). */
 async function measure(page, ids, opts) {
-  const o = Object.assign({ K, SEC, POP }, opts || {});
-  return page.evaluate(({ ids, K, SEC, POP }) => {
+  const o = Object.assign({ K, SEC, POP, freeze: false }, opts || {});
+  return page.evaluate(({ ids, K, SEC, POP, freeze }) => {
     const rawCast = window.castSkill, rawHit = window.hitEnemy;
     let ownSave;
     const one = (id) => {
@@ -90,6 +96,8 @@ async function measure(page, ids, opts) {
            위 초기화 주석이 이미 `killed` 를 «보스 소환 눈금» 이라고 부른 그 자리다.
            ⚠ 이것을 빼면 [C0] 이 곧바로 빨개진다(그것이 [R3] 되돌림 시험이다). */
         killed = 0;
+        /* 695 — 장면 손잡이(위 주석). 기본값 false 라 눈금 자체는 한 칸도 안 움직인다. */
+        if (freeze) { player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0; }
         if (preFight() || bossClear) shut++;
       }
       window.castSkill = rawCast; window.hitEnemy = rawHit;
@@ -110,7 +118,7 @@ async function measure(page, ids, opts) {
     }
     S.eqSkill = ['slash']; markDirty();
     return out;
-  }, { ids, K: o.K, SEC: o.SEC, POP: o.POP });
+  }, { ids, K: o.K, SEC: o.SEC, POP: o.POP, freeze: o.freeze });
 }
 
 /* ── ⏸199 대기 (680, 2026-09-01 — 326 `ck199` 선례) ──────────────────────────
@@ -134,10 +142,38 @@ const held199 = (x) => {
   const h = HOLD199[x.id];
   return !!h && Math.abs(x.decl - h.staleHits) < 1e-9;
 };
+/* ── ⏸접촉(695, 2026-09-01) ────────────────────────────────────────────────
+   **이 눈금이 못 재는 구조가 하나 있다.** 504-② 는 «진짜 축은 서 있는 적의 수» 라고 적었고
+   그래서 이 자는 판 위 개체수를 POP 으로 고정한다. 그 축은 «닿는 거리가 판을 덮는» 종
+   (투사체·장판·빔·폭발)에서는 옳지만, **닿는 거리가 몸 주위 한 뼘인 종**에서는 값을 정하는 것이
+   판 위 23마리가 아니라 **그 뼘 안에 든 마리 수**이고 그것은 이 자가 안 고정한다 —
+   플레이어 자동 이동(59)이 카이팅하는 동안 반경 안 개체수가 실행마다 0.6 ↔ 1.7 로 갈린다.
+   그 결과가 K회 폭 46~212% 이고, **평균 자체가 재실행 사이에 배로 갈린다**(695 [3]: aura
+   1.65 ↔ 4.46). 재현이 안 되는 자는 선언을 판정할 수 없다 — 그래서 이 셋은 «틀렸다» 도
+   «맞다» 도 아니고 **«이 눈금으로 못 잰다»** 이고, 게이트는 그것을 초록으로 말한다(504-④).
+
+   ⚠ **선언 셋이 어디서 왔는지는 재현이 답했다** — 플레이어를 못박은 판(카이팅 0)에서
+   aura 가 9.40/8.88/9.36/9.32 로 **선언 9.4 와 같은 값**이 나온다(695 [5]). 즉 이 선언들은
+   «서서 맞아 주는 장면» 의 값이고 실제 판의 값이 아니다. **그래도 여기서 값을 갈지 않는다** —
+   계수는 199 몫이고(ROUTINE), 값을 밴드에 맞춰 넣는 것은 680 등재문이 금지한 바로 그 짓이다.
+   ⚠ HOLD199 와 같은 «낡은 선언 그 값일 때만» 자물쇠를 쓴다 — 199 가 값을 넣는 순간 이 칸은
+   스스로 풀려 하드 단언으로 돌아온다(손으로 지울 목록이 아니라서 뒤처지지 않는다). */
+const HOLD695 = {
+  orbit: { staleHits: 6.65,  ref: '695' },
+  aura:  { staleHits: 9.4,   ref: '695' },
+  whirl: { staleHits: 17.88, ref: '695' }
+};
+const held695 = (x) => {
+  const h = HOLD695[x.id];
+  return !!h && Math.abs(x.decl - h.staleHits) < 1e-9;
+};
+
 /* [C2] 의 판정 한 곳 — 게이트도 프로브도 **이 함수를 부른다**(판정 사본 0개). */
 const c2Split = (rows) => ({
-  bad:  rows.filter(x => x.off > x.tol && !held199(x)),   /* 하드 빨강 */
-  hold: rows.filter(x => x.off > x.tol && held199(x))     /* ⏸199 */
+  bad:     rows.filter(x => x.off > x.tol && !held199(x) && !held695(x)),  /* 하드 빨강 */
+  hold:    rows.filter(x => x.off > x.tol && held199(x)),                  /* ⏸199 */
+  contact: rows.filter(x => x.off > x.tol && held695(x))                   /* ⏸접촉 — 눈금 미적용 */
 });
 
-module.exports = { K, SEC, POP, TOL_FLOOR, tolOf, offOf, measure, HOLD199, held199, c2Split };
+module.exports = { K, SEC, POP, TOL_FLOOR, tolOf, offOf, measure,
+                   HOLD199, held199, HOLD695, held695, c2Split };
