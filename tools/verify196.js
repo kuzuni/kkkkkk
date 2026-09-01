@@ -100,8 +100,9 @@ const ok = (b, name, detail) => {
   /* ================= [C] 해금 사다리 ================= */
   console.log('[C] 해금 사다리 — «전설 이상이 영원히 안 나옴» 방지가 핵심');
   const C = await page.evaluate(() => {
-    /* 496 — 레벨은 공용 스칼라 하나다. `S.sum[b].lv` 별칭으로 써도 같은 곳을 가리킨다 */
-    const at = (b, L) => { const o = sumLv(b); S.sumLv = L; const p = gradeProbs(b); S.sumLv = o; return p; };
+    /* 714 — 레벨은 **그 배너의 칸**이다(496 의 공용 스칼라 둘은 사라졌다).
+       묻는 것은 안 바뀐다 — «레벨 L 에서 그 배너의 확률표가 어떤가» 다. */
+    const at = (b, L) => { const o = sumLv(b); S.sum[b].lv = L; const p = gradeProbs(b); S.sum[b].lv = o; return p; };
     return {
       base: GRADE_ROLL.map(g => g.unlock), eq: GRADE_ROLL_EQ.map(g => g.unlock),
       over: GRADE_ROLL_EQ.filter(g => g.unlock > SUM_MAXLV).length,
@@ -121,9 +122,11 @@ const ok = (b, name, detail) => {
   /* ================= [D] sumAddExp 실동작 ================= */
   console.log('[D] 레벨업 실동작');
   const D = await page.evaluate(mx => {
-    const set = (lv, exp) => { S.sumLv = lv; S.sumExp = exp; };
-    const snap = () => ({ lv: S.sumLv, exp: S.sumExp });
-    const o = { lv: S.sumLv, exp: S.sumExp };
+    /* 714 — 실동작은 «무기 배너의 칸» 에서 잰다(496 은 공용 스칼라였다).
+       레벨업 규약(need−1 유지 · need 정확히 → 1단계 · 만렙 클램프)은 한 줄도 안 바뀌었다. */
+    const set = (lv, exp) => { S.sum.weapon.lv = lv; S.sum.weapon.exp = exp; };
+    const snap = () => ({ lv: S.sum.weapon.lv, exp: S.sum.weapon.exp });
+    const o = snap();
     const r = {};
     set(1, 0); sumAddExp('weapon', sumNeedExp(1) - 1); r.justUnder = snap();       /* 49 → Lv1 */
     set(1, 0); r.up1 = { up: sumAddExp('weapon', sumNeedExp(1)), ...snap() };      /* 50 → Lv2 */
@@ -133,7 +136,9 @@ const ok = (b, name, detail) => {
     r.upAll = { up: sumAddExp('weapon', tot), ...snap(), tot };
     /* 만렙 초과 소환 — lv 는 안 넘고 exp 는 0 으로 고정 */
     r.overflow = { up: sumAddExp('weapon', 99999), ...snap() };
-    S.sumLv = o.lv; S.sumExp = o.exp;
+    /* 714 — 뽑은 배너만 움직였는지도 같이 본다(오염 0) */
+    r.others = BKEYS.filter(k => k !== 'weapon').map(k => sumLv(k) + '/' + sumExp(k));
+    set(o.lv, o.exp);
     return r;
   }, MAXLV);
   ok(D.justUnder.lv === 1 && D.justUnder.exp === NEED(1) - 1,
@@ -185,45 +190,57 @@ const ok = (b, name, detail) => {
     p2.on('pageerror', e => errs.push('pageerror(세이브 이관): ' + String(e)));
     await p2.goto(URL);
     await p2.waitForTimeout(900);
-    const r = await p2.evaluate(() => ({ lv: S.sumLv, exp: S.sumExp,
+    /* 714 — 읽는 자리가 배너 칸으로 옮겨졌다. 아래 단언 모양을 지키려고 대표 한 칸(무기)을
+       `lv`·`exp` 에 싣고, 다섯 칸 전부는 `alias` 로 그대로 넘긴다. */
+    const r = await p2.evaluate(() => ({ lv: S.sum.weapon.lv, exp: S.sum.weapon.exp,
       alias: JSON.parse(JSON.stringify(BKEYS.map(k => S.sum[k].lv + '/' + S.sum[k].exp))) }));
     await c.close();
     return r;
   };
-  /* 496 — 저장 자리가 «배너 5 벌» 에서 «공용 스칼라 둘» 로 내려왔다. 이 절이 196 시절부터
+  /* 714 — 저장 자리가 다시 «배너 5 벌» 이다(496 의 공용 스칼라 둘은 폐지). 이 절이 196 시절부터
      묻던 질문은 «손댄·구 세이브가 들어와도 정상값으로 접히는가» 이고 그건 그대로 유효하다.
-     «5 벌을 합칠 때 뽑기 수를 안 잃는가» 는 496 이 새로 가져온 축이라 `verify496` [D] 가 묻는다. */
+     ⚑ [F1]·[F3] 만 방향이 뒤집혔다(333 처방) — 496 은 «다섯이 한 값으로 접힌다» 를 물었고
+     714 는 «다섯이 각자 접힌다» 를 묻는다. 자리는 안 비웠다.
+     «배너마다 뽑기 수를 안 잃는가» 는 `verify496` [D] · `verify714` [C] 가 묻는다. */
   const F1 = await inject({ weapon: { lv: 100, exp: 37 }, skill: { lv: 60, exp: 4 },
                             shield: { lv: 3, exp: 4 }, amulet: { lv: 25, exp: 0 },
                             pet: { lv: 1, exp: 0 } });
-  ok(F1.lv >= 1 && F1.lv <= MAXLV && Number.isFinite(F1.exp),
-    'F1 구 세이브(배너별 100/60/3/25/1)가 공용 레벨 하나로 접힌다 · 범위 안', JSON.stringify(F1));
-  ok(F1.exp < NEED(F1.lv), 'F2 잔여 경험치는 언제나 need 미만(채움률 1000% 가 안 뜬다)',
-    F1.exp + ' < ' + NEED(F1.lv));
-  ok(new Set(F1.alias).size === 1, 'F3 별칭 다섯이 한 값 — «배너마다 다른 레벨» 이 구조적으로 없다',
+  ok(F1.alias.every(a => { const [l, e] = a.split('/').map(Number);
+                           return l >= 1 && l <= MAXLV && Number.isFinite(e); }),
+    'F1 구 세이브(배너별 100/60/3/25/1)가 **배너마다** 정상 범위로 접힌다', JSON.stringify(F1.alias));
+  ok(F1.alias.every(a => { const [l, e] = a.split('/').map(Number); return l >= MAXLV || e < NEED(l); }),
+    'F2 잔여 경험치는 언제나 need 미만(채움률 1000% 가 안 뜬다)', F1.alias.join(' · '));
+  ok(new Set(F1.alias).size > 1,
+    'F3 ★ 다섯 칸이 **각자** 접힌다 — 496 의 «한 값으로 접힌다» 를 714 가 뒤집었다',
     F1.alias.join(' · '));
 
   const F2 = await inject({ weapon: { lv: -7, exp: -3 }, skill: { lv: '9', exp: 'x' },
                             shield: { lv: 1 / 0, exp: NaN }, amulet: null, pet: { lv: 1, exp: 0 } });
-  ok(F2.lv === 1 && F2.exp === 0, 'F4 음수·문자열·비유한·null 만 든 세이브 → Lv1/0', JSON.stringify(F2));
+  ok(F2.alias.every(a => a === '1/0'), 'F4 음수·문자열·비유한·null 만 든 세이브 → 다섯 칸 Lv1/0',
+    F2.alias.join(' · '));
   const F2b = await inject({ sumLv: -7, sumExp: 'x' });
-  ok(F2b.lv === 1 && F2b.exp === 0, 'F5 새 구조도 손댄 값이면 Lv1/0', JSON.stringify(F2b));
+  ok(F2b.alias.every(a => a === '1/0'), 'F5 496 세이브도 손댄 값이면 Lv1/0', F2b.alias.join(' · '));
   const F2c = await inject({ sumLv: 9999, sumExp: 9999999 });
-  ok(F2c.lv === MAXLV && F2c.exp === 0, 'F6 만렙 초과 → Lv' + MAXLV + ' · exp 0', JSON.stringify(F2c));
+  ok(F2c.alias.every(a => a === MAXLV + '/0'),
+    'F6 만렙 초과 → 다섯 칸 Lv' + MAXLV + ' · exp 0(496 값은 다섯에 복제된다)', F2c.alias.join(' · '));
   const F2d = await inject({ sumLv: 2, sumExp: 999999 });
-  ok(F2d.lv === 2 && F2d.exp === NEED(2) - 1, 'F7 need 초과 exp → need−1 로 클램프', JSON.stringify(F2d));
-  const F3 = await inject({ sumLv: F1.lv, sumExp: F1.exp });
+  ok(F2d.alias.every(a => a === '2/' + (NEED(2) - 1)), 'F7 need 초과 exp → need−1 로 클램프',
+    F2d.alias.join(' · '));
+  const F3 = await inject({ sumVer: 2, sum: { weapon:{lv:F1.lv,exp:F1.exp}, skill:{lv:F1.lv,exp:F1.exp},
+                                              shield:{lv:F1.lv,exp:F1.exp}, amulet:{lv:F1.lv,exp:F1.exp},
+                                              pet:{lv:F1.lv,exp:F1.exp} } });
   ok(F3.lv === F1.lv && F3.exp === F1.exp, 'F8 이관은 멱등(두 번 돌아도 같은 값)',
-    JSON.stringify(F3) + ' vs ' + JSON.stringify(F1));
+    JSON.stringify(F3.alias));
   ok([F1, F2, F2b, F2c, F2d, F3].every(o => Number.isFinite(o.lv) && Number.isFinite(o.exp)),
     'F9 이관 후 lv·exp 유한(NaN 0건)');
 
   /* ================= [G] 10 상점 카드 ================= */
   console.log('[G] 10 상점 소환 카드 표시');
-  /* 496 — 레벨이 공용이라 «무기 칸만 Lv4, 스킬 칸만 만렙» 을 동시에 만들 수 없다.
-     두 상태를 **차례로** 만들어 각각 읽는다(카드 다섯이 같은 값인지는 `verify496` [E] 가 본다). */
+  /* 714 — 레벨이 다시 배너별이라 «무기 칸만 Lv4, 스킬 칸만 만렙» 을 **동시에** 만들 수 있다.
+     그래도 이 절의 표본 순서(차례로 두 상태)는 496 것을 그대로 둔다 — 여기가 묻는 것은
+     «그 카드가 그 배너의 값을 제대로 찍는가» 이고, 다섯 칸의 독립은 `verify714` [D] 몫이다. */
   const G = await page.evaluate(mx => {
-    S.sumLv = 4; S.sumExp = Math.floor(sumNeedExp(4) / 2);
+    BKEYS.forEach(k => { S.sum[k].lv = 4; S.sum[k].exp = Math.floor(sumNeedExp(4) / 2); });
     openShopPage(null, 'sum'); renderShopPage();
     const cards = [...document.querySelectorAll('#shopList .shp-card')];
     const read = i => ({ lv: cards[i].querySelector('.clv>i').textContent,
@@ -234,7 +251,7 @@ const ok = (b, name, detail) => {
     const w = read(idx), n = cards.length;
     const bad1 = all.some(x => /NaN|undefined/.test(x.lv + x.bar));
     const pct1 = all.map(x => parseFloat(x.w) || 0);
-    S.sumLv = mx; S.sumExp = 0; renderShopPage();
+    BKEYS.forEach(k => { S.sum[k].lv = mx; S.sum[k].exp = 0; }); renderShopPage();
     const cards2 = [...document.querySelectorAll('#shopList .shp-card')];
     const idxS = SHOP_BOXES.findIndex(x => x.b === 'skill');
     const s2 = { lv: cards2[idxS].querySelector('.clv>i').textContent,

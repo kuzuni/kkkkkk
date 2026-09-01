@@ -134,8 +134,12 @@ async function measure(p, opts = {}) {
   await p.waitForTimeout(200);
   const setLv = async lv => {
     await p.evaluate(lv => {
-      S.sumLv = lv;
-      S.sumExp = (lv >= SUM_MAXLV) ? 0 : Math.min(655, sumNeedExp(lv) - 1);
+      /* 714 — 소환 레벨·경험치는 배너 칸이다(496 공용 스칼라 폐지). 이 자는 카드 잉크를 재므로
+         다섯 칸을 같은 값으로 놓는다 — 안 놓으면 카드가 Lv.1 로 그려져 **헛초록**이 된다. */
+      BKEYS.forEach(k => {
+        S.sum[k].lv = lv;
+        S.sum[k].exp = (lv >= SUM_MAXLV) ? 0 : Math.min(655, sumNeedExp(lv) - 1);
+      });
       renderShopPage();
     }, lv);
     await p.waitForTimeout(120);

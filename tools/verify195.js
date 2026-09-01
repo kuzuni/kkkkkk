@@ -259,8 +259,10 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
     cnt: { sumPet: 7 }, eqPet: ['drag2', 'robo0', 'bird0'], own: { drag2: { lv: 7 }, robo0: { lv: 4 }, bird0: { lv: 12 } } });
   const { ctx: ctx2, page: p2, errs: errs2 } = await open(browser, seed);
   const H = await p2.evaluate(async () => {
-    const lv = S.sumLv, eq = S.eqPet.slice(), before = S.dia;
-    let back = S.sumExp; for (let n = 1; n < S.sumLv; n++) back += sumNeedExp(n);
+    /* 714 — 소환 진행도가 다시 배너 칸이다(496 의 공용 스칼라 둘은 폐지). 이 씨앗이 담은
+       것은 **펫 칸** 하나이므로 되돌려 셀 자리도 펫 칸이다 — 묻는 것(뽑기 수 보존)은 그대로. */
+    const lv = S.sum.pet.lv, eq = S.eqPet.slice(), before = S.dia;
+    let back = S.sum.pet.exp; for (let n = 1; n < S.sum.pet.lv; n++) back += sumNeedExp(n);
     /* 73 ③ — 구 세이브는 `S.guide.idx` 가 0(=«스킬 1회 소환» 미션)이라 펫 소환이 **차단**된다.
        여기서 보려는 건 가격이지 차단이 아니므로 가이드를 끝낸 상태로 맞춘다(차단 자체는 verify73 §4 몫). */
     S.guide.idx = GUIDE.length; gmStart(); closeModal();
@@ -269,8 +271,8 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
     return { lv, back, eq: eq.join(','), paid: before - S.dia, c10: summonCost('pet', 10) };
   });
   ok(H.back === v496Pulls(12, 3) && H.eq === 'drag2,robo0,bird0',
-    'H1 ★ 구 세이브 그대로 로드 — 소환 진행도 ' + v496Pulls(12, 3).toLocaleString()
-      + ' 뽑 보존(496 공용화) · 장착 펫 유지',
+    'H1 ★ 구 세이브 그대로 로드 — 펫 배너 진행도 ' + v496Pulls(12, 3).toLocaleString()
+      + ' 뽑 보존(714 배너 독립 이관) · 장착 펫 유지',
     'Lv' + H.lv + ' = ' + H.back.toLocaleString() + ' 뽑 / ' + H.eq);
   ok(H.paid === 100, 'H2 구 세이브에서도 1회 소환 = 100 (마이그레이션 불요)', String(H.paid));
   ok(H.c10 === 1000, 'H3 구 세이브에서도 10연 = 1,000', String(H.c10));

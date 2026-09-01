@@ -70,15 +70,16 @@ const HARNESS = () => {
   /* 같은 출발점을 만든다: 재화 넉넉 · 소환 레벨 1 · 도감 비움 · 경험치를 레벨업 경계 바로 앞에 */
   window.__reset668 = expOff => {
     S.dia = 1e12; S.relic = 1e12;
-    S.sumLv = 1;
-    S.sumExp = Math.max(0, sumNeedExp(1) - expOff);
+    /* 714 — 소환 레벨·경험치가 배너 칸으로 돌아왔다(496 공용 스칼라 폐지).
+       리셋은 다섯 칸 전부, 읽기는 시험 대상 배너(`window.__b668`)에 건다. */
+    BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = Math.max(0, sumNeedExp(1) - expOff); });
     S.own = {};
     S.summons = 0;
     for (const k in S.cnt) if (/^sum/.test(k)) S.cnt[k] = 0;
     window.__cap668 = [];
   };
   window.__snap668 = () => ({
-    lv: S.sumLv, exp: S.sumExp, dia: S.dia, summons: S.summons,
+    lv: sumLv(window.__b668 || 'weapon'), exp: sumExp(window.__b668 || 'weapon'), dia: S.dia, summons: S.summons,
     cnt: S.cnt.sumEquip + S.cnt.sumSkill + S.cnt.sumPet + S.cnt.sumRelic, seq: window.__cap668.slice()
   });
   /* ⓒ — 668 **이전** 알고리즘의 재현(경험치를 통째로 먼저 넣고 N 번 굴린다).
@@ -101,6 +102,7 @@ const HARNESS = () => {
      (1회차에 이것을 몰라 [1] 이 «둘 다 0회» 로 헛초록·빨강이 섞여 나왔다). 지목된 배너가 있으면
      그것으로 잰다 — 제품의 가드를 끄지 않고 그 가드가 여는 문으로 들어가는 것이 옳다. */
   const B = await page.evaluate(() => (typeof gmBan === 'function' && gmBan()) || 'weapon');
+  await page.evaluate(b => { window.__b668 = b; }, B);   /* 714 — 스냅숏이 읽을 배너 칸 */
   const N = 100;
   const EXPOFF = 5;   /* 5번째 뽑기에서 레벨업이 걸리게 — 배치 한복판의 경계 */
 
@@ -154,7 +156,7 @@ const HARNESS = () => {
     const p1 = gradeProbs(B).slice();          /* 순차가 첫 장에 쓰는 표(Lv 1) */
     const old = window.__old668(B, N);
     const pEnd = gradeProbs(B).slice();        /* 옛 알고리즘이 **첫 장부터** 쓰는 표(배치 종료 레벨) */
-    const lvEnd = S.sumLv;
+    const lvEnd = sumLv(window.__b668 || 'weapon');
     window.__seed668(4242); window.__reset668(0);
     doSummon(B, N);
     const seq = window.__snap668().seq;
@@ -176,10 +178,10 @@ const HARNESS = () => {
   const r3 = await page.evaluate(({ B, EXPOFF }) => {
     window.__seed668(7); window.__reset668(EXPOFF);
     const before = gradeProbs(B).slice();
-    const lv0 = S.sumLv;
+    const lv0 = sumLv(window.__b668 || 'weapon');
     sumAddExp(B, EXPOFF);                    /* 경계를 정확히 넘긴다 */
     const after = gradeProbs(B).slice();
-    return { lv0, lv1: S.sumLv, before, after };
+    return { lv0, lv1: sumLv(window.__b668 || 'weapon'), before, after };
   }, { B, EXPOFF });
   const moved = r3.before.some((p, i) => Math.abs(p - r3.after[i]) > 1e-12);
   ok(r3.lv1 === r3.lv0 + 1, '[3-a] [전제] 경계에서 레벨이 정확히 한 칸 오른다', r3.lv0 + ' → ' + r3.lv1);
@@ -209,7 +211,7 @@ const HARNESS = () => {
     const t0 = performance.now();
     doSummon(B, 30000);                       /* 30회 × ×1000 = 최악 */
     const ms = performance.now() - t0;
-    return { ms, n: window.__cap668.length, lv: S.sumLv };
+    return { ms, n: window.__cap668.length, lv: sumLv(window.__b668 || 'weapon') };
   }, { B });
   ok(r5.n === 30000, '[5-a] 30,000 회가 전부 굴러간다', '뽑힌 수 ' + r5.n + ' · 최종 Lv ' + r5.lv);
   ok(r5.ms < 2000, '[5-b] 30,000 회가 2초 안에 끝난다(프레임 예산)', r5.ms.toFixed(1) + 'ms');

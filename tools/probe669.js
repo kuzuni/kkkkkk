@@ -105,9 +105,11 @@ async function inkOf(p, sel, clip) {
     for (const spec of LEVELS) {
       const lv = (typeof spec === 'object') ? spec.lv : spec, worst = (typeof spec === 'object') && spec.x;
       await p.evaluate(({ lv, worst }) => {
-        S.sumLv = lv;
-        S.sumExp = (lv >= SUM_MAXLV) ? 0
+        /* 714 — 소환 레벨·경험치는 배너 칸이다(496 공용 스칼라 폐지). 이 자는 카드 잉크를
+           재므로 다섯 칸을 같은 값으로 놓는다 — 안 놓으면 카드가 Lv.1 로 그려져 헛초록이 된다. */
+        const e = (lv >= SUM_MAXLV) ? 0
           : (worst ? sumNeedExp(lv) - 1 : Math.min(655, sumNeedExp(lv) - 1));
+        BKEYS.forEach(k => { S.sum[k].lv = lv; S.sum[k].exp = e; });
         renderShopPage();
       }, { lv, worst });
       await p.waitForTimeout(160);

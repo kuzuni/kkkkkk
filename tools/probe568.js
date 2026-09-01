@@ -81,16 +81,21 @@ const HIGH = 90000;   /* 10연 = 900,000 — 곡선 최대(idx19 = 49,000)보다
         `sumLv`/`sumExp` 가 들어 있으므로 여기서도 그 상태를 만들어 놓고 잰다. */
   const B = await p.evaluate(() => {
     closeModal && closeModal(); gmCloseAll();
-    S.sumLv = 1; S.sumExp = 30;              /* §2·§3 이 남기는 «30 뽑» 상태 */
+    /* 714 — 배너 칸 다섯으로 돌아왔다. «30 뽑» 상태를 다섯 칸에 같이 둔다 */
+    BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = 30; });   /* §2·§3 이 남기는 «30 뽑» 상태 */
     const snap = JSON.stringify(S);
     const run = old => {
       localStorage.setItem(KEY, JSON.stringify(old));
       load();
       return { free: freeLeft('amulet'),
                lv: S.sum.amulet && S.sum.amulet.lv, exp: S.sum.amulet && S.sum.amulet.exp,
-               sumLv: S.sumLv, sumExp: S.sumExp,
+               sumLv: S.sum.weapon.lv, sumExp: S.sum.weapon.exp,
                /* 별칭이 «다섯이 자동으로 같다» 를 지키는가 */
-               allSame: BKEYS.every(b => S.sum[b].lv === S.sumLv && S.sum[b].exp === S.sumExp) };
+               /* 714 — «다섯이 한 값인가» 가 아니라 «다섯이 이 표본에서 같게 놓였는가» 를 본다 */
+               allSame: BKEYS.every(b => S.sum[b].lv === S.sum.weapon.lv && S.sum[b].exp === S.sum.weapon.exp),
+               /* 714 — 표본의 다른 배너(skill lv3/exp2)가 **그 칸에** 남는지 */
+               skill: { lv: S.sum.skill.lv, exp: S.sum.skill.exp },
+               cells: BKEYS.map(b => b + ':' + S.sum[b].lv + '/' + S.sum[b].exp).join(' ') };
     };
     const base = JSON.parse(snap);
 
@@ -102,9 +107,10 @@ const HIGH = 90000;   /* 10연 = 900,000 — 곡선 최대(idx19 = 49,000)보다
     oldSave.guide = { idx: 7, prog: 55, gv: 2 };
     const r1 = run(oldSave);
 
-    /* [7] 대조 — **진짜** 구 세이브(496 이 신설한 두 키를 지운 것) */
+    /* [7] 대조 — **진짜** 구 세이브(그 판이 신설한 키를 지운 것)
+       714 — 갈래를 가르는 키가 둘이 됐다: `sumVer`(714) · `sumLv`(496). 둘 다 지워야 구 세이브다. */
     const real = JSON.parse(JSON.stringify(oldSave));
-    delete real.sumLv; delete real.sumExp;
+    delete real.sumVer; delete real.sumLv; delete real.sumExp;
     const r0 = run(real);
 
     /* [7-b] 대조 — 두 키를 지우고 진행도까지 0 이면 옛 기대 {lv1,exp0} 가 그대로 나온다 */
@@ -113,25 +119,29 @@ const HIGH = 90000;   /* 10연 = 900,000 — 곡선 최대(idx19 = 49,000)보다
                  pet: { lv: 1, exp: 0 }, relic: { lv: 1, exp: 0 } };
     const rz = run(zero);
 
-    /* [6] «총 뽑기 수» 를 구 곡선으로 되돌려 센 기대값 */
-    const pulls = (() => {
+    /* [6] «그 배너의 뽑기 수» 를 구 곡선으로 되돌려 센 기대값.
+       714 — 496 은 다섯 칸을 **합쳤고** 714 는 배너마다 따로 센다. 이 절이 읽는 칸은
+       목걸이(`amulet`)이고, 그 표본에는 목걸이 항이 아예 없으므로 기대는 다시 «0 뽑» 이다. */
+    const pullsOf = k => {
+      const o = (oldSave.sum && oldSave.sum[k]) || {};
+      const lv = Math.min(SUM_MAXLV_V196, Math.max(1, o.lv | 0 || 1));
       let s = 0;
-      const old = oldSave.sum;
-      BKEYS.forEach(k => {
-        const o = old[k] || {};
-        const lv = Math.min(SUM_MAXLV_V196, Math.max(1, o.lv | 0 || 1));
-        for (let n = 1; n < lv; n++) s += sumNeedExpV196(n);
-        const cap = (lv >= SUM_MAXLV_V196) ? 0 : sumNeedExpV196(lv) - 1;
-        if (o.exp > 0) s += Math.min(Math.floor(o.exp), cap);
-      });
+      for (let n = 1; n < lv; n++) s += sumNeedExpV196(n);
+      const cap = (lv >= SUM_MAXLV_V196) ? 0 : sumNeedExpV196(lv) - 1;
+      if (o.exp > 0) s += Math.min(Math.floor(o.exp), cap);
       return s;
-    })();
+    };
+    const pulls = pullsOf('amulet');
+    const pullsSkill = pullsOf('skill');
     let lv = 1, e = pulls;
     while (lv < SUM_MAXLV && e >= sumNeedExp(lv)) { e -= sumNeedExp(lv); lv++; }
 
     Object.assign(S, JSON.parse(snap)); save();
-    return { r1, r0, rz, pulls, wantLv: lv, wantExp: (lv >= SUM_MAXLV) ? 0 : e, free0: SHOP_FREE,
-             hasKeys: 'sumLv' in oldSave, snapExp: JSON.parse(snap).sumExp };
+    return { r1, r0, rz, pulls, pullsSkill, wantLv: lv, wantExp: (lv >= SUM_MAXLV) ? 0 : e,
+             free0: SHOP_FREE,
+             hasKeys: ('sumLv' in oldSave) || ('sumVer' in oldSave),
+             snapExp: JSON.parse(snap).sumExp !== undefined ? JSON.parse(snap).sumExp
+                                                            : JSON.parse(snap).sum.amulet.exp };
   });
 
   console.log('  · ① idx5 «' + A.n5 + '» 보상 ' + A.d5 + ' / 곡선 gmDiaAt(5) ' + A.curve5
@@ -149,8 +159,11 @@ const HIGH = 90000;   /* 10연 = 900,000 — 곡선 최대(idx19 = 49,000)보다
   eq('[1] ① verify76 이 찍은 21000 이 그대로 재현된다', A.d5, 21000);
   yes('[1] ① 그 값은 목걸이 10연 정가(1,000)가 아니다 — 옛 항이 빨간 이유',
       A.d5 !== A.c10.amulet, A.d5 + ' vs ' + A.c10.amulet);
-  yes('[1] ② 표본 이관이 옛 기대 {lv1,exp0} 를 만족하지 않는다 — 그 항이 빨간 이유',
-      !(B.r1.lv === 1 && B.r1.exp === 0), 'lv' + B.r1.lv + '·exp' + B.r1.exp);
+  /* ⚑ 714 로 방향이 뒤집힌 항 — 496 이 «다섯을 한 주머니에» 붓느라 목걸이 칸이 0 이 아니게
+     됐던 것이 568 의 뿌리였는데, 714 가 배너 독립으로 되돌리면서 그 칸은 다시 {lv1,exp0} 이다.
+     자리는 안 비운다(333 처방) — 물음(«표본 이관이 옛 기대를 만족하는가»)은 그대로다. */
+  yes('[1] ② 표본 이관이 옛 기대 {lv1,exp0} 를 **다시** 만족한다 — 714 가 568 의 뿌리를 걷어냈다',
+      B.r1.lv === 1 && B.r1.exp === 0, 'lv' + B.r1.lv + '·exp' + B.r1.exp);
 
   /* ── [2] ① 뿌리 ── */
   yes('[2] ① 21,000 = 498 곡선 gmDiaAt(5) 와 **정확히** 같다 (⇒ «하드코딩으로 되돌아갔다» 기각)',
@@ -175,25 +188,30 @@ const HIGH = 90000;   /* 10연 = 900,000 — 곡선 최대(idx19 = 49,000)보다
 
   /* ── [5] ② 어느 연언이 빨간가 ── */
   eq('[5] ② `freeLeft(\'amulet\')` 는 여전히 폴백 2 다 — 이쪽은 안 깨졌다', B.r1.free, B.free0);
-  eq('[5] ② `lv` 도 1 그대로다 — 빨간 것은 `exp` 한 칸이다', B.r1.lv, 1);
-  yes('[5] ② 그 exp 가 0 이 아니다 (자가 잡는 그 값)', B.r1.exp !== 0, String(B.r1.exp));
+  eq('[5] ② `lv` 도 1 그대로다', B.r1.lv, 1);
+  yes('[5] ② 714 이후 그 exp 는 0 이다 — 496 이 부어 넣던 몫이 **스킬 칸에** 남는다',
+      B.r1.exp === 0 && B.r1.skill.exp === 2, 'amulet exp ' + B.r1.exp + ' · ' + B.r1.cells);
 
   /* ── [6] ② 뿌리 — 표본이 «구 세이브» 이기를 그만뒀다 ── */
-  yes('[6] ② 자가 «구 세이브» 라며 심는 덩어리에 496 이 신설한 `sumLv` 가 **들어 있다** '
-    + '(뼈대가 `JSON.stringify(S)` 라 살아 있는 상태를 그대로 물려받는다)', B.hasKeys === true);
-  yes('[6] ② 그래서 이관이 ⓑ(구 세이브) 가 아니라 **ⓐ(새 세이브 — 클램프만)** 로 빠진다 — '
-    + '나온 exp 가 `d.sum` 이 아니라 **스냅샷의 sumExp** 와 같다',
-      B.r1.exp === B.snapExp, 'exp ' + B.r1.exp + ' = 스냅샷 sumExp ' + B.snapExp);
-  yes('[6] ② ⇒ 이 표본은 «amulet 키 없음 → 폴백» 경로를 **한 번도 밟지 않는다** — '
-    + '항의 이름이 재는 것과 실제로 도는 코드가 다르다', B.r1.exp === B.snapExp && B.hasKeys === true);
+  yes('[6] ② 자가 «구 세이브» 라며 심는 덩어리에 그 판의 새 키(714 `sumVer` · 496 `sumLv`)가 '
+    + '**들어 있다**(뼈대가 `JSON.stringify(S)` 라 살아 있는 상태를 그대로 물려받는다)', B.hasKeys === true);
+  yes('[6] ② 그래서 이관이 «구 세이브 환산» 이 아니라 **«이미 새 세이브 — 클램프만»** 으로 빠진다 — '
+    + '나온 칸이 `d.sum` 을 구 곡선으로 되돌려 센 값이 아니라 심은 값 그대로다',
+      B.r1.skill.lv === 3 && B.r1.skill.exp === 2, '스킬 칸 ' + B.r1.skill.lv + '/' + B.r1.skill.exp);
+  yes('[6] ② ⇒ 이 표본은 «구 곡선 환산» 경로를 **한 번도 밟지 않는다** — '
+    + '항의 이름이 재는 것과 실제로 도는 코드가 다르다',
+      B.r1.skill.exp === 2 && B.hasKeys === true);
 
   /* ── [7] ② 두 키를 지우면 진짜 구 세이브가 되고, 496 규약대로 «총 뽑기 수» 가 보존된다 ── */
-  yes('[7] ② 두 키를 지우면 ⓑ 로 들어가 «구 곡선으로 되돌려 센 총 뽑기 수» 가 그대로 나온다 (496 «손해 0»)',
+  yes('[7] ② 그 키들을 지우면 «구 곡선 환산» 으로 들어가 **그 배너의** 뽑기 수가 그대로 나온다 (714 «손해 0»)',
       B.r0.lv === B.wantLv && B.r0.exp === B.wantExp,
-      'lv' + B.r0.lv + '·exp' + B.r0.exp + ' vs 기대 lv' + B.wantLv + '·exp' + B.wantExp + '(뽑기 ' + B.pulls + ')');
-  yes('[7] ② 그 뽑기 수는 **다른 배너**(skill lv3·exp2)에서 왔다 — 목걸이 칸은 원래 없었다',
-      B.pulls > 0, '총 ' + B.pulls + ' 뽑');
-  yes('[7] ② 별칭 뷰라 다섯 배너가 자동으로 같은 값이다 (496 «공용 하나»)', B.r0.allSame);
+      'lv' + B.r0.lv + '·exp' + B.r0.exp + ' vs 기대 lv' + B.wantLv + '·exp' + B.wantExp + '(목걸이 뽑기 ' + B.pulls + ')');
+  yes('[7] ★ 714 — skill lv3·exp2 의 ' + B.pullsSkill + ' 뽑은 **스킬 칸에 남는다** — '
+    + '496 처럼 목걸이로 흘러오지 않는다(그것이 568 의 뿌리였다)',
+      B.pulls === 0 && B.pullsSkill > 0 && B.r0.skill.exp === B.pullsSkill,
+      '목걸이 ' + B.pulls + ' 뽑 · 스킬 ' + B.pullsSkill + ' 뽑 → ' + B.r0.cells);
+  yes('[7] ② 다섯 칸이 **각자** 논다 — 496 의 «별칭이라 자동으로 같다» 를 714 가 뒤집었다',
+      !B.r0.allSame, B.r0.cells);
   yes('[7-b] ② 두 키 없음 + 진행도 0 이면 옛 기대 {lv1,exp0} 이 그대로 나온다 — '
     + '규칙이 틀린 게 아니라 **표본이 구 세이브가 아니었다**',
       B.rz.lv === 1 && B.rz.exp === 0 && B.rz.free === B.free0,

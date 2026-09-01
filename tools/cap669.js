@@ -34,7 +34,7 @@ async function prep(p) {
     st.textContent = '*{animation:none !important;transition:none !important}';
     document.head.appendChild(st);
     /* 주인 표본과 같은 상태: 소환 레벨 31 · 경험치 655/6710 */
-    S.sumLv = 31; S.sumExp = 655; renderShopPage();
+    BKEYS.forEach(k => { S.sum[k].lv = 31; S.sum[k].exp = 655; }); renderShopPage();   /* 714 — 배너 칸 다섯 */
   });
   await p.waitForTimeout(400);
 }

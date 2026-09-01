@@ -65,8 +65,12 @@ async function sweep(p) {
   for (const spec of LEVELS) {
     const lv = (typeof spec === 'object') ? spec.lv : spec, worst = (typeof spec === 'object') && spec.x;
     await p.evaluate(({ lv, worst }) => {
-      S.sumLv = lv;
-      S.sumExp = (lv >= SUM_MAXLV) ? 0 : (worst ? sumNeedExp(lv) - 1 : Math.min(655, sumNeedExp(lv) - 1));
+      /* 714 — 레벨·경험치가 배너 칸으로 돌아왔다. 이 자는 **첫 카드**의 잉크만 재므로
+         다섯 칸을 같은 값으로 맞춘다(어느 카드를 읽든 표가 같아야 스윕이 뜻을 갖는다). */
+      BKEYS.forEach(k => {
+        S.sum[k].lv = lv;
+        S.sum[k].exp = (lv >= SUM_MAXLV) ? 0 : (worst ? sumNeedExp(lv) - 1 : Math.min(655, sumNeedExp(lv) - 1));
+      });
       renderShopPage();
     }, { lv, worst });
     await p.waitForTimeout(150);

@@ -110,7 +110,8 @@ const ok = (b, name, detail) => {
   const NEED2 = await page.evaluate(() => sumNeedExp(2));
   console.log('\n[4] 레벨업 경계 — Lv1 need ' + NEED1 + ' 을 채우는 마지막 한 번');
   {
-    await page.evaluate(() => { S.sumLv = 1; S.sumExp = sumNeedExp(1) - 10; renderShopPage(); });
+    /* 714 — 레벨·경험치가 배너 칸이다. 카드 다섯을 같은 값으로 놓고 잰다 */
+    await page.evaluate(() => { BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = sumNeedExp(1) - 10; }); renderShopPage(); });
     const { before, after } = await press('amulet', '.b2');
     ok(before.exp === NEED1 - 10 && before.lv === 1,
       '  누른 직전 Lv1 · exp ' + (NEED1 - 10) + '/' + NEED1, before.lv + '/' + before.exp);
@@ -123,10 +124,10 @@ const ok = (b, name, detail) => {
   console.log('\n[5] 다른 화면 반영 — 11 확률 팝업 · 저장');
   {
     const prb = await page.evaluate(() => {
-      S.sumLv = 16; openProbInfo('weapon');                  /* 레벨 인자 없이 = 현재 소환 Lv */
+      S.sum.weapon.lv = 16; openProbInfo('weapon');          /* 레벨 인자 없이 = 그 배너의 현재 소환 Lv */
       const lv = document.getElementById('prbLv').textContent;
       const heads = [...document.querySelectorAll('#prbList .prb-gh i')].map(e => e.textContent);
-      S.sumLv = SUM_MAXLV; openProbInfo('weapon');
+      S.sum.weapon.lv = SUM_MAXLV; openProbInfo('weapon');
       const lvMax = document.getElementById('prbLv').textContent;
       const headsMax = [...document.querySelectorAll('#prbList .prb-gh i')].map(e => e.textContent);
       closeProbInfo();
@@ -140,11 +141,11 @@ const ok = (b, name, detail) => {
     ok(!prb.heads.some(h => /불멸/.test(h)), '  Lv16 에서는 아직 불멸 없음(해금 = 만렙−1)', prb.heads.join(' / '));
     rows.push({ btn: '11 확률 팝업', chg: 'Lv16 → ' + prb.heads.length + '등급 · MAX → ' + prb.headsMax.length + '등급(초월·불멸 포함)' });
 
-    const saved = await page.evaluate(() => { S.sumLv = 7; S.sumExp = 123; save();
-                                              return { lv: S.sumLv, exp: S.sumExp }; });
+    const saved = await page.evaluate(() => { S.sum.weapon.lv = 7; S.sum.weapon.exp = 123; save();
+                                              return { lv: S.sum.weapon.lv, exp: S.sum.weapon.exp }; });
     await page.reload();
     await page.waitForTimeout(1100);
-    const kept = await page.evaluate(() => ({ lv: S.sumLv, exp: S.sumExp }));
+    const kept = await page.evaluate(() => ({ lv: S.sum.weapon.lv, exp: S.sum.weapon.exp }));
     ok(kept.lv === saved.lv && kept.exp === saved.exp, '  reload 후 소환 Lv·exp 보존(저장 반영)',
       JSON.stringify(kept));
     rows.push({ btn: '저장 · reload', chg: 'Lv7 exp123 → ' + JSON.stringify(kept) });

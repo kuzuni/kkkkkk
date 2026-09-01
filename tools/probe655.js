@@ -97,8 +97,12 @@ const BAR_SEL = ['.cbar', '.stkbar'];
   const rows = [];
   for (const lv of LEVELS) {
     await p.evaluate((lv) => {
-      S.sumLv = lv;
-      S.sumExp = (lv >= SUM_MAXLV) ? 0 : Math.min(655, sumNeedExp(lv) - 1);
+      /* 714 — 소환 레벨·경험치는 배너 칸이다(496 공용 스칼라 폐지). 이 자는 카드 잉크를 재므로
+         다섯 칸을 같은 값으로 놓는다 — 안 놓으면 카드가 Lv.1 로 그려져 **헛초록**이 된다. */
+      BKEYS.forEach(k => {
+        S.sum[k].lv = lv;
+        S.sum[k].exp = (lv >= SUM_MAXLV) ? 0 : Math.min(655, sumNeedExp(lv) - 1);
+      });
       renderShopPage();
     }, lv);
     await p.waitForTimeout(160);
@@ -199,7 +203,7 @@ const BAR_SEL = ['.cbar', '.stkbar'];
 
   /* ── [K] 범인 지목 — 바 계열을 «하나씩» 감춰 지워진 잉크가 얼마나 되돌아오는지 ── */
   const KILL_SEL = ['.stkbar', '.cbar>b', '.cbar>.trk', '.cbar'];
-  await p.evaluate(() => { S.sumLv = 31; S.sumExp = 655; renderShopPage(); });
+  await p.evaluate(() => { BKEYS.forEach(k => { S.sum[k].lv = 31; S.sum[k].exp = 655; }); renderShopPage(); });
   await p.waitForTimeout(160);
   const gk = await p.evaluate(() => {
     const card = document.querySelector('#shopList .shp-card');

@@ -402,8 +402,10 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
   const F = await F0.page.evaluate(() => ({
     own: ['bird0', 'robo0', 'drag2'].map(id => (S.own[id] ? S.own[id].l : 0)).join(','),
     frag: ['bird0', 'robo0', 'drag2'].map(id => (S.own[id] ? S.own[id].n : -1)).join(','),
-    eq: S.eqPet.join(','), pets: pets.length, lv: S.sumLv, exp: S.sumExp, maxlv: SUM_MAXLV,
-    back: (() => { let t = S.sumExp; for (let n = 1; n < S.sumLv; n++) t += sumNeedExp(n); return t; })(),
+    /* 714 — 소환 진행도가 다시 배너 칸이다. 이 씨앗이 담은 것은 **펫 칸** 하나이므로
+       되돌려 셀 자리도 펫 칸이다(496 의 공용 스칼라 둘은 폐지 · 묻는 것은 그대로 «보존»). */
+    eq: S.eqPet.join(','), pets: pets.length, lv: S.sum.pet.lv, exp: S.sum.pet.exp, maxlv: SUM_MAXLV,
+    back: (() => { let t = S.sum.pet.exp; for (let n = 1; n < S.sum.pet.lv; n++) t += sumNeedExp(n); return t; })(),
     /* 구 세이브의 «펫» 키가 전부 새 표에 살아 있는지만 본다(로드가 스킬 등 다른 계열을 새로 줄 수 있다) */
     lost: ['bird0', 'robo0', 'drag2'].filter(id => !PT[id]),
     total: PETS.length
@@ -414,7 +416,7 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
   ok(F.pets === 3, 'F4 전투 동료 3마리 스폰(syncPets)', String(F.pets));
   ok(F.back === v496Pulls(12, 3),
     'F5 ★ 구 세이브 소환 진행도 보존 — 구 Lv12/exp3 = ' + v496Pulls(12, 3).toLocaleString()
-      + ' 뽑이 공용 레벨로 그대로 옮겨졌다(496)',
+      + ' 뽑이 **펫 배너 칸으로** 그대로 옮겨졌다(714 배너 독립 이관)',
     'Lv' + F.lv + '/' + F.exp + ' = ' + F.back.toLocaleString() + ' 뽑');
   ok(F.lost.length === 0 && F.total === 36, 'F6 구 펫 id 전부 새 표에 존재 · 36종',
     F.lost.join(',') || (F.total + '종'));

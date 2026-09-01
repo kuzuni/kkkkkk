@@ -102,14 +102,20 @@ const HARNESS = () => {
   window.__cap = [];
   window.__origShow = window.showSummonResult;
   window.showSummonResult = (b, times, res) => { window.__cap.push(...res.map(r => r.it.id)); };
+  /* 714 — 소환 레벨·경험치가 «공용 스칼라 둘» 에서 **배너 칸 다섯**으로 돌아왔다.
+     등가성이 묻는 것은 안 바뀐다(«×100 한 번 = ×1 백 번») — 다만 레벨이 오르는 자리가
+     **뽑는 그 배너**라 리셋은 다섯 칸 전부에, 읽기는 시험 대상 배너(`window.__b`)에 건다.
+     ⚠ 읽기를 아무 칸에나 걸면 [B×N-전제](«배치 도중 실제로 레벨업한다»)가 늘 «1 → 1» 로
+        읽혀 **헛초록이 아니라 헛빨강**이 된다. */
+  window.__b = 'weapon';
   window.__reset = expOff => {
     S.dia = 1e12; S.relic = 1e12;
-    S.sumLv = 1; S.sumExp = Math.max(0, sumNeedExp(1) - (expOff || 0));
+    BKEYS.forEach(k => { S.sum[k].lv = 1; S.sum[k].exp = Math.max(0, sumNeedExp(1) - (expOff || 0)); });
     S.own = {}; S.summons = 0;
     for (const k in S.cnt) if (/^sum/.test(k)) S.cnt[k] = 0;
     window.__cap = [];
   };
-  window.__snap = () => ({ lv: S.sumLv, exp: S.sumExp, dia: S.dia, summons: S.summons,
+  window.__snap = () => ({ lv: sumLv(window.__b), exp: sumExp(window.__b), dia: S.dia, summons: S.summons,
                            seq: window.__cap.slice() });
 };
 
@@ -120,6 +126,7 @@ const HARNESS = () => {
   /* 73 ③ — 가이드 소환 미션이 다른 배너를 막는다. 가이드를 끝내 놓고 잰다(제품 가드는 그대로). */
   await page.evaluate(() => { S.guide.idx = GUIDE.length; if (typeof gmStart === 'function') gmStart(); });
   const B = await page.evaluate(() => (typeof gmBan === 'function' && gmBan()) || 'weapon');
+  await page.evaluate(b => { window.__b = b; }, B);   /* 714 — 스냅숏이 읽을 배너 칸 */
 
   /* ================= [A] 부품 ================= */
   /* 713 — 바는 이제 12 결과 팝업 안에 산다. 팝업을 띄우고(가로채기를 잠깐 풀어 진짜로 그린다) 잰다. */

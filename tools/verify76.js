@@ -155,9 +155,9 @@ async function launchAny(){
       localStorage.setItem(KEY, JSON.stringify(old));
       load();
       const r = { free: freeLeft('amulet'),
-                  /* 568 — 496 이후 «목걸이 칸» 은 별칭 뷰가 공용 스칼라 둘을 비춘 것이다 */
+                  /* 714 — «목걸이 칸» 은 다시 **실물 칸**이다(496 별칭 뷰 폐지) */
                   lv: S.sum.amulet && S.sum.amulet.lv, exp: S.sum.amulet && S.sum.amulet.exp,
-                  allSame: BKEYS.every(b => S.sum[b].lv === S.sumLv && S.sum[b].exp === S.sumExp),
+                  cells: BKEYS.map(b => b + ':' + S.sum[b].lv + '/' + S.sum[b].exp).join(' '),
                   idx: S.guide.idx, gv: S.guide.gv, prog: S.guide.prog };
       return r;
     };
@@ -168,16 +168,22 @@ async function launchAny(){
     oldSave.sum = { skill: { lv: 3, exp: 2 }, weapon: { lv: 1, exp: 0 }, shield: { lv: 1, exp: 0 },
                     pet: { lv: 1, exp: 0 }, relic: { lv: 1, exp: 0 } };
     oldSave.guide = { idx: 7, prog: 55, gv: 2 };
-    /* 568 — 뼈대가 `JSON.stringify(S)` 라 **496 이 신설한 `sumLv`/`sumExp` 가 딸려 온다.**
-       그 두 키가 있으면 `load()` 는 ⓐ(새 세이브 — 클램프만) 로 빠져 여기서 재려는
-       ⓑ(구 세이브 — `d.sum` 을 되돌려 센다) 경로를 **한 번도 안 밟는다**. 지워야 구 세이브다. */
-    delete oldSave.sumLv; delete oldSave.sumExp;
+    /* 568 — 뼈대가 `JSON.stringify(S)` 라 **그 판의 새 키가 딸려 온다.** 그 키가 있으면
+       `load()` 는 «이미 새 세이브» 갈래로 빠져 여기서 재려는 «구 세이브 환산» 경로를
+       **한 번도 안 밟는다**. 지워야 구 세이브다.
+       714 — 갈래를 가르는 키가 둘이 됐다: `sumVer`(714 판) · `sumLv`(496 판). 둘 다 지운다. */
+    delete oldSave.sumVer; delete oldSave.sumLv; delete oldSave.sumExp;
     const r1 = run(oldSave);
-    /* 568 [전제] — 그 두 키를 남긴 사본은 ⓑ 로 안 간다(= 위의 delete 가 이 절의 조건이다).
-       이 항이 없으면 다음 워커가 delete 를 지워도 표본만 조용히 죽고 게이트는 초록이다. */
+    /* 568 [전제] — 그 키를 남긴 사본은 «구 세이브 환산» 으로 안 간다(= 위의 delete 가 이 절의
+       조건이다). 이 항이 없으면 다음 워커가 delete 를 지워도 표본만 조용히 죽고 게이트는 초록이다.
+       714 — 두 판을 각각 못박는다: ⓐ `sumVer` 를 남기면 칸이 **그대로**(환산 없음) ·
+       ⓑ `sumLv` 만 남기면 그 하나가 **다섯에 복제**된다(구 곡선 환산이 아니다). */
     const keepKeys = JSON.parse(JSON.stringify(oldSave));
     keepKeys.sumLv = 1; keepKeys.sumExp = 7;
     const rK = run(keepKeys);
+    const keepVer = JSON.parse(JSON.stringify(oldSave));
+    keepVer.sumVer = 2;
+    const rV = run(keepVer);
     /* 568 음성 대조 — freeSum 에 amulet 이 **있으면** 폴백이 아니라 그 값이 나온다
        (= ⓐ 항이 «폴백» 을 실제로 재는 자다. 상수 2 를 우연히 맞히는 것이 아니다) */
     const hasKey = JSON.parse(JSON.stringify(oldSave));
@@ -187,36 +193,41 @@ async function launchAny(){
     oldSave.guide = { idx: 7, prog: 0, gv: 3 };  const r3 = run(oldSave);
     oldSave.guide = { idx: 20, prog: 0, gv: 2 }; const r4 = run(oldSave);
 
-    /* 568 ⓑ 의 기대값 — 496 규약 «총 뽑기 수 보존» 을 **구 곡선으로 되돌려 세서** 만든다.
-       숫자(252)를 손으로 적지 않는 이유: 곡선 상수(A·B·구 표)가 바뀌면 그 사본은 헛초록이 된다.
-       여기 식은 `load()` 의 이관 블록과 같은 규약을 읽으므로 만렙·곡선이 바뀌어도 따라온다. */
-    const want = (() => {
+    /* 714 ⓑ 의 기대값 — 496 의 «다섯을 한 주머니에 붓는다» 를 주인 지시가 번복했다.
+       이제 규약은 «배너마다 구 곡선으로 되돌려 세서 **그 배너에** 얹는다» 이므로 기대값도
+       칸마다 만든다. 숫자를 손으로 적지 않는 이유는 568 이 적어 둔 그대로다 — 곡선 상수가
+       바뀌면 베낀 사본은 헛초록이 된다. */
+    const one = k => {
+      const o = (oldSave.sum && oldSave.sum[k]) || {};
+      const olv = Math.min(SUM_MAXLV_V196, Math.max(1, Number.isFinite(o.lv) ? Math.floor(o.lv) : 1));
       let pulls = 0;
-      BKEYS.forEach(k => {
-        const o = (oldSave.sum && oldSave.sum[k]) || {};
-        const lv = Math.min(SUM_MAXLV_V196, Math.max(1, Number.isFinite(o.lv) ? Math.floor(o.lv) : 1));
-        for (let n = 1; n < lv; n++) pulls += sumNeedExpV196(n);
-        const cap = (lv >= SUM_MAXLV_V196) ? 0 : sumNeedExpV196(lv) - 1;
-        if (Number.isFinite(o.exp) && o.exp > 0) pulls += Math.min(Math.floor(o.exp), cap);
-      });
+      for (let n = 1; n < olv; n++) pulls += sumNeedExpV196(n);
+      const cap = (olv >= SUM_MAXLV_V196) ? 0 : sumNeedExpV196(olv) - 1;
+      if (Number.isFinite(o.exp) && o.exp > 0) pulls += Math.min(Math.floor(o.exp), cap);
       let lv = 1, e = pulls;
       while (lv < SUM_MAXLV && e >= sumNeedExp(lv)) { e -= sumNeedExp(lv); lv++; }
       return { pulls, lv, exp: (lv >= SUM_MAXLV) ? 0 : e };
-    })();
+    };
+    const want = one('amulet');
+    const wantCells = BKEYS.map(k => k + ':' + one(k).lv + '/' + one(k).exp).join(' ');
 
     Object.assign(S, JSON.parse(snap)); save();  /* 원상 복구 */
-    return { r1, r2, r3, r4, rK, rH, want, free0: SHOP_FREE, glen: GUIDE.length, ver: GUIDE_V };
+    return { r1, r2, r3, r4, rK, rV, rH, want, wantCells,
+             free0: SHOP_FREE, glen: GUIDE.length, ver: GUIDE_V };
   });
-  /* 568 — 옛 항은 «amulet 키 없음 → S.sum.amulet {lv1,exp0}» 이었다. 그 기대는 소환 레벨이
-     **배너 5 벌**이던 시절의 «없으면 기본값» 이고, 496 이 그 자리를 «공용 스칼라 둘» 로 갈면서
-     이관 규약도 «없으면 1» 이 아니라 **«다섯 주머니의 총 뽑기 수를 한 주머니에 붓는다»** 가 됐다.
-     ⚠ 값(exp 252)만 다시 적으면 곡선 상수를 베낀 사본이라 이관이 통째로 사라져도 초록이다 —
-        기대값은 위 `want` 가 **같은 규약을 되돌려 세서** 만든다. 자리는 안 비운다(333 처방). */
-  ok(mig.r1.free === mig.free0 && mig.r1.lv === mig.want.lv && mig.r1.exp === mig.want.exp && mig.r1.allSame,
-    `ⓐⓑ amulet 키 없음 → freeLeft ${mig.free0}(폴백) · 496 이관이 총 뽑기 ${mig.want.pulls} 를 보존 `
-    + `(실제 lv${mig.r1.lv}·exp${mig.r1.exp} / 기대 lv${mig.want.lv}·exp${mig.want.exp} · 다섯 배너 동일 ${mig.r1.allSame})`);
-  ok(mig.rK.exp === 7,
-    `ⓑ [전제] 496 의 \`sumLv\`/\`sumExp\` 가 남은 사본은 ⓑ 로 안 간다 — 그것이 «구 세이브» 표본의 조건 (실제 exp${mig.rK.exp})`);
+  /* 714 — 이 항은 **두 번 방향이 바뀐 자리**다. 568 시절 «amulet 키 없음 → {lv1,exp0}» →
+     496 이 «다섯 주머니를 한 주머니에» 로 갈았고 → 714 가 배너 독립으로 되돌리면서 목걸이 칸은
+     다시 «없으면 Lv1/0» 이 됐다. 그래도 **값을 손으로 적지 않는다**(568 경고 그대로) —
+     기대값은 위 `one()` 이 같은 규약을 되돌려 세서 만들고, 자리는 안 비운다(333 처방).
+     ⚑ 그리고 «다섯이 같은 값» 이 아니라 «칸마다 제 값» 이 통과 조건이다. */
+  ok(mig.r1.free === mig.free0 && mig.r1.lv === mig.want.lv && mig.r1.exp === mig.want.exp
+     && mig.r1.cells === mig.wantCells,
+    `ⓐⓑ amulet 키 없음 → freeLeft ${mig.free0}(폴백) · 714 이관이 **배너마다** 뽑기 수를 보존 `
+    + `(목걸이 실제 lv${mig.r1.lv}·exp${mig.r1.exp} / 기대 lv${mig.want.lv}·exp${mig.want.exp} · 칸 ${mig.r1.cells})`);
+  ok(mig.rK.exp === 7 && /amulet:1\/7/.test(mig.rK.cells),
+    `ⓑ [전제] 496 의 \`sumLv\`/\`sumExp\` 가 남은 사본은 구 곡선 환산으로 안 간다 — 그 하나가 다섯에 복제된다 (실제 ${mig.rK.cells})`);
+  ok(/skill:3\/2/.test(mig.rV.cells),
+    `ⓐ [전제] 714 의 \`sumVer\` 가 남은 사본도 환산으로 안 간다 — 칸이 그대로다 (실제 ${mig.rV.cells})`);
   ok(mig.rH.free === 0,
     `ⓐ 음성 대조 — freeSum 에 amulet 이 있으면 폴백이 아니라 그 값이다 (실제 ${mig.rH.free})`);
   /* 154 — 이관 후 gv 는 «그때의 최신 버전» 이다(3 고정이 아니다). 76 이 보는 것은 «idx 가 8 로

@@ -52,7 +52,7 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
   await p.evaluate(() => {
     S.dia = 2e6; S.gold = 1e9; S.relic = 5e4;
     S.daily = S.daily || {}; S.daily.freeSum = {}; S.daily.adBuy = {};
-    S.sumLv = 31; S.sumExp = 655;
+    BKEYS.forEach(k => { S.sum[k].lv = 31; S.sum[k].exp = 655; });   /* 714 — 배너 칸 다섯 */
     openShopPage();
   });
   await p.waitForTimeout(700);

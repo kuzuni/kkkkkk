@@ -104,7 +104,8 @@ const ok = (b, name, got) => { console.log((b ? 'PASS' : 'FAIL') + ' ' + name + 
   await page.waitForTimeout(400);
   const f = await page.evaluate(m => {
     const kept = S.sum.weapon.lv;                     /* 양성 — 넣은 값 그대로 */
-    S.sumLv = SUM_MAXLV;                              /* 음성 — «load() 가 만렙으로 올린» 상태 모사 */
+    /* 714 — 레벨 자리가 배너 칸이다. 음성 표본은 다섯 칸을 다 만렙으로 둔다 */
+    BKEYS.forEach(k => { S.sum[k].lv = SUM_MAXLV; });   /* 음성 — «load() 가 만렙으로 올린» 상태 모사 */
     return { kept, broken: S.sum.weapon.lv, want: m, max: SUM_MAXLV };
   }, mid);
   ok(f.kept === f.want && f.broken !== f.want,
