@@ -20,6 +20,10 @@
  *   · 플레이어 이속 = `stat.speed` 게터를 재정의(원본은 `PLAYER_SPEED` 상수 하나)
  *   · 잡몹 반경 = 새 개체의 `e.r` 을 `MOB_DRAW_SC` 로 나눈다
  * 잰 뒤에는 전부 원복한다.
+ *
+ * ⚑ 2026-09-01(작업 721) — 자 자신의 플레이키 수리. `[3-d]`·`[3b-c]` 가 실행마다 갈렸다(5회 중
+ *   [3-d] 4빨강 · [3b-c] 2빨강). 제품 0줄 — 고친 것은 **문턱뿐**이고 결론(«용의자 셋은 뿌리가
+ *   아니다» · «불사 판은 부푼다»)은 그대로다. 상세는 `docs/review/721-probe622문턱플레이키.md`.
  */
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -28,6 +32,27 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/
 
 const K = 6, SEC = 25, POP = 23;
 const TOL_FLOOR = 0.40;      /* `verify504` [C] 와 같은 허용 오차 바닥 */
+
+/* ── 문턱은 «바라는 값» 이 아니라 «잰 값» 에서 온다(504-④) ─────────────────────────
+ * 아래 두 뭉치의 출처는 **2026-09-01 · 같은 트리 5회 실행**의 실측 분포다(작업 721).
+ *   base(현행)          15.83 / 16.50 / 16.17 / 16.67 / 15.96  → 평균 16.23 · 폭 ±2.7%
+ *   용의자 되돌림 최댓값  c541 16.82 · pr15 16.30 · ply 15.86    → 셋 다 base 의 잡음 폭 **안**
+ *   불사(hpinf)         26.09 / 25.11 / 23.23 / 25.44 / 23.42  → 평균 24.66 · 판별 sd 4.6
+ *
+ * ⚑ 721 이 고친 것 — 옛 자는 «base 보다 조금이라도 선언에 가까우면 그 손잡이가 뿌리» 였다.
+ *   그런데 c541·ply·pr15 의 되돌림은 base 와 **잡음 안에서 겹친다** ⇒ 어느 쪽이 위로 가는지가
+ *   실행마다 뒤집혀 [3-d] 가 5회 중 4회 헛빨강이었다([3-a]·[3-b] 도 `ply` 로 같은 함정 위에 있었다).
+ *   ⇒ «뿌리» 를 **현행↔선언 간극을 절반 이상 메우는 손잡이**로 다시 정의한다(REACH).
+ *   무르게 푼 것이 아님은 §R 이 산술로 못박는다 — 개체수·불사 축은 이 자로도 그대로 «뿌리» 로 읽힌다. */
+const REACH = 0.50;          /* 간극의 절반 — 용의자 최댓값 16.82 ↔ 이 문턱 22.6~23.0 사이에 6 의 여유 */
+/* ⚑ 불사 축의 흔들림은 «판» 이 아니라 **«실행»** 단위다 — K 를 6→18(3배)로 올려 다시 5회 재 보니
+ *   실행 간 폭이 **안 줄었다**(K=6 은 23.23~26.09 · K=18 은 22.04~27.22 로 오히려 넓다).
+ *   ⇒ 표본을 늘리는 길은 값을 못 사고 시간만 쓴다(K=6 유지). 문턱은 잰 분포에서 뽑는다(504-④).
+ *   실측 **16회 풀**(K=6 5회 + K=18 5회 + 문턱 확정 뒤 6회) — 선언 대비 **74~95%**(평균 82.4 · sd 5.8%p) ·
+ *   현행 대비 **1.33~1.73배**(평균 1.51 · sd 0.11). 옛 문턱 0.85 는 그 분포를 **한복판에서 가로지른다**
+ *   (16회 중 9회가 0.85 아래 — 등재문이 «4회 중 2회» 로 잡은 그 흔들림이다). */
+const HPINF_DECL = 0.65;     /* 평균에서 3.0σ 아래 · 실측 최저 74% — 현행 판(선언의 55%)과는 또렷이 갈린다 */
+const HPINF_OVER = 1.15;     /* 평균에서 3.3σ 아래 · 실측 최저 1.33배 — 용의자 되돌림은 전부 현행의 1.03배 안이다 */
 
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
@@ -188,7 +213,8 @@ const CASES = [
     console.log('     ' + c.label.padEnd(32) + String(m).padEnd(11)
       + ((m / consts.decl * 100).toFixed(0) + '%').padEnd(11)
       + String(d).padEnd(11) + String(res[c.key].kills).padEnd(11)
-      + String(res[c.key].killIn).padEnd(12) + log.map(r => r.per).join('/'));
+      + String(res[c.key].killIn).padEnd(12)
+      + (log.length !== K ? '(K=' + log.length + ') ' : '') + log.map(r => r.per).join('/'));
   }
 
   const base = res.base, decl = consts.decl;
@@ -206,7 +232,11 @@ const CASES = [
      ⚑ 결론은 등재문과 **반대**다. 338·341·391·414 처럼 재현이 가설을 기각한 자리다.
      되돌림이 값을 **선언 쪽으로** 끌어올려야 그 손잡이가 뿌리인데, 셋 다 반대로 내린다. */
   const gain = k => (res[k].m - base.m) / base.m;                  /* 되돌렸을 때의 변화율 */
-  const closer = k => Math.abs(res[k].m / decl - 1) < Math.abs(base.m / decl - 1);
+  /* «그 손잡이가 뿌리인가» 의 자 — 간극(현행 → 선언)을 REACH 만큼 메워야 뿌리다.
+     ⚠ 옛 자(«base 보다 조금이라도 가까우면») 는 잡음 폭 안에서 부호가 뒤집혀 헛빨강을 냈다(721 · 위 주석). */
+  const reachBar = () => base.m + REACH * (decl - base.m);
+  const nearsDecl = m => m >= reachBar();
+  const closer = k => nearsDecl(res[k].m);
   console.log('\n  [3] 되돌림 변화율(현행 대비) — a580 ' + (gain('a580') * 100).toFixed(0)
     + '% · c541 ' + (gain('c541') * 100).toFixed(0) + '% · ac ' + (gain('ac') * 100).toFixed(0)
     + '% · mob ' + (gain('mob') * 100).toFixed(0) + '% · ply ' + (gain('ply') * 100).toFixed(0)
@@ -224,8 +254,10 @@ const CASES = [
      + res.pr15.m + '(' + (gain('pr15') * 100).toFixed(0) + '%)');
   const SUS = ['a580', 'c541', 'ac', 'mob', 'ply', 'pr15'];   /* 등재문의 용의자 셋이 만드는 되돌림 여섯 */
   ok(SUS.every(k => !closer(k)),
-     '[3-d] ⇒ 등재문의 용의자 셋(580·502·541)은 **전부 뿌리가 아니다** — 하나도 선언에 못 다가간다',
-     SUS.map(k => k + ' ' + res[k].m).join(' · ') + ' · 선언 ' + decl);
+     '[3-d] ⇒ 등재문의 용의자 셋(580·502·541)은 **전부 뿌리가 아니다** — 하나도 간극의 '
+     + (REACH * 100).toFixed(0) + '% 를 못 메운다',
+     SUS.map(k => k + ' ' + res[k].m).join(' · ') + ' · 뿌리 문턱 ' + reachBar().toFixed(2)
+     + '(현행 ' + base.m + ' → 선언 ' + decl + ')');
 
   /* ── [3b] 그럼 무엇이 정하나 — 눈금 자신의 축(개체수)과 잡몹 체력 ── */
   console.log('\n  [3b] 눈금 축 — 개체수 23/' + res.pop30.m + '@30/' + res.pop40.m
@@ -238,10 +270,12 @@ const CASES = [
   ok(res.pop40.m >= decl * 0.85,
      '[3b-b] 개체수를 올리면 선언 ' + decl + ' 에 닿는다 = 선언은 «더 붐비던 판» 의 값이다',
      'POP 40 에서 ' + res.pop40.m + ' (선언의 ' + (res.pop40.m / decl * 100).toFixed(0) + '%)');
-  ok(res.hpinf.m >= decl * 0.85 && res.hpinf.killIn === 0,
+  const hpOk = (m, ki) => m >= decl * HPINF_DECL && m >= base.m * HPINF_OVER && ki === 0;
+  ok(hpOk(res.hpinf.m, res.hpinf.killIn),
      '[3b-c] **적이 안 죽는 판**에서도 선언에 닿는다 — 504 가 «불사 자유 판은 부푼다» 고 적어 둔 그 자리다',
-     '불사 ' + res.hpinf.m + '(선언의 ' + (res.hpinf.m / decl * 100).toFixed(0) + '%) · 장판 안 사망 '
-     + base.killIn + '/판 → 0');
+     '불사 ' + res.hpinf.m + '(선언의 ' + (res.hpinf.m / decl * 100).toFixed(0) + '% ≥ '
+     + (HPINF_DECL * 100).toFixed(0) + '% · 현행의 ' + (res.hpinf.m / base.m).toFixed(2) + '배 ≥ '
+     + HPINF_OVER + '배) · 장판 안 사망 ' + base.killIn + '/판 → ' + res.hpinf.killIn);
   ok(base.killIn / Math.max(1, base.kills) > 0.95,
      '[3b-d] 현행 판은 **처치가 전부 장판 위에서 일어난다** = 발수의 출구는 «걸어 나감» 이 아니라 «사망» 이다',
      base.killIn + '/' + base.kills + '건 (판당 ' + (base.kills / SEC).toFixed(1) + '킬/초)');
@@ -298,6 +332,28 @@ const CASES = [
   ok(D.altRatio > 1.03,
      '[4-b] `hits` 만 실측으로 갈면 [D1] 이 곧바로 빨개진다 = `m` 과 **한 벌**이어야 한다',
      D.altRatio.toFixed(4) + ' > 1.03');
+
+  /* ── [R] 되돌림 시험 — 721 이 문턱을 «무르게 푼 것» 이 아님을 산술로 못박는다(368 §R 규약) ──
+     자를 바꾼 두 항([3-d]·[3b-c])에 **거짓인 사본**을 먹여 빨개지는지, **참인 사본**은 초록인지 본다.
+     브라우저를 다시 안 돌리므로 공짜다 — 재는 것은 «판» 이 아니라 «판정식» 이다. */
+  console.log('\n  [R] 되돌림 시험 — 뿌리 문턱 ' + reachBar().toFixed(2)
+    + ' · 불사 문턱 ' + (decl * HPINF_DECL).toFixed(2) + '/' + (base.m * HPINF_OVER).toFixed(2));
+  ok(!nearsDecl(base.m * 1.05) && !nearsDecl(Math.max(...SUS.map(k => res[k].m))),
+     '[R-a] 잡음 폭(현행 ±5%)만큼 흔들린 값은 «뿌리» 로 안 읽힌다 = 721 이 없앤 헛빨강',
+     '현행×1.05 ' + (base.m * 1.05).toFixed(2) + ' · 용의자 최댓값 '
+     + Math.max(...SUS.map(k => res[k].m)) + ' < 문턱 ' + reachBar().toFixed(2));
+  /* ⚠ 여기에 `hpinf` 를 쓰면 안 된다 — 그 축은 판별 sd 4.6 이라 문턱 22.8 에서 3σ 안이다(새 헛빨강이 된다).
+     자가 «무르지 않다» 는 것은 **흔들리지 않는 축**(선언 자신 · 개체수 40)으로 보인다. */
+  ok(nearsDecl(decl) && nearsDecl(res.pop40.m),
+     '[R-b] **진짜로 선언에 닿는 손잡이**는 새 자로도 «뿌리» 다 — 자를 무르게 풀지 않았다',
+     '선언 ' + decl + ' · 개체수40 ' + res.pop40.m + ' 둘 다 ≥ ' + reachBar().toFixed(2));
+  ok(!hpOk(base.m, 0) && !hpOk(decl * (HPINF_DECL - 0.02), 0),
+     '[R-c] 불사 판이 «안 부푸는» 사본은 [3b-c] 를 빨갛게 만든다',
+     '현행값 ' + base.m + ' · 문턱 바로 아래 ' + (decl * (HPINF_DECL - 0.02)).toFixed(2)
+     + ' 둘 다 빨강');
+  ok(!hpOk(res.hpinf.m, 1),
+     '[R-d] «장판 안 사망 0» 전제가 깨지면 [3b-c] 는 빨갛다 — 불사 전제 자체를 지킨다',
+     '같은 발수(' + res.hpinf.m + ')라도 장판 안 사망 1건이면 빨강');
 
   ok(errs.length === 0, '[Z] 콘솔 에러 0건', errs.slice(0, 3).join(' | ') || '없음');
 
