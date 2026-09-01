@@ -262,6 +262,17 @@ docs/review/.probe541.json
 #    (360·367·438·439·453·467·471·541 선례).
 .p356r23-pre616.html
 
+# 646 verify169.js [E] 가 음성항용으로 잠깐 뽑는 사본 (게이트가 끝나면 지운다).
+# 이름에 pid 를 섞어 프로세스마다 유일하다(`.v169-neg<n>-<pid>.html`) — 같은 자를 병렬로 돌려도
+# 서로의 사본을 지우지 않는다. 강제 종료로 남을 수 있어 고정 이름 시절(`.v169-neg1.html`)까지 덮는다.
+# ⚠ 무시 규칙이 **없었다** — 즉사가 남긴 사본은 `index.html` 통째 사본(1MB+)이라 `git add -A` 에 딸려 갈 수 있었다.
+.v169-neg*.html
+# 646 verify646.js §R 이 «고정 이름 시절» 대조용으로 잠깐 뽑는 자 사본과 그 사본이 뽑는 음성항 사본
+# (시험이 끝나면 지운다). ⚠ 자 사본은 `tools/` 안에 둔다 — `require('./pwlaunch')` 와
+# `ROOT = path.resolve(__dirname, '..')` 가 그 자리를 전제한다. 음성항 사본은 저장소 루트다.
+tools/.v646-rev169.js
+.v646rev-neg*.html
+
 # 633 verify633.js §5·§R 이 «수리 전 보고» 대조용으로 잠깐 뽑는 smoke 사본 (시험이 끝나면 지운다)
 # ⚠ 저장소 루트에 둔다 — /tmp 에 두면 `require('playwright')` 가 저장소 node_modules 를 못 찾는다.
 .v633-neg.js

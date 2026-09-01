@@ -306,17 +306,29 @@ async function openList(p) {
   }
 
   /* ================= [E] 음성항 — 옛 트리로 갈아 끼운 사본 =================
-     ★ CSS·JS 를 «올린 뒤 주입» 하지 않는다. 파일을 바꿔 **새로 연다**(191 교훈). */
+     ★ CSS·JS 를 «올린 뒤 주입» 하지 않는다. 파일을 바꿔 **새로 연다**(191 교훈).
+     ⚑ 646 — 사본 이름에 **`process.pid` 를 섞는다.** 고정 이름(`.v169-neg1.html` …)이면
+       같은 자를 둘 이상 동시에 돌릴 때(저장소의 게이트 스윕 관행 — 638·639) 먼저 끝난 쪽의
+       `unlinkSync` 가 **남의 사본을 지워** 다른 쪽이 통째로 죽는다
+       (`Error: ENOENT ... unlink .v169-neg1.html` · 3병렬 3회 중 **2회 즉사**, C2 판정은 무관).
+       사본을 저장소 루트에 두는 이유(`assets/*` 상대 경로 · 59·74·58·191 선례)는 그대로다. */
   {
     const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const negPath = n => path.join(ROOT, `.v169-neg${n}-${process.pid}.html`);
+    /* 278 처방 — 정리 실패로 즉사시키지 않는다(그 항만 빨개지면 된다).
+       `finally` 로 부르므로 [E] 블록이 도중에 던져도 사본은 남지 않는다. */
+    const rmNeg = f => {
+      try { fs.unlinkSync(f); }
+      catch (e) { if (e.code !== 'ENOENT') console.log(`WARN 음성항 사본 정리 실패 — ${path.basename(f)} (${e.code})`); }
+    };
 
     /* E1 — 옛 빈 핸들러: 눌러도 아무 일이 없어야 한다 */
-    const NEG1 = path.join(ROOT, '.v169-neg1.html');
+    const NEG1 = negPath(1);
     const HANDLER = /\$\('dgdSweep'\)\.onclick = \(\) => \{[\s\S]*?\n\};/;
     const hit1 = src.match(HANDLER);
     chk(!!hit1, 'E0 음성항 사본 — `#dgdSweep` 핸들러를 찾았다', hit1 ? `${hit1[0].length}자` : '못 찾음');
     fs.writeFileSync(NEG1, src.replace(HANDLER, "$('dgdSweep').onclick = () => {};"));
-    {
+    try {
       const { ctx, p } = await boot(b, 2280, 'file://' + NEG1);
       await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
       await p.waitForTimeout(300);
@@ -336,16 +348,15 @@ async function openList(p) {
         'E1 음성항 — 옛 빈 핸들러로 되돌리면 입장 횟수·클리어 카운터·클리어 화면 전부 불변',
         `불변=${inv.same} 클리어화면=${inv.dcl}`);
       await ctx.close();
-    }
-    fs.unlinkSync(NEG1);
+    } finally { rmNeg(NEG1); }
 
     /* E2 — 옛 배너(캔버스 없음): 실루엣만 보이고 썸네일은 없다 */
-    const NEG2 = path.join(ROOT, '.v169-neg2.html');
+    const NEG2 = negPath(2);
     const CV = /<canvas class="dgd-th" id="dgdTh" width="300" height="214"><\/canvas>/;
     const hit2 = src.match(CV);
     chk(!!hit2, 'E0b 음성항 사본 — 배너 캔버스를 찾았다', hit2 ? '찾음' : '못 찾음');
     fs.writeFileSync(NEG2, src.replace(CV, ''));
-    {
+    try {
       const { ctx, p } = await boot(b, 2280, 'file://' + NEG2);
       await p.evaluate(() => openDunDetail(DUNGEONS[0]));
       await p.waitForTimeout(450);
@@ -358,21 +369,20 @@ async function openList(p) {
         'E2 음성항 — 캔버스를 빼면 썸네일이 사라지고 옛 실루엣이 남는다',
         `canvas=${m.cv} th-on=${m.on} sil=${m.sil}`);
       await ctx.close();
-    }
-    fs.unlinkSync(NEG2);
+    } finally { rmNeg(NEG2); }
 
     /* ⚑ E3 — 643 되돌림 시험. C2 를 «같은 tick 측정» 으로 갈아 끼웠으니, 그 새 식이
        **여전히 진짜 결함을 잡는지**를 못박아야 한다(334 규약 — 무르게 푼 수리 금지).
        소탕이 «한 층 위» 보상을 주도록 갈아 끼운 사본에서 C2 의 식이 반드시 어긋나야 한다.
        ⚠ `giveReward(d.rw(f));` 는 파일에 두 자리다(26676 = [도전] 클리어 · 26772 = 소탕).
          앞줄 `S.dunTk[d.id]--; S.cnt.dungeon++;` 까지 묶어 **소탕 쪽만** 집는다. */
-    const NEG3 = path.join(ROOT, '.v169-neg3.html');
+    const NEG3 = negPath(3);
     const PAY = 'S.dunTk[d.id]--; S.cnt.dungeon++;\n  giveReward(d.rw(f));';
     const hit3 = src.split(PAY).length - 1;
     chk(hit3 === 1, 'E0c 음성항 사본 — 소탕 지급 자리를 한 곳으로 집었다', `${hit3}곳`);
     fs.writeFileSync(NEG3, src.replace(PAY,
       'S.dunTk[d.id]--; S.cnt.dungeon++;\n  giveReward(d.rw(f + 1));'));
-    {
+    try {
       const { ctx, p } = await boot(b, 2280, 'file://' + NEG3);
       await openList(p);
       await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
@@ -387,8 +397,7 @@ async function openList(p) {
         'E3 음성항 — 지급을 한 층 위 보상으로 갈면 C2 의 새 식이 그대로 빨개진다',
         `지급 ${n.paid.toFixed(0)} vs 기대 ${n.want.toFixed(0)} (차 ${(n.paid - n.want).toFixed(0)})`);
       await ctx.close();
-    }
-    fs.unlinkSync(NEG3);
+    } finally { rmNeg(NEG3); }
   }
 
   /* ================= [F] 회귀 — 도전 버튼·팝업 흐름 불변 ================= */
