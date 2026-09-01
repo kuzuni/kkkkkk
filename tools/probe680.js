@@ -107,7 +107,7 @@ const ok = (b, name, detail) => {
   /* [3] 후보 ⓑ·ⓒ 를 기각하는 것은 «poison 하나뿐» 이 아니라 **형제 구조가 밴드 안** 이라는 사실이다.
      ⚠ 27종으로 넓히자 622 가 못 본 것이 나왔다 — `orbit`·`aura`(cd 0 지속형)·`whirl` 이 밴드 밖이다.
      그 셋은 **눈금이 한 번도 재 본 적 없는 구조**이고(게이트 표본 11종에 cd 0 이 하나도 없다)
-     K회 폭이 46~164% 라 poison(11%)과 성질이 다르다 ⇒ **이 작업 단위 밖 · 681 로 등재**.
+     K회 폭이 46~164% 라 poison(11%)과 성질이 다르다 ⇒ **이 작업 단위 밖 · 695 로 등재**.
      여기서 같이 고치면 «재현 없이 처방» 이 된다(338 규칙). */
   const KIN = ['flask', 'meteor', 'nova', 'holy', 'laser', 'boom', 'lance'];  /* 장판·폭발·빔·관통 — poison 의 형제 */
   const kin = rows.filter(x => KIN.includes(x.id));
@@ -127,7 +127,7 @@ const ok = (b, name, detail) => {
      + (pz.tol / Math.max(se, 1e-9)).toFixed(1) + '배 · 이탈 ' + (pz.off * 100).toFixed(0) + '%');
   /* 곁다리를 «관측했다» 로 남긴다 — 실패로 세지 않되 이름·값은 표에 찍힌다(681 등재 근거). */
   const outBand = rows.filter(x => x.off > x.tol && x.id !== 'poison');
-  console.log('     [곁다리 → 681] 밴드 밖 ' + outBand.length + '종(전부 눈금 미검증 구조): '
+  console.log('     [곁다리 → 695] 밴드 밖 ' + outBand.length + '종(전부 눈금 미검증 구조): '
     + (outBand.map(x => x.id + ' cd' + x.cd + ' 이탈 ' + (x.off * 100).toFixed(0)
        + '% 폭 ' + (x.spread * 100).toFixed(0) + '%').join(' · ') || '없음'));
   ok(outBand.every(x => x.cd === 0 || x.spread > 0.40),
