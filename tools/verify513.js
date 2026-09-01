@@ -86,6 +86,8 @@ const READ_VIEW = n => {
     dias: ATTEND.map(r => r.dia),
     keys: [...new Set(ATTEND.flatMap(r => Object.keys(r).filter(k => k !== 'ic' && k !== 't')))].sort(),
     total: ATTEND.reduce((s, r) => s + (r.dia || 0), 0),
+    /* 199 14회차(LL R5) — 지속 평균이 읽는 «2주차 이후 1일차» 를 제품에게 직접 묻는다. */
+    d1curve: (typeof ATT_D1_CURVE === 'number' ? ATT_D1_CURVE : null),
   }));
   if (t) {
     ok(t.n === CYCLE, '[A-a] `ATTEND.length` = 7 (8일차 이후 칸 0개)', t.n + '칸');
@@ -296,7 +298,10 @@ const READ_VIEW = n => {
   if (t) {
     const perDay  = Math.round(t.total / CYCLE);                                   /* 첫 순환 */
     /* 199 7회차 — 1일차가 1회성이 된 뒤로 «하루 평균» 이 둘이다. ④ 가 읽는 것은 **지속** 쪽이다. */
-    const steady  = Math.round((t.total - t.dias[0] + 4560) / CYCLE);   /* 199 9회차 — ATT_D1_CURVE 4,560 */
+    /* ⚑ 199 14회차(비평 LL R5) — 4,560 은 9회차 시절 `ATT_D1_CURVE` 의 **리터럴 사본**이라
+       14회차가 그 자리에 배수(`ATT_DIA_K`)를 넣자 이 줄만 뒤처져 지속 평균을 −5.7% 로 찍었다
+       (25,320 ↔ 참값 26,864). 값을 베끼지 말고 **제품에게 묻는다**(402 «표 두 벌» 부패 방지). */
+    const steady  = Math.round((t.total - t.dias[0] + t.d1curve) / CYCLE);
     note('출석 하루 평균 — 첫 순환', perDay.toLocaleString('en-US') + '/일  (28칸 시절 4,647/일 · +'
          + Math.round((perDay / 4647 - 1) * 100) + '%)');
     note('출석 하루 평균 — **지속(2주차 이후 · ④ 가 읽는 자)**',
