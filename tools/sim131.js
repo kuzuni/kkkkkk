@@ -58,7 +58,11 @@ const EH_R = num(/const eHp\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/, 
 const ED_B = num(/const eDmg\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(/,         'eDmg 계수');
 const ED_R = num(/const eDmg\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/,  'eDmg 배율');
 const N_MOB = num(/const ENEMY_COUNT\s*=\s*(\d+)/,        'ENEMY_COUNT');
-const OFF_H = num(/const OFF_MAX_H\s*=\s*(\d+)/,          'OFF_MAX_H');
+/* ⚑ 199 21회차 이관 — 제품이 «1회 적립 상한 OFF_MAX_H 6h» 를 선언째 걷어내고(결3 ⓑ)
+   «하루 총 예산 OFF_DAY_CAP_MIN 1,440분» 하나로 자른다. 이 자는 그 값을 시간으로 읽는다.
+   ⚠ 값은 여전히 min() 의 인자다(진짜 상한이 그것으로 바뀐 것뿐) — 유휴 h 는 H_MAX ≤ 3h 라
+   두 상한 어느 쪽에도 안 닿으므로 이 이관으로 산출 수치는 한 칸도 안 움직인다. */
+const OFF_H = num(/const OFF_DAY_CAP_MIN\s*=\s*(\d+)/, 'OFF_DAY_CAP_MIN') / 60;
 /* 517 — 요구치가 «구간표» 가 됐다(326 의 «단계 몫 300n» 폐기). 제품의 표를 그대로 읽는다 —
    숫자를 여기 베끼면 표를 갈 때마다 이 시뮬이 조용히 갈라진다(LESSONS 168-③). 값은 3종 합이다. */
 const T_NEED = pick(/const TRAIN_NEED\s*=\s*\[([^\]]+)\]/, 'TRAIN_NEED')[1]

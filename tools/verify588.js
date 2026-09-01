@@ -172,14 +172,17 @@ const openPass = async (page) => {
   const E = await page2.evaluate(() => ({
     noAds: !!(S.pass && S.pass.noAds), offPlus: !!(S.pass && S.pass.offPlus),
     bless: typeof autoBlessOn === 'function' && autoBlessOn(),
-    dia: S.dia, offMax: offMaxH(),
+    dia: S.dia, offMul: offMul(),
     cls: document.getElementById('app').classList.contains('noads'),
     ver: (JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}')).v || null,
   }));
   ok(E.noAds && E.offPlus && E.bless, 'E1 구 세이브의 이용권 3종 권한이 전부 살아 있다(회수 0)',
     'noAds=' + E.noAds + ' offPlus=' + E.offPlus + ' 자동축복=' + E.bless);
   ok(E.dia === 12345, 'E2 남은 다이아를 되돌려 주지도 뺏지도 않는다', String(E.dia));
-  ok(E.offMax === 10, 'E3 오프라인 상한 6+4 = 10시간 그대로', E.offMax + '시간');
+  /* ⚑ 199 21회차 이관(333) — 옛 «상한 6+4 = 10시간» 은 제품에서 사라졌다(결3 ⓑ: 1회 상한 폐지,
+     151 은 ×배율 상품). 588 이 지키는 것은 «구 세이브의 권한이 살아 있는가» 이므로 축만 갈아 끼운다. */
+  ok(Math.abs(E.offMul - 1.2) < 1e-9, 'E3 구 세이브의 offPlus 권한이 새 상품(오프라인 ×배율)으로 이어진다',
+    '×' + E.offMul);
   ok(E.cls === true, 'E4 `#app.noads` 표식도 그대로', String(E.cls));
   /* KEY 는 안 올렸다 — 저장 구조가 안 바뀌었고(필드를 지운 것은 **상수**다), 올리면 구 세이브가
      전멸한다(LESSONS 44-②: 키 하나로 읽는 load() 에서 KEY 상승 = 구 세이브 전멸). */

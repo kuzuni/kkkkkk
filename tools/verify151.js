@@ -4,7 +4,7 @@
    레이아웃 «닮았나» 는 비평가가 본다. 이 게이트가 지키는 것은 **기능과 불변식**이다:
      [A] 카드 3장 · 상품 데이터 · 원화 표기 · 마일리지 쿠폰 알약
      [B] 구매 한 번에 «차감 · 즉시 보석 · 쿠폰 · 효과» 가 한 벌로 움직인다 (같은 tick 안에서 Δ 측정)
-     [C] 오프라인 보상 상한 6 → 10시간 (01 팝업 문구까지)
+     [C] 오프라인 보상 **×배율**(199 21회차 결3 ⓑ 이관 — 옛 «상한 6 → 10시간») · 1회 상한 폐지 · 01 팝업 문구
      [D] 매일 보석 — 시각 기준. 껐다 켠 시간만큼 정확히, 기간제는 만료 시각까지만
      [E] 세이브 — 신설 두 키 «없으면 기본값»(KEY 인상 없음) · 미래 dailyAt 폐기
      [F] **맞은 것을 지키는 칸**(LESSONS 164-4 · 156-4): 13 재화 탭·카테고리 3칸·152 타이틀 중앙·
@@ -38,7 +38,10 @@ const EXPECT = {
   abless:  { won: 22900, cp: 2, daily: 1500, once: 16000, perm: false },
   offplus: { won: 7500,  cp: 1, daily: 750,  once: 5000,  perm: true }
 };
-const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
+/* ⚑ 199 21회차 이관(333 처방 — 자리를 비우지 않고 방향을 뒤집었다). 옛 상수 `OFF_BASE_H 6`·
+   `OFF_PLUS_H 4` 는 제품에서 **선언째** 사라졌다(결3 ⓑ: 1회 상한 6h → 하루 예산 1,440분).
+   그 자리를 배율 축이 받는다 — 기대값은 제품에서 파생하지 않고 여기 다시 적는다(위 ⚠ 규약). */
+const OFF_MUL_ON = 1.2, OFF_DAY_H = 24, DAILY_MAX_D = 60;
 
 (async () => {
   const browser = await launch(chromium);
@@ -54,9 +57,22 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
     /* 음성 테스트 — 연결 3개를 끊는다: 즉시 보석 · 쿠폰 · 오프라인 상한 */
     await page.evaluate(() => {
       /* 데이터 연결(즉시 보석·쿠폰·매일 보석)과 정산 함수를 끊는다.
-         `offMaxH`/`passOffPlus` 는 const 라 못 덮으므로 상한 쪽은 `passDailyTick` 무력화로 대신한다. */
+         `offMul`/`passOffPlus` 는 const 라 못 덮으므로 배율 쪽은 `passDailyTick` 무력화로 대신한다. */
       PASS_ITEMS.forEach(p => { p.once = 0; p.cp = 0; p.daily = 0; });
       window.passDailyTick = () => 0;
+      /* ⚑ 199 21회차 — [C] 축이 «상한» 에서 «배율» 로 바뀌면서 옛 음성 테스트(passDailyTick 무력화)가
+         [C] 를 더는 못 건드리게 됐다. 그래서 **21회차 이전의 제품**(1회 상한 6h · 배율 없음)을
+         그대로 되살려 심는다 — C4·C5 가 빨개져야 이 절이 공허하지 않다. `offlineReward` 는 함수
+         선언이라 전역으로 덮인다(`offMul` 은 const 라 못 덮는다). */
+      window.offlineReward = function (lastTime) {
+        if (!lastTime) return;
+        let sec = Math.min((Date.now() - lastTime) / 1000, 6 * 3600);
+        sec = Math.min(sec, Math.max(0, OFF_DAY_CAP_MIN - (S.daily.offMin || 0)) * 60);
+        if (sec < 60) return;
+        showOfflineReward(sec, eGold(S.stage) * stat.goldMul * 1.2 * sec * 0.5,
+          Math.floor(sec * OFF_DIA_PM / 60));
+        offPend.at = lastTime;
+      };
     });
   }
   const openPass = async () => {
@@ -159,27 +175,50 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
   ok('B:588 다이아 0 에서도 구매된다 — 지급 우편 1통 · 권한 즉시 · 다이아 Δ0',
     lack.r === true && lack.dDia === 0 && lack.own === true && lack.mails === 1, JSON.stringify(lack));
 
-  /* ================= [C] 오프라인 상한 ================= */
-  console.log('\n[C] 오프라인 보상 상한 6 → 10시간');
+  /* ================= [C] 오프라인 배율 · 1회 상한 폐지 ================= */
+  console.log('\n[C] 오프라인 보상 ×배율 (199 21회차 — 옛 «상한 6 → 10시간»)');
   const C = await page.evaluate(() => {
-    S.pass.offPlus = false; const off0 = offMaxH();
-    S.pass.offPlus = true; const off1 = offMaxH();
-    /* 01 팝업 문구 — 상한이 늘면 «최대 n시간 0분» 도 같이 늘어야 한다(156 «표기·지급» 한 벌) */
-    showOfflineReward(3600, 1000, 10);
-    const txt = document.getElementById('ofrMax').textContent;
-    closeOfflineReward();
-    /* 적립 상한 자체 — 12시간 자리비움을 넣고 팝업이 받은 sec 을 본다 */
-    S.pass.offPlus = false;
-    offlineReward(Date.now() - 12 * 3600 * 1000); const secOff = (offPend || {}).sec; closeOfflineReward();
-    S.pass.offPlus = true;
-    offlineReward(Date.now() - 12 * 3600 * 1000); const secOn = (offPend || {}).sec; closeOfflineReward();
-    return { off0, off1, txt, secOff, secOn };
+    S.daily.offMin = 0;
+    S.pass.offPlus = false; const mul0 = offMul();
+    S.pass.offPlus = true;  const mul1 = offMul();
+    /* 01 팝업 문구 — 156 «표기·지급 한 벌». 상한 줄은 이제 «하루 예산» 을 말하고,
+       이용권을 갖고 있으면 그 배율이 같은 줄에 적혀야 한다. */
+    S.pass.offPlus = false; showOfflineReward(3600, 1000, 10);
+    const txtOff = document.getElementById('ofrMax').textContent; closeOfflineReward();
+    S.pass.offPlus = true;  showOfflineReward(3600, 1000, 10);
+    const txtOn = document.getElementById('ofrMax').textContent; closeOfflineReward();
+    /* 12시간 자리비움 — 옛 게이트는 여기서 «6h 로 잘린다» 를 단언했다. 지금은 안 잘린다. */
+    S.daily.offMin = 0; S.pass.offPlus = false;
+    offlineReward(Date.now() - 12 * 3600 * 1000);
+    const secOff = (offPend || {}).sec, diaOff = (offPend || {}).dia; closeOfflineReward();
+    S.daily.offMin = 0; S.pass.offPlus = true;
+    offlineReward(Date.now() - 12 * 3600 * 1000);
+    const secOn = (offPend || {}).sec, diaOn = (offPend || {}).dia; closeOfflineReward();
+    /* 하루 예산은 그대로 자른다 — 30시간 자리비움도 1,440분에서 멈춘다(199 3회차 불변식) */
+    S.daily.offMin = 0; S.pass.offPlus = false;
+    offlineReward(Date.now() - 30 * 3600 * 1000);
+    const secLong = (offPend || {}).sec; closeOfflineReward();
+    /* 배율은 «지급액» 에만 — 받고 나서 소비된 분 예산이 배율에 안 물려야 한다 */
+    S.daily.offMin = 0; S.pass.offPlus = false;
+    offlineReward(Date.now() - 3 * 3600 * 1000); claimOffline(1);
+    const minOff = S.daily.offMin;
+    S.daily.offMin = 0; S.pass.offPlus = true;
+    offlineReward(Date.now() - 3 * 3600 * 1000); claimOffline(1);
+    const minOn = S.daily.offMin;
+    return { mul0, mul1, txtOff, txtOn, secOff, secOn, diaOff, diaOn, secLong, minOff, minOn };
   });
-  ok('C1 offMaxH() 미보유 6', C.off0 === OFF_BASE_H, String(C.off0));
-  ok('C2 offMaxH() 보유 10', C.off1 === OFF_BASE_H + OFF_PLUS_H, String(C.off1));
-  ok('C3 01 팝업 문구 «최대 10시간 0분»', /10시간/.test(C.txt), C.txt);
-  ok('C4 적립 상한 미보유 6h', near(C.secOff, OFF_BASE_H * 3600, 2), String(C.secOff));
-  ok('C5 적립 상한 보유 10h', near(C.secOn, (OFF_BASE_H + OFF_PLUS_H) * 3600, 2), String(C.secOn));
+  ok('C1 offMul() 미보유 1', C.mul0 === 1, String(C.mul0));
+  ok('C2 offMul() 보유 ' + OFF_MUL_ON, Math.abs(C.mul1 - OFF_MUL_ON) < 1e-9, String(C.mul1));
+  ok('C3 01 팝업 문구 — 미보유는 «최대 24시간»(하루 예산) · 보유는 «이용권 ×1.2» 를 같이 적는다',
+    /24시간/.test(C.txtOff) && !/이용권 ×/.test(C.txtOff) && /이용권 ×1\.2/.test(C.txtOn),
+    C.txtOff + ' ‖ ' + C.txtOn);
+  ok('C4 1회 적립 상한 폐지 — 12시간 자리비움이 12시간 그대로(옛 6h 절단 없음)',
+    near(C.secOff, 12 * 3600, 2) && near(C.secLong, OFF_DAY_H * 3600, 2),
+    '12h=' + C.secOff + 's · 30h=' + C.secLong + 's(하루 예산 ' + OFF_DAY_H + 'h 에서 멈춤)');
+  ok('C5 배율은 «지급액» 에만 — 다이아 ×' + OFF_MUL_ON + ' 인데 소비된 분 예산은 Δ0',
+    C.secOn === C.secOff && Math.abs(C.diaOn - Math.floor(C.diaOff * OFF_MUL_ON)) <= 1 &&
+    Math.abs(C.minOn - C.minOff) < 1e-6,
+    '다이아 ' + C.diaOff + ' → ' + C.diaOn + ' · 분예산 ' + C.minOff + ' → ' + C.minOn);
 
   /* ================= [D] 매일 보석 ================= */
   console.log('\n[D] 매일 보석 — 시각 기준(오프라인 포함)');
