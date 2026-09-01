@@ -395,39 +395,66 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     }
   });
   await p.waitForTimeout(450);
-  const J = await (async () => {
+  const { J, TAIL } = await (async () => {
     const c = await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1');
     const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
     const t0 = Date.now(); const rows = [];
     for (const t of [900, 1500, 2100, 2700]) {
       while (Date.now() - t0 < t) await new Promise(r => setTimeout(r, 5));
-      rows.push(...await p.evaluate(() => {
+      rows.push(await p.evaluate(() => {
         const now = performance.now();
         return [...document.querySelectorAll('#fxl .fx-plus.hb')].map(n => {
           const a = n.getAnimations()[0];
           return { age: now - (+n.dataset.born || now), ct: a ? (a.currentTime || 0) : -1,
-                   op: parseFloat(getComputedStyle(n).opacity) };
+                   op: parseFloat(getComputedStyle(n).opacity), dn: /\bdn\b/.test(n.className) };
         });
       }));
     }
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await st.catch(() => {});
+    /* ⚑ 630 — [J3] 의 자리. 홀드가 끝나 새 스폰이 멎은 «꼬리» 에서 마지막 노드들의 ct 를 죽을 때까지
+       40ms 로 계속 읽는다 — 위상이 안 낀다(폴링이 죽음까지 이어져 어느 위상이든 뒤쪽 구간을 지난다). */
+    const tail = [];
+    for (let k = 0; k < 20; k++) {
+      await p.waitForTimeout(40);
+      const r2 = await p.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb:not(.lng)')].map(n => {
+        const a = n.getAnimations()[0]; return a ? (a.currentTime || 0) : -1; }));
+      tail.push(...r2);
+      if (!r2.length) break;
+    }
     await p.waitForTimeout(250);
-    return rows;
+    return { J: rows, TAIL: tail };
   })();
   /* ⚠ 허용 오차는 «바라는 값» 이 아니라 «잰 값» 에서 온다(504-④). 한 표본의 «나이» 와 «애니 진행» 은
      서로 다른 순간에 읽히고(둘 사이에 `getComputedStyle` 이 26번 돈다) rAF 격자(16.7ms)도 끼므로
      **최댓값은 잡음이 지배한다** — 4회차 실측에서 중앙값 3~6ms 인데 최댓값만 38ms 로 튄다.
      그래서 **중앙값**으로 판정하고 최댓값은 기록만 한다. 3회차 값(86~131ms)은 중앙값 기준으로도
      이 문턱을 훨씬 넘으므로 이 자가 무르게 풀린 것이 아니다. */
-  const lag = J.map(r => Math.abs(r.age - r.ct)).sort((a, b) => a - b);
+  const Jf = J.flat();
+  const lag = Jf.map(r => Math.abs(r.age - r.ct)).sort((a, b) => a - b);
   const lagMed = lag[Math.floor(lag.length / 2)], lagMax = lag[lag.length - 1];
-  const opaque = J.filter(r => r.op >= 0.99).length, late = J.filter(r => r.ct > 200).length;
-  console.log('  · 표본 ' + J.length + ' · 나이−진행 중앙 ' + lagMed.toFixed(0) + 'ms(최대 ' + lagMax.toFixed(0) + ') · α=1 표본 ' + opaque + ' · 진행 >200ms 표본 ' + late);
-  ok(J.length >= 8, '[J1] 표본이 충분하다(홀드 중 동시 생존 플로터)', J.length + '개');
+  const opaque = Jf.filter(r => r.op >= 0.99).length, late = Jf.filter(r => r.ct > 200).length;
+  const tailLate = TAIL.filter(ct => ct > 200).length;
+  /* 줄기당 동시 생존 — 스냅숏마다 res(결과)/pay(비용)를 갈라 센다(.lng 도 제 줄기의 q 에 든다) */
+  const streamMax = Math.max(...J.map(s => Math.max(s.filter(r => r.dn).length, s.filter(r => !r.dn).length)), 0);
+  console.log('  · 표본 ' + Jf.length + ' · 나이−진행 중앙 ' + lagMed.toFixed(0) + 'ms(최대 ' + lagMax.toFixed(0) + ') · α=1 표본 ' + opaque + ' · 줄기당 최대 ' + streamMax + '장 · 꼬리 표본 ' + TAIL.length + '(>200ms ' + tailLate + ')');
+  ok(Jf.length >= 8, '[J1] 표본이 충분하다(홀드 중 동시 생존 플로터)', Jf.length + '개');
   ok(lagMed <= 25, '[J2] ★ 애니메이션이 «만든 그 순간» 시작한다 — 나이와 진행의 차(중앙값) ≤ 25ms',
      lagMed.toFixed(0) + 'ms · 최대 ' + lagMax.toFixed(0) + ' (3회차엔 86~131ms 였다)');
-  ok(late > 0, '[J3] ★ 수명 뒤쪽(>200ms)까지 도는 표본이 있다 — 페이드아웃이 실제로 보인다', late + '개');
+  /* ⚑ 630 — **[J3] 을 갈아 끼웠다(뜻 유지 · 자리 이동 · 임계 200 불변).**
+     옛 [J3] 은 «홀드 중 스냅숏에 ct>200 표본이 있다» 였는데, 그 자보다 뒤에 들어온 설계가 뜻을 뒤집었다
+     (LESSONS 627-③ 꼴) — 619 8회차 «줄기당 동시 생존 상한 2» 가 3장째 스폰에서 가장 오래된 것을 걷으므로,
+     홀드 중 반복분의 실수명은 태어남 간격(실측 92ms)×2 ≈ 186ms 다(`probe630` [1] — fxBye 가 아니라 q.shift()).
+     ct>200 은 간격이 우연히 늘어진 위상에서만 잡혀 **0~2개로 흔들렸다**(= 이 항이 플레이키였던 정체).
+     페이드아웃이 설계상 «끝까지 도는» 자리는 **홀드 끝**이다 — 새 스폰이 멎으면 마지막 두 장이 온 수명을
+     산다(probe630 꼬리 축 8/8 · ct 300 도달). 그 자리를 죽을 때까지 폴링하므로 위상이 안 낀다.
+     ⚠ 임계를 낮춰 홀드 중 축을 살리는 처방은 334 가 기각한 ② 와 같은 꼴이라 쓰지 않았다. */
+  ok(tailLate > 0, '[J3] ★ 홀드 끝에서 마지막 플로터가 수명 뒤쪽(>200ms)까지 돈다 — 페이드아웃이 실제로 보인다(630: 자리를 홀드 끝으로)', tailLate + '개 / 꼬리 표본 ' + TAIL.length);
+  /* [J3b] — 옛 [J3] 을 뒤집은 설계 자체를 옆에 세운다(627-④ — 옛 결론을 죽이지 않고 가른다).
+     상한이 사라지면(수명 310 ÷ 간격 92 ≈ 줄기당 4장) 이 항이 빨개져 «홀드 중 일찍 걷히는 것이 설계다» 라는
+     [J3] 이동의 근거가 무너졌음을 알린다. */
+  ok(streamMax <= 2 && streamMax > 0, '[J3b] ★ 홀드 중 줄기당 동시 생존 ≤ 2 — 619 8회차 상한(3장째가 뜨면 가장 오래된 것을 걷는다)이 살아 있다', '최대 ' + streamMax + '장');
+  console.log('  · (기록만 · 630) 옛 축 «홀드 중 ct>200 표본» ' + late + '개 — 위상 운에 걸려 판정에서 뺐다(0~2개로 흔들리던 자리)');
 
   /* ⚑ 574 — **[J4] 는 «표본의 α» 를 세던 자리였고, 그것이 재던 것은 설계가 아니라 «위상» 이었다.**
      옛 판정 `α=1 표본 / 전체 표본 ≥ 0.5` 는 문턱에 붙어 흔들렸다(등재문: 7회 중 2회 빨강 · 16/36 · 18/38).
@@ -444,14 +471,21 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      ⚠ **문턱 0.5 는 한 칸도 안 내렸다**(등재문 금지 사항) — 재는 대상만 «표본» 에서 «수명» 으로 옮겼다.
         [J6] 되돌림 시험이 그 자리가 여전히 빨개질 수 있음을 못박고, [J7] 이 «애니 길이 = 노드 수명» 을 묶어
         (옛 자가 살아 있는 노드를 읽어서 덤으로 갖고 있던 성질) 이 자가 무르게 풀리지 않았음을 채운다. */
-  console.log('  · (기록만 · 574) 옛 축 «α=1 표본 비율» ' + opaque + '/' + J.length +
-    ' = ' + (opaque / J.length * 100).toFixed(1) + '% — 위상 격자에 ±12%p 흔들려 판정에서 뺐다');
+  console.log('  · (기록만 · 574) 옛 축 «α=1 표본 비율» ' + opaque + '/' + Jf.length +
+    ' = ' + (opaque / Jf.length * 100).toFixed(1) + '% — 위상 격자에 ±12%p 흔들려 판정에서 뺐다');
   const SW = await (async () => {
     await p.evaluate(() => {
       /* 위상 훑기 — 애니를 세우고 currentTime 을 옮기며 α 를 읽는다. fxBye 가 걷어가도 다시 붙여 끝낸다. */
+      /* ⚑ 630 — 셀렉터로 «지금» 다시 찾지 않고, 감지 시점에 stash 한 참조를 우선 쓴다.
+         619 8회차 상한 2 가 `.lng` 를 수명(1.3s)보다 훨씬 일찍(실측 ~534ms) 걷어가므로, 훑기가 도는
+         시점에 노드가 DOM 에 없어 [J5]/[J7] 이 «노드 없음» 으로 간헐 빨강이었다(75/77, 같은 630 뿌리).
+         훑기는 애니메이션을 세우고 currentTime 을 손으로 옮기는 축이라, 걷힌 노드를 도로 붙여 재도
+         재는 값(키프레임 봉투)은 같다 — 아래 재부착(`isConnected`) 가지가 원래 그 용도다. */
       window.__sw574 = (sel, N) => {
-        const L = document.getElementById('fxl'), n = document.querySelector(sel);
+        const L = document.getElementById('fxl');
+        const n = (window.__sw630 && window.__sw630[sel] && window.__sw630[sel].getAnimations) ? window.__sw630[sel] : document.querySelector(sel);
         if (!n) return null;
+        if (!n.isConnected) L.appendChild(n);     /* 걷힌 노드는 붙여야 애니메이션이 산다(안 붙이면 getAnimations 가 빈다) */
         void n.offsetWidth;                       /* animation-name 을 갈아 끼운 직후를 위해 한 번 플러시 */
         const a = n.getAnimations()[0]; if (!a) return null;
         a.pause();
@@ -477,8 +511,16 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     let have = null;
     for (let i = 0; i < 20; i++) {
       await p.waitForTimeout(120);
-      have = await p.evaluate(() => ({ rep: !!document.querySelector('#fxl .fx-plus.hb:not(.lng)'),
-                                       lone: !!document.querySelector('#fxl .fx-plus.hb.lng') }));
+      have = await p.evaluate(() => {
+        /* 630 — 본 순간에 참조를 stash(위 __sw574 머리말). 상한 2 가 다음 beat 에 걷어가도 훑기가 잡는다. */
+        const rep = document.querySelector('#fxl .fx-plus.hb:not(.lng)');
+        const lone = document.querySelector('#fxl .fx-plus.hb.lng');
+        window.__sw630 = window.__sw630 || {};
+        if (rep) window.__sw630['#fxl .fx-plus.hb:not(.lng)'] = rep;
+        if (lone) window.__sw630['#fxl .fx-plus.hb.lng'] = lone;
+        return { rep: !!(rep || window.__sw630['#fxl .fx-plus.hb:not(.lng)']),
+                 lone: !!(lone || window.__sw630['#fxl .fx-plus.hb.lng']) };
+      });
       if (have.rep && have.lone) break;
     }
     const rep  = await p.evaluate(() => window.__sw574('#fxl .fx-plus.hb:not(.lng)', 300));
@@ -489,8 +531,9 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
       s.textContent = '@keyframes fx574Bad{0%{opacity:1}30%{opacity:1}100%{opacity:0}}' +
                       '.fx-plus.hb.bad574{animation-name:fx574Bad !important}';
       document.head.appendChild(s);
-      const n = document.querySelector('#fxl .fx-plus.hb:not(.lng)');
-      if (n) n.classList.add('bad574');
+      const n = document.querySelector('#fxl .fx-plus.hb:not(.lng)') ||
+                (window.__sw630 && window.__sw630['#fxl .fx-plus.hb:not(.lng)']);   /* 630 — 걷혔으면 stash */
+      if (n) { if (!n.isConnected) document.getElementById('fxl').appendChild(n); n.classList.add('bad574'); }
       const v = window.__sw574('#fxl .fx-plus.hb.bad574', 300);
       s.remove();
       return v;
