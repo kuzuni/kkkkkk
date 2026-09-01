@@ -45,6 +45,23 @@ const ok = (c, m, d) => { if (c) { pass++; console.log('  ✓ ' + m); } else { f
 const eq = (m, got, want) => ok(got === want, m, 'got ' + JSON.stringify(got) + ' · want ' + JSON.stringify(want));
 const sec = t => console.log('\n' + t);
 
+/* ⚑ 708 (2026-09-01) — `page.evaluate` 안의 예외가 **게이트를 통째로 죽이던** 것을 막는다(278·228 처방 · 319 선례).
+   660(주인 지시 «숫자 이펙트 폐지»)이 `trDeltaTxt()` 를 **선언째** 지웠는데 [F] 가 아직 그 함수를 부르고 있어
+   `ReferenceError` 가 밖으로 나갔고, 프로세스가 [F] 한복판에서 끝나 **[G]·[H]·[R]·[I] 는 한 번도 안 돌았다**
+   (`log: []` · 앞 절의 초록만 찍힌 채 종료 — «초록 n줄» 이 통과처럼 보이는 가장 나쁜 형태다).
+   이제 예외는 `{ __err }` 로 잡혀 **그 블록의 항목만 빨개지고** 뒤 절은 계속 돈다.
+   관례: 측정 뒤 `if (!blk(r, '이름')) …` 로 걸러 쓴다 — 죽은 블록은 FAIL 1건으로 세고 건너뛴다.
+   ⚠ `open()` 안의 초기화 evaluate 는 **감싸지 않는다** — 그 자리가 죽으면 화면 자체가 안 열린 것이라
+     블록을 이어 봐야 뒤 항목이 전부 거짓 빨강이 된다. */
+const ev = async (page, fn, arg) => {
+  try { return await page.evaluate(fn, arg); }
+  catch (e) { return { __err: String((e && e.message) || e).split('\n')[0] }; }
+};
+const blk = (r, m) => {
+  if (r && r.__err) { ok(false, '  ' + m + ' — 평가가 죽었다: ' + r.__err); return false; }
+  return true;
+};
+
 const save = (stage, lv) => ({ gold: 1e30, dia: 1e9, best: 60, a105: 1, buyQty: 1,
   autoBuy: false, trainStage: stage, lv: { atk: lv, hp: lv, regen: lv } });
 
@@ -63,7 +80,7 @@ async function open(browser, file, sv) {
   return { ctx, page, errs };
 }
 /* 카드 3장의 «찍힌 글자» 와 그 순간의 최종값을 같이 돌려준다 */
-const shot = page => page.evaluate(() => {
+const shot = page => ev(page, () => {
   const t = k => ((document.querySelector('#trCards [data-tr="' + k + '"] .cv i') || {}).textContent || '');
   const n = k => ((document.querySelector('#trCards [data-tr="' + k + '"] .cn i') || {}).textContent || '');
   return {
@@ -91,9 +108,10 @@ const shot = page => page.evaluate(() => {
         try { Object.keys(S.dex || {}).slice(0, 6).forEach(k => { S.dex[k] = 9; }); } catch (e) {} }],
     ];
     for (const [label, mut] of cases) {
-      await page.evaluate(fn => { (new Function(fn))(); markDirty(); renderTrain(); }, '(' + mut.toString() + ')()');
+      await ev(page, fn => { (new Function(fn))(); markDirty(); renderTrain(); }, '(' + mut.toString() + ')()');
       await page.waitForTimeout(80);
       const s = await shot(page);
+      if (!blk(s, '[A] ' + label)) continue;
       eq('  ' + label + ' — 공격력 칸', s.cv.atk, s.now.atk);
       eq('  ' + label + ' — 체력 칸', s.cv.hp, s.now.hp);
       eq('  ' + label + ' — 체력 회복 칸', s.cv.regen, s.now.regen);
@@ -109,9 +127,10 @@ const shot = page => page.evaluate(() => {
   {
     const { ctx, page, errs } = await open(browser, SRC, save(7, 200));
     for (const qty of [1, 10, 30]) {
-      const s = await page.evaluate(q => { S.buyQty = q; renderTrain();
+      const s = await ev(page, q => { S.buyQty = q; renderTrain();
         return ['atk', 'hp', 'regen'].map(k =>
           document.querySelector('#trCards [data-tr="' + k + '"] .cv i').textContent); }, qty);
+      if (!blk(s, '[B] x' + qty)) continue;
       ok(s.every(x => !/^\+/.test(x)), '  x' + qty + ' — 세 칸 어디에도 «+» 접두가 없다', JSON.stringify(s));
     }
     /* 소스 스캔 — 렌더 두 경로(통째·가벼운 갱신)가 `gain` 을 그리지 않는다 */
@@ -130,13 +149,14 @@ const shot = page => page.evaluate(() => {
     const { ctx, page, errs } = await open(browser, SRC, save(20, 300));
     for (const qty of [1, 10, 30]) {
       for (const path2 of ['renderTrain', 'renderTrainLive']) {
-        const r = await page.evaluate(([q, p]) => {
+        const r = await ev(page, ([q, p]) => {
           S.buyQty = q; S.gold = 1e30; markDirty(); renderTrain();
           const t = () => document.querySelector('#trCards [data-tr="atk"] .cv i').textContent;
           const b = { cv: t(), lv: lv('atk') };
           trainBuy('atk'); window[p]();
           return { b, a: { cv: t(), lv: lv('atk') }, want: fmtB(stat.dmg) };
         }, [qty, path2]);
+        if (!blk(r, '[C] x' + qty + ' / ' + path2)) continue;
         ok(r.a.lv === r.b.lv + qty, '  x' + qty + ' / ' + path2 + ' — 레벨이 ' + qty + ' 올랐다',
           r.b.lv + '→' + r.a.lv);
         eq('  x' + qty + ' / ' + path2 + ' — 알약이 새 최종값', r.a.cv, r.want);
@@ -152,7 +172,7 @@ const shot = page => page.evaluate(() => {
   sec('[D] 상한 카드 — 알약 «MAX» · 버튼 «상한» (verify64·verify326 계약을 안 깼다)');
   {
     const { ctx, page, errs } = await open(browser, SRC, save(3, 0));
-    const r = await page.evaluate(() => {
+    const r = await ev(page, () => {
       S.trainStage = 3; const cap = trainCap();
       S.lv.atk = cap; S.lv.hp = 0; S.lv.regen = 0; markDirty(); renderTrain();
       const g = (k, s) => document.querySelector('#trCards [data-tr="' + k + '"] ' + s).textContent;
@@ -160,14 +180,16 @@ const shot = page => page.evaluate(() => {
         cls: document.querySelector('#trCards [data-tr="atk"]').className,
         other: g('hp', '.cv i'), otherNow: fmtB(stat.maxHp) };
     });
-    eq('  상한 카드 알약', r.full, 'MAX');
-    eq('  상한 카드 버튼', r.btn, '상한');
-    ok(/\bfull\b/.test(r.cls), '  상한 카드에 .full 클래스', r.cls);
-    eq('  같은 화면의 상한 아닌 카드는 최종값 그대로', r.other, r.otherNow);
+    if (blk(r, '[D] 상한 카드')) {
+      eq('  상한 카드 알약', r.full, 'MAX');
+      eq('  상한 카드 버튼', r.btn, '상한');
+      ok(/\bfull\b/.test(r.cls), '  상한 카드에 .full 클래스', r.cls);
+      eq('  같은 화면의 상한 아닌 카드는 최종값 그대로', r.other, r.otherNow);
+    }
     /* 가벼운 갱신 경로도 같은 규칙 */
-    const r2 = await page.evaluate(() => { renderTrainLive();
+    const r2 = await ev(page, () => { renderTrainLive();
       return document.querySelector('#trCards [data-tr="atk"] .cv i').textContent; });
-    eq('  가벼운 갱신 뒤에도 MAX', r2, 'MAX');
+    if (blk(r2, '[D] 가벼운 갱신')) eq('  가벼운 갱신 뒤에도 MAX', r2, 'MAX');
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -176,7 +198,7 @@ const shot = page => page.evaluate(() => {
   sec('[E] 잉크가 알약 안 — 최장 문자열까지 좌우 여백 ≥ 8px (예산 294px)');
   {
     const { ctx, page, errs } = await open(browser, SRC, save(3, 20));
-    const r = await page.evaluate(() => {
+    const r = await ev(page, () => {
       const card = document.querySelector('#trCards [data-tr="atk"]');
       const el = card.querySelector('.cv i');
       const cr = card.getBoundingClientRect(), keep = el.textContent;
@@ -188,59 +210,84 @@ const shot = page => page.evaluate(() => {
       el.textContent = keep;
       return { rows, fs: getComputedStyle(el).fontSize, cardW: +cr.width.toFixed(2) };
     });
-    r.rows.forEach(x => ok(x.l >= 8 && x.rr >= 8 && x.w <= 294,
-      '  «' + x.s + '» 잉크 ' + x.w + 'px · 여백 ' + x.l + '/' + x.rr, JSON.stringify(x)));
-    eq('  font-size 는 한 단도 안 내렸다(레이아웃 Δ0px)', r.fs, '48.5px');
-    eq('  카드 폭 불변', r.cardW, 326);
+    if (blk(r, '[E] 알약 잉크')) {
+      r.rows.forEach(x => ok(x.l >= 8 && x.rr >= 8 && x.w <= 294,
+        '  «' + x.s + '» 잉크 ' + x.w + 'px · 여백 ' + x.l + '/' + x.rr, JSON.stringify(x)));
+      eq('  font-size 는 한 단도 안 내렸다(레이아웃 Δ0px)', r.fs, '48.5px');
+      eq('  카드 폭 불변', r.cardW, 326);
+    }
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
 
-  /* ══════════════════ [F] 58 플로터는 증가분 ══════════════════ */
-  /* ⚑ 628(2026-09-01) — **축을 갈아 끼웠다**(333 처방 — 항을 지우거나 무르게 풀지 않는다).
-     486 은 «플로터 = 증가분» 을 세우면서 그 증가분을 `U.atk.val()` **기저**로 적었는데,
-     같은 작업이 알약(`.cv`)은 «지금 최종값»(`TRAIN_NOW` = `stat.*`)으로 옮겼다 —
-     한 카드 안에서 두 수가 서로 다른 자를 쓰게 된 자리다(`probe628` [B]: atk +21.7% ·
-     hp +19.3% · regen +16.7%). 486 의 «증가분을 말한다» 는 뜻은 그대로 두고,
-     **무엇의 증가분인가**만 알약과 같은 축으로 돌린다.
-     ⚠ 기대값을 제품 식으로 다시 적지 않는다 — **실제로 사서** 최종값의 전·후 차를 잰다.
-     ⚠ 그리고 [F0] 로 «옛 기저 축이 되살아나면 빨강» 을 같이 못박는다 — 이 한 줄이 없으면
-       «628 이 통째로 사라져도 초록인 게이트» 가 된다(328~330 의 이관 교훈). */
-  sec('[F] 58 «+n» 플로터 — 증가분을 말한다(`.cv` 와 분리됐다 · 628 최종값 축)');
+  /* ══════════════════ [F] 증가분 축은 알약 자리를 흉내내지 않는다 ══════════════════ */
+  /* ⚑ 708(2026-09-01) — **축을 갈아 끼웠다**(333 처방 — 자리를 비우거나 무르게 풀지 않는다).
+     ⓐ 628 이 세운 «플로터 문구 = 최종값 증분» 은 **660(주인 지시 «훈련도 숫자 이펙트 안뜨게»)이
+       은퇴시켰다** — `trDeltaTxt()`·`trHoldGainTxt()` 가 **선언째** 사라졌고(index.html 34679 주석),
+       그 두 함수를 부르던 이 절이 `ReferenceError` 를 밖으로 내보내 **자를 통째로 죽이고 있었다**
+       ([G]·[H]·[R]·[I] 가 한 번도 안 돌았다 — 708 등재문).
+     ⓑ 그렇다고 항을 지우면 486 이 지키던 뜻이 사라진다. 486 의 뜻은 «플로터» 가 아니라
+       **«한 카드가 말하는 두 수가 서로 다른 자를 쓰지 않는다»** 이고, 그 뜻을 물려받은
+       **살아 있는 자리**가 488 의 정산 요약 토스트다(«공격력 훈련 n회 (Lv. m)» — 홀드를 놓을 때 뜬다).
+       ⇒ 폐지된 표본(플로터)은 **소스 축으로 방향을 뒤집어** 지키고([F1]),
+          런타임 축은 살아 있는 표본(요약 토스트)으로 갈아 끼운다([F2]).
+     ⚠ «훈련 플로터 0장» 자체는 `verify660` [D3] 이 계측기까지 세워 지킨다 — 여기서 겹쳐 세지 않는다.
+     ⚠ [F3] 음성 대조가 없으면 [F2] 는 «토스트가 통째로 사라져도 초록» 이 된다(328~330 이관 교훈). */
+  sec('[F] 증가분 축 — 폐지된 플로터(660)와, 그 뜻을 물려받은 살아 있는 마무리 문구(488)');
   {
     const { ctx, page, errs } = await open(browser, SRC, save(12, 200));
-    for (const qty of [1, 10, 30]) {
-      const r = await page.evaluate(q => {
-        S.buyQty = q; S.gold = 1e30; markDirty(); renderTrain();
-        const card = document.querySelector('#trCards [data-tr="atk"]');
-        const bi = trainBuyInfo('atk');
-        const txt = trDeltaTxt(card);                    /* 구매 «전» 에 잡는 그 문자열 */
-        const cv = card.querySelector('.cv i').textContent;
-        /* 옛 축(기저) — 되살아나면 [F0] 이 빨개진다 */
-        const baseWant = '+' + fmtB(U.atk.val(lv('atk') + bi.n) - U.atk.val(lv('atk')));
-        const before = TRAIN_NOW.atk();
-        trainBuy('atk');
-        const d = TRAIN_NOW.atk() - before;
-        /* `fmtG` 는 floor 라 «전·후를 빼서» 잰 값은 부동소수 누적으로 한 칸 내려앉을 수 있다 */
-        return { txt, cv, baseWant, n: bi.n,
-                 want: '+' + fmtB(d), wantEps: '+' + fmtB(d * (1 + 1e-9)) };
-      }, qty);
-      ok(r.txt === r.want || r.txt === r.wantEps,
-         '  x' + qty + ' — 플로터 문구 = 실제 최종값 증분(628)', r.txt + ' ≟ ' + r.want);
-      ok(r.txt !== r.baseWant,
-         '  x' + qty + ' — [F0] 옛 «기저 증분» 축(«' + r.baseWant + '»)이 안 되살아났다');
-      ok(r.txt !== r.cv, '  x' + qty + ' — 플로터가 알약 글자(«' + r.cv + '»)를 그대로 쓰지 않는다');
-    }
-    /* 상한에서는 안 띄운다(58 규약 유지) */
-    const rf = await page.evaluate(() => {
-      S.lv.atk = trainCap(); markDirty(); renderTrain();
-      return trDeltaTxt(document.querySelector('#trCards [data-tr="atk"]'));
-    });
-    eq('  상한 카드에서는 플로터 문구가 빈 문자열', rf, '');
-    /* 소스 — `.cv` 를 다시 읽는 경로가 되살아나지 않았다 */
+    /* ── [F1] 소스 — 폐지된 표본은 «방향을 뒤집어» 지킨다 ───────────────────────── */
     const CODE = fs.readFileSync(SRC, 'utf8');
-    const body = CODE.slice(CODE.indexOf('function trDeltaTxt'), CODE.indexOf('function trHoldStop'));
-    ok(!/\.cv/.test(body), '  trDeltaTxt 본문이 `.cv` 를 안 읽는다');
+    const declAt = CODE.indexOf('function trDeltaTxt');
+    if (declAt < 0) {
+      ok(true, '  [F1] `trDeltaTxt()` 선언 0건 — 660 이 선언째 걷었다(죽은 코드 금지 · 295-②·399·460)');
+      ok(CODE.indexOf('function trHoldGainTxt') < 0,
+         '  [F1] `trHoldGainTxt()` 도 선언 0건 — 짝이 같이 걷혔다');
+    } else {
+      /* 되살아났다면 486 의 원래 못이 그대로 다시 박힌다 — «알약 글자를 되읽지 마라» */
+      const end = CODE.indexOf('\nfunction ', declAt + 1);
+      const body = CODE.slice(declAt, end < 0 ? declAt + 4000 : end);
+      ok(!/\.cv/.test(body),
+         '  [F1] `trDeltaTxt()` 가 되살아났다 — 그 본문이 알약(`.cv`) 글자를 되읽지 않는다');
+    }
+    /* ── [F2] 런타임 — 살아 있는 마무리 문구(488 요약 토스트) ────────────────────── */
+    const r = await ev(page, async () => {
+      const said = [];
+      const nf = window.notify;
+      window.notify = function (t) { said.push(String(t)); return nf.apply(this, arguments); };
+      try {
+        S.buyQty = 1; S.gold = 1e30; markDirty(); renderTrain();
+        const card = document.querySelector('#trCards [data-tr="atk"]');
+        const gain = (trainCardData().find(c => c.k === 'atk') || {}).gain;
+        trHoldStart('atk', card);                       /* 홀드 — 350ms 뒤부터 틱 */
+        await new Promise(z => setTimeout(z, 900));
+        const cv = (trCard('atk') || card).querySelector('.cv i').textContent;
+        trHoldStop(false);                              /* 놓는 순간 = 정산 요약 토스트 */
+        const real = said.slice();
+        /* 음성 대조용 — 같은 수집·대조 경로에 «알약 글자를 그대로 담은» 문구를 한 장 흘린다 */
+        said.length = 0;
+        notify('공격력 훈련 <b>3회</b> (Lv. 1) ' + cv);
+        return { real, bait: said.slice(), cv, gain: String(gain), lv: lv('atk') };
+      } finally { window.notify = nf; }
+    });
+    if (blk(r, '[F2] 홀드 정산 문구')) {
+      const hit = t => t.indexOf(r.cv) >= 0;            /* 대조기 — «알약 글자를 되풀이하는가» */
+      ok(r.real.length >= 1,
+         '  [F2] 홀드를 놓으면 마무리 문구가 뜬다(488) — 표본이 살아 있다', JSON.stringify(r.real));
+      ok(r.real.some(t => /훈련 <b>\d+회<\/b>/.test(t)),
+         '  [F2] 그 문구는 «무엇을 몇 회» 꼴이다(룬·단련과 한 어휘)', JSON.stringify(r.real));
+      ok(!r.real.some(hit),
+         '  [F2] 그리고 알약 글자(«' + r.cv + '»)를 되풀이하지 않는다 — 두 수가 한 자를 다투지 않는다',
+         JSON.stringify(r.real));
+      /* `c.gain` 은 이미 «+n» 꼴 문자열이다(`trainCardData()`) — 접두를 다시 붙이지 않는다 */
+      ok(!r.real.some(t => t.indexOf(r.gain) >= 0),
+         '  [F2] 증가분(«' + r.gain + '»)도 되풀이하지 않는다(58 «+n» 은 660 으로 은퇴했다)',
+         JSON.stringify(r.real));
+      /* ── [F3] 음성 대조 — 위 셋이 헛초록이 아니다 ─────────────────────────────── */
+      ok(r.bait.length === 1 && r.bait.every(hit),
+         '  [F3] 음성 대조 — 알약 글자를 담은 문구를 흘리면 같은 대조기가 잡는다',
+         JSON.stringify(r.bait));
+    }
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -250,17 +297,20 @@ const shot = page => page.evaluate(() => {
   {
     const { ctx, page, errs } = await open(browser, SRC, save(3, 20));
     const s = await shot(page);
-    eq('  공격력 라벨', s.cn.atk, '공격력');
-    eq('  체력 라벨', s.cn.hp, '체력');
-    eq('  체력 회복 라벨에 «/초»', s.cn.regen, '체력 회복/초');
-    ok(!/\/초|초당/.test(s.cv.regen), '  단위가 알약 쪽에는 안 붙었다(수만 담는다)', s.cv.regen);
-    const g = await page.evaluate(() => {
+    if (blk(s, '[G] 라벨')) {
+      eq('  공격력 라벨', s.cn.atk, '공격력');
+      eq('  체력 라벨', s.cn.hp, '체력');
+      eq('  체력 회복 라벨에 «/초»', s.cn.regen, '체력 회복/초');
+      ok(!/\/초|초당/.test(s.cv.regen), '  단위가 알약 쪽에는 안 붙었다(수만 담는다)', s.cv.regen);
+    }
+    const g = await ev(page, () => {
       const card = document.querySelector('#trCards [data-tr="regen"]');
       const el = card.querySelector('.cn i'), cr = card.getBoundingClientRect(), r = el.getBoundingClientRect();
       return { l: +(r.left - cr.left).toFixed(2), rr: +(cr.right - r.right).toFixed(2), w: +r.width.toFixed(2) };
     });
-    ok(g.l >= 8 && g.rr >= 8, '  «체력 회복/초» 잉크 ' + g.w + 'px · 여백 ' + g.l + '/' + g.rr + ' ≥ 8px',
-      JSON.stringify(g));
+    if (blk(g, '[G] 라벨 잉크'))
+      ok(g.l >= 8 && g.rr >= 8, '  «체력 회복/초» 잉크 ' + g.w + 'px · 여백 ' + g.l + '/' + g.rr + ' ≥ 8px',
+        JSON.stringify(g));
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -279,14 +329,16 @@ const shot = page => page.evaluate(() => {
       '  `.cv` 기하(top 288 · h 60) 한 픽셀도 안 바뀌었다');
     ok(/\.tr-card>\.cv>i\{font-size:48\.5px/.test(CODE), '  `.cv` 글자 크기 48.5px 불변');
     const { ctx, page, errs } = await open(browser, SRC, save(9, 400));
-    const r = await page.evaluate(() => {
+    const r = await ev(page, () => {
       const b = { prog: trainProg(), max: trainMax(), txt: $('trProg').textContent,
                   w: $('trFill').style.width, cost: trainBuyInfo('atk').cost, gold: S.gold };
       trainBuy('atk'); renderTrainLive();
       return { b, a: { prog: trainProg(), txt: $('trProg').textContent } };
     });
-    ok(r.a.prog === r.b.prog + 1, '  진행바는 483 계약대로 여전히 한 칸 오른다', r.b.prog + '→' + r.a.prog);
-    ok(r.b.cost > 0, '  비용 계산은 그대로 살아 있다', r.b.cost);
+    if (blk(r, '[H] 진행바·비용')) {
+      ok(r.a.prog === r.b.prog + 1, '  진행바는 483 계약대로 여전히 한 칸 오른다', r.b.prog + '→' + r.a.prog);
+      ok(r.b.cost > 0, '  비용 계산은 그대로 살아 있다', r.b.cost);
+    }
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -305,16 +357,18 @@ const shot = page => page.evaluate(() => {
     try {
       const { ctx, page } = await open(browser, tmp, save(3, 20));
       const s = await shot(page);
-      ok(/^\+/.test(s.cv.atk) && /^\+/.test(s.cv.hp) && /^\+/.test(s.cv.regen),
-        '  R1 — 되돌린 사본은 세 칸 전부 «+» 증가분이다', JSON.stringify(s.cv));
-      ok(s.cv.atk !== s.now.atk, '  R2 — 그리고 최종값(«' + s.now.atk + '»)이 화면에 없다', s.cv.atk);
-      const r = await page.evaluate(() => {
+      if (blk(s, '[R] 되돌린 사본')) {
+        ok(/^\+/.test(s.cv.atk) && /^\+/.test(s.cv.hp) && /^\+/.test(s.cv.regen),
+          '  R1 — 되돌린 사본은 세 칸 전부 «+» 증가분이다', JSON.stringify(s.cv));
+        ok(s.cv.atk !== s.now.atk, '  R2 — 그리고 최종값(«' + s.now.atk + '»)이 화면에 없다', s.cv.atk);
+      }
+      const r = await ev(page, () => {
         S.buyQty = 1; S.gold = 1e30; markDirty(); renderTrain();
         const t = () => document.querySelector('#trCards [data-tr="atk"] .cv i').textContent;
         const b = t(); trainBuy('atk'); renderTrainLive();
         return { b, a: t() };
       });
-      eq('  R3 — 사도 알약 글자가 안 움직인다(= 주인이 본 그림)', r.a, r.b);
+      if (blk(r, '[R] 사본 구매')) eq('  R3 — 사도 알약 글자가 안 움직인다(= 주인이 본 그림)', r.a, r.b);
       await ctx.close();
     } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
   }
