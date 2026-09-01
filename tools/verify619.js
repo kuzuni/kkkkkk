@@ -428,6 +428,138 @@ async function hold(page, sp, opt) {
        '플래시 ' + one.flash + ' · keep ' + one.keep);
   }
 
+  /* ═══ [L] 17회차 — 회당 플래시가 **호스트를 따라간다** · 룬 알갱이 상변 클램프 ═══
+     16회차 채점(EL 3 / EM 2)에서 두 비평가의 「단 하나」가 같은 뿌리를 가리켰다 —
+     EL «플래시 하드 에지가 호스트 «안» 콘텐츠 위에 떨어진다» · EM «링·워시가 행 콘텐츠보다 위 레이어».
+     뿌리는 **상자가 스폰 시각의 rect 로 굳는 것**이었다(621 이 호스트를 틱마다 흔든다).
+     `probe619g` 수리 전 실측: 중심 어긋남 훈련 **8.02px** · 룬 **11.59px** · 단련 **6.01px**.
+
+     ⚠⚠ **이 절이 밟은 함정 둘 — 둘 다 이 파일이 이미 적어 둔 것이다.**
+     ⓐ **rAF 등록 순서**(위 K3 머리말과 같은 함정). 추적(`follow`)과 자(`tick`)는 같은 프레임의
+        rAF 큐에 있고 순서는 등록 순이라, 자가 먼저 돌면 상자는 아직 **직전 프레임** 자리다.
+        브라우저는 rAF 를 다 돌린 «뒤» 합성하므로 **찍히는 프레임에서는 둘이 같다** — 1차 시도가
+        이것을 안 갈라 같은 트리에서 단련 0.02px · 훈련 8.02px 로 화면마다 딴 답을 냈다.
+        ⇒ «이번 **또는** 직전 프레임» 과 맞는지를 묻는다(한 프레임 안이면 합성 시점엔 일치).
+     ⓑ **스폰 프레임은 추적의 품질이 아니다** — 그 프레임에는 `follow` 가 아직 한 번도 안 돌았다.
+        섞으면 한 프레임짜리 값(1.9~4.2px)이 최악값을 통째로 지배한다. 갈라서 센다.
+     ⚠ **L2 전제가 이 절의 본체다** — 호스트가 안 움직이면 «따라간다» 는 아무것도 안 묻는 헛초록이다. */
+  {
+    console.log('\n[L] 17회차 — 회당 플래시가 호스트를 따라간다 · 룬 알갱이 상변 클램프');
+    let killFollow = false;
+    const trackRun = async (tab, hostSel, btnSel) => {
+      await page.reload();
+      await page.waitForFunction(() => typeof S !== 'undefined' && typeof openTrain === 'function');
+      await page.waitForTimeout(700);
+      await page.evaluate(() => {
+        const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
+        S.gold = 1e18; S.dia = 1e9; S.rstone = 1e9; S.tstone = 1e9;
+        if (S.temper) S.temper.pts = 1e6;
+        openTrain();
+      });
+      await page.waitForTimeout(400);
+      /* ★ 되돌림 — **제품을 안 건드리고** 추적만 죽인다: `fxFlash` 가 도는 동안 rAF 를 no-op 으로
+         바꿔 `follow` 가 아예 예약되지 않게 한다(K4 가 `fxFlashKeep` 을 갈아 끼우는 것과 같은 처리).
+         ⚠ 이러면 keep 패치의 추적도 같이 죽지만 이 절은 **플래시 중심**만 재므로 축이 안 섞인다. */
+      if (killFollow) await page.evaluate(() => {
+        const orig = window.fxFlash;
+        window.fxFlash = function (el, iv, inset) {
+          const raf = window.requestAnimationFrame;
+          window.requestAnimationFrame = () => 0;
+          try { return orig.call(this, el, iv, inset); }
+          finally { window.requestAnimationFrame = raf; }
+        };
+      });
+      await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, tab);
+      await page.waitForTimeout(420);
+      const tb = await page.evaluate(s => { const e = document.querySelector(s); if (!e) return null;
+        const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; }, btnSel);
+      if (!tb) return null;
+      const top0 = await page.evaluate(s => { const e = document.querySelector(s);
+        return e ? e.getBoundingClientRect().top : null; }, hostSel);
+      await page.mouse.move(tb.x + tb.w / 2, tb.y + tb.h / 2);
+      await page.mouse.down();
+      const o = await page.evaluate(([hostSel, TOP0]) => new Promise(res => {
+        const host = document.querySelector(hostSel), L = document.getElementById('fxl');
+        const out = { n: 0, n2: 0, max2: 0, fxFrames: 0, frames: 0, hostMove: 0, spdInk: 0, spdN: 0 };
+        if (!host || !L) return res(out);
+        const rect = e => e.getBoundingClientRect();
+        const prev = new Map(), seen = new WeakSet();
+        const c0 = rect(host); const cx0 = (c0.left + c0.right) / 2, cy0 = (c0.top + c0.bottom) / 2;
+        const t0 = performance.now();
+        const tick = () => {
+          const hb = rect(host); out.frames++;
+          /* L2 전제 — 홀드 중 호스트가 실제로 움직인 폭(621 왕복) */
+          const mv = Math.hypot((hb.left + hb.right) / 2 - cx0, (hb.top + hb.bottom) / 2 - cy0);
+          if (mv > out.hostMove) out.hostMove = mv;
+          let hit = 0;
+          for (const nd of L.querySelectorAll('.fx-flash')) {
+            const b = rect(nd); if (!b.width) continue;
+            const he = nd.__fxHost; if (!he || !he.isConnected) continue;
+            if (he !== host && !host.contains(he) && !he.contains(host)) continue;
+            const g = rect(he); if (!g.width) continue;
+            const p = prev.get(he) || g;
+            const gap = q => Math.hypot((b.left + b.right) / 2 - (q.left + q.right) / 2,
+                                        (b.top + b.bottom) / 2 - (q.top + q.bottom) / 2);
+            const d = Math.min(gap(g), gap(p));
+            out.n++; hit = 1;
+            if (seen.has(nd)) { out.n2++; if (d > out.max2) out.max2 = d; } else seen.add(nd);
+          }
+          out.fxFrames += hit;
+          for (const nd of L.querySelectorAll('.fx-flash')) {
+            const he = nd.__fxHost; if (he && he.isConnected) prev.set(he, rect(he));
+          }
+          /* 룬 알갱이 — 잉크가 행 상변 위로 나간 양(probe619f ⓙ 와 같은 산수·같은 잉크비) */
+          for (const nd of L.querySelectorAll('.fx-spd')) {
+            const b = rect(nd); if (!b.width) continue;
+            out.spdN++;
+            const pad = b.height * (1 - 0.938) / 2;
+            const rise = (TOP0 != null ? TOP0 : hb.top) - b.top;
+            if (rise - pad > out.spdInk) out.spdInk = rise - pad;
+          }
+          if (performance.now() - t0 < 2600) requestAnimationFrame(tick); else res(out);
+        };
+        requestAnimationFrame(tick);
+      }), [hostSel, top0]);
+      await page.mouse.up();
+      await page.waitForTimeout(350);
+      return o;
+    };
+    const r2v = v => Math.round(v * 100) / 100;
+    const SP = [
+      { id: 'train',  tab: 'train',  host: '#trCards [data-tr]',  btn: '#trCards [data-tr]' },
+      { id: 'rune',   tab: 'rune',   host: '#trRunes .tr-rn',     btn: '#trRunes .rbt.b1' },
+      { id: 'temper', tab: 'temper', host: '#trTemper .tr-tp.k0', btn: '#trTemper .tr-tp.k0 .tb' },
+    ];
+    const T = {};
+    for (const sp of SP) T[sp.id] = await trackRun(sp.tab, sp.host, sp.btn);
+    for (const sp of SP) {
+      const o = T[sp.id];
+      ok(!!o && o.fxFrames >= 4, 'L1 ' + sp.id + ' 표본이 있다 — 홀드 중 회당 플래시가 뜬다',
+         o ? '플래시 프레임 ' + o.fxFrames + '/' + o.frames : '대상 없음');
+      ok(!!o && o.hostMove >= 3,
+         'L2 ★ 전제 — 홀드 중 호스트가 실제로 움직인다(621 왕복 ≥3px · 안 움직이면 L3 은 헛초록)',
+         o ? '이동폭 ' + r2v(o.hostMove) + 'px' : '—');
+      ok(!!o && o.n2 > 0 && o.max2 <= 2,
+         'L3 ★ ' + sp.id + ' 플래시가 호스트를 따라간다(스폰 프레임 제외 최악 ≤2px)',
+         o ? '최악 ' + r2v(o.max2) + 'px · 표본 ' + o.n2 : '—');
+    }
+    const rn = T.rune;
+    ok(!!rn && rn.spdN > 0, 'L4 표본이 있다 — 룬 홀드에서 비용 알갱이가 실제로 난다',
+       rn ? '표본 ' + rn.spdN : '—');
+    ok(!!rn && rn.spdN > 0 && Math.max(0, rn.spdInk) <= 1,
+       'L5 ★ 룬 알갱이 **잉크**가 행 상변을 안 넘는다(≤1px · 16회차 ② 클램프를 ③ 폴백에도)',
+       rn ? r2v(Math.max(0, rn.spdInk)) + 'px (EL 49px / EM 57px)' : '—');
+    /* ★ 되돌림 — 추적을 죽이면 L3 이 무너진다. 없으면 «원래 안 어긋났을 뿐» 인 헛초록과 못 가른다. */
+    killFollow = true;
+    const T0 = await trackRun('train', '#trCards [data-tr]', '#trCards [data-tr]');
+    killFollow = false;
+    ok(!!T0 && T0.fxFrames >= 4 && T0.hostMove >= 3 && T0.max2 > 2,
+       'L6 ★ 되돌림 — 추적을 죽인 사본은 상자가 호스트에서 어긋난다',
+       T0 ? '최악 ' + r2v(T0.max2) + 'px · 이동폭 ' + r2v(T0.hostMove) + 'px · 표본 ' + T0.n2 : '—');
+    const T1 = await trackRun('train', '#trCards [data-tr]', '#trCards [data-tr]');
+    ok(!!T1 && T1.n2 > 0 && T1.max2 <= 2, 'L7 원복하면 같은 자로 다시 초록',
+       T1 ? '최악 ' + r2v(T1.max2) + 'px · 표본 ' + T1.n2 : '—');
+  }
 
   console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
   await browser.close();

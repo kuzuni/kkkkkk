@@ -129,14 +129,26 @@ const INSTALL = () => {
     await p.mouse.down();
     /* 궤적 — 40ms 격자로 알갱이 무리 중심과 호스트 중심 사이 거리를 잰다 */
     const traj = p.evaluate(s => new Promise(res => {
-      const out = []; const t0 = performance.now();
+      const out = []; const t0 = performance.now(); let wave = null;
       const iv = setInterval(() => {
         const h = document.querySelector(s.host);
         const hr = h ? h.getBoundingClientRect() : null;
         /* ⚠ 크기는 **안쪽 아이콘**으로 잰다. 바깥 `<b>` 의 상자는 `scale(FX3_FLYS)` 만 타고
            재화별 잉크 보정 `--fxgs` 는 `.fx-fly>.cic` 에 걸리므로(3454 · 543), 바깥만 재면
            세 재화가 전부 같은 115.5px 로 읽힌다(1회차에 [C] 가 그렇게 빨갰다 — 자의 결함이었다). */
-        const g = [...document.querySelectorAll('#fxl .fx-spd')].map(n => {
+        /* ⚑⚑ 619 17회차 — **«한 무리» 만 따라간다.** 종전에는 살아 있는 `.fx-spd` 를 **전부** 모아
+           무리 중심을 냈는데, 이 자는 **홀드** 중이라 720ms 창 안에서 새 무리가 여러 번 태어난다 —
+           갓 태어난(멀리 있는) 알갱이와 도착 직전(가까운) 알갱이가 한 중심에 섞여서, 마지막 표본이
+           «새 무리 직후» 에 걸리는지 «비행 중» 에 걸리는지가 **순전히 위상 운**이었다.
+           그래서 [D] 의 `d0 → d1` 이 수리 전 트리에서도 22~70px 로 흔들렸다(문턱 20 에 최소 여유 2px).
+           ⇒ **첫 표본에 있던 노드만** 끝까지 따라간다. 새로 태어난 무리는 안 센다 —
+             «알갱이가 호스트 쪽으로 간다» 는 원래 **한 알갱이의 궤적**에 관한 말이고, 무리 중심은
+             그것을 재는 수단이었을 뿐이다. 문턱(20px)·방향·의미는 **한 칸도 안 건드렸다**.
+           ⚠ 첫 표본이 잡히기 전에는 집합을 안 굳힌다(빈 집합으로 굳으면 영원히 표본 0 이 된다). */
+        let live = [...document.querySelectorAll('#fxl .fx-spd')];
+        if (!wave && live.length) wave = new Set(live);       /* 첫 무리를 굳힌다 */
+        if (wave) live = live.filter(n => wave.has(n));
+        const g = live.map(n => {
           const r = n.getBoundingClientRect();
           const im = n.querySelector('img.cic');
           const ir = im ? im.getBoundingClientRect() : r;

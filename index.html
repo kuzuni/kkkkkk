@@ -37077,7 +37077,17 @@ function fxSpendFrom(cur, host, toC){
      방향은 그대로 읽히고 잉크(반경 ≈54)가 위 형제를 물지 않는다(−40 위로 안 올라간다).
      9회차 — 가로는 **도착 자리 위**에서 출발한다(toC — 수직 낙하). 상변 «중앙» 출발이면 대각 경로가
      «Lv. n/500»·진행바를 관통한다(비평가 DV·DW 2인 공통 «경로가 라벨 관통»). */
-  return hc ? { x:(toC ? toC.x : hc.x), y:hr.y + 30 } : null;
+  /* ⚑⚑ 619 17회차 — **③ 도 ② 와 같은 클램프를 탄다**(EL·EM **2인 공통 신규**: 룬 알갱이가 패널
+     액자보다 EL **49px** · EM **57px** 위로 나가 탭 버튼 위에 잉크 582~715px). 16회차가 ② 에만
+     클램프를 걸어 룬은 통째로 새 나갔다 — 룬은 호스트 밖에 화폐 아이콘이 **없어** 늘 이 ③ 으로
+     온다. `probe619g` ⓝ 수리 전 실측 **잉크 25~44px 이탈**.
+     ⚠ 뿌리는 «상변 안쪽 30px» 이 **중심** 이라는 것이다 — 알갱이는 `translate(-50%,-50%)` 로 앉으므로
+       상자 반높이(115.5 / 2 = 57.75)가 통째로 위로 나가고, 스폰 산포 `FX_SPEND_JY` 가 뒤에 또 얹힌다.
+       ⇒ ② 와 **한 글자도 다르지 않은 산수**를 쓴다(상자 반높이 + 산포). 새 상수 0 개이고,
+       543 이 알갱이 크기를 또 돌려도 저절로 따라온다.
+     ⚠ `Math.max` 라 «내리기» 전용인 것도 ② 와 같다 — 30 이 이미 충분히 아래인 배치에서는 무동작. */
+  return hc ? { x:(toC ? toC.x : hc.x),
+                y:Math.max(hr.y + 30, hr.y + (C.ics * FX3_FLYS) / 2 + FX_SPEND_JY) } : null;
 }
 function fxSpend(cur, host){
   const C = FXCUR[cur]; if(!C) return false;
@@ -37588,13 +37598,37 @@ function fxFlash(el, iv, inset){
   /* ⚑ 619 15회차 — `inset` 이면 상자를 **확대·림이 넘치는 만큼** 안으로 들인다(위 산수 머리말).
      안 주면 종전 그대로 호스트 rect 다 — 09·12·17·코스튬·장비의 단발 플래시는 한 픽셀도 안 바뀐다. */
   const pin = s => inset ? Math.min(s * (1 - 1 / FXFLASH_PEAK) / 2 + FXFLASH_RIM, Math.max(0, s / 2 - 12)) : 0;
-  const px = pin(r.w), py = pin(r.h);
-  d.style.left = (r.x + px) + 'px'; d.style.top = (r.y + py) + 'px';
-  d.style.width = (r.w - 2 * px) + 'px'; d.style.height = (r.h - 2 * py) + 'px';
+  /* 자리 쓰기를 한 줄로 모은다 — 아래 17회차 추적이 같은 산수를 매 프레임 다시 쓴다(두 벌 금지). */
+  const put = q => { const px = pin(q.w), py = pin(q.h);
+    d.style.left = (q.x + px) + 'px'; d.style.top = (q.y + py) + 'px';
+    d.style.width = (q.w - 2 * px) + 'px'; d.style.height = (q.h - 2 * py) + 'px'; };
+  put(r);
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
   /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로. CSS 기본값(.34s)이 곧 `full` 이다. */
   { const ms = fxTickLife(iv, FXFLASH_MS); if(ms !== FXFLASH_MS) d.style.animationDuration = ms + 'ms'; }
   L.appendChild(d);
+  /* ⚑⚑ 619 17회차 — **상자가 호스트를 따라간다.** 16회차까지는 스폰 시각의 rect 로 **한 번 찍고
+     끝**이었다. 그런데 621(주인 지시 «틱마다 원래 크기 ↔ 눌린 크기 왕복»)이 호스트를 홀드 내내
+     흔들므로 상자는 그 자리에 굳은 채 남는다 — `probe619g` 실측(수리 전): 중심이 훈련 **8.02px**
+     · 룬 **11.59px** · 단련 **6.01px** 어긋나고, **크기**는 호스트 대비 최악 **9.3~10.2%** 벌어진다.
+     16회차 두 비평가의 「단 하나」가 각자 말로 잡은 그림이 정확히 이것이다(EL «하드 에지가 호스트
+     «안» 콘텐츠 위에 떨어진다» · EM «링·워시가 행 콘텐츠보다 위 레이어» — 둘 다 «이웃 카드는 7/7
+     멀쩡» 이라고 같이 적었다. 움직이는 것은 **눌린 카드 하나뿐**이다).
+     ⚑ **이것이 `FXFLASH_RIM` 이 손잡이가 아니었던 이유다** — 16회차가 8 → 2 로 내리자 액자선 훼손이
+       +365% → **+570%** 로 되레 나빠졌다. 넘침의 지배항은 림이 아니라 **어긋남**이라, 상자를 더
+       들이면 «덜 들어온» 상자가 엉뚱한 자리에 더 정확히 앉을 뿐이다.
+     ⚠ `inset` 을 준 호출(= 619 회당 발화)에서만 돈다 — 09·12·17·코스튬·장비의 단발 플래시는
+       한 프레임도 안 바뀐다(`verify619` [K6] 가 그것을 묶는다).
+     ⚠ 호스트가 재렌더로 갈리면 상자도 죽는다 — 없는 것을 덮는 흰 판때기가 남지 않게(16회차
+       배지 패치와 같은 판정 한 줄. `fxRect` 가 null 을 주는 순간과 같은 조건이다).
+     ⚠ 노드가 걷히면(`isConnected`) rAF 가 저절로 멎어 걷을 타이머가 없다(41회차 퇴장 규약). */
+  if(inset){
+    const follow = () => { if(!d.isConnected) return;
+      if(!el.isConnected){ try { d.remove(); } catch(_){} return; }
+      const q = fxRect(el); if(q && q.w) put(q);
+      requestAnimationFrame(follow); };
+    requestAnimationFrame(follow);
+  }
   /* ⚑ 619 16회차 — 배지 keep-out(위 `fxFlashKeep` 머리말). 플래시 **뒤에** 붙어야 그 위에 그려진다. */
   if(inset){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
   /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
