@@ -140,24 +140,37 @@ const evOf = (page) => async (fn, arg) => {
      등재문에 없는 자리다. `.cv` 를 최종값으로 갈면 플로터가 «방금 얻은 양» 대신
      «지금 총량» 을 띄운다 = 58 26회차가 명시적으로 «거짓말» 이라 부른 것.
      ══════════════════════════════════════════════════════════════════════ */
-  blk('§D 58 «+n» 플로터 — 증가분을 말하는가 총량을 말하는가');
+  blk('§D 증가분 축 — 증가분을 말하는가 총량을 말하는가');
+  /* ⚑ 749(2026-09-01) — 이 절은 `trDeltaTxt(card)` 를 불렀고, **660(주인 지시 «훈련 숫자 플로터 폐지»)이
+     그 함수를 선언째 지웠다**(index.html 35210) ⇒ `ReferenceError` 로 11/12.
+     707 처방 그대로 **«입은 폐지됐지만 축은 살아 있다»** 로 방향만 뒤집는다(486 의 뜻은 «플로터» 가
+     아니라 «증가분과 총량은 서로 다른 두 축이고, 알약은 총량을 말한다» 다). 폐지된 입을 되살아나지
+     않게 지키는 것은 `verify486` [F1]·`verify660` [D3] 몫이라 **여기서 겹쳐 세지 않는다**(708 규약).
+     ⚠ 실제 증가분은 축과 **같은 식을 두 번 적지 않고** 알약이 쓰는 그 수(`TRAIN_NOW`)를 레벨 앞뒤로
+        직접 읽어 잰다(628 이 «한 카드 안 두 자» 를 닫은 그 방법). */
   const d = await ev(() => {
     S.gold = 1e18; S.buyQty = 30; S.trainStage = 8;
     S.lv.atk = 30; markDirty(); renderTrain();
     const card = document.querySelector('#trCards [data-tr="atk"]');
     const cv = card.querySelector('.cv i').textContent;
     const bi = trainBuyInfo('atk');
-    const gain = U.atk.val(lv('atk') + bi.n) - U.atk.val(lv('atk'));
-    return { floater: trDeltaTxt(card), cv, gainRaw: gain, gainTxt: '+' + fmtB(gain),
-      now: fmtB(stat.dmg), n: bi.n };
+    const axis = trainGainTxt('atk');                 /* 폐지된 입의 뜻을 물려받은 살아 있는 자리 */
+    const before = TRAIN_NOW.atk(), keep = S.lv.atk;
+    S.lv.atk = keep + bi.n; markDirty();
+    const after = TRAIN_NOW.atk();
+    S.lv.atk = keep; markDirty();
+    return { mouth: typeof trDeltaTxt, axis, cv, n: bi.n,
+      realTxt: '+' + fmtB(after - before), now: fmtB(before) };
   });
   if (d.__err) { ok(false, 'evaluate 예외: ' + d.__err); }
   else {
-    info('플로터 «' + d.floater + '» · `.cv` «' + d.cv + '» · 실제 증가분 ' + d.gainTxt
-      + ' (x' + d.n + ') · 지금 최종값 ' + d.now);
-    ok(d.floater === d.gainTxt,
-      '플로터는 «증가분» 을 말한다 (수리 후에도 이 항이 초록이어야 한다 = `.cv` 와 분리됐다)');
-    ok(d.floater !== d.now, '플로터가 «최종값» 을 띄우지 않는다');
+    info('폐지된 입 `trDeltaTxt` = ' + d.mouth + ' (660) · 증가분 축 «' + d.axis + '»'
+      + ' · `.cv` «' + d.cv + '» · 알약의 자로 잰 실제 증분 ' + d.realTxt + ' (x' + d.n + ')'
+      + ' · 지금 최종값 ' + d.now);
+    ok(d.axis === d.realTxt,
+      '증가분 축(`trainGainTxt`)이 «증가분» 을 말한다 — 알약이 쓰는 자로 잰 실제 증분과 같다(628)');
+    ok(d.axis !== d.now && d.axis !== d.cv,
+      '증가분 축이 «최종값» 을 띄우지 않는다 — 알약(`.cv`)과 분리돼 있다(486 의 뜻)');
   }
 
   /* ══════════════════════════════════════════════════════════════════════
