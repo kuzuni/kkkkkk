@@ -116,6 +116,10 @@ async function run(scene, span) {
        갈아끼우므로 뒤에 재면 «새 노드» 를 재게 된다(LESSONS 22 와 같은 규칙). */
     const cosEl = document.querySelector('#bCos .sk-card.sel');
     const cosR = cosEl ? rect(cosEl) : null;
+    /* 694 — 씬 C 의 호스트(누를 카드). [7-c2] 가 «버스트가 그 상자 안에서 뜨는가» 를 잰다:
+       종전 [7] 이 지키던 것은 **위치 축**이라(58 24·27·30회차 회랑) 개수만 세면 그 뜻이 빠진다(702 지적). */
+    const trEl = document.querySelector('#trCards [data-tr="atk"]') || document.querySelector('#trCards .tr-card');
+    const trR = trEl ? rect(trEl) : null;
 
     /* ── 570 — 제품 자신의 신호를 남긴다(표본이 아니다) ────────────────────────
        ⓐ `plog` : 제품의 틱(`fxPzTick`)이 **그린** 인라인 scale. 프레임마다 한 줄.
@@ -177,7 +181,7 @@ async function run(scene, span) {
       const c = document.querySelector('#trCards [data-tr="atk"]') || document.querySelector('#trCards .tr-card');
       if (c) { c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); }
     }
-    const cicSeen = new Set();
+    const cicSeen = new Set(), cicAt = new Map();
     const gp = pillEl('gold'), dp = pillEl('dia');
     await new Promise((res) => {
       const tick = () => {
@@ -210,6 +214,12 @@ async function run(scene, span) {
           for (const el of document.querySelectorAll('.fx-cic')) {
             if (el.__v93c === undefined) el.__v93c = (window.__v93cn = (window.__v93cn || 0) + 1);
             cicSeen.add(el.__v93c);
+            /* 위치는 «떠 있는 동안» 한 번만 잡는다(첫 프레임 = 스폰 자리). 프레임마다 재면
+               자 자신이 부하가 된다(570) — 스폰 자리가 [7-c2] 가 묻는 전부다. */
+            if (sc === 'upg' && !cicAt.has(el.__v93c)) {
+              const r = el.getBoundingClientRect();
+              if (r.width) cicAt.set(el.__v93c, { x: r.left + r.width / 2, y: r.top + r.height / 2, s: r.width });
+            }
           }
         }
         frames.push({
@@ -231,7 +241,7 @@ async function run(scene, span) {
     return {
       frames, rows, cards, p0, leftover, beats, mism: mism.length,
       /* 694 — [7] 이 읽는 셋: 호스트 상자 · 실제 지출 · 버스트 알 수 */
-      cosR, paid: pay0 - (sc === 'cos' ? S.stone : S.gold), cic: cicSeen.size,
+      cosR, trR, cicAt: [...cicAt.values()], paid: pay0 - (sc === 'cos' ? S.stone : S.gold), cic: cicSeen.size,
       plog: plog.map(r => [Math.round(r[0] - t0), r[1], r[2], r[3], r[4]]), dlog,
       goldPill: pillC('gold'), diaPill: pillC('dia'),
       outX: (typeof fx3Out === 'function' && p0) ? fx3Out(p0) : 0,
@@ -479,6 +489,17 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
   ok(u.paid > 0, `[7-a] 전제 — 씬 C 가 났다: 훈련 강화로 골드 ${u.paid} 지출(연출이 아니라 판정에서 읽는다)`);
   ok(uDelta === 0, `[7-b] ★ 660 — 훈련 «+n» 숫자 플로터가 0장이다 (${uDelta}프레임·표본)`);
   ok(u.cic >= 3, `[7-c] ★ 그 자리를 아이콘 버스트가 대신한다 (${u.cic}알 · 660)`);
+  /* [7-c2] — 종전 [7] 이 지키던 것은 개수가 아니라 **위치**였다(702 지적: «위치 축을 잃지 마라»).
+     자리는 660 이 정한 그대로 «스폰은 누른 호스트뿐» 이고, 봉투는 호스트 상자에서 온다 —
+     알갱이 자신의 반지름만 여유로 준다(제품이 그린 값 · 새 상수 0개). */
+  const tr = u.trR, bad = [];
+  if (tr) for (const a of u.cicAt) {
+    const m = a.s / 2;
+    if (a.x < tr.x - m || a.x > tr.x + tr.w + m || a.y < tr.y - m || a.y > tr.y + tr.h + m) bad.push(a);
+  }
+  ok(!!tr && u.cicAt.length >= 3 && bad.length === 0,
+    `[7-c2] ★ 그 버스트가 **누른 카드 상자 안**에서 뜬다 — 밖 ${bad.length}알 / 잰 ${u.cicAt.length}알`
+    + (tr ? ` (카드 ${Math.round(tr.w)}×${Math.round(tr.h)})` : ' (호스트 없음)'));
 
   const cr = cs.cosR;
   const cd = [];

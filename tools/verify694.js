@@ -14,9 +14,10 @@
  *   §R-b  버스트 폐지 — 아이콘 알갱이가 `.fx-cic` 를 안 단다 ⇒ [7-c] 빨강
  *   §R-c  부품 사망 — `fxDelta` 가 아무것도 안 만든다        ⇒ [7-d] 빨강
  *   §R-d  판정 무력화 — 훈련이 골드를 안 쓴다               ⇒ [7-a] 빨강(«씬이 안 났다» 를 초록으로 안 읽는다)
+ *   §R-e  자리 이탈 — 버스트를 누른 카드가 아니라 HUD 에서 터뜨린다 ⇒ [7-c2] 빨강(702 가 지킨 «위치 축»)
  * §0 은 청정 트리에서 [7] 여섯 줄이 전부 초록임을 먼저 확인한다(주입 시험이 헛되지 않게).
  *
- * ⚠ 이 자는 verify93 을 자식 프로세스로 5번 돌린다 — 몇 분 걸린다.
+ * ⚠ 이 자는 verify93 을 자식 프로세스로 6번 돌린다 — 몇 분 걸린다.
  * 실행: node tools/verify694.js   (한 축만: node tools/verify694.js --only R-a)
  */
 const fs = require('fs');
@@ -43,7 +44,7 @@ function runGate(srcRel) {
     const m = /^\s*([✓✗])\s+(.*)$/.exec(ln);
     if (!m) continue;
     const green = m[1] === '✓', txt = m[2];
-    const tag = /\[(7-a|7-b|7-c|7-d 전제|7-d|7-e|7-f)\]/.exec(txt);
+    const tag = /\[(7-a|7-b|7-c2|7-c|7-d 전제|7-d|7-e|7-f)\]/.exec(txt);
     if (tag && axes[tag[1]] === undefined) axes[tag[1]] = { green, txt };
   }
   return { axes, out };
@@ -65,8 +66,15 @@ const INJ = {
   /* 전제가 무르지 않다는 증명 — 훈련이 아무것도 안 사면 [7-b] 의 «0장» 은 뜻이 없다.
      그 세계에서 [7-a] 가 빨개져야 «씬이 안 났다» 를 «폐지됐다» 로 오독하지 않는다. */
   'R-d': ['[7-a]', "  const ok = trBuyOnce(key);", "  const ok = false && trBuyOnce(key);"],
+  /* 자리 축 — 660 의 «스폰 위치는 강화 버튼뿐» 이 깨지면 [7-c2] 가 빨개져야 한다.
+     개수(§R-b)만 지키면 «아무 데서나 터져도 초록» 이라 702 가 요구한 위치 축이 안 산다.
+     ⚠ 1회차에는 `fxBurst` 안에서 **호스트 상자만** 300px 옆으로 밀었는데 [7-c2] 가 **안 빨개졌다** —
+        중심은 `p = fxPt(t)` 로 따로 오고 상자는 «가둠»(bx0..bx1)일 뿐이라, 밀린 상자와 원래 카드가
+        아직 겹쳐 입자가 그 겹침 구간에 눌러앉았다. 자리를 묻는 주입은 **발원 자체**를 옮겨야 한다. */
+  'R-e': ['[7-c2]', "  if(typeof fxBurst === 'function') fxBurst(fxBurstAt(el), FXPAL.up, cnt, true, null, cur || null);",
+                    "  if(typeof fxBurst === 'function') fxBurst(document.getElementById('top') || fxBurstAt(el), FXPAL.up, cnt, true, null, cur || null);"],
 };
-const WANT = { 'R-a': '7-b', 'R-b': '7-c', 'R-c': '7-d', 'R-d': '7-a' };
+const WANT = { 'R-a': '7-b', 'R-b': '7-c', 'R-c': '7-d', 'R-d': '7-a', 'R-e': '7-c2' };
 
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
 
@@ -76,7 +84,7 @@ const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf
 
   console.log('[§0] 청정 트리 — [7] 여섯 줄이 전부 초록이어야 주입 시험이 뜻을 가진다');
   const base = runGate(null);
-  for (const k of ['7-a', '7-b', '7-c', '7-d 전제', '7-d', '7-e', '7-f']) {
+  for (const k of ['7-a', '7-b', '7-c', '7-c2', '7-d 전제', '7-d', '7-e', '7-f']) {
     ok(base.axes[k] && base.axes[k].green,
       `[§0] ${k} 초록 — ${base.axes[k] ? base.axes[k].txt.slice(0, 74) : '축을 못 찾았다'}`);
   }
