@@ -3926,6 +3926,12 @@
   /* 16회차 — «플랫 단색 원은 09·12·17 의 글로우 별 어휘와 이질»(15회차 Y·Z 공통 ④, 아트 분류).
      아트 전까지 radial-gradient 로 절반 회수: 흰 코어 → 본색 → 투명 가장자리의 «글로우 오브».
      본색은 fxBurst 가 --c 로 준다. 끝 scale 도 .38→.5 — 중간 프레임이 12px 로 읽히던 것 방지. */
+  /* ⚑ 619 8회차 — «홀드 중» 상시 글로우. 룬은 강화 이펙트가 성공에만 걸리는 설계(거짓 신호 금지)라
+     저확률 구간에서 이펙트 층이 프레임째 꺼져 «홀드가 깜빡인다» 로 읽혔다(비평가 DT ① 4 «f4·f6
+     글로우·스파크 동시 0» · DU ① «7프레임 중 2 소등» — 2인 공통). 성공 신호가 아니라 «누르고 있다»
+     신호라 실패 틱에도 켜 둘 수 있다. transform 이 아니라 outline — 621 의 눌림 왕복(scale)·60 쥬시와
+     층이 안 겹친다. 세 화면이 같은 클래스를 쓴다(한 어휘). */
+  .fx-holding{outline:5px solid rgba(255,192,46,.55);outline-offset:-1px}   /* radius 는 호스트 자신의 것을 따른다 */
   .fx-spark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
     background:radial-gradient(circle at 42% 38%, #FFF 0%, #FFF 26%, var(--c,#FFE07A) 62%, rgba(0,0,0,0) 88%);
   /* 21회차 — 수명 .58s 는 «무엇을 얻었는지» 를 가린다. 20회차 비평 AG·AH 공통(#3·#5):
@@ -33655,6 +33661,12 @@ const UPFX_CAP = 36;     /* 한 자리가 `#fxl` 에서 동시에 쓰는 노드 
      여기서는 **4 + 알갱이 ≤6 = 10**(583 이전 앰버 단독과 같은 수)이라 그 상한을 안 넘는다
      (`verify583` [G2] «사건당 3~12개» 도 그대로 통과한다). */
 const UPFX_NOW = 4;
+/* ⚑ 619 8회차 — «누르고 있다» 상시 글로우(.fx-holding CSS 머리말). 재렌더가 클래스를 떨어뜨릴 수
+   있으므로 켜는 쪽은 틱마다 다시 단다(문자열 셀렉터도 받는다 — LESSONS 50-①). */
+function fxHoldMark(host, on){
+  const el = (typeof host === 'string') ? document.querySelector(host) : host;
+  if(el && el.classList) el.classList[on ? 'add' : 'remove']('fx-holding');
+}
 const upFxPool = new Map();                        /* key → [[node,…], …] — 오래된 «세대» 가 앞 */
 const upFxLive = q => q.reduce((n, g) => n + g.length, 0);
 const upFxDrop = g => { for(const nd of g){ try { nd.remove(); } catch(_){} } };
@@ -33733,6 +33745,7 @@ function trHoldStop(bad){
   trHold = null;
   clearTimeout(h.timer);
   const el = trCard(h.key);
+  fxHoldMark(el, false);                             /* 619 8회차 — 홀드 글로우 끄기 */
   if(bad && el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);   /* 60 — 부족·상한 흔들림 */
   else if(h.n > 1 && el) fxUpOk(el, el, trDeltaTxt(el), PAY_CUR.train);  /* 58 — 반복분은 마지막에 한 번 · 583 골드 알갱이 */
   /* ⚑ 488 2회차 — 정산 요약 토스트. 룬·단련 홀드에는 처음부터 있었는데 여기만 없어서, 1회차 캡처를
@@ -33771,6 +33784,7 @@ function trHoldTick(){
   const cardNow = trCard(h.key);
   upFx('train:' + h.key, cardNow);
   hbBeat(cardNow, true, null, null);
+  fxHoldMark(cardNow, true);                         /* 619 8회차 — 세 화면 같은 «홀드 중» 글로우(한 어휘) */
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
   /* ⚑ 621 — 눌림 왕복 한 사이클(주인 지시 2026-09-01 «원래 크기로 돌아오고 누른크기 되고를 반복»).
      여기는 «누른 것 = 호스트» 라 맥박(`jz-hb`, transform)과 **같은 노드**인데, 왕복은 WAAPI 의
@@ -33801,6 +33815,7 @@ function trHoldStart(key, card){
   }
   const fresh = trCard(key);
   if(fresh && fresh !== card && typeof fxHitEl === 'function') fxHitEl(fresh);
+  fxHoldMark(fresh || card, true);                   /* 619 8회차 — 첫 발부터 «홀드 중» 글로우 */
   /* 488 3회차 — 첫 발에도 «알림». ⚑ 583 — 그 알림에서 **금액만** 뺐다(위 `trHoldTick` 머리말):
      첫 발의 «무엇을 냈는가» 는 바로 위 `fxUpOk(…, bi0.cur)` 의 골드 알갱이가 말한다. */
   hbBeat(fresh || card, true, null, null);
@@ -33898,6 +33913,7 @@ function rtHoldStop(bad){
   const h = rtHold; if(!h) return;
   rtHold = null; clearTimeout(h.timer);
   h.end(h.n, bad);                      /* end 안에서 통짜 렌더가 돈다 — 그 뒤에 새 노드를 흔든다 */
+  fxHoldMark(h.host, false);            /* 619 8회차 — 통짜 렌더가 노드를 갈았어도 셀렉터로 다시 찾아 끈다 */
   if(bad) rtShake(h.sel);
 }
 function rtHoldTick(){
@@ -33910,6 +33926,7 @@ function rtHoldTick(){
      488 규약대로 카드 `sel0` 이고 그쪽은 `jz-hdn` 이 맡는다 — 두 어휘를 겹치지 않는다).
      `h.live()` 뒤에 부르는 이유: 룬·단련은 live 갱신이 버튼 안 숫자를 다시 쓰므로 그 뒤의 노드를 잡는다. */
   jzPressTick(document.querySelector(h.sel), h.iv);
+  fxHoldMark(h.host, true);                          /* 619 8회차 — live 갱신 뒤 노드에 다시 단다 */
   h.timer = setTimeout(rtHoldTick, h.iv);
 }
 /* ⚑ 491 1회차 — «홀드 중» 표시를 **첫 발보다 먼저** 세운다.
@@ -33947,12 +33964,13 @@ function rtFirstFx(sel, cur, key){
 }
 function rtHoldStart(o){
   rtHoldStop(false);
-  rtHold = { tag:o.tag, sel:o.sel, once:o.once, live:o.live, end:o.end, n:0, iv:TR_HOLD_IV0, timer:0 };
+  rtHold = { tag:o.tag, sel:o.sel, host:o.host, once:o.once, live:o.live, end:o.end, n:0, iv:TR_HOLD_IV0, timer:0 };   /* 619 8회차 — host 보관(홀드 글로우) */
   if(!o.once()){                                             /* 첫 누름부터 실패 → 반복 없음 */
     rtHold = null;
     o.end(0, false); rtShake(o.sel); return;
   }
   rtHold.n = 1;
+  fxHoldMark(o.host, true);                                  /* 619 8회차 — 첫 발부터 «누르고 있다» 글로우 */
   /* 491 7회차 — 첫 발 가산 오버레이 · 583 — 거기에 «무엇으로 샀는가» 를 얹는다(`o.tag` 가 이미 자리를 안다)
      619 — 반복분과 **같은 키**로 넣는다(`o.key`) — 그래야 세대 큐가 첫 발부터 이어진다 */
   rtFirstFx(o.host, PAY_CUR[o.tag], o.key);
@@ -36659,7 +36677,10 @@ function fxSpendFrom(cur, host){
     const r = fxRect(im); if(!r || !r.w) continue;
     const q = { x:r.x + r.w/2, y:r.y + r.h/2 };
     const d = hc ? Math.hypot(q.x - hc.x, q.y - hc.y) : 0;
-    if(d < bd){ bd = d; best = q; }
+    /* ⚑ 619 8회차 — 출발 중심을 아이콘 «하단 아래 44px» 로. 스폰 순간이 알갱이가 제일 클 때
+       (FX3_FLYS 2.1 · 잉크 반경 ≈54)라 아이콘 중심에서 태어나면 보유 라벨을 통째로 가린다
+       (비평가 DT·DU 2인 공통 «단련석 라벨 100% 가림»). 아이콘 밑에서 스며 나오면 출처는 그대로 읽힌다. */
+    if(d < bd){ bd = d; best = { x:q.x, y:q.y + r.h/2 + 44 }; }
   }
   if(best) return best;
   /* ⚑ 619 7회차 — ③ 폴백을 «호스트 위 200px» → **상변 안쪽 30px** 로. 200px 위는 룬에서 서브탭
@@ -36836,6 +36857,24 @@ function fxBurst(t, col, n, strict){
      따라간다(여유는 입자 크기에서 나온다는 4회차 규칙 그대로). */
   const hsc = (strict && r) ? clamp(Math.sqrt(r.w * r.h) / 410, 1, 1.9) : 1;
   const kh = r ? fxbTextHoles(t, strict ? Math.round(FXB_KOS * hsc) : undefined) : [];
+  /* ⚑ 619 8회차 — strict 구멍 두 벌 추가(비평가 DT·DU 2인 공통 «스파크가 −n 플로터를 70% 은폐 ·
+     진행바 위에 착지»): ① 살아 있는 플로터(`.fx-plus`) — 정보 층인데 #fxl 에 살아 호스트 자손 스캔에
+     안 잡힌다 ② 진행바(`.rb`) — 단색 배경이라 43회차 «그림 잉크» 판정(backgroundImage)에 안 걸린다.
+     이 버스트 순간의 스냅숏이면 충분하다(스파크 수명 300ms ≪ 플로터 이동 24px). */
+  if(strict && r && kh.length < 24){
+    const f2 = fxSc();
+    if(f2){
+      const K2 = Math.round(FXB_KOS * hsc), hb2 = t.getBoundingClientRect();
+      const add2 = b => { if(b.width && b.height && kh.length < 24)
+        kh.push({ x:(b.left - f2.x)/f2.s - K2, y:(b.top - f2.y)/f2.s - K2, w:b.width/f2.s + 2*K2, h:b.height/f2.s + 2*K2 }); };
+      const L2 = fxL();
+      if(L2) for(const nd of L2.querySelectorAll('.fx-plus')){
+        const b = nd.getBoundingClientRect();
+        if(b.right > hb2.left && b.left < hb2.right && b.bottom > hb2.top && b.top < hb2.bottom) add2(b);
+      }
+      for(const nd of t.querySelectorAll('.rb')) add2(nd.getBoundingClientRect());
+    }
+  }
   const PB_M = FXB_RMIN + 80;
   /* ⚑ 619 6회차 — 5회차의 «무작위 위상» 을 **황금비 저불일치 수열**로 바꾸고(무작위는 연속 두
      버스트가 우연히 같은 값을 뽑을 수 있다 — DP 지적의 실체가 바로 «연속 프레임에서 같은 자리»다),
@@ -37183,6 +37222,7 @@ const HB_LIFE_LONE = 1300, HB_LONE_GAP = 400;
 const hbAt = new Map();
 const hbAtKey = (host, el0) => (typeof host === 'string') ? host : el0;
 const hbLng = new Map();   /* 619 7회차 — 줄기별 «살아 있는 lng(1.3s) 가 점유한 칸» [{slot,die}] — 반복분이 그 칸을 건너뛴다 */
+const hbNodes = new Map(); /* 619 8회차 — 줄기별 살아 있는 플로터 노드(동시 상한 2 — 아이콘 은폐 방지) */
 /* 연속으로 나오는 플로터가 **정확히 같은 자리에 겹치지 않게** 가로로 흩는다.
    ⚑ 칸 수·간격·수명은 눈대중이 아니라 **홀드 주기에서 역산한 값**이다(1회차 실측으로 갈았다):
      · 홀드는 `TR_HOLD_IVMIN` 60ms 까지 가속한다 ⇒ 한 줄기에 «수명 ÷ 60ms» 장이 동시에 산다.
@@ -37258,9 +37298,9 @@ function hbFloat(host, txt, kind, lone){
      둘째 beat)은 1.3s 를 살고, 반복분의 칸 순환(수명 .3s × n칸 ≈ 550ms)이 그 안에 같은 칸을 다시
      쓰므로 lng × 반복분이 같은 칸에서 겹친다([H2] 간헐 빨강의 두 번째 뿌리 — 수리 전 커밋에서도
      같은 쌍이 찍힌다). lng 의 칸·수명을 줄기별로 적어 두고, 살아 있는 동안 그 칸을 비워 둔다. */
+  const hk0 = hbAtKey(host, el), lk = (typeof hk0 === 'string' ? hk0 : '·') + '|' + seqk;
   {
-    const hk0 = hbAtKey(host, el), nowF = performance.now();
-    const lk = (typeof hk0 === 'string' ? hk0 : '·') + '|' + seqk;
+    const nowF = performance.now();
     const liveL = (hbLng.get(lk) || []).filter(o => o.die > nowF);
     for(let g = 0; g < n && liveL.some(o => o.slot === (i * st) % n); g++) i = hbSeqK[seqk]++;
     if(lone) liveL.push({ slot: (i * st) % n, die: nowF + HB_LIFE_LONE });
@@ -37278,6 +37318,15 @@ function hbFloat(host, txt, kind, lone){
   { const fall = num('--hb-fall', NaN); if(Number.isFinite(fall)) d.style.setProperty('--hb-fall', fall + 'px'); }   /* 619 7회차 — 하강도 같은 길(위 «상속으로 못 받는다» 머리말 그대로) */
   d.textContent = txt;
   L.appendChild(d);
+  /* ⚑ 619 8회차 — 줄기당 **동시 생존 상한 2**. 홀드에서 lng(1.3s) + 반복분이 겹치면 한 줄기에 3장이
+     쌓여 단련 아이콘이 40~60% 상시 가려졌다(비평가 DT·DU 2인 공통 «f2 6장 스택»). 3장째가 뜨는
+     순간 가장 오래된 것을 걷는다 — upFx 세대 풀과 같은 규약(수명 대신 자리를 지킨다). */
+  {
+    const q = (hbNodes.get(lk) || []).filter(nd => nd.isConnected);
+    q.push(d);
+    while(q.length > 2){ const old = q.shift(); try { old.remove(); } catch(_){} }
+    hbNodes.set(lk, q);
+  }
   /* ⚑ 4회차 계측 — **애니메이션이 붙자마자 시작하지 않는다.** 노드를 넣어도 CSS 애니메이션의
      `startTime` 은 «다음 스타일 플러시» 에 정해지는데, 홀드 중에는 같은 태스크에서 `renderTrainLive()`·
      게임 루프가 돌아 그 순간이 밀린다 — 12ms 간격 직접 계측으로 **평균 86~131ms**(나이 336ms 인
