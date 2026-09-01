@@ -30755,10 +30755,38 @@ function rwHoldStop(bad){
    ⚠ 플래시는 버튼에 **안** 건다(`noFlash`) — 버튼의 회당 신호는 `hbBeat` 의 맥박이 이미 맡고 있고,
      625 «한 자리에 플래시 한 장» 과 겹치면 안 된다.
    ⚠ 개수는 619 어휘 그대로 **첫 발 10 · 반복분 `UPFX_N`(4)** 이다 — 새 상수를 만들지 않는다. */
+/* ⚑⚑ 2회차 — **호스트(요소) 버스트가 아니라 «버튼 중심에서 쏘는 점 버스트» 다.**
+   1회차는 660 의 세 탭과 똑같이 `upFx(…, 버튼 요소)` 로 갔는데, 비평가 두 사람이 **독립적으로 같은
+   «단 하나»** 를 냈다(둘 다 ①4 ②6 ③3 ④5 = 최저 3): «380ms 내내 입자가 버튼 상자를 한 픽셀도 못
+   나간다 · 총 이동 39~44px · t=0 에 이미 확산의 79% 가 끝나 있어 «터진다» 가 아니라 «버튼에 붙은
+   정지 장식 링» 으로 읽힌다».
+   뿌리는 상수가 아니라 **619 28·41회차가 요소 대상에 건 «가둠»** 이다 — 탄생 타원 반축이
+   `반폭 + FXB_M` 이라 이미 bbox 밖인데 시작·끝점을 둘 다 bbox 로 clamp 하므로, 이동은 구조적으로
+   «반축 × FXB_K(20%)» 이고 **상자를 못 넘는다**. 그 규칙은 훈련 카드(326×510)가 **형제 카드**를
+   덮던 것을 닫은 자리라 옳지만, 이 화면의 호스트는 **396×214 짜리 그릇**이라 같은 식이
+   «그릇 림을 따라 도는 목걸이» 를 그린다(비평가 A: f1 에 이미 입자 셋이 림 타원 위에 정확히 앉아
+   «아트의 일부» 로 보인다).
+   ⇒ **같은 부품의 다른 갈래**를 쓴다 — `fxBurst` 의 **좌표(점) 대상**은 반경 22 원에서 태어나
+   80~150px 를 날아간다(가둠 없음 · 619 가 «점 대상은 종전 그대로» 라고 네 번 못 박은 갈래다).
+   그러면 스폰은 여전히 **버튼 하나**이고(주인 지목 · 게이트 [C1] 은 «탄생 좌표» 를 묻는다),
+   그림은 «버튼에서 튀어나와 흩어진다» 가 된다.
+   ⚠ `upFx` 를 안 쓰므로 세대 큐(`upFxPool`)의 상한 처리도 안 탄다 — 대신 **여기서 개수를 줄인다**.
+     `fxBurst` 자신의 `FXMAX` 가드는 «넘으면 통째로 return» 이라 그대로 두면 발화가 조용히 빠져
+     [E1] 1:1 이 깨진다(660 이 세대 걷기를 «개수 줄이기» 로 바꾼 것과 같은 처방 · 바닥 1알 보장).
+     예산: 수명 380ms ÷ 최속 틱 60ms = 6.3세대 × 4알 ≈ **25알**로 `FXMAX` 120 에 한참 못 미친다.
+   ⚠ **캔슬 금지는 그대로다** — `iv` 를 안 넘겨 각 입자가 제 수명(380ms)을 끝까지 산다.
+   ↩ 되돌리려면 이 함수 본문을 `upFx('relic', $('rwBasin'), PAY_CUR.relic, first ? 10 : null, true, null)`
+     한 줄로 되돌리면 1회차(요소 버스트)로 돌아간다. */
+const RW_FX_N0 = 10;                     /* 첫 발 — 619 어휘(`fxUpOk` 의 10알)와 같은 값 */
 function rwSummonFx(it, first){
   const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
   if(el){ fxFlash(el); fxHitEl(el); }
-  upFx('relic', $('rwBasin'), PAY_CUR.relic, first ? 10 : null, true, null);
+  const L = (typeof fxL === 'function') ? fxL() : null;
+  const p = (typeof fxPt === 'function') ? fxPt($('rwBasin')) : null;
+  if(!L || !p) return false;
+  const n = Math.max(1, Math.min(first ? RW_FX_N0 : UPFX_N, FXMAX - L.childElementCount - 1));
+  fxBurst(p, FXPAL.up, n, false, null, PAY_CUR.relic);
+  return true;
 }
 function rwHoldTick(){
   const h = rwHold; if(!h) return;

@@ -60,7 +60,11 @@ const ARM = () => {
     const im = nd.querySelector && nd.querySelector('img.cic');
     let intended = 380;
     try { const d = parseFloat(getComputedStyle(nd).animationDuration); if (d > 0) intended = d * 1000; } catch (_) {}
-    const rec = { k: kindOf(nd), t, born: t, intended,
+    /* 2회차 — «이동» 축(아래 [C3]). 입자는 CSS 변수 `--dx/--dy` 만큼 날아간다 —
+       끝점을 프레임에서 다시 재는 것보다 **제품이 적어 둔 값**을 읽는 쪽이 정확하다(619 12회차 규약). */
+    const dx = parseFloat(nd.style.getPropertyValue('--dx')) || 0;
+    const dy = parseFloat(nd.style.getPropertyValue('--dy')) || 0;
+    const rec = { k: kindOf(nd), t, born: t, intended, dx, dy,
                   x: b.x + b.width / 2, y: b.y + b.height / 2,
                   cur: im ? (im.getAttribute('data-cur-ic') || '') : '',
                   img: !!im, txt: (nd.textContent || '').trim().slice(0, 24) };
@@ -118,12 +122,16 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
      body ? '본문 ' + body.length + '자' : '본문을 못 찾았다');
   ok(/function rwSummonFx\(it, first\)\{/.test(code),
      'A2 회당 연출이 **한 함수**(`rwSummonFx`)다 — 첫 발·홀드 틱이 같은 자리를 지난다(1:1 축의 뿌리)');
-  ok(/upFx\('relic', \$\('rwBasin'\), PAY_CUR\.relic/.test(code),
-     'A3 발화가 «버튼(`#rwBasin`)» 에서 «표가 말하는 재화(`PAY_CUR.relic`)» 로 터진다');
+  ok(/fxPt\(\$\('rwBasin'\)\)/.test(code) && /fxBurst\(p, FXPAL\.up, n, false, null, PAY_CUR\.relic\)/.test(code),
+     'A3 발화가 «버튼(`#rwBasin`) 중심점» 에서 «표가 말하는 재화(`PAY_CUR.relic`)» 로 터진다(2회차 — 점 버스트)');
   ok(/const PAY_CUR = \{[^}]*relic:'relic'/.test(code),
      'A4 `PAY_CUR` 표에 유물 소환 자리가 있다 — 화폐 문자열을 호출부에 손으로 안 적는다(402 규약)');
-  ok(/upFx\('relic'[^;]*, true, null\);/.test(code),
-     'A5 `noFlash=true` · `iv=null` — 버튼 플래시는 안 겹치고(625) 버스트는 틱에 안 잘린다(660 캔슬 금지)');
+  /* 2회차 — `upFx` 의 세대 큐를 안 타므로 상한을 **여기서** 지킨다. `fxBurst` 의 FXMAX 가드는
+     «넘으면 통째로 return» 이라 그대로 두면 발화가 조용히 빠진다([E1] 이 깨진다). */
+  ok(/Math\.max\(1, Math\.min\(first \? RW_FX_N0 : UPFX_N, FXMAX - L\.childElementCount - 1\)\)/.test(code),
+     'A5 상한을 «걷기» 가 아니라 «개수 줄이기» 로 지키고 바닥 1알을 보장한다(660 처방 · 발화는 안 빠진다)');
+  ok(/fxBurst\(p, FXPAL\.up, n, false, null,/.test(code) && !/fxBurst\(p,[^)]*iv/.test(code),
+     'A5b `iv` 를 버스트에 안 넘긴다 — 입자가 제 수명을 끝까지 산다(660 캔슬 금지 규약)');
   const rw = nc((code.split('function rwHoldTick(){')[1] || '').split('\n[\'pointerup\'')[0]);
   ok(/rwSummonFx\(it, false\)/.test(rw) && /rwSummonFx\(it, true\)/.test(rw),
      'A6 두 호출부(홀드 틱 · 첫 발)가 그 함수를 지난다', rw ? '' : 'rwHold 절을 못 찾았다');
@@ -168,12 +176,24 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   /* ── [C] 자리 ─────────────────────────────────────────────────────── */
   /* 주인 지목: «유물소환 버튼에서 유물화폐 아이콘 파티클 이펙트». 660 이 세운 «스폰은 버튼뿐».
      ⚠ 여유 2px 은 반올림 한 칸이다 — 619 의 가둠 상자가 중심을 이미 버튼 안으로 들여 놓는다. */
-  console.log('\n[C] 자리 — 스폰 중심이 «소환 버튼» 상자 안이다 (격자 칸 발 0건)');
+  console.log('\n[C] 자리 — 스폰 중심이 «소환 버튼» 상자 안이다 (격자 칸 발 0건) · 그리고 실제로 날아간다');
   const outs = icons.filter(a => !inBox(a, H.btn, 2));
-  ok(icons.length > 0 && outs.length === 0, 'C1 ★ 버튼 밖 스폰 0건', '밖 ' + outs.length + '/' + icons.length);
+  ok(icons.length > 0 && outs.length === 0, 'C1 ★ **탄생 좌표**가 전부 버튼 상자 안이다(스폰 = 버튼뿐)',
+     '밖 ' + outs.length + '/' + icons.length);
   const gridSpawn = H.add.filter(a => (a.k === 'icon' || a.k === 'spark') && !inBox(a, H.btn, 2) && inBox(a, H.grid, 0));
   ok(gridSpawn.length === 0, 'C2 ★ 격자(슬롯) 발 파티클 0건 — 수리 전 여기가 유일한 발화점이었다',
      gridSpawn.length + '알');
+  /* ⚑⚑ 2회차 신설 — **«터진다» 는 이동으로만 성립한다.** 1회차(요소 버스트)는 [C1][C2] 를 통과하고도
+     비평가 2인이 독립으로 «단 하나» 를 같은 말로 냈다: «380ms 내내 버튼 상자를 못 나간다 · 총 이동
+     39~44px · 정지 장식 링». 게이트가 «태어난 자리» 만 물으면 그 그림을 못 잡는다 —
+     **이동량과 «상자를 넘는가» 를 같이 물어야** 한다. 문턱은 제품 값에서 온다(점 버스트 산포 80~150). */
+  const trav = icons.map(a => Math.hypot(a.dx, a.dy)).sort((x, y) => x - y);
+  const tmed = trav.length ? trav[Math.floor(trav.length / 2)] : 0;
+  ok(tmed >= 80, 'C3 ★ 이동 거리 중앙값 ≥ 80px — 링이 아니라 «터짐» 이다', p2(tmed) + 'px');
+  const flyOut = icons.filter(a => !inBox({ x: a.x + a.dx, y: a.y + a.dy }, H.btn, 0)).length;
+  ok(icons.length > 0 && flyOut / icons.length >= 0.25,
+     'C4 ★ 끝점이 버튼 상자 밖인 입자가 4알 중 1알 이상 — «바깥으로 흩어진다» 가 그림으로 선다',
+     flyOut + '/' + icons.length + ' = ' + p2(flyOut / (icons.length || 1)));
 
   /* ── [D] 폐지 ─────────────────────────────────────────────────────── */
   console.log('\n[D] 폐지 — 텍스트가 떠오르는 이펙트 0장(주인 «텍스트로 존나 이펙트 하는거 빼기»)');
