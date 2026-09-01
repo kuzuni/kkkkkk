@@ -24,8 +24,23 @@ const TMP  = path.join(ROOT, `.v202-neg-${process.pid}.html`);
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 
-const PAIR_OFF = '  :is(#bSk,#bPet,#bCos) .stab>.bdg{display:none}\n' +
-                 '  :is(#bSk,#bPet,#bCos) .stab.alert>.bdg{display:block}\n';
+/* ⚑ 653 (2026-09-01) — 앵커를 **제품에서 찾아 온다**(652 와 같은 처방). 531 짝의 id 목록은
+ *   주석이 «새 화면을 만들면 그 id 를 더한다» 고 말하는, 자라도록 설계된 목록이라
+ *   손으로 베껴 두면 그 순간부터 썩는다. */
+const find = (re, name) => {
+  const m = SRC.match(re);
+  if (!m) { console.error('[!] 앵커 없음(' + name + ') — 정규식이 제품과 어긋났다'); return null; }
+  return m[0];
+};
+/* 202 짝 — 시트 스코프에 «기본 꺼짐 + .alert 로 점등» 을 되돌려 놓은 두 줄 */
+const PAIR_OFF = find(
+  /^ *:is\([^)]*#bSk[^)]*\) \.stab>\.bdg\{display:none\}\n *:is\([^)]*#bSk[^)]*\) \.stab\.alert>\.bdg\{display:block\}\n/m,
+  'PAIR_OFF(202)');
+/* 531 짝 — 같은 시트를 «재료» 단계에서 덮는 더 넓은 두 줄(`s.bdg` 를 포함한다) */
+const PAIR_531_OFF = find(
+  /^ *:is\([^)]*#bSk[^)]*\)\s*:is\(s\.updot,s\.bdg,s\.dot\)\{display:none\}\n/m, 'PAIR_531_OFF');
+const PAIR_531_ON = find(
+  /^ *:is\([^)]*#bSk[^)]*\)\s*\.alert>:is\(s\.updot,s\.bdg,s\.dot\)\{display:block\}\n/m, 'PAIR_531_ON');
 const CYAN_NOW = ".wm-b1:not(.off){color:#fff;background:linear-gradient(180deg,#8FDC33 0 11px,#63B41C 101px,";
 const CYAN_OLD = ".wm-b1:not(.off){color:#fff;background:linear-gradient(180deg,#44DAEF 0 11px,#17AECD 101px,";
 const TICK_NOW = "    uiDirty = true; renderUI();\n    if(!openUpAll(r.ups))   /* 09 결과 연출.";
@@ -72,13 +87,32 @@ const measure = page => page.evaluate(() => {
   ok(!base.late,  '[기준선] ⓒ 일괄 강화 직후 탭 레드닷 즉시 꺼짐');
   ok(base.btnGray, '[기준선] ⓒ 일괄 강화 직후 버튼 즉시 회색');
 
-  console.log('\n[N1] 특이성 복구 짝 제거 — 166 ⓔ 함정 부활');
-  const s1 = SRC.replace(PAIR_OFF, '');
-  ok(s1 !== SRC, '[N1] 치환 성공(대상 코드가 실제로 있다)');
-  const n1 = await withSrc(s1, measure);
-  ok(n1.leak, '[N1] ⓐ `.alert` 가 없는데도 시트 배지가 켜져 있다 ← 이 짝이 없으면 상시 점등');
-  ok(n1.eqBg.includes('rgb(143, 220, 51)') && !n1.late && n1.btnGray,
-    '[N1] ⓑⓒ 는 초록 그대로 — 서로 다른 절이다(항등식 아님)');
+  /* ── N1 — 653 (2026-09-01) 이 «한 줄 시험» 을 **진리표 셋**으로 갈아 끼웠다 ──────────────
+     옛 N1 은 «202 짝만 떼면 함정이 부활한다» 를 단언했고, 그것이 빨개져 있었다(12/13).
+     재현으로 뿌리를 찾았다 — 제품은 멀쩡하다(기준선 ⓐ 초록). **531(2026-08-31)이 같은 시트를
+     `s.bdg` 까지 덮는 더 넓은 짝으로 한 겹 더 깔아** 202 짝만 떼도 배지가 안 새게 됐다.
+     ⚠ 그러니 «202 짝은 이제 필요 없다» 도, «시험이 틀렸다» 도 아니다 — **막는 겹이 둘**이 된 것이고,
+     한 줄짜리 단언으로는 그 사실을 적을 자리가 없었다. 333 처방대로 **항을 지우지 않고 갈라 적는다**:
+       ⓐ 202 짝만 제거 → 안 샌다(531 이 덮는다)   ⓑ 531 짝만 제거 → 안 샌다(202 가 덮는다)
+       ⓒ **둘 다** 제거 → 샌다 ← 함정이 진짜라는 것, 그리고 두 겹이 «합쳐서» 짐을 진다는 것
+     ⓒ 가 없으면 «무엇을 지워도 초록» 인 항등식이 되고, ⓐⓑ 가 없으면 겹이 둘이라는 사실을 놓친다. */
+  console.log('\n[N1] 특이성 복구 짝 — 202 겹 · 531 겹 · 둘 다 (진리표)');
+  const s1a = SRC.replace(PAIR_OFF, '');
+  ok(PAIR_OFF && s1a !== SRC, '[N1-a] 치환 성공(202 짝이 실제로 있다)');
+  const n1a = await withSrc(s1a, measure);
+  ok(!n1a.leak, '[N1-a] ⓐ 202 짝만 떼면 **안 샌다** — 531 짝(`s.bdg`)이 같은 시트를 덮는다');
+
+  const s1b = SRC.replace(PAIR_531_OFF, '').replace(PAIR_531_ON, '');
+  ok(PAIR_531_OFF && PAIR_531_ON && s1b !== SRC, '[N1-b] 치환 성공(531 짝이 실제로 있다)');
+  const n1b = await withSrc(s1b, measure);
+  ok(!n1b.leak, '[N1-b] ⓐ 531 짝만 떼면 **안 샌다** — 202 짝이 같은 시트를 덮는다');
+
+  const s1c = s1a.replace(PAIR_531_OFF, '').replace(PAIR_531_ON, '');
+  ok(s1c !== s1a && s1c !== s1b, '[N1-c] 치환 성공(두 짝을 같이 뗐다)');
+  const n1c = await withSrc(s1c, measure);
+  ok(n1c.leak, '[N1-c] ⓐ **둘 다** 떼면 `.alert` 없이도 시트 배지가 켜진다 ← 166 ⓔ 특이성 함정 부활');
+  ok(n1c.eqBg.includes('rgb(143, 220, 51)') && !n1c.late && n1c.btnGray,
+    '[N1-c] ⓑⓒ 는 초록 그대로 — 서로 다른 절이다(항등식 아님)');
 
   console.log('\n[N2] 05 [장착] 을 202 이전 청록으로 되돌림');
   const s2 = SRC.replace(CYAN_NOW, CYAN_OLD);

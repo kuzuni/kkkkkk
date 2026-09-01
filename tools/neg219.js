@@ -17,18 +17,27 @@ const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const TMP = path.join(ROOT, `.v219-neg-${process.pid}.html`);
 
-/* 갈아 끼울 자리 — 전부 index.html 의 실제 문자열이다(못 찾으면 시험 자체를 FAIL 시킨다) */
-const SHOP_OL3 = `  #shopCats .stab>i.ol3{text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,
-    2px 2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,-2px -2px 0 #000,
-    0 calc(3px + var(--sh-drop) * 1em) 0 #000, calc(3px + var(--sh-dropx) * 1em) 0 0 #000}`;
-const SHOP_OL4 = `  #shopCats .stab>i.ol4{text-shadow:2.8px 0 0 #000,-2.8px 0 0 #000,0 2.8px 0 #000,0 -2.8px 0 #000,
-    2.1px 2.1px 0 #000,2.1px -2.1px 0 #000,-2.1px 2.1px 0 #000,-2.1px -2.1px 0 #000,
-    0 calc(2.8px + var(--sh-drop) * 1em) 0 #000, calc(2.8px + var(--sh-dropx) * 1em) 0 0 #000}`;
-const COMMON_OL3 = `:is(#bSk,#bPet,#bCos,.stabs) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
-    2px 2px 0 var(--o),2px -2px 0 var(--o),-2px 2px 0 var(--o),-2px -2px 0 var(--o)}`;
-const COMMON_OL4 = `:is(#bSk,#bPet,#bCos,.stabs) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
-    3px 3px 0 var(--o),3px -3px 0 var(--o),-3px 3px 0 var(--o),-3px -3px 0 var(--o)}`;
-const TOKEN_DROP = '--sh-drop:.053;';
+/* 갈아 끼울 자리 — 전부 index.html 의 실제 문자열이다(못 찾으면 시험 자체를 FAIL 시킨다)
+ *
+ * ⚑ 652 (2026-09-01) — **앵커를 «손으로 적은 문자열» 에서 «제품에서 찾아 오는 자리» 로 바꿨다.**
+ *   뿌리는 자가 아니라 **적는 방식**이었다: 공용 규칙의 셀렉터 목록이 자라면(이번엔 `.rl-help`·`.pr182`
+ *   두 개가 붙었다) 손으로 베껴 둔 앵커는 **조용히 어긋나** N3·N4 가 «자리를 못 찾았다» 로 스스로
+ *   빨개진다(19/21). 규칙 내용은 한 글자도 안 변했는데 시험만 죽는다 —
+ *   402 가 `dunTk()` 표를 «id 파생»(`'tk' + Id`)으로 갈아 끼운 것과 **같은 처방**이다.
+ *   ⚠ 정규식은 **셀렉터 목록이 아니라 «무엇을 고르는 규칙인가»** 로 잡는다(`.stabs` 를 포함하는
+ *     `:is(…)` 의 `.ol3` 규칙). 목록이 더 자라도 따라오고, 규칙 자체가 사라지면 그때는 **못 찾아서**
+ *     `갈아 끼울 자리를 찾았다` 가 빨개진다 = 시끄럽게 죽는 성질은 그대로 지킨다. */
+const find = (re, name) => {
+  const m = SRC.match(re);
+  if (!m) { console.error('[!] 앵커 없음(' + name + ') — 정규식이 제품과 어긋났다'); return null; }
+  return m[0];
+};
+const SHOP_OL3   = find(/^ *#shopCats \.stab>i\.ol3\{text-shadow:[^}]*\}/m, 'SHOP_OL3');
+const SHOP_OL4   = find(/^ *#shopCats \.stab>i\.ol4\{text-shadow:[^}]*\}/m, 'SHOP_OL4');
+const COMMON_OL3 = find(/^ *:is\([^)]*\.stabs[^)]*\) \.ol3\{text-shadow:[^}]*\}/m, 'COMMON_OL3');
+const COMMON_OL4 = find(/^ *:is\([^)]*\.stabs[^)]*\) \.ol4\{text-shadow:[^}]*\}/m, 'COMMON_OL4');
+const STAB_I     = find(/^ *\.stab>i\{display:inline-block;[^}]*\}/m, 'STAB_I');
+const TOKEN_DROP = find(/--sh-drop:[\d.]+;/, 'TOKEN_DROP');
 
 const TESTS = [
   { id: 'N1', why: '126 ③ 17회차 덧칠(비활성)을 지운다 — 10 상점이 공용 ol3 로 되돌아감',
@@ -42,18 +51,18 @@ const TESTS = [
       '활성 외곽선 — 10 상점 보이는 드롭 세로', '활성 외곽선 — 10 상점 보이는 드롭 가로'] },
 
   { id: 'N3', why: 'ref 실측 없이 덧칠을 공용 유틸로 확산시킨다 — 세 자리가 «같이» 움직이므로 Δ0 은 초록이다',
-    from: COMMON_OL3, to: COMMON_OL3.replace(/\}$/, ',\n    0 5.279px 0 var(--o), 4.72px 0 0 var(--o)}'),
+    from: COMMON_OL3, to: COMMON_OL3 && COMMON_OL3.replace(/\}$/, ',\n    0 5.279px 0 var(--o), 4.72px 0 0 var(--o)}'),
     want: ['비활성 외곽선 — 공용 3자리는 등방 링 3/2 8항뿐(덧칠 0)'],
     not: ['비활성 외곽선 — 영웅 vs 06 장비 Δ0', '비활성 외곽선 — 영웅 vs 03 던전 Δ0'] },
 
   { id: 'N4', why: '공용 활성 링을 4/3 → 5/4 로 부풀린다 — 역시 세 자리가 같이 움직인다',
-    from: COMMON_OL4, to: COMMON_OL4.replace(/4px/g, '5px').replace(/3px/g, '4px'),
+    from: COMMON_OL4, to: COMMON_OL4 && COMMON_OL4.replace(/4px/g, '5px').replace(/3px/g, '4px'),
     want: ['활성 외곽선 — 공용 3자리는 등방 링 4/3 8항뿐(덧칠 0)'],
     not: ['활성 외곽선 — 영웅 vs 06 장비 Δ0', '활성 외곽선 — 영웅 vs 03 던전 Δ0'] },
 
   { id: 'N5', why: '06 장비 한 자리만 외곽선을 갈라 놓는다 — 이사 전 원래 단언이 지키던 «부품 공용성»',
-    from: '  .stab>i{display:inline-block;position:relative;top:3px;transform:scaleX(.97)}',
-    to: '  .stab>i{display:inline-block;position:relative;top:3px;transform:scaleX(.97)}\n' +
+    from: STAB_I,
+    to: STAB_I && STAB_I + '\n' +
         '  #eqTabs .stab>i.ol3{text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,' +
         '1px 1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,-1px -1px 0 #000}',
     want: ['비활성 외곽선 — 영웅 vs 06 장비 Δ0', '비활성 외곽선 — 공용 3자리는 등방 링 3/2 8항뿐(덧칠 0)'],
@@ -85,7 +94,7 @@ const runGate = () => {
 
   for (const t of TESTS) {
     console.log('\n[' + t.id + '] ' + t.why);
-    if (SRC.indexOf(t.from) < 0) { ok(t.id + ' 갈아 끼울 자리를 찾았다', false, '문자열 없음 — index.html 이 바뀌었다'); continue; }
+    if (!t.from || SRC.indexOf(t.from) < 0) { ok(t.id + ' 갈아 끼울 자리를 찾았다', false, '자리 없음 — 규칙이 사라졌다(정규식 앵커도 못 찾았다)'); continue; }
     ok(t.id + ' 갈아 끼울 자리를 찾았다', true, '1곳');
     fs.writeFileSync(TMP, SRC.replace(t.from, t.to));
     const fails = runGate();
