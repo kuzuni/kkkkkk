@@ -84,23 +84,72 @@ function foldScreen(perPhase, tol) {
   const cyc = worstOverCycle(perPhase, tol);
   const rest = verdict((perPhase[0] || { rows: [] }).rows, tol);
   const box = new Map();
-  for (const { rows } of perPhase) {
+  for (const { rows, tr } of perPhase) {
+    const trBy = new Map((tr || []).map((t) => [t.sel, t.ident]));
     for (const r of rows) {
       const key = (r.screen || '') + '|' + r.sel;
       const cur = box.get(key);
-      if (!cur) box.set(key, { w0: r.w, w1: r.w, h0: r.h, h1: r.h });
-      else { cur.w0 = Math.min(cur.w0, r.w); cur.w1 = Math.max(cur.w1, r.w); cur.h0 = Math.min(cur.h0, r.h); cur.h1 = Math.max(cur.h1, r.h); }
+      const ident = trBy.has(r.sel) ? trBy.get(r.sel) : null;
+      if (!cur) box.set(key, { key, w0: r.w, w1: r.w, h0: r.h, h1: r.h, everScaled: ident === false, sawTr: ident !== null });
+      else {
+        cur.w0 = Math.min(cur.w0, r.w); cur.w1 = Math.max(cur.w1, r.w);
+        cur.h0 = Math.min(cur.h0, r.h); cur.h1 = Math.max(cur.h1, r.h);
+        if (ident === false) cur.everScaled = true;
+        if (ident !== null) cur.sawTr = true;
+      }
     }
   }
-  const boxMoved = [...box.values()].filter((b) => (b.w1 - b.w0) > 0.5 || (b.h1 - b.h0) > 0.5).length;
+  const moved = [...box.values()].filter((b) => (b.w1 - b.w0) > 0.5 || (b.h1 - b.h0) > 0.5);
+  /* «이 절 전용» — 배율이 한 위상에서도 안 걸렸는데 상자가 움직인 자리. 배율이 미는 자리는 [A]·[I] 몫이다. */
+  const movedTrFree = moved.filter((b) => b.sawTr && !b.everScaled);
   return {
     rows: (perPhase[0] || { rows: [] }).rows.length,
     restBad: rest.bad.length,
     cycBad: cyc.bad,
     maxDev: cyc.all.reduce((m, x) => Math.max(m, x.dev), 0),
-    boxMoved,
+    maxDevKey: (cyc.all.sort((a, b) => b.dev - a.dev)[0] || { key: null }).key,
+    boxMoved: moved.length,
+    boxMovedTrFree: movedTrFree.length,
+    trFreeKeys: movedTrFree.slice(0, 3).map((b) => b.key),
   };
 }
+
+/* ⚑ **이 층 «전용» 자리를 가르는 자** — 상자가 움직였다고 전부 이 절의 것이 아니다.
+   상자를 미는 것이 **배율**(transform·scale 프로퍼티)이면 그 자리는 [A]·[I] 도 본다(그쪽 축이다).
+   이 절만 보는 자리는 **배율이 항등인 채** 상자가 움직인 자리다(`width`/`height` 키프레임 · 레이아웃).
+   ⇒ 위상마다 «자신·조상에 배율이 걸렸는가» 를 같이 재서 `foldScreen` 이 둘을 가른다.
+   ⚠ 안 가르면 «상자가 27자리 움직였다» 가 이 절의 커버리지인 것처럼 읽힌다 — 27자리 전부가
+      남의 축이 미는 것일 수 있고, 그러면 이 절의 0 은 «없어서 0» 이지 «봐서 0» 이 아니다. */
+const MEDIA_TR = function () {
+  const app = document.getElementById('app');
+  if (!app) return [];
+  const out = [];
+  function pathOf(el) {
+    const o = []; let e = el, n = 0;
+    while (e && e !== document.body && n++ < 6) {
+      let s = (e.tagName || '').toLowerCase();
+      if (e.id) { s += '#' + e.id; o.unshift(s); break; }
+      const cl = e.getAttribute && e.getAttribute('class');
+      if (cl) s += '.' + String(cl).trim().split(/\s+/).slice(0, 3).join('.');
+      o.unshift(s); e = e.parentElement;
+    }
+    return o.join('>');
+  }
+  const IDENT = /^(none|matrix\(1,\s*0,\s*0,\s*1,)/;
+  for (const el of app.querySelectorAll('canvas, svg, img')) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    let ident = true;
+    for (let e = el, n = 0; e && e !== document.body && n < 10; n++, e = e.parentElement) {
+      const cs = getComputedStyle(e);
+      if (!IDENT.test(cs.transform || 'none')) { ident = false; break; }
+      const sc = cs.scale;
+      if (sc && sc !== 'none' && !/^1(\s+1)?(\s+1)?$/.test(String(sc).trim())) { ident = false; break; }
+    }
+    out.push({ sel: pathOf(el), ident });
+  }
+  return out;
+};
 
 /* 매체가 실제로 «흔들릴 수 있는 자리» 에 놓여 있는가 — 0 의 뜻을 가르는 전제(«없어서 0» ↔ «못 봐서 0»).
    자신 또는 조상에 `animation-name` 이 걸린 매체를 센다(상자는 조상이 흔들려도 흔들린다). */
@@ -127,7 +176,7 @@ const MEDIA_ANIM = function () {
   return { total, self, anc, names: [...names] };
 };
 
-module.exports = { SYN_T, worstOverCycle, foldScreen, MEDIA_ANIM, PHASES, FRAME_D };
+module.exports = { SYN_T, worstOverCycle, foldScreen, MEDIA_ANIM, MEDIA_TR, PHASES, FRAME_D };
 
 if (require.main !== module) return;
 
@@ -147,7 +196,7 @@ if (require.main !== module) return;
     const perPhase = [];
     for (let k = 0; k < PHASES; k++) {
       await page.evaluate(PIN, k / PHASES);
-      perPhase.push({ at: k / PHASES, rows: await page.evaluate(COLLECT_MEDIA) });
+      perPhase.push({ at: k / PHASES, rows: await page.evaluate(COLLECT_MEDIA), tr: await page.evaluate(MEDIA_TR) });
     }
     await page.evaluate(PIN, null);
     const atRest = verdict(perPhase[0].rows, TOL);
@@ -191,7 +240,7 @@ if (require.main !== module) return;
     const S = require('./scan356.js');
     const t0 = Date.now();
     const perScreen = [];
-    let pinnedAll = 0, rowsAll = 0, boxMovedAll = 0;
+    let pinnedAll = 0, rowsAll = 0, boxMovedAll = 0, trFreeAll = 0;
     const animAgg = { total: 0, self: 0, anc: 0, names: new Set() };
     for (const [label, steps] of S.SCREENS) {
       const ctx = await browser.newContext({ viewport: FRAME_D, deviceScaleFactor: 1 });
@@ -209,25 +258,25 @@ if (require.main !== module) return;
         for (let k = 0; k < PHASES; k++) {
           await page.evaluate(PIN, k / PHASES);
           const rows = (await page.evaluate(COLLECT_MEDIA)).map((r) => Object.assign({ screen: label }, r));
-          perPhase.push({ at: k / PHASES, rows });
+          perPhase.push({ at: k / PHASES, rows, tr: await page.evaluate(MEDIA_TR) });
         }
         await page.evaluate(PIN, null);
         const f = foldScreen(perPhase, TOL);
-        pinnedAll += pinned; rowsAll += f.rows; boxMovedAll += f.boxMoved;
+        pinnedAll += pinned; rowsAll += f.rows; boxMovedAll += f.boxMoved; trFreeAll += f.boxMovedTrFree;
         perScreen.push({ label, pinned, rows: f.rows, rest: f.restBad, cycle: f.cycBad.length, worst: f.cycBad[0] || null,
           maxDev: f.maxDev, boxMoved: f.boxMoved, animMedia: am.self + am.anc });
-        console.log(`   · ${label} — 매체 ${f.rows} · 애니 ${pinned} · 상자 이동 ${f.boxMoved} · 최악 편차 ${f.maxDev.toFixed(4)} · 주기 비균등 ${f.cycBad.length}`);
+        console.log(`   · ${label} — 매체 ${f.rows} · 애니 ${pinned} · 상자 이동 ${f.boxMoved}(배율 없이 ${f.boxMovedTrFree}) · 최악 편차 ${f.maxDev.toFixed(4)} · 주기 비균등 ${f.cycBad.length}`);
       } catch (e) { perScreen.push({ label, err: String(e.message || e).slice(0, 60) }); }
       await ctx.close();
     }
     const secs = ((Date.now() - t0) / 1000).toFixed(1);
     const cycTotal = perScreen.reduce((a, s) => a + (s.cycle || 0), 0);
     const restTotal = perScreen.reduce((a, s) => a + (s.rest || 0), 0);
-    report.census = { screens: perScreen.length, phases: PHASES, pinnedAll, rowsAll, boxMovedAll, restTotal, cycTotal, secs,
+    report.census = { screens: perScreen.length, phases: PHASES, pinnedAll, rowsAll, boxMovedAll, trFreeAll, restTotal, cycTotal, secs,
       animMedia: { total: animAgg.total, self: animAgg.self, anc: animAgg.anc, names: [...animAgg.names] } };
 
     console.log(`\n[5] 제품 인구조사 — ${perScreen.length}화면 × 주기 ${PHASES}칸 (${secs}s)`);
-    console.log(`     매체 행 ${rowsAll} · 못박은 애니 노드 ${pinnedAll} · 위상 사이에 상자가 움직인 매체 ${boxMovedAll}자리 · 한 점 비균등 ${restTotal} · **한 주기 비균등 ${cycTotal}**`);
+    console.log(`     매체 행 ${rowsAll} · 못박은 애니 노드 ${pinnedAll} · 위상 사이에 상자가 움직인 매체 ${boxMovedAll}자리(그중 배율이 한 번도 안 걸린 «이 절 전용» ${trFreeAll}자리) · 한 점 비균등 ${restTotal} · **한 주기 비균등 ${cycTotal}**`);
     console.log(`     애니메이션이 걸린 매체 — 자신 ${animAgg.self} · 조상 ${animAgg.anc} / 매체 ${animAgg.total}`);
     console.log(`     걸린 이름: ${[...animAgg.names].slice(0, 12).join(' · ') || '(없음)'}`);
     for (const s of perScreen) {

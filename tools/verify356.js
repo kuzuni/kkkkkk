@@ -28,6 +28,9 @@
  *   [N] **매체 축 × 짧은 프레임** — 같은 축을 **1080×1600** 에서 한 번 더 (30회차 신설).
  *       [M] 은 리사이즈 «전» 에만 꺼내 2280 밖을 구조적으로 못 봤다. 이 층이 프레임을 타는 이유는
  *       [F] 의 이유와 다르다 — 배율이 아니라 **상자만** 줄어 비트맵 비와 어긋난다([N-e] 가 실측한다).
+ *   [O] **매체 축 × 시간** — 같은 축을 **한 주기**(위상 16칸) 훑는다 (31회차 신설).
+ *       [M]·[N] 은 «가라앉은 한 점» 이라, 배율이 한 줄도 안 걸린 채 `width`/`height` 키프레임으로
+ *       **상자만** 흔들리는 자리는 [A]·[I]·[M]·[N] 이 **동시에 초록**이다([O-e]·[O-f] 가 실측한다).
  *
  * ⚠ [B] 는 «줄었다» 를 막지 않는다(라운드마다 줄어드는 것이 정상). 늘어난 것만 잡는다.
  *   라운드를 돌아 자리를 닫았으면 REMAIN 을 그 값으로 내려 적어라 — 안 내리면 래칫이 헐거워진다.
@@ -305,7 +308,10 @@ async function sweep(browser, inject) {
         for (let k = 0; k < R31.PHASES; k++) {
           await page.evaluate(PIN_PHASE, k / R31.PHASES);
           const got = await page.evaluate(COLLECT_MEDIA);
-          perPhase.push({ at: k / R31.PHASES, rows: got.map((g) => Object.assign({ screen: label }, g)) });
+          /* 같은 위상에서 «배율이 걸렸는가» 도 같이 잰다 — 상자를 미는 것이 배율이면 그 자리는
+             [A]·[I] 몫이고 이 절 «전용» 이 아니다(그 구분이 없으면 커버리지를 부풀려 읽는다). */
+          const tr = await page.evaluate(R31.MEDIA_TR);
+          perPhase.push({ at: k / R31.PHASES, rows: got.map((g) => Object.assign({ screen: label }, g)), tr });
         }
         foldO = R31.foldScreen(perPhase, TOL);
       } catch (e) { foldO = null; }
@@ -2782,6 +2788,14 @@ async function sweep(browser, inject) {
       ok(`[O-a2] 위상 사이에 상자가 실제로 움직인 매체 ${movedO}자리 — 이 절의 0 은 «한 점을 열여섯 번 잰 0» 이 아니다`);
     else bad('[O-a2] 위상을 옮겼는데 상자가 한 자리도 안 움직였다 — 못박기가 안 먹었거나 이 층에 흔들리는 매체가 없다 (헛초록 방지)');
 
+    /* ⓐ2b ⚑ **커버리지를 부풀려 읽지 않는다** — 움직인 상자를 미는 것이 «배율» 이면 그 자리는
+       [A]·[I] 도 보는 자리이고 이 절 «전용» 이 아니다. 지금 트리의 그 수를 갈라 적는다.
+       ⚠ 이 항은 «전용 자리가 있어야 한다» 고 요구하지 않는다 — 0 이면 그 뜻은
+          «이 층 전용 결함이 아직 **없다**» 이지 «자가 못 본다» 가 아니다(그 증명은 [O-e]·[O-f]). */
+    const trFreeO = sum((s) => s.fold.boxMovedTrFree);
+    ok(`[O-a2b] 움직인 상자 ${movedO}자리 중 **배율이 한 위상에서도 안 걸린** «이 절 전용» ${trFreeO}자리`
+      + (trFreeO ? ` — 예: ${okO.flatMap((s) => s.fold.trFreeKeys).slice(0, 3).join(' · ')}` : ' — 지금 트리에서 상자를 미는 것은 전부 배율(스케일 프로퍼티)이라 [A]·[I] 와 겹친다. 이 절의 «전용» 0 은 «없어서 0» 이다'));
+
     /* ⓐ3 «0» 의 뜻을 가른다 — 애니메이션이 걸린 매체가 아예 0 이면 그 0 은 «없어서 0» 이다(27회차 규율) */
     if (animSelf + animAnc > 0)
       ok(`[O-a3] 애니메이션이 걸린 매체 ${animSelf + animAnc}자리(자신 ${animSelf} · 조상 ${animAnc}) — 이 축은 제품에 실재하는 자리를 훑는다`);
@@ -2819,7 +2833,7 @@ async function sweep(browser, inject) {
         const per = [];
         for (let k = 0; k < R31.PHASES; k++) {
           await page.evaluate(PIN_PHASE, k / R31.PHASES);
-          per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA) });
+          per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA), tr: await page.evaluate(R31.MEDIA_TR) });
         }
         await page.evaluate(PIN_PHASE, null);
         const f = R31.foldScreen(per, TOL);
@@ -2863,7 +2877,7 @@ async function sweep(browser, inject) {
         await page.evaluate(PIN_PHASE, 0);
         for (let k = 0; k < R31.PHASES; k++) {
           await page.evaluate(PIN_PHASE, k / R31.PHASES);
-          per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA) });
+          per.push({ at: k / R31.PHASES, rows: await page.evaluate(COLLECT_MEDIA), tr: await page.evaluate(R31.MEDIA_TR) });
         }
         await page.evaluate(PIN_PHASE, null);
         const f = R31.foldScreen(per, TOL);
@@ -2872,6 +2886,12 @@ async function sweep(browser, inject) {
           ok(`[O-f] 제품 되돌림 — 02 메인의 실제 캔버스 «${hit}» **상자만** 흔드는 키프레임을 심으면 `
             + `한 점 ${f.restBad}자리(= [M] 은 여전히 초록) ↔ 한 주기 ${f.cycBad.length}자리로 갈린다 ⇒ 이 절이 제품 스윕에 정말 물려 있다`);
         else bad(`[O-f] 제품 되돌림 실패 — 한 점 ${f.restBad}자리 / 한 주기 ${f.cycBad.length}자리 (표본 «${hit}»)`);
+
+        /* ⓕ2 «전용» 분류기도 같은 주입으로 문다 — 배율을 한 줄도 안 걸고 상자만 흔들었으니
+           이 자리는 **`boxMovedTrFree` 로 세져야** 한다. 안 세지면 [O-a2b] 의 0 은 분류기가 눈먼 0 이다. */
+        if (hit && f.boxMovedTrFree > 0)
+          ok(`[O-f2] 같은 주입을 «이 절 전용»(배율 없이 움직인 상자) 으로도 ${f.boxMovedTrFree}자리 세었다 ⇒ [O-a2b] 의 분류기가 눈먼 0 을 찍는 자가 아니다`);
+        else if (hit) bad(`[O-f2] 배율을 안 걸고 상자만 흔들었는데 «전용» 으로 0자리 — [O-a2b] 의 분류기가 이 갈래를 못 본다`);
       } catch (e) { bad('[O-f] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
       await ctx.close();
     }
