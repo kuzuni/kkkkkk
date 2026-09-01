@@ -21437,6 +21437,21 @@ const cp = () => Math.round(stat.dps*1.2 + stat.maxHp*0.6 + stat.regen*80 + stat
    · 156 «표기·지급·이펙트 삼자 일치»: 토스트의 Δ 는 **실측 `cp()` 차** 그 자체다(게이트가 대조). */
 const CP_FX_MS = 420;
 let cpPrev = 0, cpOpen = false, cpAt = 0, cpReady = false;
+/* ⚑ 685(주인 개정 2026-09-02 00:40) — «끝나고 합계 1장» → **«살아있는 한 장»**.
+   주인 원문: «다른 모든곳도 연속 강화 끝나고 알림뜨는데 강화 중에도 알림뜨게 해줘야함».
+   ── 무엇이 바뀌었나 ────────────────────────────────────────────────────────
+   324 는 홀드 내내 침묵하다 손을 뗀 뒤 «합계» 한 장을 냈다(주인 승인 설계였고 677 이 그것을
+   시간이 아니라 홀드 상태로 굳혔다). 개정은 그 «합계 한 장» 을 **홀드 시작으로 앞당기고**
+   틱마다 **같은 노드의 숫자만** 갈아 끼운다. 그래서 바뀌는 것은 «언제 보이는가» 이고,
+   **장수는 그대로 1장**이다 — 스팸(틱마다 새 장)은 여전히 금지다.
+   ── 왜 `notify()` 가 아니라 `fxToast()` 로 띄우나 ──────────────────────────
+   `notify()` 는 스택이 4장이면 **큐**에 넣고 자리가 나면 띄운다(206). 갱신 경로가 그것을 타면
+   홀드가 끝난 한참 뒤에 «중간값» 이 줄줄이 튀어나온다 = «동시 ≤1장» 이 깨진다. 살아있는 장은
+   자리가 없으면 **그 틱을 조용히 건너뛰고** 다음 틱에 다시 시도한다(잃는 것은 없다 — 값은
+   `cpPrev` 기준 누적이라 다음 갱신이 곧 따라잡는다). 확정 한 장만 종전대로 `notify()` 를 탄다.
+   ── 침묵 규칙은 그대로 ─────────────────────────────────────────────────────
+   Δ≤0 은 살아있는 장도 안 만든다(주인 지시는 «올랐는지»). 자동 구매·부팅도 종전대로 침묵이다. */
+let cpLive = null;
 function cpFxInit(){ cpPrev = cp(); cpOpen = false; cpReady = true; }
 function cpFxArm(){ if(!cpReady) return; cpOpen = true; cpAt = performance.now(); }
 /* ⚑ 677 — «홀드가 살아 있는가» 를 **직접** 묻는다(제품 상태 4개 · 새 축 0개).
@@ -21458,15 +21473,42 @@ function cpFxArm(){ if(!cpReady) return; cpOpen = true; cpAt = performance.now()
      유물(`rwHold`). [D1] 이 본 자리는 훈련 하나지만 기계는 넷이 같고, 하나만 적으면 나머지 셋에
      같은 결함이 그대로 남는다(402 «표가 아니라 파생으로» 와 같은 이유). */
 function cpHolding(){ return !!(trHold || rtHold || upHold || rwHold); }
-function cpTick(now){
-  if(!cpReady) return;
-  if(!cpOpen){ cpPrev = cp(); return; }          /* 묶음이 닫혀 있는 동안만 기준선이 따라 오른다 */
-  if(now - cpAt < CP_FX_MS) return;              /* 홀드가 멎기 전에는 닫지 않는다 */
-  if(cpHolding()){ cpAt = now; return; }         /* 677 — 홀드가 살아 있으면 창을 다시 무장한다 */
+/* 685 — 한 장을 «내거나 갱신한다». `live` 면 그 노드를 붙들고(다음 틱이 같은 자리를 고친다),
+   확정이면 손을 놓아 종전대로 늙게 둔다. 문구는 한 곳에서만 만든다(156 «표기 = 실측차»). */
+function cpSay(d, live){
+  const txt = '⚔️ 전투력 <b>+' + fmtB(d) + '</b>';
+  if(cpLive && cpLive.isConnected){ cpLive.innerHTML = txt; fxToastAge(cpLive); }
+  else cpLive = live ? fxToast(txt) : notify(txt);
+  if(!live) cpLive = null;                       /* 확정 — 이 뒤로는 평범한 토스트로 늙는다 */
+}
+/* 묶음을 «지금» 닫는다 — 시각을 다 기다린 cpTick 과 684 의 즉시 확정이 같은 한 곳을 쓴다 */
+function cpFxClose(){
   cpOpen = false;
   const v = cp(), d = v - cpPrev;
   cpPrev = v;
-  if(d > 0) notify('⚔️ 전투력 <b>+' + fmtB(d) + '</b>');
+  if(d > 0) cpSay(d, false);
+  else cpLive = null;                            /* 살아 있던 장이 있으면 그대로 늙어 사라진다 */
+}
+/* ⚑ 684(주인 지시 2026-09-02 00:36) — **대량 소환은 동기 배치**라 «멎기를 기다릴» 것이 없다.
+   재현(`probe684` [1])이 등재문의 «안 뜨거나 삼켜진다» 를 기각했다 — 토스트는 Δ>0 인 배치마다
+   정확히 1장 뜨고 값도 맞다. 실재 결손은 **시각**이었다: 묶음 창(420ms)을 끝까지 기다리느라
+   431~468ms 뒤에 뜨고, 그 사이 12 결과 팝업이 이미 열려 카드 연출이 시선을 가져간다.
+   ⇒ 배치가 «한 번의 행위» 로 끝났음을 아는 호출부가 그 자리에서 확정한다(685 의 «종료 시 확정값»).
+   ⚠ 기준선은 건드리지 않는다 — `cpPrev` 는 배치 **직전 프레임**의 값이라 Δ 는 배치 전체다. */
+function cpFxFlush(){ if(cpReady && cpOpen) cpFxClose(); }
+function cpTick(now){
+  if(!cpReady) return;
+  if(!cpOpen){ cpPrev = cp(); return; }          /* 묶음이 닫혀 있는 동안만 기준선이 따라 오른다 */
+  /* ⚑ 685 — 묶음이 **열려 있는 동안** 은 «지금까지의 합» 을 그 자리에서 보여 준다.
+     ⚠ 조건을 `cpHolding()` 으로 좁히지 않은 것이 핵심이다 — 주인 지시는 «연속 강화(연타·홀드)»
+       둘 다이고, 연타는 홀드 상태가 **없다**(`trHold` 는 null). 홀드로 좁히면 12연타 1.2초가
+       통째로 침묵해 개정 전과 같은 그림이 남는다(`verify324` [3] 표본이 바로 그 연타다).
+       묶음 자체가 «지금 연속으로 뭔가 하는 중» 이라는 뜻이므로 그것을 그대로 읽는다. */
+  const d = cp() - cpPrev;
+  if(d > 0) cpSay(d, true);                      /* Δ≤0 은 살아있는 장도 안 만든다(324 침묵) */
+  if(cpHolding()){ cpAt = now; return; }         /* 677 — 홀드가 살아 있으면 창을 다시 무장한다 */
+  if(now - cpAt < CP_FX_MS) return;              /* 홀드가 멎기 전에는 닫지 않는다 */
+  cpFxClose();
 }
 
 const rankOf = () => RANKS[Math.min(S.rank, RANKS.length-1)];
@@ -25860,6 +25902,7 @@ function doSummon(b, times){
   markDirty(); uiDirty = true;
   /* 263 — 소환 결과 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
+  cpFxFlush();                                   /* 684 — 결과 팝업보다 **먼저** 확정한다(위 머리말) */
   showSummonResult(b, times, res, lvUp);
 }
 /* 10 상점 무료 10연 — 재화를 소모하지 않는 것만 doSummon 과 다르다(무료 횟수 차감은 호출부 담당) */
@@ -25876,6 +25919,7 @@ function doSummonFree(b, times, viaReward){
   markDirty(); uiDirty = true;
   /* 263 — 소환 결과 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
+  cpFxFlush();                                   /* 684 — 결과 팝업보다 **먼저** 확정한다(위 머리말) */
   showSummonResult(b, times, res, lvUp);
 }
 const itemIcon = it => it.ic || (it.sp ? (it.sp === 'dragon' ? '🐉' : it.sp === 'bird' ? '🐦' : '🤖') : '❔');
@@ -38943,9 +38987,22 @@ function fxToast(txt){
      AM #12 «정지한 토스트가 전체 예산의 68%(960ms↑)를 점유». 두 사람의 처방(AL 350ms · AM 550+200)
      사이로 잡는다 — 퇴장 시작 1200 → **760ms**, 소멸 1560 → **1060ms**.
      `verify58` 의 «181ms 에 완전히 뜬다»·«1.3초 뒤 사라져 있다» 두 항목은 그대로 만족한다. */
-  setTimeout(() => el.classList.add('out'), 760);
-  setTimeout(() => el.remove(), 1060);
+  fxToastAge(el);
   return el;                                     /* 149 — 호출자가 토스트를 못 띄웠는지 알아야 한다 */
+}
+/* ⚑ 685 — 수명 타이머를 **요소에 매단다**(손잡이 두 개). 상수는 여전히 이 한 곳에만 있으므로
+   체류 기하의 소유권은 58 그대로다 — 바뀐 것은 «언제부터 늙는가» 를 다시 셀 수 있다는 것뿐이다.
+   ⚠ 토스트 자신의 `animation` 도, 자리(top)도 한 픽셀 안 건드린다.
+   왜 필요한가: 324 규약의 주인 개정(«끝나고 합계 1장» → «살아있는 한 장»)은 **같은 노드**를
+   홀드 내내 갱신한다. 손잡이가 없으면 첫 프레임에 걸린 1060ms 타이머가 홀드 한복판에서
+   그 노드를 지워, 갱신할 자리가 사라진다(= 다시 «틱마다 새 장» 으로 되돌아간다). */
+function fxToastAge(el){
+  if(!el) return el;
+  clearTimeout(el._fxOut); clearTimeout(el._fxGone);
+  el.classList.remove('out');
+  el._fxOut  = setTimeout(() => el.classList.add('out'), 760);
+  el._fxGone = setTimeout(() => el.remove(), 1060);
+  return el;
 }
 /* ==========================================================================
    113 «손가락» 가이드 포인터 — fxHand()  (2026-08-26, 저장소 주인 지시)

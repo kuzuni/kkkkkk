@@ -54,11 +54,15 @@ async function boot(browser) {
   await page.waitForFunction(() => typeof S !== 'undefined' && typeof cp === 'function' && typeof cpTick === 'function');
   await page.evaluate(() => {
     window.__T = [];
+    /* 685 — 노드 자체도 들고 있는다. 개정 뒤 «한 장» 은 **붙은 뒤에도 문구가 바뀌므로**
+       붙을 때 찍은 문자열만으로는 «마지막에 무엇을 말했는가» 를 못 묻는다. */
+    window.__TN = [];
     const L = document.getElementById('fxl');
     new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
       if (n.nodeType === 1 && n.classList && n.classList.contains('fx-toast')) {
         const r = n.getBoundingClientRect();
         window.__T.push({ t: n.textContent, x: r.left, w: r.width, ws: getComputedStyle(n).whiteSpace });
+        window.__TN.push(n);
       }
     }))).observe(L, { childList: true });
   });
@@ -140,21 +144,58 @@ async function blk(name, fn) {
       r.list[0] ? r.list[0].ws + ' · x' + r.list[0].x.toFixed(0) + ' w' + r.list[0].w.toFixed(0) : '없음');
   });
 
-  /* ══ [3] 홀드 — 100ms 간격 12회 → 합계 1장 ══════════════════════════════ */
+  /* ══ [3] 연타 — 100ms 간격 12회 → **살아있는 1장**(중간 갱신 포함) ═══════════
+     ⚑ 685(주인 개정 2026-09-02 00:40)로 이 절의 **방향이 반전됐다.**
+       개정 전: «홀드/연타 중에는 침묵하고 끝나고 합계 한 장» — 그래서 이 절은 «장수 1» 과
+       «그 한 장의 (붙을 때) 문구 = 합계» 두 항이었다.
+       개정 후: 주인 원문 «연속 강화 끝나고 알림뜨는데 **강화 중에도** 알림뜨게 해줘야함» ⇒
+       한 장은 **연타가 시작되자마자** 뜨고 그 자리에서 «지금까지의 합» 으로 갱신된다.
+     ⚠ 그래서 «붙을 때의 문구» 를 합계로 단언하면 **개정 자체를 금지하는 항**이 된다
+       (실제로 그 항이 «+942» 로 빨개져 이 이관을 불렀다). 대신 **끝난 뒤 그 노드의 현재 문구**를
+       합계로 단언한다 — 뜻(«한 장이 합계를 말한다»)은 그대로고 시점만 옮겼다.
+     ⚠ 그리고 **무르게 풀지 않기 위해** 개정이 실제로 일어났는지를 묻는 항을 같이 세운다
+       (③ 중간에 이미 떠 있다 · ④ 값이 단조 증가로 갱신된다). 이 둘이 없으면 685 를 통째로
+       되돌려도 이 절은 초록이다 — 328~330 이 «이관이 본체» 라고 적어 둔 그 자리다. */
   await blk('[3]', async () => {
+    /* ⚠ 앞 블록([2])의 한 장이 아직 늙는 중이면 첫 표본이 2장으로 읽힌다 — 그것은 «스팸» 이
+       아니라 **다른 액션의 잔상**이다(개정 전에도 토스트는 서로 쌓였다). 표본이 이 연타만
+       보도록 화면이 빌 때까지 기다린 뒤 시작한다. */
+    await page.waitForFunction(() =>
+      ![...document.querySelectorAll('#fxl .fx-toast')].some(e => /전투력/.test(e.textContent || '')),
+      null, { timeout: 5000 }).catch(() => {});
     await clear(page);
     const before = await page.evaluate(() => cp());
     /* 64 의 홀드 반복(TR_HOLD_IV0 160ms → TR_HOLD_IVMIN 60ms)보다 **느린** 100ms 로 민다 —
        느린 쪽이 창을 닫기 쉬우므로 이쪽이 통과하면 실제 홀드는 더 확실히 1장이다. */
+    const mid = [];
     for (let i = 0; i < 12; i++) {
       await page.evaluate(() => levelUp(SK['slash']));
       await page.waitForTimeout(100);
+      /* ★ 685 — «연타 한복판» 표본: 그 순간 화면에 살아 있는 전투력 토스트의 문구·장수 */
+      mid.push(await page.evaluate(() => {
+        const els = [...document.querySelectorAll('#fxl .fx-toast')].filter(e => /전투력/.test(e.textContent || ''));
+        return { n: els.length, t: els.length ? els[0].textContent.trim() : '' };
+      }));
     }
     const exp = await page.evaluate(b => '⚔️ 전투력 +' + fmtB(cp() - b), before);
     await page.waitForTimeout(WAIT);
     const list = cpToasts(await got(page));
-    ok(list.length === 1, '[3] 홀드 12회 → 토스트 1장 (틱마다 1장이 아니다)', list.length + '장');
-    ok(list[0] && list[0].t === exp, '[3] 그 1장이 «12회 합계» 다', '«' + (list[0] && list[0].t) + '» 기대 «' + exp + '»');
+    /* 끝난 뒤 «그 노드» 의 현재 문구 — 이미 사라졌으면 붙을 때의 문구로 폴백한다 */
+    const fin = await page.evaluate(() => {
+      const e = window.__TN.filter(n => /전투력/.test(n.textContent || '')).pop();
+      return e ? e.textContent.trim() : '';
+    });
+    const last = fin || (list[0] && list[0].t) || '';
+    ok(list.length === 1, '[3] 연타 12회 → 토스트 1장 (틱마다 새 장이 아니다)', list.length + '장');
+    ok(last === exp, '[3] 그 한 장의 **마지막 문구** 가 «12회 합계» 다', '«' + last + '» 기대 «' + exp + '»');
+    /* ③·④ — 685 가 실제로 살아 있는지(되돌리면 둘 다 빨개진다) */
+    const seen = mid.filter(m => m.n > 0).length;
+    ok(seen >= 6, '[3] ★685 — 연타 **한복판** 에 이미 떠 있다 (12표본 중 ' + seen + '개)', seen + '/12');
+    ok(mid.every(m => m.n <= 1), '[3] 동시 표시 ≤1장 (스팸 금지 — 324 규약 유지)',
+      '최대 ' + Math.max(0, ...mid.map(m => m.n)) + '장 · 표본 [' + mid.map(m => m.n).join(',') + ']');
+    const vals = mid.filter(m => m.n > 0).map(m => m.t);
+    ok(new Set(vals).size >= 2, '[3] ★685 — 그 한 장의 값이 **갱신**된다 (서로 다른 문구 '
+      + new Set(vals).size + '종)', vals.slice(0, 3).join(' → ') + (vals.length > 3 ? ' → …' : ''));
   });
 
   /* ══ [4] 하락은 침묵 · 되돌리면 다시 1장 ════════════════════════════════ */
