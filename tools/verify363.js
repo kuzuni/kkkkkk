@@ -105,11 +105,15 @@ const GEO = `(() => {
     const r = e.getBoundingClientRect();
     return { x:+r.x.toFixed(1), y:+r.y.toFixed(1), w:+r.width.toFixed(1), h:+r.height.toFixed(1),
              r:+r.right.toFixed(1), b:+r.bottom.toFixed(1) }; };
-  return { sk:g('.sm-sk'), tr:g('.sm-skt'), kn:g('.sm-skk'), panel:g('.sm-panel'), grid:g('.sm-grid'),
+  /* ⚑ 699 이관(2026-09-01) — '.sm-sk' 는 이제 **문서 안에 여럿**이다(12 소환 · 16 룰렛 · 28 보스 도전 ·
+     55 설정). 맨 앞 하나를 집으면 이 자가 재는 것이 «12 팝업의 자리» 가 아니게 된다(실제로 28 HUD 의
+     숨은 노드를 집어 0×0 이 나왔다). 363 이 묻는 것은 **그 화면의 자리**이므로 스코프를 '#sumSkip' 으로
+     좁힌다 — 항을 지우지 않고 «어느 호스트인가» 를 명시했을 뿐이다(514 규약: 부품은 공용, 자리는 호스트). */
+  return { sk:g('#sumSkip'), tr:g('#sumSkip .sm-skt'), kn:g('#sumSkip .sm-skk'), panel:g('.sm-panel'), grid:g('.sm-grid'),
            btns:g('.sm-btns'), close:g('.sm-close'), rb:g('.sm-rb'),
            cls:document.getElementById('sumSkip').className,
            aria:document.getElementById('sumSkip').getAttribute('aria-checked'),
-           txt:document.querySelector('.sm-skk>em').textContent,
+           txt:document.querySelector('#sumSkip .sm-skk>em').textContent,
            open:document.getElementById('sumw').classList.contains('on') };
 })()`;
 

@@ -63,8 +63,15 @@ const SETUP = `
   yes('[0-d] 승급 수호자가 시퀀스로 들어간다(killEnemy)', /bossClearStart\('promo', e\)/.test(src));
   yes('[0-e] 던전 보스가 같은 시퀀스로 들어간다(killEnemy)', /bossClearStart\('dun', e, dunRun\.clrDie\)/.test(src));
   /* ⚑ 새 홀드 상수를 만들면 «던전만 1초» 로 되돌아간다 — 상수는 하나뿐이어야 한다 */
+  /* ⚑ 699 이관(2026-09-01) — 홀드가 «상수 한 줄» 에서 «시퀀스가 열릴 때 정해지는 값»(`bossClear.hold`)이
+     됐다(전투 연출 스킵 토글: ON 이면 0). **묻는 것은 그대로다** — 값의 출처가 여전히 `DUN_CLR_HOLD`
+     하나이고 모드별 새 상수가 없는가. 항을 지우지 않고 방향만 새 자리로 옮긴다(333). */
   yes('[0-f] 홀드는 던전 상수 `DUN_CLR_HOLD` 를 공유한다(새 상수 0개)',
-      /bossClear\.t >= bossClear\.die \+ DUN_CLR_HOLD/.test(src) && !/BOSS_CLR_HOLD/.test(src));
+      /bossClear\.t >= bossClear\.die \+ \(bossClear\.hold != null \? bossClear\.hold : DUN_CLR_HOLD\)/.test(src)
+      && /hold: sk \? 0 : DUN_CLR_HOLD/.test(src) && !/BOSS_CLR_HOLD/.test(src));
+  /* 699 — 스킵이 꺼져 있으면 홀드는 예전과 같은 한 값이다(모드별로 갈라지지 않는다) */
+  yes('[0-f2] 스킵 OFF 면 홀드가 `DUN_CLR_HOLD` 그대로다',
+      /hold: sk \? 0 : DUN_CLR_HOLD/.test(src) && !/hold: *[0-9]/.test(src));
   is('[0-g] `DUN_CLR_HOLD` 값', (src.match(/const DUN_CLR_HOLD = ([\d.]+)/) || [])[1], '1.0');
   /* 옛 거동이 «남아 있지 않다» 를 두 자리에서 각각 못 박는다 — 새 상태만 확인하면 옛 즉시 처리가
      같이 남아도 초록이다(그러면 스테이지가 격파 프레임에 한 번, 시퀀스 끝에 또 오른다). */
@@ -289,7 +296,7 @@ const SETUP = `
   /* ── §R 되돌림 — 홀드를 걷어낸 사본은 §A·§B 의 자로 빨갛다 ── */
   console.log('[R] 되돌림 시험 — 옛 «죽는 프레임에 바로» 거동을 재면 빨간가');
   const rev = path.join(path.dirname(SRC), `.verify475-r1-${process.pid}.html`);
-  const FROM = 'if(bossClear.t >= bossClear.die + DUN_CLR_HOLD) bossClearDone();';
+  const FROM = 'if(bossClear.t >= bossClear.die + (bossClear.hold != null ? bossClear.hold : DUN_CLR_HOLD)) bossClearDone();';
   const TO   = 'bossClearDone();';
   if (src.indexOf(FROM) < 0) no('[R] 되돌릴 자리를 못 찾았다 — 시퀀스 홀드 줄이 바뀌었나');
   else {
