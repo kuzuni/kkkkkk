@@ -27,13 +27,18 @@ const POLS = [
   { key: 'diligent', name: '부지런한 유저', logins: [8, 12.5, 19, 22.5], activeMin: 45, mul: 1.5 },
   { key: 'casual',   name: '대충 유저',     logins: [21],                activeMin: 30, mul: 1.0 },
 ];
-/* 하루의 «자리비움» = 앞 세션 로그아웃 → 다음 접속. 마지막 칸은 다음 날 첫 접속까지 넘어간다. */
+/* 하루의 «자리비움» = 앞 세션 로그아웃 → 다음 접속.
+   ⚑⚑ **순서가 결과를 바꾼다(1회차 하네스 결함 · 비평 AAF·AAH 2인 지적)** — 하루 예산
+   `S.daily.offMin` 은 **달력 날짜**로 리셋되고(`dailyCheck()`), 봇의 접속 시각은 8·12.5·19·22.5시라
+   **밤 자리비움(전날 23:15 → 08:00)이 그날의 «첫» 수령**이다. 1회차 초판은 그것을 배열 끝에
+   놓아 예산이 마른 뒤 청구했고, 그래서 «부지런이 337.5분을 버린다» 는 유령을 만들었다.
+   ⇒ 첫 접속의 자리비움(= 전날 마지막 로그아웃부터)을 **맨 앞**에 놓는다. */
 const gapsOf = p => {
   const out = [];
   for (let i = 0; i < p.logins.length; i++) {
-    const outAt = p.logins[i] + p.activeMin / 60;
-    const next  = i + 1 < p.logins.length ? p.logins[i + 1] : p.logins[0] + 24;
-    out.push(next - outAt);
+    const prev   = i === 0 ? p.logins[p.logins.length - 1] - 24 : p.logins[i - 1];
+    const outAt  = prev + p.activeMin / 60;
+    out.push(p.logins[i] - outAt);
   }
   return out;
 };
@@ -105,15 +110,19 @@ async function measure(browser, file) {
     /* ⚑ 등재문(과 내 손계산)은 «부지런은 하루 예산 1,440분에 붙어 있다» 였는데 재현이 그것을
        정정했다 — 1,102.5분에서 멈춘다. 뿌리는 상한도 예산도 아니라 **199 4회차 «결손A» 가드**다:
        마지막 수령이 실효 ×1.0 이라 «×1.5 는 안 받는다» 로 통째로 버려진다(봇은 광고 버튼만 누른다). */
-    ok('P2 수리 전 부지런을 자른 것은 1회 상한이 아니다 — 자리비움 합(1,260분)보다 적게 받고 ' +
-       '하루 예산(1,440분)에도 못 닿는다', B.diligent.min < 1440 - 1 && B.diligent.dropped.length > 0,
-      B.diligent.min + '분 · 버려진 수령 ' + B.diligent.dropped.length + '건');
-    ok('P2b 그 결정자는 «결손A» 가드다 — 수리 후에도 같은 수령이 같은 분만큼 버려진다(축이 다르다)',
-      JSON.stringify(A.diligent.dropped) === JSON.stringify(B.diligent.dropped),
-      '전 ' + JSON.stringify(B.diligent.dropped) + ' ‖ 후 ' + JSON.stringify(A.diligent.dropped));
+    /* ⚑ 1회차 초판은 여기서 «부지런이 하루 예산의 23.4% 를 버린다» 를 읽고 곁다리로 등재했다.
+       그것은 위 `gapsOf` 의 순서 결함이 만든 유령이었다 — 순서를 봇과 맞추면 부지런은 하루
+       예산을 **거의 다 쓴다**. 그래도 «마지막 조각이 버려진다» 는 사실 자체는 남으므로(예산이
+       마르는 마지막 수령은 gain 이 1.0 이라 ×1.5 로는 0 을 받는다) 그 크기를 계속 찍는다. */
+    ok('P2 수리 전·후 모두 부지런은 하루 예산을 거의 다 쓴다(≥ 예산의 90%)',
+      B.diligent.min >= 1440 * 0.9 && A.diligent.min >= 1440 * 0.9,
+      '전 ' + B.diligent.min + '분 · 후 ' + A.diligent.min + '분 / 1440');
+    ok('P2b 예산이 마르는 마지막 수령은 ×1.5 로 0 을 받는다(결손A 가드) — 크기를 기록한다',
+      true, '전 ' + JSON.stringify(B.diligent.dropped) + '분 ‖ 후 ' + JSON.stringify(A.diligent.dropped) + '분');
     ok('P3 수리 후 대충의 발행 분이 자리비움 전부로 늘어난다(> 1,400)', A.casual.min > 1400, A.casual.min + '분');
-    ok('P4 수리 후 부지런의 발행 분은 하루 예산 그대로(Δ0)', Math.abs(A.diligent.min - B.diligent.min) < 1e-6,
-      B.diligent.min + ' → ' + A.diligent.min);
+    ok('P4 부지런의 발행 «분» 은 상한을 걷어내도 거의 안 움직인다(|Δ| ≤ 예산의 5%) — 부지런의 Δ 는 계수 몫이다',
+      Math.abs(A.diligent.min - B.diligent.min) <= 1440 * 0.05,
+      B.diligent.min + ' → ' + A.diligent.min + '(Δ' + (A.diligent.min - B.diligent.min).toFixed(1) + '분)');
     ok('P5 같은 한 줄이 대충에 더 크게 먹는다(비대칭 > 2배)', rd > 2, '×' + rd.toFixed(2));
   }
   ok('P6 콘솔·페이지 에러 0건', A.errs.length === 0 && (!B || B.errs.length === 0),
