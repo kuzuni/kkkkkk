@@ -61,6 +61,7 @@ function openedCopy() {
 const CELLS = [
   ['stageMob', 'dun'], ['stageMob', 'promo'], ['stageMob', 'tower'],
   ['stageBoss', 'dun'], ['stageBoss', 'promo'], ['stageBoss', 'tower'],
+  ['stageIntro', 'dun'], ['stageIntro', 'promo'],
   ['stageClr', 'dun'], ['stageClr', 'promo'],
   ['promo', 'dun'], ['promo', 'tower'],
   ['dun', 'promo'], ['dun', 'dun'],
@@ -124,6 +125,13 @@ async function sweep(url, tag) {
       /* ---- 이전 모드 세우기 ---- */
       let setupOk = true;
       if (from === 'stageMob') tick(0.5);
+      else if (from === 'stageIntro') {
+        /* 457 등장 국면 한복판 — 국면이 열린 프레임에서 멈춘다(`battleLocked` 이 이 창을 안 막는
+           근거를 여기서 직접 잰다: 갈아타도 잃는 것이 없어야 한다). */
+        startBoss();
+        for (let i = 0; i < 900 && !bossIntro; i++) tick(DT);
+        setupOk = !!bossIntro;
+      }
       else if (from === 'stageBoss' || from === 'stageClr') {
         /* 스폰 딜레이 1.4s(28) + 등장 국면(457) — 길이가 아틀라스·연출에 달렸으므로 «몇 초» 로
            박지 않고 **보스가 실제로 설 때까지** 굴린다(1회차에 4초 고정이 랜덤으로 무너졌다). */

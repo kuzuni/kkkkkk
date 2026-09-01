@@ -24933,13 +24933,18 @@ function battleBlock(msg){
    **«지금 판을 버리고 갈아탈 수 없는가»** 다. 갈아탈 수 없는 것은 둘뿐이다.
      ⓐ **스테이지가 아닌 모드** — 던전·탑·레이드·아레나·승급전은 입장권·도전 횟수를 이미 치른
         판이라 갈아타면 그 값이 조용히 사라진다. 주인이 연 것은 «스테이지 도전 중» 뿐이다.
-     ⓑ **격파 시퀀스(475)·등장 국면(457)이 도는 창** — `tools/probe665.js` 가 찍은 자리다.
-        가드를 그냥 열어 본 사본에서 `stageClr → dun`·`stageClr → promo` 두 칸이 **Δstage 0**
-        이었다: 그 2초 안에 갈아타면 `bossClear` 가 지워져 **이미 이긴 판의 스테이지 상승이 통째로
-        증발한다**(보상 손실). 그래서 창 하나만 남겨 둔다 — 2초 남짓이라 «못 누르는 버튼» 이 아니다.
+     ⓑ **격파 시퀀스(475)가 도는 창** — `tools/probe665.js` 가 찍은 자리다. 가드를 그냥 열어 본
+        사본에서 `stageClr → dun`·`stageClr → promo` 두 칸이 **Δstage 0** 이었다: 그 2초 안에
+        갈아타면 `bossClear` 가 지워져 **이미 이긴 판의 스테이지 상승이 통째로 증발한다**(보상 손실).
+        2초 남짓이라 «못 누르는 버튼» 이 아니다.
+   ⚠ **등장 국면(`bossIntro`)은 여기 넣지 않았다.** 넣어 봤지만 두 가지가 걸렸다: ⓐ 갈아타도
+     잃는 것이 없다 — `startDunRun` 은 `bossIntro = null` 을, `startPromo` 는 `bossIntroStart` 로
+     덮어쓰기를 이미 하고 있고 `probe665` 의 `stageIntro → *` 칸이 전부 초록이다 ⓑ 국면은
+     `bossIntroEnd()` 하나로만 닫히므로, 어떤 경로로든 남으면 **모든 입장이 영영 잠긴다**
+     (`verify453` [D] 가 정확히 그 모양으로 빨개졌다). 대가를 치를 이유가 없는 항이다.
    ⚠ `battleBusy()` 는 지우지 않는다 — 284 가 정한 «지금 어느 전투인가» 는 그대로 쓰인다.
-   ⚠ `bossClear`·`bossIntro` 는 여기보다 아래에서 선언되지만 이 함수는 호출 시점에 읽으므로 안전하다. */
-const battleLocked = () => { const md = bossMode(); return (md !== '' && md !== 'stage') || !!bossClear || !!bossIntro; };
+   ⚠ `bossClear` 는 여기보다 아래에서 선언되지만 이 함수는 호출 시점에 읽으므로 안전하다. */
+const battleLocked = () => { const md = bossMode(); return (md !== '' && md !== 'stage') || !!bossClear; };
 /* 위와 짝을 이루는 토스트 판(206 규약 — 조용히 막으면 «눌러도 아무 일도 안 일어나는 버튼» 이 된다) */
 function battleLockBlock(msg){
   if(!battleLocked()) return false;
