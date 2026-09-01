@@ -62,7 +62,7 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
     try { if (window.raf) cancelAnimationFrame(window.raf); } catch (e) {}
     const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
     const st = document.createElement('style'); st.id = 'v675stop';
-    st.textContent = '*,*::before,*::after{animation:none !important;transition:none !important}';
+    st.textContent = '*,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}';
     document.head.appendChild(st);
     try { document.getAnimations().forEach(a => { a.pause(); a.currentTime = 0; }); } catch (e) {}
   });
@@ -110,15 +110,31 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
     };
   });
 
-  const shot = async clip => (await p.screenshot({ clip })).toString('base64');
+  /* ⚑ 프레임 강제 — 유휴 rAF·CSS 애니를 다 끈 상태에서는 «새 프레임을 미는 것» 이 없어
+     굴린 뒤·감춘 뒤에도 합성기가 직전 프레임을 그대로 돌려준다(675 1회차 함정 ⓓ). */
+  const frame = () => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+  const shot = async clip => { await frame(); return (await p.screenshot({ clip })).toString('base64'); };
 
   /* 사본 하나를 «켜고 / 끄고 / 이웃까지 끄고» 세 장으로 잰다 — 쌍별 상세는 probe675 몫이고
      여기서는 이웃을 **묶어** 재서 회귀에 쓸 만한 속도로 만든다(뜻은 같다). */
   async function measureCopy(cardSel, ci, copySel) {
-    await p.evaluate(({ cardSel, ci }) => {
-      document.querySelectorAll(cardSel)[ci].scrollIntoView({ block: 'center', behavior: 'instant' });
-    }, { cardSel, ci });
-    await p.waitForTimeout(150);
+    /* ⚑ **목록을 굴리지 않는다 — 카드를 «주차 자리» 로 옮겨 놓고 잰다.**
+       `#shopList` 를 굴리면 `page.screenshot({clip})` 이 `getBoundingClientRect` 와 **다른 자리**를
+       돌려준다(675 1회차 함정 ⓓ — 굴린 카드부터 세 장이 같은 장이 되어 «잉크 0px = 초록» 40건).
+       ⚠ 옮겨도 되는 이유: 카드 자식은 전부 카드 기준 절대 배치라 평행이동해도
+       «사본 링 ↔ 이웃 잉크» 관계가 한 픽셀도 안 변한다. 형제는 감춰 뒤를 안 섞고, 끝나면 원복한다. */
+    await p.evaluate(({ cardSel, ci, park }) => {
+      const list = document.getElementById('shopList');
+      if (list) list.scrollTop = 0;
+      const cards = [...document.querySelectorAll(cardSel)];
+      cards.forEach((c, i) => { c.style.visibility = (i === ci) ? '' : 'hidden'; });
+      const c = cards[ci];
+      /* ⚠ 카드 배치가 탭마다 다르다(소환 = 흐름 · 재화 = 절대) — 둘 다 통하는 손잡이는 translateY 다. */
+      const lr = list ? list.getBoundingClientRect() : { top: 0 };
+      const dy = (lr.top + park) - c.getBoundingClientRect().top;
+      if (c.dataset.v675tr === undefined) c.dataset.v675tr = c.style.transform || '';
+      c.style.transform = 'translateY(' + dy + 'px)';
+    }, { cardSel, ci, park: 60 });
     const g = await p.evaluate(({ cardSel, ci, copySel }) => {
       const card = document.querySelectorAll(cardSel)[ci];
       const cp = card.querySelector(copySel);
@@ -136,13 +152,13 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
       cp.setAttribute('data-v675c', '1');
       return { n: ns.length, x1, y1, x2, y2 };
     }, { cardSel, ci, copySel });
-    if (!g) return null;
-    if (!g.n) return { n: 0, ink: 0, killed: 0, noise: 0 };
+    if (!g) { await unpark(cardSel, ci); return null; }
+    if (!g.n) { await unpark(cardSel, ci); return { n: 0, ink: 0, killed: 0, noise: 0 }; }
 
     const bx = { x1: Math.floor(g.x1) - 2, y1: Math.floor(g.y1) - 2, x2: Math.ceil(g.x2) + 2, y2: Math.ceil(g.y2) + 2 };
     const clip = { x: bx.x1 - 4, y: bx.y1 - 4, width: (bx.x2 - bx.x1) + 8, height: (bx.y2 - bx.y1) + 8 };
     const box = { x1: bx.x1 - clip.x, y1: bx.y1 - clip.y, x2: bx.x2 - clip.x, y2: bx.y2 - clip.y };
-    if (clip.width <= 8 || clip.height <= 8) return { n: g.n, ink: 0, killed: 0, noise: 0 };
+    if (clip.width <= 8 || clip.height <= 8) { await unpark(cardSel, ci); return { n: g.n, ink: 0, killed: 0, noise: 0 }; }
 
     const setVis = async (hideCopy, hideNeigh) => {
       await p.evaluate(({ hideCopy, hideNeigh }) => {
@@ -175,7 +191,19 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
       }
       return { ink, killed, noise };
     }, { a: A, a2: A2, b: B, c: C, w: clip.width, h: clip.height, box, D });
+    await unpark(cardSel, ci);
     return { n: g.n, ...r };
+  }
+
+  /* 주차 원복 — top·형제 visibility 를 되돌린다 */
+  async function unpark(cardSel, ci) {
+    await p.evaluate(({ cardSel, ci }) => {
+      const cards = [...document.querySelectorAll(cardSel)];
+      const c = cards[ci];
+      if (c && c.dataset.v675tr !== undefined) { c.style.transform = c.dataset.v675tr; delete c.dataset.v675tr; }
+      cards.forEach(n => { n.style.visibility = ''; });
+    }, { cardSel, ci });
+    await p.waitForTimeout(60);
   }
 
   async function tab(t) {
@@ -233,7 +261,9 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
       bar: document.querySelectorAll('#shopList .shp-card .stkbar').length };
   });
   ok(a.cards === 5, '[A1] 소환 카드 5장 (' + a.cards + ')');
-  ok(a.bar === 5 && a.stk === 20, '[A2] 사본 실재 — `.stkbar` ' + a.bar + '개 · `.stk` 계열 ' + a.stk + '개 (기대 5 · 20)');
+  /* ⚠ `.stkbar` 는 `.stk` 클래스를 안 달고 있다(소환 = `i.stkbar` · 버튼 링 = `i.stk.stk1`) —
+     기대값은 «카드 5장 × 버튼 3» = 15 이고, 게이지 사본은 `.stkbar` 로 따로 센다. */
+  ok(a.bar === 5 && a.stk === 15, '[A2] 사본 실재 — `.stkbar` ' + a.bar + '개 · `.stk` 계열 ' + a.stk + '개 (기대 5 · 15)');
   ok(a.rectSame.length === 0, '[A3] 사본 rect = 원본 rect (기하 단일 출처, 122 ⓒⓕ)' + (a.rectSame.length ? ' — ' + a.rectSame.slice(0, 3).join(' ;; ') : ''));
   ok(a.noFace.length === 0, '[A4a] 사본에 면 없음(테두리만)' + (a.noFace.length ? ' — ' + a.noFace.slice(0, 3).join(' ') : ''));
   ok(a.hit.length === 0, '[A4b] 사본 전부 pointer-events:none' + (a.hit.length ? ' — ' + a.hit.slice(0, 3).join(' ') : ''));

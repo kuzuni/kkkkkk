@@ -59,7 +59,7 @@ const D = 40;   /* 픽셀 차분 문턱 — 655 와 같은 값 */
     const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
     const st = document.createElement('style');
     st.id = 'p675stop';
-    st.textContent = '*,*::before,*::after{animation:none !important;transition:none !important}';
+    st.textContent = '*,*::before,*::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}';
     document.head.appendChild(st);
     try { document.getAnimations().forEach(a => { a.pause(); a.currentTime = 0; }); } catch (e) {}
   });
@@ -113,6 +113,12 @@ const D = 40;   /* 픽셀 차분 문턱 — 655 와 같은 값 */
     };
   });
 
+  /* ⚑ **잘라 찍지 않는다 — 뷰포트 한 장을 통째로 찍고 캔버스에서 자른다.**
+     `page.screenshot({clip})` 은 목록(`#shopList`)이 실제로 굴러간 뒤부터 `getBoundingClientRect`
+     가 준 자리와 **다른 자리**를 돌려줬다(675 1회차: 굴림이 일어난 카드부터 세 장이 전부
+     같은 장이 되어 «잉크 0px = 초록» 이 40건 · 널 대조도 같이 튀었다). 좌표계를 하나로 묶으면
+     그 함정이 통째로 사라진다 — 자르는 일은 우리가 뷰포트 좌표 그대로 한다. */
+  const VW = 1080, VH = 2280;
   const shot = async (clip) => (await p.screenshot({ clip })).toString('base64');
 
   /* 세 장 차분 — 페이지 안에서 센다 */
@@ -165,12 +171,28 @@ const D = 40;   /* 픽셀 차분 문턱 — 655 와 같은 값 */
     const nCards = await p.evaluate(s => document.querySelectorAll(s).length, cardSel);
     const plan = [];
     for (let ci0 = 0; ci0 < nCards; ci0++) {
-      /* ⚠ 카드가 뷰포트(1080×2280) 밖에 있으면 screenshot clip 이 못 잡는다 —
-         재화 탭은 19장이 y 4800 까지 간다. 카드마다 화면 가운데로 굴리고 **그 자리에서** 잰다. */
-      await p.evaluate(({ cardSel, ci }) => {
-        document.querySelectorAll(cardSel)[ci].scrollIntoView({ block: 'center', behavior: 'instant' });
-      }, { cardSel, ci: ci0 });
-      await p.waitForTimeout(160);
+      /* ⚑ **목록을 굴리지 않는다 — 카드를 «주차 자리» 로 옮겨 놓고 잰다.**
+         카드가 뷰포트(1080×2280) 밖이면 잘라 찍을 수 없는데, `#shopList` 를 굴리면
+         `page.screenshot({clip})` 이 `getBoundingClientRect` 와 **다른 자리**를 돌려준다
+         (675 1회차: 굴림이 실제로 일어난 카드부터 세 장이 같은 장이 되어
+         «잉크 0px = 초록» 40건 · 널 대조 1,762픽셀). 굴림 자체를 없애면 그 함정이 사라진다.
+         ⚠ 옮겨도 되는 이유: 카드의 자식은 전부 **카드 기준 절대 배치**라 카드를 통째로
+         평행이동해도 «사본 링과 이웃 잉크의 관계» 는 한 픽셀도 안 변한다(우리가 묻는 것이
+         그 관계다). 형제 카드는 감춰 뒤에 겹치지 않게 하고, 다 재면 top·visibility 를 원복한다. */
+      await p.evaluate(({ cardSel, ci, park }) => {
+        const list = document.getElementById('shopList');
+        if (list) list.scrollTop = 0;
+        const cards = [...document.querySelectorAll(cardSel)];
+        cards.forEach((c, i) => { c.style.visibility = (i === ci) ? '' : 'hidden'; });
+        const c = cards[ci];
+        /* ⚠ 카드 배치가 탭마다 다르다(소환 = 흐름 · 재화 = 절대) — `top` 을 적으면 흐름 카드는
+           «그만큼 더 내려갈» 뿐이다. 둘 다 통하는 손잡이는 **현재 rect 를 보고 옮기는 translateY** 다. */
+        const lr = list ? list.getBoundingClientRect() : { top: 0 };
+        const dy = (lr.top + park) - c.getBoundingClientRect().top;
+        if (c.dataset.p675tr === undefined) c.dataset.p675tr = c.style.transform || '';
+        c.style.transform = 'translateY(' + dy + 'px)';
+      }, { cardSel, ci: ci0, park: 60 });
+      await p.waitForTimeout(200);
       const part = await p.evaluate(({ cardSel, copySels, ci }) => {
       const out = [];
       const cards = [document.querySelectorAll(cardSel)[ci]];
@@ -213,6 +235,14 @@ const D = 40;   /* 픽셀 차분 문턱 — 655 와 같은 값 */
       }, { cardSel, copySels, ci: ci0 });
       plan.push(...part);
       await measure(label, cardSel, part);
+      /* 원복 — 주차 자리에서 빼고 형제를 되켠다 */
+      await p.evaluate(({ cardSel, ci }) => {
+        const cards = [...document.querySelectorAll(cardSel)];
+        const c = cards[ci];
+        if (c && c.dataset.p675tr !== undefined) { c.style.transform = c.dataset.p675tr; delete c.dataset.p675tr; }
+        cards.forEach(n => { n.style.visibility = ''; });
+      }, { cardSel, ci: ci0 });
+      await p.waitForTimeout(80);
     }
   }
 
@@ -226,23 +256,40 @@ const D = 40;   /* 픽셀 차분 문턱 — 655 와 같은 값 */
       console.log('  ' + head);
       for (const rk of it.risks) {
         totalPairs++;
+        /* ⚠ 상자는 **찍기 직전에 다시 읽는다.** 열거 때 읽은 rect 로 상자를 잡으면
+           그 사이에 목록이 조금이라도 굴러간 자리에서 «엉뚱한 자리를 잰» 장이 나오고,
+           그 장은 잉크 0px = **초록**으로 읽힌다(1회차 함정 ⓓ — 재화 탭 14칸이 그랬다). */
+        const fresh = await p.evaluate(({ cardSel, ci, copy, tag }) => {
+          const card = document.querySelectorAll(cardSel)[ci];
+          const cp = card && card.querySelector(copy);
+          const t = document.querySelector('[data-p675i="' + tag + '"]');
+          if (!cp || !t) return null;
+          const cr = cp.getBoundingClientRect(), ib = window.__p675ink(t);
+          return { cr: { x1: cr.left, y1: cr.top, x2: cr.right, y2: cr.bottom }, ib };
+        }, { cardSel, ci: it.ci, copy: it.copy, tag: rk.tag });
+        if (!fresh) { totalPairs--; skipped++; console.log('    (표적 못 찾음) ' + rk.sel + ' «' + rk.txt + '»'); continue; }
         /* 상자 = 이웃 잉크 bbox ∩ 사본 rect, ±2 */
         const bx = {
-          x1: Math.floor(Math.max(rk.ink.x1, it.rect.x1)) - 2,
-          y1: Math.floor(Math.max(rk.ink.y1, it.rect.y1)) - 2,
-          x2: Math.ceil(Math.min(rk.ink.x2, it.rect.x2)) + 2,
-          y2: Math.ceil(Math.min(rk.ink.y2, it.rect.y2)) + 2
+          x1: Math.floor(Math.max(fresh.ib.x1, fresh.cr.x1)) - 2,
+          y1: Math.floor(Math.max(fresh.ib.y1, fresh.cr.y1)) - 2,
+          x2: Math.ceil(Math.min(fresh.ib.x2, fresh.cr.x2)) + 2,
+          y2: Math.ceil(Math.min(fresh.ib.y2, fresh.cr.y2)) + 2
         };
-        const clip = { x: bx.x1 - 4, y: bx.y1 - 4, width: (bx.x2 - bx.x1) + 8, height: (bx.y2 - bx.y1) + 8 };
         /* ⚠ 겹침이 «rect 로는 참인데 상자로는 비는» 자리가 있다(둥근 코너·1px 접점).
-           그런 쌍을 조용히 0px 로 적으면 그게 헛초록이다 — 세지 말고 이름을 남긴다. */
-        if (bx.x2 - bx.x1 <= 4 || bx.y2 - bx.y1 <= 4) {
+           그런 쌍을 조용히 0px 로 적으면 그게 헛초록이다 — 세지 말고 이름을 남긴다.
+           뷰포트 밖으로 나간 자리도 마찬가지로 «못 쟀다» 고 이름을 남긴다. */
+        const ab = {
+          x1: Math.max(0, bx.x1), y1: Math.max(0, bx.y1),
+          x2: Math.min(VW, bx.x2), y2: Math.min(VH, bx.y2)
+        };
+        if (ab.x2 - ab.x1 <= 4 || ab.y2 - ab.y1 <= 4) {
           totalPairs--; skipped++;
           console.log('    ' + (rk.sel + ' «' + rk.txt + '»').padEnd(34)
-            + ' (겹침 상자 ' + (bx.x2 - bx.x1 - 4) + '×' + (bx.y2 - bx.y1 - 4) + ' — 잴 것 없음)');
+            + ' (겹침 상자 ' + (ab.x2 - ab.x1) + '×' + (ab.y2 - ab.y1) + ' — 잴 것 없음)');
           continue;
         }
-        const box = { x1: bx.x1 - clip.x, y1: bx.y1 - clip.y, x2: bx.x2 - clip.x, y2: bx.y2 - clip.y };
+        const clip = { x: ab.x1, y: ab.y1, width: ab.x2 - ab.x1, height: ab.y2 - ab.y1 };
+        const box = { x1: 0, y1: 0, x2: clip.width, y2: clip.height };
 
         /* ⚠ 표적을 **한 번만** 찾아 표시해 둔다 — 매번 다시 찾으면 «감춘 뒤» 에는 열거기가
            그 노드를 (visibility:hidden 이라) 안 돌려줘 **영영 안 켜진다**(1회차에 실제로 그랬다). */
@@ -278,8 +325,22 @@ const D = 40;   /* 픽셀 차분 문턱 — 655 와 같은 값 */
             return { vis: cs.visibility, disp: cs.display, op: cs.opacity,
               rect: [+r.left.toFixed(1), +r.top.toFixed(1), +r.width.toFixed(1), +r.height.toFixed(1)] };
           }, rk.tag);
+          /* 잡은 장이 «엉뚱한 자리(평평한 바탕)» 인지, 아니면 «감추기가 안 먹은» 것인지 가른다 */
+          const flat = await p.evaluate(async ({ b, c, w, h, D }) => {
+            const load = s => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = 'data:image/png;base64,' + s; });
+            const [B, C] = await Promise.all([load(b), load(c)]);
+            const g = im => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); x.drawImage(im, 0, 0); return x.getImageData(0, 0, w, h).data; };
+            const [dB, dC] = [g(B), g(C)];
+            let var0 = 0, whole = 0;
+            for (let i = 0; i < dB.length; i += 4) {
+              if (Math.max(Math.abs(dB[i] - dB[0]), Math.abs(dB[i + 1] - dB[1]), Math.abs(dB[i + 2] - dB[2])) > D) var0++;
+              if (Math.max(Math.abs(dB[i] - dC[i]), Math.abs(dB[i + 1] - dC[i + 1]), Math.abs(dB[i + 2] - dC[i + 2])) > D) whole++;
+            }
+            return { var0, whole, first: [dB[0], dB[1], dB[2]] };
+          }, { b: sB, c: sC, w: clip.width, h: clip.height, D });
           console.log('      ⚠ 잉크 0 진단 — ' + JSON.stringify(dbg) + ' clip=' + JSON.stringify(clip)
-            + ' box=' + JSON.stringify(box));
+            + ' box=' + JSON.stringify(box) + ' 장B: 첫색과 다른 화소 ' + flat.var0 + '/' + (clip.width * clip.height)
+            + ' · B↔C0 전면차 ' + flat.whole);
         }
         if (isBad) { totalBad++; bad.push({ label, ci: it.ci, copy: it.copy, rk, clip, box, killed: r.killed, ink: r.ink }); }
         console.log('    ' + (rk.sel + ' «' + rk.txt + '»').padEnd(34)
