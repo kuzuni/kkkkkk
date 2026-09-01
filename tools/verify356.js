@@ -36,6 +36,8 @@ const { SCREENS, COLLECT, URL, derivePassScreens, HTML, STEP } = require('./scan
 const R26 = require('./probe356r26.js');
 /* 28회차(작업 634) — 캔버스 축 훅. 주 스윕에 얹는다(자를 두 벌로 안 적는다 · 13회차 [R12]) */
 const R23_HOOK = require('./probe356r23.js');
+/* [M] 29회차 — 매체 «내용 좌표계 ↔ 표시 상자» 수집기. 자를 두 벌로 안 적는다(13회차 [R12]). */
+const { COLLECT_MEDIA, verdict: MEDIA_VERDICT } = require('./probe356r29.js');
 const { COLLECT_PSEUDO } = R26;
 
 const TOL = 0.02;
@@ -223,6 +225,7 @@ async function sweep(browser, inject) {
   const rowsP = [];       /* [J] 의사 축 — 같은 페이지에서 `::before`/`::after` 를 한 번 더 수집한 것 (26회차) */
   const seenF = [];       /* 화면별 «리사이즈가 정말 먹었나» — innerHeight 실측 (무음 실패 감시) */
   const seenG = [];       /* [L] 캔버스 축 — 화면별 `window.__r23` 스냅샷 (28회차 · 작업 634) */
+  const rowsM = [];       /* [M] 매체 «내용 좌표계 ↔ 표시 상자» 축 — 같은 페이지에서 한 번 더 수집 (29회차) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
@@ -264,6 +267,15 @@ async function sweep(browser, inject) {
          (1600 프레임의 캔버스는 [F] 의 물음이고 아직 아무도 안 봤다 — 634 review §4 에 적어 뒀다.) */
       seenG.push([label, await page.evaluate(() => window.__r23 || null)]);
 
+      /* ── [M] 매체 축 (29회차) — [J]·[L]·[F] 와 **같은 손**: `evaluate` 한 번이다.
+         [A] 가 보는 것은 «노드에 걸린 배율» 이고, 이 축이 보는 것은 **배율이 하나도 안 걸려도**
+         내용 좌표계와 표시 상자의 비가 어긋나 브라우저가 늘려 버리는 층이다
+         (`<canvas 88×92>` 를 150×50 상자에 넣으면 [A] 는 ratio 1 = 초록인데 그림은 3.14배 늘어난다).
+         ⚠ 리사이즈 **전**에 꺼낸다 — [A]·[L] 과 같은 프레임(2280)에서 재야
+            «[A] 가 도는 그 순간에 [A] 가 못 보는 것» 이 실측이 된다. */
+      const gotM = await page.evaluate(COLLECT_MEDIA);
+      for (const g of gotM) rowsM.push(Object.assign({ screen: label }, g));
+
       /* ── [F] 프레임 축 (14회차) — **스윕을 한 벌 더 돌지 않는다** ──────────────────
          비용의 거의 전부는 위의 ①컨텍스트 ②goto ③단계 클릭이고 `COLLECT` 는 evaluate 한 번이다.
          그래서 같은 페이지를 9:13.3 으로 **줄여서 한 번 더 수집**한다 —
@@ -287,7 +299,7 @@ async function sweep(browser, inject) {
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, rowsP, seenF, seenG };
+  return { rows, rowsF, rowsP, seenF, seenG, rowsM };
 }
 
 (async () => {
@@ -304,7 +316,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, rowsP, seenF, seenG } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF, seenG, rowsM } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -2412,6 +2424,136 @@ async function sweep(browser, inject) {
     if (cn.ctxNuInjected === 1 && cn.hk && cn.hk.ctxNonUni > 0)
       ok(`[L-d4] 되돌림 — \`ctx.scale(1,0.6)\` 을 한 번 걸면 [L-c2] 가 ${cn.hk.ctxNonUni}회로 잡는다 (컨텍스트 축도 살아 있다)`);
     else bad(`[L-d4] 되돌림 실패 — \`ctx.scale(1,0.6)\` 을 걸어도 ${cn.hk ? cn.hk.ctxNonUni : 0}회다(주입 ${cn.ctxNuInjected}건). [L-c2] 는 아무것도 못 보는 자다`);
+  }
+
+  /* ── [M] 29회차 — **매체 «내용 좌표계 ↔ 표시 상자» 축** ──────────────────────
+     스물여덟 회차가 넓혀 온 것은 전부 «**노드에 걸린 배율**» 이다(자기 transform · 조상 누적 ·
+     개별 scale · 의사 요소 · 캔버스 안 픽셀). **매체는 배율이 하나도 안 걸려도 찌그러진다** —
+     내용이 제 좌표계를 갖고 있고 표시 상자가 그 비와 다르면 브라우저가 상자에 맞춰 늘린다.
+
+     ⚑ **356 은 이 축을 이미 알고 있었다 — 매체 한 종에만 세웠을 뿐이다.**
+        `scan356.COLLECT` 는 `IMG` 에만 «화면 종횡비 ÷ 원본 종횡비» 를 잰다(`object-fit:fill` 갈래).
+        그런데 같은 파일의 `isMedia()` 가 세는 매체는 **IMG·CANVAS·SVG 셋**이다.
+        ⇒ 자기가 열거한 셋 중 **하나에만** 자를 세우고 스물여덟 회차 «전 화면 0건» 을 찍어 온 것이고,
+        24·26·27회차가 되풀이한 «못 봐서 0» 의 **다섯 번째 모양**이다(앞의 넷과 달리 놓친 자리가
+        남의 축이 아니라 **자기 축의 나머지 절반**이다).
+
+     ⚠ **갈래마다 «0» 의 뜻이 다르다**(27회차 [K-e] 규율 — 세 가지 0 을 한 줄로 안 찍는다):
+        CANVAS = 대상인데 **눈이 없었다**(이 회차가 낸다) · SVG = **상자 비로 재면 헛빨강**이라
+        판정축이 `preserveAspectRatio` 다 · IMG = 자가 있지만 `naturalWidth===0` 에서 **조용히 빠져나간다**.
+     ⚠ [L] 과 층이 다르다 — [L] 은 캔버스 «안» 에 무엇이 어떻게 그려지는가, [M] 은 그 캔버스
+        «자체» 가 어떤 상자에 눌리는가다. `ctx.scale` 이 완벽히 등방이어도 상자가 통째로 늘린다. */
+  console.log('\n[M] 29회차 — 매체 축: 배율이 하나도 안 걸려도 «내용 좌표계 ↔ 표시 상자» 가 어긋나면 늘어난다');
+  {
+    const R29 = require('./probe356r29.js');
+    const mv = MEDIA_VERDICT(rowsM, TOL);
+    const byKind = (k) => rowsM.filter((r) => r.kind === k);
+
+    /* ⓐ 전제 — 아무것도 못 본 자는 언제나 0건이다(11·21·26회차) */
+    if (!rowsM.length) bad('[M-a] 매체를 한 자리도 못 봤다 — 이 절은 아무것도 못 보는 자다 (헛초록 방지)');
+    else ok(`[M-a] 전 화면 매체 ${rowsM.length}자리 관측 (canvas ${byKind('canvas').length} · svg ${byKind('svg').length} · img ${byKind('img').length})`);
+
+    /* ⓐ2 전제 — «눈 없음» 은 초록이 아니다. 하나라도 있으면 그 자리는 **자가 못 보는 자리**다. */
+    if (!mv.blind.length) ok(`[M-a2] «눈 없음» 0자리 — 사정권 안 ${mv.inScope.length}자리 전부가 내용 좌표계를 읽힌다`);
+    else bad(`[M-a2] «눈 없음» ${mv.blind.length}자리 — 초록으로 세면 안 된다: `
+      + mv.blind.slice(0, 4).map((r) => `${r.screen} ${r.sel} (${r.why})`).join(' · '));
+
+    /* ⓑ 판정 — 지금 트리 */
+    if (!mv.bad.length) ok(`[M-b] 전 화면 매체 비균등 0자리 (사정권 안 ${mv.inScope.length} · 밖 ${mv.outs.length})`);
+    else bad(`[M-b] 매체 비균등 ${mv.bad.length}자리: `
+      + mv.bad.slice(0, 6).map((r) => `${r.screen} ${r.sel} d=${r.d}`).join(' · '));
+
+    /* ⓒ **«0» 을 갈래마다 갈라 적는다** — 이 항이 없으면 세 가지 0 이 다시 한 줄이 된다 */
+    {
+      const line = ['canvas', 'svg', 'img'].map((k) => {
+        const v = MEDIA_VERDICT(byKind(k), TOL);
+        return `${k} 안 ${v.inScope.length}/밖 ${v.outs.length}/눈없음 ${v.blind.length}`;
+      }).join(' · ');
+      const svgIn = MEDIA_VERDICT(byKind('svg'), TOL).inScope.length;
+      const imgFill = MEDIA_VERDICT(byKind('img'), TOL).inScope.length;
+      ok(`[M-c] 갈래별 0 의 뜻 — ${line}`
+        + ` ⇒ canvas 는 «봤는데 0» · svg 사정권 안 ${svgIn}자리(= \`preserveAspectRatio="none"\` 이 제품에 ${svgIn}건 = «없어서 0»)`
+        + ` · img \`object-fit:fill\` ${imgFill}자리(= «없어서 0»)`);
+    }
+
+    /* ⓓ 되돌림 + [A] 대조 + 음성항 — **합성**(probe356r29 의 표본 일곱).
+       ⚠ 스윕을 한 벌 더 돌지 않는다([G-c]·[L-d] 와 같은 규율) — 합성 페이지 한 장이다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 600, height: 400 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.setContent(R29.SYN);
+      await page.waitForTimeout(150);
+      const syn = await page.evaluate(COLLECT_MEDIA);
+      const old = await page.evaluate(COLLECT, { all: true });
+      const pick = (rs, id, key) => rs.find((r) => r[key || 'sel'].indexOf('#' + id) >= 0);
+      const sq = pick(syn, 'cSquash'), sqOld = pick(old, 'cSquash');
+      const okc = pick(syn, 'cOk'), bare = pick(syn, 'cBare');
+      const sD = pick(syn, 'sDefault'), sN = pick(syn, 'sNone'), sV = pick(syn, 'sNoVb');
+      const iN = pick(syn, 'iNoNat'), iNOld = pick(old, 'iNoNat');
+
+      if (sq && sq.scope === 'in' && Math.abs(sq.d - 1) > TOL)
+        ok(`[M-d] 되돌림 — \`<canvas 88×92>\` 를 150×50 상자에 넣으면 왜곡비 ${sq.d} 로 잡는다`);
+      else bad(`[M-d] 되돌림 실패 — 상자로 3배 늘린 캔버스를 못 잡는다: ${JSON.stringify(sq)}`);
+
+      if (sqOld && Math.abs(sqOld.ratio - 1) <= 1e-6)
+        ok(`[M-d2] [A] 대조 — **같은 표본**을 [A] 축(\`scan356.COLLECT\`)은 ratio ${sqOld.ratio} = 초록이라 한다 `
+          + '⇒ 이 층은 [A] 가 «구조적으로 못 보는» 자리이고, 대표 화면으로 접으면 그만큼이 그냥 구멍이다');
+      else bad(`[M-d2] [A] 대조 실패 — [A] 가 이미 본다(${sqOld ? sqOld.ratio : '수집 안 됨'}). 이 표본은 «[A] 가 못 본다» 의 증거가 아니다`);
+
+      if (okc && bare && Math.abs(okc.d - 1) <= TOL && Math.abs(bare.d - 1) <= TOL)
+        ok(`[M-d3] 음성항 — 비가 맞는 상자(d=${okc.d}) · CSS 크기 선언 없음(d=${bare.d}) 은 안 빨개진다 (크기 변경은 결함이 아니다)`);
+      else bad(`[M-d3] 음성항 실패 — 등방 캔버스를 결함이라 부른다: ${JSON.stringify(okc)} / ${JSON.stringify(bare)}`);
+
+      /* ⓔ **«SVG 를 상자 비로 안 재는 이유»** — 27회차 [K-e] 와 같은 규율(안 넣는 이유를 자가 말한다).
+         상자 비를 그대로 댔으면 기본 preserveAspectRatio 표본과 viewBox 없는 표본이 **헛빨강**이다. */
+      const ghost = [sD, sV].filter((r) => r && Math.abs((r.w / r.h) - 1) > TOL).length;
+      if (sD && sD.scope === 'out' && sV && sV.scope === 'out' && sN && sN.scope === 'in' && Math.abs(sN.d - 1) > TOL && ghost === 2)
+        ok(`[M-e] SVG 는 상자 비로 안 잰다 — 기본 \`preserveAspectRatio\`(레터박스)와 viewBox 없는 표본은 상자가 3:1 이어도 `
+          + `잉크가 1:1 이다(찍힌 픽셀로 확인 — \`probe356r29\` [4]·[5]). 상자 비로 쟀으면 그 ${ghost}자리가 헛빨강이었다. `
+          + `판정축은 \`preserveAspectRatio="none"\` 이고 그 표본만 d=${sN.d} 로 잡힌다`);
+      else bad(`[M-e] SVG 갈래가 안 선다: 기본 ${JSON.stringify(sD)} / none ${JSON.stringify(sN)} / viewBox없음 ${JSON.stringify(sV)}`);
+
+      /* ⓕ IMG 탈출구 — 자가 있는데 조용히 빠져나가는 자리 */
+      if (iN && iN.scope === 'blind' && iNOld && Math.abs(iNOld.ratio - 1) <= 1e-6)
+        ok(`[M-f] IMG 탈출구 — \`object-fit:fill\` 인데 \`naturalWidth===0\` 이면 \`scan356.COLLECT\` 는 ratio ${iNOld.ratio}(초록)로 남긴다. `
+          + '이 절은 그 자리를 «눈 없음» 으로 돌려 [M-a2] 가 물게 한다 (지금 제품에 0건이지만, 0 을 «없어서» 라고 부를 수 있으려면 자가 그렇게 말해야 한다)');
+      else bad(`[M-f] IMG 탈출구가 안 갈린다: ${JSON.stringify(iN)} / 현행 ${JSON.stringify(iNOld)}`);
+
+      await ctx.close();
+    }
+
+    /* ⓖ **제품 되돌림** — 합성 페이지가 아니라 진짜 화면의 진짜 캔버스를 눌러 본다.
+       ⚠ 합성만으로 닫으면 «자는 사는데 제품 스윕에는 안 물려 있다» 를 못 가른다(26회차 [J] 가 데인 자리).
+       ⚠ 스윕을 한 벌 더 돌지 않는다 — 화면 **한 장**이다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.goto(URL, { waitUntil: 'load' });
+        await page.waitForTimeout(700);
+        const before = await page.evaluate(COLLECT_MEDIA);
+        const bv = MEDIA_VERDICT(before, TOL);
+        const hit = await page.evaluate(() => {
+          const app = document.getElementById('app');
+          const c = [...app.querySelectorAll('canvas')].find((x) => { const r = x.getBoundingClientRect(); return r.width && r.height && x.width && x.height; });
+          if (!c) return null;
+          const r = c.getBoundingClientRect();
+          /* 세로만 0.6 배 — 배율이 아니라 **상자**를 눌러야 이 층의 표본이다 */
+          c.style.width = r.width + 'px'; c.style.height = (r.height * 0.6) + 'px';
+          return c.id || c.getAttribute('class') || '(익명)';
+        });
+        await page.waitForTimeout(150);
+        const after = await page.evaluate(COLLECT_MEDIA);
+        const av = MEDIA_VERDICT(after, TOL);
+        if (!hit) bad('[M-g] 되돌림 표본이 없다 — 02 메인에 잴 수 있는 캔버스가 한 자리도 없다');
+        else if (bv.bad.length === 0 && av.bad.length > 0)
+          ok(`[M-g] 제품 되돌림 — 02 메인의 실제 캔버스 «${hit}» 상자를 **세로만** ×0.6 으로 누르면 `
+            + `${bv.bad.length}자리 → ${av.bad.length}자리로 빨개진다 (최악 d=${av.bad.map((r) => r.d).sort((a, b) => Math.abs(b - 1) - Math.abs(a - 1))[0]}) `
+            + '⇒ 이 절이 스윕에 정말 물려 있다');
+        else bad(`[M-g] 제품 되돌림 실패 — 주입 전 ${bv.bad.length}자리 / 주입 후 ${av.bad.length}자리 (표본 «${hit}»)`);
+      } catch (e) { bad('[M-g] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
   }
 
   await browser.close();
