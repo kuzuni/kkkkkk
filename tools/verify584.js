@@ -15,8 +15,10 @@
  *                룬 [강화]·단련 [단련]이 그 값과 ±3%. 세 자산 viewBox 가 같은 64 라 상자 = 잉크다.
  *   [3] ③      — `.tr-up` 이 커졌고(수리 전 108×107) 이웃과 겹침 0 · 진행바 세로 중심 유지
  *   [4] ②      — 룬 액자 안 잉크비가 411 `SLOT_ART` 비와 ±3% · 값이 **파생**이지 손으로 적은 수가 아니다
- *   [5] ④      — 라벨이 «단련» + `tstone` 아이콘 **1장** + «n»(613 — «pt» 는 죽은 말) ·
+ *   [5] ④      — 라벨이 `tstone` 아이콘 **1장** + «n»(613 — «pt» 는 죽은 말) ·
  *                제품 문자열에 «투자» 0건(토스트 포함)
+ *                ⚑ 670(2026-09-02) — «단련» 낱말은 버튼에서 빠졌다. [5-a] 를 «낱말 0건» 으로
+ *                뒤집고 [5-a2](행 제목이 그 말을 한다)를 신설했다 — 상세는 `verify670`.
  *   [6] 297    — 통짜 렌더와 `liveTemper()` 가 **같은 문자열**(라벨에 태그가 들어와 깨지기 쉬운 자리)
  *   [7] 210·519·166 — 단련 탭 다섯 줄 겹침 0 · 레드닷 판정 불변 · 351(9:13.3) 잘림 0
  *   §R  되돌림 — 라벨·룬 그림자리·↑ 버튼을 각각 수리 전으로 되돌리면 **그 절만** 빨개진다
@@ -267,12 +269,24 @@ const openAt = async (browser, h) => {
   await tab('temper');
   const lab = await page.evaluate(() => {
     const b = document.querySelector('#trTemper .tr-tp.k0 .tb i');
+    const t = document.querySelector('#trTemper .tr-tp.k0 .tn i');
     return { txt: b.textContent.replace(/\s+/g, ' ').trim(), html: b.innerHTML,
              imgs: b.querySelectorAll('img.cic').length,
              cur: (b.querySelector('img.cic') || {}).dataset && b.querySelector('img.cic').dataset.curIc,
+             title: t ? t.textContent.replace(/\s+/g, ' ').trim() : null,
              fn: temperRowTxt(TEMPERS[0]).btn };
   });
-  ok(/^단련/.test(lab.txt), '[5-a] ★ 라벨이 «단련» 으로 시작한다', '«' + lab.txt + '»');
+  /* ⚑ 670(2026-09-02 주인 지시 «단련 (단련아이콘) 3 이런거 말고 (단련아이콘) 3 이런식으로»)이
+     이 항의 **방향을 뒤집었다**. 항을 지우지 않고 갈아 끼우는 이유(333 처방): 584 ④ 의 뜻은
+     «버튼이 [투자] 라는 죽은 말을 하지 않는다» 였고, 그 뜻은 지금도 살아 있다 —
+     달라진 것은 버튼이 말하는 방법이다(낱말 → 아이콘). 그래서 술어를 둘로 나눈다:
+       [5-a]  버튼 라벨에는 낱말이 없다(«단련» 포함 0건 · 수와 자리쉼표뿐)
+       [5-a2] 그 말은 같은 행 제목이 대신한다 — «무슨 버튼인지» 를 잃지 않았다는 반대편 항
+     («단련» 을 그냥 안 보게 한 수리였다면 [5-a2] 가 빨개진다.) 상세 게이트는 `verify670`. */
+  ok(!/단련/.test(lab.txt) && /^[\d,]+$/.test(lab.txt),
+    '[5-a] ★ 670 — 라벨은 «(아이콘) n» 뿐이다(낱말 0건)', '«' + lab.txt + '»');
+  ok(/단련/.test(lab.title || ''),
+    '[5-a2] ★ 670 — 버튼에서 뺀 «단련» 은 같은 행 제목이 말한다', '«' + lab.title + '»');
   ok(!/투자/.test(lab.txt) && !/투자/.test(lab.html), '[5-b] 라벨에 «투자» 가 없다');
   ok(lab.imgs === 1 && lab.cur === 'tstone',
     '[5-c] ★ «어떤 화폐 쓰는지» 를 아이콘으로 말한다(tstone 1장)', lab.cur + ' ×' + lab.imgs);
@@ -379,7 +393,9 @@ const openAt = async (browser, h) => {
     const back = await page.evaluate(() => { const w = $('trTemper'); w.dataset.sig = ''; renderTrain();
       const b = document.querySelector('#trTemper .tr-tp.k0 .tb i');
       return { txt: b.textContent.trim(), imgs: b.querySelectorAll('img.cic').length }; });
-    ok(/^단련/.test(back.txt) && back.imgs === 1, '[R-b] 원복하면 다시 초록 — 사본이 트리를 안 더럽혔다');
+    ok(/^[\d,]+$/.test(back.txt) && back.imgs === 1,
+      '[R-b] 원복하면 다시 초록 — 사본이 트리를 안 더럽혔다(670 — 낱말 없는 «(아이콘) n»)',
+      '«' + back.txt + '»');
   }
   {
     /* R-2 룬 그림 자리 — `.sa-e` 를 걷어내면 비가 수리 전으로 떨어진다 */
