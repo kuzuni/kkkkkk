@@ -40,43 +40,60 @@ const gapsOf = p => {
 };
 
 /* 페이지 안에서 «4번째 수령» 을 세우고 `press` 를 누른 결과를 돌려준다 */
+/* ⚑ 692 — 이 두 표본은 **시계를 안 탄다**. 얼리기 전에는 `offlineReward(Date.now() - gap)` 의
+   «인자를 만든 순간» 과 함수 안의 `Date.now()` 가 다른 밀리초에 떨어질 수 있어, 그 1ms 가
+   앞 세 수령의 `offMin` 을 밀고 네 번째의 `sec` 을 20250 → 20249.9955 로 만들었다(같은 뿌리로
+   `probe650` R8 이 4회 중 1회 빨갰다). 블록이 통째로 동기라 얼린 사이에 다른 코드가 안 돈다.
+   그리고 재는 값은 **반올림 전 원값**(`dMinRaw`) 이다 — 한쪽만 `toFixed(4)` 를 지나게 해 놓고
+   1e-6 으로 비교하면 자가 스스로와 안 맞는다. `dMin` 은 사람이 읽는 자리로만 남긴다. */
 const PROBE = ({ gaps, mul, press }) => {
-  S.daily = S.daily || {}; S.daily.offMin = 0;
-  S.dia = 0; S.gold = 0;
-  for (let i = 0; i < gaps.length - 1; i++) {
-    offlineReward(Date.now() - gaps[i] * 3600 * 1000);
-    if (offPend) claimOffline(mul);
-  }
-  offlineReward(Date.now() - gaps[gaps.length - 1] * 3600 * 1000);
-  if (!offPend) return { armed: false };
-  const b = { min: S.daily.offMin || 0, gold: S.gold, dia: S.dia };
-  const shown = {
-    gain: offPend.gain, sec: offPend.sec,
-    label: document.querySelector('#ofrGet15 i').textContent.trim(),
-    adShown: getComputedStyle(document.querySelector('#offw .ofr-ad')).display !== 'none',
-    cap: OFF_DAY_CAP_MIN,
-  };
-  if      (press === 'ad')    document.getElementById('ofrGet15').click();
-  else if (press === 'plain') document.getElementById('ofrGet').click();
-  else if (press === 'api')   claimOffline(1.5);
-  return { armed: true, ...shown,
-    dMin: +((S.daily.offMin || 0) - b.min).toFixed(4),
-    dGold: Math.round(S.gold - b.gold), dDia: S.dia - b.dia,
-    totMin: +(S.daily.offMin || 0).toFixed(4),
-    stillOpen: document.getElementById('offw').classList.contains('on') };
+  const REAL_NOW = Date.now, T0 = REAL_NOW.call(Date);
+  Date.now = () => T0;
+  try {
+    S.daily = S.daily || {}; S.daily.offMin = 0;
+    S.dia = 0; S.gold = 0;
+    const preSec = [];
+    for (let i = 0; i < gaps.length - 1; i++) {
+      offlineReward(Date.now() - gaps[i] * 3600 * 1000);
+      if (offPend) { preSec.push(offPend.sec); claimOffline(mul); }
+    }
+    offlineReward(Date.now() - gaps[gaps.length - 1] * 3600 * 1000);
+    if (!offPend) return { armed: false };
+    const b = { min: S.daily.offMin || 0, gold: S.gold, dia: S.dia };
+    const shown = {
+      gain: offPend.gain, sec: offPend.sec, preSec,
+      label: document.querySelector('#ofrGet15 i').textContent.trim(),
+      adShown: getComputedStyle(document.querySelector('#offw .ofr-ad')).display !== 'none',
+      cap: OFF_DAY_CAP_MIN,
+    };
+    if      (press === 'ad')    document.getElementById('ofrGet15').click();
+    else if (press === 'plain') document.getElementById('ofrGet').click();
+    else if (press === 'api')   claimOffline(1.5);
+    const raw = (S.daily.offMin || 0) - b.min;
+    return { armed: true, ...shown,
+      dMinRaw: raw, dMin: +raw.toFixed(4),
+      dGold: Math.round(S.gold - b.gold), dDia: S.dia - b.dia,
+      totMinRaw: (S.daily.offMin || 0), totMin: +(S.daily.offMin || 0).toFixed(4),
+      stillOpen: document.getElementById('offw').classList.contains('on') };
+  } finally { Date.now = REAL_NOW; }
 };
 /* 이득이 **있는** 상태(첫 수령)에서 같은 버튼을 누른다 — 음성항 */
 const PROBE_GAIN = ({ gap, press }) => {
-  S.daily = S.daily || {}; S.daily.offMin = 0;
-  S.dia = 0; S.gold = 0;
-  offlineReward(Date.now() - gap * 3600 * 1000);
-  if (!offPend) return { armed: false };
-  const b = S.daily.offMin || 0, gain = offPend.gain;
-  const label = document.querySelector('#ofrGet15 i').textContent.trim();
-  const adShown = getComputedStyle(document.querySelector('#offw .ofr-ad')).display !== 'none';
-  if (press === 'ad') document.getElementById('ofrGet15').click();
-  else                document.getElementById('ofrGet').click();
-  return { armed: true, gain, label, adShown, dMin: +((S.daily.offMin || 0) - b).toFixed(4) };
+  const REAL_NOW = Date.now, T0 = REAL_NOW.call(Date);        /* 692 — 위와 같은 시계 격리 */
+  Date.now = () => T0;
+  try {
+    S.daily = S.daily || {}; S.daily.offMin = 0;
+    S.dia = 0; S.gold = 0;
+    offlineReward(Date.now() - gap * 3600 * 1000);
+    if (!offPend) return { armed: false };
+    const b = S.daily.offMin || 0, gain = offPend.gain, sec = offPend.sec;
+    const label = document.querySelector('#ofrGet15 i').textContent.trim();
+    const adShown = getComputedStyle(document.querySelector('#offw .ofr-ad')).display !== 'none';
+    if (press === 'ad') document.getElementById('ofrGet15').click();
+    else                document.getElementById('ofrGet').click();
+    const raw = (S.daily.offMin || 0) - b;
+    return { armed: true, gain, sec, label, adShown, dMinRaw: raw, dMin: +raw.toFixed(4) };
+  } finally { Date.now = REAL_NOW; }
 };
 
 async function run(browser, file) {
@@ -127,16 +144,16 @@ async function run(browser, file) {
   ok('B3 광고 버튼 누름이 «그냥 받기» 와 **정확히 같은 액수**를 준다',
     A.ad.dMin > 0 && A.ad.dMin === A.plain.dMin && A.ad.dDia === A.plain.dDia && A.ad.dGold === A.plain.dGold,
     '광고 ' + A.ad.dMin + '분/' + A.ad.dDia.toLocaleString() + '다이아 ‖ 그냥 ' + A.plain.dMin + '분/' + A.plain.dDia.toLocaleString() + '다이아');
-  ok('B4 표에 실린 분이 그대로 발행된다 (버려짐 0)', Math.abs(A.ad.dMin - A.ad.sec / 60) < 1e-6,
+  ok('B4 표에 실린 분이 그대로 발행된다 (버려짐 0)', Math.abs(A.ad.dMinRaw - A.ad.sec / 60) < 1e-6,
     'Δ' + A.ad.dMin + '분 = 표의 ' + (A.ad.sec / 60).toFixed(1) + '분');
-  ok('B5 하루 예산을 넘겨 발행하지 않는다', A.ad.totMin <= A.ad.cap + 1e-6, A.ad.totMin + ' ≤ ' + A.ad.cap + '분');
+  ok('B5 하루 예산을 넘겨 발행하지 않는다', A.ad.totMinRaw <= A.ad.cap + 1e-6, A.ad.totMin + ' ≤ ' + A.ad.cap + '분');
   ok('B6 누르면 팝업이 닫힌다 (수령이 실제로 일어났다)', A.ad.stillOpen === false);
 
   console.log('\n[C] 음성항 — 이득이 있는 상태는 건드리지 않았다');
   ok('C1 라벨이 «1.5배 받기» 그대로다', A.gainAd.label === '1.5배 받기', '«' + A.gainAd.label + '»');
   ok('C2 ▶AD 뱃지가 보인다', A.gainAd.adShown === true);
   ok('C3 광고 버튼이 그냥 받기의 **1.5배** 분을 먹는다',
-    A.gainAd.gain > 1.4995 && Math.abs(A.gainAd.dMin - A.gainPlain.dMin * 1.5) < 1e-6,
+    A.gainAd.gain > 1.4995 && Math.abs(A.gainAd.dMinRaw - A.gainPlain.dMinRaw * 1.5) < 1e-6,
     '광고 ' + A.gainAd.dMin + '분 vs 그냥 ' + A.gainPlain.dMin + '분');
   ok('C4 «결손A» 난간은 API 에서 여전히 산다 — `claimOffline(1.5)` 직접 호출은 0',
     A.api.dMin === 0, '분 Δ' + A.api.dMin);
@@ -159,6 +176,20 @@ async function run(browser, file) {
     R.plain.dMin > 0, '분 Δ' + R.plain.dMin);
   ok('R3 되돌림은 배선 한 줄이다 — 라벨은 여전히 새 문구다(문턱·라벨이 서로 다른 자리)',
     R.ad.label === '광고 이득 없음', '«' + R.ad.label + '»');
+
+  /* 692 — B4·B5·C3 을 «시계 격리 + 반올림 전 원값» 으로 옮겼다. 아래 셋이 그것이 자를
+     무르게 푼 것이 **아님**을 못박는다: 허용 오차 1e-6 은 한 칸도 안 넓혔고(R4),
+     표본이 실시계에서 실제로 떨어졌다(R5·R6). */
+  console.log('\n[§R2] 692 — 자를 무르게 풀지 않았다 (플레이키 수리의 되돌림 시험)');
+  ok('R4 같은 1e-6 자가 «1초 초과 발행» 은 여전히 빨갛게 잡는다',
+    !(Math.abs((A.ad.dMinRaw + 1 / 60) - A.ad.sec / 60) < 1e-6),
+    '1초(0.0167분) 얹으면 Δ' + Math.abs((A.ad.dMinRaw + 1 / 60) - A.ad.sec / 60).toExponential(2) + ' > 1e-6');
+  const EXP = [13500, 20700, 9900];                 /* 부지런 프로필 앞 세 수령의 자리비움(초) */
+  ok('R5 표본이 실시계를 안 탄다 — 앞 세 수령의 자리비움이 프로필 값과 정확히 같다 (드리프트 0)',
+    A.ad.preSec.length === EXP.length && A.ad.preSec.every((s, i) => s === EXP[i]),
+    '[' + A.ad.preSec.join(', ') + '] = [' + EXP.join(', ') + ']');
+  ok('R6 그래서 4번째의 자리비움도 정수 초다 (예산 잔량 337.5분 = 20250초)',
+    A.ad.sec === 20250, A.ad.sec + '초');
 
   await browser.close();
   console.log('\nVERIFY650 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));

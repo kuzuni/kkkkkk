@@ -48,46 +48,64 @@ async function measure(browser, file) {
   await page.waitForTimeout(900);
 
   const run = press => page.evaluate(({ gaps, mul, press }) => {
-    S.daily = S.daily || {}; S.daily.offMin = 0;
-    S.dia = 0; S.gold = 0;
-    /* 앞 세 수령 — 광고 버튼(×1.5)으로 예산을 «거의» 채운다 */
-    for (let i = 0; i < gaps.length - 1; i++) {
-      offlineReward(Date.now() - gaps[i] * 3600 * 1000);
-      if (offPend) claimOffline(mul);
-    }
-    /* 네 번째 = 문제의 수령 */
-    offlineReward(Date.now() - gaps[gaps.length - 1] * 3600 * 1000);
-    if (!offPend) return { armed: false };
-    const before = { min: S.daily.offMin || 0, gold: S.gold, dia: S.dia };
-    const shown  = {
-      gain: offPend.gain, sec: offPend.sec,
-      label: document.querySelector('#ofrGet15 i').textContent.trim(),
-      opacity: document.getElementById('ofrGet15').style.opacity || '',
-      cap: (typeof OFF_DAY_CAP_MIN === 'number' ? OFF_DAY_CAP_MIN : null),
-    };
-    if      (press === 'ad')    document.getElementById('ofrGet15').click();
-    else if (press === 'plain') document.getElementById('ofrGet').click();
-    else if (press === 'api')   claimOffline(1.5);
-    return {
-      armed: true, ...shown,
-      dMin: +((S.daily.offMin || 0) - before.min).toFixed(4),
-      dGold: Math.round(S.gold - before.gold),
-      dDia: S.dia - before.dia,
-      stillOpen: document.getElementById('offw').classList.contains('on'),
-    };
+    /* 692 — **시계 격리**. 얼리기 전에는 `offlineReward(Date.now() - gap)` 의 «인자를 만든 순간» 과
+       함수 안의 `Date.now()` 가 서로 다른 밀리초에 떨어질 수 있어 표본이 실시계를 탔다. 그 1ms 가
+       앞 세 수령의 `offMin` 을 1,102.5 에서 미세하게 밀고, 네 번째의 `sec` 이 20250 → 20249.9955 가
+       된다(692 재현). 블록은 통째로 동기라 이 사이에 다른 코드가 돌지 않는다 — 되돌림은 finally. */
+    const REAL_NOW = Date.now, T0 = REAL_NOW.call(Date);
+    Date.now = () => T0;
+    try {
+      S.daily = S.daily || {}; S.daily.offMin = 0;
+      S.dia = 0; S.gold = 0;
+      /* 앞 세 수령 — 광고 버튼(×1.5)으로 예산을 «거의» 채운다 */
+      const preSec = [];
+      for (let i = 0; i < gaps.length - 1; i++) {
+        offlineReward(Date.now() - gaps[i] * 3600 * 1000);
+        if (offPend) { preSec.push(offPend.sec); claimOffline(mul); }
+      }
+      /* 네 번째 = 문제의 수령 */
+      offlineReward(Date.now() - gaps[gaps.length - 1] * 3600 * 1000);
+      if (!offPend) return { armed: false };
+      const before = { min: S.daily.offMin || 0, gold: S.gold, dia: S.dia };
+      const shown  = {
+        gain: offPend.gain, sec: offPend.sec, preSec,
+        label: document.querySelector('#ofrGet15 i').textContent.trim(),
+        opacity: document.getElementById('ofrGet15').style.opacity || '',
+        cap: (typeof OFF_DAY_CAP_MIN === 'number' ? OFF_DAY_CAP_MIN : null),
+      };
+      if      (press === 'ad')    document.getElementById('ofrGet15').click();
+      else if (press === 'plain') document.getElementById('ofrGet').click();
+      else if (press === 'api')   claimOffline(1.5);
+      /* 692 — 눈금 일관성: 재는 값은 **반올림 전 원값**(`dMinRaw`), `dMin` 은 사람이 읽는 자리다.
+         한쪽만 `toFixed(4)` 를 지나게 해 놓고 1e-6 으로 비교하면 자가 스스로와 안 맞는다. */
+      const raw = (S.daily.offMin || 0) - before.min;
+      return {
+        armed: true, ...shown,
+        dMinRaw: raw,
+        dMin: +raw.toFixed(4),
+        dGold: Math.round(S.gold - before.gold),
+        dDia: S.dia - before.dia,
+        stillOpen: document.getElementById('offw').classList.contains('on'),
+      };
+    } finally { Date.now = REAL_NOW; }
   }, { gaps: gapsOf(DILIGENT), mul: DILIGENT.mul, press });
 
   /* 실효 이득이 **있는** 상태(첫 수령)에서 광고 버튼이 여전히 ×1.5 인지 — 되돌림 시험용 */
   const gainful = press => page.evaluate(({ gap, press }) => {
-    S.daily = S.daily || {}; S.daily.offMin = 0;
-    S.dia = 0; S.gold = 0;
-    offlineReward(Date.now() - gap * 3600 * 1000);
-    if (!offPend) return { armed: false };
-    const b = { min: S.daily.offMin || 0 }, gain = offPend.gain, sec = offPend.sec;
-    const label = document.querySelector('#ofrGet15 i').textContent.trim();
-    if (press === 'ad') document.getElementById('ofrGet15').click();
-    else                document.getElementById('ofrGet').click();
-    return { armed: true, gain, sec, label, dMin: +((S.daily.offMin || 0) - b.min).toFixed(4) };
+    const REAL_NOW = Date.now, T0 = REAL_NOW.call(Date);      /* 692 — 위와 같은 시계 격리 */
+    Date.now = () => T0;
+    try {
+      S.daily = S.daily || {}; S.daily.offMin = 0;
+      S.dia = 0; S.gold = 0;
+      offlineReward(Date.now() - gap * 3600 * 1000);
+      if (!offPend) return { armed: false };
+      const b = { min: S.daily.offMin || 0 }, gain = offPend.gain, sec = offPend.sec;
+      const label = document.querySelector('#ofrGet15 i').textContent.trim();
+      if (press === 'ad') document.getElementById('ofrGet15').click();
+      else                document.getElementById('ofrGet').click();
+      const raw = (S.daily.offMin || 0) - b.min;
+      return { armed: true, gain, sec, label, dMinRaw: raw, dMin: +raw.toFixed(4) };
+    } finally { Date.now = REAL_NOW; }
   }, { gap: gapsOf(DILIGENT)[0], press });
 
   const out = {
@@ -142,16 +160,30 @@ async function measure(browser, file) {
     A.ad.dMin > 0 && A.ad.dMin === A.plain.dMin && A.ad.dDia === A.plain.dDia && A.ad.dGold === A.plain.dGold,
     '광고 Δ' + A.ad.dMin + '분/' + A.ad.dDia.toLocaleString() + '다이아 ‖ 그냥 Δ' + A.plain.dMin + '분/' + A.plain.dDia.toLocaleString() + '다이아');
   ok('R8 그 수령으로 하루 예산이 정확히 채워진다 (초과 발행 0)',
-    Math.abs(A.ad.dMin - A.ad.sec / 60) < 1e-6, 'Δ' + A.ad.dMin + '분 = 표의 ' + (A.ad.sec / 60).toFixed(1) + '분');
+    Math.abs(A.ad.dMinRaw - A.ad.sec / 60) < 1e-6, 'Δ' + A.ad.dMin + '분 = 표의 ' + (A.ad.sec / 60).toFixed(1) + '분');
   console.log('\n— §R 되돌림 시험 (무르게 풀지 않았음) —');
   ok('R9 «결손A» 가드 자체는 살아 있다 — `claimOffline(1.5)` 직접 호출은 여전히 안 준다',
     A.api.dMin === 0, '분 Δ' + A.api.dMin);
   ok('R10 실효 이득이 **있는** 상태에서는 광고 버튼이 여전히 ×1.5 다 (그냥 받기의 1.5배 분을 먹는다)',
-    A.gainAd.gain > 1.4995 && Math.abs(A.gainAd.dMin - A.gainPlain.dMin * 1.5) < 1e-6,
+    A.gainAd.gain > 1.4995 && Math.abs(A.gainAd.dMinRaw - A.gainPlain.dMinRaw * 1.5) < 1e-6,
     '광고 ' + A.gainAd.dMin + '분 vs 그냥 ' + A.gainPlain.dMin + '분');
   ok('R11 그 상태의 라벨은 «1.5배 받기» 그대로다', A.gainAd.label === '1.5배 받기', '«' + A.gainAd.label + '»');
   ok('R12 콘솔·페이지 에러 0건', A.errs.length === 0 && (!B || B.errs.length === 0),
     (A.errs.length + (B ? B.errs.length : 0)) + '건');
+
+  /* 692 — 플레이키였던 R8·R10 을 «시계 격리 + 반올림 전 원값» 으로 고쳤다.
+     아래 둘이 «무르게 풀지 않았음» 을 못박는다: 허용 오차 1e-6 은 한 칸도 안 넓혔고(R8n),
+     표본이 실시계에서 실제로 떨어졌다(R13). */
+  console.log('\n— §R2 692 되돌림 시험 (자를 무르게 풀지 않았다) —');
+  ok('R8n 같은 1e-6 자가 «1초 초과 발행» 은 여전히 빨갛게 잡는다 (허용 오차를 안 넓혔다)',
+    !(Math.abs((A.ad.dMinRaw + 1 / 60) - A.ad.sec / 60) < 1e-6),
+    '1초(0.0167분) 얹으면 Δ' + Math.abs((A.ad.dMinRaw + 1 / 60) - A.ad.sec / 60).toExponential(2) + ' > 1e-6');
+  const EXP = [13500, 20700, 9900];                 /* 부지런 프로필 앞 세 수령의 자리비움(초) */
+  ok('R13 표본이 실시계를 안 탄다 — 앞 세 수령의 자리비움이 프로필 값과 정확히 같다 (드리프트 0)',
+    A.ad.preSec.length === EXP.length && A.ad.preSec.every((s, i) => s === EXP[i]),
+    '[' + A.ad.preSec.join(', ') + '] = [' + EXP.join(', ') + ']');
+  ok('R14 그래서 4번째의 자리비움도 정수 초다 (예산 잔량 337.5분 = 20250초)',
+    A.ad.sec === 20250, A.ad.sec + '초');
 
   console.log('\nPROBE650 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   process.exit(fail ? 1 : 0);
