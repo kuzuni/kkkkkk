@@ -384,19 +384,29 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
           gold: 12345, dia: 678, stage: 30, best: 30,
           raidBest: { r60: { dmg: 1e6, dps: 2e4 }, r30: { dmg: 5e5, dps: 1e4 }, r120: { dmg: 9e6, dps: 3e4 } },
         }));
+        /* 618 — 프레임 시계 고정. 이 절이 묻는 것은 «load() 가 구 세이브 값을 지키는가» 인데,
+           부팅 즉시 도는 자동 전투가 아래 900ms 대기 중 첫 킬 드랍(스테이지 30 은 ~400골드 소수)을
+           내면 골드 표본이 오염된다 — probe618 실측: ~850ms 에 kills 0→1 과 함께 12345 → 12783.28….
+           rAF 타임스탬프를 0 으로 고정하면 제품 loop(37871)의 dt = (now-last)/1000 이 0 이라
+           step(0) = 전투 정지·렌더는 그대로다. 오프라인 축은 결백(표본에 time 이 없어 offPend 자체가
+           안 생긴다 — probe618 [2]). ⚠ `=== 12345` 를 범위로 무르게 풀지 마라(등재문 반려 사유) —
+           아래 «킬 0» 항이 이 고정을 지킨다(고정이 빠지면 골드 항보다 먼저, 뜻이 보이게 빨개진다). */
+        const raf = window.requestAnimationFrame.bind(window);
+        window.requestAnimationFrame = (cb) => raf(() => cb(0));
       });
       await p2.goto(URL, { waitUntil: 'load' });
       await p2.waitForTimeout(900);
       const got = await p2.evaluate(() => ({
         keys: Object.keys(S.raidBest || {}),
         r60: S.raidBest && S.raidBest.r60 && S.raidBest.r60.dps,
-        arena: S.arena, gold: S.gold,
+        arena: S.arena, gold: S.gold, kills: S.totalKills,
         bad: /\bNaN\b|\bundefined\b/.test(document.body.innerText || ''),
       }));
       chk('r60 기록만 남는다', got.keys.length === 1 && got.keys[0] === 'r60', JSON.stringify(got.keys));
       chk('r60 최고 DPS 는 그대로 이월', got.r60 === 2e4, got.r60);
       chk('arena 키가 없던 세이브도 0승 0패로 채워진다',
         !!got.arena && got.arena.w === 0 && got.arena.l === 0, JSON.stringify(got.arena));
+      chk('골드 표본 창에 전투 수입이 안 섞였다(시계 고정 = 킬 0 — 618)', got.kills === 0, got.kills);
       chk('구 세이브 값(골드)은 그대로', got.gold === 12345, got.gold);
       chk('구 세이브 로드에 NaN/에러 없음', !got.bad && e2.length === 0, `${got.bad} ${e2.slice(0, 1)}`);
       await c2.close();
