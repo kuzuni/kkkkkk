@@ -151,13 +151,21 @@ async function boot(browser) {
       passFree: [0, 5, 11, 19, 29, 39].map(i => ({ i, n: PASS_CUR[0].n(i) })),
       passN: PASS_N, passStep: PASS_STEP, towerN: PASS_TOWER_N,
       dunTry: DUN_TRY, dun: [1, 5, 10, 20].map(f => ({ f, n: dunAt(f) })),
-      offH: OFF_MAX_H, offPerMin: 3,
+      /* ⚑ 712 — 옛 사본 `offH: OFF_MAX_H, offPerMin: 3` 은 199 21회차(결3 ⓑ)가 `OFF_MAX_H` 를
+         선언째 걷어낸 뒤 `ReferenceError` 로 죽어 §4 가 통째로 조용히 사라졌다(자는 6/6 초록).
+         자르는 축은 하루 예산 `OFF_DAY_CAP_MIN`(분) 하나이고 분당 지급은 `OFF_DIA_PM` 이다
+         — «분당 3» 도 199 2회차(48)·21회차(75) 이전의 낡은 사본이라 같이 갈았다. */
+      offCapMin: OFF_DAY_CAP_MIN, offPerMin: OFF_DIA_PM,
       q22: [0, 3, 6, 10].map(st => ({ st, n: q22(st) })),
     };
   });
+  /* ⚑ 712 위생 — 절이 통째로 비면 그것 자체가 한 항의 실패다(278·319 처방).
+     머리말이 «예외는 그 블록만 빨갛게» 라고 적어 두고도 실제로는 조용히 넘어가고 있었다. */
+  ok(day !== null, '[4-0] §4 가 실제로 돌았다 (evaluate 예외 0건)',
+     day !== null ? '' : '`ev` 가 예외를 삼켜 [4-a]·[4-b] 와 출처별 표가 통째로 사라졌다');
   if (day) {
     const roul = Math.round(day.roulEv * day.roulTry);
-    const off = day.offH * 60 * day.offPerMin;
+    const off = day.offCapMin * day.offPerMin;
     const attAvg = Math.round(day.attSum / day.attN);
     const dun10 = day.dunTry * day.dun.find(d => d.f === 10).n;
     info('룰렛      ', fmtN(roul) + '/일 (기대값 ' + day.roulEv + ' × ' + day.roulTry + '회)');
@@ -170,7 +178,7 @@ async function boot(browser) {
         + ' (무료 칸 · ' + day.passStep + '스테이지마다 · ' + day.passN + '단)');
     info('탑 패스 ×2', '같은 곡선 · 각 ' + day.towerN + '단 (레벨 1칸 = 1단계)');
     info('수정 광산 ', day.dun.map(d => 'f' + d.f + ' ' + fmtN(d.n)).join(' · ') + ' × 입장권 ' + day.dunTry + '장/일');
-    info('오프라인  ', fmtN(off) + '/일 (' + day.offH + 'h × 분당 ' + day.offPerMin + ')');
+    info('오프라인  ', fmtN(off) + '/일 (하루 예산 ' + fmtN(day.offCapMin) + '분 × 분당 ' + day.offPerMin + ')');
     const core = roul + day.adDia + day.dq + attAvg + day.attPassFree2 + dun10 + off;
     ok(core > 0, '[4-a] 반복 수급 «바닥» 합계(룰렛+광고+일퀘+출석+출석패스+수정광산f10+오프라인)',
        fmtN(core) + '/일');

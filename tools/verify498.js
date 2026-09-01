@@ -242,13 +242,27 @@ const GM0 = 11000, GMD = 2000;
     const att = Math.round(ATTEND.slice(1).reduce((n, r) => n + r.dia, 0) / (ATTEND.length - 1));
     const attPass = PASS_TABS.att.rw(1, 0).n;
     const dun = DUN_TRY * (DUNGEONS.find(d => d.id === 'dia').rw(10).dia || 0);
-    const off = OFF_MAX_H * 60 * 3;
-    return { roul, ads, dq, att, attPass, dun, off, sum: roul + ads + dq + att + attPass + dun + off };
+    /* ⚑ 712 — 옛 사본은 `OFF_MAX_H * 60 * 3` 이었다. 199 21회차(주인 결정 결3 ⓑ)가 «1회 적립
+       상한 OFF_MAX_H 6h» 를 **선언째** 걷어내 이 줄이 `ReferenceError` 로 죽었고, `ev` 가 그
+       예외를 삼켜 §6 다섯 줄이 **조용히** 사라진 채 자는 46/46 «초록» 으로 끝났다.
+       ⚠ 이름만 갈면 안 된다 — 두 번째 숫자 «분당 3» 도 199 2회차(48)·21회차(75) 이전의 사본이라
+       그대로 두면 오프라인 몫이 1/25 로 잡힌다. **자르는 축(분)과 분당 지급을 둘 다 제품에서 읽는다.**
+       하루 예산을 전부 쓰는 ×1 수령 = `OFF_DAY_CAP_MIN` 분 × `OFF_DIA_PM` (제품 `offlineReward` 의
+       `floor(sec * OFF_DIA_PM / 60)` 과 같은 값 — `verify712` [C] 가 실지급 경로와 대조해 못박는다). */
+    const offCap = OFF_DAY_CAP_MIN, offPm = OFF_DIA_PM;
+    const off = offCap * offPm;
+    return { roul, ads, dq, att, attPass, dun, off, offCap, offPm,
+             sum: roul + ads + dq + att + attPass + dun + off };
   });
+  /* ⚑ 712 위생 — 절이 통째로 비면 «그것 자체가 한 항의 실패» 다(278·319 처방).
+     이 한 줄이 없으면 §6 은 죽어도 자를 초록으로 끝낸다 = «초록으로 읽히는 빨강». */
+  yes('[6-0] §6 이 실제로 돌았다 (evaluate 예외 0건)', day !== null,
+      '`ev` 가 예외를 삼켜 [6-a]~[6-e] 다섯 줄이 조용히 사라졌다 — 위 ⚠ 줄을 보라');
   if (day) {
     note('룰렛 ' + fmtN(day.roul) + ' · 광고 ' + fmtN(day.ads) + ' · 일퀘 ' + fmtN(day.dq)
        + ' · 출석 ' + fmtN(day.att) + ' · 출석패스 ' + fmtN(day.attPass)
-       + ' · 수정광산(f10) ' + fmtN(day.dun) + ' · 오프라인 ' + fmtN(day.off));
+       + ' · 수정광산(f10) ' + fmtN(day.dun)
+       + ' · 오프라인 ' + fmtN(day.off) + '(' + fmtN(day.offCap) + '분 × ' + day.offPm + '/분)');
     note('[6-a] 반복 수급 바닥 합계', fmtN(day.sum) + '/일');
     note('[6-b] 목표 2~7일 200,000/일 대비', (200000 / day.sum).toFixed(1) + '배 부족');
     note('[6-c] 목표 31~100일 300,000/일 대비', (300000 / day.sum).toFixed(1) + '배 부족');
