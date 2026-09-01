@@ -130,17 +130,24 @@ const strays = () => [
   ...fs.readdirSync(TOOLS).filter(f => /^[._].*\.(html|js|json)$/.test(f)).map(f => 'tools/' + f),
 ];
 
-/* §2 의 표본 — 사본을 실제로 쓰고 지우는 «가벼운» 자 둘.
-   ⚠ 무거운 자(전투 60초·전 화면 스윕)를 쓰면 §2 가 자기 시간에 눌려 못 돈다. */
-const SAMPLE = ['tools/neg219.js', 'tools/neg230.js'];
+/* §2 의 표본 — 사본을 실제로 쓰고 지우는 자.
+   ⚠ 표본은 **그 자체로 초록**이어야 한다. 1회차에 `neg219` 를 골랐다가 [2-b] 가 빨갰는데,
+      그것은 병렬 때문이 아니라 그 자가 **원래 빨간 것**(N3·N4 «문자열 없음 — index.html 이 바뀌었다»
+      = 게이트 부패, 649·650 계열)이었다. 빨간 자를 표본으로 쓰면 «무엇이 빨간지» 를 못 가른다.
+   ⚠ 무거운 자(전투 60초·전 화면 스윕)도 안 된다 — §2 가 자기 시간에 눌려 못 돈다. */
+const SAMPLE = (process.env.V648_SAMPLE || 'tools/neg180.js,tools/neg230.js').split(',');
 
 (async () => {
   section(`[2] 실동작 — 표본 자를 ${PAR}병렬로 띄운다`);
   if (SKIP_RUN) {
     console.log('  –   [2] 건너뜀(V648_SKIP_RUN=1)');
   } else {
+    /* ⚠ 시작 전에 남아 있는 사본을 «0이어야 한다» 고 물으면 안 되고, **지워서도 안 된다** —
+       다른 워커의 자가 지금 그 사본을 쓰고 있을 수 있고, 지우는 순간 이 자가 바로 646 의 버그가 된다.
+       그래서 baseline 으로 **적어 두고**, [2-c] 는 «새로 남은 것이 있는가» 만 묻는다. */
     const before = strays();
-    ok(before.length === 0, '[2-0] 전제 — 시작 전 저장소에 남은 임시 사본 0', before.join(' ') || '0개');
+    console.log('  –   [2-0] baseline — 시작 전 남아 있던 임시 사본 ' + before.length + '개'
+      + (before.length ? ' (남의 실행일 수 있어 건드리지 않는다: ' + before.join(' ') + ')' : ''));
     for (const tool of SAMPLE) {
       const rs = await Promise.all(Array.from({ length: PAR }, () => run(tool)));
       const enoent = rs.filter(r => /ENOENT[\s\S]*unlink/.test(r.out)).length;
@@ -148,8 +155,8 @@ const SAMPLE = ['tools/neg219.js', 'tools/neg230.js'];
       ok(rs.every(r => r.code === 0), `[2-b] ${tool} ×${PAR} — 전부 종료 코드 0`,
          rs.map(r => r.code).join(','));
     }
-    const after = strays();
-    ok(after.length === 0, '[2-c] 끝난 뒤 남은 임시 사본 0', after.join(' ') || '0개');
+    const fresh = strays().filter(f => !before.includes(f));
+    ok(fresh.length === 0, '[2-c] 이 실행이 새로 남긴 임시 사본 0', fresh.join(' ') || '0개');
   }
 
   /* ─────────────────────────────────────────────────────────────── */
@@ -178,7 +185,11 @@ const SAMPLE = ['tools/neg219.js', 'tools/neg230.js'];
     ok(!rs.some(r => /SyntaxError/.test(r.out)), '[R-a] 되돌림 사본이 문법으로 죽지 않았다(엉뚱한 이유의 빨강 배제)');
     ok(died > 0, `[R-b] 고정 이름으로 되돌리면 «ENOENT … unlink» 로 즉사한다 — §2 의 초록이 헛것이 아니다`,
        died + '/' + rs.length + ' 즉사');
-    for (const f of strays()) { try { fs.unlinkSync(path.join(ROOT, f)); } catch (e) {} }
+    /* 되돌림 사본이 «고정 이름» 으로 남긴 것만 치운다 — 남의 pid 사본은 건드리지 않는다(위 [2-0] 와 같은 이유) */
+    for (const f of strays()) {
+      if (/-\d+\.(html|js|json)$/.test(f)) continue;
+      try { fs.unlinkSync(path.join(ROOT, f)); } catch (e) {}
+    }
   }
 
   console.log('\n' + (fails.length ? `VERIFY648 ${pass}/${pass + fails.length} FAIL` : `VERIFY648 ${pass}/${pass} PASS`));
