@@ -385,9 +385,14 @@ async function pixelRun(page) {
         (화폐 알갱이가 서면 그것, 못 쏘면 종전 앰버 버스트가 그대로 바닥이다)
      ③ 화폐 키를 **자리마다 손으로 적지 않는다** — `PAY_CUR[o.tag]` 한 표에서 온다.
      ⇒ 헐거워지지 않는다: `fxBurst(h, FXPAL.up, 10)` 폴백이 사라지면 여기가 빨개진다. */
-  ok(/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\]\);/.test(src)
-     && /function rtFirstFx\(sel, cur\)\{[\s\S]{0,600}?fxFlash\(h\)[\s\S]{0,500}?fxSpend\(cur, h\)[\s\S]{0,300}?fxBurst\(h, FXPAL\.up, 10\)/.test(src),
-     '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 — 화폐 축 포함)');
+  /* ⚑ 619 이관 — 619(«연속 강화 때 이펙트가 매 강화마다») 가 이 두 조각을 **공용 부품 `upFx()`** 한 곳으로
+     모았다(첫 발과 반복분이 다른 부품이면 ④ 일관성이 깨진다). 583 이관과 **같은 꼴**로 자리만 따라간다 —
+     묻는 뜻 셋(① 첫 발 자리에서 부른다 ② 대조군과 같은 갈아 끼움 규칙 ③ 화폐 키는 `PAY_CUR` 한 표)은
+     그대로다. 헐거워지지 않는다: `fxBurst(el, FXPAL.up, …)` 폴백이 사라지거나 첫 발이 10개를 안 쏘면 빨개진다. */
+  ok(/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\], o\.key\);/.test(src)
+     && /function rtFirstFx\(sel, cur, key\)\{[\s\S]{0,400}?upFx\(key \|\| \('first:' \+ sel\), sel, cur, 10\)/.test(src)
+     && /function upFx\(key, host, cur, n\)\{[\s\S]{0,1600}?fxFlash\(el\)[\s\S]{0,500}?fxSpend\(cur, el\)[\s\S]{0,300}?fxBurst\(el, FXPAL\.up, cnt\)/.test(src),
+     '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 화폐 축 · 619 공용 부품)');
   ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \}/.test(src)
      && /fxUpOk\(card, card, txt, bi0\.cur\)/.test(src),
      '[7-d1] 583 — 대조군(훈련 카드)도 **같은 표**에서 화폐 키를 받는다(결제가 돌려준다 · 자리마다 문자열 금지)');
@@ -553,15 +558,20 @@ async function pixelRun(page) {
       const H = document.querySelector('#trTemper .tr-tp.k0');
       const L = document.getElementById('fxl');
       const cs = getComputedStyle(H);
+      /* ⚑ 619 이관 — 이제 홀드 중에는 **회당 발화**(619)의 오버레이가 계속 새로 뜬다. 이 항이 묻던 것은
+         «첫 발의 것이 아직 안 꺼졌는가» 이므로 «개수» 가 아니라 **나이**로 센다(첫 발 오버레이의 수명은
+         `fxBye` 500ms — 800ms 시점에 그보다 늙은 노드가 하나라도 있으면 전제가 깨진 것이다). */
+      const age = el => { try { const a = el.getAnimations()[0]; return a ? +a.currentTime : 1e9; } catch(_) { return 1e9; } };
+      const fl = L ? [...L.querySelectorAll('.fx-flash')] : [];
       return { filter: cs.filter, scale: cs.scale,
-               flash: L ? L.querySelectorAll('.fx-flash').length : -1 };
+               flash: fl.length, flashOld: fl.filter(e => age(e) > 500).length };
     });
     await p3.mouse.up();
     await p3.waitForTimeout(150);
     await p3.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false); });
     /* ★ «첫 발 오버레이가 이미 꺼진 시각» 이어야 이 항이 뜻을 갖는다 — 그것부터 못박는다 */
-    ok(hold.flash === 0, '[8-a] 800ms 에는 첫 발 오버레이(`fx-flash`)가 이미 꺼져 있다(이 항의 전제)',
-       'flash=' + hold.flash);
+    ok(hold.flashOld === 0, '[8-a] 800ms 에는 첫 발 오버레이(`fx-flash`)가 이미 꺼져 있다(이 항의 전제 · 619 이관: 남은 것은 회당 발화)',
+       'flash=' + hold.flash + ' 중 500ms 초과 ' + hold.flashOld);
     ok(/brightness\(1\.05\)/.test(hold.filter),
        '[8-b] ★ 그런데도 호스트는 **밝기를 유지**한다 — 눌린 채 800ms 에 idle 과 구별된다',
        'filter=' + hold.filter);
@@ -737,11 +747,15 @@ async function pixelRun(page) {
       const h5 = await b5.page.evaluate(() => {
         const H = document.querySelector('#trTemper .tr-tp.k0');
         const L = document.getElementById('fxl');
-        return { filter: getComputedStyle(H).filter, flash: L ? L.querySelectorAll('.fx-flash').length : -1 };
+        const age = el => { try { const a = el.getAnimations()[0]; return a ? +a.currentTime : 1e9; } catch(_) { return 1e9; } };
+        const fl = L ? [...L.querySelectorAll('.fx-flash')] : [];
+        return { filter: getComputedStyle(H).filter, flash: fl.length, flashOld: fl.filter(e => age(e) > 500).length };
       });
       await b5.page.mouse.up();
-      ok(h5.flash === 0 && !/brightness/.test(h5.filter),
-         '[R4-a] ★ 밝기를 뺀 사본은 800ms 에 오버레이도 밝기도 없다 — 호스트가 idle 과 구별되지 않는다',
+      /* 619 이관 — [8-a] 와 같은 자(나이). 이 절이 묻는 축은 **호스트 자신의 밝기**이고, 619 의 회당
+         오버레이는 «호스트 위에 잠깐 뜨는 별개 노드» 라 그 축을 대신하지 못한다. 밝기가 살아 있으면 빨개진다. */
+      ok(h5.flashOld === 0 && !/brightness/.test(h5.filter),
+         '[R4-a] ★ 밝기를 뺀 사본은 800ms 에 **호스트 자신**의 구별(밝기)이 없다 — 첫 발 오버레이도 이미 꺼져 있다(619 이관)',
          'flash=' + h5.flash + ' filter=' + h5.filter);
       await b5.ctx.close();
     } finally {
