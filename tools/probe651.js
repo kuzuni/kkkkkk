@@ -38,7 +38,10 @@ const CODE = fs.readFileSync(SRC, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
 
 const ARG = process.argv.slice(2);
 const TABLE = ARG.includes('--table');
-const LOAD = Number((ARG.find(a => a.startsWith('--load=')) || '').split('=')[1] || 150);
+/* ⚠ 기본 300ms — 이 컨테이너는 **부하가 없어도** 이미 5~12fps 라 dt 가 상시 0.1 로 클램프된다.
+   150ms 로는 «부하 아래 대기 > 2.2s»(§3-a) 가 2.3~2.4s 로 문턱에 붙어 그 항 자신이 플레이키해진다 —
+   651 을 고치면서 651 을 새로 만드는 셈이다. 300ms 면 3.7s 로 여유가 선다. */
+const LOAD = Number((ARG.find(a => a.startsWith('--load=')) || '').split('=')[1] || 300);
 const REPS = Number((ARG.find(a => a.startsWith('--reps=')) || '').split('=')[1] || 2);
 
 let pass = 0, fail = 0;
@@ -60,9 +63,14 @@ const sample = (lvSpd, loadMs, simWin) => `(async () => {
   enemies.length = 0; spawnQ.length = 0;
   startBoss();
   const B = () => enemies.find(e => e.tk === 'boss');
-  /* 보스를 «시뮬로» 기다린다 — 벽시계 고정 대기가 부하에서 무너지는 자리다 */
+  /* 보스를 «시뮬로» 기다린다 — 벽시계 고정 대기가 부하에서 무너지는 자리다.
+     ⚠ 부하는 **대기 구간에도** 걸어야 한다. 표본 구간에만 걸면 «보스를 기다릴 때는 한가하다» 는
+        있지도 않은 세계를 재게 된다(실제 부하는 세션 내내 걸려 있다). */
   const w0 = performance.now(), ws0 = S.playtime;
-  while (!B() && performance.now() - w0 < 20000) await new Promise(r2 => setTimeout(r2, 40));
+  while (!B() && performance.now() - w0 < 20000) {
+    await new Promise(r2 => setTimeout(r2, 40));
+    ${loadMs ? `{ const z = performance.now(); while (performance.now() - z < ${loadMs}); }` : ''}
+  }
   const waitWall = +((performance.now() - w0) / 1000).toFixed(3);
   const waitSim = +(S.playtime - ws0).toFixed(3);
   if (!B()) return { err: '보스가 안 섰다', waitWall, waitSim };
@@ -146,25 +154,37 @@ const row = (tag, r) => `    ${tag.padEnd(16)} fr ${String(r.fr).padStart(3)} ·
       `시뮬/벽 = 부하없음 ×${fRatio.toFixed(2)} → 부하 ×${lRatio.toFixed(2)}`);
 
     const fW = med(R.free.map(r => r.avgWall)), lW = med(R.load.map(r => r.avgWall));
-    const fS = med(R.free.map(r => r.avgSim)), lS = med(R.load.map(r => r.avgSim));
     ok(lW < fW * 0.85, '2-b **벽시계 자**(현행 §5)는 부하에서 통째로 내려앉는다 = 이것이 등재된 빨강이다',
       `평균벽 ${fW} → ${lW} px/s (×${(lW / fW).toFixed(2)})`);
-    ok(Math.abs(lS / fS - 1) < 0.15, '2-c **시뮬 시계 자**는 같은 부하에서 자리를 지킨다 = 처방이 맞다',
-      `평균시뮬 ${fS} → ${lS} px/s (×${(lS / fS).toFixed(2)})`);
-    ok(Math.abs(lS / fS - 1) < Math.abs(lW / fW - 1), '2-d 두 자를 나란히 놓으면 시뮬 쪽이 **덜 흔들린다**',
-      `흔들림 벽 ${(Math.abs(lW / fW - 1) * 100).toFixed(1)}% vs 시뮬 ${(Math.abs(lS / fS - 1) * 100).toFixed(1)}%`);
+
+    /* ⚑ 자를 **평균**에서 **추격 최댓값**으로 옮긴 이유가 여기 있다. 시뮬 시계로 바꾸는 것만으로는
+       모자란다 — 평균은 표본 창이 어느 국면(공격 모션 정지·돌진)에 걸렸는지에 계속 흔들린다. */
+    const ALL = R.free.concat(R.load);
+    const cOff = Math.max(...ALL.map(r => Math.abs(r.chase / r.floor - 1)));
+    ok(cOff <= 0.01, '2-c **시뮬 시계 × 추격 최댓값** 자는 부하 유무와 무관하게 소스가 말한 바닥에 붙는다 = 처방',
+      `표본 ${ALL.length}개 전부 실측 추격 = 바닥(최대 어긋남 ${(cOff * 100).toFixed(2)}%)`);
+    const sOff = Math.max(...ALL.map(r => Math.abs(r.avgSim / r.floor - 1)));
+    ok(sOff > 0.2, '2-c2 반대로 **평균**은 시뮬 시계로 재도 바닥을 못 맞힌다(그래서 평균이 아니라 최댓값이다)',
+      `평균시뮬 ${ALL.map(r => r.avgSim).join('/')} vs 바닥 ${ALL[0].floor} px/s`);
+
+    const wOff = Math.abs(lW / fW - 1);
+    ok(cOff < wOff, '2-d 두 자를 나란히 놓으면 추격 자가 **덜 흔들린다**',
+      `흔들림 벽 ${(wOff * 100).toFixed(1)}% vs 추격 ${(cOff * 100).toFixed(2)}%`);
   });
 
   await blk('§3', async () => {
     if (!R.free.length) return ok(false, '3 표본 없음');
     console.log('\n=== §3 벽시계 대기(2200ms)가 부하에서 모자란다 ===');
-    const W = 2.2;
+    const W = 2.2;                                   /* 구 §5 의 고정 대기 */
     const lw = med(R.load.map(r => r.waitWall));
     const need = med(R.load.map(r => r.waitWall / Math.max(0.01, r.waitSim)));
-    ok(lw > W, `3-a 부하 아래에서 보스는 벽시계 ${W}s 안에 안 선다(현행 §5 의 고정 대기가 짧다)`,
-      `실측 대기 ${lw}s`);
+    ok(lw > W, `3-a 부하 아래에서 보스는 벽시계 ${W}s 안에 안 선다(구 §5 의 고정 대기가 짧다)`,
+      `실측 대기 ${lw}s · 부하없음 ${med(R.free.map(r => r.waitWall))}s`);
     ok(need > 1.2, '3-b 그 대기가 모자란 이유는 «시뮬 1초를 벌려면 벽시계가 그 이상 든다» 이다',
-      `벽/시뮬 ×${need.toFixed(2)} · 예약 지연 ${SPAWN_DELAY} 시뮬초`);
+      `벽/시뮬 ×${need.toFixed(2)} · 예약 지연 ${SPAWN_DELAY} 시뮬초 = 벽시계 ${(need * SPAWN_DELAY).toFixed(2)}s`);
+    ok(R.load.every(r => r.waitSim >= SPAWN_DELAY * 0.9),
+      '3-c 시뮬로 재면 대기는 부하와 무관하게 예약 지연 그대로다(늦은 것은 보스가 아니라 시계다)',
+      `시뮬 대기 ${R.load.map(r => r.waitSim).join('/')}s vs 예약 ${SPAWN_DELAY}s`);
   });
 
   await blk('§4', async () => {
