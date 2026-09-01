@@ -5,7 +5,8 @@
  *
  * 검사 항목:
  *   [A] 데이터 — EQUIPS 108종 · 부위별 등급 분포 [5,5,5,5,5,5,5,1] · id 유일 · 구 54종 id 전부 보존
- *   [B] 등급 상수 — GRADE 8단(초월·불멸) · REFUND/SUM_CARD/WGRADE/BAG_G 8행 · GRADE_ROLL_EQ 8행(20/24 해금 — 196)
+ *   [B] 등급 상수 — GRADE 8단(초월·불멸) · SUM_CARD/WGRADE/BAG_G 8행 · GRADE_ROLL_EQ 8행(20/24 해금 — 196)
+ *       757 이관 — 옛 «REFUND 8행» 은 표가 폐지돼(환급가 = 소환 1회 단가 파생) B3b 로 뒤집혔다
  *   [C] 최고 등급 판정 — topG: 장비 g7 만 top, g6 은 아님 · «신화 스킬 = MAX» 유지(비장비는 5 가 top)
  *   [D] 확률 — 장비 배너 **만렙**(SUM_MAXLV)에서 g6·g7 > 0, 합 = 1 · 스킬 배너는 g6·g7 = 0 (6행 표 유지)
  *   [E] 소환 시뮬 — 무기 10연 ×300 (**만렙**) 에서 8등급(g7) 실제 등장 + 아이템 undefined 0건
@@ -99,14 +100,25 @@ const ok = (b, name, detail) => {
   /* [B] 등급 상수 */
   const B = await page.evaluate(() => ({
     gl: GRADE.length, g6: GRADE[6].n, g7: GRADE[7].n, m6: GRADE[6].mul, m7: GRADE[7].mul,
-    refund: REFUND.length, sumCard: SUM_CARD.length, wg: WGRADE.length, bag: BAG_G.length,
+    /* 757 — 옛 `REFUND` 8행 표는 폐지됐다(환급가 = 소환 1회 단가 파생). 자리를 비우지 않고
+       «표가 정말 사라졌는가 + 파생이 항등을 지키는가» 로 방향을 뒤집는다(333 처방). */
+    refundGone: typeof REFUND === 'undefined',
+    rfUnit: refundUnit(SKILLS[0]), rfSum1: summonCost('skill', 1), rfSum10: summonCost('skill', 10),
+    rfEq: refundAmount(EQUIPS.filter(e => e.slot === 'weapon')),
+    sumCard: SUM_CARD.length, wg: WGRADE.length, bag: BAG_G.length,
     rollEq: GRADE_ROLL_EQ.length, u6: GRADE_ROLL_EQ[6].unlock, u7: GRADE_ROLL_EQ[7].unlock,
     roll: GRADE_ROLL.length, steps: PRB_STEPS_EQ.join(','), maxlv: SUM_MAXLV
   }));
   ok(B.gl === 8 && B.g6 === '초월' && B.g7 === '불멸', 'B1 GRADE 8단 (초월·불멸)', B.g6 + '/' + B.g7);
   ok(B.m6 === 16 && B.m7 === 26, 'B2 mul 16·26 기하급수', B.m6 + '/' + B.m7);
-  ok(B.refund === 8 && B.sumCard === 8 && B.wg === 8 && B.bag === 8, 'B3 REFUND·SUM_CARD·WGRADE·BAG_G 8행',
-    [B.refund, B.sumCard, B.wg, B.bag].join('/'));
+  ok(B.sumCard === 8 && B.wg === 8 && B.bag === 8, 'B3 SUM_CARD·WGRADE·BAG_G 8행',
+    [B.sumCard, B.wg, B.bag].join('/'));
+  /* 757 이관 — 여기 있던 «REFUND 8행» 은 표 자체가 폐지돼 물을 수 없다. 지우지 않고
+     **뒤집어서** 남긴다: ⓐ 표가 진짜 없어졌는가 ⓑ 파생 단가가 소환 1회가와 같은가
+     ⓒ 주인이 못박은 항등 «환급가 × 10 = 10회 소환가» ⓓ 장비는 환급 대상이 아니다(0). */
+  ok(B.refundGone && B.rfUnit === B.rfSum1 && B.rfUnit * 10 === B.rfSum10 && B.rfEq === 0,
+    'B3b 757 환급가 = 소환 1회 단가 파생 · ×10 = 10회가 · 장비 0',
+    'gone=' + B.refundGone + ' unit=' + B.rfUnit + ' x1=' + B.rfSum1 + ' x10=' + B.rfSum10 + ' eq=' + B.rfEq);
   /* 196 — 만렙 100 → 25 로 줄면서 해금 사다리가 5/8/12/16/**20/24** 로 옮겨졌다.
      묻는 것은 그대로다 — «장비 배너는 8행 표를 쓰고 초월·불멸 해금이 만렙 밑에 있는가». */
   /* 496 — 만렙이 25 → 50 이 되면서 사다리가 비례 이동했다(초월 20 → 40 · 불멸 24 → 만렙 − 1 = 49).

@@ -11536,6 +11536,18 @@
   .sk-b2{left:551px;color:#DFDFDF;--hl:#D3D3D3;
     background:linear-gradient(180deg,#D3D3D3 0 9px,#A8A8A8 11px,#8B8B8B 101px,
       #D2D2D2 103px 109px,#757575 109px)}
+  /* 757 — [환급] 이 뜨는 상태에서만 붙는 3칸 배치. **버튼 규격(275x131 · bottom 48 · 간격 36)은
+     레퍼런스 값 그대로**이고 바뀌는 것은 `left` 뿐이다.
+     ⚑ 기준자는 «화면 1080» 이 아니라 **버튼의 자리 상자 `.shsc-in`(x 7 · 폭 1066)** 이다 —
+       레퍼런스 2칸이 그 안에서 240..826 = **좌우 여백 240 대칭 · 간격 36** 이라는 것이 그 증거다
+       (1080 을 기준으로 재면 좌 240 ↔ 우 254 로 «기울어 보인다» — 335 «앵커가 둘» 과 같은 함정).
+       ⇒ 3칸도 같은 상자에서 대칭: 3×275 + 2×36 = 897, 여백 (1066−897)/2 = **84.5**
+       ⇒ **84.5 · 395.5 · 706.5**(간격 36 유지 · 우여백 84.5).
+     ⚠ `.r3` 가 안 붙는 흔한 상태(환급 0)는 240/551 그대로라 **레퍼런스 대비 Δ0px** 다 —
+       50 코스튬 시트는 조각 개념이 없어 `.r3` 를 한 번도 안 받는다(같은 부품·무영향). */
+  .sk-b3{left:706.5px}
+  .sk-btn.r3.sk-b1{left:84.5px}
+  .sk-btn.r3.sk-b2{left:395.5px}
   /* 171 — 상태색. `.sk-b1/.sk-b2` 는 이제 «자리»(left)와 기본 배색만 정하고,
      «지금 눌러서 되는가» 는 `.ok`(초록) / `.no`(회색)가 덮어쓴다. 자리와 색을 분리했으므로
      같은 부품을 쓰는 07 스킬 · 26 동료 · 50 코스튬 세 시트가 한 벌로 움직인다.
@@ -25785,7 +25797,8 @@ const MAX_LEVEL = 100, FRAG_BASE = 5, FRAG_CAP = 20, CRAFT_NEED = 5;
      `l <= 1` 로 잡아 미보유·Lv1 이 둘 다 «첫 강화 = 2» 로 일치한다.
    ⚠ `CRAFT_NEED`(합성 5개)는 **다른 축**이라 건드리지 않는다. */
 const FRAG_FIRST = 2;
-const REFUND = [20, 45, 100, 220, 550, 1400, 3400, 8000];   /* 85 — 7 초월·8 불멸 행 추가(기하급수 유지) */
+/* 757 — 옛 `REFUND`(등급별 환급 상수 8행)는 **선언째 폐지**했다. 환급가는 이제 소환 1회 단가에서
+   파생한다(주인 지시 «소환 가격 바꾸면 환급 가격도 자동으로») — 자리·근거는 `refundUnit` 옆. */
 const fragNeed = l => (l <= 1 ? FRAG_FIRST : Math.min(FRAG_BASE + (l-1), FRAG_CAP));
 const catOf = it => SK[it.id] ? 'skill' : PT[it.id] ? 'pet' : RL[it.id] ? 'relic' : 'equip';
 /* 85 — «최고 등급» 은 카테고리별이다: 장비는 8등급(불멸), 스킬·유물·코스튬은 6등급(신화)까지.
@@ -26159,17 +26172,51 @@ function craft(it){
   return nx;
 }
 const allMaxed = list => list.every(it => atMax(it));
-const refundAmount = list => list.reduce((s, it) => s + frag(it.id)*REFUND[it.g], 0);
+/* ── 757 (2026-09-02, 저장소 주인 지시) 조각 환급 ──────────────────────────────
+   주인 원문: «강화를 해도 스킬들이 100 레벨 다 되고 나머지 스킬들이 조각이 500 막 이런식으로
+   남게 되는데, 그렇게 되면 환급 버튼 뜨게 해서 클릭시 그 스킬들 환급해서 다이아로 도로 받게 하기.
+   소환했을때 가격이랑 같아야함. 만약에 소환에 가격 바꾸게 되면 환급 가격도 자동으로 바뀔수있게 …
+   스킬 소환 10회 10원이면 스킬 1조각 환급당 1원이어야하는식임»
+   ⚑ **환급가는 상수가 아니라 «소환 1회 단가» 다.** 옛 `REFUND = [20,45,…,8000]`(85 의 등급표)을
+     **선언째 걷어냈다** — 손으로 적은 표는 소환가가 바뀌면 조용히 어긋난다(LESSONS 106-1 ·
+     723 «같은 값을 세 자리가 다르게 적는 것»). `summonCost(b, 1)` 하나에서 파생하므로
+     `BANNERS[b].cost` 를 고치면 환급가가 저절로 따라오고, 게이트가 항등
+     «환급가 × 10 = 10회 소환가» 를 단언한다(`flat:1` 이라 10연 할인이 없다).
+   ⚠ **대상은 스킬·펫뿐이다.** 장비 조각은 만렙 뒤에도 **합성 재료**(CRAFT_NEED · 719)라
+     쓸 데가 남아 있고, 유물은 조각 개념이 없다. 「환급 = 더 쓸 데가 없어진 조각」 이 기준이고
+     그것이 카테고리를 가른다 — 장비 배너에 `refundAmount` 를 물으면 **0** 이 나온다(예외 아님).
+   ⚠ 만렙 미만 스킬의 조각은 **강화 재료**라 환급 대상이 아니다(757 ④). */
+const RF_BANK = { skill:'skill', pet:'pet' };   /* 환급 대상 카테고리 → 그 종을 파는 소환 배너 */
+const refundUnit = it => { const b = RF_BANK[catOf(it)]; return b ? summonCost(b, 1) : 0; };
+const canRefund  = it => !!RF_BANK[catOf(it)] && atMax(it) && frag(it.id) > 0;
+const refundFrag = list => list.reduce((s, it) => s + (canRefund(it) ? frag(it.id) : 0), 0);
+const refundAmount = list => list.reduce((s, it) => s + (canRefund(it) ? frag(it.id)*refundUnit(it) : 0), 0);
 function doRefund(bkey){
   const B = BANNERS[bkey];
-  if(!allMaxed(B.list)) return;
   const amt = refundAmount(B.list);
-  if(amt <= 0){ notify('환불할 재료가 없습니다'); return; }
-  B.list.forEach(it => { if(S.own[it.id]) S.own[it.id].n = 0; });
+  if(amt <= 0){ notify('환급할 조각이 없습니다'); return 0; }
+  B.list.forEach(it => { if(canRefund(it)) S.own[it.id].n = 0; });
+  /* 697 — 상점·교환 지급은 우편 경유 0, 즉시 반영이다. 환급도 같은 규약을 따른다 */
   if(B.cur === 'rel') S.relic += amt; else S.dia += amt;
   uiDirty = true; save();
-  /* 206 — «환불했습니다» 는 결과 통보다. 도감 완성 사실은 도감 탭이 그대로 보여 준다 */
-  notify('♻️ ' + B.n + ' 도감 완성 — ' + curIc(B.cur === 'rel' ? 'relic' : 'dia') + ' <b>+' + fmt(amt) + '</b> 환불');
+  notify('♻️ ' + B.n + ' 조각 환급 — ' + curIc(B.cur === 'rel' ? 'relic' : 'dia') + ' <b>+' + fmt(amt) + '</b>');
+  return amt;
+}
+/* 206 분류 규약 — «사용자의 선택이 실제로 필요한 것»(버튼 둘)이라 토스트가 아니라 팝업이다.
+   조각은 되돌릴 수 없으므로 실행 전에 개수·금액·단가를 그대로 보여 준다. */
+function askRefund(bkey){
+  const B = BANNERS[bkey], amt = refundAmount(B.list), cnt = refundFrag(B.list);
+  if(amt <= 0){ notify('환급할 조각이 없습니다'); return; }
+  const ic = curIc(B.cur === 'rel' ? 'relic' : 'dia');
+  popup('조각 환급',
+      '<p>만렙 ' + B.n + '에 남은 조각 <b>' + fmt(cnt) + '</b>개를 '
+    + ic + ' <b>' + fmt(amt) + '</b> 로 환급합니다.</p>'
+    + '<p>조각 1개 = ' + ic + ' <b>' + fmt(summonCost(bkey, 1)) + '</b> — ' + B.n
+    + ' 소환 1회 가격과 같습니다.</p>'
+    + '<button class="gbtn green" id="rfOk">환급</button>'
+    + '<button class="gbtn" id="rfNo">취소</button>', { noOk:true });
+  $('rfOk').onclick = () => { closeModal(); doRefund(bkey); renderUI(); };
+  $('rfNo').onclick = closeModal;
 }
 
 /* ==========================================================================
@@ -34141,10 +34188,13 @@ function renderSkill(){
      [일괄 강화] 는 강화 가능한 스킬이 하나라도 있을 때만 초록이다(없으면 눌러도 안내만 뜬다). */
   /* 283 — ③ [일괄 강화] 버튼 «자체» 에도 레드닷. 초록/회색(171·202)은 «지금 눌러서 되나» 를
      말하고, 레드닷은 «누를 게 생겼다» 를 말한다 — 주인 지시는 둘을 같이 요구한다. */
-  const skUp = SKILLS.some(canLevel);
-  h += '<div class="sk-btn sk-b1 ok" data-sksum="1"><i class="ol3">스킬 소환</i></div>'
-    +  '<div class="sk-btn sk-b2 ' + (skUp ? 'ok alert' : 'no') + '" data-skup="1">'
-    +  '<i class="ol3">일괄 강화</i>' + (skUp ? '<s class="updot"></s>' : '') + '</div>';
+  /* 757 — [환급] 은 «환급할 조각이 있을 때만» 뜬다(321 규약 — 안 뜨는 것이 곧 «지금은 없다»).
+     그 상태에서만 버튼 줄이 3칸으로 벌어지고(`.r3`), 안 뜨면 레퍼런스 2칸 그대로 **Δ0px** 다. */
+  const skUp = SKILLS.some(canLevel), skRf = refundAmount(SKILLS) > 0, r3 = skRf ? ' r3' : '';
+  h += '<div class="sk-btn sk-b1 ok' + r3 + '" data-sksum="1"><i class="ol3">스킬 소환</i></div>'
+    +  '<div class="sk-btn sk-b2 ' + (skUp ? 'ok alert' : 'no') + r3 + '" data-skup="1">'
+    +  '<i class="ol3">일괄 강화</i>' + (skUp ? '<s class="updot"></s>' : '') + '</div>'
+    +  (skRf ? '<div class="sk-btn sk-b3 ok r3" data-skrf="1"><i class="ol3">환급</i></div>' : '');
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
@@ -34162,6 +34212,7 @@ $('bSk').addEventListener('click', e => {
   const q = e.target.closest('[data-skeq]');
   if(q){ toggleEquip(SK[q.dataset.skeq], 'skill'); save(); uiDirty = true; renderUI(); return; }
   if(e.target.closest('[data-sksum]')){ goTab('shop'); return; }   /* 그 자리 소환 X → 10 상점 소환 탭 */
+  if(e.target.closest('[data-skrf]')){ askRefund('skill'); return; }   /* 757 */
   if(e.target.closest('[data-skup]')){
     const r = levelUpAll(SKILLS);
     /* 202 — 「일괄 강화 실행 시 즉시 소등」(주인 확정). `levelUpMax` 가 `uiDirty` 만 세우면
@@ -34244,10 +34295,12 @@ function renderPet(){
   /* 8 버튼 2개 — [동료 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §26) */
   /* 171 — 07 스킬 시트와 같은 규칙(같은 부품이다) */
   /* 283 — ③ [일괄 강화] 버튼 자체의 레드닷(07 스킬 경로와 같다) */
-  const ptUp = PETS.some(canLevel);
-  h += '<div class="sk-btn sk-b1 ok" data-ptsum="1"><i class="ol3">펫 소환</i></div>'
-    +  '<div class="sk-btn sk-b2 ' + (ptUp ? 'ok alert' : 'no') + '" data-ptup="1">'
-    +  '<i class="ol3">일괄 강화</i>' + (ptUp ? '<s class="updot"></s>' : '') + '</div>';
+  /* 757 — [환급] 은 07 스킬 시트와 **같은 부품·같은 규칙**이다(주인 보강 «펫도 스킬이랑 같은 방식») */
+  const ptUp = PETS.some(canLevel), ptRf = refundAmount(PETS) > 0, r3 = ptRf ? ' r3' : '';
+  h += '<div class="sk-btn sk-b1 ok' + r3 + '" data-ptsum="1"><i class="ol3">펫 소환</i></div>'
+    +  '<div class="sk-btn sk-b2 ' + (ptUp ? 'ok alert' : 'no') + r3 + '" data-ptup="1">'
+    +  '<i class="ol3">일괄 강화</i>' + (ptUp ? '<s class="updot"></s>' : '') + '</div>'
+    +  (ptRf ? '<div class="sk-btn sk-b3 ok r3" data-ptrf="1"><i class="ol3">환급</i></div>' : '');
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
@@ -34269,6 +34322,7 @@ $('bPet').addEventListener('click', e => {
   /* 106 — 상점에 «동료 상자» 가 생겼다. 73 이 «막다른 길»(상점에 펫 카드가 없다)로 남긴 경로를
      여기서 잇는다 — goTab 으로 탭 상태·seen 점을 정상 처리한 뒤 그 상자까지 스크롤·팝한다. */
   if(e.target.closest('[data-ptsum]')){ goTab('shop'); openShopPage('pet'); return; }
+  if(e.target.closest('[data-ptrf]')){ askRefund('pet'); return; }     /* 757 */
   if(e.target.closest('[data-ptup]')){
     const r = levelUpAll(PETS);
     uiDirty = true; renderUI();                 /* 202 — 즉시 소등(07 스킬 경로와 같다) */
