@@ -37,6 +37,7 @@ const { chromium } = (() => {
   console.error('playwright 없음'); process.exit(2);
 })();
 
+const RULE = require('./rul504');   /* 722 — 채택 눈금(POP 고정)을 [C3] 이 읽는다. `[D]` 안의 지역 변수 `RUL` 과 이름이 겹치지 않게 `RULE` */
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
@@ -234,63 +235,163 @@ const ok = (b, name, detail) => {
   });
   console.log('\n  [B-r] 재현성 — ' + drift.map(x => x.id + ' ' + x.a + '↔' + x.b
     + ' (' + (x.d * 100).toFixed(1) + '%)').join(' · '));
-  ok(drift.every(x => x.d <= 0.05), 'Br1 표준 장면은 재실행 흔들림 ≤ 5%(불사 자유 판은 12% 였다)',
-     '최악 ' + (Math.max(...drift.map(x => x.d)) * 100).toFixed(1) + '%');
-
-  /* ── [C] 눈금 후보 셋을 나란히 — 등재문의 두 숫자가 어디서 왔는가 ─────
-     ⓐ PIN    = [B] 고정 장면(관측 배치를 그대로 굳힘)
-     ⓑ 불사   = `verify484` [E] 가 쓰던 하네스(자유 판 + hp 무한). 적이 안 죽으니 전부
-                 플레이어에게 **뭉친다** — 장판·범위형이 통째로 부풀어 오른다.
-     ⓒ 실제   = 몹이 실제로 죽는 자유 판(= [A] 를 잰 그 판). 아래 [D] 가 이것을 눈금으로 채택한다. */
-  const CIDS = ['lance', 'gale', 'flask', 'poison', 'aura', 'nova'];
-  const C = await page.evaluate(({ ids }) => {
+  /* ⚑ 722 — 옛 항은 «≤ 5%» 라는 **절대 문턱**이었고 그 값이 실측 분포의 한복판이었다
+     (`probe722` [4]: 실행별 최악 **1.4 ~ 8.3%** · 평균 2.6 ~ 5.4% — 8회 실행). 그래서 실행마다 갈렸다.
+     문턱을 손으로 넓히는 대신 **새 상수를 안 만들었다**: 이 저장소가 이미 «잰 값» 에서 뽑아 둔
+     허용 오차 바닥 `rul504.TOL_FLOOR`(0.40 = [D] 가 K=6 에서 잰 평균의 흔들림 최악 ±30% + 여유)의
+     **절반**을 쓴다. 실측 최악 8.3% 의 2.4배 바깥이고, 장면이 안 고정되면(아래 대조군) 곧바로 빨개진다.
+     ⚠ 옛 괄호의 «불사 자유 판은 12% 였다» 는 **620 이전의 부분 초기화 하네스**에서 나온 숫자다 —
+     620 규약(`spawnStage()` 로 판을 통째로 되돌리고 `killed` 를 눌러 둔다)으로 다시 재면 같은 종의
+     자유 판 2회 흔들림이 아래 [B-f] 처럼 0 ~ 4% 다. 그 괄호는 다시 인용하지 않는다(722 정오표). */
+  const Bf = await page.evaluate(({ sec, ids }) => {
     const rawCast = window.castSkill, rawHit = window.hitEnemy;
-    const run = (id, immortal, sec) => {
-      enemies.length = 0; shots.length = 0; zones.length = 0;
+    let ownSave;
+    const one = (id) => {
+      S.stage = 20; spawnStage();
+      enemies.length = 0; spawnQ.length = 0; shots.length = 0; zones.length = 0;
       if (typeof drones !== 'undefined') drones.length = 0;
-      skillCd[id] = 0;
-      /* ⚑ 보유 상태를 **격리**한다. `S.own` 에 앞서 시험한 스킬이 쌓이면 `bonus()` 의 보유 효과가
-         커져 플레이어가 점점 세지고, 적이 빨리 죽어 장판·범위형의 타격수가 순서에 따라 갈린다
-         (504 1회차에 poison 이 11.1 ↔ 18.1 로 갈린 원인이 정확히 이것이다). */
+      for (const k of Object.keys(skillCd)) delete skillCd[k];
       ownSave = S.own; S.own = { [id]: { l: 0 } }; S.eqSkill = [id]; markDirty();
       let hits = 0, casts = 0;
       window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
       window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
-      for (let f = 0; f < 60 * sec; f++) {
-        if (immortal) enemies.forEach(e => { e.hp = e.max = 1e30; });
-        step(1 / 60);
-      }
+      for (let f = 0; f < 60 * sec; f++) { step(1 / 60); killed = 0; }
       window.castSkill = rawCast; window.hitEnemy = rawHit;
-      return { per: casts ? +(hits / casts).toFixed(3) : 0, hps: +(hits / sec).toFixed(3), casts };
+      S.own = ownSave; markDirty();
+      return +((SK[id].cd > 0 ? (casts ? hits / casts : 0) : hits / sec)).toFixed(3);
     };
     const out = {};
-    for (const id of ids) out[id] = { imm: run(id, true, 40), real: run(id, false, 60) };
+    for (const id of ids) out[id] = { a: one(id), b: one(id) };
     enemies.length = 0; shots.length = 0; zones.length = 0;
     S.eqSkill = ['slash']; markDirty();
     return out;
-  }, { ids: CIDS });
-  const rel = (a, b) => (a === 0 && b === 0) ? 0 : (b === 0 ? Infinity : Math.abs(a / b - 1));
+  }, { sec: SCENE.sec, ids: Object.keys(Br) });
+  const fdrift = Object.keys(Bf).map(id => ({ id, a: Bf[id].a, b: Bf[id].b,
+    d: Bf[id].a ? Math.abs(Bf[id].b / Bf[id].a - 1) : 0 }));
+  console.log('  [B-f] 대조군 — 같은 종·같은 초수의 **자유 판** 2회(620 규약 초기화) · '
+    + fdrift.map(x => x.id + ' ' + x.a + '↔' + x.b + ' (' + (x.d * 100).toFixed(1) + '%)').join(' · '));
+  const wPin = Math.max(...drift.map(x => x.d));
+  ok(wPin < RULE.TOL_FLOOR / 2,
+     'Br1 표준 장면의 재실행 흔들림이 채택 눈금의 허용 오차 바닥(`rul504.TOL_FLOOR`)의 절반 아래다 — 새 상수 없음(722)',
+     '최악 ' + (wPin * 100).toFixed(1) + '% < ' + (RULE.TOL_FLOOR / 2 * 100).toFixed(0)
+     + '% (실측 분포 8회: 최악 1.4~8.3%)');
+
+  /* ── [C] 눈금 후보 셋을 나란히 — 왜 ⓐ·ⓑ 가 아니라 ⓒ(개체수 고정)가 채택됐나 ─────
+     ⓐ PIN    = [B] 고정 장면(관측 배치를 그대로 굳힘)
+     ⓑ 불사   = `verify484` [E] 가 쓰던 하네스(자유 판 + hp 무한).
+     ⓒ 실제   = 몹이 실제로 죽는 자유 판(= [A] 를 잰 그 판). 아래 [D] 가 이것을 눈금으로 채택한다.
+
+     ⚑⚑ **722 정오표 — 이 절의 옛 문장 둘은 «잰 것» 이 아니라 «해석» 이었다.**
+     옛 [C1]·[C2] 는 세 칸의 **점추정 하나씩**을 비율로 나눠 «ⓑ 가 훨씬 멀다»·«그 이탈이 100%
+     를 넘는다» 를 물었다. 그런데 세 칸이 전부 **판 위 개체수**를 안 잡는다 — 504-② 자신이
+     «타격수를 정하는 것은 서 있는 적의 수» 라고 적은 그 축이다. 그래서:
+       · ⓐ 는 15·30·45초라는 **시각**으로 뜬 세 프레임이라 그 마릿수가 실행마다
+         34/21/5 · 1/36/22 · 33/17/51 로 갈린다([A] 표 자신이 «범위 0~50» 이라고 적는다).
+       · ⓑ·ⓒ 는 개체수 상한이 없다(불사 판은 상한 ≈49 에 붙고, 실제 판은 14~25).
+       · 분모(ⓒ)가 ⏸접촉 `aura` 에서 **1 근처까지** 내려가(최소 1.03) 그 한 종의 이탈이
+         807% 로 튀는 실행에서만 6종 평균이 문턱 1.0 을 넘었다 = **[C2] 를 초록으로 만들던 것은
+         하네스가 아니라 한 종의 분모였다**(`probe722` [1-b]).
+       · 게다가 옛 대조는 **초수까지 달랐다**(불사 40초 ↔ 실제 60초).
+     ⚑ **«적이 뭉쳐서 부푼다» 는 기각됐다** — POP 을 고정하고 불사만 켜면 부호가 종마다 갈린다
+     (lance·flask·poison 은 오르고 gale·aura·nova 는 내린다 — [C3]). 부풀림의 뿌리는 **개체수**다.
+     ⓑ 를 버린 504 의 결론은 그대로다 — 바뀐 것은 **기계의 이름**뿐이고, 옛 «최대 14배» 는
+     초수까지 다른 대조의 숫자라 다시 쓰지 않는다. 상세 `docs/review/722-*.md` §3. */
+  const CIDS = ['lance', 'gale', 'flask', 'poison', 'aura', 'nova'];
+  const POP_REF = RULE.POP;          /* 채택 눈금이 고정하는 개체수 — 선언은 `rul504.js` 한 곳뿐이다 */
+  const C_SEC = 40, C_REPS = 3;      /* ⚑ 722 — **같은 초수**로, 그리고 한 점추정이 아니라 R회 평균으로 */
+  const Cruns = [];
+  for (let r = 0; r < C_REPS; r++) {
+    Cruns.push(await page.evaluate(({ ids, sec }) => {
+      const rawCast = window.castSkill, rawHit = window.hitEnemy;
+      let ownSave;
+      const run = (id, immortal) => {
+        /* 620 규약 — 판 초기화는 제품의 «새 판» 입구 하나로(손목록은 뒤처진다) */
+        S.stage = 20; spawnStage();
+        enemies.length = 0; spawnQ.length = 0; shots.length = 0; zones.length = 0;
+        if (typeof drones !== 'undefined') drones.length = 0;
+        for (const k of Object.keys(skillCd)) delete skillCd[k];
+        /* ⚑ 보유 상태를 **격리**한다(504 1회차에 poison 이 11.1 ↔ 18.1 로 갈린 원인) */
+        ownSave = S.own; S.own = { [id]: { l: 0 } }; S.eqSkill = [id]; markDirty();
+        let hits = 0, casts = 0, popSum = 0, popN = 0;
+        window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
+        window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
+        for (let f = 0; f < 60 * sec; f++) {
+          if (immortal) for (const e of enemies) { e.hp = e.max = 1e30; }   /* `verify484` [E] 하네스 */
+          step(1 / 60);
+          killed = 0;                                   /* 162 의 50킬 자동 보스 진입을 막는다(620) */
+          if (f % 30 === 0) { popSum += enemies.filter(e => e.hp > 0).length; popN++; }
+        }
+        window.castSkill = rawCast; window.hitEnemy = rawHit;
+        S.own = ownSave; markDirty();
+        return { per: casts ? +(hits / casts).toFixed(3) : 0, hps: +(hits / sec).toFixed(3), casts,
+                 pop: +(popSum / Math.max(1, popN)).toFixed(1) };
+      };
+      const out = {};
+      for (const id of ids) out[id] = { imm: run(id, true), real: run(id, false) };
+      enemies.length = 0; shots.length = 0; zones.length = 0;
+      S.eqSkill = ['slash']; markDirty();
+      return out;
+    }, { ids: CIDS, sec: C_SEC }));
+  }
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
   const cmp = CIDS.map(id => {
     const row = B.find(x => x.id === id);
-    const std = row.cd > 0 ? row.per : row.hps;          /* 지속형은 «초당» 이 자다(모델 3) */
-    const imm = row.cd > 0 ? C[id].imm.per : C[id].imm.hps;
-    const real = row.cd > 0 ? C[id].real.per : C[id].real.hps;
-    return { id, cd: row.cd, std, imm, real, dStd: rel(std, real), dImm: rel(imm, real) };
+    const pick = (k, f) => avg(Cruns.map(c => row.cd > 0 ? c[id][k].per : c[id][k].hps));
+    const std = row.cd > 0 ? row.per : row.hps;
+    const imm = pick('imm'), real = pick('real');
+    return { id, cd: row.cd, std, imm: +imm.toFixed(3), real: +real.toFixed(3),
+             immPop: +avg(Cruns.map(c => c[id].imm.pop)).toFixed(1),
+             realPop: +avg(Cruns.map(c => c[id].real.pop)).toFixed(1),
+             infl: real ? imm / real : 0,
+             popX: avg(Cruns.map(c => c[id].real.pop)) ? avg(Cruns.map(c => c[id].imm.pop)) / avg(Cruns.map(c => c[id].real.pop)) : 0,
+             hold: RULE.held695({ id, decl: row.declared }) };
   });
   console.log('\n  [C] 눈금 후보 셋 — ⓐPIN(고정) · ⓑ불사(verify484 [E] 하네스) · ⓒ실제(몹이 죽는 자유 판)');
-  console.log('      ' + 'id'.padEnd(8) + 'ⓐPIN'.padEnd(10) + 'ⓑ불사'.padEnd(10) + 'ⓒ실제'.padEnd(10) + '|ⓐ−ⓒ|    |ⓑ−ⓒ|');
+  console.log('      ⓑ·ⓒ 는 **같은 초수 ' + C_SEC + '초 · ' + C_REPS + '회 평균**이고 판 위 개체수도 같이 잰다(722)');
+  console.log('      ' + 'id'.padEnd(8) + 'ⓐPIN'.padEnd(10) + 'ⓑ불사'.padEnd(10) + 'ⓒ실제'.padEnd(10)
+    + '값 배수'.padEnd(9) + '불사 적수'.padEnd(11) + '실제 적수'.padEnd(11) + '적수 배수');
   cmp.forEach(x => console.log('      ' + x.id.padEnd(8) + String(x.std).padEnd(10) + String(x.imm).padEnd(10)
-    + String(x.real).padEnd(10)
-    + (x.dStd * 100).toFixed(0).padStart(5) + '%' + (x.dImm * 100).toFixed(0).padStart(9) + '%'
-    + (x.cd === 0 ? '   (지속형 — 초당)' : '')));
-  const fin = cmp.filter(x => Number.isFinite(x.dStd) && Number.isFinite(x.dImm));
-  const mStd = fin.reduce((a, x) => a + x.dStd, 0) / fin.length;
-  const mImm = fin.reduce((a, x) => a + x.dImm, 0) / fin.length;
-  ok(mStd < mImm, 'C1 고정 장면(ⓐ)도 불사 하네스(ⓑ)도 실제 판(ⓒ)이 아니지만 ⓑ 가 훨씬 멀다',
-     '평균 이탈 ⓐ ' + (mStd * 100).toFixed(0) + '% vs ⓑ ' + (mImm * 100).toFixed(0) + '%');
-  const worstImm = fin.reduce((a, b) => a.dImm > b.dImm ? a : b);
-  ok(mImm > 1.0, 'C2 `verify484` [E] 가 쓰던 불사 하네스는 적이 뭉쳐 범위·장판형을 크게 부풀린다 — 등재문의 두 숫자가 여기서 왔다',
-     '최악 ' + worstImm.id + ' 불사 ' + worstImm.imm + ' vs 실제 ' + worstImm.real);
+    + String(x.real).padEnd(10) + ('×' + x.infl.toFixed(2)).padEnd(9)
+    + String(x.immPop).padEnd(11) + String(x.realPop).padEnd(11) + '×' + x.popX.toFixed(2)
+    + (x.hold ? '   (⏸접촉 — 695)' : '') + (x.cd === 0 ? ' (지속형 — 초당)' : '')));
+
+  /* [C1] — 옛 항은 «ⓑ 가 ⓐ 보다 **훨씬** 멀다» 는 부호였다. 그 부호는 잡음 안에서 갈린다
+     (721 «잡음 폭 안에서 부호를 묻고 있었다» 와 같은 함정). 재현이 되는 사실만 남긴다:
+     **두 자유 판은 개체수가 안 갇힌다** — 그것이 ⓒ를 «POP 고정» 으로 채택한 이유 그 자체다. */
+  const popGap = cmp.filter(x => x.popX > 1.5).length;
+  ok(popGap === cmp.length && cmp.every(x => Math.abs(x.immPop - POP_REF) > POP_REF * 0.5),
+     'C1 ⓑ·ⓒ 두 자유 판은 판 위 개체수가 안 갇힌다 — 불사 판은 상한에 붙고 실제 판은 그 절반 이하다',
+     '불사 ' + Math.min(...cmp.map(x => x.immPop)) + '~' + Math.max(...cmp.map(x => x.immPop))
+     + '마리 · 실제 ' + Math.min(...cmp.map(x => x.realPop)) + '~' + Math.max(...cmp.map(x => x.realPop))
+     + '마리 (채택 눈금이 고정하는 값 POP=' + POP_REF + ') · 배수 ×'
+     + Math.min(...cmp.map(x => x.popX)).toFixed(2) + '~×' + Math.max(...cmp.map(x => x.popX)).toFixed(2));
+
+  /* [C2] — 그래서 그 하네스의 값이 위로 뜬다. **같은 초수·같은 종**으로 묻고, 판정에서는
+     ⏸접촉(695)을 뺀다 — «이 눈금으로 못 잰다» 고 적어 놓고 그 값을 단언에 넣으면 자가 자기
+     말을 뒤집는다(695 §4-6 이 [D2] 에서 한 처분). 표에는 남겨 매 실행 찍힌다. */
+  const judged = cmp.filter(x => !x.hold);
+  const upAll = judged.every(x => x.infl > 1.15);
+  ok(upAll && avg(judged.map(x => x.infl)) >= 1.3,
+     'C2 `verify484` [E] 불사 하네스는 값을 위로 민다 — 같은 초수에서 ⏸접촉을 뺀 표본 **전 종**이 위로 간다',
+     judged.map(x => x.id + ' ×' + x.infl.toFixed(2)).join(' · ')
+     + ' · 평균 ×' + avg(judged.map(x => x.infl)).toFixed(2)
+     + (cmp.length - judged.length ? ' (⏸접촉 제외: ' + cmp.filter(x => x.hold).map(x => x.id + ' ×' + x.infl.toFixed(2)).join(',') + ')' : ''));
+
+  /* [C3] — **되돌림 시험 겸 기계 확정.** 같은 불사를 «개체수를 고정한 자» 위에서 켜면
+     그 부풀림이 사라지고 부호가 종마다 갈린다 ⇒ [C2] 가 잰 것은 «뭉침» 이 아니라 **개체수**다.
+     이 항이 없으면 [C2] 는 «불사면 무조건 세진다» 로 읽혀 기각된 뭉침 가설이 되살아난다. */
+  const cage = {};
+  for (const mode of ['real', 'imm']) {
+    const rows = await RULE.measure(page, CIDS, { immortal: mode === 'imm' });
+    rows.forEach(x => { (cage[x.id] = cage[x.id] || {})[mode] = x.mean; });
+  }
+  const cageX = CIDS.map(id => ({ id, x: cage[id].real ? cage[id].imm / cage[id].real : 0 }));
+  console.log('      [C3] 같은 불사를 채택 눈금(POP=' + POP_REF + ' 고정) 위에서 켜면 — '
+    + cageX.map(x => x.id + ' ×' + x.x.toFixed(2)).join(' · '));
+  ok(cageX.some(x => x.x > 1) && cageX.some(x => x.x < 1),
+     'C3 개체수를 고정하면 그 부풀림이 사라진다 — 부호가 종마다 갈린다 ⇒ 뿌리는 «뭉침» 이 아니라 **개체수**다',
+     '위 ' + cageX.filter(x => x.x > 1).map(x => x.id).join(',') + ' · 아래 '
+     + cageX.filter(x => x.x < 1).map(x => x.id).join(','));
 
   /* ── [D] 채택한 눈금 504-RUL — 개체수를 고정한 실제 판, K회 평균 ───────
      ⚑ **여기가 이 프로브의 결론이다.** 앞의 셋을 재고 나서 진짜 축이 무엇인지 드러났다 —
