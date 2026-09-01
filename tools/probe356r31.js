@@ -58,7 +58,12 @@ const SYN_T = `<!doctype html><meta charset="utf-8"><style>
 </style><body style="margin:0"><div id="app">
   <canvas id="cSq"   width="200" height="100"></canvas>
   <canvas id="cProp" width="200" height="100"></canvas>
+  <div class="dup"><canvas class="cd" width="100" height="100" style="width:100px;height:100px"></canvas></div>
+  <div class="dup"><canvas class="cd" width="100" height="100" style="width:60px;height:60px"></canvas></div>
 </div></body>`;
+/* ⚠ 뒤의 둘(`div.dup>canvas.cd`)은 **애니메이션이 없고 크기만 다른 쌍둥이**다 — 경로 문자열이 똑같아서
+   접기 키에 순번이 없으면 «한 자리가 40px 움직였다» 로 세진다(13 재화 탭에서 실제로 그랬다).
+   `[5]`/`[O-e3]` 이 그 함정을 문다. */
 
 /* 한 주기를 훑어 **노드마다 최악 위상**을 접는다. 이 파일이 새로 세우는 유일한 것.
    ⚠ 키는 «화면 + 셀렉터» 다([N] `pairUp` 과 같은 규약 — 같은 셀렉터가 화면마다 다른 상자를 갖는다). */
@@ -80,16 +85,31 @@ function worstOverCycle(perPhase, tol) {
 /* 한 화면분 위상 표본을 **하나의 줄**로 접는다 — `verify356` [O] 가 이것을 그대로 받아 쓴다.
    ⚠ `boxMoved` 가 이 회차의 무음 실패 감시다([N-a2] 와 같은 규율): 위상을 열여섯 번 바꿨는데
       매체 상자가 한 자리도 안 움직였으면 그 0 은 **같은 순간을 열여섯 번 잰 0** 이다. */
-function foldScreen(perPhase, tol) {
+function foldScreen(perPhase, tol, opt) {
   const cyc = worstOverCycle(perPhase, tol);
   const rest = verdict((perPhase[0] || { rows: [] }).rows, tol);
   const box = new Map();
   for (const { rows, tr } of perPhase) {
-    const trBy = new Map((tr || []).map((t) => [t.sel, t.ident]));
+    /* ⚠⚠ **셀렉터는 한 화면에서 유일하지 않다** — `.gem>img.cic` 같은 경로는 카드마다 같은 문자열이다.
+       그것을 키로 삼아 «최소↔최대 상자» 를 접으면 **서로 다른 노드의 크기 차이가 «움직임» 으로 둔갑한다**
+       (1판이 그렇게 짰다가 13 재화 탭에서 «전용 4자리» 를 만들어 냈는데, 같은 노드를 위상별로 찍어 보니
+        열여섯 칸 전부 79.91×79.91 로 **한 번도 안 움직였다**). ⇒ 키에 **등장 순번**을 붙인다.
+       ⚠ 순번은 DOM 순서라 위상마다 같은 노드를 가리킨다(위상 스윕은 렌더를 안 바꾼다). */
+    const seenSel = new Map();
+    const idxOf = (sel) => { const n = (seenSel.get(sel) || 0); seenSel.set(sel, n + 1); return n; };
+    const trSeen = new Map();
+    const trBy = new Map((tr || []).map((t) => {
+      const n = (trSeen.get(t.sel) || 0); trSeen.set(t.sel, n + 1);
+      return [t.sel + '#' + n, t.ident];
+    }));
     for (const r of rows) {
-      const key = (r.screen || '') + '|' + r.sel;
+      const n = idxOf(r.sel);
+      /* `naiveKey` 는 **반사실 대조군**이다 — 순번을 안 붙이면 무엇이 세지는지를 같은 자로 보여 준다
+         (자를 두 벌로 안 적으려고 별도 구현이 아니라 **깃발**로 뒀다). */
+      const key = (r.screen || '') + '|' + r.sel + ((opt && opt.naiveKey) ? '' : '#' + n);
       const cur = box.get(key);
-      const ident = trBy.has(r.sel) ? trBy.get(r.sel) : null;
+      const trKey = key.slice(key.indexOf('|') + 1);
+      const ident = trBy.has(trKey) ? trBy.get(trKey) : null;
       if (!cur) box.set(key, { key, w0: r.w, w1: r.w, h0: r.h, h1: r.h, everScaled: ident === false, sawTr: ident !== null });
       else {
         cur.w0 = Math.min(cur.w0, r.w); cur.w1 = Math.max(cur.w1, r.w);
@@ -109,6 +129,7 @@ function foldScreen(perPhase, tol) {
     maxDev: cyc.all.reduce((m, x) => Math.max(m, x.dev), 0),
     maxDevKey: (cyc.all.sort((a, b) => b.dev - a.dev)[0] || { key: null }).key,
     boxMoved: moved.length,
+    movedKeys: moved.map((b) => b.key),
     boxMovedTrFree: movedTrFree.length,
     trFreeKeys: movedTrFree.slice(0, 3).map((b) => b.key),
   };
@@ -220,6 +241,17 @@ if (require.main !== module) return;
     const propBad = cyc.bad.find((x) => x.key.indexOf('#cProp') >= 0);
     if (prop && !propBad) ok(`[3] ⓚ 주기 최악 편차 ${prop.dev.toFixed(4)} ≤ 허용 ${TOL} — «애니메이션이 걸렸다» 는 이유만으로는 안 빨개진다`);
     else bad(`[3] ⓚ 음성항이 빨갛다: ${JSON.stringify(propBad ? propBad.row : null)}`);
+
+    console.log('[5] 함정 — 같은 셀렉터를 쓰는 «크기만 다른 쌍둥이» 를 «움직였다» 로 세지 않는가');
+    {
+      const f = foldScreen(perPhase, TOL);
+      const naive = foldScreen(perPhase, TOL, { naiveKey: true });
+      const dupF = f.movedKeys.filter((k) => k.indexOf('canvas.cd') >= 0);
+      const dupN = naive.movedKeys.filter((k) => k.indexOf('canvas.cd') >= 0);
+      if (!dupF.length && dupN.length)
+        ok(`[5] 순번 키: 쌍둥이 0자리 · **순번 없는 키(반사실 대조군)**: ${dupN.length}자리 ⇒ 13 재화 탭의 «전용 4자리» 는 이 겹침이 만든 유령이었다`);
+      else bad(`[5] 함정이 안 재현되거나 안 막힌다 — 순번 키 ${dupF.length}자리 / 순번 없는 키 ${dupN.length}자리`);
+    }
 
     console.log('[4] 대조군 — 같은 자리를 [A] 축(scan356.COLLECT)은 무엇이라 하는가');
     await page.evaluate(PIN, 0.5);

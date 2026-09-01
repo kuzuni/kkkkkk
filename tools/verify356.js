@@ -2843,6 +2843,20 @@ async function sweep(browser, inject) {
           ok(`[O-e] 되돌림 — 상자 «높이만» 흔들리는 캔버스(비트맵 200×100 고정): 한 점 ${f.restBad}자리 ↔ 한 주기 ${f.cycBad.length}자리 `
             + `(최악 d=${sq.row.d} @위상 ${(sq.at * 100).toFixed(0)}%) ⇒ [O-b] 의 0 은 «안 보는 자» 의 0 이 아니다`);
         else bad(`[O-e] 되돌림 실패 — 한 점 ${f.restBad} / 한 주기 ${f.cycBad.length} (시간 전용 자리를 못 본다)`);
+        /* ⓔ3 ⚑ **접기 키의 함정** — 경로 문자열은 한 화면에서 유일하지 않다(`div.gem>img.cic` 는 카드마다 같다).
+           순번 없이 «최소↔최대 상자» 를 접으면 **크기만 다른 쌍둥이가 «움직였다»** 가 된다
+           (이 회차 1판이 13 재화 탭에서 «전용 4자리» 를 그렇게 만들어 냈고, 같은 노드를 위상별로 찍어 보니
+            열여섯 칸 전부 79.91×79.91 로 한 번도 안 움직였다). 반사실 대조군을 같은 자의 깃발로 세운다. */
+        {
+          const naive = R31.foldScreen(per, TOL, { naiveKey: true });
+          const dupF = f.movedKeys.filter((k) => k.indexOf('canvas.cd') >= 0);
+          const dupN = naive.movedKeys.filter((k) => k.indexOf('canvas.cd') >= 0);
+          if (!dupF.length && dupN.length)
+            ok(`[O-e3] 접기 키 함정 — 크기만 다른 쌍둥이(같은 셀렉터)를 순번 키는 ${dupF.length}자리, `
+              + `**순번 없는 키(반사실 대조군)는 ${dupN.length}자리**로 센다 ⇒ [O-a2]·[O-a2b] 의 수는 노드별 수다`);
+          else bad(`[O-e3] 접기 키 함정이 안 막힌다 — 순번 키 ${dupF.length}자리 / 순번 없는 키 ${dupN.length}자리`);
+        }
+
         if (!prop) ok('[O-e2] 음성항 — 종횡이 «같이» 흔들리는 상자는 어느 위상에도 안 빨개진다 (애니메이션이 걸렸다는 이유만으로는 결함이 아니다)');
         else bad(`[O-e2] 음성항 실패 — 멀쩡한 등방 애니메이션을 결함이라 부른다: d=${prop.row.d}`);
       } catch (e) { bad('[O-e] 합성 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
