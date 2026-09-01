@@ -64,8 +64,12 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   const saLine = (code.match(/sideAlert\('promo',[^;]*\);/) || [''])[0];
   ok("[0] `sideAlert('promo', …)` 의 점등축은 `promoReady()` 다(입장 게이트 `canPromote()` 가 아니다)",
     /promoReady\(\)/.test(saLine) && !/canPromote\(\)/.test(saLine), saLine);
-  ok("[0-b] 453 — 그 축에 `!battleBusy()` 가 함께 걸려 전투 중에는 꺼진다(321 «누를 수 있다» 규약)",
-    /!battleBusy\(\)/.test(saLine), saLine);
+  /* ⚑ 665(주인 지시 2026-09-02) — 같은 항을 **한 번 더 갈아 끼운다.** 453 의 `!battleBusy()` 가
+     `!battleLocked()` 로 바뀌었다: 스테이지 도전 중에는 승급전에 실제로 들어갈 수 있으므로 그때
+     닷을 끄면 이번에는 «누를 수 있는데 안 켜지는 닷» = 반대 방향의 거짓 신호가 된다.
+     295 의 뜻은 여전히 그대로이고 바뀐 것은 **어느 자를 보는가** 뿐이다. */
+  ok("[0-b] 453·665 — 그 축에 `!battleLocked()` 가 함께 걸려 **갈아탈 수 없는 전투** 중에만 꺼진다(321 «누를 수 있다» 규약)",
+    /!battleLocked\(\)/.test(saLine) && !/!battleBusy\(\)/.test(saLine), saLine);
 
   /* 팝업 문구 — 표기와 동작이 어긋나면 안 된다(기능 완성 규칙) */
   ok('[0] 승급전 팝업에 «조건을 만족하면 … 등장합니다» 문구가 없다',
