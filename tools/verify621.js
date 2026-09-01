@@ -133,6 +133,8 @@ async function hold(page, sp) {
     id: sp.id, ticks: rep.length, frames: fr.length, w0: p3(W0),
     cyc, cycRatio: p3(cyc / rep.length), dnCyc, live, gone,
     dnRatio: live ? p3(dnCyc / live) : 0,
+    dnFrames: owns.filter(x => x <= DOWN_TH).length,
+    dnPct: owns.length ? p3(owns.filter(x => x <= DOWN_TH).length / owns.length) : 0,
     omin: p3(Math.min(...owns)), omax: p3(Math.max(...owns)),
     smin: p3(Math.min(...fr.map(f => f.sc))), smax: p3(Math.max(...fr.map(f => f.sc))),
     amin: p3(Math.min(...fr.map(f => f.w / W0))), amax: p3(Math.max(...fr.map(f => f.w / W0))),
@@ -203,7 +205,13 @@ async function hold(page, sp) {
   console.log('\n[C] 왕복이지 «풀린 것» 이 아니다 — 눌린 크기도 매 틱 지난다');
   for (const sp of SPOTS) {
     const o = R[sp.id];
-    ok(!!o && o.dnRatio >= 0.95, 'C1 ' + sp.id + ' 눌린 크기(≤' + DOWN_TH + ')를 지난 틱 ≥ 95%',
+    /* ⚠ 문턱이 둘인 이유 — 틱 하나에 들어오는 rAF 표본이 **3~5장**뿐이라 «틱마다 눌린 장이 있다» 를
+       0.95 로 잡으면 표본 운에 진다(눌림이 틱의 60% 를 차지해도 4장이 전부 나머지 40% 에 떨어질 확률이
+       매 틱 2.6% · 19틱이면 한 번쯤은 난다 — 실측으로 18/19 = 0.947 이 났다). 흔들리지 않는 축은
+       **프레임 듀티**이고(실측 0.49~0.60 · 수리 전 0.011~0.046), 틱 축은 «거의 매 틱» 으로 남긴다. */
+    ok(!!o && o.dnPct >= 0.40, 'C1 ' + sp.id + ' 눌린 크기(≤' + DOWN_TH + ') 프레임 듀티 ≥ 40% — 수리 전 1.1~4.6%',
+       o ? o.dnFrames + '/' + o.frames + ' = ' + o.dnPct : 'n/a');
+    ok(!!o && o.dnRatio >= 0.85, 'C1b ' + sp.id + ' 눌린 크기를 지난 틱 ≥ 85%(표본 3~5장/틱)',
        o ? o.dnCyc + '/' + o.live + ' = ' + o.dnRatio + (o.gone ? ' · 노드가 갈린 틱 ' + o.gone + '개 제외' : '') : 'n/a');
     ok(!!o && o.smin <= 0.941 && o.smin >= 0.939 && o.smax >= 0.999,
        'C2 ' + sp.id + ' 눌림 층(scale)이 1 ↔ .94 를 오간다 — 진폭은 `jz-dn` 그대로(새 값 0개)',
@@ -240,8 +248,10 @@ async function hold(page, sp) {
      그러니 «오버슈트가 있어야 한다» 고 우기지 않고, **무력화 사본과 같은가**를 묻는다. */
   for (const sp of SPOTS) {
     const a = R[sp.id], b = rv[sp.id];
-    ok(!!a && !!b && a.relMax >= b.relMax - 0.005,
-       'R3 ' + sp.id + ' 뗌 스프링을 안 먹었다(무력화 사본과 같거나 크다)',
+    /* ⚠ 크기를 «같거나 크다» 로 비교하면 스프링 표본의 흔들림(1.04~1.055)에 진다 —
+       묻는 것은 «스프링이 도는가» 이므로 **오버슈트가 잡히는 자리인가**로 가른다. */
+    ok(!!a && !!b && (b.relMax < 1.01 || a.relMax >= 1.01),
+       'R3 ' + sp.id + ' 뗌 스프링을 안 먹었다(무력화 사본에서 오버슈트가 보이는 자리면 원본도 보인다)',
        a && b ? '원본 ' + a.relMax + ' ↔ 무력화 ' + b.relMax : 'n/a');
   }
 

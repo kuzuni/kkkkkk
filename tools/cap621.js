@@ -4,7 +4,8 @@
  *
  *   node tools/cap621.js [회차]
  *
- * 세 자리(훈련 카드 · 룬 [강화] · 단련 [단련]) × 「쉼(누르기 전) 1장 + 홀드 8장」.
+ * 세 자리(훈련 카드 · 룬 [강화] · 단련 [단련]) ×
+ *   「쉼 1장 + 홀드 실시간 10장(45ms 간격) + 한 사이클 위상 6장(c1~c6) + 뗌 1장」.
  * 크롭 상자는 **누르기 전 배치 자리**로 고정한다 — 상자가 따라 커지면 크기 변화가 안 보인다.
  * 프레임마다 그 순간의 눌림 층(computed `scale`)과 그려진 폭을 같이 적어 `-frames.json` 으로 남긴다
  * (비평가에게는 **그림만** 주고, 수치는 review 표에 쓴다).
@@ -19,8 +20,15 @@ const fs = require('fs');
 const R = process.argv[2] || '1';
 const OUT = path.resolve(__dirname, '..', 'docs', 'review');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
-const IV = Number(process.env.C621_IV || 90);     /* 지시서 [3]-(다) — 80~100ms 간격 */
-const N = Number(process.env.C621_N || 8);
+/* ⚠ 1회차 교훈 — **간격을 틱 주기와 비슷하게 잡으면 앨리어싱으로 «안 눌린다» 가 찍힌다.**
+   1회차는 90ms 로 찍었는데 실측 틱 간격이 88~127ms 라 표본이 매번 같은 위상(틱 직후 = 원래 크기)에
+   떨어졌다 — 비평가 CI 가 «단련은 8장 중 눌린 장이 2장뿐» 으로 읽은 것이 그것이다(rAF 자로는 같은
+   구간의 눌림 듀티가 49~60%). ⇒ 간격을 **45ms** 로 내려 위상을 골고루 훑는다. */
+const IV = Number(process.env.C621_IV || 45);
+const N = Number(process.env.C621_N || 10);
+/* 한 사이클 위상 스윕 — 홀드 루프를 멈춘 뒤 같은 부품을 한 번 돌리고 위상을 고정해 찍는다.
+   «틱 하나가 어떻게 생겼는가» 는 실시간 표본으로는 운에 맡겨야 해서 따로 만든다. */
+const PH = [0, 0.12, 0.25, 0.4, 0.7, 1];
 
 const SPOTS = [
   { id: 'train',  tab: 'train',  sel: '#trCards [data-tr]',      n: '23 훈련 카드' },
@@ -80,6 +88,24 @@ const SPOTS = [
       meta[sp.id].frames.push({ i: i + 1, sc: m ? m.sc : 'n/a', w: m ? m.w : 0 });
       await page.waitForTimeout(IV);
     }
+    /* ── 한 사이클 위상 스윕(c1~c6) — 홀드 타이머를 멈추고 같은 부품 한 번을 위상별로 정지시켜 찍는다 ── */
+    const CD = 140;
+    for (let i = 0; i < PH.length; i++) {
+      const m = await page.evaluate(([s, dur, frac]) => {
+        const el = document.querySelector(s); if (!el) return null;
+        if (window.trHold && trHold.timer) clearTimeout(trHold.timer);
+        if (window.rtHold && rtHold.timer) clearTimeout(rtHold.timer);
+        jzPressTick(el, dur / 0.9);
+        const an = el.getAnimations().filter(a => a.playState !== 'finished').pop();
+        if (!an) return null;
+        an.pause(); an.currentTime = frac * dur;
+        let sc = 'none'; try { sc = getComputedStyle(el).scale; } catch (_) {}
+        return { sc, w: Math.round(el.getBoundingClientRect().width * 100) / 100 };
+      }, [sp.sel, CD, PH[i]]);
+      await shot('c' + (i + 1));
+      meta[sp.id].cycle = meta[sp.id].cycle || [];
+      meta[sp.id].cycle.push({ i: i + 1, phase: PH[i], sc: m ? m.sc : 'n/a', w: m ? m.w : 0 });
+    }
     await page.mouse.up();
     await page.waitForTimeout(320);
     await shot('after');
@@ -87,7 +113,9 @@ const SPOTS = [
 
   fs.writeFileSync(path.join(OUT, '621-r' + R + '-frames.json'), JSON.stringify(meta, null, 1));
   console.log(made.length + '장 — ' + OUT);
-  for (const k of Object.keys(meta))
-    console.log('  ' + k + ' ' + meta[k].frames.map(f => f.i + ':' + f.sc + '/' + f.w).join('  '));
+  for (const k of Object.keys(meta)) {
+    console.log('  ' + k + ' 실시간 ' + meta[k].frames.map(f => f.i + ':' + f.sc + '/' + f.w).join('  '));
+    if (meta[k].cycle) console.log('  ' + k + ' 사이클 ' + meta[k].cycle.map(f => f.phase + ':' + f.sc + '/' + f.w).join('  '));
+  }
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });
