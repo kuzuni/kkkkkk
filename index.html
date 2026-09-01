@@ -33690,11 +33690,72 @@ const UPFX_NOW = 4;
    (색·플래시는 룬 홀드 머리말 참조 — 실패에는 플래시도 «+1» 도 없다). 583 [G2] «사건당 3~12개»
    하한과 같은 값이라 그 자에도 걸리지 않는다. */
 const UPFX_FAIL_N = 3;
+/* ⚑ 619 13회차 — 홀드 글로우의 **틱 펌프**. 12회차에 두 비평가(ED·EE)의 「8점을 막는 단 하나」가
+   처음으로 완전히 일치했다 — «훈련은 f3~f7 932ms 동안 Lv 가 +9 인데 회당 원장이 0장» 이다.
+   ⚠⚠ **그 처방의 절반은 «하지 말 것» 이다** — EE ② 의 «비용 «−N» 도 넣어라» 는 주인 지시 583 이
+     직접 걷어낸 자리이고(«그 훈련할때 금액 마이너스로 되는 연출 빼기») `verify488` [F3] 이 못박고
+     있다. «+N» 쪽도 2회차가 닫았다(카드 `.cv` 가 «다음에 오를 양» 을 상시로 말하고 `fx-cvswap` 이
+     그 자리를 깜빡이며 손을 떼면 `fxUpOk` 가 델타를 띄운다 = 같은 수가 세 곳). ⇒ 13회차의 갈래는
+     «수치를 한 장 더» 가 아니라 **«수치 없이 회당 신호가 새 사건으로 읽히게»** 다(EB ② 의 축).
+   ⚠ **EB ② 의 값(상시 α.45 → 틱 1.0 → .45)은 그대로 쓰지 않는다** — 9회차가 실측으로 닫은 자리다:
+     5px·α.55 를 비평가 둘이 각각 «없다»(DW «3/7 프레임 소등»)·«감쇠»(DV «실패 구간 ~4px»)로 읽어
+     9px·α.92 로 올린 것이 지금 값이고, 상시를 .45 로 내리면 그 2인 공통이 그대로 되살아난다.
+     ⇒ 바닥은 **안 내리고 봉우리만 올린다**(9px/α.92 → 17px/거의 흰 앰버 → 90ms 로 복귀).
+     «상태 표시» 는 바닥이 그대로 지키고, «새 사건» 은 봉우리가 말한다 — 두 뜻이 한 부품 안에서 갈린다.
+   ⚠ 층은 621 의 눌림 왕복(WAAPI `scale`)·60 쥬시(transform)와 안 겹친다 — 여기는 outline 뿐이고
+     레이아웃에도 영향이 없다(8회차가 box-shadow 를 버린 이유와 같은 규약).
+   ⚠ 재시작은 WAAPI 로 한다(`jzPressTick` 과 같은 길) — 클래스 토글 + 강제 리플로우는 홀드 틱마다
+     동기 레이아웃을 부른다. 앞 펌프는 취소해 겹을 안 쌓는다(625 «한 자리에 한 장» 규약).
+   ⚠⚠ **`startTime` 을 손으로 준다 — 619 4회차가 이미 적어 둔 함정이다**(«애니메이션이 붙자마자
+     시작하지 않는다 — `startTime` 은 다음 스타일 플러시에 정해지는데 홀드 중에는 같은 태스크에서
+     `renderTrainLive()`·게임 루프가 돌아 평균 86~131ms 밀린다»). 펌프 길이가 그 지연보다 짧아서
+     **대기(pending) 중인 애니메이션이 0% 값(17px)을 그대로 물고 있다가 다음 틱에 취소**되면
+     글로우가 상시 17px 로 굳는다 — 13회차 1차 시도의 자가 정확히 그 그림을 찍었다
+     (`probe619c` ⓑ «봉우리 2회 ÷ 강화 20회 = 0.10 · 상시 17px»). 타임라인 현재 시각을 직접 박으면
+     그 대기 구간이 사라진다.
+   ⚠⚠ **길이를 상수로 박으면 어느 한쪽 속도에서 반드시 깨진다** — 홀드 틱은 160ms 에서 시작해
+     `TR_HOLD_ACCEL` 로 **60ms 까지 빨라진다**(`TR_HOLD_DELAY/IV0/IVMIN/ACCEL`). 고정 90ms 는 빠른
+     구간에서 골이 통째로 잘려 «상시 켜짐» 으로 되돌아가고(= 9회차가 세운 상시 글로우와 구분 불가),
+     고정 40ms 는 느린 구간에서 한 프레임만 스쳐 안 보인다. ⇒ **621 이 눌림 왕복에 `h.iv` 를 넘기는
+     것과 같은 길로** 이 부품도 틱 간격을 받아 그 비율로 봉우리·골을 나눈다(봉우리 55% · 골 45%).
+     그래야 어느 속도에서도 «틱마다 한 번 밝아졌다 돌아온다» 가 성립한다.
+   ⚠ 봉우리는 **평평하게** 든다(0%·55% 두 키프레임이 같은 값) — 순수 ease-out 은 첫 5ms 에 값이
+     주저앉아 60fps 화면에서도, 90ms 간격 캡처에서도 한 프레임 안 잡힌다(13회차 2·3차 시도의 자:
+     «최대 10~16px · 봉우리 3~6회 ÷ 강화 19~21회»). 눈이 보는 것은 «봉우리가 프레임에 실리는가» 다. */
+const HOLD_PUMP_HI = 0.55;                          /* 틱 간격 중 봉우리가 차지하는 몫 */
+const HOLD_PUMP_MIN = 34, HOLD_PUMP_MAX = 110;      /* 한 사이클 길이의 아래·위 끝 */
 /* ⚑ 619 8회차 — «누르고 있다» 상시 글로우(.fx-holding CSS 머리말). 재렌더가 클래스를 떨어뜨릴 수
    있으므로 켜는 쪽은 틱마다 다시 단다(문자열 셀렉터도 받는다 — LESSONS 50-①). */
-function fxHoldMark(host, on){
+function fxHoldMark(host, on, iv){
   const el = (typeof host === 'string') ? document.querySelector(host) : host;
-  if(el && el.classList) el.classList[on ? 'add' : 'remove']('fx-holding');
+  if(!el || !el.classList) return;
+  el.classList[on ? 'add' : 'remove']('fx-holding');
+  if(!on) return;
+  fxHoldPump(el, iv);
+}
+/* 틱 펌프 한 사이클(위 머리말). 노드가 갈려도 앞 노드의 애니메이션은 노드와 함께 사라진다. */
+function fxHoldPump(el, iv){
+  if(!el || typeof el.animate !== 'function') return false;
+  /* 사이클은 틱의 80% 만 쓴다 — 나머지 20% 가 **골**이다. 값은 자로 골랐다(`probe619c` ⓑ
+     «봉우리가 실린 프레임 비율»): 0.92 는 골이 틱의 8% 라 화면에서 «상시 켜짐» 으로 되돌아가고,
+     0.62 는 봉우리가 14~17% 프레임에만 실려 이번엔 봉우리 쪽이 스침이 된다. 0.80 이 두 상태를
+     각각 화면에 남기는 자리다(측정값은 review 13회차 표). */
+  const dur = clamp((Number(iv) || TR_HOLD_IV0) * 0.80, HOLD_PUMP_MIN, HOLD_PUMP_MAX);
+  try { if(el._hpump) el._hpump.cancel(); } catch(_){}
+  try {
+    el._hpump = el.animate(
+      [{ outlineWidth:'17px', outlineColor:'rgba(255,236,176,1)', offset:0 },
+       { outlineWidth:'17px', outlineColor:'rgba(255,236,176,1)', offset:HOLD_PUMP_HI },
+       { outlineWidth:'9px',  outlineColor:'rgba(255,172,28,.92)', offset:1 }],
+      { duration: dur, easing:'ease-out' });
+    /* 위 «startTime» 머리말 — 대기 구간을 없앤다(619 4회차 계측).
+       ⚠ 시각은 `document.timeline.currentTime`(= **직전 프레임**)이 아니라 `performance.now()`(= 지금)로
+         박는다. 둘은 같은 시간 원점을 쓰지만 틱은 setTimeout 이라 프레임 사이 아무 데서나 도므로,
+         직전 프레임 시각을 박으면 펌프가 **이미 지난 시간만큼 진행된 채** 시작한다 — 13회차 2차 시도의
+         자가 그 그림을 찍었다(봉우리 0회 · 최대 10px = 55ms 중 앞부분이 통째로 잘렸다). */
+    try { el._hpump.startTime = performance.now(); } catch(_){}
+  } catch(_){ return false; }
+  return true;
 }
 const upFxPool = new Map();                        /* key → [[node,…], …] — 오래된 «세대» 가 앞 */
 const upFxLive = q => q.reduce((n, g) => n + g.length, 0);
@@ -33837,8 +33898,10 @@ function trHoldTick(){
   const cardNow = trCard(h.key);
   upFx('train:' + h.key, cardNow);
   hbBeat(cardNow, true, null, null);
-  fxHoldMark(cardNow, true);                         /* 619 8회차 — 세 화면 같은 «홀드 중» 글로우(한 어휘) */
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  /* 619 13회차 — 글로우 펌프는 **다음 틱까지의 간격**을 받아야 봉우리·골이 그 틱 안에 들어간다.
+     그래서 `h.iv` 를 갱신한 **뒤**로 옮겼다(아래 621 눌림 왕복과 같은 값 = 둘이 같은 박자다). */
+  fxHoldMark(cardNow, true, h.iv);                   /* 619 8회차 — 세 화면 같은 «홀드 중» 글로우(한 어휘) */
   /* ⚑ 621 — 눌림 왕복 한 사이클(주인 지시 2026-09-01 «원래 크기로 돌아오고 누른크기 되고를 반복»).
      여기는 «누른 것 = 호스트» 라 맥박(`jz-hb`, transform)과 **같은 노드**인데, 왕복은 WAAPI 의
      `scale`/`translate` 라 층이 갈려 둘이 곱해진다(jzPressTick 머리말). 619 의 이펙트와 같은 틱에서
@@ -33868,7 +33931,7 @@ function trHoldStart(key, card){
   }
   const fresh = trCard(key);
   if(fresh && fresh !== card && typeof fxHitEl === 'function') fxHitEl(fresh);
-  fxHoldMark(fresh || card, true);                   /* 619 8회차 — 첫 발부터 «홀드 중» 글로우 */
+  fxHoldMark(fresh || card, true, TR_HOLD_DELAY);    /* 619 8회차 — 첫 발부터 «홀드 중» 글로우 (13회차 — 첫 발의 다음 틱까지가 봉우리 예산) */
   /* 488 3회차 — 첫 발에도 «알림». ⚑ 583 — 그 알림에서 **금액만** 뺐다(위 `trHoldTick` 머리말):
      첫 발의 «무엇을 냈는가» 는 바로 위 `fxUpOk(…, bi0.cur)` 의 골드 알갱이가 말한다. */
   hbBeat(fresh || card, true, null, null);
@@ -33980,7 +34043,7 @@ function rtHoldTick(){
      488 규약대로 카드 `sel0` 이고 그쪽은 `jz-hdn` 이 맡는다 — 두 어휘를 겹치지 않는다).
      `h.live()` 뒤에 부르는 이유: 룬·단련은 live 갱신이 버튼 안 숫자를 다시 쓰므로 그 뒤의 노드를 잡는다. */
   jzPressTick(document.querySelector(h.sel), h.iv);
-  fxHoldMark(h.host, true);                          /* 619 8회차 — live 갱신 뒤 노드에 다시 단다 */
+  fxHoldMark(h.host, true, h.iv);                    /* 619 8회차 — live 갱신 뒤 노드에 다시 단다 · 13회차 — 틱 간격으로 펌프 */
   h.timer = setTimeout(rtHoldTick, h.iv);
 }
 /* ⚑ 491 1회차 — «홀드 중» 표시를 **첫 발보다 먼저** 세운다.
@@ -34024,7 +34087,7 @@ function rtHoldStart(o){
     o.end(0, false); rtShake(o.sel); return;
   }
   rtHold.n = 1;
-  fxHoldMark(o.host, true);                                  /* 619 8회차 — 첫 발부터 «누르고 있다» 글로우 */
+  fxHoldMark(o.host, true, TR_HOLD_DELAY);                   /* 619 8회차 — 첫 발부터 «누르고 있다» 글로우 (13회차 — 위와 같은 예산) */
   /* 491 7회차 — 첫 발 가산 오버레이 · 583 — 거기에 «무엇으로 샀는가» 를 얹는다(`o.tag` 가 이미 자리를 안다)
      619 — 반복분과 **같은 키**로 넣는다(`o.key`) — 그래야 세대 큐가 첫 발부터 이어진다 */
   rtFirstFx(o.host, PAY_CUR[o.tag], o.key);
@@ -37053,11 +37116,25 @@ function fxBurst(t, col, n, strict){
        더 나가므로 사방 스필이 ≤17px 로 균일해진다 — AX 가 잡은 하단 15px·좌측 화면 잘림도 닫힌다.
        탄생 타원 자체(반축 = 반폭 + FXB_M)는 그대로 두고 «가둠» 만 6px 안쪽으로 당기는 것이라
        21회차의 «대상 테두리 바깥에서 태어난다» 는 유지된다. */
-    const bx0 = r ? Math.max(20, r.x) : 20;
-    const bx1 = r ? Math.min(FRAME_W - 20, r.x + r.w) : FRAME_W - 20;
+    /* ⚑ 619 13회차 — **가둠의 기준을 «중심» 에서 «잉크» 로 옮긴다.** 12회차에 자와 눈이 갈렸던
+       자리다(ED ③ · EE ④⑩ «스파크가 호스트 밖 13~20px»  vs  실측 «bbox 기준 위·아래·좌·우 전부 0»,
+       표본 91/80/85알). **둘 다 옳았다** — 종전 clamp 는 «입자 중심» 을 bbox 안에 넣었고 잉크는
+       거기서 `sz/2` 를 더 나갔다(28회차가 «사방 스필 ≤ sz/2 로 균일» 이라고 의도한 그 값이다).
+       사람이 재는 것은 중심이 아니라 **보이는 금색 액자 밖으로 나온 잉크**이므로 자를 그쪽으로 옮긴다:
+       상자를 `sz/2` 안으로 들여 **잉크가 액자 안에서 끝난다**(스필 sz/2 → 0). 실측 대응:
+       룬 sz 최대 40 ⇒ 20px · 단련 39 ⇒ 19.5px · 훈련 34 ⇒ 17px = 두 사람이 적은 «13~20px» 그대로다.
+       ⚠ **탄생 타원(반축 = 반폭 + FXB_M)은 한 픽셀도 안 건드린다** — 21회차의 «대상 테두리 바깥에서
+         태어난다» 와 41회차의 «끝점을 가두고 시작점을 FXB_K 만큼 당긴다»(퍼짐 ±0% 방지)는 둘 다
+         **가둠 상자와 무관한 식**이라 그대로 성립한다. 바뀌는 것은 상자의 네 변뿐이다.
+       ⚠ 얇은 호스트에서 상자가 뒤집히지 않게 들이는 양은 반폭·반높이보다 작게 물린다
+         (단련 띠 998×222 검산: inM 19.5 < 111 ⇒ 세로 가둠 폭 183px 로 링이 그대로 산다).
+       ⚠ 좌표(점) 대상은 종전 그대로 — 잉크 기준으로 들이면 전투 발 버스트의 산포가 줄어든다. */
+    const inM = r ? Math.max(0, Math.min(sz/2, r.w/2 - 1, r.h/2 - 1)) : 0;
+    const bx0 = r ? Math.max(20, r.x + inM) : 20;
+    const bx1 = r ? Math.min(FRAME_W - 20, r.x + r.w - inM) : FRAME_W - 20;
     /* 32회차 — 점 대상의 세로도 프레임 안으로(위 PB_M 주석의 비대칭 해소). 원점을 이미 들여
        놓았으므로 이 클램프는 통상 binding 이 아니다 — 프레임보다 큰 화면비에서만 걸린다. */
-    const by0 = r ? r.y : 20, by1 = r ? r.y + r.h : frameH - 20;
+    const by0 = r ? r.y + inM : 20, by1 = r ? r.y + r.h - inM : frameH - 20;   /* 619 13회차 — 위 inM 머리말 */
     /* ⚑ 41회차 — 40차 **2인 공통ㅈ** «버스트가 quest·upg 에서 반경 확장 0% + 동시 전멸»
        (AB «링 bbox 405–676×1561–1691(2ms) → 407–679×1561–1689(192ms) = **±0%**» ·
         AC «271×132 → 250×130 = **±2%**»). 두 사람이 «퍼지지 않는다» 를 각각 다른 자로 재서 같은
@@ -37396,6 +37473,9 @@ const HB_SLOTS = 5, HB_SLOT_W = 80;
 /* 619 11회차 — 플로터 잉크 실측 폭(아래 `hbSlotW` 머리말이 이미 쓰던 69px 를 이름 있는 상수로).
    스폰 최소거리 가드(`hbFloat`)가 이 값을 «두 장이 갈려 읽히는 하한» 으로 읽는다. */
 const HB_INK_W = 69;
+/* ⚑ 619 13회차 — 잉크 **높이**(글리프 토큰 `--fx-plus-fs` 34px 그대로). 가드가 «두 띠가 세로로도
+   붙어 있는가» 를 이 값으로 가른다(아래 `hbFloat` 의 줄기 넘는 가드 머리말). */
+const HB_INK_H = 34;
 /* 2회차 — 칸 간격은 **호스트 폭에 맞춘다.** 80px 고정이면 사다리가 400px 라 326 폭의 훈련 카드에서는
    양옆으로 37px 씩 삐져나가 **이웃 카드 위**에 뜬다(«이 카드가 낸 것» 이 아니게 된다).
    잉크 실측 폭 69px 를 빼고 남는 폭을 4등분한 값과 80 중 **작은 쪽**을 쓴다(326 → 64px). */
@@ -37487,8 +37567,27 @@ function hbFloat(host, txt, kind, lone){
   {
     const dxMin = Math.min(HB_INK_W, sw - 2 * jxA) - 1;
     const live = () => (hbNodes.get(lk) || []).filter(nd => nd.isConnected);
-    const xs = live().map(nd => parseFloat(nd.style.left)).filter(Number.isFinite);
-    for(let g = 0; g < n && xs.some(x => Math.abs(x - hbLeftOf(i)) < dxMin); g++) i = hbSeqK[seqk]++;
+    /* ⚑ 619 13회차 — 미는 가드가 **줄기를 넘어서** 본다(비평가 ED ⑧ · EE ⑦ 2인 공통 «룬 «−13» 두 장이
+       5~10px 간격으로 붙는다»). 12회차 인계문이 «이 둘은 서로 다른 줄기다» 라고 적어 둔 자리이고,
+       뿌리는 **룬 호스트의 두 띠가 24px 밖에 안 떨어져 있다**는 것이다
+       (`.tr-rn{--hb-y:248;--hb-y2:224;--hb-jy:0}` — 실패 틱은 결과 줄기와 비용 줄기가 같은 «−13» 을
+       각각 쓴다). 줄기별 목록만 보는 11회차 가드는 정의상 그 쌍을 못 본다.
+       ⇒ 목록을 호스트 단위(`res`+`pay`)로 넓히고, 겹침 판정에 **세로**를 같이 넣는다 — 띠가 글리프
+       높이(34)보다 멀면 가로가 붙어도 두 장으로 갈려 읽히므로 그런 호스트는 종전과 같다
+       (단련 `--hb-y:116`/`--hb-y2:20` = 96px · 훈련 250/180 = 70px 은 둘 다 통과).
+       ⚠ **걷는 쪽(아래 회수)은 같은 줄기로 남긴다** — 12회차의 회수는 칸이 구조적으로 모자란
+         단련(`--hb-slots:2`)을 위한 규약인데, 줄기를 넘겨 걷으면 결과 줄기가 «무엇을 냈는가»(비용)를
+         지운다. 정보를 지우는 대신 **자리를 넓히는 방향으로만** 돈다(11회차 규약 그대로). */
+    const hkH = (typeof hk0 === 'string' ? hk0 : '·');
+    const liveH = () => ['res', 'pay'].reduce((a, k2) =>
+      a.concat((hbNodes.get(hkH + '|' + k2) || []).filter(nd => nd.isConnected)), []);
+    const hbTopOf = k => r.y + lane + ((k * 0.3819660113) % 1 - 0.5) * 2 * jyA;
+    const hbNear = k => liveH().some(nd => {
+      const x = parseFloat(nd.style.left), y = parseFloat(nd.style.top);
+      return Number.isFinite(x) && Number.isFinite(y)
+        && Math.abs(x - hbLeftOf(k)) < dxMin && Math.abs(y - hbTopOf(k)) < HB_INK_H;
+    });
+    for(let g = 0; g < n && hbNear(i); g++) i = hbSeqK[seqk]++;
     /* ⚑ 619 12회차 — **칸이 모자라면 «미는» 것으로는 못 푼다.** 단련은 `--hb-slots:2` 인데 점유자가
        셋이다(첫 발 `lng` 1.3s + 반복분 2장) — 빈 칸이 **구조적으로 없어** 위 루프가 n 바퀴를 다 돌고
        충돌한 자리에 그대로 앉는다(11회차에 최소 Δx 7.55px 가 안 움직인 뿌리 · 비평가 EC ⑪ 이
