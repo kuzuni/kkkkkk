@@ -63,7 +63,15 @@ const RAWNUM = /\d,\d/;
        ⇒ 자리만 «지금 그 값을 만드는 함수» 로 옮기고 **묻는 것은 그대로 둔다**: 이 값이 fmtB 를
        지나는가. 펫은 자리가 둘(표 4번째 칸 · 설명문 «장착 효과» 줄)이라 칸을 갈라 쓴다
        (326 교훈 — 한 항이 두 자리를 겸하면 한쪽이 사라져도 초록이다). */
-    ['04 스킬 피해 — 세부 표 «피해량» 칸(dmgNow)', /const dmgNow = \(\) => own \? fmtB\(skillDmg\(it\)\) : '—';/],
+    /* 662 이관(2026-09-01) — 343 이 옮겨 놓은 이 자리를 **662 가 또 옮겼다**. 주인 지시로
+       미보유 칸이 «—» 를 그만두고 실수치를 말하게 되면서 `own ? … : '—'` 삼항이 사라지고,
+       레벨 축이 인자로 빠져(`skillDmgAt(it, own ? oLv(id) : 1)`) 제품은 여전히 fmtB 를 지난다.
+       ⇒ 343 과 같은 처방: 자리만 지금 그 줄로 옮기고 **묻는 것은 그대로 둔다**(fmtB 를 지나는가).
+       ⚠ 여기서 «옛 삼항이 없어졌다» 만 눌러 초록으로 만들면 «662 가 통째로 사라져도 초록인
+         게이트» 가 된다(328-330 교훈) — 그래서 아래 ①-662 항으로 **미보유가 «—» 로 되돌아가면
+         빨개지는** 짝을 한 줄 더 세운다. */
+    ['04 스킬 피해 — 세부 표 «피해량» 칸(dmgNow)',
+     /const dmgNow = \(\) => fmtB\(skillDmgAt\(it, own \? oLv\(id\) : 1\)\);/],
     ['07 펫 피해 — 세부 표 «피해량» 칸(ct3Now)', /ct3Now = \(\) => cat === 'pet'\s+\? \(own \? fmtB\(petDmg\(it\)\) : '—'\)/],
     /* 481 이관(2026-08-30) — 이 항은 **485 가 그 줄을 다시 쓴 뒤로 빨갰다**(수리 전 76/79).
        485 가 «장착 효과 — 공격력 +n%» 를 앞에 붙이고 481 이 라벨을 «전투 참여 피해» → «전투 피해»
@@ -92,7 +100,17 @@ const RAWNUM = /\d,\d/;
      새 자리에서 초록인 채로 **옛 자리가 fmt 로 부활**하는 것을 막는 짝이다.
      `fmt` `fmtG` `fmtCur` 무엇이든 걸리게 접두어를 열어 두고 `fmtB(` 만 통과시킨다. */
   eq('① 스킬·펫 피해 표기층에 남은 비-fmtB 호출',
-    (src.match(/\bfmt[A-Za-z]*\((skillDmg|petDmg)\(/g) || []).filter(s => !s.startsWith('fmtB(')).length, 0);
+    (src.match(/\bfmt[A-Za-z]*\((skillDmg(?:At)?|petDmg)\(/g) || []).filter(s => !s.startsWith('fmtB(')).length, 0);
+  /* 662 — 위 자리 항의 짝 둘. 이관이 «옛 문자열이 없어졌다» 로 끝나지 않게 한다.
+     ⓐ 미보유 칸이 «—» 로 되돌아가면 빨강 — 주인 지시(662)가 통째로 사라지는 자리다.
+     ⓑ 피해 식이 **한 곳**인가 — `skillDmgAt` 이 식을 갖고 `skillDmg` 는 그것을 오늘의
+        레벨로 부르는 껍데기여야 한다. 식이 두 벌이 되면 표기층이 조용히 갈라진다(262 규칙). */
+  yes('①-662 미보유 피해량이 «—» 로 되돌아가 있지 않다',
+    !/const dmgNow = \(\) => own \? [^\n]*: '—';/.test(src));
+  eq('①-662 스킬 피해 식은 소스에 한 벌뿐이다',
+    (src.match(/stat\.dmg \* s\.m \* gWear\(s\.g\)/g) || []).length, 1);
+  yes('①-662 skillDmg 는 skillDmgAt 을 부르는 껍데기다',
+    /const skillDmg = s => skillDmgAt\(s, oLv\(s\.id\)\);/.test(src));
 
   /* ── 페이지 ────────────────────────────────────────────────────── */
   const br = await launch(chromium);
@@ -259,8 +277,13 @@ const RAWNUM = /\d,\d/;
   const SK04 = SINK.find(s => s[0].startsWith('04 스킬 피해'))[1];
   const PT07 = SINK.find(s => s[0].startsWith('07 펫 피해 — 세부'))[1];
   const PT07D = SINK.find(s => s[0].startsWith('07 펫 피해 — 설명문'))[1];   /* 481 — «전투 피해» 칸 */
-  const leak = s => (s.match(/\bfmt[A-Za-z]*\((skillDmg|petDmg)\(/g) || []).filter(x => !x.startsWith('fmtB(')).length;
-  const rSk = src.replace(/fmtB\(skillDmg\(it\)\)/g, 'fmt(skillDmg(it))');
+  const leak = s => (s.match(/\bfmt[A-Za-z]*\((skillDmg(?:At)?|petDmg)\(/g) || []).filter(x => !x.startsWith('fmtB(')).length;
+  /* 662 이관 — 되돌림 시험의 «갈아 끼울 문자열» 도 지금 제품의 것으로 옮긴다.
+     ⚠ 안 옮기면 replace 가 **아무것도 안 바꾸고** 그 자리에서 조용히 통과한다
+       (652 가 neg219 에서 겪은 «갈아 끼울 문자열 없음» 과 같은 부패다). */
+  const rSk = src.replace(/fmtB\(skillDmgAt\(it, own \? oLv\(id\) : 1\)\)/g,
+                          'fmt(skillDmgAt(it, own ? oLv(id) : 1))');
+  yes('§R0 스킬 되돌림 시험이 실제로 갈아 끼웠다(빈 replace 가 아니다)', rSk !== src);
   const rPt = src.replace(/fmtB\(petDmg\(it\)\)/g, 'fmt(petDmg(it))');
   yes('§R1 스킬 피해를 fmt( 로 되돌리면 ① 항이 빨개진다', !SK04.test(rSk) && leak(rSk) >= 1);
   yes('§R2 펫 피해를 fmt( 로 되돌리면 ① 두 항이 빨개진다',
