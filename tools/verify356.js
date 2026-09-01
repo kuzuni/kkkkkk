@@ -23,6 +23,11 @@
  *   [L] **캔버스 축 전 화면** — [G-b]·[G-g] 를 대표 4화면에서 스윕 전 화면으로 (28회차 신설 · 작업 634).
  *       [G] 는 «[A] 가 도는 축의 다른 각도» 로 분류돼 접혀 있었는데, 캔버스 안 픽셀은
  *       `getComputedStyle` 에 흔적이 없어 **[A] 가 구조적으로 못 보는** 자리다([L-d2] 가 실측한다).
+ *   [M] **매체 축** — 배율이 하나도 안 걸려도 «내용 좌표계 ↔ 표시 상자» 의 비가 어긋나면
+ *       브라우저가 상자에 맞춰 늘린다 (29회차 신설 · canvas 비트맵 · svg preserveAspectRatio · img object-fit:fill).
+ *   [N] **매체 축 × 짧은 프레임** — 같은 축을 **1080×1600** 에서 한 번 더 (30회차 신설).
+ *       [M] 은 리사이즈 «전» 에만 꺼내 2280 밖을 구조적으로 못 봤다. 이 층이 프레임을 타는 이유는
+ *       [F] 의 이유와 다르다 — 배율이 아니라 **상자만** 줄어 비트맵 비와 어긋난다([N-e] 가 실측한다).
  *
  * ⚠ [B] 는 «줄었다» 를 막지 않는다(라운드마다 줄어드는 것이 정상). 늘어난 것만 잡는다.
  *   라운드를 돌아 자리를 닫았으면 REMAIN 을 그 값으로 내려 적어라 — 안 내리면 래칫이 헐거워진다.
@@ -38,6 +43,8 @@ const R26 = require('./probe356r26.js');
 const R23_HOOK = require('./probe356r23.js');
 /* [M] 29회차 — 매체 «내용 좌표계 ↔ 표시 상자» 수집기. 자를 두 벌로 안 적는다(13회차 [R12]). */
 const { COLLECT_MEDIA, verdict: MEDIA_VERDICT } = require('./probe356r29.js');
+/* [N] 30회차 — 같은 매체 축의 «두 프레임 짝짓기». 짝짓기·합성 표본을 `probe356r30` 에서 받아 쓴다(13회차 [R12]). */
+const R30 = require('./probe356r30.js');
 const { COLLECT_PSEUDO } = R26;
 
 const TOL = 0.02;
@@ -226,6 +233,7 @@ async function sweep(browser, inject) {
   const seenF = [];       /* 화면별 «리사이즈가 정말 먹었나» — innerHeight 실측 (무음 실패 감시) */
   const seenG = [];       /* [L] 캔버스 축 — 화면별 `window.__r23` 스냅샷 (28회차 · 작업 634) */
   const rowsM = [];       /* [M] 매체 «내용 좌표계 ↔ 표시 상자» 축 — 같은 페이지에서 한 번 더 수집 (29회차) */
+  const rowsMF = [];      /* [N] 같은 매체 축을 **리사이즈 뒤**(1080×1600)에 한 번 더 수집한 것 (30회차) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
@@ -296,10 +304,20 @@ async function sweep(browser, inject) {
       seenF.push([label, await page.evaluate(() => window.innerHeight)]);
       const gotF = await page.evaluate(COLLECT, { all: false });
       for (const g of gotF) rowsF.push(Object.assign({ screen: label }, g));
+
+      /* ── [N] 매체 축 × 짧은 프레임 (30회차) — 29회차 인계문이 «값은 공짜» 라고 적어 넘긴 자리다.
+         [M] 은 리사이즈 **전**에만 꺼내므로 2280 밖을 구조적으로 못 본다. 그런데 이 층이
+         프레임을 타는 이유는 [F] 의 이유와 **다르다**: [F] 는 짧아진 시트에서 요소가 `transform`
+         으로 눌리는 것을 보고, 이 축은 **배율이 한 줄도 안 걸린 채** 상자만 줄어 내용 좌표계와
+         비가 어긋나는 것을 본다(`#stagearea{flex:1}` 이 남는 높이를 흡수하므로 전투 캔버스 상자는
+         프레임을 그대로 타는데 비트맵 `canvas.width/height` 는 `resize` 핸들러가 다시 잡아 줘야만 따라온다).
+         ⇒ «2280 에서 0» 은 «1600 에서 0» 의 근거가 못 된다. [F] 와 같은 손 — `evaluate` 한 번이다. */
+      const gotMF = await page.evaluate(COLLECT_MEDIA);
+      for (const g of gotMF) rowsMF.push(Object.assign({ screen: label }, g));
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, rowsP, seenF, seenG, rowsM };
+  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF };
 }
 
 (async () => {
@@ -316,7 +334,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, rowsP, seenF, seenG, rowsM } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -2553,6 +2571,146 @@ async function sweep(browser, inject) {
         else bad(`[M-g] 제품 되돌림 실패 — 주입 전 ${bv.bad.length}자리 / 주입 후 ${av.bad.length}자리 (표본 «${hit}»)`);
       } catch (e) { bad('[M-g] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
       await ctx.close();
+    }
+  }
+
+  /* ── [N] 30회차 — **매체 축 × 짧은 프레임(9:13.3)** ──────────────────────────
+     29회차는 열째 프런티어를 닫으면서 자기 한계를 하나 **글로 적어 넘겼다**(§36-7 마지막 줄):
+     «[M] 은 2280 프레임에서만 잰다 … 그 프레임의 매체 축은 아직 아무도 안 봤다. 값은 공짜다».
+     24회차가 세운 규율이 그것을 이 회차의 일로 만든다 —
+     **«자기 한계를 글로 넘긴 회차는 그 한계를 안 닫은 것이다.»**
+
+     ⚠ **이 절이 [F] 의 사본이 아닌 이유**(둘 다 1600 에서 재지만 보는 층이 다르다):
+        [F] 는 [A] 축(**노드에 걸린 배율**)을 짧은 프레임에서 다시 본다 — 시트가 짧아지며
+        요소에 `transform` 이 걸리는 자리다. 이 절은 **배율이 한 줄도 안 걸린 채**
+        상자만 줄어 내용 좌표계와 비가 어긋나는 자리를 본다.
+        구조적 자리는 이미 하나 알고 있다 — `#stagearea{flex:1}` 이 남는 높이를 흡수하므로
+        **전투 캔버스 상자는 프레임을 그대로 타는데** 비트맵(`canvas.width/height`)은
+        `resize` 핸들러가 다시 잡아 줘야만 따라온다. 안 따라오면 그림이 눌리고
+        [A]·[F] 는 `ratio 1` = 초록을 찍는다([M-d2] 가 같은 대조를 2280 에서 이미 세웠다).
+     ⚠ **«2280 에서 0» 은 «1600 에서 0» 의 근거가 아니다** — 29회차가 «자리»와 «행» 을 갈라 적으며
+        «하나를 다른 하나의 근거로 인용하지 마라» 고 못박은 것과 같은 규율이다. */
+  console.log('\n[N] 30회차 — 매체 축을 짧은 프레임(1080×1600)에서도 잰다: 배율 없이 «상자만» 줄어 어긋나는 층');
+  {
+    const mvF = MEDIA_VERDICT(rowsMF, TOL);
+    const pair = R30.pairUp(rowsM, rowsMF, TOL);
+    const byKindF = (k) => rowsMF.filter((r) => r.kind === k);
+
+    /* ⓐ 전제 — 아무것도 못 본 자는 언제나 0건이다(11·21·26·29회차) */
+    if (!rowsMF.length) bad('[N-a] 1600 에서 매체를 한 자리도 못 봤다 — 이 절은 아무것도 못 보는 자다 (헛초록 방지)');
+    else ok(`[N-a] 1600 프레임 매체 ${rowsMF.length}행 관측 (canvas ${byKindF('canvas').length} · svg ${byKindF('svg').length} · img ${byKindF('img').length})`);
+
+    /* ⓐ2 전제 — **매체 전용 무음 실패 감시**. [F-a] 는 `innerHeight` 로 «리사이즈가 먹었나» 를 보지만,
+       이 절이 물어야 하는 것은 «그 리사이즈가 **매체 상자에까지 닿았나**» 다. 상자가 한 자리도
+       안 움직였으면 이 절은 같은 프레임을 두 번 잰 것이고 그 0 은 헛초록이다. */
+    if (pair.boxMoved.length > 0)
+      ok(`[N-a2] 두 프레임에서 상자가 실제로 달라진 매체 ${pair.boxMoved.length}자리 — 이 절의 수는 정말 다른 프레임의 수다`
+        + (pair.newInF.length ? ` (1600 에만 있는 행 ${pair.newInF.length})` : ''));
+    else bad('[N-a2] 상자가 한 자리도 안 움직였다 — 리사이즈가 매체에 안 닿았다 (2280 을 두 번 잰 값이다 · 헛초록 방지)');
+
+    /* ⓐ3 «눈 없음» 은 초록이 아니다 — 29회차 [M-a2] 와 같은 규율을 짧은 프레임에도 세운다 */
+    if (!mvF.blind.length) ok(`[N-a3] 1600 «눈 없음» 0자리 — 사정권 안 ${mvF.inScope.length}행 전부가 내용 좌표계를 읽힌다`);
+    else bad(`[N-a3] 1600 «눈 없음» ${mvF.blind.length}자리 — 초록으로 세면 안 된다: `
+      + mvF.blind.slice(0, 4).map((r) => `${r.screen} ${r.sel} (${r.why})`).join(' · '));
+
+    /* ⓑ 판정 — 짧은 프레임의 지금 트리 */
+    if (!mvF.bad.length) ok(`[N-b] 1600 매체 비균등 0행 (사정권 안 ${mvF.inScope.length} · 밖 ${mvF.outs.length})`);
+    else bad(`[N-b] 1600 매체 비균등 ${mvF.bad.length}행: `
+      + mvF.bad.slice(0, 6).map((r) => `${r.screen} ${r.sel} d=${r.d} 상자 ${r.w}×${r.h}`).join(' · '));
+
+    /* ⓒ **이 절의 존재 이유** — «1600 에서만» 어긋나는 자리. [F-c] 와 같은 물음을 이 층에 세운다.
+       [N-b] 가 0 이면 이 집합도 정의상 0 이지만, **수를 따로 찍는 것이 이 절이 무엇을 위해 있는지**를 말한다. */
+    if (!pair.onlyF.length) ok(`[N-c] «1600 에서만» 비균등인 매체 0행 — 2280 이 못 보는 프레임 전용 결함이 없다`);
+    else bad(`[N-c] «1600 에서만» 비균등인 매체 ${pair.onlyF.length}행 (2280 에서는 초록이라 [M] 이 구조적으로 못 보는 자리다): `
+      + pair.onlyF.slice(0, 6).map((r) => `${r.screen} ${r.sel} d=${r.d}`).join(' · '));
+
+    /* ⓓ 갈래마다 «0» 의 뜻을 갈라 적는다 — [M-c] 와 같은 규율(세 가지 0 을 한 줄로 안 찍는다) */
+    {
+      const line = ['canvas', 'svg', 'img'].map((k) => {
+        const v = MEDIA_VERDICT(byKindF(k), TOL);
+        return `${k} 안 ${v.inScope.length}/밖 ${v.outs.length}/눈없음 ${v.blind.length}/비균등 ${v.bad.length}`;
+      }).join(' · ');
+      ok(`[N-d] 1600 갈래별 0 의 뜻 — ${line}`);
+    }
+
+    /* ⓔ **되돌림(합성)** — 이 축이 정말 프레임을 타는가. 스윕을 한 벌 더 돌지 않는다(합성 한 장).
+       ⚠ 이 항이 없으면 [N-b] 의 0 은 «프레임을 바꿔도 아무것도 안 변하는 자» 의 0 일 수 있다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 400, height: 600 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.setContent(R30.SYN_F);
+        await page.waitForTimeout(120);
+        const tall = await page.evaluate(COLLECT_MEDIA);
+        await page.setViewportSize({ width: 400, height: 200 });
+        await page.waitForTimeout(120);
+        const short = await page.evaluate(COLLECT_MEDIA);
+        const by = (rs, id) => rs.find((r) => r.sel.indexOf('#' + id) >= 0);
+        const vhT = by(tall, 'cVh'), vhS = by(short, 'cVh');
+        const fxT = by(tall, 'cFix'), fxS = by(short, 'cFix');
+        if (vhT && vhS && Math.abs(vhT.d - vhS.d) > TOL)
+          ok(`[N-e] 되돌림 — 상자 높이만 뷰포트에 매인 캔버스(비트맵 200×100 고정)는 프레임을 줄이면 `
+            + `d ${vhT.d} → ${vhS.d} 로 **갈린다** ⇒ 이 축은 프레임을 타고, [N-b] 의 0 은 «안 변하는 자» 의 0 이 아니다`);
+        else bad(`[N-e] 되돌림 실패 — 프레임을 줄여도 이 자가 값을 안 바꾼다: ${JSON.stringify(vhT)} / ${JSON.stringify(vhS)}`);
+
+        if (fxT && fxS && Math.abs(fxT.d - 1) <= TOL && Math.abs(fxS.d - 1) <= TOL)
+          ok(`[N-e2] 음성항 — 상자가 프레임과 무관한 캔버스는 두 프레임 다 d=${fxT.d}/${fxS.d} (프레임을 줄였다는 이유만으로는 안 빨개진다)`);
+        else bad(`[N-e2] 음성항 실패 — 프레임을 줄였더니 멀쩡한 캔버스를 결함이라 부른다: ${JSON.stringify(fxT)} / ${JSON.stringify(fxS)}`);
+      } catch (e) { bad('[N-e] 합성 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+
+    /* ⓕ **제품 되돌림 — 1600 에서** . [M-g] 가 2280 에서 한 것과 같은 손이되 프레임이 다르다.
+       ⚠ 합성만으로 닫으면 «자는 사는데 **1600 스윕에는** 안 물려 있다» 를 못 가른다
+          (26회차 [J] 가 데인 자리이고, 29회차가 [M-g] 로 그 교훈을 이미 한 번 갚았다).
+       ⚠ 화면 **한 장**이다 — 스윕을 한 벌 더 돌지 않는다. */
+    {
+      const ctx = await browser.newContext({ viewport: FRAME_F, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.goto(URL, { waitUntil: 'load' });
+        await page.waitForTimeout(700);
+        const before = await page.evaluate(COLLECT_MEDIA);
+        const bv = MEDIA_VERDICT(before, TOL);
+        const hit = await page.evaluate(() => {
+          const app = document.getElementById('app');
+          const c = [...app.querySelectorAll('canvas')].find((x) => { const r = x.getBoundingClientRect(); return r.width && r.height && x.width && x.height; });
+          if (!c) return null;
+          const r = c.getBoundingClientRect();
+          /* **상자**를 누른다 — 배율이 아니다. 이 층의 표본은 transform 이 `none` 인 채로 어긋난 자리다. */
+          c.style.width = r.width + 'px'; c.style.height = (r.height * 0.6) + 'px';
+          return c.id || c.getAttribute('class') || '(익명)';
+        });
+        await page.waitForTimeout(150);
+        const av = MEDIA_VERDICT(await page.evaluate(COLLECT_MEDIA), TOL);
+        if (!hit) bad('[N-f] 되돌림 표본이 없다 — 1600 프레임의 02 메인에 잴 수 있는 캔버스가 한 자리도 없다');
+        else if (bv.bad.length === 0 && av.bad.length > 0)
+          ok(`[N-f] 제품 되돌림(1600) — 02 메인의 실제 캔버스 «${hit}» 상자를 **세로만** ×0.6 으로 누르면 `
+            + `${bv.bad.length}행 → ${av.bad.length}행으로 빨개진다 ⇒ 이 절이 짧은 프레임의 제품에 정말 물려 있다`);
+        else bad(`[N-f] 제품 되돌림(1600) 실패 — 주입 전 ${bv.bad.length}행 / 주입 후 ${av.bad.length}행 (표본 «${hit}»)`);
+      } catch (e) { bad('[N-f] 제품 되돌림(1600) 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+
+    /* ⓖ **29회차가 «다음 회차의 공짜 한 줄» 로 넘긴 셈** (§36-4 SVG 절).
+       29회차는 합성 표본 2자리로 «상자 비로 재면 헛빨강» 을 세우고, **제품에서 몇 자리인지는
+       안 셌다고 스스로 적었다.** 그 수를 여기서 찍는다 — 이것이 [M-e]/[N] 이 판정축을
+       `preserveAspectRatio` 로 고른 것의 **제품 실측 근거**다(합성이 아니라). */
+    {
+      const ghost = (rs) => {
+        const seen = new Map();
+        for (const r of rs) {
+          if (r.kind !== 'svg') continue;
+          const k = (r.screen || '') + '|' + r.sel;
+          if (seen.has(k)) continue;
+          const boxR = r.w / r.h;
+          seen.set(k, r.vb ? Math.abs(boxR / r.vb - 1) > TOL : Math.abs(boxR - 1) > TOL);
+        }
+        return { total: seen.size, ghost: [...seen.values()].filter(Boolean).length };
+      };
+      const gD = ghost(rowsM), gF = ghost(rowsMF);
+      ok(`[N-g] 상자 비로 쟀으면 헛빨강이었을 제품 SVG — 2280 ${gD.ghost}/${gD.total}자리 · 1600 ${gF.ghost}/${gF.total}자리. `
+        + `판정축이 \`preserveAspectRatio\` 라 실제 빨강은 0 이다 (29회차가 «안 셌다» 고 적어 넘긴 수 — [M-e] 의 합성 2자리에 대한 제품 대조군)`);
     }
   }
 
