@@ -20,6 +20,9 @@
  *       위 절이 전부 «가라앉은 한 점» 을 보는 자라, 도는 동안만 갈리는 종횡을 못 봤다.
  *   [J] **의사 축** — `::before`/`::after` 가 그리는 아이콘 (26회차 신설).
  *       위 절이 전부 `querySelectorAll('*')` 위에 서 있는데 그 함수는 의사 요소를 안 돌려준다.
+ *   [L] **캔버스 축 전 화면** — [G-b]·[G-g] 를 대표 4화면에서 스윕 전 화면으로 (28회차 신설 · 작업 634).
+ *       [G] 는 «[A] 가 도는 축의 다른 각도» 로 분류돼 접혀 있었는데, 캔버스 안 픽셀은
+ *       `getComputedStyle` 에 흔적이 없어 **[A] 가 구조적으로 못 보는** 자리다([L-d2] 가 실측한다).
  *
  * ⚠ [B] 는 «줄었다» 를 막지 않는다(라운드마다 줄어드는 것이 정상). 늘어난 것만 잡는다.
  *   라운드를 돌아 자리를 닫았으면 REMAIN 을 그 값으로 내려 적어라 — 안 내리면 래칫이 헐거워진다.
@@ -31,6 +34,8 @@ const path = require('path');
 const { SCREENS, COLLECT, URL, derivePassScreens, HTML, STEP } = require('./scan356.js');
 /* 26회차 — 의사 축. 수집기·소스 인구조사를 `probe356r26` 한 곳에서 읽는다(자를 두 벌로 안 적는다 · 13회차 [R12]) */
 const R26 = require('./probe356r26.js');
+/* 28회차(작업 634) — 캔버스 축 훅. 주 스윕에 얹는다(자를 두 벌로 안 적는다 · 13회차 [R12]) */
+const R23_HOOK = require('./probe356r23.js');
 const { COLLECT_PSEUDO } = R26;
 
 const TOL = 0.02;
@@ -217,10 +222,21 @@ async function sweep(browser, inject) {
   const rowsF = [];       /* [F] 프레임 축 — 같은 화면을 1080×1600 으로 줄인 뒤 한 번 더 수집한 것 */
   const rowsP = [];       /* [J] 의사 축 — 같은 페이지에서 `::before`/`::after` 를 한 번 더 수집한 것 (26회차) */
   const seenF = [];       /* 화면별 «리사이즈가 정말 먹었나» — innerHeight 실측 (무음 실패 감시) */
+  const seenG = [];       /* [L] 캔버스 축 — 화면별 `window.__r23` 스냅샷 (28회차 · 작업 634) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     try {
+      /* ── [L] 캔버스 축 (28회차 · 작업 634) — [J]·[F] 와 **같은 손**이다: 스윕을 한 벌 더 돌지 않고
+         이미 여는 이 페이지에 훅을 얹는다. 그래서 23회차가 대표 4화면에서만 보던 축
+         ([G-b] drawImage 비균등 · [G-g] 비균등 컨텍스트 변환)이 **[A] 와 같은 전 화면 커버리지**를
+         evaluate 한 번 값으로 얻는다.
+         ⚠ 훅은 `probe356r23.initHook` 을 **받아 쓴다**(자를 두 벌로 안 적는다 — 13회차 [R12]).
+            그 훅이 `getTransform()` 을 일부러 안 부르는 이유가 거기 주석에 있다(60fps 캔버스에서
+            훅이 게임을 느리게 만든다) — 그래서 이 스윕에 얹어도 [A]·[B]·[F]·[I]·[J] 값이 안 움직인다.
+         ⚠ **`goto` 보다 먼저** 걸어야 전수다: `drawImage` 는 프로토타입에 있으므로
+            컨텍스트가 만들어지기 전에 갈아 끼워야 한다(23회차 주석). */
+      await page.addInitScript(R23_HOOK.initHook, TOL);
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
@@ -242,6 +258,11 @@ async function sweep(browser, inject) {
           지만, 의사 요소는 [A] 가 **구조적으로 못 보는** 노드라 대표 화면으로 접으면 그만큼이 그냥 구멍이다). */
       const gotP = await page.evaluate(COLLECT_PSEUDO, { all: false });
       for (const g of gotP) rowsP.push(Object.assign({ screen: label }, g));
+
+      /* [L] — 훅 스냅샷은 **리사이즈 «전»** 에 꺼낸다. 이 축을 [A]·[G] 와 같은 프레임(2280)에서
+         재야 «[A] 가 도는 그 순간에 [A] 가 못 보는 것» 이라는 말이 실측이 된다.
+         (1600 프레임의 캔버스는 [F] 의 물음이고 아직 아무도 안 봤다 — 634 review §4 에 적어 뒀다.) */
+      seenG.push([label, await page.evaluate(() => window.__r23 || null)]);
 
       /* ── [F] 프레임 축 (14회차) — **스윕을 한 벌 더 돌지 않는다** ──────────────────
          비용의 거의 전부는 위의 ①컨텍스트 ②goto ③단계 클릭이고 `COLLECT` 는 evaluate 한 번이다.
@@ -266,7 +287,7 @@ async function sweep(browser, inject) {
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, rowsP, seenF };
+  return { rows, rowsF, rowsP, seenF, seenG };
 }
 
 (async () => {
@@ -283,7 +304,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, rowsP, seenF } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF, seenG } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -2321,6 +2342,76 @@ async function sweep(browser, inject) {
     if (onHit.length === R27.PSEUDO_ON.length)
       ok(`[K-e3] 음성 대조 — 사정권 세 이름(${onHit.map((n) => '::' + n).join(' · ')})은 **같은 주입에 transform 이 먹는다**. 위 두 항의 «안 먹는다» 가 자의 눈이 먼 탓이 아니라는 실측`);
     else bad(`[K-e3] 사정권 이름 중 ${R27.PSEUDO_ON.length - onHit.length}종이 같은 주입에 안 먹는다 — [K-e]·[K-e2] 의 «안 먹는다» 가 자의 눈 탓일 수 있다`);
+  }
+
+  /* ── [L] 28회차(작업 634) — **캔버스 축을 전 화면으로** ────────────────────────
+     23회차가 세운 캔버스 축([G-b] drawImage 비균등 · [G-g] 비균등 컨텍스트 변환)은
+     `PICK` **대표 4화면**만 돌고 있었다. 26회차 인계문이 그 접기를 이렇게 정당화했다 —
+       « [G]·[I] 는 [A] 가 이미 도는 축의 «다른 각도» 라 대표 화면으로 접어도 되지만,
+         의사 요소는 [A] 가 **구조적으로 못 보는** 노드라 대표 화면으로 접으면 그만큼이 그냥 구멍이다. »
+     **기준은 옳은데 [G] 를 잘못 분류했다.** [I](시간)는 정말로 «[A] 가 도는 그 노드의 다른
+     위상» 이지만, [G] 가 보는 것은 캔버스 **안에 구워진** 픽셀이고 23회차 자신이
+     «`getComputedStyle` 로는 영영 안 보인다» 고 적어 뒀다 = [A] 가 **구조적으로 못 보는** 자리다.
+     그 기준을 그대로 대면 이 축이야말로 «접으면 구멍» 이고, 실측이 그 구멍의 크기를 말한다 —
+     대표 4화면 `drawImage` **15,276건** ↔ 전 화면 **274,492건**(밖에 놓인 화면 67개 · ×18.0).
+
+     ⚑ **[G] 를 지우지 않았다** — 그 절은 616 «직전» 트리 되돌림([G-c])을 이고 있고
+        되돌림은 대표 화면에서 도는 것이 맞다. 넓힌 것은 «지금 트리의 판정» 하나다.
+     ⚑ **커버리지 항([L-b])의 방향은 [B]·[F] 래칫과 반대다** — 저 둘은 «결함이 늘면 빨강»,
+        이것은 «**커버리지가 줄면 빨강**». 판정값이 0자리라 «0 이 늘었다» 로는 축이 꺼진 것을
+        못 본다(356 이 스물여덟 회차 동안 싸운 «못 봐서 0» 의 다섯 번째 모양).
+     ⚠ 하한을 **손으로 안 적는다** — 전투 캔버스는 어느 화면에서도 살아 있어 실측이 71/71 이므로
+        기대값은 `SCREENS.length` **그 자체**다(402 «표가 아니라 파생»). 화면이 늘면 기대도 는다. */
+  console.log('\n[L] 28회차 — 캔버스 축 전 화면: [G-b]·[G-g] 를 대표 4화면에서 전 화면으로');
+  {
+    const R28 = require('./probe356r28.js');
+    const g = R28.fold(seenG);
+    const gBad = g.bad.filter((r) => r.inApp);
+
+    /* ⓐ 전제 — 훅이 **정말 돌았는가**. 0 이면 아래 초록은 전부 헛초록이다([G-a] 와 같은 자리). */
+    if (g.calls > 0 && !g.err) ok(`[L-a] 전제 — 주 스윕에서 drawImage ${g.calls}건 관측 · 훅 예외 ${g.err}건 (축이 살아 있다)`);
+    else bad(`[L-a] 전제 실패 — drawImage 관측 ${g.calls}건 · 훅 예외 ${g.err}건. 아래 0 은 «못 봐서 0» 이다`);
+
+    /* ⓑ 커버리지 — 이 절의 존재 이유. «캔버스가 도는 화면» 이 스윕 전 화면이어야 한다. */
+    if (g.live === SCREENS.length)
+      ok(`[L-b] 커버리지 — 캔버스가 도는 화면 ${g.live}/${SCREENS.length} (대표 4화면이 아니라 전 화면에서 이 축이 산다)`);
+    else
+      bad(`[L-b] 커버리지 ${g.live}/${SCREENS.length} — 캔버스가 안 도는 화면 ${g.dead.length}개: ${g.dead.slice(0, 8).join(' · ')}`
+        + ' ⇒ 그 화면의 «비균등 0» 은 «없어서 0» 이 아니라 «안 봐서 0» 이다');
+
+    /* ⓒ 판정 — 지금 트리. 두 축을 같이 본다([G-b]·[G-g] 와 같은 물음, 화면만 71배). */
+    if (!gBad.length) ok(`[L-c] 전 화면 캔버스 안 비균등 그리기 0자리 (${g.live}화면 · ${g.calls}건)`);
+    else bad(`[L-c] 캔버스 안 비균등 그리기 ${gBad.length}자리: `
+      + gBad.slice(0, 6).map((r) => `${r.screen} ${r.sel} ×${r.ratio} (${r.src})`).join(' · '));
+    if (!g.ctxNU) ok(`[L-c2] 전 화면 비균등 컨텍스트 변환 0회 — 뒤집기 scale(-1,1) 은 |sx|=|sy| 라 안 센다`);
+    else bad(`[L-c2] 비균등 컨텍스트 변환 ${g.ctxNU}회 — drawImage 인자가 등방이어도 화면에서는 늘어난다`);
+
+    /* ⓓ 되돌림 + **[A] 대조** + 음성항 — 이 절의 본체.
+       21회차 교훈: «0건» 은 값이 옳아서 0 인지 안 보는 자라서 0 인지 스스로 말해야 한다.
+       ⚠ 되돌림은 **한 화면**에서 돈다(스윕을 한 벌 더 돌지 않는다 — [G-c] 와 같은 규율).
+       ⚑ [L-d2] 가 이 회차가 새로 세운 자리다 — 같은 주입을 [A] 축이 **0자리**로 읽는 것이
+          «[G] 는 [A] 의 다른 각도가 아니다»(= 대표 화면으로 접으면 그만큼이 구멍이다)의 실측이다. */
+    const sq = await R28.shot(browser, { inject: R28.SQUASH_Y });
+    const sqBad = sq.hk ? Object.values(sq.hk.bad).filter((r) => r.inApp) : [];
+    if (sqBad.length) ok(`[L-d] 되돌림 — «${sq.label}» 캔버스에 **세로만** ×0.6 을 심으면 ${sqBad.length}자리로 잡는다 (최악 ×${sqBad.map((r) => r.ratio).sort((a, b) => Math.abs(b - 1) - Math.abs(a - 1))[0]})`);
+    else bad('[L-d] 되돌림 실패 — 세로만 ×0.6 을 심어도 0자리다. 이 절은 아무것도 못 보는 자다');
+
+    if (sq.aSeen > 0 && sq.aBad === 0)
+      ok(`[L-d2] [A] 대조 — **같은 주입**을 [A] 축(\`scan356.COLLECT\`)은 ${sq.aBad}자리로 읽는다(관측 ${sq.aSeen}노드). `
+        + '캔버스 안 픽셀은 `getComputedStyle` 에 흔적이 없다 ⇒ [G] 는 «[A] 가 도는 축의 다른 각도» 가 아니고, 대표 화면으로 접으면 그만큼이 구멍이다');
+    else bad(`[L-d2] [A] 대조 실패 — [A] 축이 ${sq.aBad}자리(관측 ${sq.aSeen}노드)로 읽는다. `
+      + (sq.aSeen ? '이 주입은 [A] 도 보는 자리라 «[A] 가 구조적으로 못 본다» 의 표본이 아니다' : '[A] 수집기가 죽었다'));
+
+    const iso = await R28.shot(browser, { inject: R28.ISO2 });
+    const isoBad = iso.hk ? Object.values(iso.hk.bad).filter((r) => r.inApp) : [];
+    if (!isoBad.length && iso.hk && iso.hk.calls > 0)
+      ok(`[L-d3] 음성항 — **등방** ×2 주입은 ${isoBad.length}자리 (관측 ${iso.hk.calls}건 · 크기 변경은 결함이 아니다 · [G-d] 규율)`);
+    else bad(`[L-d3] 음성항 실패 — 등방 ×2 를 ${isoBad.length}자리라 부른다(관측 ${iso.hk ? iso.hk.calls : 0}건)`);
+
+    const cn = await R28.shot(browser, { ctxNu: true });
+    if (cn.ctxNuInjected === 1 && cn.hk && cn.hk.ctxNonUni > 0)
+      ok(`[L-d4] 되돌림 — \`ctx.scale(1,0.6)\` 을 한 번 걸면 [L-c2] 가 ${cn.hk.ctxNonUni}회로 잡는다 (컨텍스트 축도 살아 있다)`);
+    else bad(`[L-d4] 되돌림 실패 — \`ctx.scale(1,0.6)\` 을 걸어도 ${cn.hk ? cn.hk.ctxNonUni : 0}회다(주입 ${cn.ctxNuInjected}건). [L-c2] 는 아무것도 못 보는 자다`);
   }
 
   await browser.close();
