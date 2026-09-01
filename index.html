@@ -12942,6 +12942,13 @@
      레퍼런스 측정표가 없는 화면이라(29 는 «설계 확정» 이고 `docs/measure` 에 룰렛 표가 없다)
      이 이동은 정오표 한 줄로 족하다 — `docs/measure/265-룰렛글씨.md` §정오표. */
   #rouSkip{width:fit-content;margin:14px 0 0 auto}
+  /* ⚑ 699 — 28 보스전 HUD 의 «연출 스킵». 자리는 액션 버튼(#bossGv 283..363 · #bossRt 294..376) **아래**
+     20px 띠를 두고 396..452 이고, 좌우는 `left:0;right:0` + `justify-content:center` 로 화면 중앙이다
+     (버튼 두 개의 중심 x540 과 같은 축 — 39·40 레퍼런스의 버튼 중심선이다).
+     ⚠ 기존 요소 좌표는 한 칸도 안 건드린다 — 절대배치라 #stinfo·#bossTm·#bossHp·.bbtn 전부 Δ0px.
+     ⚠ 표시 전용 HUD(#stinfo·#bossHp)와 달리 이건 **누르는 것**이라 pointer-events 를 살려 둔다. */
+  #bossSkip{position:absolute;left:0;right:0;top:396px;justify-content:center;z-index:5;display:none}
+  #bossSkip.sh{display:flex}
   /* 라벨 — 패널 면(#2A2835) 위라 흰색은 세다. 320 이 남긴 «남색 상자 위 밝은 크림» 토큰과 같은 색을 쓴다. */
   .sm-sk>i{font-size:30px;line-height:56px;color:#EADCC6;--fat:#EADCC6;--fatw:.5px;transform:scaleX(.96)}
   .sm-sk.on>i{color:#CFF3B4;--fat:#CFF3B4}
@@ -12950,6 +12957,14 @@
      끔 = 본문 글자색 `.mbody p`(#5A4634) · 켬 = 325 가 쓴 초록(#2F8F1E). */
   #rouSkip>i{color:#5A4634;--fat:#5A4634}
   #rouSkip.on>i{color:#2F8F1E;--fat:#2F8F1E}
+  /* ⚑ 699 — 55 설정 팝업 본문도 같은 베이지(#F0D9BA)라 라벨 색 규칙을 룰렛과 **공유**한다(사본 금지). */
+  #cfSkip>i{color:#5A4634;--fat:#5A4634}
+  #cfSkip.on>i{color:#2F8F1E;--fat:#2F8F1E}
+  /* ⚑ 699 — 자리: 「볼륨」 제목 줄의 오른쪽 빈 구간. 오른끝은 트랙 우단(55+679 = 734 · 본문 우여백 24)에
+     맞추고, 세로는 제목 띠(9..54)의 한가운데(중심 31.5 · 높이 56 ⇒ top 3.5)다.
+     ⚠ 짧은 프레임에서 제목·트랙이 `--sq` 지분만큼 올라가므로 **같은 계수**(0.028986 = 제목 것)를 그대로
+       쓴다 — 안 쓰면 1600 에서 트랙 쪽으로 4px 내려앉는다. 400 이 조율한 어느 값도 안 건드린다. */
+  #cfSkip{right:24px;top:calc(3.5px - var(--sq) * 0.028986)}
   /* 트랙·노브는 55 설정 토글(.cf55-sw/.cf55-kn)과 **같은 어휘**를 축소한 것이다 —
      트랙 169×58 · 노브 99×69(위아래 5.5 넘침) → 트랙 120×46 · 노브 70×54(위아래 4 넘침).
      켬 위치 47 = 트랙 120 − 노브 70 − 3(끔 위치 −3 의 거울). 색은 55 것을 그대로 쓴다. */
@@ -16124,6 +16139,14 @@
     <div id="bossHp"><i id="bossHpF"></i><b id="bossHpN">0</b><u>💀</u></div>
     <button id="bossGv" class="bbtn"><i>포기하기</i></button>
     <button id="bossRt" class="bbtn"><i>스테이지 재도전</i></button>
+    <!-- ⚑ 699(주인 지시 2026-09-02 02:00 «보스도전할때 설정 가능하고 설정팝업에도 있게 해줘») —
+         «연출 스킵» 토글의 **첫 번째 자리**. 부품은 363/514 의 공용 `.sm-sk` 그대로이고(새로 짜면 반려),
+         자리만 이 화면 몫이다(514 가 «CSS 한 벌 · 상태 한 벌 · 호스트 여럿» 으로 세운 규약).
+         ⚠ 보이기 클래스가 `.on` 이 아니라 `.sh` 인 이유: `.sm-sk.on` 은 **켜짐 상태**를 뜻하는
+           부품의 클래스라(`fxSyncSkip` 이 쓴다) 여기에 겹쳐 쓰면 «꺼 두면 토글이 사라지는» 그림이 된다. -->
+    <div id="bossSkip" class="sm-sk" role="switch" aria-checked="false">
+      <i class="sm-fat" data-t="연출 스킵">연출 스킵</i><s class="sm-skt"><b class="sm-skk"><em>OFF</em></b></s>
+    </div>
     <!-- 작업 30 — 던전 입장 화면 HUD. 측정표 docs/measure/30-던전입장.md.
          `#app.dunrun` 일 때만 보인다. 표시 전용이라 포인터는 캔버스로 통과시킨다. -->
     <div id="dunHud">
@@ -16884,6 +16907,18 @@
       <div class="cf55-head"><i>설정</i></div>
       <div class="cf55-body">
         <div class="cf55-sub"><i>볼륨</i></div>
+        <!-- ⚑ 699(주인 지시 2026-09-02 02:00 «설정팝업에도 있게 해줘») — «연출 스킵» 토글의 **두 번째 자리**.
+             부품은 363/514 의 공용 `.sm-sk` 그대로다(새로 짜면 반려). 자리는 «볼륨» 제목 줄의 **오른쪽
+             빈 구간**(제목 잉크는 x66..118 에서 끝나고 트랙 우단 734 까지가 비어 있다).
+             ⚠ **6행 리스트에 7번째 행으로 넣지 않았다** — 리스트는 `flex:1 1 0` 이라 행이 하나 늘면
+               행 높이가 84.86 → 72.7 로 내려가 «이웃 토글 사이 데드존» 이 15.8 → 3.9px 이 된다.
+               그것이 400 1회차가 비평가 CG 6 / CH 5 를 받은 바로 그 상태다(verify400 §3). 상자를 한 행
+               키워 봤더니(1347 → 1432) 이번에는 1600 에서 눌림이 69 → 154 로 커져 **헤더가 91 → 55 로
+               찌그러져 제목이 잘린다**(실측). ⇒ 레퍼런스 6행과 400 이 조율한 기하를 **한 픽셀도 안 건드리는**
+               이 자리를 골랐다. `verify400` 156/156 · `verify55` 66/66 이 그대로 초록인 것이 그 증거다. -->
+        <div id="cfSkip" class="sm-sk" role="switch" aria-checked="false">
+          <i class="sm-fat" data-t="연출 스킵">연출 스킵</i><s class="sm-skt"><b class="sm-skk"><em>OFF</em></b></s>
+        </div>
         <div class="cf55-track" id="cfTrack"><s class="cf55-empty"></s><s class="cf55-fill" id="cfFill"></s></div>
         <div class="cf55-knob" id="cfKnob"></div>
         <div class="cf55-e0"><i>0</i></div>
@@ -21895,7 +21930,9 @@ function startBoss(){
   if(battleBusy()) return;
   S.bossFarm = false; bossOn = true; stageWin = false;
   enemies.length = 0; spawnQ.length = 0; killed = 0;   /* 28 — 보스는 «단독» 스폰. 남은 잡몹은 물린다 */
-  spawnQ.push({ t:'boss', delay:1.4 });
+  /* ⚑ 699 — 이 1.4초는 «등장음이 울릴 틈»(DUN_BOSS_DLY 주석)이라 필드가 비어 있는 대기다.
+     스킵 ON 이면 0 — 상수는 안 건드리고 **호출부에서** 접는다(표를 두 벌로 만들지 않는다, 402). */
+  spawnQ.push({ t:'boss', delay: fxSkipOn() ? 0 : 1.4 });
   cdArm = true;                     /* ⚑ 459 — 예약. 보스는 1.4초 뒤에 선다(그 창은 필드가 비어 있다) */
   bossT = BOSS_SEC;
   showMsg('BOSS ' + S.stage);
@@ -24065,8 +24102,11 @@ function step(dt){
          던전은 완료 화면이, 승급전은 팝업이 각자 제 소리를 낸다. */
       if(bossClear.md === 'stage') sfx('clear');
     }
-    /* ③ 그로부터 1초 뒤 후속 — 던전 완료 화면 / 승급 팝업 / 다음 스테이지 */
-    if(bossClear.t >= bossClear.die + DUN_CLR_HOLD) bossClearDone();
+    /* ③ 그로부터 1초 뒤 후속 — 던전 완료 화면 / 승급 팝업 / 다음 스테이지
+       ⚑ 699 — 홀드는 이제 **시퀀스가 열릴 때 정해진 값**(`hold`)이다. 스킵 OFF 면 여전히
+          `DUN_CLR_HOLD`(1초) 하나이고(모드별로 갈라지지 않는다 — 475 규약), ON 이면 0 이다.
+          옛 세이브·옛 상태에서 필드가 없으면 상수로 떨어진다. */
+    if(bossClear.t >= bossClear.die + (bossClear.hold != null ? bossClear.hold : DUN_CLR_HOLD)) bossClearDone();
   }
 
   /* ---- 28 보스전 제한 시간 ---- */
@@ -25488,6 +25528,11 @@ function drawBossHud(){
   /* [포기하기] 는 «중간에 그만둘 수 있는» 두 모드만이다 — 승급전은 도전이 끝날 때까지 간다 */
   $('bossGv').classList.toggle('on', md === 'stage' || md === 'raid');
   $('bossRt').classList.toggle('on', fm);
+  /* ⚑ 699 — «보스 도전할 때» 설정할 수 있어야 한다(주인 원문). 그 창은 둘이다:
+     보스전이 도는 동안(`bf` = 28 규격 HUD 를 쓰는 모드)과 **도전 대기**(`fm` = [스테이지 재도전]).
+     ⚠ 새 상태를 안 만든다 — 이 함수가 매 프레임 다시 토글하는 다섯 요소에 한 줄을 더한 것뿐이라
+       «이전 모드 HUD 잔존» 이 구조적으로 불가능하다는 284 의 성질을 그대로 물려받는다. */
+  $('bossSkip').classList.toggle('sh', bf || fm);
   if(!bf) return;
   /* 46 레이드 — 바는 «체력» 이 아니라 «최고 기록 대비 현재 DPS», 숫자는 누적 피해량이다. */
   if(md === 'raid'){
@@ -26003,6 +26048,9 @@ $('statw').addEventListener('click', () => $('statw').classList.remove('on'));
 /* 46 — 레이드 중이면 같은 버튼이 «레이드 중단» 이다(기록 저장 없음) */
 $('bossGv').addEventListener('click', () => { if(raidOn) endRaid(false); else failBoss('포기'); });
 $('bossRt').addEventListener('click', retryBoss);
+/* ⚑ 699 — 보스 도전 화면의 «연출 스킵». 누름의 본체는 공용 함수 하나다(514 규약 — 호스트는 물리기만).
+   ⚠ `stopPropagation` 은 캔버스 몫이다 — 이 노드는 #stagearea 안이라 전파하면 이동/조준 탭으로 샌다. */
+$('bossSkip').addEventListener('click', e => { e.stopPropagation(); fxSkipToggle(); });
 
 /* 123 — 아레나 중 사망은 «패배 화면(18)» 이 아니라 아레나 결과 화면이 받는다(두 겹으로 뜨지 않게).
    자동 부활 진행은 그대로다 — 여기서 막는 것은 표시뿐이다. */
@@ -27180,7 +27228,17 @@ function bossClearStart(md, e, die){
   /* 425/457 — 등장 국면 도중에 보스가 죽으면(펫·지속 피해) 국면은 그 자리에서 닫는다.
      닫지 않으면 시퀀스가 도는 동안 카메라가 시체를 계속 비춘다(332 가 던전에서 이미 정한 처리). */
   if(bossIntro) bossIntroEnd();
-  bossClear = { md, t:0, die: (die > 0 ? die : bossDieSec(e)), msg:false, txt: BOSS_CLR_TXT[md] || DUN_CLR_TXT };
+  /* ⚑ 699(주인 지시 2026-09-02 «던전,보스,승급전 전부 스킵 됨 연출효과») — 스킵이 켜져 있으면
+     **시간축만 접는다**(363·514 가 12 소환·16 룰렛에서 세운 규약 그대로): 시퀀스를 없애는 것이
+     아니라 `die`(터짐)·`hold`(«클리어» 뒤 대기)를 0 으로 두어 **다음 프레임에 후속으로 넘어간다**.
+     ⚠ 상태를 건너뛰지 않는 이유는 후속 경로가 하나뿐이어야 하기 때문이다 — `bossClearDone()` 은
+       적 순회 뒤(step)에서만 불려야 안전하다(그 함수 위 주석·162 예약제). 여기서 직접 부르면
+       `killEnemy` 한복판에서 `endDunRun`·`spawnStage` 가 전장을 갈아엎는다.
+     ⚠ 알림(«STAGE CLEAR!»·«클리어»)과 `sfx('clear')` 는 **남긴다** — 363 이 «스킵인데 결과 표시까지
+       사라지면 안 된다» 로 못박은 반대쪽 규약이다(룰렛도 당첨 칸 하이라이트·획득 문구는 남겼다). */
+  const sk = fxSkipOn();
+  bossClear = { md, t:0, die: sk ? 0 : (die > 0 ? die : bossDieSec(e)),
+                hold: sk ? 0 : DUN_CLR_HOLD, msg:false, txt: BOSS_CLR_TXT[md] || DUN_CLR_TXT };
   return true;
 }
 /* 홀드가 끝나는 프레임 — «후속» 은 모드마다 다르고 **각 모드가 이미 쓰던 그 경로 그대로**다.
@@ -27280,7 +27338,8 @@ function spawnDunBoss(n, dly){
   ETYPE.dunboss = dunBossType(r.d);
   r.bossQ = true;
   const k = Math.max(1, n | 0);
-  for(let i = 0; i < k; i++) spawnQ.push({ t:'dunboss', delay: dly > 0 ? dly : DUN_BOSS_DLY });
+  /* ⚑ 699 — 28 `startBoss` 와 같은 «등장음이 울릴 틈» 이다. 스킵 ON 이면 0(호출부에서 접는다). */
+  for(let i = 0; i < k; i++) spawnQ.push({ t:'dunboss', delay: fxSkipOn() ? 0 : (dly > 0 ? dly : DUN_BOSS_DLY) });
   r.bossUp += k;                                    /* 지금까지 «세운» 보스 수(스폰 대기 포함) */
 }
 /* ⚑ 425 — 등장 국면을 연다. 보스가 «필드에 선» 프레임에 그 모드가 딱 한 번 부른다.
@@ -27288,7 +27347,10 @@ function spawnDunBoss(n, dly){
    ⚑ 457 — 모드 공용이 됐다. **여는 곳은 넷, 판정은 여기 하나**다(던전·스테이지·승급전·레이드).
       돌려주는 값 = «국면이 실제로 열렸나» — 못 열면 호출부가 곧바로 전투로 넘어간다. */
 function bossIntroStart(md, e){
-  if(!e || bossIntroLen() <= 0){ bossIntro = null; return false; }
+  /* ⚑ 699 — 스킵이 켜져 있으면 국면을 **아예 열지 않는다**. 되돌림 시험이 이미 이 길을 쓰고 있다
+     (상수 셋이 0 이면 열지 않는다) — 새 분기가 아니라 **같은 출구**를 한 조건으로 넓힌 것이다.
+     호출부 넷은 «못 열었다» 를 이미 처리한다(던전은 그 프레임에 `r.fight = true`). */
+  if(!e || bossIntroLen() <= 0 || fxSkipOn()){ bossIntro = null; return false; }
   bossIntro = { md, t:0, e, p:{ x:e.x, y:e.y }, c:null };
   return true;
 }
@@ -33357,7 +33419,11 @@ function renderConf(){
   $('cfSrv').textContent = 'Server: KR-1';
   $('cfGid').textContent = 'Gamer Id: ' + spcGamerId();
 }
-function openConf(){ renderConf(); $('cfw').classList.add('on'); }
+/* ⚑ 699 — «연출 스킵» 은 이 팝업의 값이 아니라 **공용 값**이다(12 소환·16 룰렛·28 보스 도전과 한 벌).
+   그래서 `CF_ROWS` 위임 핸들러(`S.opt[k]` 를 직접 뒤집는 자리)를 안 쓰고 공용 함수를 부른다 —
+   그 안에 «켜는 즉시» 규약(363)·저장·다른 호스트 동기화(`fxSyncSkip`)가 이미 들어 있다. */
+$('cfSkip').addEventListener('click', e => { e.stopPropagation(); fxSkipToggle(); });
+function openConf(){ renderConf(); fxSyncSkip(); $('cfw').classList.add('on'); }
 function closeConf(){ $('cfw').classList.remove('on'); }
 window.openConf = openConf;
 
