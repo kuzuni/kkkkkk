@@ -1837,17 +1837,35 @@ async function ampCheck(p, hosts) {
     }
   }
 
-  /* ── §21 골드 광선이 «보이는가» (15회차 신설) ────────────────────
-     14회차 채점에서 비평가 AJ 가 «최대 다이아 상품 판의 각도 방향 변화가 ≤0.5계조 —
-     없거나 안 보인다» 로 짚었다. 재 보니 **켜져 있는데 안 보이는** 쪽이었다:
-     회전도 애니메이션도 정상인데 판 평균 기여가 **0.23 계조**였다.
-     마스크가 한가운데(0~26%)에서 가장 진한데 그 자리는 아이콘이 통째로 덮고,
-     판이 실제로 보이는 바깥 고리는 페이드 꼬리라 알파가 0 에 가까웠다.
-     «연출 없음은 0점» 이므로 게이트로 내린다 — 판 위 기여도를 광선만 끈 기준선과 비교한다.
-     ⚠ 회전 검출은 **표본 앨리어싱**에 주의해야 한다: 원뿔 그라디언트가 45° 주기라
-     패턴은 20s/8 = **2.5s 마다 되돌아온다**. AJ 가 «회전 0.0°» 를 읽은 것도 Δt=2400ms 로 봐서다
-     (2400ms 면 43.2° = 45° 에서 1.8° 차라 사실상 제자리다). 여기서는 Δt=1250ms(반주기)로 본다. */
-  console.log('§21 골드 광선 — 판 위에서 실제로 보이는가');
+  /* ── §21 골드 광선이 «보이는가» (15회차 신설 · 26회차 = 작업 676 전면 개정) ────────
+     15회차가 세운 뜻은 옳다 — «연출 없음은 0점» 이라 «판 위에서 실제로 보이는가» 를 게이트로 내린다.
+     바뀐 것은 **재는 법**이다. 15회차의 자는 세 항이 전부 «판의 절대값» 을 봤고,
+     판에는 광선 말고 **아이콘(`.pn>em`, `jz122Float` 로 떠 있다)** 이 있다.
+
+     ⚑ 작업 676 재현(`tools/probe676.js`)이 셋을 한꺼번에 못박았다:
+       ① 빨갛던 «기여» 항은 **제품이 아니라 창이 낡아서** 빨갛다. 15회차가 «아이콘이 덮는 안쪽은
+          빼고 판이 보이는 고리» 로 적어 둔 **r 34..76** 이 지금은 아이콘 자리다 — 아이콘 상자가
+          120×157 이라 **r ≤ 60 은 통째로 아이콘**이고(대역별 실측 ON↔OFF 기여가 r 0..72 에서 전부 **0.00**),
+          광선의 잉크는 **r 72..96**(대역 기여 31.30 · 67.73)에 있다. 고리는 그 대역의 4px 만 스친다 ⇒ 1.59.
+       ② 초록이던 두 항(산포 ≥1.5 · 반주기 ≥1.5)은 **헛초록**이었다. 광선을 끈 판에서 같은 자를 대면
+          산포 39.88(ON 39.39) · 반주기 **13.40(ON 13.40 — 소수점까지 같다)** 이다.
+          즉 그 둘은 광선이 통째로 사라져도 초록이고, 재고 있던 것은 **아이콘의 둥실**이었다.
+       ③ 광선 자체는 멀쩡하다 — `display:none` 이 판의 화소를 실제로 바꾸고(최대 Δ루마 50),
+          기여가 가장 큰 대역은 r 84..96 의 **67.73** 이다.
+
+     ⇒ 처방은 **문턱이 아니라 창과 값**이다(672 규약). 문턱 셋(4 · 1.5 · 1.5)은 한 칸도 안 건드렸다.
+       · 창 = **판 전체**. 반지름 상수를 새로 적지 않는다 — 낡은 것은 «34..76» 이라는 숫자였고,
+         그 자리에 다른 숫자를 적으면 아이콘이 또 자라는 날 같은 부패가 되풀이된다.
+       · 값 = **광선을 껐다 켠 차분**(`on − off`). 아이콘·판 배경처럼 광선과 무관한 것은 차분에서 상쇄되므로
+         «판의 절대값» 이 섞일 자리가 없다 ⇒ 세 항이 전부 광선만 잰다.
+       · 위상은 둘 다 본다(t=0 · t=1250) — 원뿔이 45° 주기라 한 위상만 보면 «그 위상에서 보이는 섹터가
+         없다» 는 이유로 헛빨강이 날 수 있다. 기여는 두 위상의 최대, 회전은 두 위상의 차.
+       ⚠ 회전 검출의 표본 앨리어싱 주의는 15회차 그대로다: 원뿔이 45° 주기라 패턴은 20s/8 = 2.5s 마다
+         되돌아온다. 그래서 Δt=1250ms(반주기)로 본다.
+       ⚠ 무르게 푼 수리가 아님은 **§R 되돌림 시험**이 못박는다 — 노드·마스크·회전은 그대로 두고
+         **칠(background)만** 걷으면 세 항이 전부 문턱 아래로 내려가야 한다(실측 0.06 / 0.02 / 0.05).
+       실측(3회 연속 같은 값): 기여 **8.66**(t=0) · 8.66/5.38(위상별) · 산포 **2.39** · 반주기 변화 **5.38**. */
+  console.log('§21 골드 광선 — 판 위에서 실제로 보이는가 (676 개정: 창=판 전체 · 값=ON−OFF 차분)');
   {
     await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
     await p.waitForTimeout(150);
@@ -1858,6 +1876,10 @@ async function ampCheck(p, hosts) {
       const b = r.parentElement.getBoundingClientRect();
       return { x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) };
     });
+    /* 판을 각도 12섹터로 쪼개 R−B(황색도)를 낸다 — 지표 축은 비평가 AJ 와 같다.
+       ⚠ «판 평균» 은 이 연출을 재는 자로 못 쓴다(원뿔이 45° 중 17° 만 불투명이라 평균은 0.5 계조도
+       안 움직인다 — 15회차 실측 0.46). 그리고 15회차가 쓰던 **고리**도 못 쓴다(위 ①).
+       진단용으로 옛 고리(34..76) 값을 같이 찍어 둔다 — 낡았다는 사실이 로그에 남게. */
     const shot = async () => {
       const b64 = (await p.screenshot({ clip: box })).toString('base64');
       return p.evaluate(async src => {
@@ -1867,20 +1889,21 @@ async function ampCheck(p, hosts) {
         const g = c.getContext('2d'); g.drawImage(img, 0, 0);
         const d = g.getImageData(0, 0, c.width, c.height).data;
         const cx = c.width / 2, cy = c.height / 2;
-        let s = 0, n = 0;
-        const sec = new Array(12).fill(0), cnt = new Array(12).fill(0);
+        const sa = new Array(12).fill(0), ca = new Array(12).fill(0);
+        const sr = new Array(12).fill(0), cr = new Array(12).fill(0);
         for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
           const j = (y * c.width + x) * 4;
-          const L = .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2];
-          s += L; n++;
-          /* 아이콘이 덮는 안쪽은 빼고, 판이 보이는 고리(r 34~76px)만 각도별로 센다 */
           const dx = x - cx, dy = y - cy, rr = Math.hypot(dx, dy);
-          if (rr < 34 || rr > 76) continue;
           let a = Math.atan2(dy, dx) * 180 / Math.PI; if (a < 0) a += 360;
           const k = Math.min(11, Math.floor(a / 30));
-          sec[k] += d[j] - d[j + 2]; cnt[k]++;      /* R−B = 황색도 (AJ 와 같은 지표) */
+          const yl = d[j] - d[j + 2];                    /* R−B = 황색도 */
+          sa[k] += yl; ca[k]++;                          /* 창 = 판 전체 */
+          if (rr >= 34 && rr <= 76) { sr[k] += yl; cr[k]++; }   /* 진단 — 15회차의 옛 고리 */
         }
-        return { avg: s / n, sec: sec.map((v, i) => cnt[i] ? v / cnt[i] : 0) };
+        return {
+          all: sa.map((v, i) => ca[i] ? v / ca[i] : 0),
+          ring: sr.map((v, i) => cr[i] ? v / cr[i] : 0)
+        };
       }, b64);
     };
     const pray = txt => p.evaluate(x => {
@@ -1889,28 +1912,46 @@ async function ampCheck(p, hosts) {
       if (!e) { e = document.createElement('style'); e.id = 'jz122ray'; document.head.appendChild(e); }
       e.textContent = x;
     }, txt);
-    if (!box) ok(false, '골드 광선 요소를 못 찾음');
-    else {
-      await seek(p, 0); const on0 = await shot();
-      await seek(p, 1250); const on1 = await shot();
-      await pray('.cn-cd.dia.top>.pn>.ray{display:none!important}');
-      await seek(p, 0); const off = await shot();
+    const RAY = '.cn-cd.dia.top>.pn>.ray';
+    const OFF = RAY + '{display:none!important}';
+    const NOPAINT = RAY + '{background:none!important}';
+    /* 광선만의 기여를 두 위상에서 뽑는다 — 같은 위상끼리 빼야 아이콘 둥실이 상쇄된다 */
+    const rayOnly = async extra => {
+      await pray(extra); await seek(p, 0); const o0 = await shot();
+      await seek(p, 1250); const o1 = await shot();
+      await pray(extra + OFF); await seek(p, 0); const f0 = await shot();
+      await seek(p, 1250); const f1 = await shot();
       await pray('');
-      /* ⚠ 판 «평균» 은 이 연출을 재는 자로 못 쓴다 — 원뿔 패턴이 45° 중 17° 만 불투명이라
-         광선이 뚜렷해도 판 전체 평균은 0.5 계조도 안 움직인다(실측 0.46).
-         비평가 AJ 가 쓴 지표(섹터별 황색도)와 같은 축으로, **광선을 끈 기준선 대비
-         섹터 최대 편차**를 본다. 이게 «보이는가» 에 대응하는 값이다. */
-      const contrib = Math.max(...on0.sec.map((v, i) => Math.abs(v - off.sec[i])));
-      const sd = a => { const m = a.reduce((x, y) => x + y, 0) / a.length;
-        return Math.sqrt(a.reduce((x, y) => x + (y - m) * (y - m), 0) / a.length); };
-      const spin = Math.max(...on0.sec.map((v, i) => Math.abs(v - on1.sec[i])));
-      console.log('    · 기준선 대비 섹터 최대 편차 ' + contrib.toFixed(2) + ' · 섹터 산포 ' + sd(on0.sec).toFixed(2)
-        + ' · 반주기(1250ms) 섹터 최대 변화 ' + spin.toFixed(2));
-      ok(contrib >= 4, '골드 광선이 판에 실제로 보인다 — 기준선 대비 섹터 최대 편차 '
-        + contrib.toFixed(2) + ' (>=4 · 14회차 결과물은 섹터 산포 0.14 로 «없는 것»과 구별이 안 됐다)');
-      ok(sd(on0.sec) >= 1.5, '각도 섹터 산포 = ' + sd(on0.sec).toFixed(2)
-        + ' (>=1.5 · 14회차 AJ 실측 0.14)');
-      ok(spin >= 1.5, '반주기 뒤 섹터가 실제로 돌았다 — 최대 변화 ' + spin.toFixed(2) + ' (>=1.5)');
+      const d0 = o0.all.map((v, i) => v - f0.all[i]);
+      const d1 = o1.all.map((v, i) => v - f1.all[i]);
+      const m = d0.reduce((x, y) => x + y, 0) / d0.length;
+      return {
+        contrib: Math.max(Math.max(...d0.map(Math.abs)), Math.max(...d1.map(Math.abs))),
+        spread: Math.sqrt(d0.reduce((x, y) => x + (y - m) * (y - m), 0) / d0.length),
+        spin: Math.max(...d0.map((v, i) => Math.abs(v - d1[i]))),
+        ringC: Math.max(...o0.ring.map((v, i) => Math.abs(v - f0.ring[i])))
+      };
+    };
+    if (!box) ok(false, '골드 광선 판(.cn-cd.dia.top>.pn>.ray) 을 찾지 못함');
+    else {
+      const r = await rayOnly('');
+      console.log('    · 기여(두 위상 최대) ' + r.contrib.toFixed(2) + ' · 섹터 산포 ' + r.spread.toFixed(2)
+        + ' · 반주기(1250ms) 변화 ' + r.spin.toFixed(2)
+        + '   (진단: 15회차의 옛 고리 34..76 으로 재면 ' + r.ringC.toFixed(2) + ' — 지금은 아이콘 자리다)');
+      ok(r.contrib >= 4, '골드 광선이 판에 실제로 보인다 — 광선 ON−OFF 섹터 최대 편차 '
+        + r.contrib.toFixed(2) + ' (>=4 · 14회차 결과물은 섹터 산포 0.14 로 «없는 것»과 구별이 안 됐다)');
+      ok(r.spread >= 1.5, '광선 기여의 각도 산포 = ' + r.spread.toFixed(2)
+        + ' (>=1.5 · 원뿔이라 섹터마다 달라야 한다)');
+      ok(r.spin >= 1.5, '반주기 뒤 광선 기여가 실제로 돌았다 — 최대 변화 ' + r.spin.toFixed(2) + ' (>=1.5)');
+
+      /* ── §R 되돌림 시험 — 노드·마스크·회전은 그대로, 칠만 걷는다.
+         세 항이 «광선이 사라져도 초록» 이 아님을 여기서 못박는다(15회차의 헛초록 재발 방지). */
+      const dead = await rayOnly(NOPAINT);
+      console.log('    · §R 되돌림(칠만 제거) — 기여 ' + dead.contrib.toFixed(2) + ' · 산포 '
+        + dead.spread.toFixed(2) + ' · 반주기 변화 ' + dead.spin.toFixed(2));
+      ok(dead.contrib < 4, '§R 칠을 걷으면 기여 항이 빨개진다 (' + dead.contrib.toFixed(2) + ' < 4)');
+      ok(dead.spread < 1.5, '§R 칠을 걷으면 산포 항이 빨개진다 (' + dead.spread.toFixed(2) + ' < 1.5)');
+      ok(dead.spin < 1.5, '§R 칠을 걷으면 회전 항이 빨개진다 (' + dead.spin.toFixed(2) + ' < 1.5)');
     }
     /* ⚠ 다음 절(§17)은 **소환 탭**에서 시작한다(강제 상자·[무료] 링이 거기에만 있다).
        여기서 재화 탭을 열어 둔 채 끝내면 그 두 측정점이 통째로 사라져 «측정점 3개» 로 FAIL 이 난다. */
