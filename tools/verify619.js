@@ -98,7 +98,7 @@ async function hold(page, sp) {
 
   /* ── [A] 선언 ─────────────────────────────────────────────────────── */
   console.log('[A] 선언 — 발화 부품 한 곳 · 세 자리가 그것을 부른다');
-  ok(/function upFx\(key, host, cur, n\)\{/.test(code), 'A1 공용 부품 `upFx()` 가 선언돼 있다');
+  ok(/function upFx\(key, host, cur, n, noFlash\)\{/.test(code), 'A1 공용 부품 `upFx()` 가 선언돼 있다');
   ok(/const UPFX_N\s*=\s*\d+/.test(code) && /const UPFX_CAP\s*=\s*\d+/.test(code),
      'A2 풀·동시 상한 상수(UPFX_N · UPFX_CAP)가 있다', (code.match(/const UPFX_N\s*=\s*\d+, UPFX_CAP\s*=\s*\d+/) || code.match(/const UPFX_N[^\n]*/) || [''])[0].trim());
   ok(/upFx\('train:'/.test(code),  'A3 훈련 홀드 틱이 upFx 를 부른다');

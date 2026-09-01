@@ -391,7 +391,7 @@ async function pixelRun(page) {
      그대로다. 헐거워지지 않는다: `fxBurst(el, FXPAL.up, …)` 폴백이 사라지거나 첫 발이 10개를 안 쏘면 빨개진다. */
   ok(/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\], o\.key\);/.test(src)
      && /function rtFirstFx\(sel, cur, key\)\{[\s\S]{0,400}?upFx\(key \|\| \('first:' \+ sel\), sel, cur, 10\)/.test(src)
-     && /function upFx\(key, host, cur, n\)\{[\s\S]{0,1600}?fxFlash\(el\)[\s\S]{0,500}?fxSpend\(cur, el\)[\s\S]{0,300}?fxBurst\(el, FXPAL\.up, cnt\)/.test(src),
+     && /function upFx\(key, host, cur, n, noFlash\)\{[\s\S]{0,2400}?fxFlash\(el\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,400}?fxBurst\(el, FXPAL\.up, grain \? UPFX_NOW : cnt\)/.test(src),
      '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 화폐 축 · 619 공용 부품)');
   ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \}/.test(src)
      && /fxUpOk\(card, card, txt, bi0\.cur\)/.test(src),

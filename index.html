@@ -33581,11 +33581,21 @@ $('trw').addEventListener('click', e => {
    -------------------------------------------------------------------------- */
 const UPFX_N   = 6;      /* 반복 1틱당 파티클 수 — 첫 발(10)보다 가볍게. 60ms 간격에서 겹쳐도 «잡음» 이 안 되는 값 */
 const UPFX_CAP = 36;     /* 한 자리가 `#fxl` 에서 동시에 쓰는 노드 상한(FXMAX 120 의 30%) */
+/* ⚑ 619 3회차 — **«타격 순간» 몫**. 화폐 알갱이(583)는 HUD 알약·아이콘에서 **날아오는** 그림이라
+   출발 뒤 200~350ms 동안 호스트 근처가 비어 있다. 직접 재 봤다(호스트 ±60px 안 노드 수):
+     훈련 t71ms flash 1 · spark 0 · 알갱이 **0**(전체 3개는 아직 비행 중) · t264ms 에야 spark 6
+     룬  t68ms spark 0 · 알갱이 1 / 단련 t64ms spark 0 · 알갱이 0
+   비평가 넷(DJ·DK·DL·DM)이 **2회차 연속 2인 공통**으로 이 자리를 «첫 타격에 이펙트가 죽어 있다» 로 냈고
+   DL·DM 은 «8점을 막는 단 하나» 로 지목했다. ⇒ 알갱이가 도착할 때까지의 빈자리를 **작은 앰버 한 줌**이 메운다.
+   ⚠ 583 의 «겹쳐 쏘지 않는다» 를 값으로 지킨다 — 그 규약이 든 근거는 «한 사건에 파티클 13개» 였다.
+     여기서는 **4 + 알갱이 ≤6 = 10**(583 이전 앰버 단독과 같은 수)이라 그 상한을 안 넘는다
+     (`verify583` [G2] «사건당 3~12개» 도 그대로 통과한다). */
+const UPFX_NOW = 4;
 const upFxPool = new Map();                        /* key → [[node,…], …] — 오래된 «세대» 가 앞 */
 const upFxLive = q => q.reduce((n, g) => n + g.length, 0);
 const upFxDrop = g => { for(const nd of g){ try { nd.remove(); } catch(_){} } };
 /* 한 번의 강화 = 한 번의 발화. 돌려주는 값은 «실제로 무엇이 붙었는가» 다(게이트가 이것을 센다). */
-function upFx(key, host, cur, n){
+function upFx(key, host, cur, n, noFlash){
   const L = (typeof fxL === 'function') ? fxL() : null;
   const el = (typeof host === 'string') ? document.querySelector(host) : host;
   if(!L || !el || !el.getBoundingClientRect) return false;
@@ -33597,10 +33607,11 @@ function upFx(key, host, cur, n){
   /* ② 그래도 레이어 상한에 걸리면 내 세대를 전부 걷는다 — 발화가 조용히 빠지면 «회당 터짐» 이 깨진다 */
   if(L.childElementCount + cnt + 1 > FXMAX){ while(q.length) upFxDrop(q.shift()); }
   const before = new Set(L.children);
-  if(typeof fxFlash === 'function') fxFlash(el);
-  /* 583 규약 그대로 — 화폐 키가 있으면 화폐 알갱이, 못 쏘면(레이어 포화·260ms 재시작 간격) 종전 앰버 */
-  if(!(cur && typeof fxSpend === 'function' && fxSpend(cur, el))
-     && typeof fxBurst === 'function') fxBurst(el, FXPAL.up, cnt);
+  if(!noFlash && typeof fxFlash === 'function') fxFlash(el);
+  /* 583 규약 그대로 — 화폐 키가 있으면 화폐 알갱이, 못 쏘면(레이어 포화·260ms 재시작 간격) 종전 앰버.
+     619 3회차 — 알갱이가 서면 **타격 순간 몫**(UPFX_NOW)만 같이 쏜다(위 상수 머리말 — 합 10개로 583 상한 안). */
+  const grain = !!(cur && typeof fxSpend === 'function' && fxSpend(cur, el));
+  if(typeof fxBurst === 'function') fxBurst(el, FXPAL.up, grain ? UPFX_NOW : cnt);
   const gen = [];
   for(const nd of L.children) if(!before.has(nd)) gen.push(nd);
   if(gen.length) q.push(gen);
@@ -33684,10 +33695,15 @@ function trHoldTick(){
      «−45» 는 **두 곳**에 떴다(HUD 알약 옆 `fxPay` · 카드 위 488 사다리). 주인이 보는 큰 쪽은
      카드 위 이것이다. 맥박(`hbPulse`)은 그대로라 488 의 «회당 피드백» 은 안 사라졌고,
      «무엇을 냈는가» 는 583 의 화폐 알갱이가 첫 발에 말한다. `verify488` [F3] 을 그 축으로 갈아 끼웠다. */
-  /* ⚑ 619 — 회당 **이펙트**. 488 이 얹은 «맥박 + 플로터» 는 그대로 두고 그 위에 첫 발과 같은
-     두 조각(플래시 + 골드 알갱이/앰버)을 틱당 1회 얹는다. 비용 키는 첫 발과 같은 `bi`(내기 «전» 값)다. */
+  /* ⚑ 619 — 회당 **이펙트**. 488 이 얹은 «맥박 + 플로터» 는 그대로 두고 그 위에 틱당 1회 얹는다.
+     ⚠ 2회차 — **반복분에는 화폐 알갱이를 안 쓴다**(`cur` 를 안 넘긴다 = 앰버 버스트로 고정).
+       비평가 DJ·DK 가 2인 공통으로 잡은 자리다: 알갱이는 잉크 50~70px(호스트의 5~7%)에 **날아와
+       쌓이는** 그림이라 60ms 마다 되풀이하면 룬 진행 바를 3프레임 연속 25~30% 가리고(DK «8점을 막는
+       단 하나»), 세 화면이 서로 다른 어휘로 읽힌다(DJ ④ 3점). 스파크는 16~20px 라 같은 박자에 맞는다.
+     ⚠ 583 규약은 **첫 발에 그대로 남는다** — «무엇으로 샀는가» 는 한 사건에 한 번 말하면 되고(21회차
+       «둘 다 쏘면 손맛이 아니라 잡음»), 반복분이 말하는 것은 «또 올랐다» 다. */
   const cardNow = trCard(h.key);
-  upFx('train:' + h.key, cardNow, bi.cur);
+  upFx('train:' + h.key, cardNow);
   hbBeat(cardNow, true, null, null);
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
   /* ⚑ 621 — 눌림 왕복 한 사이클(주인 지시 2026-09-01 «원래 크기로 돌아오고 누른크기 되고를 반복»).
@@ -33707,6 +33723,10 @@ function trHoldStart(key, card){
   /* 58(다른 세션 변경분 유지) — 오버레이는 **재렌더 «전»** 에 쏜다. 뒤에 쏘면 렌더 비용만큼 연출이 늦는다.
      그 뒤 노드가 «바뀌었을 때만» fx-hit 를 새 노드에 다시 붙인다(renderTrainLive 는 노드를 유지하므로 보통 no-op). */
   if(ok) fxUpOk(card, card, txt, bi0.cur);      /* 583 — 결제가 돌려준 화폐 키로 알갱이를 쏜다 */
+  /* ⚑ 619 3회차 — 첫 발의 «타격 순간» 몫. `fxUpOk` 는 공용 부품이라(09·12·17·장비·코스튬이 같이 쓴다)
+     여기서 한 줌만 더한다 — 플래시는 `fxUpOk` 가 이미 걸었으므로 **끄고**(중복 금지) 파티클만.
+     ⚠ 룬·단련은 같은 일을 `upFx` 안에서 한다(부품이 갈리지 않게 상수 `UPFX_NOW` 를 공유한다). */
+  if(ok && bi0.cur) upFx('train:' + key, card, null, UPFX_NOW, true);
   renderTrainLive();
   if(!ok){                                                             /* 첫 누름부터 실패면 반복 없음 */
     const el = trCard(key) || card;
@@ -33908,7 +33928,7 @@ function rtRuneHold(id){
          58 이 «강화·업그레이드 «성공» 한 세트» 로 뜻을 굳힌 그림이라(주석 36xxx), 실패에 얹으면
          «레벨이 올랐다» 는 거짓 신호가 된다 — 룬만 확률 판정이라 여기서 훈련·단련과 갈린다.
          실패의 회당 피드백은 종전대로 바로 아래 `hbBeat(…, false, '실패', …)` 의 흔들림·플로터다. */
-      if(up && tries > 1) upFx('rune:' + id, sel0, PAY_CUR.rune);   /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 */
+      if(up && tries > 1) upFx('rune:' + id, sel0);   /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
       hbBeat(sel0, up, up ? '+1' : '실패', '−' + fmt(cost));
       return true;
     },
@@ -33945,7 +33965,7 @@ function rtTemperHold(k){
          613 — «−n» 의 단위는 이제 단련석이다(행 라벨·버튼이 상시로 아이콘을 말하므로 숫자만 —
          58 26회차 «바로 아래 줄이 말하는 낱말을 플로터가 한 번 더 말하느라 자리를 두 배로 쓴다»). */
       /* ⚑ 619 — 회당 이펙트(단련은 확정 처리라 실패 갈래가 없다 = 틱과 1:1) */
-      if(n > 1) upFx('temper:' + k, host, PAY_CUR.temper);          /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 */
+      if(n > 1) upFx('temper:' + k, host);          /* 첫 발은 `rtFirstFx` 가 같은 키로 이미 쏜다 · 2회차 — 반복분은 알갱이 없이 앰버(위 trHoldTick 머리말) */
       hbBeat(host, true, '+1', '−' + fmt(cost));
       return true;
     },

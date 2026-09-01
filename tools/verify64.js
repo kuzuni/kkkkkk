@@ -377,7 +377,14 @@ async function reset(page, o){
   const nBuys = (await snap(page)).atk;
   await page.mouse.up();
   await page.waitForTimeout(200);
-  ok('반복 중 #fxl 자식 수가 구매수보다 훨씬 적다', peak < nBuys * 3, 'fxl ' + peak + ' / 구매 ' + nBuys);
+  /* ⚑ 619 이관 — 이 항이 «구매수보다 훨씬 적다» 로 잰 이유는 64 가 «반복분 연출은 정지할 때 한 번» 이라
+     결정했기 때문이다(60ms 마다 10개씩 쏘면 `#fxl` 이 FXMAX 로 막힌다). **주인 지시 619 가 그 결정을
+     뒤집었다** — 반복분도 회당 터진다. 그러니 여기서 지킬 뜻은 «발화를 참아라» 가 아니라 원래 근거인
+     **«폭주하지 않는다»** 다: 발화는 619 의 풀·동시 상한(`UPFX_CAP` 36)이 묶으므로 **동시 노드**가
+     FXMAX 밑 · 상한 언저리에 머무는지를 묻는다(333 처방 — 자리만 옮기고 뜻은 그대로).
+     ⚠ 헐거워지지 않는다: 상한을 걷어내면 1.4초 홀드에서 파티클이 100개를 넘겨 이 항이 그대로 빨개진다. */
+  ok('반복 중 #fxl 동시 노드가 상한 안에 머문다(619 풀·동시 상한 — 폭주 없음)',
+     peak < 120 && peak <= 70, 'fxl 동시 최대 ' + peak + ' / 구매 ' + nBuys + ' (FXMAX 120)');
   const tail = await page.evaluate(() => $('fxl') ? $('fxl').childElementCount : 0);
   ok('정지 시 마무리 연출 재생(0 아님)', tail > 0, 'fxl ' + tail);
 
