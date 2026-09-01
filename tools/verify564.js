@@ -18,6 +18,23 @@
  *       이 항이 없으면 위 넷은 «이미 참인 것을 굳힌 자» 인지 구분되지 않는다(338 규칙).
  *   [R2] 되돌림 시험 2 — 왼쪽 되밀기를 36회차의 «한 방» 식으로 되돌리면 nsl 4 에서 폭이
  *       484 에 멈춰(슬롯당 121 < 123) 회피가 또 버려진다. 564 가 고친 두 번째 자리다.
+ *   [R3] 되돌림 시험 3(672 신설) — keep-out 자체를 무력화(`fx3TextX` → [])하면 [E] 가 빨개진다.
+ *       [R]·[R2] 는 «밴드 산수» 를 되돌리는 자라 [E] 의 **관측 경로**는 한 번도 안 쓴다.
+ *
+ * ⚑ 672(2026-09-01) — [E] 가 «실행마다 갈렸다»(씨앗 20260829 에서 50.1 ↔ 초록). **자의 창이 틀렸다.**
+ *   [E] 는 표본 창을 `btn.click()` **전** 에 찍은 벽시계 `t0` 에서 `FX3_SPREAD..+FX3_HOLD_F` 로 잡았는데,
+ *   코인 자신의 시계(`f.st`)는 클릭 처리 + 렌더 뒤에 시작한다 — `probe672` 실측 **스폰 지연 18.3~26.9ms**.
+ *   그만큼 두 창이 어긋나서 [E] 창 표본 57개 중 **21개가 머묾이 아니라 «퍼짐»(a) 국면**이었다.
+ *   퍼짐 중인 코인은 아직 버튼(=라벨 자리)에서 슬롯으로 가는 중이라 배치값에서 최대 **45.9px** 떨어져
+ *   있는데(설계 부유 진폭은 11), 문턱 `FX3_KOM − FX3_BSFX` 는 **머묾 국면에서만** 성립하는 하한이다
+ *   ⇒ 퍼짐 표본이 하나 걸리는 실행만 빨개졌다. 제품은 결함이 없다 — 같은 순간을 제품 자신의 국면
+ *   (`f.sd ≤ f.t < f.ha`)으로 걸러 재면 진폭이 **10.98 ≤ 11** 로 설계 그대로다(`probe672` [7]).
+ *   ⇒ 처방은 **문턱이 아니라 창**이다(문턱은 한 칸도 안 내렸다). 덤으로 셋을 같이 조였다:
+ *     ⓐ y 대역 필터 폐지 — 제품의 keep-out 은 코인 y 를 안 보므로 필터는 자를 무르게만 했다
+ *        («라벨 y 대역에 코인 없음» 으로 **n/a 초록**이 나던 자리다).
+ *     ⓑ 좌표계 통일 — 코인·라벨을 **프레임 좌표**로 환산해 프레임 단위 문턱과 잰다(종전은 뷰포트
+ *        px 를 프레임 문턱과 비교했다 — s = 1 이라 값은 같았지만 자가 축척에 묶여 있었다).
+ *     ⓒ 표본 0 이면 빨강 — 머묾 국면을 한 번도 못 본 실행은 관측이 아니다.
  *
  * 실행: node tools/verify564.js */
 const { pw, launch } = require('./pwlaunch');
@@ -29,7 +46,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail++; console.log('  ✗ ' + m); } };
 
 /* 씬 B(22 퀘스트 «모두 받기»)를 열고, 요청한 계측을 돌려준다. */
-async function scene(seed, work) {
+async function scene(seed, work, arg) {
   const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
@@ -55,7 +72,7 @@ async function scene(seed, work) {
   });
   await p.evaluate(() => openQuest());
   await p.waitForTimeout(500);
-  const out = await p.evaluate(work);
+  const out = await p.evaluate(work, arg);
   await b.close();
   return out;
 }
@@ -76,6 +93,62 @@ const askBand = () => {
   return { keep: escY.keep, MIND: FX3_MIND, KOM: FX3_KOM, BSFX: FX3_BSFX, PITCH: FX3_BSPITCH,
            cap: fx3SlotCap(p0, outX, escY, 6),
            rows: [2, 3, 4, 5, 6].map(at) };
+};
+
+/* 672 — 머묾 관측. **창을 벽시계가 아니라 코인 자신의 국면으로 잡는다**(`f.sd ≤ f.t < f.ha`).
+   `kill` 이 참이면 keep-out 을 통째로 무력화한다([R3] 되돌림 시험) — 라벨 상자는 무력화 «전» 에
+   제품에게서 받아 둔다(무력화 뒤에는 `escY.keep` 이 비어 자기 자신을 못 잰다). */
+const hold = async (kill) => {
+  const btn = document.getElementById('qAll');
+  const p0 = fxPt(btn);
+  const escY = fx3Escape(p0);
+  if (!p0 || !escY || !escY.free) return { err: '자유 밴드를 못 잡았다' };
+  /* 자는 라벨 상자를 **스스로** 잰다(제품의 `fx3TextX` 를 그대로 믿지 않는다) — 버튼 안 텍스트
+     노드의 Range 중 가장 넓은 것. 프레임 좌표로 환산해 프레임 단위 문턱과 같은 자에 올린다. */
+  const f0 = fxSc();
+  let lab = null;
+  { const rg = document.createRange(); let best = null;
+    const walk = (nd) => { if (nd.nodeType === 3 && nd.textContent.trim()) { rg.selectNodeContents(nd); const rr = rg.getBoundingClientRect(); if (rr.width && (!best || rr.width > best.width)) best = rr; } for (const c of nd.childNodes) walk(c); };
+    walk(btn); if (best) lab = { x0: (best.left - f0.x) / f0.s, x1: (best.right - f0.x) / f0.s }; }
+  if (!lab) return { err: '라벨 텍스트 노드를 못 찾았다' };
+  /* 자가 잰 상자가 제품의 keep-out 원본과 어긋나면 그 자체가 결함이다(672 실측 폭 차 0.00px) */
+  const raw = escY.keep.map(h => [h[0] + FX3_KOM, h[1] - FX3_KOM]);
+  const dLab = raw.length ? Math.max(Math.abs(raw[0][0] - lab.x0), Math.abs(raw[raw.length - 1][1] - lab.x1)) : 1e9;
+
+  if (kill) window.fx3TextX = () => [];
+  const need = FX3_KOM - FX3_BSFX;
+  /* ⚑ 672 — 허용오차는 **고른 값이 아니라 잰 값**이다. 제품은 자리를 `translate(x.toFixed(1)px …)`
+     로 **0.1px 격자에 양자화**해서 그린다(index.html 의 비행 그리기) — 그러니 «그려진» 자리는 계산값
+     에서 최대 ±0.05px 벗어난다. 배치가 `fx3Eject` 로 구멍 «가장자리» 에 앉는 기하(644 이전이 그랬다)
+     에서는 설계값이 문턱과 **정확히 같으므로**, 이 격자 몫을 안 빼면 자가 0.05px 짜리 칼날 위에 선다.
+     `probe672` [8] 실측 최대 부족분 **0.001px** — 격자 상한 안이다. 문턱(need) 자신은 한 칸도 안 내렸다. */
+  const QUANT = 0.05;
+  const t0 = performance.now();
+  btn.click();
+  let bad = 0, mind = 1e9, ns = 0, off = 0, nb = 0, peak = 0;
+  await new Promise((res) => {
+    const tick = () => {
+      const t = performance.now() - t0;
+      peak = Math.max(peak, document.querySelectorAll('.fx-fly').length);
+      const fs = fxSc();
+      for (const fl of fxFlies) {
+        if (!fl.el) continue;
+        /* keep-out 은 «밴드 배치» 의 규칙이다 — 밴드 밖 코인이 있으면 필터가 무엇을 감추게 되므로
+           세어서 **빨갛게** 만든다(범위를 조용히 좁히지 않는다). */
+        if (!fl.bnd) { nb++; continue; }
+        if (!(fl.t >= fl.sd && fl.t < fl.ha)) { off++; continue; }   /* 제품 자신의 머묾 국면만 */
+        ns++;
+        const ic = fl.el.querySelector('.cic'); const rr = (ic || fl.el).getBoundingClientRect();
+        const cxF = (rr.left + rr.width / 2 - fs.x) / fs.s;
+        const d = Math.max(lab.x0 - cxF, cxF - lab.x1);
+        mind = Math.min(mind, d); if (d < need - QUANT) bad++;
+      }
+      if (t >= 700) return res();
+      setTimeout(tick, 12);
+    };
+    tick();
+  });
+  return { bad, mind, ns, off, nb, need, peak, dLab, quant: QUANT };
 };
 
 (async () => {
@@ -106,38 +179,11 @@ const askBand = () => {
 
   console.log('[E] 관측 — 머묾 창 «코인 중심 ↔ 라벨» 최소 여유 (씨앗 3벌)');
   for (const sd of [20260828, 20260829, 20260830]) {
-    const r = await scene(sd, async () => {
-      let qlab = null;
-      { const btn = document.getElementById('qAll'); const rg = document.createRange(); let best = null;
-        const walk = (nd) => { if (nd.nodeType === 3 && nd.textContent.trim()) { rg.selectNodeContents(nd); const rr = rg.getBoundingClientRect(); if (rr.width && (!best || rr.width > best.width)) best = rr; } for (const c of nd.childNodes) walk(c); };
-        walk(btn); if (best) qlab = { x: best.left, y: best.top, w: best.width, h: best.height }; }
-      const H = { a: FX3_SPREAD * 1000, b: (FX3_SPREAD + FX3_HOLD_F) * 1000 };
-      const need = FX3_KOM - FX3_BSFX;
-      const t0 = performance.now();
-      document.getElementById('qAll').click();
-      let bad = 0, mind = 1e9, ns = 0, peak = 0;
-      await new Promise((res) => {
-        const tick = () => {
-          const t = performance.now() - t0;
-          peak = Math.max(peak, document.querySelectorAll('.fx-fly').length);
-          if (t >= H.a && t <= H.b) {
-            ns++;
-            for (const el of document.querySelectorAll('.fx-fly')) {
-              const ic = el.querySelector('.cic'); const rr = (ic || el).getBoundingClientRect();
-              const cx = rr.left + rr.width / 2, cy = rr.top + rr.height / 2;
-              if (!qlab || cy < qlab.y || cy > qlab.y + qlab.h) continue;
-              const d = Math.max(qlab.x - cx, cx - (qlab.x + qlab.w));
-              mind = Math.min(mind, d); if (d < need) bad++;
-            }
-          }
-          if (t >= 700) return res();
-          setTimeout(tick, 12);
-        };
-        tick();
-      });
-      return { bad, mind, ns, need, peak };
-    });
-    ok(r.ns > 0 && r.bad === 0, `씨앗 ${sd}: 머묾 표본 ${r.ns}개 · 위반 ${r.bad}개 · 최소 여유 ${r.mind === 1e9 ? 'n/a(라벨 y 대역에 코인 없음)' : r.mind.toFixed(1) + 'px'} (≥ ${r.need}) · 동시 최대 ${r.peak}개`);
+    const r = await scene(sd, hold, false);
+    ok(!r.err && r.nb === 0 && r.ns > 0 && r.bad === 0 && r.dLab < 0.5,
+      `씨앗 ${sd}: ${r.err || `머묾 표본 ${r.ns}개(코인×프레임) · 위반 ${r.bad}개 · 최소 여유 ${r.mind === 1e9 ? 'n/a' : r.mind.toFixed(1) + 'px'} (≥ ${r.need})`
+      + ` · 밴드 밖 코인 ${r.nb}개 · 동시 최대 ${r.peak}개 · 국면 밖(퍼짐·흡수) ${r.off}개는 안 셌다`
+      + ` · 자↔제품 라벨 상자 차 ${r.dLab.toFixed(2)}px · 허용 격자 ${r.quant}px(제품 toFixed(1))`}`);
   }
 
   console.log('\n[R] 되돌림 시험 — `fx3SlotCap` 을 564 이전(0 = 개수 안 깎음)으로 되돌린다');
@@ -165,6 +211,12 @@ const askBand = () => {
     return { span, nsl, MIND: FX3_MIND, per: span / nsl };
   });
   ok(R2.per < R2.MIND, `한 방 되밀기로는 슬롯당 ${R2.per.toFixed(1)}px < FX3_MIND ${R2.MIND} — 회피가 또 버려진다(564 의 반복 되밀기가 이걸 넘긴다)`);
+
+  console.log('[R3] 되돌림 시험 3(672) — keep-out 을 무력화하면 [E] 가 빨개진다');
+  const R3 = await scene(20260829, hold, true);
+  ok(!R3.err && R3.ns > 0 && R3.bad > 0 && R3.mind < R3.need,
+    `무력화하면 머묾 표본 ${R3.ns}개 중 위반 ${R3.bad}개 · 최소 여유 ${R3.mind === 1e9 ? 'n/a' : R3.mind.toFixed(1) + 'px'} < ${R3.need}`
+    + ` — 위반 0 이면 [E] 가 «이미 참인 것을 굳힌 자» 다(338 규칙)`);
 
   console.log(`\nVERIFY564 ${pass}/${pass + fail} ` + (fail ? 'FAIL' : 'PASS'));
   process.exit(fail ? 1 : 0);
