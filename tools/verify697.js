@@ -204,8 +204,17 @@ const reset = `
     f2 === null ? '선언 없음' : (f2.join(' · ') || '0건'));
   const f3 = (CODE.match(/\bex\.mail\b/g) || []).length + (CODE.match(/mail\s*:\s*[01]\s*[,}]/g) || []).length;
   ok(f3 === 0, 'F3 `EXCHANGE` 의 죽은 `mail` 칸과 그 분기가 선언째 사라졌다', f3 + '건');
-  const f4 = (CODE.match(/sendMail\(\{/g) || []).length;
-  ok(f4 === 1, 'F4 살아 있는 `sendMail({…})` 호출부는 **월별 다이아 한 곳**뿐(180 — 구매가 아니다)', f4 + '곳');
+  /* ⚑ 697 이 약속한 것은 «우편함이 빈다» 가 아니라 **«상점 구매가 우편을 안 지난다»** 다.
+     출석 환영·월별 다이아처럼 «구매가 아닌» 우편은 앞으로도 늘 수 있으므로 호출부 **수**를 세면
+     그때마다 남의 작업에서 이 자가 빨개진다(1회차 뒤 실제로 그랬다 — 다른 워커의 «환영 n일차 보너스»).
+     그래서 세는 것은 수가 아니라 **각 호출부의 `src`** 다: `sendMail` 의 기본값이 `'shop'` 이므로
+     «상점 지급» 은 src 를 안 적거나 'shop' 으로 적는 쪽이고, 그런 호출부가 0이어야 한다. */
+  const calls = CODE.match(/sendMail\(\{[^;]*?\}\)/g) || [];
+  const shopCalls = calls.filter(c => !/src\s*:\s*'(?!shop')[a-z]+'/.test(c));
+  ok(calls.length > 0 && shopCalls.length === 0,
+    'F4 살아 있는 `sendMail({…})` 호출부 중 «상점 지급»(src 미기재 또는 \'shop\')이 0곳',
+    calls.length + '곳 중 상점 ' + shopCalls.length + '곳 — ' +
+      (calls.map(c => (c.match(/src\s*:\s*'([a-z]+)'/) || [0, '(미기재)'])[1]).join(' · ')));
   const f5 = await ev(page, () => typeof sendMail === 'function' && typeof trimMailx === 'function'
                                   && typeof allMails === 'function');
   ok(f5 === true, 'F5 우편함 **부품 자체는 안 죽였다** — 고정 우편·월별이 그 위에서 돈다', String(f5));

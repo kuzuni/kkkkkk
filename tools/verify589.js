@@ -192,8 +192,13 @@ const reset = `
     'C5 권한 상품 7종은 여전히 즉시 반영된다', JSON.stringify(C.perms));
   /* ⚑ 살아 있는 코드에서 «구매가 우편을 만드는» 자리가 정말 0인가 — 굴려 본 12건 밖까지 본다.
      `sendMail(` 호출부는 **월별 다이아 하나**만 남아야 한다(180 · 구매가 아니다). */
-  const C6 = (CODE.match(/sendMail\(\{/g) || []).length;
-  ok(C6 === 1, 'C6 살아 있는 코드의 `sendMail({…})` 호출부가 딱 1곳(180 월별 다이아)', C6 + '곳');
+  /* 697 — 세는 것은 호출부 «수» 가 아니라 각 호출부의 `src` 다(구매가 아닌 우편은 앞으로도 는다).
+     `sendMail` 의 src 기본값이 'shop' 이므로 «상점 지급» 은 src 를 안 적거나 'shop' 으로 적는 쪽이다. */
+  const C6calls = CODE.match(/sendMail\(\{[^;]*?\}\)/g) || [];
+  const C6shop = C6calls.filter(c => !/src\s*:\s*'(?!shop')[a-z]+'/.test(c));
+  ok(C6calls.length > 0 && C6shop.length === 0,
+    'C6 살아 있는 `sendMail({…})` 호출부에 «상점 지급»(src 미기재 또는 \'shop\')이 0곳',
+    C6calls.length + '곳 중 상점 ' + C6shop.length + '곳');
 
   /* ═════ [D] 안내 ═════ */
   console.log('\n[D] 안내 — «즉시 지급되었습니다» 1건 · 토스트 · 프레임 안');
