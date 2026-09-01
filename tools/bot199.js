@@ -543,6 +543,17 @@ const BOT_SRC = function (cfg) {
      판정식은 여기 한 곳이다(표 두 벌 금지 — `calValid` 와 같은 규약). */
   const bossValid = r => r.bossKilled === true
                       && r.bossOver != null && isFinite(r.bossOver) && r.bossOver <= BOSS_OVER;
+  /* ⚑ 16회차(정정5) — **κ_hp·κ_gold(몹 성질 축)도 자기 유효 조건을 따로 갖는다.**
+     둘은 «처치당 비»(mob.hpRat/kills · goldRat/kills)라 **표본이 대역 안이기만 하면**(처치 > 3)
+     캐릭터의 화력 사정과 무관하다 — 몹 하나의 체력·골드는 누가 잡아도 같은 수다.
+     15회차까지는 `valid`(화력 축: pump0 ≥ 0.5 · 같은 캐릭터 접기)로 같이 걸러서,
+     s700(86킬 · buildRat 1.000 «접힘»)·s760(34킬 · pump0 0.33 «화력 미달»)의 몹 표본이
+     통째로 버려졌고 그 결과 s840 에서 κ_hp·κ_gold 가 1e-9 바닥에 물렸다([C] 골드 −98.3% —
+     15-9 정정4 «이 회차가 만든 손해»). 넣으면 s840 κ_hp → 0.492 · κ_gold → 0.831(정정5 실측).
+     ⚠ **κ_dps 는 그대로 `valid` 로 거른다** — 그 비의 분모가 `formDps`(그 행을 찍은 캐릭터)라
+     같은 캐릭터 중복 행이 ±17% 잡음을 만들던 자리(13회차 ⓓ)가 바로 κ_dps 다.
+     판정식은 여기 한 곳이다(표 두 벌 금지 — `calValid`·`bossValid` 와 같은 규약). */
+  const mobValid = r => (r.kills | 0) > 3;
   /* 615 — 재현 프로브가 **같은 조각**을 부른다(사본을 짜면 자와 프로브가 갈린다). */
   B.pumpTo = pumpTo; B.pumpSurv = pumpSurv; B.BOSS_OVER = BOSS_OVER; B.sampleBoss = sampleBoss; B.sampleMobs = sampleMobs;
   B.survHave = survHave; B.survNeed = survNeed;
@@ -594,6 +605,8 @@ const BOT_SRC = function (cfg) {
     row.powerOk = row.pump0 != null && isFinite(row.pump0) && row.pump0 >= PUMP_MIN && (row.kills | 0) > 3;
     row.failBy = row.valid ? null : (row.powerOk ? 'build' : 'power');
     row.bossValid = bossValid(row);
+    /* 16회차(정정5) — κ_hp·κ_gold 는 이 칸으로 걸러진다(행이 판정을 들고 다닌다 — 615 규약). */
+    row.mobValid = mobValid(row);
     return row;
   };
   B.calibrateFloor = () => {
@@ -621,8 +634,14 @@ const BOT_SRC = function (cfg) {
        옛 세대 캐시(r10 이하)에는 `valid` 가 없고 유효 행만 실려 있었다 → «없으면 유효». */
     /* ⚑ 12회차(615) — 축마다 유효 조건이 다르다. κ_boss 는 «격파로 끝났고 과충이 상한 안인»
        행만 읽는다(`bossValid`) — 안 그러면 «죽기 전까지» 를 잰 수가 곡선에 들어온다.
-       옛 세대 캐시(r11 이하)에는 `bossValid` 가 없다 → «없으면 유효»(11회차 `valid` 와 같은 규약). */
-    const okRow = r => key === 'kBoss' ? r.bossValid !== false : r.valid !== false;
+       옛 세대 캐시(r11 이하)에는 `bossValid` 가 없다 → «없으면 유효»(11회차 `valid` 와 같은 규약).
+       ⚑ 16회차(정정5) — κ_hp·κ_gold 는 `mobValid`(처치 > 3)로 읽는다: 처치당 비라 화력 축
+       탈락(접힘·미달)과 무관하다. s700·s760 이 여기 들어와 s840 κ_hp 1e-9 → 0.492 가 된다.
+       κ_dps 는 그대로 `valid`(분모가 그 행의 캐릭터라 중복 행 잡음이 실재하는 축).
+       옛 세대 캐시(r15 이하)에는 `mobValid` 가 없다 → `valid` 로 되짚는다(같은 규약). */
+    const okRow = r => key === 'kBoss' ? r.bossValid !== false
+                : (key === 'kHp' || key === 'kGold') ? (r.mobValid != null ? r.mobValid === true : r.valid !== false)
+                : r.valid !== false;
     const rows = B.cal.rows.filter(r => okRow(r) && r[key] != null && isFinite(r[key]) && r[key] > 0);
     if (!rows.length) return B.cal[key] || 1;
     if (s <= rows[0].s) return rows[0][key];
@@ -1342,8 +1361,13 @@ if (require.main === module) (async () => {
       await ctx.close();
       return f;
     })();
-    /* 11회차 — 참고 평균도 **유효 행만**(kAt 과 같은 표를 봐야 한다). */
-    const avg = (k) => { const v = rows.filter(o => o.valid !== false).map(o => o[k]).filter(x => x != null && isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
+    /* 11회차 — 참고 평균도 **유효 행만**(kAt 과 같은 표를 봐야 한다).
+       16회차(정정5) — «같은 표» 가 축마다 다르다: kHp·kGold 는 `mobValid` · kBoss 는 `bossValid` ·
+       kDps 는 `valid`. 평균이 kAt 과 다른 행을 읽으면 표 머리의 참고값이 자와 갈린다. */
+    const avgOk = (o, k) => k === 'kBoss' ? o.bossValid !== false
+                    : (k === 'kHp' || k === 'kGold') ? (o.mobValid != null ? o.mobValid === true : o.valid !== false)
+                    : o.valid !== false;
+    const avg = (k) => { const v = rows.filter(o => avgOk(o, k)).map(o => o[k]).filter(x => x != null && isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
     report.cal = { rows, kDps: avg('kDps'), kHp: avg('kHp'), kGold: avg('kGold'), kBoss: avg('kBoss'),
                    tFloor: fl.tFloor, floorKills: fl.floorKills };
     /* 캐시는 nofloor 오염 전 원본으로 저장한다 — 게이트 손잡이가 캐시에 굳으면 안 된다 */
@@ -1497,8 +1521,10 @@ function writeReport(rep) {
     /* 13회차 — 이름은 «둘 다 어기면 화력 미달» 규약(`failBy`). 옛 캐시는 저장된 칸에서 되짚는다. */
     const failWhy = r.valid === false
       ? (r.failBy || (r.pump0 != null && isFinite(r.pump0) && r.pump0 >= 0.5 && (r.kills | 0) > 3 ? 'build' : 'power')) : null;
-    const badTxt = failWhy === 'build' ? '✖ **같은 캐릭터**(화력비 < 1.05)'
-                 : failWhy === 'power' ? '✖ **대역 밖**(실패 프로브)' : '✔';
+    /* 16회차(정정5) — 화력 축 탈락 행도 몹 표본이 대역 안이면 κ_hp·κ_gold 는 자에 쓴다. */
+    const mobOkTx = r.mobValid != null ? r.mobValid === true : r.valid !== false;
+    const badTxt = failWhy === 'build' ? (mobOkTx ? '△ **접힘**(κ_dps 만 제외 · κ_hp·κ_gold 는 자에 쓴다)' : '✖ **같은 캐릭터**(화력비 < 1.05)')
+                 : failWhy === 'power' ? (mobOkTx ? '△ **화력 미달**(κ_dps 만 제외 · κ_hp·κ_gold 는 자에 쓴다)' : '✖ **대역 밖**(실패 프로브)') : '✔';
     L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${endTxt} | ${svTxt} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${pumpTxt} | ${p0Txt} | ${brTxt} | ${badTxt} | ${r.bossValid === false ? '✖ **대역 밖**' : '✔'} |`);
   }
   {
@@ -1508,7 +1534,7 @@ function writeReport(rep) {
       && (r.failBy ? r.failBy === 'power' : !(r.pump0 != null && isFinite(r.pump0) && r.pump0 >= 0.5 && (r.kills | 0) > 3)));
     if (bad.length) {
       L.push('');
-      L.push(`· ✖ 행은 **자에서 뺀다**(κ 보간·외삽·참고 평균 전부) — 그 자리의 κ 는 «전장의 모양» 이 아니라 **화력 미달**이 만든 수다.`);
+      L.push(`· ✖ 행은 **화력 축(κ_dps)과 되먹임에서 뺀다** — 그 자리의 κ_dps 는 «전장의 모양» 이 아니라 **화력 미달**이 만든 수다. ⚠ 16회차(정정5): **κ_hp·κ_gold(처치당 비)는 처치 > 3 이면 그 행도 자에 쓴다** — 몹 하나의 체력·골드는 누가 잡아도 같은 수라 화력 사정과 무관하다(«몹 축» 칸의 △ 표시가 그 행이다).`);
       L.push(`  실패 프로브를 표에 남기는 이유는 10회차 최대 실측(«달성/목표 ${bad[0].pump == null ? '—' : bad[0].pump.toExponential(1)}»)이 본문에만 있고 재현 경로가 없었기 때문이다(정정7).`);
       L.push(`  목표 DPS(재현용): ${bad.map(r => `s${r.s} ${fmtN(r.target)}`).join(' · ')} — 전 축(UPG·훈련·소환·일괄 강화·유물·룬·도감·소환 레벨) 만개 후의 달성치가 앞 칸 «수식 \`stat.dps\`» 다.`);
     }

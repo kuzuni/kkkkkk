@@ -96,9 +96,19 @@ console.log('[6] 보스 축은 자기 유효 조건을 갖는다');
 ok((BOT.match(/const bossValid = r =>/g) || []).length === 1, '판정식은 한 곳이다(표 두 벌 금지 — `calValid` 와 같은 규약)');
 ok(/r\.bossKilled === true[\s\S]{0,200}r\.bossOver <= BOSS_OVER/.test(BOT),
    '유효 = 격파했다 **그리고** 과충이 상한 안이다(격파해도 한 대에 지웠으면 그 수는 클리핑이다)');
-ok(/key === 'kBoss' \? r\.bossValid !== false : r\.valid !== false/.test(BOT),
-   '`kAt` 가 κ_boss 만 `bossValid` 로 거른다 · 옛 세대 캐시는 «없으면 유효»');
+/* ⚑ 199-16회차(정정5) 이관 — 축별 유효 조건이 «둘» 에서 «셋» 이 됐다. 옛 단언
+   («kBoss 만 bossValid · 나머지는 valid»)을 그대로 두면 κ_hp·κ_gold 분리를 되돌리는
+   회귀를 초록으로 통과시킨다 — 방향을 넓혀 갈아 끼운다(333 처방 · 자리는 비우지 않는다). */
+ok(/key === 'kBoss' \? r\.bossValid !== false/.test(BOT),
+   '`kAt` 가 κ_boss 를 `bossValid` 로 거른다');
+ok(/\(key === 'kHp' \|\| key === 'kGold'\) \? \(r\.mobValid != null \? r\.mobValid === true : r\.valid !== false\)/.test(BOT),
+   '`kAt` 가 κ_hp·κ_gold 를 `mobValid` 로 거른다 · 옛 세대 캐시(r15 이하)는 `valid` 로 되짚는다');
+ok(/: r\.valid !== false;/.test(BOT),
+   'κ_dps 는 그대로 `valid` 로 거른다(분모가 그 행의 캐릭터라 중복 행 잡음이 실재하는 축)');
+ok((BOT.match(/const mobValid = r =>/g) || []).length === 1,
+   '몹 성질 축 판정식도 한 곳이다(표 두 벌 금지)');
 ok(/row\.bossValid = bossValid\(row\);/.test(BOT), '행이 `bossValid` 를 들고 다닌다');
+ok(/row\.mobValid = mobValid\(row\);/.test(BOT), '행이 `mobValid` 를 들고 다닌다');
 
 /* ── [7] 표가 말한다 ──────────────────────────────────────────────────── */
 console.log('[7] 표가 매 실행 «격파 n/N · 자에 쓰는 행 n» 을 말한다');
