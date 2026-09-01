@@ -14,6 +14,10 @@
  *   [F] 프레임 축 래칫 — **9:13.3(1080×1600)** 에서도 비균등 «자리» 0 (14회차 신설 · 351·403·404 의 그 프레임)
  *   [C] 잘림 0 — 스코프 아이콘의 글리프 advance 가 호스트 상자를 안 넘는다(357 함정)
  *   [R] 되돌림 시험 — 스코프 노드에 scaleX 를 도로 주입하면 [A] 가 실제로 빨개진다
+ *   [G] 출처 축 — 캔버스 안·비트맵 상자·svg (23회차)
+ *   [H] 축 인구조사 — 자가 «안 보는» 그리기 경로가 소스에 생겼는가 (24회차)
+ *   [I] **시간 축** — 애니메이션 **한 주기**를 위상 스윕으로 훑는다 (25회차 신설).
+ *       위 절이 전부 «가라앉은 한 점» 을 보는 자라, 도는 동안만 갈리는 종횡을 못 봤다.
  *
  * ⚠ [B] 는 «줄었다» 를 막지 않는다(라운드마다 줄어드는 것이 정상). 늘어난 것만 잡는다.
  *   라운드를 돌아 자리를 닫았으면 REMAIN 을 그 값으로 내려 적어라 — 안 내리면 래칫이 헐거워진다.
@@ -1949,6 +1953,114 @@ async function sweep(browser, inject) {
     const leaked = cmtCen.bad.map((r) => r.key).concat(cmtCen.bg.bad.length ? ['bgUrl'] : []);
     if (!leaked.length) ok('[H-e] 주석 걷기 — 주석 안에 넣은 구성물 3종은 안 세어진다 (이력이 현재 결함으로 안 읽힌다)');
     else bad(`[H-e] 주석 안의 구성물이 세어졌다(${leaked.join(' · ')}) — 스물네 회차의 주석이 결함으로 읽힌다`);
+  }
+
+  /* ── [I] 25회차 — **시간 축**: 한 점이 아니라 한 주기를 본다 ──────────────────
+     스물네 회차의 축은 전부 «**어디를·무엇을** 보는가» 였다(화면·상태·사건·문·출처·구성물).
+     남은 축이 하나 있었고 아무도 안 적었다 — «**언제** 보는가».
+
+       `scan356.COLLECT` 는 화면이 가라앉은 뒤 `getComputedStyle` 을 **한 번** 읽는다.
+       애니메이션이 도는 노드에서 그 한 점은 **주기의 어느 위상인지 아무도 안 정한 값**이다.
+
+     ⚑ 25회차의 첫 실측이 그것을 그대로 확인했다 — 03 던전 카드 썸네일은 `thBob`(121 이 주인
+        지시 ⑥ 으로 만든 스쿼시·스트레치)을 무한 재생으로 돌고 있고, 스윕이 읽은 값은 카드마다
+        `1 0.999983` · `1 0.995454` 로 **서로 달랐다.** 값이 흔들린 게 아니라 **도착한 위상이 달랐다.**
+        지금은 그 폭이 허용 오차 안이라 초록이지만, 초록의 근거가 «옳아서» 가 아니라 «그 순간이라서» 다.
+
+     ⚠⚠ **소스 리터럴로 판정하면 안 된다** — 이 절의 1판이 그렇게 짰다가 기각됐다.
+        `thBob` 의 선언은 `scale: 1 var(--thsqA,.96)` 이라 **소스만 읽으면 4% 찌그러짐**인데,
+        `--thsqA` 는 `thPlace` 가 카드마다 넣어 주는 런타임 값이고 화면의 실제 값은 **0.5%** 다
+        (`.96` 은 아무도 안 쓰는 폴백 — 121 6회차가 «비율이 아니라 px 로 준다» 로 바꾼 자리).
+        소스로 판정했으면 **주인 승인 설계를 결함이라고 부르는 자**가 됐다.
+
+     ⇒ 판정은 **위상 스윕**이 한다. 자를 두 벌로 안 적는다(13회차 [R12]) — `COLLECT` 를 **그대로**
+        쓰되 부르기 전에 페이지의 애니메이션을 같은 위상에 못박는다:
+            `animation-play-state: paused` + `animation-delay: −(k/N) × 자기 duration`
+        k 를 0..N−1 로 돌려 주기 전체를 훑고 노드마다 **최악 비**를 취한다.
+        즉 [A] 가 «한 점» 에서 하던 판정을 [I] 는 «한 주기» 에서 한다. 라벨 제외는 `iconKind` 가
+        이미 하므로 물려받는다. 못박는 것은 **인라인 스타일**이라 측정이 제품을 안 바꾼다.
+
+     ⚑ [I-c2] 가 이 절의 본체다 — 같은 스쿼시를 «한 점» 으로 읽으면 **0자리**, 한 주기로 읽으면
+        32자리다. 그 두 수의 차이가 이 축이 새 축인 이유의 전부다(21·23·24회차와 같은 규율:
+        되돌림이 서면 «0건» 이 «값이 옳아서 0» 이지 «안 보는 자라서 0» 이 아니다). */
+  console.log('\n[I] 25회차 — 시간 축: 애니메이션 한 주기 안의 종횡비');
+  {
+    const R25 = require('./probe356r25.js');
+    const rawHtml = fs.readFileSync(HTML, 'utf8');
+
+    /* ⓐ 소스 인구조사 — **판정이 아니라 전제**다. 위상 스윕이 훑을 것이 실제로 있는가. */
+    const cen = R25.sourceCensus(rawHtml);
+    if (cen.blocks.length && cen.steps) ok(`[I-a] 전제 — @keyframes ${cen.blocks.length}블록 · 키프레임 ${cen.steps}칸 · 스케일을 건드리는 칸 ${cen.withScale}개`);
+    else bad('[I-a] 전제 — @keyframes 를 못 읽었다 (아래 초록은 전부 헛초록)');
+    if (!cen.wa.unknown.length) ok(`[I-a2] WAAPI 호출 ${cen.wa.calls.length}건 전부 배열 리터럴이라 읽힌다 (측정 불가 0)`);
+    else bad(`[I-a2] WAAPI 측정 불가 ${cen.wa.unknown.length}건: ` + cen.wa.unknown.map((u) => `줄 ${u.line} — ${u.why}`).join(' · ')
+      + ' ⇒ 못 읽는 꼴을 «안전» 으로 읽지 마라(24회차 처방)');
+
+    /* ⓑ 위상 스윕 — 대표 화면([G] 와 같은 규약. 전 화면 순회는 [A] 몫이다) */
+    const sweep = async (label, inject) => {
+      const line = SCREENS.find(([l]) => l === label);
+      if (!line) return { miss: `SCREENS 에 «${label}» 줄이 없다` };
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(1400);
+      for (const st of line[1]) { try { await STEP(page, st); } catch (_) {} await page.waitForTimeout(220); }
+      await page.waitForTimeout(900);
+      if (inject) await page.addStyleTag({ content: inject });
+      const animated = await page.evaluate(R25.PIN, 0);
+      const worst = new Map();
+      let one = null;
+      for (let k = 0; k < R25.PHASES; k++) {
+        await page.evaluate(R25.PIN, k / R25.PHASES);
+        const rows = await page.evaluate(COLLECT, { all: false });
+        if (k === 0) one = rows;
+        for (const r of rows) {
+          if (!r.sx || !r.sy) continue;
+          const ratio = Math.max(r.sx / r.sy, r.sy / r.sx);
+          const key = r.path || (r.txt + '·' + r.sx);
+          const cur = worst.get(key);
+          if (!cur || ratio > cur.ratio) worst.set(key, { key, ratio, at: k / R25.PHASES });
+        }
+      }
+      await page.evaluate(R25.PIN, null);
+      await ctx.close();
+      return {
+        animated,
+        nodes: (one || []).length,
+        rows: [...worst.values()].filter((x) => x.ratio - 1 > TOL).sort((a, b) => b.ratio - a.ratio),
+        atRest: (one || []).filter((r) => r.sx && r.sy && Math.max(r.sx / r.sy, r.sy / r.sx) - 1 > TOL).length,
+      };
+    };
+
+    let pinned = 0, seen = 0;
+    for (const label of R25.PICK) {
+      const r = await sweep(label);
+      if (r.miss) { bad(`[I-b] ${label} — ${r.miss}`); continue; }
+      pinned += r.animated; seen += r.nodes;
+      if (!r.rows.length) ok(`[I-b] ${label} — 아이콘 ${r.nodes} · 애니 노드 ${r.animated} · 주기 ${R25.PHASES}칸 어느 위상에도 비균등 0`);
+      else bad(`[I-b] ${label} — 비균등 ${r.rows.length}자리: `
+        + r.rows.slice(0, 5).map((x) => `${x.key} 최악 비 ${x.ratio.toFixed(4)} @위상 ${(x.at * 100).toFixed(0)}%`).join(' · '));
+    }
+    if (pinned > 0 && seen > 0) ok(`[I-b2] 전제 — 애니 노드 ${pinned}개를 실제로 못박고 아이콘 ${seen}개를 읽었다 (0 이면 위 초록은 헛초록)`);
+    else bad(`[I-b2] 전제 실패 — 못박은 애니 노드 ${pinned} · 읽은 아이콘 ${seen}`);
+
+    /* ⓒ 되돌림 — «한 점에서는 안 걸리고 한 주기에서는 걸리는» 모양을 일부러 만든다.
+       0%·100% 가 등방이고 한복판만 늘어나면 스윕이 도착하는 위상(0 근처)에서는 등방이다. */
+    const inj = await sweep('A1 탭바 열림',
+      '@keyframes __i25sq{0%,100%{scale:1 1}50%{scale:1.4 1}}#app .tab>span.ti{animation:__i25sq 30s linear infinite}');
+    if (inj.miss) bad('[I-c] 되돌림 화면을 못 열었다 — ' + inj.miss);
+    else {
+      if (inj.rows.length) ok(`[I-c] 되돌림 — 주입한 스쿼시를 위상 스윕이 ${inj.rows.length}자리로 잡는다 (최악 비 ${inj.rows[0].ratio.toFixed(3)} @위상 ${(inj.rows[0].at * 100).toFixed(0)}%)`);
+      else bad('[I-c] 되돌림 실패 — 주입해도 0자리. 이 절은 아무것도 못 보는 자다');
+      if (inj.rows.length && inj.atRest === 0) ok('[I-c2] ⚑ 같은 것을 «한 점»([A] 의 방식)으로 읽으면 0자리 — 이 축이 [A] 의 재탕이 아니라는 실측');
+      else if (inj.rows.length) bad(`[I-c2] 한 점에서도 ${inj.atRest}자리가 잡힌다 — 이 표본으로는 «새 축» 을 못 보인다`);
+    }
+
+    /* ⓓ 음성항 — 등방 애니메이션은 안 잡혀야 한다. 상시 빨간 자는 꺼진 자와 같다(23회차 [G-d]). */
+    const uni = await sweep('A1 탭바 열림',
+      '@keyframes __i25uni{0%,100%{scale:1}50%{scale:1.4}}#app .tab>span.ti{animation:__i25uni 30s linear infinite}');
+    if (!uni.miss && !uni.rows.length) ok('[I-d] 음성항 — 등방 애니(scale 1→1.4→1)를 같은 자리에 주입해도 0자리 (크기 변경은 결함이 아니다)');
+    else bad(`[I-d] 음성항 실패 — 등방을 주입했는데 ${uni.rows ? uni.rows.length : '?'}자리가 잡혔다`);
   }
 
   await browser.close();
