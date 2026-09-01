@@ -391,9 +391,13 @@ async function pixelRun(page) {
      그대로다. 헐거워지지 않는다: `fxBurst(el, FXPAL.up, …)` 폴백이 사라지거나 첫 발이 10개를 안 쏘면 빨개진다. */
   /* 619 9회차 이관 — 플래시 대상이 `--flash-to` 신고를 지나 `fel` 이 됐다(신고 없으면 = el, 룬만
      아이콘으로 좁힘 — 전면 워시 방지). 갈아 끼움 사다리(플래시 → 알갱이 → 앰버 폴백)의 뜻은 그대로다. */
+  /* ⚑ 619 11회차 이관 — 「타격 순간」 몫만 진한 앰버(`FXPAL.upNow`)가 됐다(크림 위 첫 발 대비 1.28:1 →
+     2.60:1 · 비평가 EA·DX 2인). **333 처방 그대로 자리만 옮긴다** — 색이 개수와 **같은 `grain` 갈래**를
+     타는 것까지 못박아 두므로 헐거워지지 않는다: 앰버 폴백이 사라져도, 색·개수 갈래가 어긋나도,
+     첫 발이 `UPFX_NOW` 를 안 쏘아도 여기가 그대로 빨개진다. */
   ok(/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\], o\.key\);/.test(src)
      && /function rtFirstFx\(sel, cur, key\)\{[\s\S]{0,400}?upFx\(key \|\| \('first:' \+ sel\), sel, cur, 10\)/.test(src)
-     && /function upFx\(key, host, cur, n, noFlash\)\{[\s\S]{0,3200}?fxFlash\(fel\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,400}?fxBurst\(el, FXPAL\.up, grain \? UPFX_NOW : cnt, true\)/.test(src),
+     && /function upFx\(key, host, cur, n, noFlash\)\{[\s\S]{0,3200}?fxFlash\(fel\)[\s\S]{0,900}?fxSpend\(cur, el\)[\s\S]{0,600}?fxBurst\(el, grain \? FXPAL\.upNow : FXPAL\.up, grain \? UPFX_NOW : cnt, true\)/.test(src),
      '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 화폐 축 · 619 공용 부품)');
   ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \}/.test(src)
      && /fxUpOk\(card, card, txt, bi0\.cur\)/.test(src),
