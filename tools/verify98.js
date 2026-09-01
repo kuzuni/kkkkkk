@@ -6,7 +6,10 @@
    §C BGM 게인이 SFX 평균(전투 반복음 제외)보다 8 dB 이상 아래 · 클리핑 0건
    §D 런타임: ctx 경로에서 sfx 전종 예외 0 · 소스마다 게인 노드 · el 폴백 volume = vol/100×게인 ·
       설정 토글·볼륨 회귀(auApply) 없음 · 콘솔 에러 0
-   §E 전투 60초(가속) 동안 sfx('coin') 실제 발화 ≤ 7회/s */
+   §E 전투 60초(가속) 동안 sfx('coin') 실제 발화 ≤ 7회/s
+      + 637(2026-09-01) — 592 가 ⑴ 킬 드랍 코인을 끈 뒤로 그 창의 표본은 **0 이 설계값**이다.
+        그래서 ⓐ 킬은 났는데 호출 0(592 축) · ⓑ 스위치를 켜면 다시 운다(되돌림 시험) ·
+        ⓒ 592 가 남긴 ⑵⑶(클리어·파도 보너스)에서는 여전히 울고 그 창에서 억제 상한을 잰다 */
 process.env.W98 = process.env.W98 || '100';
 const fs = require('fs'), path = require('path');
 const { measure, launch, serve } = require('./aud98.js');
@@ -161,24 +164,70 @@ const AU_SFX = eval(sfxSrc), AU_GAIN = eval('(' + gainSrc + ')'),
   ck('연속 두들기기 ' + r.coinCalls + '회/' + r.coinSec + 's → 발화 ' + r.coinFired + '회, ' + hz.toFixed(2) + '회/s ≤ 7',
      hz <= 7);
 
-  /* 실제 전투 60초 — fxFly 가 킬마다·알약마다 부르는 실사용 조건 */
-  const live = await pg.evaluate(() => new Promise(done => {
-    const orig = window.sfx;
-    let calls = 0, fired = 0;
+  /* ⚑ 637 (2026-09-01) — 여기 있던 음성 대조항 «전투 중 coin 이 실제로 울리긴 함» 은
+     **592**(저장소 주인 지시 «적죽을때 골드 이펙트 뜨는거 빼줘 안쓸래 그거»)가 ⑴ 킬 드랍의
+     전투 발원 표시를 끄면서 **설계상 거짓**이 됐다 — `probe637` 실측: 전투 20초에 킬 23회인데
+     `sfx('coin')` **호출 0 · 발화 0**, 같은 창에서 `FX_COMBAT_FX.kill` 만 되돌리면 **22회 발화**.
+     ⇒ 제품 회귀가 아니라 **자가 낡은 것**이다.
+     ⚠ 항을 그냥 지우면 바로 위 «≤ 7회/s» 가 **표본 0 으로 영원히 초록**이 된다(«못 봐서 0» —
+     LESSONS 634-③). 333 처방대로 **자리를 비우지 않고** 뜻을 셋으로 갈라 갈아 끼운다:
+       ⓐ 킬 창의 0 은 «설계값» 이다 — 킬은 실제로 났는데(표본 살아 있음) 호출이 0 이다(592 축).
+       ⓑ 그 0 이 «꺼져서 0» 이지 «못 봐서 0» 이 아님을 **되돌림 시험**이 못박는다.
+       ⓒ 592 가 **일부러 남긴** ⑵⑶(스테이지 클리어·파도 전멸 보너스)에서는 coin 이 **여전히 운다** —
+          옛 항의 «연출 회귀 아님» 이라는 뜻은 이 살아 있는 표본이 이어받고, 억제 상한도 여기서 잰다. */
+  /* 창 하나를 재는 계측기 — 아래 세 표본(현행 킬 창 · 되돌림 창 · ⑵⑶ 보너스 창)이 **같은 자**를 쓴다.
+     사본을 세 벌 적으면 한 벌만 고쳐지는 자리가 생긴다(LESSONS 90-① · 402 «표 두 벌»).
+       sec    — 창 길이(초)
+       killFx — `FX_COMBAT_FX.kill` 을 이 값으로 두고 잰다(null 이면 제품 기본값 그대로)
+       armMs  — >0 이면 ⑶ 파도 전멸 분기를 밟게 눈금을 한 칸 앞에 세운다(아래 주석) */
+  const coinWindow = (sec, killFx, armMs) => pg.evaluate(([sec, killFx, armMs]) => new Promise(done => {
+    const origSfx = window.sfx;
+    const saveKill = FX_COMBAT_FX.kill, saveFarm = S.bossFarm;
+    const kills0 = S.totalKills;
+    if(killFx != null) FX_COMBAT_FX.kill = killFx;
+    let calls = 0, fired = 0, armT = null;
+    if(armMs){
+      /* ⑵⑶ 표본 — 파도 전멸(③)은 `killed >= ENEMY_COUNT` 에서만 선다. 기본 속도로는 50킬에
+         40초가 넘어 창 하나에 «설까 말까» 라 표본이 운이 된다(344·372 플레이키). 눈금을 한 칸
+         앞에 세워 **제품의 그 분기 그대로** 밟게 한다 — 보너스 계산·발원 표시·골드 증가·소리는
+         한 줄도 흉내내지 않는다. */
+      S.bossFarm = true;
+      armT = setInterval(() => { if(killed < ENEMY_COUNT - 1) killed = ENEMY_COUNT - 1; }, armMs);
+    }
     window.sfx = function(n){
-      if(n !== 'coin') return orig(n);
-      calls++; const b = auLast.coin; orig(n); if(auLast.coin !== b) fired++;
+      if(n !== 'coin') return origSfx.apply(this, arguments);
+      calls++; const b = auLast.coin; const rv = origSfx.apply(this, arguments);
+      if(auLast.coin !== b) fired++; return rv;
     };
     const t0 = performance.now();
     setTimeout(() => {
-      window.sfx = orig;
-      done({ calls, fired, sec: +((performance.now() - t0) / 1000).toFixed(2) });
-    }, 60000);
-  }));
+      window.sfx = origSfx; if(armT) clearInterval(armT);
+      FX_COMBAT_FX.kill = saveKill; S.bossFarm = saveFarm;
+      done({ calls, fired, kills: S.totalKills - kills0, sec: +((performance.now() - t0) / 1000).toFixed(2) });
+    }, sec * 1000);
+  }), [sec, killFx, armMs]);
+
+  /* 실제 전투 60초 — 옛 «실사용 조건» 창 그대로다(길이·측정 방법 불변) */
+  const live = await coinWindow(60, null, 0);
   const lhz = live.fired / live.sec;
   ck('전투 60초 — fxFly 호출 ' + live.calls + '회 → 실제 발화 ' + live.fired + '회 ('
      + lhz.toFixed(2) + '회/s) ≤ 7회/s', lhz <= 7);
-  ck('전투 중 coin 이 실제로 울리긴 함(연출 회귀 아님)', live.fired > 0, live.fired + '회');
+  /* ⓐ 592 축 — 그 창의 0 은 «표본이 없어서» 가 아니다: 킬은 실제로 났다 */
+  ck('전투 60초 — 킬이 실제로 났다(표본이 비지 않았다)', live.kills > 0, live.kills + '킬');
+  ck('⚑ 592 — 킬 드랍은 coin 을 안 울린다 (호출 ' + live.calls + ' · 발화 ' + live.fired + ')',
+     live.calls === 0 && live.fired === 0);
+
+  /* ⓑ 되돌림 시험 — 스위치를 켠 창에서는 **같은 자**가 발화를 본다 */
+  const rev = await coinWindow(20, true, 0);
+  ck('되돌림 시험 — `FX_COMBAT_FX.kill` 을 켜면 그 창에서 coin 이 다시 운다 («못 봐서 0» 이 아니다)',
+     rev.fired > 0, rev.fired + '회 발화 / ' + rev.kills + '킬');
+
+  /* ⓒ 살아 있는 음성 대조 — 592 가 **일부러 남긴** ⑵⑶ 보너스 경로 */
+  const bonus = await coinWindow(20, null, 1500);
+  const bhz = bonus.fired / bonus.sec;
+  ck('592 가 남긴 ⑵⑶(클리어·파도 보너스)에서는 coin 이 여전히 운다(연출 회귀 아님)',
+     bonus.fired > 0, bonus.fired + '회 발화 / ' + bonus.calls + '회 호출');
+  ck('그 살아 있는 경로도 억제 상한 안 — ' + bhz.toFixed(2) + '회/s ≤ 7회/s', bhz <= 7);
 
   /* el 폴백 volume 계산식 */
   ck('el 폴백 volume = vol/100 × 게인',
