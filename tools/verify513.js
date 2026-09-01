@@ -224,8 +224,11 @@ const READ_VIEW = n => {
   const tmp = path.join(ROOT, 'tools', '.verify513-revert.html');
   const nowDecl = `for(let i=1;i<=7;i++){`;
   const oldDecl = `for(let i=1;i<=28;i++){`;
-  /* 199 9회차 — 곡선 ×12 확정에 맞춰 «지금 소스» 표식만 갱신(되돌림 사본은 여전히 28칸 세계다) */
-  const nowDia = `  const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 18000 + i*720 : 4200 + i*360);`;
+  /* 199 9회차 — 곡선 ×12 확정에 맞춰 «지금 소스» 표식만 갱신(되돌림 사본은 여전히 28칸 세계다)
+     199 14회차 — 배수가 상수 `ATT_DIA_K` 로 빠지면서 이 줄이 두 줄이 됐다. **되돌림 시험의 이빨은
+     그대로다** — 바뀐 것은 «지금 소스» 를 가리키는 표식뿐이고, 사본이 되돌아가는 28칸 세계는 Δ0. */
+  const nowDia = `  const dia = i === 1 ? ATT_D1_DIA
+                      : Math.round((i % 7 === 0 ? 18000 + i*720 : 4200 + i*360) * ATT_DIA_K);`;
   const oldDia = `  const dia = i === 1 ? ATT_D1_DIA
             : (i % 28 === 0 ? 5000 : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30));`;
   const nowView = `  const day = S.att.n % ATTEND.length, can = S.att.date !== today();

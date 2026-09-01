@@ -1040,6 +1040,11 @@ const BOT_SRC = function (cfg) {
       inAll: Object.values(B.diaIn).reduce((a, b) => a + b, 0),
       inOnce: (B.onceKeys || []).reduce((a, k) => a + (B.diaIn[k] || 0), 0),
       outNS: Object.keys(B.diaOut).reduce((a, k) => a + (k === '소환' ? 0 : B.diaOut[k]), 0),
+      /* ⚑ 14회차 — 13-12 1 «JJ(진행 연동 축) ↔ II(비연동 축) 가 갈리는 유일한 자리이니
+         재현으로 먼저 갈라라». 그러려면 **말미 창의 축별 몫**이 있어야 하는데 [E] 는 30일
+         누적 평균뿐이었다. 스냅마다 축별 누적을 실으면 D23↔D30 차분 한 번으로 갈린다.
+         (표 두 벌 금지 — `inAll` 은 이 사전의 합이라 항등식으로 검산된다: §14-1 [E2].) */
+      inBy: Object.assign({}, B.diaIn),
     };
   };
 
