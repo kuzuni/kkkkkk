@@ -30877,7 +30877,22 @@ const RW_FX_N0 = 10;                     /* 첫 발 — 619 어휘(`fxUpOk` 의 
       같은 산수다. 프레임 밖으로는 안 나간다(중심 540 ± 300 = 240~840 · 세로도 안쪽).
    ⚠ 수명·색·개수·크기는 한 값도 안 건드렸다 — 바꾼 것은 «어디서 나서 얼마나 멀리 가는가» 둘뿐이다.
    ↩ 되돌림: `RW_FX_Y` 를 0.5 로, `RW_FX_FLY` 를 1 로 두면 2회차와 픽셀 동일하다. */
-const RW_FX_Y = 0.28, RW_FX_FLY = 2.0;
+/* ⚑ 4회차 — **상향 원뿔**(`RW_FX_UP`). 3회차를 비평가 E 가 «8점을 막는 단 하나» 로 이렇게 적었다:
+   «방사 각도가 여전히 360° 라 **하강 입자가 자기 버튼의 라벨(40ms)과 가격 «100»(80·180ms)을
+   불투명 상태로 밟는다** … 아래쪽 ±60° 를 죽이고 상향 원뿔로 바꾸면 세 축이 동시에 풀린다».
+   맞는 진단이다 — 발원점을 그릇 아가리로 올린 것(3회차)은 **출발**만 옮겼고, 아래로 쏜 입자는
+   그 아래에 있는 라벨·비용 알약을 그대로 지난다. 이 화면의 정보는 **전부 발원점 아래**에 있다.
+   ⇒ 아래로 향하는 입자는 **궤적을 위아래로 뒤집는다**(`dy → −dy` · 출발점도 발원점 기준으로 같이
+     뒤집어 링 위에 그대로 둔다) = **위쪽 반구(180°)**.
+   ⚠ 비평가 E 의 처방문은 «아래쪽 ±60° 만 죽여 위쪽 220°» 였는데 **여유를 0 으로 잡았다** — 이동이
+     최대 300px 라 수평에서 20° 만 내려가도 세로로 109px 이 내려앉고(비평가 F 실측: 라벨 y1761 ·
+     알약 y1807~1847), 발원점 y1709 에서 그만큼이면 **알약 대역 한복판**이다. 각도 여유는
+     «이동 거리 × tan» 이라 3회차의 ×2 와 한 벌로 정해야 한다(`RW_FX_UP` 이 그 손잡이다).
+   ⚠ 각도·반경·개수·수명·크기는 여전히 `fxBurst` 가 정한 그대로다 — 뒤집기는 **부호 하나**이고
+     공용 상수는 한 글자도 안 건드린다(전투·보상 버스트 불변).
+   ⚠ 접힌 만큼 위쪽 밀도가 오르는 것은 의도다(657 «파티클이 너무 적다» 와 같은 방향).
+   ↩ 되돌림: `RW_FX_UP` 을 `Infinity` 로 두면 3회차(360°)와 픽셀 동일하다. */
+const RW_FX_Y = 0.28, RW_FX_FLY = 2.0, RW_FX_UP = 0;
 function rwSummonFx(it, first){
   const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
   if(el){ fxFlash(el); fxHitEl(el); }
@@ -30885,13 +30900,19 @@ function rwSummonFx(it, first){
   const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
   if(!L || !r) return false;
   const n = Math.max(1, Math.min(first ? RW_FX_N0 : UPFX_N, FXMAX - L.childElementCount - 1));
-  const before = new Set(L.children);
-  fxBurst({ x:r.x + r.w / 2, y:r.y + r.h * RW_FX_Y }, FXPAL.up, n, false, null, PAY_CUR.relic);
+  const cy = r.y + r.h * RW_FX_Y, before = new Set(L.children);
+  fxBurst({ x:r.x + r.w / 2, y:cy }, FXPAL.up, n, false, null, PAY_CUR.relic);
   for(const nd of L.children){
     if(before.has(nd)) continue;
-    const dx = parseFloat(nd.style.getPropertyValue('--dx')), dy = parseFloat(nd.style.getPropertyValue('--dy'));
-    if(Number.isFinite(dx)) nd.style.setProperty('--dx', (dx * RW_FX_FLY).toFixed(1) + 'px');
-    if(Number.isFinite(dy)) nd.style.setProperty('--dy', (dy * RW_FX_FLY).toFixed(1) + 'px');
+    let dx = parseFloat(nd.style.getPropertyValue('--dx')), dy = parseFloat(nd.style.getPropertyValue('--dy'));
+    if(!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
+    if(dy > Math.abs(dx) * RW_FX_UP){                 /* 아래로 쏜 입자는 궤적을 뒤집는다(위 머리말) */
+      dy = -dy;
+      const sy = parseFloat(nd.style.top);
+      if(Number.isFinite(sy)) nd.style.top = (2 * cy - sy).toFixed(1) + 'px';
+    }
+    nd.style.setProperty('--dx', (dx * RW_FX_FLY).toFixed(1) + 'px');
+    nd.style.setProperty('--dy', (dy * RW_FX_FLY).toFixed(1) + 'px');
   }
   return true;
 }

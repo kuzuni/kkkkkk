@@ -132,7 +132,7 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   ok(/function rwSummonFx\(it, first\)\{/.test(code),
      'A2 회당 연출이 **한 함수**(`rwSummonFx`)다 — 첫 발·홀드 틱이 같은 자리를 지난다(1:1 축의 뿌리)');
   ok(/fxRect\(\$\('rwBasin'\)\)/.test(code) && /fxBurst\(\{ x:r\.x[^;]*PAY_CUR\.relic\)/.test(code)
-     && /const RW_FX_Y = [\d.]+, RW_FX_FLY = [\d.]+;/.test(code),
+     && /const RW_FX_Y = [\d.]+, RW_FX_FLY = [\d.]+, RW_FX_UP = [\d.]+;/.test(code),
      'A3 발화가 «버튼 상자 안의 한 점(그릇 아가리)» 에서 «표가 말하는 재화(`PAY_CUR.relic`)» 로 터진다(3회차)');
   ok(/const PAY_CUR = \{[^}]*relic:'relic'/.test(code),
      'A4 `PAY_CUR` 표에 유물 소환 자리가 있다 — 화폐 문자열을 호출부에 손으로 안 적는다(402 규약)');
