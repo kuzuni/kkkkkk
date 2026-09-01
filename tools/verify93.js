@@ -349,12 +349,23 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
   const pi = scaleKey === 'sd' ? 2 : 1;
   const hits = q.dlog.filter(r => r[3] === (scaleKey === 'sd' ? 'd' : 'g'));
   const declMin = hits.length ? Math.min(...hits.map(r => r[1])) : 0;
-  ok(hits.length >= 4 && declMin >= K.PZMAX - 1e-9,
-    `[4-a] 선언 — 비트 ${hits.length}회(≥4) 전부 진폭 ≥ FX3_PZ_MAX ${K.PZMAX} (최소 ${declMin.toFixed(4)})`);
+  /* ⚑ 644(2026-09-01) — 하한 4 → **사양 밴드 3..6**. 값을 무르게 푼 것이 아니라 **사양으로 옮긴 것**이다.
+     644 가 `cur-dia.svg` 의 viewBox 를 잉크 bbox 로 잘라 채움비 .9375 → 1.0 이 되면서 알갱이의
+     **실제 잉크 지름**이 108.3 → **115.5** 가 됐다(`FX3_GINK` — 그 상수의 끝 계수가 바로 이 채움비다.
+     108.3 을 그대로 두면 상수가 잉크를 **속이고** 알갱이가 6.7% 겹치게 깔린다 ⇒ `verify543` [D] 가 잡는다).
+     543 의 설계가 «크기를 개수와 맞바꾼다» 이므로 밴드 피치·최소 중심거리(`FX3_MIND` 123 → 132)가 같이
+     커졌고 UI 발 슬롯이 **4 → 3** 이 됐다. 3 은 이 화면의 **사양 하한**이다 —
+     93 자신의 «UI 발 3~6개» · `verify58` [2] · `verify543` [D](«개수가 3 밑으로 안 내려간다»)가 같은 수를 쓴다.
+     ⇒ 한쪽만 묻던 «≥4» 를 **양쪽을 묻는 «3..6»** 으로 바꿨다(위반 방향이 하나 늘었다).
+     ⚠ 되돌림 대조 — `FX3_GINK` 를 108.3 으로 되돌린 사본은 이 절이 **26/26 초록**이다(비트 4회).
+       즉 이 항은 여전히 기하에 물려 있고, 알갱이를 다시 줄이면 개수가 저절로 돌아온다. */
+  const BEAT_LO = 3, BEAT_HI = 6;   /* 93 사양 «UI 발 3~6개» */
+  ok(hits.length >= BEAT_LO && hits.length <= BEAT_HI && declMin >= K.PZMAX - 1e-9,
+    `[4-a] 선언 — 비트 ${hits.length}회(사양 ${BEAT_LO}~${BEAT_HI}) 전부 진폭 ≥ FX3_PZ_MAX ${K.PZMAX} (최소 ${declMin.toFixed(4)})`);
   ok(q.mism === 0, `[4-b] 그림 = 선언 — 제품 틱 ${q.plog.length}회 중 인라인 scale ≠ 1+a 인 프레임 ${q.mism}건 (0)`);
   ok(K.PZHOLD * 1000 >= 1000 / 60, `[4-c] 고원 ${(K.PZHOLD * 1000).toFixed(0)}ms ≥ 60fps 한 프레임 16.7ms (FX3_PZ_HOLD)`);
   const beats = Math.max(...q.frames.map(f => f.punch));
-  ok(beats >= 4, `왕복(fxPunchN 증가) ${beats}회 (≥4)`);
+  ok(beats >= BEAT_LO && beats <= BEAT_HI, `왕복(fxPunchN 증가) ${beats}회 (사양 ${BEAT_LO}~${BEAT_HI} · 644 이관)`);
 
   /* [4-d] 듀티 — 비트 시각(`fxBeatLog`)과 감쇠 법칙만으로 «켜져 있는 시간의 비» 를 낸다.
      종전 «표본 중 scale>1.005 인 프레임 비율» 은 부하에서 42.9~57.1% 로 판정선 55 를 가로질렀다.
@@ -372,7 +383,7 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
     for (let i = 0; i < bt.length; i++) on += Math.min(ONMS, (i + 1 < bt.length ? bt[i + 1] : Infinity) - bt[i]);
     duty = on / Math.max(1, bt[bt.length - 1] + ONMS - bt[0]);
   }
-  ok(bt.length >= 4, `[4-d 전제] ${bcur === 'd' ? '다이아' : '골드'} 비트 ${bt.length}건 (≥4 — fxPzHit 직후의 고원 개시, 표본이 아니다)`);
+  ok(bt.length >= BEAT_LO && bt.length <= BEAT_HI, `[4-d 전제] ${bcur === 'd' ? '다이아' : '골드'} 비트 ${bt.length}건 (사양 ${BEAT_LO}~${BEAT_HI} — fxPzHit 직후의 고원 개시, 표본이 아니다)`);
   ok(duty >= 0.55, `[4-d] 듀티(선언) ${(duty * 100).toFixed(1)}% (≥55% · 켜짐 ${ONMS.toFixed(0)}ms = 고원 + τ·ln(${K.PZMAX}/0.005))`);
 
   /* [4-e] 그려진 봉우리 — 고원 안에 제품 프레임이 있었던 비트만 등급한다 */
