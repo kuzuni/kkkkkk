@@ -20,8 +20,17 @@ const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 const R = process.argv[2] || '1';
 const OUT = path.resolve(__dirname, '..', 'docs', 'review');
-const GAP = Number(process.env.C619_GAP || 90);
-const N = Number(process.env.C619_N || 7);
+/* ⚑⚑ 17회차 — **창(window)이 간격보다 중요하다.** 16회차 EM #12 를 따라 간격을 90 → 60ms 로
+   좁혔더니 7장의 **span 이 420ms** 로 줄었는데, 실측(홀드 발화 시각)은 이렇다:
+     훈련 320,483,633,745,858,968,…  · 단련 349,513,650,785,…  · 룬 **634**,748,948,1025,…
+   즉 **첫 발화가 320~634ms** 에 있다(홀드 반복 진입 지연). 420ms 창은 훈련·단련에 발화가
+   **1회**, 룬에는 **0회**밖에 안 들어간다 — 그 프레임을 받은 비평가는 «두 번째 틱이 없다 ·
+   감쇠도 없다» 로 **제품이 아니라 창을 채점**하게 된다(17회차 1차 채점 EO 가 실제로 그랬다).
+   ⇒ ① 격자 시작을 **LEAD** 만큼 늦춰 반복 진입 지연을 건너뛰고 ② 장수를 늘려 **여러 틱**을 담는다.
+   기본값 300 + 60×12 = **300~1020ms** — 훈련·단련 ≈7틱, 틱당 약 2장(«매 틱마다» 를 눈으로 셀 수 있다). */
+const GAP = Number(process.env.C619_GAP || 60);
+const N = Number(process.env.C619_N || 12);
+const LEAD = Number(process.env.C619_LEAD || 300);
 
 const SCENES = [
   { id: 'train',  tab: 'train',  sel: '#trCards [data-tr]',      host: '#trCards [data-tr]',        n: '23 훈련 카드(64 홀드)' },
@@ -88,7 +97,7 @@ const SCENES = [
     await page.mouse.move(g.bx, g.by);
     const t0 = Date.now();
     await page.mouse.down();
-    await page.waitForTimeout(GAP * N + 260);
+    await page.waitForTimeout(LEAD + GAP * N + 260);
     await page.mouse.up();
     try { await cdp.send('Page.stopScreencast'); } catch (_) {}
     await page.waitForTimeout(200);
@@ -102,7 +111,7 @@ const SCENES = [
          그 사실이 아래 rate 로 드러난다 — 조용히 중복으로 채우지 않는다. */
     const used = new Set(), picks = [];
     for (let i = 1; i <= N; i++) {
-      const want = t0 + i * GAP;
+      const want = t0 + LEAD + i * GAP;
       let best = -1, bd = Infinity;
       for (let j = 0; j < raw.length; j++) {
         if (used.has(j)) continue;
@@ -119,7 +128,15 @@ const SCENES = [
       const out = [];
       for (const it of items) {
         const img = new Image();
-        await new Promise(r => { img.onload = r; img.onerror = r; img.src = 'data:image/png;base64,' + it.data; });
+        /* ⚠⚠ **디코드 실패를 조용히 넘기면 «빈 프레임» 이 나간다.** 1차 시도는 `onerror` 도
+           resolve 로 받아, 못 읽은 장을 그대로 캔버스에 그려 **호스트가 통째로 사라진 그림**을
+           만들었다(비평가가 그것을 «카드 미렌더» 결함으로 보고했다 = 자가 만든 유령).
+           ⇒ 실패한 장은 버리고 그 사실을 표에 남긴다 — 조용히 채우지 않는다. */
+        const okImg = await new Promise(r => {
+          img.onload = () => r(true); img.onerror = () => r(false);
+          img.src = 'data:image/png;base64,' + it.data;
+        });
+        if (!okImg || !img.naturalWidth) { out.push({ i: it.i, at: it.at, png: null }); continue; }
         const c = document.createElement('canvas');
         c.width = Math.round(clip.width); c.height = Math.round(clip.height);
         const x = c.getContext('2d');
@@ -131,11 +148,14 @@ const SCENES = [
       }
       return out;
     }, [picks, clip]);
+    let dropped = 0;
     for (const s of cropped) {
+      if (!s.png) { dropped++; continue; }
       const f = path.join(OUT, '619-' + sc.id + '-r' + R + '-f' + s.i + '.png');
       fs.writeFileSync(f, Buffer.from(s.png, 'base64'));
       log.push({ scene: sc.id, frame: s.i, ms: s.at, file: path.basename(f), note: '홀드 중' });
     }
+    if (dropped) console.log('    ⚠ 디코드 실패로 버린 장 ' + dropped + '개');
     await page.waitForTimeout(420);
     console.log('  ✓ ' + sc.id + ' — 8장 (clip ' + Math.round(clip.width) + '×' + Math.round(clip.height) + ')');
   }
