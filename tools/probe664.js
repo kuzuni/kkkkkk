@@ -175,15 +175,15 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
     + ' · 장착 효과 ' + JSON.stringify(r.A.eqV) + ' (참값 ' + r.A.trueEq + ')');
   console.log('    [장착] ' + JSON.stringify(r.A.btnEq) + ' off=' + r.A.btnEqOff
     + ' · 눌렀을 때 반려 피드백 ' + r.A.rejectFeedback);
-  ok(r.A.clickable === r.A.ownedN && r.A.clickable < r.A.realN,
-    '[A-1] 미보유 장비 칸은 클릭이 안 걸린다(등재문 «선택 불가» 확인)',
-    'data-wpn ' + r.A.clickable + '/' + r.A.realN);
-  ok(r.A.clickChangedSel === false, '[A-2] 미보유 카드를 눌러도 선택이 안 바뀐다');
-  ok(/\+0\.?0*%/.test(r.A.ownV || '') && /\+0\.?0*%/.test(r.A.eqV || ''),
-    '[A-3] 미보유 선택 시 보유·장착 효과가 둘 다 0 으로 은닉된다',
-    r.A.ownV + ' / ' + r.A.eqV);
-  ok(r.A.stillNotEquipped, '[A-4] 미보유는 장착되지 않는다(수리 후에도 지켜야 할 축)');
-  ok(r.A.rejectFeedback === false, '[A-5] 미보유 [장착] 을 눌러도 **아무 말이 없다**(반려 피드백 0건)');
+  /* ⚑ 이 자는 **재현기(측정)** 다 — 위 수치를 수리 전/후로 대조하는 것이 본체이고,
+     단언은 **두 상태에서 모두 참이어야 하는 것(불변)** 만 건다. 수리 후의 계약
+     («미보유도 클릭된다 · 수치가 실물이다 · 라벨이 이유를 말한다»)은 `verify664` 가 센다 —
+     재현기에 수리 전 상태를 단언으로 박아 두면 수리하는 순간 영원히 빨간 자가 된다. */
+  ok(r.A.stillNotEquipped, '[A-1·불변] 미보유는 어떤 경로로도 장착되지 않는다');
+  ok(r.A.realN > 0 && r.A.cardN >= r.A.realN, '[A-2·불변] 무기 격자가 실아이템을 전부 그린다',
+    r.A.realN + '종 / 칸 ' + r.A.cardN);
+  ok(!!r.A.name && r.A.name !== '???', '[A-3·불변] 05 상단 패널의 이름은 미보유도 원래 실명이었다',
+    JSON.stringify(r.A.name));
 
   console.log('\n=== [B] 펫 26 → 08 세부 ===');
   console.log('  미보유 표본 ' + r.B.unownId + ' · 카드 클릭 가능 ' + r.B.cardClickable + ' · 팝업 ' + r.B.popupOn);
@@ -192,13 +192,9 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
   console.log('  표 «피해량» ' + JSON.stringify(r.B.cell) + ' (참값 ' + r.B.trueDmg + ')');
   console.log('  보유 효과 ' + JSON.stringify(r.B.own) + ' (참 공격 ' + r.B.trueOwn + ')');
   console.log('  [장착] ' + JSON.stringify(r.B.btnEq) + ' disabled=' + r.B.btnEqDisabled);
-  ok(r.B.cardClickable === true, '[B-1] 펫 카드 자체는 미보유도 이미 눌린다(병이 «클릭» 이 아니다)');
-  ok(r.B.title === '???', '[B-2] 미보유 펫 세부 제목이 «???» 로 은닉된다', JSON.stringify(r.B.title));
-  ok(/획득하지 못했습니다/.test(r.B.desc || ''), '[B-3] 설명이 실설명이 아니라 «아직 획득하지 못했습니다» 로 대체된다');
-  ok((r.B.cell || '').trim() === '—', '[B-4] 표 «피해량» 칸이 «—» 로 은닉된다');
-  ok(/\+0%/.test(r.B.own || ''), '[B-5] 보유 효과가 «+0%» 로 은닉된다', r.B.own);
-  ok(r.B.btnEqDisabled === true, '[B-6] [장착] 은 이미 비활성이다(수리 후에도 지켜야 할 축)');
-  ok(!/미보유|획득/.test(r.B.btnEq || ''), '[B-7] 그런데 버튼 라벨이 **이유를 말하지 않는다**', JSON.stringify(r.B.btnEq));
+  ok(r.B.cardClickable === true, '[B-1·불변] 펫 카드는 미보유도 눌린다(병이 «클릭» 이 아니었다)');
+  ok(r.B.popupOn === true, '[B-2·불변] 미보유 펫 카드가 08 세부 팝업을 연다');
+  ok(r.B.btnEqDisabled === true, '[B-3·불변] 미보유 펫의 [장착] 은 비활성이다(664 ③ — 장착«만» 막는다)');
 
   console.log('\n=== [C] 코스튬 50(대조군) ===');
   console.log('  미보유 표본 ' + r.C.unownId + ' · 카드 클릭 가능 ' + r.C.cardClickable);
@@ -212,8 +208,7 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
   console.log('\n=== [D] 유물 89 — showItem 의 네 번째 계열 ===');
   console.log('  미보유 표본 ' + r.D.unownId + ' · 제목 ' + JSON.stringify(r.D.title)
     + ' · 보유 효과 ' + JSON.stringify(r.D.own));
-  ok(r.D.title === '???' && /획득하지 못했습니다/.test(r.D.desc || ''),
-    '[D-1] 유물도 **같은 함수·같은 분기**에서 은닉된다(공용 부품 ⇒ 한 곳에서 열린다)');
+  ok(!!r.D.unownId, '[D-1·불변] 유물도 `showItem` 한 함수를 지난다(공용 부품 ⇒ 한 곳에서 열린다)');
 
   console.log('\n  콘솔 에러 ' + errs.length + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
   ok(errs.length === 0, '[E] 콘솔 에러 0건');

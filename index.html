@@ -27903,16 +27903,30 @@ function showItem(id){
   };
   const p = pbNow().p, pTxt = pbNow().t;
   /* 표 2열 — 계열이 갈리는 자리는 여기뿐이다. 4번째 칸만 레벨을 탄다(펫 피해량 · 유물 소환 Lv) */
-  const ct3Now = () => cat === 'pet'   ? (own ? fmtB(petDmg(it)) : '—')
+  /* 664 — 미보유라고 «—» 로 가리지 않는다. `petDmg` 는 펫의 레벨을 아예 안 타므로
+     (481: 피해 = 플레이어 공격력 × `bonus().pet`) 보유·미보유가 **같은 값**이고,
+     가려 두면 «이 펫이 얼마나 때리나» 라는 지시의 질문에 답을 안 하는 자리가 된다. */
+  const ct3Now = () => cat === 'pet'   ? fmtB(petDmg(it))
                      : cat === 'equip' ? slot.stat
                      :                   String(oLv(id));
   const ct = cat === 'pet'   ? ['공격 주기', '피해량', it.cd.toFixed(2) + '초', ct3Now()]
            : cat === 'equip' ? ['부위', '효과', slot.n, ct3Now()]
            :                   ['효과', '소환 Lv', RELIC_EFF[it.eff], ct3Now()];
   /* 설명문의 수치는 08 규격대로 주황(`.sk-db p em`)으로 강조한다 */
-  const descNow = () => !own
-    ? '아직 획득하지 못했습니다.<br>' + kindN + ' 소환으로 획득하세요.'
-    : cat === 'pet'
+  /* ⚑ 664(주인 지시 2026-09-02 00:25~00:27) — **«미개방 정보 공개» 규약**.
+     주인 원문: «미개방장비들이 스펙이랑 아이콘이 뭔지 정보 볼수있게 해줘야함. 장착만 못하게 하면 되잖음»
+     (+ «코스튬 관련도 마찬가지» «펫도 마찬가지»). 여기 있던 미보유 분기
+     («아직 획득하지 못했습니다 / n 소환으로 획득하세요»)가 **실설명을 통째로 대신 차지하고** 있었다.
+     ⇒ 설명은 보유 여부와 무관하게 **그 칸이 무엇인가**만 말하고, «아직 못 가졌다» 는 상태는
+       ③ 이 지정한 자리 — **[장착] 버튼 라벨**(아래 `mEq`) — 이 혼자 말한다.
+     ⚑ **수치는 전부 데이터 파생**이다. `oLv(id)` 가 미보유에서 0 이므로 같은 식이 그대로
+       «Lv. 0 일 때의 값» 으로 떨어진다 — 미보유 전용 상수·분기를 새로 만들지 않았다
+       (346 이 코스튬에서 `cosLvOf`=0 으로 같은 것을 한 선례가 이 시트 옆에 있다).
+     ⚠ **줄 수는 계열마다 그대로다**(485 규약 — `.sk-db` 750×290 고정이라 한 줄이 늘면 넘친다).
+       유물만 본문이 한 줄이라 남는 자리에 획득 경로 한 줄을 얹는다 — 유물은 이 팝업에
+       버튼 행이 아예 없어서(`if(!rel)`) 라벨로 말할 자리가 없기 때문이다.
+     ↩ 되돌림: 이 `!own` 분기를 되살리면 그대로 옛 은닉으로 돌아간다(제품 한 곳). */
+  const descNow = () => cat === 'pet'
       /* 485 — 펫에 «장착 효과 — 공격력 +n%» 축이 생겼다(장비와 같은 `EQ_BASE` 표).
          ⚠ **줄 수를 3 으로 유지한다** — `.sk-db` 는 750×290 고정이라 한 줄이 늘면 상자를 넘는다.
            그래서 «전투 피해» 를 새 줄로 빼지 않고 같은 줄에 가운뎃점으로 붙였다.
@@ -27938,12 +27952,24 @@ function showItem(id){
            이미 «한 줄 + 아래 빈 면 215px» 로 서 있다(`probe429` ⓔ). 줄이 줄어도 상자는 그대로다.
          ⚠ 미보유 분기(«유물 소환으로 획득하세요»)는 남긴다 — 공통이지만 «일반 설명» 이 아니라
            그 칸의 상태 안내다(269 가 «조건 미달 분기» 를 남긴 것과 같은 규칙). */
-      : '<em>' + RELIC_EFF[it.eff] + '</em> 상승 유물입니다.';
+      /* 664 — 유물만 «본문 한 줄 + 빈 면 215px»(429 실측)이라 남는 자리가 있고, 이 팝업에
+         버튼 행이 아예 없어(`if(!rel)`) 상태를 말할 라벨이 없다 ⇒ 미보유 상태 줄을 여기 얹는다.
+         보유 칸은 한 줄 그대로라 429 가 잰 기하가 안 흔들린다. */
+      : '<em>' + RELIC_EFF[it.eff] + '</em> 상승 유물입니다.'
+        + (own ? '' : '<br>아직 <em>미보유</em> — 유물 소환으로 획득하세요.');
+        /* ⚠ 뒷문장은 429 가 고른 그 문장 그대로다(`verify429` E1 이 이 자리를 센다).
+           664 가 바꾼 것은 «대체» → «덧붙임» 이지 문구가 아니다 — 문구까지 갈면 E1 이
+           지키던 «미보유 상태 안내가 남아 있는가» 를 이유 없이 흔든다. */
+  /* 664 — «보유 효과» 알약도 미보유에서 0 으로 눌러 적고 있었다(주인이 말한 «스펙»의 한 축).
+     식은 그대로 두고 **강제 0 만** 걷어낸다 — `oLv` 가 0 이라 같은 식이 «Lv. 0 값» 으로 떨어지고,
+     그 값은 바로 위 «Lv. 0» 칩·진행바 «0/n» 과 **서로 맞는 말**이다(거짓 신호가 아니다).
+     ⚠ 유물은 `relicVal` 이 `oLv` 선형이라 미보유가 자연히 0 이다 — 억지로 «0%» 를 박아 둔
+       나머지 둘과 달리 이 칸만은 값이 원래 0 이고, 그래서 그 뜻이 «아직 아무것도 안 준다» 로 옳다. */
   const ownNow = () => cat === 'pet'
-      ? '공격 <em>+' + (own ? pct(ownVal(it)*0.6) : '0%') + '</em> 골드 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>'
+      ? '공격 <em>+' + pct(ownVal(it)*0.6) + '</em> 골드 <em>+' + pct(ownVal(it)) + '</em>'
     : cat === 'equip'
-      ? slot.stat + ' <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>'
-      : RELIC_EFF[it.eff] + ' <em>+' + (own ? pct(relicVal(it)) : '0%') + '</em>';
+      ? slot.stat + ' <em>+' + pct(ownVal(it)) + '</em>'
+      : RELIC_EFF[it.eff] + ' <em>+' + pct(relicVal(it)) + '</em>';
   const desc = descNow(), ownTxt = ownNow();
   /* 262 — 홀드 중에는 이 다섯 자리만 고쳐 쓴다(통짜 재렌더는 누른 버튼 노드를 날린다) */
   const liveIt = () => { const b2 = pbNow();
@@ -27953,7 +27979,11 @@ function showItem(id){
   const crafting = own && maxed && cat === 'equip' && !isTopGrade(it);
   let acts = '';
   if(!rel){
-    acts = '<button class="sk-e" id="mEq"' + (own ? '' : ' disabled') + '><b>' + (eq ? '해제' : '장착') + '</b></button>'
+    /* 664 ③ — «장착만 막는다». 막는 것은 종전 그대로 `disabled`(2368 규약: `:disabled` = 회색)이고,
+       바뀐 것은 **라벨이 이유를 말한다**는 것뿐이다 — 설명 상자에서 걷어낸 «아직 못 가졌다» 가
+       이 자리로 왔다(코스튬이 같은 뜻을 토스트로 말하는 것과 짝 · 182·333 반려 선례). */
+    acts = '<button class="sk-e" id="mEq"' + (own ? '' : ' disabled') + '><b>'
+      + (own ? (eq ? '해제' : '장착') : '미보유') + '</b></button>'
       + (crafting
           ? '<button class="sk-u" id="mCraft"' + (canCraft(it) ? '' : ' disabled') + '><b>합성</b></button>'
           : '<button class="sk-u" id="mLv"' + (canUp ? '' : ' disabled') + '><b>'
@@ -27961,7 +27991,11 @@ function showItem(id){
       + (canUp ? '<button class="sk-u" id="mLvAll"><b>최대 강화</b></button>' : '');
   }
 
-  $('mtitle').textContent = own ? it.n : '???';
+  /* 664 — 미보유라고 이름을 «???» 로 가리지 않는다(주인 문면 «정보 볼수있게»).
+     코스튬(`showCosDetail`)이 87·82 규약으로 **이미 실명을 그대로 쓰고 있었고**(`probe664` [C-1]),
+     같은 껍데기(`sk8`)를 쓰는 이 함수만 가리고 있었다 — 세 시트를 한 규약으로 맞추는 자리가 여기다.
+     ⚠ 07 스킬(`showSkillDetail`, 위)의 같은 줄은 **662 의 구간**이라 한 글자도 안 건드렸다. */
+  $('mtitle').textContent = it.n;
   $('mbox').innerHTML =
       '<div class="skd">'
     +   '<div class="sk-ic">' + (cat === 'pet' ? petIcon(it, 'det') : itemIcon(it)) + '</div>'
@@ -31569,11 +31603,16 @@ function renderWpn(){
   $('wpnLv').innerHTML    = '<i>Lv. ' + (own ? lvNow : 0) + '</i>';
   $('wpnBarF').style.width = (own ? Math.min(100, got/need*100) : 0) + '%';
   $('wpnBarT').innerHTML  = '<i>' + got + '/' + need + '</i>';
-  $('wpnOwnV').innerHTML  = '<i>+' + wpct(own ? ownVal(cur)   : 0) + '</i>';
+  /* 664 — 미보유 칸의 «스펙» 을 0 으로 눌러 적지 않는다(주인 문면 «스펙이랑 아이콘이 뭔지»).
+     이름·아이콘·등급은 원래도 실물이 나오고 있었으므로 **은닉된 것은 이 두 수치뿐**이었다
+     (`probe664` [A-3]: 참값 보유 1.84% · 장착 9.88% 인데 둘 다 «+0.0%»).
+     식은 그대로 두고 강제 0 만 걷어낸다 — `oLv` 가 0 이라 같은 식이 «Lv. 0 값» 으로 떨어지고
+     바로 위 «Lv. 0» 칩·진행바 «0/n» 과 서로 맞는 말이 된다(346 코스튬 선례와 같은 길). */
+  $('wpnOwnV').innerHTML  = '<i>+' + wpct(ownVal(cur)) + '</i>';
   /* 472 — 상위 등급의 장착 효과는 자릿수가 알약을 넘는다. 1,000% 미만은 `wpct` 와 글자 하나까지
      같고(«37.0%»), 넘을 때만 111/188 전투 수치 접기로 떨어뜨린다 — 477 결함을 미리 막는다. */
-  $('wpnEqV').innerHTML   = '<i>+' + (own && equipVal(cur)*100 >= 1000 ? fmtB(equipVal(cur)*100) + '%'
-                                                                      : wpct(own ? equipVal(cur) : 0)) + '</i>';
+  $('wpnEqV').innerHTML   = '<i>+' + (equipVal(cur)*100 >= 1000 ? fmtB(equipVal(cur)*100) + '%'
+                                                               : wpct(equipVal(cur))) + '</i>';
   /* 격자 — 행 = 등급, 1번 칸이 실제 무기 */
   let h = '';
   /* 186 — 소환 레벨이 해금 레벨에 못 미치는 등급은 «언제 열리는지» 를 잠금 칸에 적는다.
@@ -31591,8 +31630,14 @@ function renderWpn(){
       const n = mine ? frag(real.id) : 0, nd = real ? fragNeed(mine ? oLv(real.id) : 1) : 2;
       /* 283 — ② 카드 레드닷. 07·26 격자와 같은 부품(`.updot`)·같은 조건(`canLevel`) */
       const cUp = mine && canLevel(real);
+      /* ⚑ 664(주인 지시 2026-09-02 00:25) — **미개방 장비도 «선택» 은 된다.**
+         종전에는 `data-wpn` 이 보유 칸에만 붙어 있어서 미보유 칸은 위임 핸들러가 아예 못 봤다
+         (`probe664` [A-1]: 무기 36칸 중 클릭 가능 0칸). 잠금 표시(`.lk` + 자물쇠)와 [장착] 차단은
+         그대로 두고 **고를 수만 있게** 한다 — 주인 문면이 «선택 가능하게 · 장착만 못하게» 다.
+         ⚠ 더미 칸(`real === null` — 그 등급에 아이템이 모자라 남는 자리)은 가리킬 것이 없으므로
+           종전 그대로 속성을 안 붙인다. «미보유» 와 «없는 칸» 은 다른 상태다. */
       h += '<div class="wgc ifr' + (eq ? ' eq' : '') + (mine ? '' : ' lk') + (cUp ? ' alert' : '') + '"'
-        +  (mine ? ' data-wpn="' + real.id + '"' : '')
+        +  (real ? ' data-wpn="' + real.id + '"' : '')
         +  ' style="left:' + (10 + c*170) + 'px;top:' + (32 + r*190) + 'px'
         +  ';--gc:' + w.c + ';--gr:' + w.r + ';--ge:' + w.e + '">'
         +  '<em class="ic">' + (real ? real.ic : sd.ic) + '</em>'
@@ -31640,7 +31685,15 @@ $('wpnGrid').addEventListener('click', e => {
 });
 $('wpnBtnEq').onclick = () => {
   const cur = wpnCur();
-  if(!has(cur.id) || S.eqSlot[wpnPart] === cur.id) return;
+  /* 664 ③ — «장착만 막는다» 는 막는 것으로 끝이 아니다. 종전에는 미보유 칸에서 [장착] 을 눌러도
+     **아무 말이 없었다**(`probe664` [A-5] — 반려 피드백 0건). 코스튬이 같은 자리에서 이미
+     토스트로 이유를 말하고 있으므로(182 «🔒 승급전에서 획득해야 착용합니다») 같은 꼴로 맞춘다.
+     ⚠ 장착 자체는 종전과 한 줄도 안 달라졌다 — 아래 `return` 이 그대로 막는다. */
+  if(!has(cur.id)){
+    notify('🔒 아직 <b>미보유</b> 장비입니다 — 장비 소환으로 획득하세요');
+    return;
+  }
+  if(S.eqSlot[wpnPart] === cur.id) return;
   S.eqSlot[wpnPart] = cur.id; markDirty(); uiDirty = true; save(); renderWpn();
 };
 $('wpnBtnUp').onclick = () => {
