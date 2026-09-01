@@ -221,6 +221,24 @@ async function openAt(browser, H) {
     '[5-a] ★ 버튼 값이 구간을 따라간다(Lv50/150/250 → 1/3/6) — 210 ⓑ-2 의 이관처',
     V.map(v => 'Lv' + v.lv + '→' + v.tb).join(' · '));
   ok(V.every(v => v.ic), '[5-b] 화폐 아이콘이 남아 단위를 말한다(125 · 613 이관처)');
+  /* [5-c] 3회차 — 라벨을 키운 대가(자릿수 예산)를 **추상적인 «n자리» 가 아니라 실제 도달 레벨**로 잰다.
+     이 저장소가 스스로 «먼 값» 으로 쓰는 far 표본은 `verify210` [C] 의 **Lv 100000**(비용 501,501)이다. */
+  const FAR = await page.evaluate(() => {
+    const out = [];
+    S.tstone = 1e12;
+    [10000, 100000].forEach(lv => {
+      S.temper = { alloc: { atk: lv, hp: 0, regen: 0 } }; renderTemper();
+      const row = document.querySelector('.tr-tp[data-temper="atk"]');
+      const b = row.querySelector('.tb').getBoundingClientRect();
+      const i = row.querySelector('.tb i').getBoundingClientRect();
+      out.push({ lv, cost: temperCost('atk'), room: Math.round((b.width - 16 - i.width) * 10) / 10 });
+    });
+    S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } }; renderTemper();
+    return out;
+  });
+  ok(FAR.every(f => f.room > 0),
+    '[5-c] ★ 3회차 — 커진 라벨이 **이 저장소의 far 표본(Lv 100000 · 비용 501,501)에서 안 넘친다**',
+    FAR.map(f => `Lv${f.lv} 비용 ${f.cost} 여유 ${f.room}`).join(' · '));
 
   /* ══ [R] 되돌림 시험 ═══════════════════════════════════════════════ */
   console.log('\n=== [R] 되돌림 — 옛 상태를 주입하면 이 자가 실제로 빨개지는가 ===');
