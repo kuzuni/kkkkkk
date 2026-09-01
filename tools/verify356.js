@@ -18,6 +18,8 @@
  *   [H] 축 인구조사 — 자가 «안 보는» 그리기 경로가 소스에 생겼는가 (24회차)
  *   [I] **시간 축** — 애니메이션 **한 주기**를 위상 스윕으로 훑는다 (25회차 신설).
  *       위 절이 전부 «가라앉은 한 점» 을 보는 자라, 도는 동안만 갈리는 종횡을 못 봤다.
+ *   [J] **의사 축** — `::before`/`::after` 가 그리는 아이콘 (26회차 신설).
+ *       위 절이 전부 `querySelectorAll('*')` 위에 서 있는데 그 함수는 의사 요소를 안 돌려준다.
  *
  * ⚠ [B] 는 «줄었다» 를 막지 않는다(라운드마다 줄어드는 것이 정상). 늘어난 것만 잡는다.
  *   라운드를 돌아 자리를 닫았으면 REMAIN 을 그 값으로 내려 적어라 — 안 내리면 래칫이 헐거워진다.
@@ -27,6 +29,9 @@ const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 const { SCREENS, COLLECT, URL, derivePassScreens, HTML, STEP } = require('./scan356.js');
+/* 26회차 — 의사 축. 수집기·소스 인구조사를 `probe356r26` 한 곳에서 읽는다(자를 두 벌로 안 적는다 · 13회차 [R12]) */
+const R26 = require('./probe356r26.js');
+const { COLLECT_PSEUDO } = R26;
 
 const TOL = 0.02;
 
@@ -210,6 +215,7 @@ const FRAME_REMAIN = 0;
 async function sweep(browser, inject) {
   const rows = [];
   const rowsF = [];       /* [F] 프레임 축 — 같은 화면을 1080×1600 으로 줄인 뒤 한 번 더 수집한 것 */
+  const rowsP = [];       /* [J] 의사 축 — 같은 페이지에서 `::before`/`::after` 를 한 번 더 수집한 것 (26회차) */
   const seenF = [];       /* 화면별 «리사이즈가 정말 먹었나» — innerHeight 실측 (무음 실패 감시) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -227,6 +233,15 @@ async function sweep(browser, inject) {
       await page.waitForTimeout(200);
       const got = await page.evaluate(COLLECT, { all: false });
       for (const g of got) rows.push(Object.assign({ screen: label }, g));
+
+      /* ── [J] 의사 축 (26회차) — [F] 와 **같은 손**이다: 스윕을 한 벌 더 돌지 않고
+         이미 열려 있는 이 페이지에 `evaluate` 를 한 번 더 한다.
+         25회차 인계문이 그렇게 적어 넘겼다 — «화면 진입 비용을 두 번 내지 마라».
+         그래서 새 축인데도 [A] 와 **같은 전 화면 커버리지**를 공짜로 얻는다
+         ([G]·[I] 가 대표 화면만 훑는 것과 갈리는 자리다 — 저 둘은 [A] 가 이미 도는 축의 «다른 각도»
+          지만, 의사 요소는 [A] 가 **구조적으로 못 보는** 노드라 대표 화면으로 접으면 그만큼이 그냥 구멍이다). */
+      const gotP = await page.evaluate(COLLECT_PSEUDO, { all: false });
+      for (const g of gotP) rowsP.push(Object.assign({ screen: label }, g));
 
       /* ── [F] 프레임 축 (14회차) — **스윕을 한 벌 더 돌지 않는다** ──────────────────
          비용의 거의 전부는 위의 ①컨텍스트 ②goto ③단계 클릭이고 `COLLECT` 는 evaluate 한 번이다.
@@ -251,7 +266,7 @@ async function sweep(browser, inject) {
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, seenF };
+  return { rows, rowsF, rowsP, seenF };
 }
 
 (async () => {
@@ -268,7 +283,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, seenF } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -1834,19 +1849,46 @@ async function sweep(browser, inject) {
     else bad(`[G-b] 캔버스 안 비균등 그리기 ${inApp.length}자리: `
       + inApp.map((r) => `${r.screen} ${r.sel} ×${r.ratio} (${r.src})`).join(' · '));
 
-    /* ⓒ 되돌림 — 616 «직전» 트리에서 이 자가 실제로 빨개지는가 */
+    /* ⓒ 되돌림 — 616 «직전» 트리에서 이 자가 실제로 빨개지는가
+       ⚠⚠ **26회차 — 이 항은 얕은 클론에서 구조적으로 빨갰다.** 루틴 워커의 컨테이너는 매번
+          `.git/shallow` 로 시작하고(이 회차 착수 시 이력 52커밋), 616 은 그 경계 **밖**이라
+          `git show 319277e^:index.html` 이 `fatal: invalid object name` 으로 죽었다
+          — 착수 기준선이 **179/180** 이었고 그 1건이 이것이다(제품·자 어느 쪽의 결함도 아니다).
+       ⇒ 처방은 «못 돌렸으니 넘어간다» 가 **아니다**(그러면 23회차가 세운 축이 조용히 꺼진다).
+          경계 밖이면 **그 자리에서 이력을 판다** — 실패하면 여전히 빨갛고, 빨간 줄이 원인과
+          한 줄 처방을 같이 말한다. 판정을 무르게 푼 것이 아니라 **표본을 가져오는 것**이다.
+       ⚠ `git fetch origin <sha>` 는 서버가 막는다(`couldn't find remote ref` — 26회차 실측).
+          되는 것은 `--deepen` 하나뿐이고, 30커밋이면 닿는다(.git 490M → 497M · 7MB). */
     {
       const abs = R23.PRE_ABS;
+      const ROOT = path.resolve(__dirname, '..');
       try {
-        if (!fs.existsSync(abs)) {
-          const { execFileSync } = require('child_process');
-          fs.writeFileSync(abs, execFileSync('git', ['show', R23.PRE_REV + ':index.html'],
-            { cwd: path.resolve(__dirname, '..'), maxBuffer: 1 << 28 }));
+        const { execFileSync } = require('child_process');
+        const have = (rev) => {
+          try { execFileSync('git', ['cat-file', '-e', rev], { cwd: ROOT, stdio: 'ignore' }); return true; }
+          catch (e) { return false; }
+        };
+        let dug = '';
+        if (!fs.existsSync(abs) && !have(R23.PRE_REV)) {
+          try {
+            execFileSync('git', ['fetch', '--deepen=40', 'origin', 'main'],
+              { cwd: ROOT, stdio: 'ignore', timeout: 240000 });
+            dug = have(R23.PRE_REV) ? ' (얕은 클론이라 `--deepen=40` 으로 표본을 파 왔다)' : '';
+          } catch (e) { /* 아래에서 빨개진다 */ }
         }
+        if (!fs.existsSync(abs) && !have(R23.PRE_REV)) {
+          throw new Error(`616 직전 트리 ${R23.PRE_REV} 가 이 클론에 없다(얕은 클론) `
+            + '— `git fetch --deepen=40 origin main` 을 먼저 돌려라');
+        }
+        if (!fs.existsSync(abs)) {
+          fs.writeFileSync(abs, execFileSync('git', ['show', R23.PRE_REV + ':index.html'],
+            { cwd: ROOT, maxBuffer: 1 << 28 }));
+        }
+        R23.__dug = dug;
         const pre = await rowsOf('file://' + abs.replace(/\\/g, '/'), ['03 레이드']);
         const hit = pre.draw.filter((r) => r.inApp && Math.abs(r.ratio - 1) > 0.30)
           .sort((a, b) => Math.abs(b.ratio - 1) - Math.abs(a.ratio - 1));   /* «최악» 이라 적으려면 정렬해야 한다 */
-        if (hit.length) ok(`[G-c] 되돌림 — 616 직전 트리에서 ${hit.length}자리가 빨개진다 (최악 ×${hit[0].ratio} · 등재문의 ×1.45/×1.65 자리)`);
+        if (hit.length) ok(`[G-c] 되돌림 — 616 직전 트리에서 ${hit.length}자리가 빨개진다 (최악 ×${hit[0].ratio} · 등재문의 ×1.45/×1.65 자리)${R23.__dug || ''}`);
         else bad('[G-c] 되돌림 실패 — 616 직전 트리에서도 0자리다. 이 절은 아무것도 못 보는 자다');
       } catch (e) {
         bad('[G-c] 되돌림을 못 돌렸다: ' + String(e.message || e).split('\n')[0]);
@@ -2061,6 +2103,88 @@ async function sweep(browser, inject) {
       '@keyframes __i25uni{0%,100%{scale:1}50%{scale:1.4}}#app .tab>span.ti{animation:__i25uni 30s linear infinite}');
     if (!uni.miss && !uni.rows.length) ok('[I-d] 음성항 — 등방 애니(scale 1→1.4→1)를 같은 자리에 주입해도 0자리 (크기 변경은 결함이 아니다)');
     else bad(`[I-d] 음성항 실패 — 등방을 주입했는데 ${uni.rows ? uni.rows.length : '?'}자리가 잡혔다`);
+  }
+
+  /* ── [J] 26회차 — **의사 축**: DOM 노드가 아닌 것이 그리는 아이콘 ─────────────
+     스물다섯 회차의 축(화면·상태·문·출처·구성물·시간)은 전부 **«DOM 노드 하나를 어떻게 볼까»** 였고,
+     여섯 갈래 전부가 `scan356.COLLECT` 의 같은 한 줄 위에 서 있었다:
+
+         const all = app.querySelectorAll('*');
+
+     `querySelectorAll` 은 **의사 요소를 안 돌려준다** — 의사 요소는 DOM 노드가 아니다.
+     그래서 `::before`/`::after` 가 그리는 아이콘은 스물다섯 회차의 «비균등 0» 안에
+     **한 번도 안 들어 있었다.** 못 봐서 0 이었다(11·12·15 화면 · 21·22 문 · 616 축 에 이은 네 번째 모양).
+
+     ⚑ **[J-c] 가 이 절의 본체다** — 살아 있는 호스트의 의사 요소에 `scaleX(.8)` 을 심으면
+        이 축은 잡고 **[A] 축은 0자리**로 읽는다. 그 두 수의 차이가 «새 축» 의 전부다
+        (21·23·24·25회차와 같은 규율).
+
+     ⚠ **판정은 화면이 한다 · 소스는 «가 볼 자리» 만 센다**(25회차가 스스로 기각한 1판의 교훈).
+        지금 소스의 의사 아이콘 규칙 5건 중 **4건이 `content:attr(data-t)`** 라 소스로는
+        그 값이 그림문자인지 글자인지 **알 수 없다.** 그 넷을 «못 읽으니 안전» 으로 접으면 헛초록이라
+        [J-a2] 가 그것을 세어 말하고, 실제 판정은 계산된 `content` 를 읽는 [J-b] 가 한다.
+
+     ⚠ 나머지 1건 `.ibtn.lock::after{content:'🔒'}`(1060행)은 **호스트가 DOM 에 없다** —
+        작업 49 가 `.ibtn[data-lock]` 을 지웠고 `.lock` 을 `.ibtn` 에 붙이는 코드가 0곳이다.
+        그래서 이 축의 «아이콘 0개» 는 «규칙이 없어서» 가 아니라 «그 규칙이 죽어서» 다.
+        죽은 선언 자체는 356 의 축(종횡비)이 아니라 **629 로 등재**했다 — 지시서 [1] «한 개만». */
+  console.log('\n[J] 26회차 — 의사 축: `::before`/`::after` 가 그리는 아이콘');
+  {
+    const rawHtml = fs.readFileSync(HTML, 'utf8');
+    const cen = R26.sourceCensus(rawHtml);
+
+    /* ⓐ 소스 인구조사 — **전제**다(25회차 [I-a] 규율). 판정이 아니다. */
+    if (cen.rules.length) ok(`[J-a] 소스 인구조사 — 의사 요소 규칙 ${cen.rules.length}개 (장식 상자 ${cen.deco} · 아이콘이 될 수 있는 것 ${cen.icons.length})`);
+    else bad('[J-a] 의사 요소 규칙을 한 개도 못 읽었다 — 인구조사가 죽었다(아래는 전부 헛초록)');
+
+    const dyn = cen.icons.filter((r) => r.kind === 'dyn');
+    if (dyn.length) ok(`[J-a2] 소스로 못 읽는 꼴 ${dyn.length}건(${dyn.map((r) => r.line + '행').join(' · ')}) — «안전» 으로 안 접는다. 판정은 아래 [J-b] 가 화면에서 한다`);
+    else ok('[J-a2] `attr()`/`var()` 로 내용을 받는 의사 요소 0건 — 소스 인구조사와 화면 판정이 같은 집합을 본다');
+
+    /* ⓑ 판정 — 전 화면 스윕(위 sweep 이 [A] 와 같은 페이지에서 이미 걷어 온 것) */
+    const icons = rowsP.filter((r) => r.kind !== 'empty');
+    const nonUni = [...new Map(icons.filter((r) => Math.abs(r.ratio - 1) > TOL).map((r) => [r.sel, r])).values()];
+    /* 전제 — «아이콘 0개» 가 «눈이 없어서 0» 이 아님을 세우는 항. 표본은 장식 상자다. */
+    if (rowsP.length) ok(`[J-b0] 전제 — 전 화면에서 의사 요소 ${rowsP.length}개를 실제로 읽었다 (그중 아이콘 ${icons.length}개)`);
+    else bad('[J-b0] 의사 요소를 한 개도 못 읽었다 — [J-b] 의 0 은 «못 봐서 0» 이다');
+    if (!nonUni.length) ok(`[J-b] 의사 아이콘 비균등(|sx/sy−1| > ${TOL}) 0자리 — 아이콘 ${icons.length}개 · ${SCREENS.length}화면`);
+    else bad(`[J-b] 의사 아이콘 비균등 ${nonUni.length}자리: `
+      + nonUni.slice(0, 5).map((r) => `${r.sel} ${r.ratio} «${r.txt}»`).join(' · '));
+
+    /* ⓒ 되돌림 — 이 절의 본체. **살아 있는** 호스트에 심는다.
+       ⚠ 1060행의 `.ibtn.lock::after` 에 심으면 «주입해도 0자리» 가 나오는데, 그건 자가 눈먼 것이
+          아니라 **호스트가 없는 것**이다 — 되돌림 시험은 그 둘을 못 가르므로 쓰면 안 된다. */
+    const ONE = SCREENS[0];
+    const BASE = R26.HOST_LIVE + '::after{content:"🔒";position:absolute;left:0;top:0;font-size:40px;';
+    const shot = async (css, collector) => {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(900);
+      for (const st of ONE[1]) { try { await STEP(page, st); } catch (_) {} await page.waitForTimeout(220); }
+      await page.addStyleTag({ content: css });
+      await page.waitForTimeout(150);
+      const got = await page.evaluate(collector, { all: false });
+      await ctx.close();
+      return got.filter((r) => r.kind !== 'empty' && Math.abs(r.ratio - 1) > TOL);
+    };
+
+    const hitP = await shot(BASE + 'transform:scaleX(.8)}', COLLECT_PSEUDO);
+    if (hitP.length) ok(`[J-c] 되돌림 — 살아 있는 호스트의 의사 아이콘에 \`scaleX(.8)\` 을 심으면 ${hitP.length}자리로 잡는다 (${hitP[0].sel} ${hitP[0].ratio})`);
+    else bad('[J-c] 되돌림 실패 — 주입해도 0자리. 이 절은 아무것도 못 보는 자다');
+
+    const hitA = await shot(BASE + 'transform:scaleX(.8)}', COLLECT);
+    if (hitP.length && !hitA.length) ok('[J-c2] ⚑ 같은 주입을 [A] 축(`scan356.COLLECT`)은 **0자리**로 읽는다 — 이 축이 [A] 의 재탕이 아니라는 실측');
+    else if (hitP.length) bad(`[J-c2] [A] 축도 ${hitA.length}자리를 잡는다 — 이 표본으로는 «새 축» 을 못 보인다`);
+
+    /* ⓓ 음성항 둘 — 상시 빨간 자는 꺼진 자와 같다(23회차 [G-d] 규율) */
+    const iso = await shot(BASE + 'transform:scale(.8)}', COLLECT_PSEUDO);
+    if (!iso.length) ok('[J-d] 음성항 ⓐ — 등방 `scale(.8)` 주입은 0자리 (크기 변경은 결함이 아니다)');
+    else bad(`[J-d] 음성항 ⓐ 실패 — 등방 주입에도 ${iso.length}자리를 결함이라 부른다`);
+
+    const lbl = await shot(R26.HOST_LIVE + '::after{content:"출석 5";position:absolute;left:0;top:0;transform:scaleX(.8)}', COLLECT_PSEUDO);
+    if (!lbl.length) ok('[J-d2] 음성항 ⓑ — 글자가 섞인 `content` 는 라벨이라 안 센다 (3회차 `u.pr` 선례 · 라벨의 scaleX 는 이 지시의 대상이 아니다)');
+    else bad(`[J-d2] 음성항 ⓑ 실패 — 라벨의 scaleX 를 결함이라 부른다(${lbl.length}자리)`);
   }
 
   await browser.close();
