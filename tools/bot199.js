@@ -253,9 +253,16 @@ const BOT_SRC = function (cfg) {
   /* ⚠ **한 번에 다 사면 안 된다.** 2회차는 `S.gold = 1e100` 을 붓고 «살 수 있는 만큼» 을
      한 호출에 샀는데, MAX 수량이라 첫 바퀴에 목표를 **1,500만 배** 넘겨 버렸다(s10 표본의
      `stat.dps` 가 1.9e9). 한 레벨씩 올려 목표를 처음 넘는 자리에서 멈춘다 — 과충은 최대 한 바퀴. */
-  const pumpTo = (target) => {
+  /* ⚑ 12회차(615) — 이 함수는 원래 «화력이 목표에 닿을 때까지» 하나만 알았다. 축이 둘이 되면서
+     («화력» 과 «생존») **손잡이를 도는 몸통은 그대로 두고 재는 자만 인자로 받는다** — 사본을
+     한 벌 더 짜면 두 축의 «한 눈금씩» 규약이 조용히 갈린다(402 처방). `have`·`need` 는 매번
+     다시 읽는 함수다: 생존 축의 `need` 는 방어력을 사면 **내려가므로** 상수로 굳히면 안 된다. */
+  const pumpBy = (have, need, stop) => {
     const qty0 = S.buyQty;
     S.buyQty = 1;
+    /* 615 — `stop()` 은 «여기서 더 밀면 그 구간의 캐릭터가 아니다» 는 상한이다(생존 축이 쓴다).
+       없으면 종전과 한 글자도 다르지 않다 — 화력 축은 상한 없이 목표까지 민다. */
+    const go = () => have() < need() && !(stop && stop());
     const goldOnce = () => {                          /* 골드 손잡이 한 눈금 — 샀으면 true */
       let bought = false;
       for (const u of UPG) {
@@ -274,7 +281,7 @@ const BOT_SRC = function (cfg) {
       return bought;
     };
     let guard = 0;
-    while (stat.dps < target && guard++ < 4000) if (!goldOnce()) break;
+    while (go() && guard++ < 4000) if (!goldOnce()) break;
     /* ⚑ 10회차(정정2) — s400+ 목표는 골드 손잡이(UPG·훈련)만으로는 **물리적으로 닿지 않는다**
        (상한 ≈1.3e10 vs s400 목표 3.1e21 — 실측. 옆 주석의 «어울리는 캐릭터» 규약이 s>200 에서
        깨져 있었다 — 옆 주석이 1회차에 s200 에서 잡은 바로 그 병의 재발이다). 그 구간의
@@ -284,8 +291,8 @@ const BOT_SRC = function (cfg) {
        페이지라 세이브·장부를 오염시키지 않는다(ledger 는 이 컨텍스트의 B.diaIn 에만 적혀 버려진다). */
     let sg = 0, budget = 1e6, rbudget = 1e5;
     const STEP = 1.05;                                /* «눈금이 올렸다» 의 문턱 — 5% */
-    while (stat.dps < target && sg++ < 600) {
-      const d0 = stat.dps, R2 = B.R;
+    while (go() && sg++ < 600) {
+      const d0 = have(), R2 = B.R;
       if (!R2) break;
       /* ⓐ 10뽑 한 눈금 — 제일 덜 뽑은 배너 하나만. 한 번에 R.summon 을 통째로 돌리면
          (10뽑 ×400 가드) 목표를 수백 배 넘겨 κ_dps 가 «오버킬 클리핑» 으로 무너진다 —
@@ -300,10 +307,10 @@ const BOT_SRC = function (cfg) {
         S.dia = 0;
       }
       T('cal.equip', () => R2.equipBest());
-      if (stat.dps >= target) break;
+      if (!go()) break;
       /* ⓑ 뽑기 눈금이 5% 도 못 올리면 강화 «예산 눈금» — 골드를 10배씩 늘려 가며 일괄 강화.
          예산이 점프 폭을 묶는다(무한 골드로 levelUpAll 을 부르면 한 호출이 만렙까지 간다). */
-      if (stat.dps < d0 * STEP && stat.dps < target / 5) {
+      if (have() < d0 * STEP && have() < need() / 5) {
         /* 거친 손잡이(일괄 강화·소환 레벨)는 목표의 1/5 아래에서만 — 마지막 구간은 10뽑·골드
            눈금으로만 다가간다. 과충(오버킬 클리핑)보다 소폭 미달이 자로서 안전하다:
            미달은 표본이 «느리게 잡는» 진짜 그림이고, 과충은 실전 DPS 를 처리량 상한으로
@@ -312,7 +319,7 @@ const BOT_SRC = function (cfg) {
         T('cal.lvl', () => { R2.levelAll(); R2.equipBest(); });
         budget = Math.min(budget * 2, 1e33);
         /* ⓒ 그래도 안 오르면 나머지 축(유물 소환·룬·도감·골드 손잡이) 한 바퀴 */
-        if (stat.dps < d0 * STEP) {
+        if (have() < d0 * STEP) {
           /* 유물 다이아도 예산 눈금 — 고정 1e9 를 주면 이 한 바퀴가 ×10 이상을 점프해
              s200 표본을 ×12 과충시켰다(10회차 실측). */
           S.dia = Math.max(S.dia, rbudget); S.gold = Math.max(S.gold, budget);
@@ -320,13 +327,13 @@ const BOT_SRC = function (cfg) {
           rbudget = Math.min(rbudget * 2, 1e12);
           S.dia = 0;
           guard = 0;
-          while (stat.dps < target && guard++ < 400) if (!goldOnce()) break;
+          while (go() && guard++ < 400) if (!goldOnce()) break;
           /* ⓓ 마지막 축 — 소환 «레벨»(등급 개방 · `S.sumLv`). 만렙 50 까지 26.8만 뽑이라
              뽑기로 올리면 보정이 분 단위가 된다 — 레벨을 한 눈금씩 직접 올린다. 늦은 구간
              (s800+)의 캐릭터는 실플레이로도 이 레벨대를 갖고 있으므로(d120 실측 — 봇이
              하루 천여 뽑을 한다) «어울리는 캐릭터» 규약 안이다. 다른 어떤 손잡이 조합도
              s800 목표에 못 닿는 것을 실측한 뒤에만 온다(이 분기 순서가 그 증명이다). */
-          if (stat.dps < d0 * STEP) {
+          if (have() < d0 * STEP) {
             if (typeof SUM_MAXLV === 'number' && (S.sumLv | 0) < SUM_MAXLV) S.sumLv = (S.sumLv | 0) + 1;
             else if (budget >= 1e33) break;            /* 전 축이 다 올랐다 — 진짜 상한 */
           }
@@ -335,7 +342,69 @@ const BOT_SRC = function (cfg) {
     }
     S.buyQty = qty0;
     S.gold = 0; S.dia = 0;
-    return stat.dps;
+    return have();
+  };
+  const pumpTo = (target) => pumpBy(() => stat.dps, () => target);
+  /* ══ 615 — 생존 축 ═══════════════════════════════════════════════════════════
+     11회차가 남긴 처방: «보정 캐릭터는 `pumpTo` 가 **화력만** 목표에 맞추고 생존은 안 맞춘다
+     ⇒ «그 구간에 어울리는 캐릭터» 규약을 생존 축(체력·회복)까지 넓힌다.»
+     ⚑ **목표는 취향이 아니라 물리다** — 보스 접촉 피해는 `e.dmg · stat.defMul · sbDef()`
+     (index.html 22965)이고 `e.dmg` 는 `eDmg(s) · ETYPE.boss.dmg` 다. 피격 무적이 `player.inv`
+     0.4초라 **초당 최대 2.5대**이므로, 제한 시간을 버티는 조건은
+         체력 + 창 안 회복  ≥  (한 대 피해) × (BOSS_SEC / 0.4)
+     ⚠ `0.4` 는 제품 리터럴(22965)이고 제품이 밖으로 안 내놓는다 — 여기 상수로 적되
+       `verify615` 가 «두 값이 같은가» 를 소스로 확인한다(상수를 손으로 두 벌 적는 것의 값).
+     ⚠ 이것은 **최악**이다(매 무적 창마다 한 대씩 맞는다). 실제로는 카이팅으로 덜 맞으므로
+       목표를 넘긴 캐릭터가 반드시 격파하는 것도, 못 넘긴 캐릭터가 반드시 죽는 것도 아니다 —
+       그래서 이 값을 «유효 조건» 이 아니라 **행이 들고 다니는 수(`survPump`)** 로 둔다.
+     ⚑ **순서가 곧 분리다** — 이 펌프는 `sampleMobs` **뒤**에 돈다. 몹 축(κ_dps·κ_hp·κ_gold)은
+       이미 «화력이 목표에 맞는 캐릭터» 로 찍힌 뒤라 이 펌프가 그 셋을 한 자리도 안 흔든다.
+       대신 κ_boss 의 분모는 «이 창을 찍은 캐릭터» 의 화력이어야 한다(calibrateOne 의 dpsBoss). */
+  const HIT_IV = 0.4;                               /* = index.html 22965 `player.inv = 0.4` */
+  const survNeed = (s) => eDmg(s) * ETYPE.boss.dmg * stat.defMul * sbDef() * (BOSS_SEC / HIT_IV);
+  const survHave = () => stat.maxHp + stat.regen * BOSS_SEC;
+  /* 방어력·체력·회복은 `stat.dps` 에 한 항도 안 들어가므로(`stat.dps` 는 atk·aspd·crit·cdmg·
+     pierce 와 `bonus().atk` 로만 만들어진다) 이 세 손잡이는 화력을 안 흔든다 — 그래서 **먼저**
+     민다. 여기서 목표에 닿으면 공용 축(소환·일괄 강화)을 안 건드리고 끝난다. */
+  const survOnce = () => {
+    let bought = false;
+    for (const id of ['hp', 'regen', 'def']) {
+      const u = U[id]; if (!u) continue;
+      const bi = buyInfo(u);
+      if (!bi || !bi.n) continue;
+      S.gold = Math.max(S.gold, bi.cost);
+      applyBuy(u, bi.n, bi.cost); markDirty(); bought = true;
+    }
+    for (const id of TRAIN_STATS) {
+      if (id === 'atk') continue;                   /* 훈련 «공격력» 은 화력 축이라 여기서 안 산다 */
+      const bi = trainBuyInfo(id);
+      if (!bi || bi.full || !bi.n) continue;
+      S.gold = Math.max(S.gold, bi.cost);
+      if (trainBuy(id)) bought = true;
+    }
+    return bought;
+  };
+  /* ⚑ 615 — «어울리는 캐릭터» 는 **두 쪽이다.** 생존을 맞추려고 화력을 무한히 밀면 그 캐릭터는
+     보스를 한 대에 지워 버리고(실측 s500 에서 창 1.00초 · 과충 ×3.96e7), κ_boss 는 «죽기 전까지»
+     대신 **오버킬 클리핑**을 재게 된다 — 결손을 옆으로 옮긴 것뿐이다. 그래서 공용 축으로 넘어간
+     구간에는 상한을 둔다. 값 4 는 **관측된 자연 폭의 두 배**다(r10·r11 유효 행의 pump 1.03~2.24).
+     ⚠ 문턱을 표본에 맞춰 깎은 것이 아님을 그 폭이 말한다 — s200 이 목표를 채우려면 **×1.75e3**,
+       s500 은 **×3.96e7** 이 필요하다(probe615 실측). 4 를 40 이나 400 으로 적어도 판정은 같다. */
+  const BOSS_OVER = 4;
+  const pumpSurv = (s, dps0) => {
+    const qty0 = S.buyQty; S.buyQty = 1;
+    let guard = 0;
+    while (survHave() < survNeed(s) && guard++ < 4000) if (!survOnce()) break;
+    S.buyQty = qty0; S.gold = 0;
+    /* 순수 생존 손잡이가 바닥나면 공용 축(소환·장비·유물·룬·도감)으로 이어 민다 —
+       방패 슬롯이 `bonus().hp` 를 올리는 유일한 큰 축이다(index.html `bonus()` — shield → b.hp).
+       ⚠ 이 구간은 화력도 같이 올리므로 위 상한에서 멈춘다. 행이 `dpsBoss`·`bossOver` 를 들고
+       다니므로 «어디서 멈췄는가» 는 표가 말한다. */
+    const base = dps0 > 0 ? dps0 : stat.dps;
+    if (survHave() < survNeed(s))
+      pumpBy(() => survHave(), () => survNeed(s), () => stat.dps > base * BOSS_OVER);
+    const have = survHave(), need = survNeed(s);
+    return { have, need, ratio: need > 0 ? have / need : null };
   };
   /* 몹 표본은 **파밍 상태**(`S.bossFarm = true`)에서 찍는다 — 제품이 그 상태에서 보스를 안 부르므로
      60초 표본 도중에 스테이지가 오르지 않는다(2회차에 표본이 오염된 자리). */
@@ -355,10 +424,16 @@ const BOT_SRC = function (cfg) {
     T('cal.bossSpawn', () => { enemies.length = 0; S.bossFarm = false; bossOn = false; startBoss(); });
     const cap = Math.round((BOSS_SEC * 4 + 12) * 30);
     let f = 0, seen = false, f0 = 0, hp0 = 0;
+    /* ⚑ 12회차(615) — **창이 왜 끝났는가**를 행이 들고 다닌다. 11회차는 «격파했나» 만 참말로
+       만들었고 «아니면 무엇이었나» 는 여전히 표 밖(본문 추적)이었다 — 그래서 원인이 다시
+       잠복할 수 있었다. 사망은 판정이 아니라 **관측**이다: `playerDied()` 가 부르는 실패 경로가
+       `enemies` 를 비우므로(458) 그 프레임에 보스도 같이 사라진다 = 옛 판정이 «격파» 로 읽던 그 길. */
+    let died = false, pHp0 = 0, pMin = Infinity;
     for (; f < cap; f++) {
       step(1 / 30);
+      if (seen) { pMin = Math.min(pMin, player.hp); if (player.hp <= 0 || player.dead > 0) died = true; }
       const b = enemies.find(e => e.tk === 'boss' && e.born >= 0.3);
-      if (b && !seen) { seen = true; f0 = f; hp0 = b.hp; meterReset(); }
+      if (b && !seen) { seen = true; f0 = f; hp0 = b.hp; pHp0 = player.hp; pMin = player.hp; meterReset(); }
       else if (seen && !b) break;
     }
     const sec = seen ? (f - f0) / 30 : 0;
@@ -377,7 +452,10 @@ const BOT_SRC = function (cfg) {
        `hp0` «과 같아야» 하는데 부동소수 누적이 마지막 자리에서 모자란다(s100 실측 0.999…).
        여유가 없으면 실제 격파가 «미격파» 로 읽힌다 — 이 자리는 문턱이 아니라 반올림이다. */
     const killed = seen && hp0 > 0 && dmgAcc >= hp0 * (1 - 1e-9);
-    return { sec, dmg: dmgAcc, killed, hp0 };
+    /* 창이 끝난 이유 — 넷뿐이고 순서가 곧 우선순위다(격파 프레임에 사망이 겹칠 수 있다). */
+    const endBy = !seen ? 'none' : killed ? 'kill' : died ? 'death' : f >= cap ? 'cap' : 'gone';
+    return { sec, dmg: dmgAcc, killed, hp0, endBy, died,
+             pHp0, pMin: isFinite(pMin) ? pMin : null, pMaxHp: stat.maxHp };
   };
 
   /* ⚑ 10회차 — 앵커마다 **새 캐릭터**로 잰다(Node 가 앵커마다 새 페이지에서 calibrateOne 을
@@ -400,11 +478,28 @@ const BOT_SRC = function (cfg) {
   const PUMP_MIN = 0.5;
   const calValid = r => r.pump != null && isFinite(r.pump) && r.pump >= PUMP_MIN
                      && (r.kills | 0) > 3;
+  /* ⚑ 615 — **보스 축은 자기 유효 조건을 따로 갖는다.** 몹 축(κ_dps·κ_hp·κ_gold)과 보스 축
+     (κ_boss)은 서로 다른 캐릭터로 찍히므로(생존 펌프가 그 사이에 돈다) 한 `valid` 로 묶으면
+     둘 중 하나가 반드시 거짓말을 한다. 둘 다여야 유효:
+       ⓐ **창이 격파로 끝났다** — 11회차가 물리로 세운 그 판정. 안 그러면 κ_boss 는
+          «죽기 전까지» 를 잰 값이다(이 행이 등재된 이유 그 자체).
+       ⓑ **화력 과충이 상한 안이다** — 격파했어도 한 대에 지웠으면 그 수는 클리핑이다.
+     판정식은 여기 한 곳이다(표 두 벌 금지 — `calValid` 와 같은 규약). */
+  const bossValid = r => r.bossKilled === true
+                      && r.bossOver != null && isFinite(r.bossOver) && r.bossOver <= BOSS_OVER;
+  /* 615 — 재현 프로브가 **같은 조각**을 부른다(사본을 짜면 자와 프로브가 갈린다). */
+  B.pumpTo = pumpTo; B.pumpSurv = pumpSurv; B.BOSS_OVER = BOSS_OVER; B.sampleBoss = sampleBoss; B.sampleMobs = sampleMobs;
+  B.survHave = survHave; B.survNeed = survNeed;
   B.calibrateOne = (s, sec, kGuess) => {
     S.stage = s; S.best = Math.max(S.best, s);
     const target = eHp(s) * ETYPE.boss.hp * bossGateHp(s) / (BOSS_SEC * 0.5) / (kGuess || 1);
     const dpsNow = pumpTo(target);
     const m = sampleMobs(s, sec);
+    /* ⚑ 12회차(615) — 여기서 축이 갈린다. 몹 표본은 위에서 «화력이 목표에 맞는 캐릭터» 로
+       이미 찍혔고, 보스 표본은 그 아래에서 «그 보스전을 실제로 치를 수 있는 캐릭터» 로 찍는다.
+       순서를 바꾸면(생존 펌프를 몹 표본 앞에 두면) κ_dps 가 과충 클리핑으로 무너진다. */
+    const sv = pumpSurv(s, dpsNow);
+    const dpsBoss = stat.dps;                        /* κ_boss 의 분모 = **이 창을 찍은** 캐릭터 */
     const b = sampleBoss(s);
     const kDps = (m.dmg / sec) / (dpsNow || 1);
     const row = {
@@ -416,11 +511,19 @@ const BOT_SRC = function (cfg) {
       kHp: m.kills ? m.hpRat / m.kills : null,
       kGold: m.kills ? m.goldRat / m.kills : null,
       bossSec: b.sec, bossKilled: b.killed,
+      /* 12회차(615) — 창이 왜 끝났는가 + 생존 축의 실측치. 이 넷이 없으면 «격파 n/N» 은
+         숫자만 있고 원인이 없다(11회차가 본문 추적으로만 갖고 있던 자리). */
+      bossEndBy: b.endBy, bossDied: b.died, pMaxHp: b.pMaxHp, pMin: b.pMin,
       /* 11회차 — «격파» 판정의 두 재료를 행에 남긴다(판정만 남기면 왜 그렇게 읽혔는지 못 캔다) */
       bossHp0: b.hp0, bossDmg: b.dmg, bossDmgRat: b.hp0 > 0 ? b.dmg / b.hp0 : null,
-      kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsNow || 1) : null,
+      /* 12회차(615) — 생존 축의 달성/목표. `pump` 와 같은 꼴이라 나란히 읽힌다.
+         ⚠ 1 을 넘겨도 «반드시 격파» 는 아니다 — 목표가 최악(초당 2.5대)이라 여유가 있는 쪽이다. */
+      survHave: sv.have, survNeed: sv.need, survPump: sv.ratio, dpsBoss,
+      bossOver: dpsNow > 0 ? dpsBoss / dpsNow : null,   /* 생존 펌프가 화력을 몇 배 밀었나 */
+      kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsBoss || 1) : null,
     };
     row.valid = calValid(row);
+    row.bossValid = bossValid(row);
     return row;
   };
   B.calibrateFloor = () => {
@@ -446,7 +549,11 @@ const BOT_SRC = function (cfg) {
     /* 11회차(정정7) — 캐시에 «실패 프로브» 행(화력이 목표에 못 닿은 앵커)이 같이 실린다.
        그 행의 κ 는 «전장의 모양» 이 아니라 화력 미달이 만든 수라 자에서 뺀다.
        옛 세대 캐시(r10 이하)에는 `valid` 가 없고 유효 행만 실려 있었다 → «없으면 유효». */
-    const rows = B.cal.rows.filter(r => r.valid !== false && r[key] != null && isFinite(r[key]) && r[key] > 0);
+    /* ⚑ 12회차(615) — 축마다 유효 조건이 다르다. κ_boss 는 «격파로 끝났고 과충이 상한 안인»
+       행만 읽는다(`bossValid`) — 안 그러면 «죽기 전까지» 를 잰 수가 곡선에 들어온다.
+       옛 세대 캐시(r11 이하)에는 `bossValid` 가 없다 → «없으면 유효»(11회차 `valid` 와 같은 규약). */
+    const okRow = r => key === 'kBoss' ? r.bossValid !== false : r.valid !== false;
+    const rows = B.cal.rows.filter(r => okRow(r) && r[key] != null && isFinite(r[key]) && r[key] > 0);
     if (!rows.length) return B.cal[key] || 1;
     if (s <= rows[0].s) return rows[0][key];
     for (let i = 1; i < rows.length; i++) {
@@ -915,6 +1022,9 @@ const POLICIES = {
    읽는다(`r.valid !== false`). */
 const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400, 500, 560, 640, 800, 1200];
 const CAL_SEC = 60;
+/* 615 — 표가 쓰는 «화력 과충 상한» 사본. 판정 자체는 BOT_SRC 안 `BOSS_OVER` 한 곳이고
+   여기는 **문장에 수를 적기 위한 것**뿐이다 — `verify615` 가 «두 수가 같은가» 를 소스로 확인한다. */
+const BOSS_OVER_DOC = 4;
 /* ⚑ 199 10회차 — 일회성 장부 키를 한 곳에 모은다(스냅 `inOnce` 와 [G] 가 같은 목록을 읽어야
    ④ 의 두 자가 어긋나지 않는다). 정정4 — «우편» 을 «우편(1회성)/우편(월)» 로 갈랐다:
    월별분은 지속 수급이다. 레거시 키 «우편» 은 옛 --json 리플레이용으로 남긴다(옛 실행은
@@ -1055,8 +1165,14 @@ async function runOne(page, pol, seed, days, onRow) {
   return res;
 }
 
+/* ---------------- 재사용 입구(615) ----------------
+   ⚑ 615 — 재현 프로브(`tools/probe615.js`)가 **같은 `BOT_SRC` 를** 페이지에 심어야 한다.
+   프로브가 자기 사본을 들고 있으면 «표 두 벌» 이라 자와 프로브가 조용히 갈린다(402 처방).
+   그래서 이 파일을 `require` 하면 실행부는 돌지 않고 조각만 넘긴다 — CLI 로 부르면 그대로다. */
+module.exports = { BOT_SRC, CLOCK, SEEDRNG, URL, ROOT, CAL_STAGES, CAL_SEC };
+
 /* ---------------- 실행 ---------------- */
-(async () => {
+if (require.main === module) (async () => {
   const t0 = Date.now();
 
   /* ---- 리플레이 — 시뮬 없이 이전 --json 산출을 현재 분류(--wallband)로 다시 접는다 ---- */
@@ -1208,12 +1324,18 @@ function writeReport(rep) {
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
   L.push('');
-  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | κ_boss | pump(달성/목표) | 자에 쓰나 |');
-  L.push('|---|---|---|---|---|---|---|---|---|---|---|---|');
+  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | 창이 끝난 이유 | 생존(달성/목표) | κ_boss | pump(달성/목표) | 몹 축 | 보스 축 |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rep.cal.rows) {
     /* 11회차 — pump 가 1e-3 아래로 내려가면 소수점 두 자리는 «0.00» 이라 좌표를 못 읽는다 */
     const pumpTxt = r.pump == null ? '— (10회차 이전 표)' : (r.pump < 0.01 ? r.pump.toExponential(1) : r.pump.toFixed(2));
-    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${pumpTxt} | ${r.valid === false ? '✖ **대역 밖**(실패 프로브)' : '✔'} |`);
+    /* 12회차(615) — «창이 끝난 이유» 와 «생존 달성/목표» 를 표가 직접 말한다.
+       옛 표(r11 이하)에는 두 칸이 없다 — 그 세대는 «—» 로 읽는다. */
+    const endTxt = r.bossEndBy == null ? (r.bossKilled ? '격파' : '— (11회차 이전 표)')
+                 : ({ kill: '격파', death: '**플레이어 사망**', cap: '시간 초과(cap)', gone: '사라짐(원인 미상)', none: '보스 안 섬' })[r.bossEndBy] || r.bossEndBy;
+    const svTxt = r.survPump == null ? '—' : (r.survPump < 0.01 ? r.survPump.toExponential(1) : r.survPump.toFixed(2))
+                 + (r.bossOver != null && r.bossOver > 1.0000001 ? ` (화력 과충 ×${r.bossOver.toExponential(1)})` : '');
+    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${endTxt} | ${svTxt} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${pumpTxt} | ${r.valid === false ? '✖ **대역 밖**(실패 프로브)' : '✔'} | ${r.bossValid === false ? '✖ **대역 밖**' : '✔'} |`);
   }
   {
     const bad = (rep.cal.rows || []).filter(r => r.valid === false);
@@ -1228,10 +1350,16 @@ function writeReport(rep) {
        으로 바꾸자 격파가 **0건**으로 드러났다 — 감추지 말고 표가 매 실행 말하게 한다. */
     const withBoss = (rep.cal.rows || []).filter(r => r.bossDmgRat != null);
     const killedN = withBoss.filter(r => r.bossKilled).length;
-    if (withBoss.length && killedN < withBoss.length) {
+    const bOk = withBoss.filter(r => r.bossValid !== false);
+    if (withBoss.length) {
       L.push('');
-      L.push(`· ⚠⚠ **보스 축 결손(등재 615)** — 보정 보스 표본 ${withBoss.length}행 중 **격파 ${killedN}행**. 나머지는 창 안 피해가 보스 체력의 ${withBoss.filter(r => !r.bossKilled).map(r => (r.bossDmgRat * 100).toFixed(1) + '%').join(' · ')} 에서 끝났다(s1 실측 원인 = **플레이어 사망** · \`bossT\` 13/15 로 시간 초과 아님).`);
-      L.push(`  ⇒ **κ_boss 는 «격파까지» 가 아니라 «죽기 전까지» 를 잰 값이다.** 보스 실전(초) 칸도 «격파 소요» 가 아니라 «판이 끝난 시각» 으로 읽어라. 몹 축(κ_dps·κ_hp·κ_gold)은 이 결손과 무관하다(별도 60초 파밍 표본).`);
+      L.push(`· **보스 축(615)** — 보정 보스 표본 ${withBoss.length}행 중 **격파 ${killedN}행 · κ_boss 를 자에 쓰는 행 ${bOk.length}행**${bOk.length ? `(s${bOk.map(r => r.s).join(' · s')})` : ''}.`);
+      if (killedN < withBoss.length)
+        L.push(`  · 미격파 ${withBoss.length - killedN}행은 창 안 피해가 보스 체력의 ${withBoss.filter(r => !r.bossKilled).map(r => `s${r.s} ${(r.bossDmgRat * 100).toFixed(1)}%`).join(' · ')} 에서 끝났다 — 끝 이유 칸이 그 원인을 말한다(**플레이어 사망**이면 그 행의 κ_boss 는 «격파까지» 가 아니라 «죽기 전까지» 이고, «보스 실전(초)» 칸도 «격파 소요» 가 아니라 «판이 끝난 시각» 이다).`);
+      const over = withBoss.filter(r => r.bossOver != null && r.bossOver > 1.0000001);
+      if (over.length)
+        L.push(`  · 생존 펌프가 공용 축(소환·장비)까지 간 행 ${over.length}건 — ${over.map(r => `s${r.s} 화력 ×${r.bossOver.toExponential(1)}`).join(' · ')}. 상한은 ×${BOSS_OVER_DOC} 이고 **눈금 하나만큼 넘길 수 있다**(문턱을 눈금 앞에서 본다). 거기서 멈춘 채 생존이 1 에 못 미친 행은 **생존과 화력을 동시에 만족시키는 캐릭터가 그 구간에 없다**는 실측이다.`);
+      L.push(`  ⚠ 몹 축(κ_dps·κ_hp·κ_gold)은 이 결손과 무관하다 — 별도 60초 파밍 표본이고, 생존 펌프는 그 표본 **뒤**에 돈다.`);
     }
   }
   L.push('');
