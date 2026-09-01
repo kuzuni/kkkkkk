@@ -16,6 +16,9 @@
                + 등급 알약·Lv·진행바·설명 헤더가 그 계열 값으로 채워진다.
      §5 버튼   08 규격 250x120. 펫·장비는 [장착]/[강화](+[최대 강화]) · 유물은 행 없음.
                3개일 때만 `.n3` 이고 행 폭이 본문 폭(868)을 안 넘는다.
+               ⚠ 763(2026-09-01)로 «미보유 칸» 의 축이 **뒤집혔다**: 664 가 미개방 은닉을 걷어내
+               제목이 실이름으로 열린다. 옛 «제목 = ???» 항을 «제목 = 데이터 실이름 + 그래도
+               [장착]은 비활성» 짝 항으로 갈아 끼웠다(333 처방 — 자리를 비우지 않는다).
      §6 기능   실제로 동작한다 — [장착] 토글이 S 에 반영 · [강화] 가 Lv 를 올림 ·
                [최대 강화] 가 재료를 다 씀 · [합성](`mCraft`)이 다음 등급을 준다.
      §7 펫 그림 174 규칙 — 펫 아이콘은 이모지가 아니라 스프라이트 캔버스이고 잉크가 칸 중앙에 있다.
@@ -33,6 +36,17 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
    showItem 본문이 2글자로 잘리고(«본문을 찾았다» · «.skd 를 쓴다» 2건 FAIL) 나머지 부정 단언은 헛통과한다.
    앵커 리터럴이 전부 LF 기준이므로 읽을 때 줄끝을 정규화한다(브라우저는 원본 파일을 그대로 연다). */
 const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8').replace(/\r\n/g, '\n');
+
+/* 763 — `showItem` 본문 잘라내기. §3 이 인라인으로 하던 것과 **같은 앵커**이고, §5 의
+   «제목이 데이터 파생이다» 항이 같은 구간을 다시 봐야 해서 부품으로 뽑았다.
+   ⚠ 앵커가 빗나가면 빈 문자열이 아니라 `null` 을 돌린다 — 빈 문자열을 돌리면 그것을 읽는
+   부정 단언이 전부 헛통과한다(315·212-① 교훈). 그래서 쓰는 쪽이 `!!ITEM_FN` 을 같이 묻는다. */
+const ITEM_FN = (() => {
+  const a = SRC.indexOf('function showItem(id){');
+  if (a < 0) return null;
+  const f = SRC.slice(a), e = f.indexOf('\n}\n');
+  return e > 0 ? f.slice(0, e + 3) : null;
+})();
 
 const PARTS = ['.sk-ic', '.sk-gr', '.sk-lv', '.sk-pb', '.sk-ct', '.sk-sl', '.sk-db', '.sk-ow'];
 
@@ -239,11 +253,25 @@ const READ = (partList) => {
     const x = EQUIPS.find(e => !S.own[e.id]); closeModal(); showItem(x.id);
     const bs = [...document.querySelectorAll('#mbox .sk-act button')];
     return { n: bs.length, dis: bs.map(b => b.disabled), title: document.getElementById('mtitle').textContent,
+             name: x.n, ids: bs.map(b => b.id), labels: bs.map(b => b.textContent.trim()),
              n3: document.querySelector('#mbox .sk-act').classList.contains('n3') };
   });
   eq('[미보유 장비] 버튼 수', notOwn.n, 2);
   ok(notOwn.dis.every(Boolean), '[미보유 장비] 두 버튼 다 비활성', JSON.stringify(notOwn.dis));
-  eq('[미보유 장비] 제목', notOwn.title, '???');
+  /* 763 — **방향을 뒤집은 자리**(333 처방). 옛 항은 «미보유면 제목을 «???» 로 가린다» 를 물었고,
+     664(주인 지시 2026-09-02 «미개방장비들이 스펙이랑 아이콘이 뭔지 정보 볼수있게 해줘야함»)가
+     그 은닉을 걷어낸 뒤로 빨간 채 굳어 있었다(148/149 · 제품은 옳고 자가 옛 방향을 물었다).
+     ⚠ 자리를 비우면 664 가 통째로 되돌아와도 초록인 게이트가 되므로 **짝 항으로** 갈아 끼운다:
+       ① 제목은 데이터(`it.n`)의 실이름이다 — 664 가 되돌아오면 «???» 라서 빨개진다
+       ② 그래도 [장착] 자리는 비활성이고 라벨이 이유를 말한다 — «정보는 열되 상태는 안 감춘다»
+       ③ 소스에서도 제목이 데이터 파생이다 — 가림 삼항이 다시 기어들면 여기서 걸린다.
+     (①②는 664 §2·§3 과 같은 규약을 08 세부 팝업 쪽에서 다시 못박는 것이다.) */
+  eq('[미보유 장비] 제목 = 데이터의 실이름(664 «미개방 정보 공개»)', notOwn.title, notOwn.name);
+  eq('[미보유 장비] [장착] 자리 id', notOwn.ids[0], 'mEq');
+  eq('[미보유 장비] [장착] 라벨이 막힌 이유를 말한다', notOwn.labels[0], '미보유');
+  ok(!!ITEM_FN && /\$\('mtitle'\)\.textContent = it\.n;/.test(ITEM_FN),
+     '[미보유 장비] showItem 이 제목을 데이터에서 그대로 쓴다(가림 삼항 부활 0)',
+     ITEM_FN ? 'anchor ok' : 'showItem 앵커를 못 찾았다');
   ok(!notOwn.n3, '[미보유 장비] 버튼 2개라 .n3 아님');
 
   /* 만렙 장비 — [합성] 버튼(mCraft)이 그 자리에 온다 (verify149 가 이 id 를 쓴다) */
