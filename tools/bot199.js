@@ -1237,7 +1237,13 @@ async function runOne(page, pol, seed, days, onRow) {
         if (target > minute) { B.advance((target - minute) * 60000); minute = target; }
         dailyCheck();
         if (lastLogout != null) {
-          try { offlineReward(lastLogout); claimOffline(a.offlineMul); } catch (_) {}
+          /* ⚑ 673 — 봇은 **버튼을 누르는 유저**여야 한다. `claimOffline(a.offlineMul)` 을 직접 부르면
+             650 이 API 쪽에 일부러 남겨 둔 «결손A» 난간(실효 이득 0 인 ×1.5 는 안 준다)에 그대로
+             막혀, 부지런 프로필 4번째 수령 **337.5분 = 하루 예산의 23.44%** 가 봇 표에서만 버려진다
+             (`node tools/probe673.js` — 유저 1,440분/107,998다이아 vs 옛 봇 1,102.5분/82,686다이아).
+             실제 유저의 광고 버튼은 650 이후 이 상태에서 ×1 로 부른다(`#ofrGet15` onclick).
+             ⇒ **그 판정을 그대로 읽는다** — 새 문턱을 여기 적으면 402 «표 두 벌» 이 그대로 재발한다. */
+          try { offlineReward(lastLogout); claimOffline(offNoGain() ? 1 : a.offlineMul); } catch (_) {}
           B.ledger('오프라인');        /* 안 적으면 이 몫이 다음 장부(출석)에 얹혀 출처가 몇 % 틀어진다 */
         }
         out.sessions++;
