@@ -238,12 +238,17 @@ async function artBox(page, svg) {
     out.push('       짧은 축은 **아트 자신의 종횡비**다 — 356 규약(원본 비율·비균등 스케일 금지)이 그것을 못 건드리게 한다.');
     out.push(`     목표 F 후보 둘 — ⓐ **1.0000**(골드가 지금 쓰는 값) · ⓑ 0.9375(다이아·입장권 9장의 최빈값)`);
     {
-      const gArt = art['cur-gold.svg'], dArt = art['cur-dia.svg'];
-      out.push(`       ⓐ 를 고르면 골드는 **한 픽셀도 안 움직이고**(현 ${gArt.long.toFixed(4)}) 다이아가`
-             + ` ${(1 / dArt.long).toFixed(4)}배 커진다 → 340 [2] 가 적어 둔 «dia 색 잉크 −12.5%» 가 ref 쪽으로 줄어든다.`);
+      /* ⚠ 이 산수는 **수리 전 값**(642 §5 표)으로 고정해 적는다 — 수리 뒤에 돌려도 «왜 ⓐ 였나» 가 남아야 한다.
+         지금 파일의 값으로 재계산하면 수리 뒤에는 «다이아가 1.0000배 커진다» 같은 무의미한 줄이 된다. */
+      const WAS_GOLD = 1.0000, WAS_DIA = 0.9375;
+      out.push(`       ⓐ 를 고르면 골드는 **한 픽셀도 안 움직이고**(수리 전 ${WAS_GOLD.toFixed(4)}) 다이아가`
+             + ` ${(1 / WAS_DIA).toFixed(4)}배 커진다 → 340 [2] 가 적어 둔 «dia 색 잉크 −12.5%» 가 ref 쪽으로 줄어든다.`);
       out.push(`       ⓑ 를 고르면 다이아·입장권 9장이 안 움직이는 대신 **골드가 ref 에서 멀어진다**`
              + `(340 [2] 는 골드 색 잉크를 ref 57 ±3 으로 못박고 있다 — ${(0.9375 * 57).toFixed(1)} 로 내려가 빨개진다).`);
       out.push('       ⇒ **ⓐ 를 고른다.** 레퍼런스 실측이 박혀 있는 축을 «멀어지는 쪽» 으로 미는 것은 재기준이다.');
+      const now = art['cur-gold.svg'].long, nowD = art['cur-dia.svg'].long;
+      out.push(`     지금 파일 상태 — 골드 ${now.toFixed(4)} · 다이아 ${nowD.toFixed(4)}`
+             + (Math.abs(now - nowD) < 0.006 ? ' (수리 뒤: 둘이 같다)' : ' (수리 전: 둘이 다르다)'));
     }
   } finally { await browser.close(); }
 

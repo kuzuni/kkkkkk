@@ -208,15 +208,21 @@ async function openAndMeasure(browser, sel, opts) {
   /* ── ② 아트 여백은 파일에서 바로 잰다(브라우저 없이) ── */
   out.push('[art] cur-dia.svg — 젬이 viewBox 를 얼마나 채우는가');
   const svg = fs.readFileSync(path.join(ROOT, 'assets', 'ui', 'cur-dia.svg'), 'utf8');
-  const vb = /viewBox="0 0 (\d+) (\d+)"/.exec(svg);
-  vb ? ok('viewBox 64×64', vb[1] + '×' + vb[2]) : bad('viewBox 64×64', '못 찾음');
-  /* 바깥 젬 경로 M20 4h24l16 18-28 38L4 22z → x 4..60 · y 4..60, stroke-width 4 라 ±2 */
+  /* ⚑ 644(2026-09-01) — 옛 술어는 «viewBox 가 0 0 64 64 이고 젬이 그 안을 .9375 채운다» 였다.
+     644 가 재화 아트 15장의 viewBox 를 **각자의 잉크 bbox** 로 잘라 채움비를 1.0000 으로 통일했다
+     (같은 프레임에서 다이아 49.33 vs 골드 52.00 = 1.054 가 411·356 의 «≤1.05» 눈금을 넘던 자리).
+     ⇒ 이 절이 지키려던 것 — «아트가 안 바뀌었다 · 그래서 --if-ic 역산이 아직 유효하다» — 은 그대로 두고
+       기대값만 새 좌표계로 옮긴다. **path 는 한 자도 안 바뀌었으므로 아래 경로 술어가 그것을 못박는다.** */
+  const vb = /viewBox="2 2 60 60"/.test(svg);
+  vb ? ok('viewBox = 잉크 bbox `2 2 60 60` (644 — 상자 = 잉크)', '2 2 60 60')
+     : bad('viewBox = 잉크 bbox `2 2 60 60` (644)', (/viewBox="([^"]*)"/.exec(svg) || [])[1] || '못 찾음');
+  /* 바깥 젬 경로 M20 4h24l16 18-28 38L4 22z → x 4..60 · y 4..60, stroke-width 4 라 ±2 ⇒ 실루엣 2..62 */
   const hasOuter = /M20 4h24l16 18-28 38L4 22z/.test(svg) && /stroke-width="4"/.test(svg);
-  hasOuter ? ok('바깥 젬 경로·외곽선 4 그대로', '실루엣 2..62 = 60/64 = .9375')
+  hasOuter ? ok('바깥 젬 경로·외곽선 4 그대로', '실루엣 2..62 — 644 는 캔버스만 잘랐다(path Δ0)')
            : bad('바깥 젬 경로·외곽선 4 그대로', '아트가 바뀌었다 — --if-ic 를 다시 역산해야 한다');
   if (vb && hasOuter) {
-    const fillRatio = 60 / +vb[1];
-    near('viewBox 채움비 .9375', +fillRatio.toFixed(4), 0.9375, 0.0001, '');
+    /* 잘린 캔버스가 실루엣과 정확히 같으므로 채움비는 1.0000 이다(그것이 644 의 불변식이다). */
+    near('viewBox 채움비 1.0000 (644 · `verify644` [A] 가 15장 전수로 지킨다)', 60 / 60, 1.0, 0.0001, '');
   }
 
   const browser = await launch(chromium);
@@ -236,7 +242,11 @@ async function openAndMeasure(browser, sel, opts) {
         ('아이콘 자리에 이모지 문자 0건', JSON.stringify(q.iconText));
       /* ③ 처방 */
       (q.ifIc === '54.3px' ? ok : bad)('--if-ic = 54.3px', q.ifIc);
-      near('.cic 박스 = --if-ic × 1.08', q.iconBox.w, 58.64, 0.6, 'px');
+      /* ⚑ 644 — 이 상자는 418 이 «소수 상자 정수화» 로 박아 둔 **명시 override**(`.qs-i>.cic`)이지
+         `--if-ic × 1.08` 의 자연값이 아니다(옛 기대 58.64 는 자연값이고, 실제 값 59 가 ±0.6 안에
+         우연히 들어와 있었다). 644 로 채움비가 1.0 이 되어 «상자 = 그려지는 잉크» 이므로 그 override 는
+         ref 잉크 55 와 **같은 수**가 됐다 — 59 를 그대로 뒀다면 잉크가 59 로 ref 에서 +7% 멀어진다. */
+      near('.cic 박스 = 418 정수 override = ref 잉크 55 (644 — 상자 = 잉크)', q.iconBox.w, REF_INK, 0.6, 'px');
       if (q.ink) {
         near('잉크 폭 = ref 55', q.ink.w, REF_INK, REF_INK * 0.02, 'px');
         near('잉크 높이 = ref 55', q.ink.h, REF_INK, REF_INK * 0.02, 'px');

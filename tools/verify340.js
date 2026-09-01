@@ -216,9 +216,15 @@ async function capInk(page, kind, sel) {
     /* 356 이관 — 젬 쪽 손잡이가 사라졌다. «기전이 같다» 는 뜻도 같이 바뀐다:
        코인은 상자 키우기(그대로) · 젬은 **override 없음**(63×63 · transform none). */
     const noTf = (t) => t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)';
-    ok('[3] 코인 = 상자 키우기 65.3×65.3 · 젬 = override 없음 63×63 (356 이 scaleX 를 폐기) — HUD(A3)와 같은 기전',
+    /* ⚑ 644(2026-09-01) — 젬 상자 63 → **59.06**. 그려지는 잉크는 **Δ0** 이다:
+       644 가 `cur-dia.svg` 의 viewBox 를 잉크 bbox 로 잘라 채움비 .9375 → 1.0 이 되었으므로
+       종전 63 이 그리던 잉크(63 × .9375 = 59.06)를 그대로 내려면 상자가 59.06 이어야 한다.
+       ⇒ 이 이관의 **음성항은 바로 위 [2]**다 — 잉크(색 잉크 −12.5%±3 · h ref 57 ±3)를 재는 그 절이
+       **수리 전과 같은 값으로** 초록인 한, 여기서 상자 숫자를 옮긴 것은 무르게 푼 것이 아니다.
+       코인 65.3 은 그대로다(`cur-gold.svg` 는 원래 채움비 1.0 이라 644 가 안 건드린 유일한 아트다). */
+    ok('[3] 코인 = 상자 키우기 65.3×65.3 · 젬 = override 없음 59.06×59.06 (356 scaleX 폐기 · 644 상자=잉크) — HUD(A3)와 같은 기전',
       Math.abs(mech.gold.img[0] - 65.3) <= 1 && Math.abs(mech.gold.img[1] - 65.3) <= 1
-      && Math.abs(mech.dia.img[0] - 63) <= 1.5 && Math.abs(mech.dia.img[1] - 63) <= 1
+      && Math.abs(mech.dia.img[0] - 59.06) <= 1.5 && Math.abs(mech.dia.img[1] - 59.06) <= 1
       && noTf(mech.gold.itf) && noTf(mech.dia.itf),
       'gold ' + mech.gold.img.join('×') + ' tf ' + mech.gold.itf + ' · dia ' + mech.dia.img.join('×') + ' tf ' + mech.dia.itf);
     /* 235 가 «알약 콘텐츠 폭 186.5 = 254 − padding 53/14.5» 를 고정해 두었다. 아이콘은 절대배치라
@@ -244,8 +250,8 @@ async function capInk(page, kind, sel) {
     for (const nm of ['shop', 'relic']) {
       const o = other[nm];
       ok('[4] ' + nm + ' 코인 65.3×65.3', !!o.g && Math.abs(o.g[0] - 65.3) <= 1 && Math.abs(o.g[1] - 65.3) <= 1, JSON.stringify(o.g));
-      ok('[4] ' + nm + ' 젬 63×63 (356 이관 — scaleX(1.16) 폐기)',
-        !!o.d && Math.abs(o.d[0] - 63) <= 1.5 && Math.abs(o.d[1] - 63) <= 1, JSON.stringify(o.d));
+      ok('[4] ' + nm + ' 젬 59.06×59.06 (356 이관 — scaleX(1.16) 폐기 · 644 이관 — 상자 = 잉크)',
+        !!o.d && Math.abs(o.d[0] - 59.06) <= 1.5 && Math.abs(o.d[1] - 59.06) <= 1, JSON.stringify(o.d));
     }
 
     /* ── [R] 되돌림 시험 — 보정을 걷어내면 §2 가 다시 빨개진다 ── */

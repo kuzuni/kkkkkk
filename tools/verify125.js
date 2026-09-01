@@ -286,7 +286,16 @@ function scanEmoji(bare) {
     const p = path.join(ROOT, 'assets', 'ui', f);
     if (!fs.existsSync(p)) return true;
     const t = fs.readFileSync(p, 'utf8');
-    return !/<svg[\s\S]*viewBox="0 0 64 64"/.test(t);
+    /* ⚑ 644(2026-09-01) — 옛 술어는 `viewBox="0 0 64 64"` **문자열**이었다. 644 가 15장의 viewBox 를
+       각자의 잉크 bbox 로 잘라(채움비 1.0000 통일) 그 문자열이 아트마다 달라졌다.
+       C1 이 실제로 지키려던 것은 «파일이 있고 · <svg> 이고 · viewBox 가 유효하다» 이고(이 절의 머리말),
+       `.cic` 가 기대는 계약은 **캔버스가 정사각 64** 라는 것이다(`width/height` 가 그것을 정한다 —
+       viewBox 는 그 캔버스 안에서 `preserveAspectRatio` 로 맞춰 들어간다).
+       ⇒ 술어를 «네 수짜리 viewBox + width/height 64» 로 옮긴다 — **넓힌 것이 아니라 옮긴 것**이다:
+         옛 술어가 잡던 것(viewBox 없음·깨진 값)은 그대로 잡히고, 자르기 값 자체는
+         `tools/verify644.js` [A]·[C]·[C2] 가 «잉크 bbox 와 같은가» 로 **더 세게** 지킨다. */
+    return !/<svg[\s\S]*?viewBox="\s*-?[\d.]+\s+-?[\d.]+\s+[\d.]+\s+[\d.]+\s*"/.test(t)
+        || !/<svg[\s\S]*?width="64"[\s\S]*?height="64"/.test(t);
   });
   ok(bad.length === 0, 'C1 화폐 SVG ' + ICONS.length + '종 존재·유효', bad.length ? bad.join(',') : ICONS.length + '개');
 
@@ -326,7 +335,14 @@ function scanEmoji(bare) {
      자산(`cur-*.svg`)이 고쳐져 override 가 필요 없어지면 **이 기대값도 같이 내려야** 한다
      (measure/A3 §아트 필요 «자산이 고쳐지면 그 override 를 지워야 한다»).
      화면 override 는 `#top .curs` 한정이라 13 재화 탭(55×55)은 이 선택자에 안 들어온다. */
-  const HUD_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 63, h: 63, tf: false } };
+  /* ⚑ 644(2026-09-01) — dia 63 → **59.06**. 위 D3 주석이 «자산이 고쳐지면 D1 과 함께 내린다» 고
+     적어 둔 그 자리다. 644 가 `cur-dia.svg` 의 viewBox 를 잉크 bbox 로 잘라 채움비 .9375 → **1.0** 이
+     되었으므로, 종전 상자 63 이 그리던 잉크(63 × .9375 = 59.06)를 그대로 내려면 상자가 59.06 이다.
+     ⇒ **그려지는 잉크는 Δ0** 이고 움직인 것은 «상자» 라는 이름의 숫자뿐이다. 잉크가 실제로 안 움직였다는
+     증거는 `tools/verify340.js` [2](dia 색 잉크 −12.5%±3)·`tools/verify585.js` §5(«59.06 그대로»)가
+     **수리 전과 같은 값으로** 초록인 것이다 — 그 둘이 이 이관의 음성항이다. gold 65.3 은 안 움직인다
+     (`cur-gold.svg` 는 원래 채움비 1.0 이라 644 가 한 자도 안 건드린 유일한 아트다). */
+  const HUD_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 59.06, h: 59.06, tf: false } };
   const D = await page.evaluate(() => {
     const out = { hud: [], tf: [] };
     document.querySelectorAll('.cbox i > img.cic').forEach(im => {
@@ -340,7 +356,7 @@ function scanEmoji(bare) {
   const geoBad = D.hud.filter(x => !HUD_EXP[x.k]
     || Math.abs(x.w - HUD_EXP[x.k].w) > 2 || Math.abs(x.h - HUD_EXP[x.k].h) > 2);
   ok(D.hud.length === 2 && geoBad.length === 0,
-     'D1 HUD 아이콘 재화별 확정 크기 (gold 65.3×65.3 · dia 63×63 — 356 이관: dia scaleX 폐기)',
+     'D1 HUD 아이콘 재화별 확정 크기 (gold 65.3×65.3 · dia 59.06×59.06 — 356 이관: dia scaleX 폐기 · 644 이관: 상자 = 잉크)',
      D.hud.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
   const mBad = D.hud.filter(x => HUD_EXP[x.k]
     && HUD_EXP[x.k].tf !== (x.tf !== 'none' && x.tf !== 'matrix(1, 0, 0, 1, 0, 0)'));
@@ -359,7 +375,8 @@ function scanEmoji(bare) {
      ⇒ 기대값을 HUD(D1)와 **같은 재화별 확정값**으로 옮긴다. 상자(`<i>` 57×57)는 그대로이고
      움직인 것은 **이미지**뿐이라, 여기서 재는 것도 이미지 rect 다. 자산이 고쳐지면 D1 과
      함께 내린다. 잉크가 실제로 ref 에 붙었는지는 `tools/verify340.js` 가 픽셀로 못박는다. */
-  const PCB_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 63, h: 63, tf: false } };  /* 356 이관 */
+  /* ⚑ 644 — D1 과 같은 이관(위 주석). dia 63 → 59.06 · 그려지는 잉크 Δ0. */
+  const PCB_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 59.06, h: 59.06, tf: false } };  /* 356 이관 */
   const P = await page.evaluate(() => {
     openDungeon();
     const out = [];
@@ -373,7 +390,7 @@ function scanEmoji(bare) {
   });
   const pBad = P.filter(x => PCB_EXP[x.k] && (Math.abs(x.w - PCB_EXP[x.k].w) > 2 || Math.abs(x.h - PCB_EXP[x.k].h) > 2));
   ok(P.length >= 2 && pBad.length === 0,
-     'D3 41 재화 바 아이콘 = HUD 와 같은 재화별 확정값 (gold 65.3×65.3 · dia 63×63 — 340·356)',
+     'D3 41 재화 바 아이콘 = HUD 와 같은 재화별 확정값 (gold 65.3×65.3 · dia 59.06×59.06 — 340·356·644)',
      P.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
   const pmBad = P.filter(x => PCB_EXP[x.k]
     && PCB_EXP[x.k].tf !== (x.itf !== 'none' && x.itf !== 'matrix(1, 0, 0, 1, 0, 0)'));

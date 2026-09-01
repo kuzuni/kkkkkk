@@ -227,7 +227,17 @@
        단 `transform` 무력화는 화면 규칙(`.pcb-d>i` 등)을 **이겨야** 하므로 `:has()` 로 특이도를 올린다. */
   .cic{display:inline-block;width:1.08em;height:1.08em;vertical-align:-0.2em;
     object-fit:contain;flex:none;pointer-events:none}
-  .cbox i>.cic{width:63px;height:63px}
+  /* ⚑ 644(2026-09-01) — 63 → **59.06**. 값이 바뀐 것이 아니라 **같은 값을 정직하게 적은 것**이다.
+     이 규칙의 살아 있는 소비자는 둘뿐이다 — 골드(바로 아래 `.cGold` 가 65.3 으로 덮는다)와 **다이아**.
+     `cur-dia.svg` 채움비가 .9375 였을 때 63 이 그리던 잉크가 63 × .9375 = **59.06** 이었고,
+     644 가 아트 viewBox 를 잉크 bbox 로 잘라 «상자 = 잉크» 가 된 지금 같은 그림을 내려면 상자가 59.06 이다.
+     ⇒ **그려지는 픽셀 Δ0** — HUD 다이아가 03 `.pcb-d` 와 **같은 크기로 남는다**(둘을 다르게 두면
+       같은 아트가 화면마다 갈린다 = 644 가 닫으려는 바로 그 결손이 자리만 옮겨 되살아난다).
+     ⚠ 이것은 340 이 D3 주석에 «자산이 고쳐지면 D1 과 함께 내린다» 고 적어 둔 그 자리다
+       (`verify125` D1·D3 의 기대 상자를 같이 옮겼다).
+     ⚠ `.pcb-p` 57 은 **안 내린다** — 그 자리는 잉크를 못 박은 자가 없고(측정표 41 §3 «아트 자리 57×57»
+       은 선언이다) 644 로 그 선언이 **처음으로 참이 됐다**(잉크 = 57). 내리면 선언을 다시 거짓으로 만든다. */
+  .cbox i>.cic{width:59.06px;height:59.06px}
   .pcb-p>i>.cic{width:57px;height:57px}
   .cbox i:has(>.cic),.pcb-p>i:has(>.cic){transform:none}
 
@@ -2560,8 +2570,12 @@
      소수 상자를 만들고 그것이 소수 좌표에 앉아 DSF2 잉크가 110×112 로 그려졌다(−1.79% · 5칸 =
      퀘스트 행 전부). 144 가 못 박은 «잉크 55×55» 는 지킨다 — 59 × .9375 = **55.31**(58 은 54.38 로
      ref 에서 더 멀다). `--if-ic` 자체를 안 건드리는 이유는 그 변수가 프레임 기하(`.ifr`)의 손잡이라
-     여기서 반올림하면 141 이 잡고 있는 `--ifq-k` 계산까지 같이 움직이기 때문이다. */
-  .qs-i>.cic{width:59px;height:59px}
+     여기서 반올림하면 141 이 잡고 있는 `--ifq-k` 계산까지 같이 움직이기 때문이다.
+     ⚑ **644(2026-09-01) — `.9375` 가 사라져 이 자리가 오히려 단순해졌다.** `cur-dia.svg` 의 viewBox 를
+     잉크 bbox 로 잘라 채움비가 **1.0000** 이 되었으므로 이제 «상자 = 그려지는 잉크» 다
+     ⇒ 144 의 ref 55 를 맞추는 값은 **정확히 55**이고, 반올림 여유(418)도 정수라 그대로 살아 있다.
+     59 를 그대로 두면 잉크가 59 로 커져 ref 에서 +7% 멀어진다(`verify144` 가 즉시 잡는다). */
+  .qs-i>.cic{width:55px;height:55px}
   .qs-i i.ifq{transform:scaleX(.958);letter-spacing:.262em;text-indent:.262em;
     /* fs 를 24.9 → 33.6 으로 올리면 줄상자(높이 .243×106 = 25.8) 안에서 베이스라인이 올라간다 —
        실측으로 잉크가 프레임 하단 기준 위 22.8 / 아래 4.2 였다(ref 21.5 / 5.5). 1.3px 내린다.
@@ -4553,7 +4567,14 @@
         고르게 넘치고, 잉크 중심은 상자 중심에 그대로 남는다. 그 중심을 ref 중심
         (코인 528,139 · 젬 828.5,139 = 프레임 55)에 맞추느라 위 두 줄의 left/top 을 1.5~2px 옮겼다. */
   .pcb-g>i>.cic{width:65.3px;height:65.3px}
-  .pcb-d>i>.cic{width:63px;height:63px}  /* 356 — scaleX(1.16) 폐기(위 HUD 와 같은 이유) */
+  /* ⚑ 644(2026-09-01) — 63 → **59.06**. 값이 바뀐 것이 아니라 **같은 값을 정직하게 적은 것**이다:
+     `cur-dia.svg` 채움비가 .9375 였을 때 이 상자 63 이 그리던 잉크가 63 × .9375 = **59.06** 이었고,
+     644 가 아트 viewBox 를 잉크 bbox 로 잘라 «상자 = 잉크» 가 된 지금 같은 그림을 내려면 상자가 59.06 이다.
+     ⇒ **그려지는 픽셀 Δ0** — `verify340` [2](dia 색 잉크 −12.5%±3)·`verify585` §5(«59.06 그대로»)가 그것을 지킨다.
+     ⚠ 63 을 그대로 두면 잉크가 63 이 되어 두 자가 즉시 빨개진다. 그 방향(ref 실루엣 64 에 더 가깝다)이
+       옳은지는 **이 행의 판단이 아니다** — `.pcb-g` 65.3 ↔ `.pcb-d` 를 한 값으로 모으는 일은 340/585 가
+       ref 실측으로 잡아 둔 자리라 별도 등재로 넘긴다(644 review §6). */
+  .pcb-d>i>.cic{width:59.06px;height:59.06px}  /* 356 — scaleX(1.16) 폐기(위 HUD 와 같은 이유) */
   /* 숫자 — 잉크 h23, 28 교훈 1(숫자 잉크비 0.69) → fs 33.3. 폭은 scaleX 로 회수.
      translate3d + antialiased 는 2D 변환 레이어의 LCD 서브픽셀 색번짐 방지(16 교훈 3) */
   .pcb-p>b{position:relative;top:1px;font-size:34.5px;font-weight:900;color:#fff;
@@ -5078,9 +5099,21 @@
        세로로는 baseline(`vertical-align:-0.2em`) 위에 놓여 em 중심과 다르다.
      ⚠ rstone 이 폭 33.12(ref 51)에 머무는 것은 **아트 몫**이다 — 그림 자체가 세로로 긴
        0.625×1.000 이라 등방으로는 두 축을 같이 못 채운다(356 정오표 🔥 와 같은 자리 · 371 처방). */
-  .dnc .pill>em:has(>[data-cur-ic="dia"])   {transform:scale(1.14478)}
-  .dnc .pill>em:has(>[data-cur-ic="relic"]) {transform:scale(1.14664)}
-  .dnc .pill>em:has(>[data-cur-ic="stone"]) {transform:scale(1.36613)}
+  /* ⚑ 644(2026-09-01) — 위 표의 «아트가 viewBox 를 덜 채운다» 가 **아트 쪽에서 닫혔다**
+     (`assets/ui/cur-*.svg` 15장의 viewBox 를 잉크 bbox 로 잘랐다 · 채움비 1.0000 · `verify644`).
+     ⇒ 같은 유도식 `min(51/ink_w, 53/ink_h)` 을 **새 자연 잉크**로 다시 돌린 값이 아래다.
+       자연 잉크는 이제 `.cic` 상자(1.08em × 44 = 47.52)의 **긴 축 = 상자**이고 짧은 축만 아트 종횡이다:
+         gold   47.52 × 47.52       → min(1.07323, 1.11532) = 1.0732  (위 기본값 — 그대로)
+         dia    47.52 × 47.52       → **골드와 같은 값이 된다** ⇒ 전용 규칙을 **지웠다**(죽은 선언 금지 · 295-②)
+         relic  41.39 × 47.52       → min(1.23218, 1.11532) = 1.11532
+         stone  43.86 × 47.52       → min(1.16279, 1.11532) = 1.11532
+         rstone 29.70 × 47.52       → min(1.71717, 1.11532) = 1.11532  (644 전과 **같은 값** — 이 아트만 원래 세로가 꽉 찼다)
+     ⇒ 그려지는 잉크는 **한 픽셀도 안 바뀐다**(dia 51.00 · relic 46.16×53 · stone 48.91×53 · rstone 33.12×53).
+       바뀐 것은 «같은 그림을 어떤 배율로 부르는가» 뿐이고, 세로가 묶는 축인 셋이 **한 값으로 모였다**
+       — 644 전에는 셋이 1.14664 / 1.36613 / 1.11532 로 갈려 있었다(그 편차가 곧 아트 채움비 편차였다).
+     ⚠ rstone 이 폭 33.12(ref 51)에 머무는 것은 여전히 **아트 몫**이다(0.625 종횡 · 371 처방). */
+  .dnc .pill>em:has(>[data-cur-ic="relic"]),
+  .dnc .pill>em:has(>[data-cur-ic="stone"]),
   .dnc .pill>em:has(>[data-cur-ic="rstone"]){transform:scale(1.11532)}
   /* 라벨은 **흐름 안**에 둔다 — 절대배치면 캡슐이 글자를 못 잰다(그것이 90 의 scaleX 를 부른 원인).
      fs 30 → 34 는 잉크 «높이» 를 ref 에 맞춘 것이다(25 → 28.3 · ref 28~29). 폭은 서체 몫이라
@@ -5164,8 +5197,16 @@
        상자(400..438)가 아니라 **401..432** 였다. 5.96 올라가고 top 이 5.49 더 올려도 잉크 여유는
        **2.4px**(ref 여유 4.5px · 상자로 재면 −3.6 으로 «밟는» 것처럼 보인다). 겹침 축은
        `verify585` §9 과 `verify596` §4 에서 **상자 → 잉크**로 같이 갈아 끼웠다. */
-  .dnc .sp.tk>em:has(>[data-cur-ic^="tk"]){top:-5.5px;
-    transform:rotate(-18deg) scale(1.00248);transform-origin:50% 50%}
+  /* ⚑ 644(2026-09-01) — 입장권 아트도 viewBox 를 잉크 bbox 로 잘랐다(가로 .9375 → **1.0**).
+     같은 유도식을 새 자연 잉크로 다시 돌린다:
+       자연 잉크 60.48 × 34.27 → −18° bbox = 68.09 × 51.26 (종횡 1.328 — 각도가 정하는 값이라 Δ0)
+       등방 contain S = min(64/68.09, 50/51.26) = min(0.93994, 0.97542) = **0.93994**
+       ⇒ 그려지는 bbox **64.00 × 48.19** — 596 이 맞춰 둔 값과 **Δ0px**.
+     ⚠ `top` 도 같이 줄인다 — 이 값은 «인라인 baseline 이 만든 세로 어긋남 d 를 배율만큼 되민 것»
+       이라 배율에 비례한다(d = 5.5 / 1.00248 = 5.486 ⇒ 5.486 × 0.93994 = **5.16**).
+       안 줄이면 잉크 중심이 0.34px 위로 뜬다(596 §2 중심 항이 잡는다). */
+  .dnc .sp.tk>em:has(>[data-cur-ic^="tk"]){top:-5.16px;
+    transform:rotate(-18deg) scale(0.93994);transform-origin:50% 50%}
   /* 342 3회차(2026-08-29) — 비평가 AT 가 «네 번째 자리» 를 찾았다. 여기만 **반대 방향**이다:
      한글 잉크는 전 구간 −8~10%(서체 몫) 인데 **숫자만 +7% 크다**. 잠금 카드는 ref·우리 둘 다
      «2/2» 라 문자열이 같아 직접 비교가 되고, 카드1 도 측정표 §3-5-2·§3-5-3 과 맞물린다:
@@ -8339,7 +8380,12 @@
        `:has()` 로 권종(402 — 입장권 키는 예외 없이 `tk` 로 시작한다)에만 스코프를 준다.
      ⚠ 회전을 먼저·확대를 나중에 적는다(`rotate() scale()`) — 순서를 바꾸면 원점은 같아도
        회전 전 좌표계에서 늘어나 «기울어진 방향으로만» 커진다. */
-  .dgd-tki:has(>[data-cur-ic^="tk"]){transform:rotate(-18deg) scale(1.51276)}
+  /* ⚑ 644(2026-09-01) — 위 «같은 병» 이 아트 쪽에서 닫혔다(입장권 viewBox 를 잉크 bbox 로 잘랐다 —
+     가로 채움비 .9375 → **1.0**). 같은 유도식을 새 자연 잉크로 다시 돌린다:
+       잉크 43.20 × 24.48 → −18° bbox(s=1) = 48.65 × 36.63
+       s = min(69/48.65, 54/36.63) = min(1.41830, 1.47420) = **1.41830**
+       ⇒ 그려지는 bbox **69.00 × 51.95** — 585 가 맞춰 둔 값과 **Δ0px**. */
+  .dgd-tki:has(>[data-cur-ic^="tk"]){transform:rotate(-18deg) scale(1.41830)}
   .dgd-cb{left:446px;top:830px;width:40px;height:40px;border-radius:50%;box-sizing:border-box;
     border:2px solid #000;padding:0;cursor:pointer;font-family:inherit;
     background:radial-gradient(closest-side,#7F5B45 0 62%,#75543F 62% 82%,#A07059 82% 100%)}
@@ -35333,7 +35379,10 @@ const FX3_BSX0 = 34, FX3_BSX1 = 470;   /* 밴드 스프레이 — 출발점 기�
      여기서 참조하면 TDZ 로 즉사한다. 대신 `verify543` [C] 가 «표에서 다시 계산한 값과 이 리터럴이
      ±1% 안» 을 매 실행 확인한다 — 손잡이만 돌리고 여기를 안 고치면 그 자가 빨개진다.
    ⚠ 종전 리터럴 32.5 는 «55 × 0.70 ≈ 38.5» 시절의 근사였고 실측(probe543)은 36.09 였다. */
-const FX3_GINK    = 108.3;             /* = 55 × 2.10 × 0.938 (FX_GRAIN_SC 3 기준) */
+const FX3_GINK    = 115.5;             /* = 55 × 2.10 × 1.000 (FX_GRAIN_SC 3 기준)
+                                          ⚡ 644 — 끝의 계수는 `cur-dia.svg` 의 **채움비** 다. 644 가 viewBox 를 잉크 bbox 로
+                                          잘라 .9375 → **1.0** 이 되었으므로 108.3 → 115.5. 그려지는 알갱이가 그만큼 커진다
+                                          (주인이 말한 «다이아 기준 3배» 는 상자가 아니라 잉크 기준이라 이쪽이 지시에 맞는다). */
 const FX3_BSPITCH = Math.round(FX3_GINK*1.22);
                                        /* 30회차 — 밴드 슬롯 최소 피치. 코인 잉크 지름보다 넉넉히 커야
                                           두 재화를 깍지 껴도 겹치지 않는다(28회차는 27px 이라 겹쳤다). 잉크 32.5
@@ -35792,12 +35841,12 @@ const FX3_BARDIM = 0.75;                             /* 바와 겹치는 프레�
      (`verify543` [B] 가 표와 실측이 어긋나면 빨개진다.) */
 const FXCUR = {
   gold:  { pill:'.cGold', pcb:'.pcb-g', cur:'gold',   col:'#FFDE6A', fs:46, ics:55, ink:0.790 },
-  dia :  { pill:'.cDia',  pcb:'.pcb-d', cur:'dia',    col:'#8FE9FF', fs:46, ics:55, ink:0.525 },
-  relic: { pill:null,     pcb:'.pcb-r', cur:'relic',  col:'#D3AEFF', fs:46, ics:55, ink:0.615 },
-  stone: { pill:null,     pcb:null,     cur:'stone',  col:'#FFB977', fs:46, ics:55, ink:0.398 },
+  dia :  { pill:'.cDia',  pcb:'.pcb-d', cur:'dia',    col:'#8FE9FF', fs:46, ics:55, ink:0.597 },
+  relic: { pill:null,     pcb:'.pcb-r', cur:'relic',  col:'#D3AEFF', fs:46, ics:55, ink:0.658 },
+  stone: { pill:null,     pcb:null,     cur:'stone',  col:'#FFB977', fs:46, ics:55, ink:0.603 },
   rstone:{ pill:null,     pcb:null,     cur:'rstone', col:'#78E184', fs:46, ics:55, ink:0.486 },
-  tstone:{ pill:null,     pcb:null,     cur:'tstone', col:'#E98177', fs:46, ics:55, ink:0.514 },
-  mile:  { pill:null,     pcb:null,     cur:'mile',   col:'#EB9B75', fs:46, ics:55, ink:0.574, st:'mileage' }
+  tstone:{ pill:null,     pcb:null,     cur:'tstone', col:'#E98177', fs:46, ics:55, ink:0.913 },
+  mile:  { pill:null,     pcb:null,     cur:'mile',   col:'#EB9B75', fs:46, ics:55, ink:0.701, st:'mileage' }
 };
 /* 543 — 재화별 «시각 보정» 배수. 기준 재화(다이아)와 **같은 잉크 면적**이 되는 등방 배수다.
    ⚠ `curIc(cur, ics)` 가 width/height 를 **인라인**으로 박으므로 CSS width 로는 못 이긴다 —

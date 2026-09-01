@@ -347,9 +347,13 @@ async function pixelInk(ctx, page) {
     r2(r1.rw / r1.rh) + ' vs 1.28');
   await R1.page.close();
 
-  /* 비등방으로 «세로만» 늘려 ref 50 을 맞춘 사본 — 356 규약 위반이 §3 에 걸리는지 */
+  /* 비등방으로 «세로만» 늘려 ref 50 을 맞춘 사본 — 356 규약 위반이 §3 에 걸리는지
+     ⚑ 644(2026-09-01) — 등방 계수 1.12875 → **1.05820**(= 1.12875 × .9375). 이 사본이 «세로 50 을
+     맞추기는 한다» 는 **전제**라서, 입장권 아트의 채움비가 .9375 → 1.0 으로 커진 만큼 되돌려야
+     같은 50 을 낸다. 비등방 계수 `scaleY(1.379)` 는 그대로다 — 이 항이 잡으려는 «위반» 자체는
+     그 축이고, 거기를 건드리면 되돌림 시험이 무뎌진다. */
   const R2 = await open(ctx, '.dnc .sp.tk>em:has(>[data-cur-ic^="tk"])'
-    + '{transform:scale(1.12875) scaleY(1.379);top:0}');
+    + '{transform:scale(1.05820) scaleY(1.379);top:0}');
   const r2r = ink((await R2.page.evaluate(PICK + '(' + JSON.stringify(SEL) + ')'))[0]);
   ok(near(r2r.rh, REF.h, 3), '[R2 전제] 비등방 사본은 세로 50 을 «맞추기는» 한다',
     r2(r2r.rh) + ' vs 50');

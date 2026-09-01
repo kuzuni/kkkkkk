@@ -67,7 +67,14 @@ function variant(svg, mode, s) {
 
 (async () => {
   const src = {};
-  for (const k of KEYS) src[k] = fs.readFileSync(path.join(ROOT, 'assets/ui/cur-ticket-' + k + '.svg'), 'utf8');
+  /* ⚑ 644(2026-09-01) — 이 자는 **아트의 «속» 기하**(문양 ↔ 속띠 ↔ 검은 테)를 잰다. 그 좌표는
+     아트 자신의 단위(BAND 23..47 · CY 35 · MIN_W 21)이고, 아래 래스터가 `N = 64 * SC` 로 그리는 것은
+     «viewBox 가 0 0 64 64 라서 1단위 = SC px» 이라는 전제 위에 서 있다.
+     644 는 파일의 **캔버스만** 잉크 bbox 로 잘랐다(`viewBox="2 15 60 34"`) — path 는 한 자도 안 건드렸다.
+     ⇒ 잴 때 좌표계를 원래대로 되돌리면 **옛 래스터가 비트 그대로 재현**되고 이 절의 상수는 전부 그대로다.
+     이것이 «자를 무르게 푸는 것» 이 아닌 이유: 자르기 값 자체는 `tools/verify644.js` 가 따로 지킨다. */
+  const VB644 = (s) => s.replace(/viewBox="[^"]*"/, 'viewBox="0 0 64 64"');
+  for (const k of KEYS) src[k] = VB644(fs.readFileSync(path.join(ROOT, 'assets/ui/cur-ticket-' + k + '.svg'), 'utf8'));
 
   const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 400, height: 400 }, deviceScaleFactor: 1 });

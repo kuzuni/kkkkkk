@@ -151,13 +151,40 @@ const openAt = async (browser, h) => {
     '[2-e] ★ 단련 [단련] 화폐가 훈련 기준선과 ±3%',
     cur.temp && `${cur.temp.w} ↔ ${cur.base.w} (${p1(cur.temp.w / cur.base.w * 100)}%, 수리 전 **0장**)`);
   ok(cur.tempN === 1, '[2-f] 단련 버튼 안 화폐 아이콘은 **정확히 1장**이다', cur.tempN + '장');
-  /* 세 자산이 같은 viewBox 라 «상자가 같다 = 잉크가 같다» 가 성립한다(125 단일 출처) */
-  const vb = ['gold', 'rstone', 'tstone'].map(k => {
-    const s = fs.readFileSync(path.join(ROOT, 'assets/ui/cur-' + k + '.svg'), 'utf8');
-    return (s.match(/viewBox="([^"]+)"/) || [])[1];
-  });
-  ok(vb.every(v => v === '0 0 64 64'),
-    '[2-g] 세 화폐 자산의 viewBox 가 같다(= 상자가 같으면 잉크도 같다)', vb.join(' / '));
+  /* ⚑ 644(2026-09-01) — 이 항은 **헛초록이었다.** 옛 술어는 세 파일의 `viewBox` **문자열**이
+     `0 0 64 64` 로 같은지만 보고 «상자가 같다 = 잉크가 같다» 를 주장했는데, 그 결론은 세 아트가
+     **캔버스를 같은 비율로 채울 때만** 성립한다. 실제로는 `cur-rstone.svg` 가 가로를 **.625** 밖에
+     안 채워(세로만 꽉 찼다) 같은 상자에 넣으면 폭이 37% 작았다 — 옛 술어는 그것을 **한 번도 못 봤다**.
+     (그런데도 [2-d] 가 초록이던 것은 CSS 가 자리마다 상자를 따로 줘서 폭을 맞춰 놨기 때문이다.)
+     644 가 15장의 viewBox 를 잉크 bbox 로 잘라 **긴 축 채움비를 1.0000 으로** 통일했으므로,
+     이 항을 문자열에서 **실제로 그려진 채움비**로 옮긴다 — 술어를 넓힌 것이 아니라 처음으로 재는 것이다. */
+  const FILLSRC = ['gold', 'rstone', 'tstone'].map(k => ({
+    k, svg: fs.readFileSync(path.join(ROOT, 'assets/ui/cur-' + k + '.svg'), 'utf8'),
+  }));
+  const fills = [];
+  for (const a of FILLSRC) {
+    const r = await page.evaluate(async ({ svg, S }) => {
+      const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+      const im = await new Promise((res, rej) => {
+        const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('x'));
+        i.width = S; i.height = S; i.src = url;
+      });
+      const c = document.createElement('canvas'); c.width = S; c.height = S;
+      const g = c.getContext('2d'); g.clearRect(0, 0, S, S); g.drawImage(im, 0, 0, S, S);
+      const d = g.getImageData(0, 0, S, S).data;
+      let ax = 1e9, ay = 1e9, bx = -1, by = -1;
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++)
+        if (d[((y * S) + x) * 4 + 3] > 8) { if (x < ax) ax = x; if (x > bx) bx = x; if (y < ay) ay = y; if (y > by) by = y; }
+      return bx < 0 ? null : { w: (bx - ax + 1) / S, h: (by - ay + 1) / S };
+    }, { svg: a.svg, S: 256 });
+    fills.push({ k: a.k, long: r ? Math.max(r.w, r.h) : 0, w: r ? r.w : 0 });
+  }
+  ok(fills.every(f => Math.abs(f.long - 1) <= 0.01),
+    '[2-g] 세 화폐 자산이 캔버스의 **긴 축을 똑같이 꽉 채운다**(644 — 상자가 같으면 덩치가 같다)',
+    fills.map(f => `${f.k} ${f.long.toFixed(4)}`).join(' / '));
+  ok(Math.abs(fills.find(f => f.k === 'rstone').w - 0.625) <= 0.02,
+    '[2-g2] 그래도 rstone 은 **가로**가 .625 다(아트 종횡 몫) — 폭을 맞추는 것은 자리마다의 상자다',
+    fills.map(f => `${f.k} w ${f.w.toFixed(4)}`).join(' / '));
   ok(cur.runeFit && cur.runeFit.top >= 5 && cur.runeFit.bot >= 5 &&
      Math.abs(cur.runeFit.top - cur.runeFit.bot) <= 3,
     '[2-h] ★ 커진 화폐가 룬 [강화] 버튼 안에서 **세로 중앙**이다(안 새고, 위로도 안 뜬다)',
