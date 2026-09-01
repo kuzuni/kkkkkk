@@ -31219,8 +31219,33 @@ let rwFxW = 0;                           /* 682 — 버스트마다 도는 저�
    ⚠ **화면 밖 카드에는 안 쏜다**(518 «쌩뚱맞은 곳에서 이펙트» 재발 방지) — 페이지가 닫혀 있거나
      짧은 프레임에서 칸이 잘려 나가면 파티클만 허공에 뜬다. `rwCardShown()` 이 그 자다.
    ↩ 되돌림: `rwGainFx()` 호출 한 줄(아래 `rwSummonFx` 첫 줄)을 지우면 666 상태와 픽셀 동일하다. */
-const RW_GAIN_N0 = 6, RW_GAIN_N = 3;     /* 첫 발 / 홀드 틱당 알 수 — 지불 버스트(10 / 4)보다 가볍게 */
+/* ⚑⚑ 2회차 — 1회차를 비평가 둘이 **독립으로 3점**(축 ①②③④ 최저 3)으로 잡았다. 셋이 공통이었다:
+   ⓐ **너무 크다** — 알 잉크 37~55px 이 카드(151)의 27~39% · 여섯 알 bbox 합이 카드 면의 67~68% 라
+      카드 자기 아이콘과 «Lv.n» 이 덮인다(A1 에서 라벨 흰 픽셀 **0개**).
+   ⓑ **안 퍼진다 · 갈래가 넷뿐** — 알 중심 각이 41°/136°/222°/315° 네 대각에 고정이고 180ms 동안
+      변화 최대 2.9°, 총 이동 **14px**(자기 지름의 37%) · 최대 반경 65 < 카드 반폭 75 라 **수명 내내
+      한 알도 카드 밖으로 못 나간다** ⇒ «터짐» 이 아니라 **«카드에 붙은 데칼»** 로 읽힌다.
+   ⓒ 홀드에서 알이 6 → 3 으로 반토막.
+   ⚑ **ⓑ 의 뿌리는 «작은 호스트에서 가둠이 링을 사각형 코너로 접는다» 이다** — `fxBurst` 의 요소 대상
+      기하는 **큰 카드**(훈련 326×510)에서 온 것이라, 151×151 에서는 탄생 타원 반축 `r.w/2 + FXB_M`
+      = 81 이 가둠 상자 반폭 `r.w/2 − inM` = 49 보다 **크다**. 그러면 링의 모든 각이 정사각 상자
+      **네 모서리로 clamp** 되어 갈래가 4 로 접히고(41회차가 버튼에서 겪은 «퍼짐 ±0%» 의 사촌),
+      이동은 `FXB_K`(0.20) × 중심거리 = 12px 에 그친다. 비평가 둘의 «네 갈래 · 14px» 실측 그대로다.
+   ⇒ **666 3·4회차가 지불 버스트에서 쓴 것과 같은 처방** — `fxBurst` 에게는 «알을 낳는 일» 만
+      맡기고 **자리·이동·크기는 이 자리에서 다시 적는다**(같은 파일 `rwSummonFx` 가 이미 그 꼴이다).
+      공용 상수·전투/보상 버스트는 한 글자도 안 건드린다.
+   ⚠ **상자는 «줄이기만» 한다** — 619 13·14회차의 가둠(`inM`)은 «잉크가 액자 안에서 끝난다» 를 위해
+      `fxBurst` 가 잡아 준 것인데, 줄인 상자는 그 상자의 **부분집합**이라 그 보증이 그대로 산다
+      (키우면 깨진다 — 그래서 `RW_GAIN_SC ≤ 1` 이 규약이다).
+   ⚠ **이웃 칸을 안 밟는 상한이 `RW_GAIN_R1` 을 정한다** — 세로 피치가 176 이라 이웃 칸 중심까지
+      88px 다. 끝 반경 72 + 잉크 반폭 ~11 = **83 < 88** ⇒ 카드 테(75.5)는 넘어서 «터져 나가» 보이되
+      이웃 칸에는 안 닿는다(`verify683` [C3] 이 매 실행 그것을 센다). */
+const RW_GAIN_N0 = 6, RW_GAIN_N = 5;     /* 첫 발 / 홀드 틱당 알 수 — 2회차: 3 → 5(밀도 반토막 지적) */
+const RW_GAIN_SC = 0.52;                 /* `fxBurst` 가 준 상자 대비 축소율(≤1 — 위 머리말). 44px → 23px */
 const RW_GAIN_GS = 0.86;                 /* 알 상자 대비 글리프 font-size — 잉크가 상자 안에서 끝나는 값 */
+const RW_GAIN_R0 = 16, RW_GAIN_R1 = 70;  /* 카드 중심 기준 탄생·도달 반경(px) — 위 머리말의 이웃 칸 산수 */
+const RW_GAIN_JIT = 0.28;                /* 칸 폭 대비 ±지터(682 규약과 같은 어휘) */
+let rwGainW = 0;                         /* 버스트마다 도는 저불일치 위상(황금비 · 682·619 6회차와 같은 수열) */
 /* 칸이 «지금 화면에 온전히 있는가». 프레임과 89 페이지 두 상자에 다 들어와야 한다
    (`#relw` 는 `overflow:visible` 이라 짧은 프레임에서 격자가 페이지 밖으로 나갈 수 있다). */
 function rwCardShown(r){
@@ -31240,21 +31265,38 @@ function rwGainFx(it, el, first, iv){
   const n = Math.max(1, Math.min(first ? RW_GAIN_N0 : RW_GAIN_N, FXMAX - L.childElementCount - 1));
   const before = new Set(L.children);
   fxBurst(el, col, n, true, iv, PAY_CUR.relic);
-  let made = 0;
-  for(const nd of L.children){
-    if(before.has(nd)) continue;
-    /* 상자는 그대로 — 그린 것만 바꾼다(위 머리말) */
+  const born = [];
+  for(const nd of L.children) if(!before.has(nd)) born.push(nd);
+  /* 자리·이동·크기를 여기서 다시 적는다(위 2회차 머리말) — `fxBurst` 는 «알을 낳는 일» 만 했다 */
+  const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  const m = born.length, ph = (rwGainW = (rwGainW + 0.6180339887) % 1);
+  born.forEach((nd, j) => {
     const sz = parseFloat(nd.style.width);
+    const s3 = Number.isFinite(sz) ? Math.max(12, Math.round(sz * RW_GAIN_SC)) : 24;
     nd.className = 'fx-spark fx-rlic';
     nd.textContent = it.ic;
-    if(Number.isFinite(sz)) nd.style.fontSize = Math.round(sz * RW_GAIN_GS) + 'px';
-    made++;
-  }
-  return made > 0;
+    /* 상자는 «줄이기만» — 줄인 상자는 `fxBurst` 가 잡아 준 가둠 상자의 부분집합이다(머리말) */
+    nd.style.width = s3 + 'px'; nd.style.height = s3 + 'px';
+    nd.style.margin = (-s3 / 2) + 'px 0 0 ' + (-s3 / 2) + 'px';
+    nd.style.fontSize = Math.round(s3 * RW_GAIN_GS) + 'px';
+    /* 갈래 = 알 수. 반구가 아니라 **온 원**이다 — 카드는 사방이 제 면이라 위로 접을 이유가 없다
+       (버튼과 다른 점 — 666 4회차의 상향 원뿔은 «발원점 아래에 정보가 있다» 는 그 화면의 사정이다). */
+    const u = ((((j + 0.5 + ph + rnd(-RW_GAIN_JIT, RW_GAIN_JIT)) % m) + m) % m) / m;
+    const a = u * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+    nd.style.left = (cx + ca * RW_GAIN_R0).toFixed(1) + 'px';
+    nd.style.top  = (cy + sa * RW_GAIN_R0).toFixed(1) + 'px';
+    nd.style.setProperty('--dx', (ca * (RW_GAIN_R1 - RW_GAIN_R0)).toFixed(1) + 'px');
+    nd.style.setProperty('--dy', (sa * (RW_GAIN_R1 - RW_GAIN_R0)).toFixed(1) + 'px');
+  });
+  return born.length > 0;
 }
 function rwSummonFx(it, first, iv){
   const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
-  if(el){ fxFlash(el); fxHitEl(el); rwGainFx(it, el, first, first ? null : iv); }
+  /* 2회차 — 홀드 틱이면 **플래시도 그 틱 안에서 끝난다**(619 14회차 `fxTickLife` API 그대로).
+     1회차 채점에서 두 비평가가 독립으로 «한 화면에 «방금 얻음» 흰 카드가 두 장 켜져 있다»
+     (홀드 간격 ≈293ms < 플래시 수명 340ms ⇒ 듀티 109%)를 잡았다. 단발(`first`)은 다음 틱이
+     없으므로 종전 340ms 그대로다. */
+  if(el){ fxFlash(el, first ? undefined : iv); fxHitEl(el); rwGainFx(it, el, first, first ? null : iv); }
   const L = (typeof fxL === 'function') ? fxL() : null;
   const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
   if(!L || !r) return false;

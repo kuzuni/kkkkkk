@@ -25,7 +25,13 @@ const ROUND = process.argv[2] || 'r1';
 const OUT = path.resolve(__dirname, '../docs/shots');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
 const STOPS = [0, 40, 80, 130, 180, 240, 290, 340];      /* 씬 A — 666 과 같은 봉투(수명 380ms) */
-const HOLDS = [420, 700, 1000, 1300];                    /* 씬 B — 홀드 시작 후 실시간 ms */
+/* ⚑⚑ 2회차 — 씬 B 의 표본 시각을 **이음매에서 뺐다.** 1회차의 420ms 는 하필
+   «첫 발(수명 380ms)이 죽는 시각 ↔ 첫 틱(`TR_HOLD_DELAY` 350ms)이 사는 시각» 의 **틈**이고,
+   러너의 타이머가 밀리면 그 틈이 벌어져 **빈 프레임**이 찍힌다(1회차 B1 이 그랬다 —
+   비평가 둘이 독립으로 «연출이 통째로 없다» 로 잡았고, `probe683b` 로 찍힌 픽셀을 세어 보니
+   당첨 칸 258px vs 정상 발화 8285px 로 **비평가가 옳았다**).
+   ⇒ 첫 틱이 확실히 지난 뒤(가속으로 간격이 60~160ms 인 구간)를 고르게 덮는다. */
+const HOLDS = [560, 760, 980, 1240];                     /* 씬 B — 홀드 시작 후 실시간 ms */
 const SEED = 20260902;
 
 const SEEDFN = sd => {
@@ -40,8 +46,14 @@ const SEEDFN = sd => {
 
 /* 페이지 안에서 «지금 보이는 것» 을 센다 — 666 과 같은 가시성 자(불투명도 .06 · 최소변 6px) */
 const TALLY = () => {
+  /* ⚑⚑ 2회차 — **가시성 문턱을 0.06 → 0.25 로 올렸다.** 1회차의 0.06 은 `.fx-spark` 키프레임이
+     끝으로 가며 `opacity:0`·`scale(.62)` 로 사그라든 «거의 안 보이는 잔해» 까지 «보인다» 로 셌다 —
+     그래서 정답표가 «획득 6알» 이라고 적은 프레임의 찍힌 픽셀이 258px(정상 8285px 의 3%)였다.
+     비평가 둘이 독립으로 그것을 잡았고 `tools/probe683b.js` 가 찍힌 픽셀로 확인했다.
+     ⚠ **자가 거짓말하면 정답표가 비평을 오염시킨다** — 이 표는 비평가가 «내가 본 것이 맞나» 를
+       대조하는 근거라, 표가 틀리면 회차가 통째로 «계측기부터 고쳐라» 로 끝난다(1회차가 그랬다). */
   const vis = n => { const cs = getComputedStyle(n), bb = n.getBoundingClientRect();
-    return +cs.opacity > 0.06 && Math.min(bb.width, bb.height) >= 6; };
+    return +cs.opacity > 0.25 && Math.min(bb.width, bb.height) >= 6; };
   const L = [...document.querySelectorAll('#fxl > *')].filter(vis);
   const cls = n => (n.className || '') + '';
   const gain = L.filter(n => /fx-rlic/.test(cls(n)));       /* 683 획득 이미터 */
@@ -73,6 +85,29 @@ const TALLY = () => {
            id: w.id || '', ic: w.ic || '', name: w.name || '',
            card: cr ? { x: Math.round(cr.x), y: Math.round(cr.y), w: Math.round(cr.width), h: Math.round(cr.height) } : null };
 };
+
+/* ⚑⚑ 2회차 신설 — **찍힌 픽셀을 표에 같이 적는다**(350 처방 · `probe683b` 와 같은 방법).
+   DOM 을 세는 자와 «화면에 칠해진 것» 이 갈릴 수 있다는 것을 1회차가 비싸게 배웠다 ⇒
+   정답표가 스스로를 검산하게 만든다: 방금 찍은 PNG 를 페이지로 되돌려 당첨 카드 상자 안의
+   밝은 잉크 픽셀을 센다. «획득 알 N» 과 이 값이 같이 0 이거나 같이 크지 않으면 표가 거짓이다. */
+async function paintedPx(p, file, box) {
+  if (!box) return -1;
+  const url = 'data:image/png;base64,' + fs.readFileSync(file).toString('base64');
+  return await p.evaluate(async ({ url, b }) => {
+    const img = new Image();
+    await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = url; });
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(b.x, b.y, b.w, b.h).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2] > 200) n++;
+    }
+    return n;
+  }, { url, b: box });
+}
 
 const FREEZE = () => {
   window.requestAnimationFrame = () => 0;
@@ -140,8 +175,9 @@ async function shotA(T, idx) {
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '683-' + ROUND + '-A' + idx + '.png');
   await p.screenshot({ path: file });
+  const px = await paintedPx(p, file, info.card);
   await b.close();
-  return { T, file, info, errs: errs.length };
+  return { T, file, info, px, errs: errs.length };
 }
 
 /* 씬 B — 연속(홀드). 세대가 섞이므로 `currentTime` 을 안 감고 **실시간**으로 홀드하다 그 순간 얼린다. */
@@ -161,15 +197,16 @@ async function shotB(T, idx) {
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '683-' + ROUND + '-B' + idx + '.png');
   await p.screenshot({ path: file });
+  const px = await paintedPx(p, file, info.card);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }).catch(() => {});
   await b.close();
-  return { T, file, info, errs: errs.length };
+  return { T, file, info, px, errs: errs.length };
 }
 
 const row = (tag, i, r) => '| ' + tag + (i + 1) + ' | ' + r.T + ' | ' + r.info.name + ' ' + r.info.ic
-  + ' | ' + r.info.gain + ' | ' + r.info.onCard + ' | ' + r.info.other + ' | ' + r.info.glyph
-  + ' | ' + r.info.gsz + 'px | ' + r.info.gsp + 'px | ' + r.info.pay + ' | ' + r.info.payOut
-  + ' | ' + r.info.bead + ' | ' + r.info.text + ' | ' + r.info.flash + ' |';
+  + ' | ' + JSON.stringify(r.info.card) + ' | ' + r.info.gain + ' | ' + r.info.onCard + ' | ' + r.info.other
+  + ' | ' + r.info.glyph + ' | ' + r.info.gsz + 'px | ' + r.info.gsp + 'px | ' + r.px
+  + ' | ' + r.info.pay + ' | ' + r.info.bead + ' | ' + r.info.text + ' | ' + r.info.flash + ' |';
 
 (async () => {
   const A = [], B = [];
@@ -178,8 +215,8 @@ const row = (tag, i, r) => '| ' + tag + (i + 1) + ' | ' + r.T + ' | ' + r.info.n
   console.log('\n# 683 ' + ROUND + ' 정답표 (시드 ' + SEED + ')');
   console.log('\n«획득» = 683 이 신설한 획득 이미터(`.fx-rlic`, 원점 = 획득 유물 카드)');
   console.log('«지불» = 666 의 지불 이미터(`.fx-cic`, 원점 = 소환 버튼) — 이 작업이 안 건드린 축\n');
-  console.log('| # | t(ms) | 당첨 유물 | 획득 알 | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 평균 크기 | 최대 반경 | 지불 알 | 버튼 밖 | 구슬 | 글자 | 플래시 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('| # | t(ms) | 당첨 유물 | 당첨 카드 상자 | 획득 알 | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 평균 크기 | 최대 반경 | **찍힌 잉크 px** | 지불 알 | 구슬 | 글자 | 플래시 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   A.forEach((r, i) => console.log(row('A', i, r)));
   B.forEach((r, i) => console.log(row('B', i, r)));
   console.log('\nA = 단발(트리거 = 0ms · `currentTime` 으로 감은 정확한 시각) · B = 연속 홀드(실시간 ms)');

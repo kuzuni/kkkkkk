@@ -114,14 +114,25 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      아이콘 경로(`IC`)라야 `kh` 가 비고, 크기(`FX_CIC_SC`)가 `fxBurst` **안에서** 가둠에 되먹여진다. */
   ok(/fxBurst\(el, col, n, true, iv, PAY_CUR\.relic\)/.test(src),
      'A3 ★ 획득 버스트는 **아이콘 경로 + `strict`** 로 부른다 — keep-out 굶주림(660)을 구조적으로 피한다');
-  ok(/const RW_GAIN_N0 = \d+, RW_GAIN_N = \d+;/.test(src) && /const RW_GAIN_GS = [\d.]+;/.test(src),
-     'A4 알 수·글리프 배율이 이름 있는 상수다 — 호출부에 손으로 안 적는다');
+  ok(/const RW_GAIN_N0 = \d+, RW_GAIN_N = \d+;/.test(src) && /const RW_GAIN_GS = [\d.]+;/.test(src)
+     && /const RW_GAIN_SC = [\d.]+;/.test(src) && /const RW_GAIN_R0 = \d+, RW_GAIN_R1 = \d+;/.test(src)
+     && /const RW_GAIN_JIT = [\d.]+;/.test(src),
+     'A4 알 수·크기·반경·지터가 전부 이름 있는 상수다 — 호출부에 손으로 안 적는다');
   ok(/Math\.max\(1, Math\.min\(first \? RW_GAIN_N0 : RW_GAIN_N, FXMAX - L\.childElementCount - 1\)\)/.test(src),
      'A5 상한을 «걷기» 가 아니라 «개수 줄이기» 로 지킨다(660·666 A5 와 같은 처방 — 발화가 안 빠진다)');
-  /* 상자를 다시 적으면 619 13·14회차의 가둠 산수(`inM`)가 깨진다 — 글리프만 그 안에 앉힌다 */
-  ok(/nd\.style\.fontSize = Math\.round\(sz \* RW_GAIN_GS\)/.test(src)
-     && !/nd\.style\.width\s*=/.test(src.split('function rwGainFx')[1] || '').valueOf(),
-     'A6 ★ 알 **상자는 안 건드리고** 글리프만 그 안에 앉힌다 — `fxBurst` 의 가둠(`inM`)이 그대로 따라온다');
+  /* ⚑ 2회차 — [A6] 의 뜻이 «상자를 안 건드린다» 에서 **«상자를 줄이기만 한다»** 로 좁혀졌다.
+     619 13·14회차의 가둠(`inM`)은 «잉크가 액자 안에서 끝난다» 를 위해 `fxBurst` 가 잡아 준 상자인데,
+     **줄인 상자는 그 상자의 부분집합**이라 그 보증이 그대로 산다. 키우면 깨지므로 `RW_GAIN_SC ≤ 1`
+     이 규약이고, 이 항이 그 부등식을 **소스에서** 못박는다(런타임 축은 [D3] 이 따로 센다). */
+  const mSc = src.match(/const RW_GAIN_SC = ([\d.]+);/);
+  ok(/nd\.style\.fontSize = Math\.round\(s3 \* RW_GAIN_GS\)/.test(src)
+     && /Math\.max\(12, Math\.round\(sz \* RW_GAIN_SC\)\)/.test(src)
+     && !!mSc && parseFloat(mSc[1]) <= 1,
+     'A6 ★ 알 상자를 **줄이기만** 한다(`RW_GAIN_SC` ≤ 1) — `fxBurst` 의 가둠(`inM`)이 부분집합으로 따라온다',
+     mSc ? 'RW_GAIN_SC = ' + mSc[1] : '상수를 못 찾았다');
+  ok(/const u = \(\(\(\(j \+ 0\.5 \+ ph \+ rnd\(-RW_GAIN_JIT, RW_GAIN_JIT\)\)/.test(src)
+     && /rwGainW = \(rwGainW \+ 0\.6180339887\) % 1/.test(src),
+     'A6b ★ 갈래를 **알 수만큼 칸**으로 나누고 칸 자체가 버스트마다 황금비로 돈다(682 규약 — 2회차 신설)');
   ok(/\.fx-spark\.fx-rlic\{/.test(code) && /filter:drop-shadow\(0 0 6px var\(--c/.test(code),
      'A7 `.fx-rlic` 부품이 있고 `--c`(그 칸의 글로우 색)를 실제로 쓴다 — 죽은 값 0(295-②·399·460)');
   ok(/function rwCardShown\(r\)\{/.test(src) && /rwCardShown\(r\)/.test(src),
@@ -190,6 +201,38 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      'C3 ★ **미획득 카드에서 태어난 알 0건** (등재문 요구 ②)',
      wrongCard + '건' + (wrongIds.size ? ' · ' + [...wrongIds].join(',') : ''));
 
+  /* ⚑⚑ 2회차 신설 — «터진다» 는 **이동**으로만 성립한다(666 [C3] 이 버튼에서 배운 것과 같은 교훈).
+     1회차는 [C1][C2] 를 통과하고도 비평가 둘이 독립으로 «최대 반경 65 < 카드 반폭 75 라 수명 내내
+     한 알도 카드 밖으로 못 나간다 · 총 이동 14px = 자기 지름의 37% · 카드에 붙은 데칼» 로 3점을 줬다.
+     게이트가 «태어난 자리» 만 물으면 그 그림을 못 잡는다. */
+  const HALF = 151 / 2, PITCH_HALF = 176 / 2;         /* 카드 반폭 · 세로 이웃 칸 중심까지 */
+  /* ⚠ 자를 «중심» 이 아니라 **«잉크»** 로 든다 — 619 13회차가 배운 것과 같다(사람이 보는 것은
+     입자 중심이 아니라 «액자 밖으로 나온 잉크» 다). [C6] 의 이웃 칸 산수도 같은 자여야 짝이 맞는다. */
+  let travTot = 0, farBad = 0, minTrav = 1e9, maxInk = 0, burstOut = 0, burstN = 0;
+  for (const b of BS) {
+    const g = b.born.filter(isGain);
+    const cr = b.cards[b.id]; if (!cr || !g.length) continue;
+    const cx = cr.x + cr.w / 2, cy = cr.y + cr.h / 2;
+    let bMax = 0;
+    for (const q of g) {
+      const t = Math.hypot(q.dx, q.dy);
+      const ink = Math.hypot(q.x + q.dx - cx, q.y + q.dy - cy) + q.w / 2;
+      travTot++; minTrav = Math.min(minTrav, t);
+      bMax = Math.max(bMax, ink); maxInk = Math.max(maxInk, ink);
+      if (ink > PITCH_HALF) farBad++;
+    }
+    burstN++; if (bMax > HALF) burstOut++;
+  }
+  ok(travTot > 0 && minTrav >= 40,
+     'C4 ★ 모든 알이 **실제로 날아간다**(이동 ≥ 40px) — 1회차의 «14px = 붙은 데칼» 이 빨개지는 자리',
+     travTot ? '최소 이동 ' + Math.round(minTrav) + 'px' : '표본 0');
+  ok(burstN > 0 && burstOut === burstN,
+     'C5 ★ 버스트마다 잉크가 **카드 테(반폭 75.5) 를 넘는다** — «카드 안에서만 논다» 가 아니다',
+     burstOut + '/' + burstN + '버스트 · 최대 잉크 끝 ' + Math.round(maxInk) + 'px');
+  ok(farBad === 0,
+     'C6 ★ 그래도 **이웃 칸(세로 피치 반 88px)에는 안 닿는다** — 잉크 바깥 끝 기준',
+     '넘은 알 ' + farBad + ' · 최대 잉크 끝 ' + Math.round(maxInk) + 'px');
+
   /* ── [D] 그림·연속 ───────────────────────────────────────────────── */
   blk('D] 그림 — 알이 «그 유물» 의 문양이다 · 연속 소환이 같은 그림이 아니다');
   let glyphBad = 0, imgBad = 0, boxBad = 0;
@@ -204,6 +247,27 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   ok(gain > 0 && imgBad === 0, 'D2 재화 `<img>` 가 남아 있는 알 0 — 지불 어휘와 안 섞인다', String(imgBad));
   ok(gain > 0 && boxBad === 0, 'D3 글리프가 알 상자 안에서 끝난다(font-size ≤ 상자) — 619 13·14회차 규약',
      String(boxBad));
+  /* ⚑ 2회차 신설 — «너무 커서 카드를 덮는다»(비평 2인 공통 ②: 알 bbox 합이 카드 면의 67~68% ·
+     A1 라벨 흰 픽셀 0개). 한 알이 카드 폭의 몇 %인지를 상한으로 못박는다. */
+  let szMax = 0;
+  for (const b of BS) for (const q of b.born.filter(isGain)) szMax = Math.max(szMax, q.w);
+  ok(gain > 0 && szMax > 0 && szMax <= 151 * 0.22,
+     'D5 ★ 알 한 개가 카드 폭의 22% 이하다 — 1회차의 «카드 면 67% 를 덮는다» 가 빨개지는 자리',
+     '최대 ' + Math.round(szMax) + 'px = 카드 폭의 ' + (szMax / 151 * 100).toFixed(1) + '%');
+  /* ⚑ 2회차 신설 — 갈래 수 = 알 수(682 규약의 «구조적 보증» 을 이 이미터에도). 1회차는 가둠이
+     링을 사각형 네 모서리로 접어 6알이 **4갈래**였다(비평 2인 공통 ③). */
+  let laneBad = 0, laneMin = 999;
+  for (const b of BS) {
+    const a = degs(b); if (a.length < 2) continue;
+    let g = 999;
+    for (let i = 1; i < a.length; i++) g = Math.min(g, a[i] - a[i - 1]);
+    g = Math.min(g, 360 - (a[a.length - 1] - a[0]));   /* 원형이라 양 끝도 이웃이다 */
+    laneMin = Math.min(laneMin, g);
+    if (g < 15) laneBad++;
+  }
+  ok(BS.length > 0 && laneBad === 0,
+     'D6 ★ 한 버스트 안 두 알의 최소 각 간격 ≥ 15° — 갈래 수가 알 수와 같다(682 규약)',
+     '어긋난 버스트 ' + laneBad + ' · 최소 ' + (laneMin === 999 ? '—' : laneMin.toFixed(1) + '°'));
   /* 682 규약 — 연속 두 버스트가 «같은 방향 시퀀스» 면 안 된다(황금비 위상이 돌고 있는가) */
   let sameN = 0, pairs = 0;
   for (let i = 1; i < BS.length; i++) {
