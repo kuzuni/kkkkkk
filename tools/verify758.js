@@ -35,9 +35,9 @@ const SRCF = path.join(ROOT, 'index.html');
 const SRC = fs.readFileSync(SRCF, 'utf8');
 
 /* 표 두 장 — 기준선(하향 전) 과 이 회차. 파일 이름을 여기 한 곳에만 적는다.
-   ⚠ 기준선은 **.md 만** 커밋돼 있다(22회차가 격리 사본으로 굴린 열 — json 은 남기지 않았다).
-   그래서 기준선은 [E] 표를 파싱해 읽고, 이 회차는 json 을 읽는다. 두 경로가 **같은 수**를
-   내는지는 [C1e] 가 이 회차 표를 양쪽으로 읽어 대조한다(자가 자기 파서를 먼저 잰다).
+   ⚠ **24정정7(AAO)** — 초판 주석은 «기준선은 .md 만 커밋돼 있다» 였는데 24회차가 기준선을
+   재실행하며 **json 도 같이 커밋했다**. 그래서 이제는 **두 표 다 json 을 읽고**, [C1e] 는
+   양쪽(json ↔ md [E] 표)을 **기준선·이 회차 모두**에서 대조한다(자가 자기 파서를 먼저 잰다).
    ⚑ **24회차(23정정10 · AAL 1순위) — 분모를 κ 맞춘 열로 갈았다.** 23회차의 판정 줄은
    calib sha 가 서로 다른 두 표의 나눗셈이었다(base 3cc6898718c1 ÷ r23 6a013a86ea41). 24회차가
    기준선 트리(`adeb739^` = 22회차 직전)를 **이 회차의 κ 캐시로** 다시 굴려 두 표의 sha 를 맞췄고,
@@ -124,10 +124,13 @@ function maxAxis(axes, total) {
   const mPm = SRC.match(/const\s+OFF_DIA_PM\s*=\s*(\d+)\s*;/);
   yes('[A1] 제품에 `OFF_DIA_PM` 선언이 있다', !!mPm);
   const PM = mPm ? parseInt(mPm[1], 10) : NaN;
-  /* ⚠ 23정정10 — 초판은 여기서 `PM < 75` 만 물어 **0~74 아무 값이나 통과**했다. 값을 못박는 항이
-     [E1] 하나뿐이었다는 뜻이다. 지금은 [A2] 가 «측정표가 실제로 이 값으로 굴러갔는가» 를 물어
-     상수와 표를 **한 항 안에서** 묶는다(둘이 어긋나면 여기서 먼저 빨개진다). */
-  yes('[A2] `OFF_DIA_PM` 이 옛 계수(' + OLD_PM + ')에서 내려왔다 — 758 하향이 살아 있다',
+  /* ⚠ 23정정10 → **24정정6(AAO·AAQ 일치 — 초판의 주석이 코드가 안 하는 일을 적었다)**.
+     이 항의 술어는 `PM < 75` 한 줄이라 **0~74 아무 값이나 통과**한다. 초판은 여기 주석에
+     «상수와 표를 한 항 안에서 묶는다» 라고 적었는데 그것을 실제로 하는 항은 **[E1b]** 다.
+     항을 없애지 않는 이유(333 처방): «하향이 살아 있는가» 는 [E1b] 와 **다른 것을 묻는다** —
+     [E1b] 는 표와 상수가 **서로 맞는지**만 보므로 둘이 나란히 75 로 돌아가면 [E1b] 는 초록이고
+     이 항만 빨개진다. ⇒ 술어는 그대로 두고 **이름표를 사실대로** 고친다(값은 [E1b] 가 못박는다). */
+  yes('[A2] `OFF_DIA_PM` 이 옛 계수(' + OLD_PM + ')에서 내려왔다 — 758 하향이 살아 있다 (⚠ 값을 못박는 것은 [E1b] 다)',
       Number.isFinite(PM) && PM < OLD_PM, '현행 ' + PM);
   /* 오프라인 다이아의 분당 축은 이 상수 하나여야 한다 — 사본이 생기면 하향이 반쪽이 된다 */
   yes('[A3] 오프라인 다이아 지급식이 `OFF_DIA_PM` 하나만 읽는다 (분당 축 사본 0건)',
@@ -185,21 +188,23 @@ function maxAxis(axes, total) {
   if (fs.existsSync(BASE_M) && fs.existsSync(CUR_J) && fs.existsSync(CUR_M)) {
     const bmd = fs.readFileSync(BASE_M, 'utf8');
     const cmd = fs.readFileSync(CUR_M, 'utf8');
-    const cj = readJson(CUR_J);
-    base = { d: incOfMd(bmd, 'diligent'), c: incOfMd(bmd, 'casual') };
+    const cj = readJson(CUR_J), bj = readJson(BASE_J);
+    base = { d: incOf(bj, 'diligent'), c: incOf(bj, 'casual'), j: bj };
     cur  = { d: incOf(cj, 'diligent'), c: incOf(cj, 'casual'), j: cj };
     const curMd = { d: incOfMd(cmd, 'diligent'), c: incOfMd(cmd, 'casual') };
+    const baseMd = { d: incOfMd(bmd, 'diligent'), c: incOfMd(bmd, 'casual') };
     /* 같은 자로 잰 두 표인가 — 일수·시드 수·정책이 갈리면 비율은 뜻이 없다 */
-    const bRun = (bmd.match(/--days=(\d+)\s+--seeds=(\d+)/) || []);
-    eq('[C1] 두 표의 일수가 같다', cur.j.days, Number(bRun[1]));
-    eq('[C1b] 두 표의 시드 수가 같다', cur.d.seeds, Number(bRun[2]));
-    yes('[C1c] 기준선 표에 정책 둘이 다 실려 있다', !!(base.d && base.c),
-        '부지런 ' + fmt(base.d && base.d.total) + ' · 대충 ' + fmt(base.c && base.c.total));
+    eq('[C1] 두 표의 일수가 같다', cur.j.days, base.j.days);
+    eq('[C1b] 두 표의 시드 수가 같다', cur.d.seeds, base.d.seeds);
+    yes('[C1c] 기준선 표에 정책 둘이 다 실려 있다', base.d.seeds > 0 && base.c.seeds > 0,
+        '부지런 ' + fmt(base.d.total) + ' · 대충 ' + fmt(base.c.total));
     eq('[C1d] 규칙 위반 0건 (등재문 ⑦ — 0 이어야 결과를 믿는다)', (cur.j.viol || []).length, 0);
     /* 자가 자기 파서를 먼저 잰다 — 같은 회차 표를 json 으로 읽은 값과 md 로 읽은 값이 같은가.
        (기준선은 md 로만 읽으므로, 이 항이 빨개지면 [C2] 의 분모·분자가 다른 자로 잰 것이 된다) */
-    near('[C1e] [전제] 같은 표를 json 으로 읽은 합 = md [E] 표의 합 (파서 대조)',
+    near('[C1e] [전제] 같은 표를 json 으로 읽은 합 = md [E] 표의 합 — 이 회차 (파서 대조)',
          cur.d.total, curMd.d ? curMd.d.sum : NaN, 0.001);
+    near('[C1f] [전제] 같은 대조 — **기준선**(24정정7 — 분모도 양쪽 경로로 읽는다)',
+         base.d.total, baseMd.d ? baseMd.d.sum : NaN, 0.001);
 
     const rD = cur.d.total / base.d.total, rC = cur.c.total / base.c.total;
     yes('[C2] **부지런 30일 총 유입 = 기준선의 50% ± 5%p** (§0 개정 판정 줄)',
@@ -272,9 +277,17 @@ function maxAxis(axes, total) {
        가른다» 는 뜻이고 빨개지면 자가 아무 표나 통과시킨다는 뜻이다. */
     const r22m = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r22-both.md');
     const r22 = fs.existsSync(r22m) ? incOfMd(fs.readFileSync(r22m, 'utf8'), 'diligent') : null;
-    yes('[R3] [음성항] **다른 세대의 실제 표**(r22 · 하향 중간)를 이 자에 대면 창 밖으로 빨개진다',
+    /* ⚠ **24정정8(AAO·AAQ 일치)** — 이 항은 커밋된 두 파일만 읽으므로 **제품 변경으로는 못 빨개진다**
+       ([S4] 와 같은 구조 = [전제] 항이다. «진짜 음성항» 이라 부른 24-4 의 표기가 틀렸다).
+       그리고 r22-both 의 calib sha 는 `48035eafe0b2` 로 base-k 와 **다르다** — [S1] 이 금지한
+       «해시 다른 두 표의 나눗셈» 을 이 항이 자기 안에서 한다. 지우지 않는 이유: 이 항이 재는
+       것은 «창이 다른 세대를 실제로 밀어내는가» 이고 그 여유(88% ↔ 상한 55% = 33%p)가 κ 효과
+       (실측 4.34%)의 **7.6배**라 결론이 뒤집히지 않는다. ⇒ 이름표를 [전제]로 사실대로 고치고
+       sha 가 다르다는 것을 라벨에 적는다(25회차가 κ 맞춘 표본으로 갈면 그때 [R3] 으로 승격). */
+    yes('[R3] [전제] **다른 세대의 실제 표**(r22 · 하향 중간 · ⚠ sha 다름)를 이 자에 대면 창 밖이다',
         !!r22 && (r22.total / base.d.total) > WIN_HI,
-        r22 ? fmt(r22.total) + ' / ' + fmt(base.d.total) + ' = ' + pct(r22.total / base.d.total) : '(r22 표 없음)');
+        r22 ? fmt(r22.total) + ' / ' + fmt(base.d.total) + ' = ' + pct(r22.total / base.d.total)
+              + ' (여유 33%p ≫ κ 효과 4.34%)' : '(r22 표 없음)');
 
     /* ── [S] κ 대조 + ② 말미 창 ──────────────────────────────────────────── */
     console.log('\n[S] 같은 자로 잰 비교인가 · ② 를 말미 창에서도 잰다 (23정정2·3·10)');
