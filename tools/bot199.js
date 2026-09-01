@@ -1564,6 +1564,23 @@ function writeReport(rep) {
   L.push(`· 참고 평균(한 수로 봐야 할 때만) — κ_dps ${rep.cal.kDps.toFixed(3)} · κ_hp ${rep.cal.kHp.toFixed(3)} · κ_gold ${rep.cal.kGold.toFixed(3)} · κ_boss ${rep.cal.kBoss.toFixed(3)}`);
   L.push('');
 
+  /* ⚑ 17회차(16-8 정정3 — QQ6·RR3·SS6 3인 일치) — ③ 의 축(실오르막)을 [D2] 와 [G] 가
+     **같은 함수**로 읽도록 함수 스코프로 끌어올렸다. 16회차까지 [G] «③ 축» 줄은 `netPct`
+     (정체 밖 시간 = [D2] 가 «넓은 자 · ③ 축 아님» 이라 명기한 값)를 찍고 있었다 — 같은
+     라벨이 두 값을 가리키는 «표 두 벌» 사고(402 계보). 정의는 5·7·13회차의 것 그대로다. */
+  const wA = (w) => (w.amin != null ? w.amin : w.min);
+  const actTot = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
+  const faceNetOf = (r) => {
+    const w = r.walls.filter(x => isWall(x, r.band) && x.trunc !== true); const f = [];
+    for (let i = 0; i + 1 < w.length; i++) {
+      const a = wA(w[i]) + w[i].len, b = wA(w[i + 1]);
+      const pause = r.walls.filter(x => !isWall(x, r.band) && wA(x) >= a && wA(x) < b)
+                           .reduce((s, x) => s + Math.min(x.len, b - wA(x)), 0);
+      f.push(Math.max(0, b - a - pause));
+    }
+    return f;
+  };
+
   for (const pol of Object.keys(rep.policies)) {
     const runs = rep.policies[pol];
     const P = { diligent: '부지런한 유저', casual: '대충 유저' }[pol] || pol;
@@ -1595,9 +1612,8 @@ function writeReport(rep) {
     const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w, r.band)).length);
     /* ⚑ 7회차 — 상승면·실오르막도 **활성 자**로 잰다(정정6). 벽시계로 재면 상승면이 로그아웃
        시간을 통째로 삼켜 ③ 의 분자가 부풀고, 분모(달력 총 분)와 함께 두 쪽이 다 오염된다.
-       `w.amin` = 정체 시작의 활성 분 · `w.len` = 정체의 활성 길이 ⇒ 같은 자 안에서 뺀다. */
-    const wA = (w) => (w.amin != null ? w.amin : w.min);
-    const actTot = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
+       `w.amin` = 정체 시작의 활성 분 · `w.len` = 정체의 활성 길이 ⇒ 같은 자 안에서 뺀다.
+       (17회차 정정3 — `wA`·`actTot` 는 [G] 와 공유하는 함수 스코프 것을 쓴다.) */
     const ACT = med(runs.map(actTot)) || (rep.days * 1440);
     const faceOf = (r) => {
       const w = r.walls.filter(x => isWall(x, r.band) && x.trunc !== true); const f = [];
@@ -1614,17 +1630,8 @@ function writeReport(rep) {
     const netOf     = (r) => Math.max(0, actTot(r) - stallOf(r));
     /* ⚑ 13회차 비평 II(R2·R9) — ③ 도 `wallsOf` 와 **같은 벽 목록**을 써야 한다. 안 그러면
        한 표 안에서 대충 벽이 ① 에서는 2개 · ③ 에서는 3개다(같은 회차에 세 번째 «읽는 쪽을
-       안 갈랐다» 사고). 잘린 정체는 «벽 끝» 이 관측 밖이라 상승면의 끝점이 될 수 없다. */
-    const faceNetOf = (r) => {
-      const w = r.walls.filter(x => isWall(x, r.band) && x.trunc !== true); const f = [];
-      for (let i = 0; i + 1 < w.length; i++) {
-        const a = wA(w[i]) + w[i].len, b = wA(w[i + 1]);
-        const pause = r.walls.filter(x => !isWall(x, r.band) && wA(x) >= a && wA(x) < b)
-                             .reduce((s, x) => s + Math.min(x.len, b - wA(x)), 0);
-        f.push(Math.max(0, b - a - pause));
-      }
-      return f;
-    };
+       안 갈랐다» 사고). 잘린 정체는 «벽 끝» 이 관측 밖이라 상승면의 끝점이 될 수 없다.
+       (17회차 정정3 — `faceNetOf` 본체도 [G] 와 공유하는 함수 스코프 것 하나다.) */
     const faceSum = runs.map(r => faceOf(r).reduce((a, b) => a + b, 0));
     const netAll  = runs.map(netOf);
     const faceNet = runs.map(r => faceNetOf(r));
@@ -1774,7 +1781,12 @@ function writeReport(rep) {
     L.push(`**① 축 — 목표 칸 적중 p50 = ${med(runs.map(hitOf))}/${tgtN} (±20% · 1:1 유일 배정 · 달력 중앙 좌표`
       + ` · 왼쪽 끝 좌표로는 ${med(runs.map(hitLOf))}/${tgtN})`
       + ` · **창 밖 벽 p50 = ${med(runs.map(outOf))}**(= §0 의 «없어야 할 벽»)`
-      + ` · 창 안 중복 p50 = ${med(runs.map(dupOf))} (합 = 잉여 ${med(runs.map(extraOf))})`
+      /* ⚑ 17회차(16-8 정정6 — QQ5) — «창 밖 p50 + 중복 p50 = 잉여 p50» 은 시드가 다르면
+         성립하지 않는 p50 끼리의 산수다(r16 부지런 3+12=15 ↔ 잉여 16 이 그 자리). 항등
+         «창밖+중복=잉여» 는 **시드별**로만 참이라, 그 검산(전 시드)을 자가 직접 찍고
+         p50 세 값은 «더하지 마라» 를 달아 나란히 둔다. */
+      + ` · 창 안 중복 p50 = ${med(runs.map(dupOf))} · 잉여 p50 = ${med(runs.map(extraOf))}`
+      + ` (⚠ p50 끼리 더하지 마라 — 시드별 항등 «창밖+중복=잉여» 검산 ${runs.filter(r => { const p = pairOf(r); return p.out + p.dup === p.extra; }).length}/${runs.length})`
       + ` · 첫 벽(배정) p50 = ${med(runs.map(firstOf))}분 (목표 = 첫 도달 가능 칸 ${REACH[0] || '—'}분`
       + ` · 배정 안 가린 첫 벽 ${med(runs.map(firstAnyOf))}분)`
       /* ⚑ 13회차 비평 JJ(R12) — 배정 벽이 2개 미만이면 `spanOf` 는 «간격 0» 이 아니라
@@ -1938,13 +1950,22 @@ function writeReport(rep) {
           contMean: (mean(sum) - mean(one1)) / rep.days,      /* 1~7회차의 자(평균) */
         };
       };
+      /* ⚑ 17회차(16-8 정정3 — QQ6·RR3·SS6 3인 일치) — 이 자리가 «③ 축» 라벨로 찍던 것은
+         정체 밖 시간(첫/마지막 벽 밖 · 30분 미만 숨 포함 — [D2] 가 «넓은 자 · ③ 축 아님» 이라
+         명기한 값)이었다. ③ 의 축은 [D2] 헤드라인과 같은 **실오르막 합 / 활성 분**이고,
+         함수는 [D2] 와 **공유**한다(표 두 벌 금지). 넓은 자는 참고 줄로 강등해 나란히 둔다. */
+      const facePct = (pol) => {
+        const runs = rep.policies[pol];
+        const v = runs.map(r => faceNetOf(r).reduce((a, b) => a + b, 0));
+        const d = med(runs.map(actTot)) || (rep.days * 1440);
+        return 100 * med(v) / d;
+      };
       const netPct = (pol) => {
         const runs = rep.policies[pol];
         /* 7회차 — 분자·분모 둘 다 **활성 분**이다(정정6). 벽시계로 재면 분모가 로그아웃까지
            세어 ③ 이 구조적으로 1% 아래에 눌린다(43,200 vs 5,400). */
-        const at = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
-        const v = runs.map(r => Math.max(0, at(r) - r.walls.reduce((a, w) => a + w.len, 0)));
-        const d = med(runs.map(at)) || (rep.days * 1440);
+        const v = runs.map(r => Math.max(0, actTot(r) - r.walls.reduce((a, w) => a + w.len, 0)));
+        const d = med(runs.map(actTot)) || (rep.days * 1440);
         return 100 * med(v) / d;
       };
       const stg = (pol) => med(rep.policies[pol].map(r => r.final.stage));
@@ -2066,7 +2087,8 @@ function writeReport(rep) {
         ['지속 수급/일 — 같은 목록·**평균**(1~7회차의 자 — 회차 간 비교용) 〔지속 장부 · ' + rep.days + '일 · 평균〕', p => dayIn(p).contMean, fmtN],
         ['지속 수급/일 — 시작 지급만 제외(5회차 [G] 초판) 〔· ' + rep.days + '일 · p50〕', p => dayIn(p).cont, fmtN],
         [`${rep.days}일 스테이지 p50`, stg, fmtN],
-        ['순 이동 비중(%) — ③ 축(④ 와 무관) 〔활성 분 자 · ' + rep.days + '일 · p50〕', netPct, x => x.toFixed(2)],
+        ['순 이동 비중(%) — ③ 축 = 실오르막 합(④ 와 무관 · [D2] 헤드라인과 같은 자) 〔활성 분 자 · ' + rep.days + '일 · p50〕', facePct, x => x.toFixed(2)],
+        ['정체 밖 시간 비중(%) — 넓은 자(첫/마지막 벽 밖·짧은 숨 포함 · **③ 축 아님 — 참고**) 〔활성 분 자 · ' + rep.days + '일 · p50〕', netPct, x => x.toFixed(2)],
         ['**§0 «한 축 ≤50%» — 최대 유입 축 비중(%) 〔지속 장부(일회성 제외) · ' + rep.days + '일 · 평균〕**',
           p => topOf(p, true).pct, x => x.toFixed(2)],
         ['§0 «한 축 ≤50%» — 최대 유입 축 비중(%) 〔유입 장부(전체) · ' + rep.days + '일 · 평균〕',
