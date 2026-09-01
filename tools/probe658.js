@@ -76,14 +76,37 @@ const ARM = () => {
 };
 
 /* 되돌림 — 660 이 걷은 그 호출을 자 안에서만 되살린다(`upFx(key, host, cur, …)` 뒤 `fxSpend(cur, host)`).
-   ⚠ 제품 파일은 안 건드린다. `fxSpend` 선언은 아직 살아 있으므로(678 이 걷을 몫) 이 되살림이 가능하다. */
+   ⚠ 제품 파일은 안 건드린다.
+   ⚠ **678 이 `fxSpend` 선언을 걷으면 이 길은 사라진다** — 그때는 자가 «같은 그림» 을 직접 그린다.
+     기대를 상태에 따라 바꿔 적는 것이 338 규칙이다(`probe583` 머리말과 같은 규약). 어느 길이든
+     묻는 것은 하나 — «수렴하는 노드를 이 자가 실제로 볼 수 있는가». */
 const REARM = () => {
-  const f = window.upFx; if (typeof f !== 'function') return false;
+  if (typeof window.fxSpend !== 'function') return 'none';
+  const f = window.upFx; if (typeof f !== 'function') return 'none';
   window.upFx = function (key, host, cur, ...rest) {
     const r = f.call(this, key, host, cur, ...rest);
     try { window.fxSpend(cur, host); } catch (_) {}
     return r;
   };
+  return 'product';
+};
+
+/* 폴백 되돌림 — «골드 알약 → 훈련 카드» 한 장을 자가 직접 날린다(제품 함수를 안 쓴다). */
+const FLY = async host => {
+  const pill = document.querySelector('.cGold') || document.querySelector('#top .pcb');
+  const card = document.querySelector(host);
+  if (!pill || !card) return false;
+  const pr = pill.getBoundingClientRect(), cr = card.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'fx-fly __p658fly';
+  el.style.cssText = 'position:absolute;left:0;top:0;width:40px;height:40px;'
+    + 'transform:translate(' + (pr.x + pr.width / 2 - 20) + 'px,' + (pr.y + pr.height / 2 - 20) + 'px);'
+    + 'transition:transform .3s linear';
+  document.getElementById('fxl').appendChild(el);
+  el.getBoundingClientRect();
+  el.style.transform = 'translate(' + (cr.x + cr.width / 2 - 20) + 'px,' + (cr.y + cr.height / 2 - 20) + 'px)';
+  await new Promise(r => setTimeout(r, 420));
+  el.remove();
   return true;
 };
 
@@ -110,8 +133,7 @@ async function run(page, opts) {
   await page.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub('train'); renderTrain(); });
   await page.waitForTimeout(420);
   if (opts.rearm) {
-    const okr = await page.evaluate(REARM);
-    if (!okr) throw new Error('되돌림 후킹 실패 — upFx 가 없다');
+    opts.mode = await page.evaluate(REARM);
   }
   const g = await page.evaluate(([hs, bs]) => {
     const h = document.querySelector(hs); if (!h) return null;
@@ -180,16 +202,33 @@ async function run(page, opts) {
   /* ── ⓑ 되돌림 ───────────────────────────────────────────────────────── */
   console.log('\n[ⓑ] 되돌림 — 660 이 걷은 `fxSpend(cur, host)` 를 **자 안에서만** 되살린다');
   const B = await open();
-  const b = await run(B.page, { rearm: true });
+  const opt = { rearm: true };
+  const b = await run(B.page, opt);
+  if (opt.mode === 'none') {
+    /* 678 이 선언을 걷은 뒤 — 제품 경로가 없으니 자가 같은 그림을 직접 그린다 */
+    await B.page.evaluate(() => { const P = window.__p658; P.add.length = 0; P.gone.length = 0; });
+    await B.page.evaluate(FLY, HOST);
+    const r2 = await B.page.evaluate(() => ({ gone: window.__p658.gone.slice() }));
+    b.gone = r2.gone;
+  }
+  console.log('     되돌림 경로: ' + (opt.mode === 'product'
+    ? '**제품 함수 `fxSpend`**(678 이 아직 안 걷었다)'
+    : '**자가 직접 그림**(678 이 선언을 걷었다 — 338 규칙대로 기대를 상태에 맞춰 바꿔 적는다)'));
   const gb = geo(b.gone, b.host, b.btn);
   ok(gb.conv.length > 0,
      'ⓑ1 ★ 되살리면 같은 자가 **수렴을 본다** — ⓐ1 의 0 은 헛초록이 아니다',
      '수렴 ' + gb.conv.length + '장'
      + (gb.conv.length ? ' (' + [...new Set(gb.conv.map(r => r.c.trim()))].join(' · ') + ')' : ''));
   {
-    const golds = gb.conv.filter(r => r.cur === 'gold' || /cGold|fx-spd/.test(r.c));
-    ok(golds.length > 0, 'ⓑ2 그 수렴이 **골드**다 — 주인 문면(«골드가 … 버튼쪽으로»)과 같은 것을 봤다',
-       '골드 ' + golds.length + '/' + gb.conv.length + '장');
+    if (opt.mode === 'product') {
+      const golds = gb.conv.filter(r => r.cur === 'gold' || /cGold|fx-spd/.test(r.c));
+      ok(golds.length > 0, 'ⓑ2 그 수렴이 **골드**다 — 주인 문면(«골드가 … 버튼쪽으로»)과 같은 것을 봤다',
+         '골드 ' + golds.length + '/' + gb.conv.length + '장');
+    } else {
+      /* 678 뒤 — 제품에 그 비행이 아예 없으니 «골드인가» 는 물을 대상이 없다.
+         이 절이 묻는 것은 «자가 수렴을 볼 수 있는가» 하나로 좁는다(기대를 상태에 맞춰 적는다). */
+      console.log('     (ⓑ2 는 제품 경로가 있을 때만 묻는다 — 지금은 선언이 걷혔다)');
+    }
     if (gb.conv.length) {
       const d0 = gb.conv.map(r => Math.hypot(r.x1 - r.x0, r.y1 - r.y0));
       console.log('     수렴 비행 거리 중앙값 ' + p2(d0.sort((x, y) => x - y)[Math.floor(d0.length / 2)]) + 'px'
