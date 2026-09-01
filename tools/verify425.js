@@ -70,6 +70,15 @@ window.__v425 = {
   w(){ return typeof bossIntroW === 'function' ? bossIntroW() : 0; },
   cleanup(){
     if(dunRun) endDunRun(false, true);
+    /* ⚑ 674 — **격파 시퀀스(475 의 bossClear)를 여기서 닫는다.** 안 닫으면 표본이 서로 오염된다:
+       [F] 의 «시련의 탑» 은 1층 요구 피해가 168(황금 동굴 1000 의 1/6)이라 표본 창 안에서
+       보스가 실제로 죽어 시퀀스가 열리는데, 그 프레임에 런이 끝나 위 endDunRun 이 조기
+       return 하고 시퀀스만 남는다. 그러면 battleLocked() (= md 나 **bossClear**)가 계속 참이라
+       **다음 표본부터 입장이 전부 막힌다** — 실제로 [F] despair·[F-a]·[D] 세 항이 그래서 빨갰다.
+       ⚠ 제품 결함이 아니다. 제품은 다음 틱에 스스로 지운다(index.html 23547 —
+       «bossClear 의 md 가 지금 모드와 다르면 null»). 시계를 표본 끝에서 멈추는 것은 이 자뿐이라,
+       **제품이 한 틱 뒤에 하는 일을 자가 표본 사이에서 대신** 한다. */
+    if(typeof bossClear !== 'undefined' && bossClear) bossClear = null;
     document.querySelectorAll('.modal.on, .mw.on').forEach(el => el.classList.remove('on'));
     const cl = document.getElementById('dclw'); if(cl) cl.classList.remove('on');
     if(typeof closeModal === 'function') closeModal();
@@ -115,7 +124,11 @@ const blk = (name, r) => (r && r.__err ? (no(name + ' — 평가 실패: ' + r._
 /* 한 던전을 «입장 → 보스 등장 → 국면 → 전투» 로 굴리며 프레임마다 t·카메라를 찍는다 */
 const RUN = ([id]) => {
   const H = window.__v425;
-  if (!H.enter(id)) return { err: '입장 실패' };
+  /* ⚑ 674 — 표본이 **중립인 전장에서** 시작했는가. 앞 표본이 격파 시퀀스를 남기면
+     `battleLocked()` 가 참이라 입장이 통째로 막히는데, 그때 나오는 «입장 실패» 는
+     원인을 안 말한다. 전제를 표본마다 같이 실어 [F-d] 가 그 자리를 묻는다. */
+  const preLocked = typeof battleLocked === 'function' ? battleLocked() : null;
+  if (!H.enter(id)) return { err: '입장 실패', preLocked };
   const t0 = dunRun.t, SEC = DUN_SEC;
   const d2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   let f = 0, fIn = -1, fFightFirst = -1, tAtIn = null, hudAtIn = null, barAtIn = null;
@@ -174,7 +187,7 @@ const RUN = ([id]) => {
   }
   const r = dunRun;
   const out = {
-    SEC, t0, f, fIn, tAtIn, hudAtIn, barAtIn,
+    SEC, t0, f, fIn, tAtIn, hudAtIn, barAtIn, preLocked,
     fIntroEnd, tAtIntroEnd, introFrames, fFightFirst,
     camBossMin: camBossMin === Infinity ? null : +camBossMin.toFixed(2),
     camPlayMaxIntro: +camPlayMaxIntro.toFixed(2), camPlayAtEnd,
@@ -361,10 +374,13 @@ const RUN_OTHER = ([mode]) => {
 
   /* ═══ §F — 던전 8종 + 탑 2종 전수 ════════════════════════════════════ */
   console.log('\n[F] 전 종 — 던전 8 + 탑 2 에서 «샌 시간» 이 0 이다');
-  let leak = 0, noIntro = 0, seen = 0;
+  let leak = 0, noIntro = 0, seen = 0, dirty = 0;
   for (const d of DUNS) {
     const r = await cur.ev(RUN, [d.id]);
     if (r && r.__err) { no('[F] ' + d.id + ' 평가 실패: ' + r.__err); continue; }
+    /* ⚑ 674 — 앞 표본이 남긴 격파 시퀀스로 입장이 막히면 «입장 실패» 만 보이고 원인은 안 보인다.
+       전제(중립 전장)를 먼저 세고 그 수를 [F-d] 가 0 으로 묻는다. */
+    if (r.preLocked) { dirty++; no('[F] ' + d.id + ' — 앞 표본이 전장을 안 비웠다(battleLocked=true)'); }
     if (r.err) { no('[F] ' + d.id + ' — ' + r.err); continue; }
     seen++;
     if (r.tAtIn !== r.SEC) { leak++; no('[F] ' + d.id + ' — 보스가 설 때 t ' + r.tAtIn + ' (기대 ' + r.SEC + ')'); }
@@ -373,6 +389,7 @@ const RUN_OTHER = ([mode]) => {
   is('[F-a] 표본 던전·탑 수', seen, DUNS.length);
   is('[F-b] 제한 시간이 새는 던전 수', leak, 0);
   is('[F-c] 등장 국면이 안 열리는 던전 수', noIntro, 0);
+  is('[F-d] 앞 표본이 전장을 안 비운 채로 시작한 표본 수(674)', dirty, 0);
 
   /* ═══ §D — 페이즈 2번째 보스 ═════════════════════════════════════════ */
   console.log('\n[D] 페이즈 던전 — 2번째 보스에서는 왕복이 0회다');

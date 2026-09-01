@@ -55,10 +55,19 @@ const SCEN = function (md) {
     document.querySelectorAll('.modal.on, .mw.on').forEach(function (el) { el.classList.remove('on'); });
 
     const toasts = [], msgs = [];
-    const rn = window.notify, rs = window.showMsg;
+    /* ⚑ 674 — «보상» 의 눈금을 **지급 경로**로 갈았다. 종전에는 `S.gold` 증감으로 쟀는데
+       그것은 잡몹 킬 골드(`killEnemy` 의 `S.gold += g` — 22153)까지 같이 세는 자다.
+       던전·탑 클리어 보상은 예외 없이 `giveReward(d.rw(f), …)`(finishDunRun 26875)를 지나므로
+       그 호출을 세면 **전투 수입과 보상이 갈린다**. 재화 축은 [1-g2] 가 «사망 프레임» 창에서 따로 본다. */
+    const rewards = [];
+    const rn = window.notify, rs = window.showMsg, rg = window.giveReward;
     window.notify = function (t) { toasts.push(String(t).replace(/<[^>]*>/g, '')); return rn.apply(this, arguments); };
     window.showMsg = function (t) { msgs.push(String(t)); return rs.apply(this, arguments); };
-    const restore = function () { window.notify = rn; window.showMsg = rs; };
+    window.giveReward = function (r) {
+      rewards.push(Object.keys(r || {}).map(function (k) { return k + ':' + r[k]; }).join(','));
+      return rg.apply(this, arguments);
+    };
+    const restore = function () { window.notify = rn; window.showMsg = rs; window.giveReward = rg; };
 
     /* ── 진입 ── */
     if (md === 'dun' || md === 'tower' || md === 'intro' || md === 'auto') {
@@ -95,6 +104,13 @@ const SCEN = function (md) {
     let deaths = 0;
     const rd = window.playerDied;
     window.playerDied = function () { deaths++; return rd.apply(this, arguments); };
+    /* ⚑ 674 — 표본의 전제는 «이 창 안에서는 못 이긴다» 다. 안 세우면 표본이 **이겨서** 끝나
+       결함(«죽고도 계속 싸운다»)이 설 자리 자체가 사라진다 — §R 의 탑 표본이 실제로 그랬다
+       (시련의 탑 1층 need 168 · 사본에서 사망 창 안에 격파 → 클리어 → 층 1→2 → md ""). 필드에
+       이미 선 개체의 체력만 창보다 크게 올린다(스폰 규칙·판정·보상 경로는 한 줄도 안 건드린다).
+       ⚠ 수리본의 [1]~[4] 는 사망 프레임(1프레임)에 끝나므로 이 값에 닿지 않는다 — 이 줄이
+       바꾸는 것은 **사본에서 표본이 살아남는 시간**뿐이다. */
+    enemies.forEach(function (x) { if (x.max > 0) { x.max = 1e12; x.hp = 1e12; } });
     player.hp = 1; player.inv = 0; player.dead = 0;
     let e = enemies[0];
     if (!e) { makeEnemy('zombie'); e = enemies[enemies.length - 1]; }
@@ -114,6 +130,9 @@ const SCEN = function (md) {
                 defw: document.getElementById('defw').classList.contains('on'),
                 dclw: document.getElementById('dclw').classList.contains('on'),
                 farm: !!S.bossFarm, toasts: toasts.slice(), msgs: msgs.slice(),
+                /* ⚑ 674 — 재화는 **사망 프레임**에서 잰다. 아래 ②③ 은 실패 뒤 10초를 더 흘리는데
+                   그 창은 스테이지로 돌아간 플레이어가 잡몹을 잡는 창이라 «보상» 이 아니다. */
+                gold: S.gold, dia: S.dia,
                 introOn: !!(dunRun && dunRun.introOn) };
 
     /* ② +4초 — 사망 연출(2.4초)이 끝나고도 그 보스전이 살아 있는가 = «죽어도 안 지는 보스전» */
@@ -129,6 +148,7 @@ const SCEN = function (md) {
                  toasts: toasts.slice(), msgs: msgs.slice() };
 
     /* ③ 보상·진행 */
+    out.rewards = rewards.slice();          /* 674 — 지급 경로(giveReward)를 지난 횟수·내용 */
     out.after = { gold: S.gold, dia: S.dia };
     if (md === 'dun' || md === 'intro' || md === 'auto') out.after.floor = S.dun[DUNGEONS[0].id];
     if (md === 'tower') out.after.floor = S.tower;
@@ -140,6 +160,56 @@ const SCEN = function (md) {
     arena = null; raidOn = null; promo = null; dgdAutoOn = false;
     document.querySelectorAll('.modal.on, .mw.on').forEach(function (el) { el.classList.remove('on'); });
     document.getElementById('defw').classList.remove('on');
+    document.getElementById('dclw').classList.remove('on');
+  } catch (err) { out.err = String((err && err.message) || err).slice(0, 200); }
+  return out;
+};
+
+/* ⚑ 674 — §P 양성 대조. [1-g]·[1-g2] 가 «아무것도 안 재는 자» 가 아님을 못박는다:
+   **같은 눈금**으로 실제 클리어를 재면 지급 경로가 잡히고 재화가 그 프레임에 오른다.
+   (실패 표본과 코드를 나누는 이유는 위 SCEN 이 «못 이기게» 체력을 올려 두기 때문이다 —
+    양성 대조는 정반대로 «이기는» 표본이라 그 줄을 안 탄다.) */
+const SCEN_CLR = function () {
+  const out = {};
+  try {
+    localStorage.clear();
+    Object.assign(S, DEF());
+    S.own.slash = { n: 0, l: 1 }; S.eqSkill = ['slash'];
+    S.stage = 20; S.best = 20; S.guide.idx = 99;
+    S.rank = 0; S.dia = 99999; S.gold = 1e7;
+    arena = null; raidOn = null; promo = null;
+    if (dunRun) endDunRun(false, true);
+    spawnStage();
+    const rewards = [];
+    const rg = window.giveReward;
+    let goldAtPay = null, diaAtPay = null;
+    window.giveReward = function (r) {
+      rewards.push(Object.keys(r || {}).map(function (k) { return k + ':' + r[k]; }).join(','));
+      const v = rg.apply(this, arguments);
+      goldAtPay = S.gold; diaAtPay = S.dia;
+      return v;
+    };
+    const d = DUNGEONS[0]; S.dunTk[d.id] = 9;
+    challengeDungeon(d);
+    if (!dunRun) { window.giveReward = rg; out.err = '던전 진입 실패'; return out; }
+    out.before = { gold: S.gold, dia: S.dia, floor: S.dun[d.id] };
+    spawnQ.forEach(function (q) { if (q.t === 'dunboss') q.delay = 0; });
+    for (let i = 0; i < 30 && !enemies.some(function (e) { return e.tk === 'dunboss'; }); i++) step(1 / 60);
+    for (let i = 0; i < 300 && dunRun && dunRun.introOn; i++) step(1 / 60);
+    /* 보스를 «한 대면 죽는» 상태로 두고 실제 전투로 격파한다(판정·지급은 제품 경로 그대로) */
+    let n = 0;
+    for (let i = 0; i < 900 && dunRun; i++) {
+      const b = enemies.find(function (e) { return e.tk === 'dunboss' && e.hp > 0; });
+      if (b) { b.hp = 1; b.x = player.x + 8; b.y = player.y; n++; }
+      step(1 / 60);
+    }
+    out.bossFrames = n;
+    out.rewards = rewards.slice();
+    out.goldAtPay = goldAtPay; out.diaAtPay = diaAtPay;
+    out.after = { gold: S.gold, dia: S.dia, floor: S.dun[d.id] };
+    window.giveReward = rg;
+    if (dunRun) endDunRun(false, true);
+    document.querySelectorAll('.modal.on, .mw.on').forEach(function (el) { el.classList.remove('on'); });
     document.getElementById('dclw').classList.remove('on');
   } catch (err) { out.err = String((err && err.message) || err).slice(0, 200); }
   return out;
@@ -205,8 +275,18 @@ const T = (s, re) => s.some(t => re.test(t));
      '[1-e] 10초 뒤에도 그 던전으로 돌아가 있지 않다(«죽어도 안 지는» 재발 감시)');
   is(d.before && d.after && d.after.floor === d.before.floor,
      '[1-f] 실패라 레벨이 안 오른다', d.before && (d.before.floor + ' → ' + d.after.floor));
-  is(d.before && d.after && d.after.gold === d.before.gold && d.after.dia === d.before.dia,
-     '[1-g] 보상 0(골드·다이아 Δ0)', d.before && (d.before.gold + '/' + d.before.dia + ' → ' + d.after.gold + '/' + d.after.dia));
+  /* ⚑ 674 — 종전 [1-g] 는 «`S.gold` 가 안 늘었나» 를 **실패 뒤 10초를 더 흘린 뒤**에 물었다.
+     그 창은 스테이지로 돌아간 플레이어가 잡몹을 잡는 창이라(`killEnemy` 의 `S.gold += g`)
+     보상이 0 이어도 골드는 늘어난다 — 자가 **전투 수입을 보상으로 세고 있었다**(실측 +865).
+     축은 «클리어 보상이 안 나갔다» 하나인데 눈금이 둘이었으므로 눈금을 갈랐다:
+       [1-g]  지급 경로(`giveReward`)를 한 번도 안 지났다  ← 보상의 정의 그 자체
+       [1-g2] **사망 프레임**의 골드·다이아 Δ0            ← 재화 축, 창을 지급 프레임으로 좁혔다
+     이 눈금이 «아무것도 안 재는 자» 가 아니라는 것은 §P(양성 대조 — 실제 클리어)가 못박는다. */
+  is(d.rewards && d.rewards.length === 0, '[1-g] 보상 지급 경로(giveReward)를 한 번도 안 지났다',
+     d.rewards && (d.rewards.length + '건' + (d.rewards.length ? ' — ' + d.rewards.join(' | ') : '')));
+  is(d.before && d.at0 && d.at0.gold === d.before.gold && d.at0.dia === d.before.dia,
+     '[1-g2] 사망 프레임의 골드·다이아 Δ0(전투 수입이 아니라 지급 프레임을 본다)',
+     d.before && d.at0 && (d.before.gold + '/' + d.before.dia + ' → ' + d.at0.gold + '/' + d.at0.dia));
   is(d.at0 && d.at0.defw === false, '[1-h] 18 패배 화면은 안 뜬다 — 던전은 제 실패 통보가 받는다(273 ①)');
 
   /* ── [2] 탑 ── */
@@ -287,6 +367,20 @@ const T = (s, re) => s.some(t => re.test(t));
 
   is(errs.length === 0, '[9] 콘솔·페이지 오류 0건', errs.length ? errs.slice(0, 2).join(' | ') : '0건');
 
+  /* ── [§P] 양성 대조(674) — 같은 눈금이 «실제 보상» 은 잡는다 ── */
+  console.log('\n[§P] 양성 대조 — 클리어한 판에서는 [1-g]·[1-g2] 의 눈금이 보상을 잡는다');
+  const P = await page.evaluate(SCEN_CLR);
+  if (P.err) is(false, '[P] 표본을 못 세웠다', P.err);
+  else {
+    is(P.after && P.before && P.after.floor === P.before.floor + 1,
+       '[P-a] (준비) 실제로 클리어했다(층이 올랐다)', P.before && (P.before.floor + ' → ' + P.after.floor));
+    is(P.rewards && P.rewards.length >= 1, '[P-b] ★ [1-g] 의 눈금이 지급 경로를 잡는다',
+       P.rewards && (P.rewards.length + '건 — ' + P.rewards.join(' | ')));
+    is(P.goldAtPay !== null && P.before && P.goldAtPay > P.before.gold,
+       '[P-c] ★ [1-g2] 의 눈금(지급 프레임의 재화)이 오른다',
+       P.before && (P.before.gold + ' → ' + P.goldAtPay));
+  }
+
   /* ── [§R] 되돌림 시험 ── */
   console.log('\n[§R] 되돌림 시험 — 옛 가드 사본에서는 [1]~[4] 가 빨개진다');
   const { page: rp, errs: rerrs } = await boot(ctx, 'file://' + revPath);
@@ -299,6 +393,12 @@ const T = (s, re) => s.some(t => re.test(t));
     const alive = v.died === true && v.at4 && v.at4.md === v.mdIn && v.at4.md !== '';
     is(alive, '[R-' + k + '] 사본에서는 ' + n + ' 이 «죽고도 계속 싸운다» — 결함이 재현된다',
        v.at4 && ('md="' + v.at4.md + '" hp=' + v.at4.hp));
+    /* ⚑ 674 — **전제**: 표본이 «이겨서» 끝나면 결함이 설 자리가 없고, 그때 나오는 md="" 는
+       수리가 아니라 클리어다. 종전에는 이 자리가 안 물어져 [R-tower] 가 «수리가 재현 안 된다»
+       처럼 보였다(사본에서 시련의 탑 1층 need 168 → 사망 창 안에 격파 → 층 1→2). */
+    is(!(v.rewards && v.rewards.length),
+       '[R-' + k + '-전제] 그 표본이 **클리어로** 끝나지 않았다(보상 지급 0건 — 674)',
+       v.rewards ? v.rewards.length + '건' + (v.rewards.length ? ' — ' + v.rewards.join(' | ') : '') : '?');
   }
   is(RV.stage.at0 && RV.stage.at0.defw === true && RV.stage.at0.farm === true,
      '[R-stage] 사본에서도 스테이지는 실패한다 = 이 자는 «아무거나 흔들면 빨개지는» 항등식이 아니다');
