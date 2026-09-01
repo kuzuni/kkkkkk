@@ -9601,6 +9601,8 @@
   /* 카드 350×77 r16 — 보유(139,118,99)/미보유(92,77,64). 장착 = 시안 링 6 + 검정 배지 */
   .pf-card{position:relative;width:350px;height:77px;border-radius:16px;background:#5C4D40}
   .pf-card.own{background:#8B7663}
+  /* 706 — 누를 수 있는 칸이라는 표시. 레이아웃 Δ0px(커서만 바뀐다). */
+  .pf-card{cursor:pointer}
   .pf-card.eq{box-shadow:0 0 0 1px #93EFE4,inset 0 0 0 5px #93EFE4}
   /* 카드 내부 육각 배너 w298 h57, 카드 상 11 / 좌 26 */
   .pf-bn{position:absolute;left:26px;top:11px;width:298px;height:57px;line-height:57px}
@@ -20622,6 +20624,14 @@ const DEF = () => sumAliasView({
      이전에는 `i <= S.rank` 로 «파생» 시켰는데, 파생은 계급이 내려가면 칭호도 같이 회수돼
      «승급 성공 시에만 지급» 이라는 규칙을 표현하지 못한다(주인 지시 2026-08-27). */
   titles:{ 0:1 },
+  /* 706 — **장착 중인 칭호**(주인 지시 2026-09-02 02:25 «칭호를 지금 다른거로 장착이 안되더라»).
+     201 ② 가 «보유» 를 파생에서 떼어냈지만 «장착» 은 그대로 `S.rank` 파생으로 남아 있어서
+     고를 자리 자체가 없었다(`probe706` [0b]). 여기가 그 자리다.
+     `null` = «한 번도 고른 적 없음» 이고 그때만 계급을 따라간다 — **구 세이브가 정확히 그 상태**라
+     KEY 를 안 올리고도 옛 화면과 한 픽셀도 안 달라진다(`verify706` §4 가 실로드로 못박는다).
+     ⚠ 기본값을 `0`(브론즈)이나 `S.rank` 스냅숏으로 바꾸지 마라 — 그러면 «고른 적 없음» 과
+     «브론즈를 골랐다» 가 같은 값이 되어 승급이 칭호를 따라 올리는 길이 막힌다. */
+  titleEq:null,
   /* 496 — 소환 레벨·경험치는 **전 배너 공용 하나**다(주인 확정 «소환 레벨은 다 합쳐서»).
      구조는 `S.sum[b] = {lv,exp}` 5 벌에서 스칼라 둘로 내려왔다. `S.sum` 자체는 사라지지 않고
      **별칭 뷰**로 남는다(아래 `defineProperty`) — 옛 이름으로 읽고 쓰는 자리가 전부 그 하나를
@@ -20752,6 +20762,15 @@ function load(){
     /* 201 ② — 칭호 보유. 구 세이브엔 이 키가 없다(44 교훈 2 «없으면 기본값», KEY 는 올리지 않는다 —
        저장 «구조» 는 그대로고 값만 채워진다). 소급은 아래 `grantRankTitle` 루프가 한다. */
     b.titles = (d.titles && typeof d.titles === 'object') ? d.titles : {};
+    /* 706 — 장착 칭호. 구 세이브엔 이 키가 없으니 `null` 로 남고 = 계급을 따라간다(옛 동작 그대로).
+       손댄 세이브가 문자열·음수·범위 밖을 들고 와도 여기서 한 종류(정수 또는 null)로 못박는다.
+       «보유하고 있는가» 는 여기서 안 본다 — 소급 지급(`grantRankTitle` 루프)이 아래에서 돌기 때문에
+       지금 판정하면 아직 안 들어온 칭호를 잘라낸다. 보유 검사는 읽는 쪽(`titleIdx`)이 매번 한다. */
+    /* ⚠ `Number(d.titleEq)` 로 감싸지 마라 — **`Number(null)` 은 0 이다.** «고른 적 없음» 은 실제로
+       `null` 로 저장돼 되돌아오므로(JSON 왕복) 그렇게 쓰면 한 번도 안 고른 세이브가 전부
+       «브론즈를 골랐다» 로 살아난다. `verify706` [D2] 가 초판에서 그것을 잡았다. 날값을 그대로 본다. */
+    { const te = d.titleEq;
+      b.titleEq = (Number.isInteger(te) && te >= 0 && te < RANKS.length) ? te : null; }
     /* 153 — 동적 우편. 구 세이브엔 두 키가 없다(44 교훈 2 «없으면 기본값», KEY 는 올리지 않는다).
        id·수량을 여기서 한 번 정화해 두면 `mailRowHtml` 이 NaN 을 그릴 길이 없다. */
     b.mailx = (Array.isArray(d.mailx) ? d.mailx : []).filter(m => m && typeof m.id === 'string')
@@ -25253,8 +25272,8 @@ function drawHud(){
   $('cpN').textContent = fmtB(jzRollVal('cp', cp()));   /* 60 — 전투력도 뚝 바뀌지 않고 롤링한다 */
   fitNum($('cpN'), cpRoom());                          /* 150 — 자릿수가 길어져도 한 글자도 안 버린다 */
   $('nickN').textContent = S.nick;
-  $('rankN').textContent = rankOf().n;
-  porHud();                                            /* 201 ③ — 헤더 초상화 = 현재 착용 코스튬 */
+  $('rankN').textContent = titleOf().n;                /* 706 — 이 자리는 «칭호» 다(HUD 주석 위 참조) */
+  porHud();                                          /* 201 ③ — 헤더 초상화 = 현재 착용 코스튬 */
   /* 58 — 뚝 바뀌지 않고 롤링한다(fxTick 이 fxDisp 를 실제 값으로 수렴시킨다) */
   $('goldN').textContent = fmtG(fxVal('gold'));
   $('diaN').textContent = fmt(fxVal('dia'));
@@ -27456,6 +27475,41 @@ function grantRankTitle(ri){
   if(!RANKS[ri] || titleOwn(ri)) return false;
   if(!S.titles) S.titles = {};
   S.titles[ri] = 1;
+  return true;
+}
+/* ---- 706 장착 칭호 — «계급» 과 «칭호» 를 두 축으로 가른다 (2026-09-02 주인 지시) ----------
+   결손은 판정식도 데이터도 아니라 **축이 하나뿐이었다**는 것이다: 보유는 `S.titles` 인데
+   장착은 `i === S.rank` 라(`probe706` [0b]) 다른 것을 고를 자리가 없었고, 그래서 클릭 결선도
+   없었다([0c] «없다»). 아래 셋이 그 축을 세운다 — 읽기(`titleIdx`) · 표시(`titleOf`) · 쓰기(`titleEquip`).
+
+   ⚑ **`rankOf()` 로 되돌리지 마라.** 계급(`rankOf`)은 승급전·계급 보너스·다음 계급이 읽는 **판정 축**이고
+   여기 셋은 **표시 축**이다. 한 함수로 합치면 «칭호를 바꿨더니 계급 보너스가 바뀐다» 가 된다.
+   반대로 승급 팝업·계급 보너스 줄(`renderSt` h3 · `nextRank`)은 계속 `rankOf()` 를 써야 한다.
+
+   폴백이 두 겹인 이유: ① 고른 적 없으면(`null`) 계급을 따라간다 = 구 세이브·신규 플레이어가
+   옛 화면과 똑같다 ② 고른 값이 보유 밖이면(세이브 손댐, 표 축소) 조용히 계급으로 되돌아간다 —
+   못 가진 칭호가 HUD 에 걸리는 길을 **구조적으로** 막는다(회수하지는 않는다: 다시 얻으면 되살아난다). */
+const titleIdx = () => {
+  const t = S.titleEq;
+  return (Number.isInteger(t) && t >= 0 && t < RANKS.length && titleOwn(t))
+    ? t : Math.min(S.rank, RANKS.length - 1);
+};
+const titleOf = () => RANKS[titleIdx()];
+/* 장착. 보유 밖이면 **바꾸지 않고** 이유를 말한다(664 반려 규약 · 26583·32059 와 같은 «🔒 이름 — 조건» 꼴).
+   돌려주는 값은 «실제로 바뀌었는가» 다 — 부르는 쪽이 그것으로 다시 그릴지를 정한다. */
+function titleEquip(ri){
+  if(!RANKS[ri]) return false;
+  if(!titleOwn(ri)){
+    notify('🔒 <b>' + RANKS[ri].n + '</b> — ' + RANKS[ri].n + ' 승급에 성공하면 받습니다');
+    return false;
+  }
+  if(titleIdx() === ri && Number.isInteger(S.titleEq)) return false;
+  S.titleEq = ri;
+  save();
+  drawHud();                                   /* 칭호는 HUD 에도 걸려 있다(#rankN) */
+  if($('pfw').classList.contains('on')) renderProfile();
+  if($('rkw') && $('rkw').classList.contains('on')) renderRank();   /* 41 랭킹의 내 줄도 칭호를 쓴다 */
+  fxToast('칭호 <b>' + RANKS[ri].n + '</b> 장착');
   return true;
 }
 /* 182 ③ — 승급 성공 팝업의 «획득한 코스튬» 연출. 17 스탯업 «성공» 과 **같은 한 세트**를 쓴다
@@ -32571,13 +32625,15 @@ function pfGamerId(){
 function renderProfile(){
   $('pfGid').innerHTML = '<i>Gamer Id: ' + pfGamerId() + '</i>';
   $('pfNick').innerHTML = ''; { const i = document.createElement('i'); i.textContent = S.nick; $('pfNick').appendChild(i); }
-  $('pfTtl').textContent = rankOf().n;
+  $('pfTtl').textContent = titleOf().n;              /* 706 — 계급이 아니라 «장착 칭호» 다 */
   porPaint($('pfPor'));            /* 201 ③ — 초상 = 현재 착용 코스튬 */
   let h = '';
+  const cur = titleIdx();                            /* 706 — 루프 밖에서 한 번(파생 두 벌 방지) */
   RANKS.forEach((r, i) => {
-    /* 201 ② — 보유는 «계급 index 이하» 파생이 아니라 **실제로 지급받았는가**(S.titles)다. */
-    const own = titleOwn(i), eq = i === S.rank, bn = PF_BN[i] || PF_BN[0];
-    h += '<div class="pf-card' + (own ? ' own' : '') + (eq ? ' eq' : '') + '">'
+    /* 201 ② — 보유는 «계급 index 이하» 파생이 아니라 **실제로 지급받았는가**(S.titles)다.
+       706 — 장착은 `S.rank` 가 아니라 `titleIdx()` 다(고른 적 없으면 그 안에서 계급으로 폴백). */
+    const own = titleOwn(i), eq = i === cur, bn = PF_BN[i] || PF_BN[0];
+    h += '<div class="pf-card' + (own ? ' own' : '') + (eq ? ' eq' : '') + '" data-ttl="' + i + '">'
       +  '<div class="pf-bn hx' + (i === 4 || i === 5 ? ' g2' : '') + '" style="--gc:' + bn.gc + ';--bv:' + bn.bv
       +  (bn.ring ? ';--gr:' + bn.ring : '') + '">'
       +  '<s class="o"></s>' + (bn.ring ? '<s class="m"></s>' : '') + '<s class="f"></s>'
@@ -32588,6 +32644,17 @@ function renderProfile(){
   });
   $('pfCards').innerHTML = h;
 }
+/* 706 — 칭호 카드 클릭. 결선을 **그릇에 한 번**(위임)으로 건다 — `renderProfile` 이 매번
+   `innerHTML` 로 카드를 통째로 새로 만들기 때문에 카드마다 `onclick` 을 달면 장착할 때마다
+   같은 핸들러를 8개씩 다시 만든다(그리고 `titleEquip` 이 그 안에서 다시 그리므로 재진입이다).
+   미보유 칸도 **핸들러까지 도달시킨다** — 664 규약대로 «아무 일도 안 일어남» 이 아니라
+   이유를 말해야 하고, 그 반려는 `titleEquip` 한 곳에 있다. */
+$('pfCards').addEventListener('click', e => {
+  const c = e.target.closest('.pf-card');
+  if(!c || !$('pfCards').contains(c)) return;
+  const i = Number(c.dataset.ttl);
+  if(Number.isInteger(i)) titleEquip(i);
+});
 function openProfile(){
   renderProfile();
   $('pfw').classList.add('on');
@@ -32868,7 +32935,8 @@ function rankRows(){
      나중에 실제 랭커가 서버에서 오면 그 사람의 look 을 넣기만 하면 된다. 지금은 서버가 없어
      내 엔트리는 {avatar: cosCur()}, 더미 랭커는 엔트리마다 서로 다른 AVATARS 틴트(av0~av5 순환)를
      넣어 «외형이 다르게 그려지는» 데이터 경로를 검증한다(확장: sprite·tint·weapon…). */
-  const me = { n:S.nick, av:'🐱', t:S.rank, best:S.best | 0, cp:cp(), me:true, look:{ avatar: cosCur() } };
+  /* 706 — 내 줄의 칭호도 «장착한 것» 이다. NPC 의 `x.t` 는 그쪽 표의 값이라 그대로 둔다. */
+  const me = { n:S.nick, av:'🐱', t:titleIdx(), best:S.best | 0, cp:cp(), me:true, look:{ avatar: cosCur() } };
   const all = RANK_NPC.map((x, i) => ({ n:x.n, av:x.av, t:x.t, best:x.best, cp:rkCp(x.best),
                                         look:{ avatar: 'av' + (i % 6) } })).concat([me]);
   all.sort((a, b) => b.best - a.best || b.cp - a.cp);
