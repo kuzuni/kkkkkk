@@ -6923,12 +6923,16 @@
        ref 를 다시 재서 «어두운 쪽이 면적의 절반» 이 아님을 보였다(AS 전이 실측 45·52 / 103·110 / 161·168:
        **선 폭 7 · x축 주기 58**(ref px) = 어두운 면적 **12%**. AR 방향성 실측: ref 는 (1,1)·(1,−1) 양방향
        3.97/3.88 로 **둘 다** 변한다 = 교차선). ⇒ 45°·−45° 두 겹의 «가는 선».
-       x축 주기 58 → 환산 119.7, 선 폭 7 → 환산 14.4 이고, 45° 선의 **수직** 간격은 거기에 sin45 를 곱한다:
-       주기 119.7×.7071 = **84.6** · 선 폭 14.4×.7071 = **10.2**. 알파는 ref 실측 비
-       (52/57 · 179/196 · 128/141 = 0.912)의 여집합 **.088**. 교차점만 두 겹이 겹쳐 더 어둡지만
-       그 면적은 12%×12% ≈ 1.4% 라 톤 판정에 안 잡힌다. */
-    background:repeating-linear-gradient(45deg,rgba(0,0,0,.088) 0 10.2px,#0000 10.2px 84.6px),
-      repeating-linear-gradient(-45deg,rgba(0,0,0,.088) 0 10.2px,#0000 10.2px 84.6px),var(--c);
+       ⚠ **그 «가는 선» 도 틀렸다(3회차 정정)** — AS 의 «선 폭 7» 은 전이를 **거꾸로 읽은 것**이다.
+       ref 행 파형을 직접 찍으면(y556, x25..145 의 G 채널) **어두운 쪽이 넓다**:
+       밝음 7 → **어두움 36** → 밝음 22 → **어두움 37** → 밝음 … ⇒ 주기 **58**(ref px) 은 맞고
+       어두운 면적은 12% 가 아니라 **약 57%** 다(문턱 대조: ref 56.9% ↔ «가는 선» 안 19.8%).
+       12% 는 «어두운 톤과 **완전히 같은 값**인 화소» 만 센 값이고, ref 는 노이즈가 있어 그 셈이 낮게 나온다.
+       ⇒ 정답은 **두 톤 마름모 체커**(면적 50:50)이고, 1회차가 틀렸던 것은 형태가 아니라 **크기**였다:
+       타일 60 → **120**(= x축 주기 58 × k = 119.7). 알파는 ref 실측 비
+       (52/57 · 179/196 · 128/141 = 0.912)의 여집합 **.088** 그대로. */
+    background:conic-gradient(from 45deg,rgba(0,0,0,.088) 0 25%,#0000 0 50%,
+      rgba(0,0,0,.088) 0 75%,#0000 0) 0 0/120px 120px,var(--c);
     border:12px solid var(--h);border-top:0;border-radius:31px;
     -webkit-mask:var(--ntc-bg);mask:var(--ntc-bg)}
   .pvc>.hdb{left:10px;top:10px;right:10px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
@@ -7037,20 +7041,30 @@
     -webkit-text-stroke:12px #000;paint-order:stroke fill}
   /* ⑥ 빨강 리본 2줄 — 카드 좌변 밖으로 4px 물려 시작(ref 크림 꼬리)하고,
      오른끝에 금색 판 + 그 아래 수량이 붙는다. 카드 아래쪽에서 bottom 기준으로 앉힌다 */
-  .pvc>.rb{left:-3px;height:72px;border:6px solid #000;border-radius:8px;
-    background:linear-gradient(180deg,#FF8A90 0 6px,#FF565D 6px 55px,#C4343C 55px 72px);
+  /* ⚑ 667 3회차 — 높이가 **한 값(72)으로 고정**돼 있었다. ref 는 두 카드에서 다르다:
+     초록(불릿형) 37 → **76** · 파랑(배너형) 32.5 → **67**. 비평가 4인(AR·AS·AU·AT)이 전부 짚었고
+     각자 «불릿형 −5.6% / 배너형 +7.5%» 로 같은 값을 냈다. 띠 **상변**과 피치는 이미 정확하므로
+     (AU: 불릿형 상변 = 하변에서 272·138 · AT: 배너형 로컬 295·413) **상변을 붙박아 두고 높이만** 바꾼다
+     ⇒ `bottom` 을 «상변거리 − 새 높이» 로 다시 적는다. 세로 그라디언트·크림 캡·제비꼬리도 같이 비례. */
+  .pvc>.rb{left:-3px;height:76px;border:6px solid #000;border-radius:8px;
+    background:linear-gradient(180deg,#FF8A90 0 8.33%,#FF565D 8.33% 76.4%,#C4343C 76.4% 100%);
     display:flex;align-items:center;padding:0 24px 0 41px}
+  .pvc.ban1>.rb{height:67px}
   /* ref 리본 왼끝은 «접힌 종이» 크림 캡이다(ref 13×31 → 27×64). 검정 테 안쪽에 물린다 */
-  .pvc>.rb::before{content:'';position:absolute;left:0;top:0;width:27px;height:60px;
+  .pvc>.rb::before{content:'';position:absolute;left:0;top:0;width:27px;height:64px;
     background:#FFFCF3;border-radius:3px;z-index:1}
+  .pvc.ban1>.rb::before{height:56px}
   /* 세로 자리는 ref 대로 카드 바닥에서 잰다(불릿형 771 / 배너형 534 기준) */
-  .pvc>.rb1{bottom:200px}
-  .pvc>.rb2{bottom:66px}
+  /* ⚑ 667 — 상변거리는 불변(불릿형 272·138 · 배너형 239·121)이고 높이만 72→76/67 이므로
+     bottom = 상변거리 − 높이 로 다시 적는다: 272−76=196 · 138−76=62 · 239−67=172 · 121−67=54 */
+  .pvc>.rb1{bottom:196px}
+  .pvc>.rb2{bottom:62px}
   /* 리본2 오른끝 «제비꼬리» — 자식을 자르지 않도록 clip-path 대신 몸통색 삼각형을 덧댄다 */
-  .pvc>.rb2::after{content:'';position:absolute;right:-6px;top:-6px;width:26px;height:72px;
+  .pvc>.rb2::after{content:'';position:absolute;right:-6px;top:-6px;width:26px;height:76px;
     background:var(--c);clip-path:polygon(100% 0,100% 100%,0 50%)}
-  .pvc.ban1>.rb1{bottom:167px}
-  .pvc.ban1>.rb2{bottom:49px}
+  .pvc.ban1>.rb2::after{height:67px}
+  .pvc.ban1>.rb1{bottom:172px}
+  .pvc.ban1>.rb2{bottom:54px}
   .pvc>.rb>i{color:#ECE975;font-size:34px;line-height:38px;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
   /* 금색 판 + 보석 — ref 는 리본 위로 19px 솟고 수량은 리본 아래로 내려간다 */
