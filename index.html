@@ -19077,6 +19077,59 @@ const SKILLS = [
    같은 등급으로만 옮기므로 도감 세트(`skill:{g}`)의 «세트 최저 Lv» 가 이관 때문에 내려가지 않는다. */
 const SK193_MOVE = { vigor:'curve', mend:'whirl', haste:'rico', ward:'drone', rage:'laser' };
 
+/* ⚑ 710 (주인 지시 2026-09-02 «스킬 이펙트 중복 된거 있으면 중복 안되게 하기») —
+   **발동 이펙트 전수 표.** 한 스킬 = 한 서명(`fam` 렌더러 가족 · `sh` 실루엣 키)이고,
+   같은 서명을 두 스킬이 쓰면 그것이 곧 «중복» 이다. 게이트는 두 겹이다 —
+   `tools/verify710.js` 가 이 표의 중복 쌍 0 을 지키고, `tools/probe710.js` 가 같은 것을
+   **찍힌 픽셀**(실루엣 마스크 IoU)로 다시 잰다. 표만 맞고 그림이 같으면 프로브가 빨개진다.
+   ⚑ 412 교훈 그대로 — **가르는 축은 «형상» 이고 색은 보조**다. 수리 전 실측이 그 이유다:
+     18쌍이 마스크 IoU **1.000**(색만 다른 완전 동일 그림)이었고, 회색조에서는 한 그림이다.
+   ⚑ 껍데기 규격(잉크 지름 대략 22~30 게임px · 선 굵기 · 알파 층)은 **안 건드린다** —
+     412 의 «한 밴드» 원칙이라 27종이 여전히 한 세트로 읽힌다. 자리·속도·수명·관통·피해는
+     한 글자도 안 건드리므로 **밸런스는 구성상 불변**이다(114·541 의 «그리기만» 처방과 같은 문법).
+   ⚠ 표만 고치고 그림을 안 그리면 서명이 거짓말이 된다 — `sh` 를 읽는 자리는 셋뿐이다:
+     `shotBody()`(투사체·접촉 잔상) · 번개 폴리라인(`l.bk`) · `skAreaFx()`(광역 2종).
+   ⚠ 지속형 2종(회전검·신성 오라)은 cd 0 이라 시전 경로가 없다 — 원래부터 서로 다른 렌더러가
+     그린다(칼날 공전 ↔ 불길 링). 여기서는 **서명만 적는다**(그 둘에 대한 제품 변경 0줄). */
+const SK_FX = {
+  /* ── 검격(호) ── */
+  slash:  { fam:'shot',  sh:'arc'      },   /* 검기 — 초승달 호(기준형) */
+  multi:  { fam:'shot',  sh:'rake'     },   /* 멀티 검기 — 호 세 겹(갈퀴) */
+  whirl:  { fam:'shot',  sh:'cross'    },   /* 주변 참격 — X 교차 참격 */
+  gale:   { fam:'shot',  sh:'wing'     },   /* 폭풍의 칼날 — 호 + 뒷깃 세 줄 */
+  /* ── 투척 ── */
+  shuri:  { fam:'shot',  sh:'star'     },   /* 표창 난사 — 4각 별(기준형) */
+  stone:  { fam:'shot',  sh:'rock'     },   /* 돌팔매 — 울퉁불퉁한 바위 육각 */
+  boomer: { fam:'shot',  sh:'bmr'      },   /* 부메랑 — 굽은 막대 */
+  /* ── 찌르기 ── */
+  ice:    { fam:'shot',  sh:'spear'    },   /* 얼음창 — 창날 + 냉기 띠(기준형) */
+  curve:  { fam:'shot',  sh:'moon'     },   /* 곡선탄 — 초승달(아이콘 🌙 과 한 벌) */
+  arrow:  { fam:'shot',  sh:'arrow'    },   /* 꿰뚫는 화살 — 대 + 촉 + 깃 */
+  lance:  { fam:'shot',  sh:'lance'    },   /* 천벌의 창 — 긴 창날 + 가로 가드 */
+  /* ── 불 ── */
+  boom:   { fam:'shot',  sh:'fire'     },   /* 화염구 — 둥근 화구(기준형) */
+  meteor: { fam:'shot',  sh:'rockfall' },   /* 운석 낙하 — 바위 코어 + 불꼬리 */
+  flask:  { fam:'shot',  sh:'bottle'   },   /* 화염병 — 병 실루엣 + 심지 불 */
+  /* ── 구슬 ── */
+  rico:   { fam:'shot',  sh:'gem'      },   /* 반사탄 — 마름모 결정(아이콘 🔷) */
+  bounce: { fam:'shot',  sh:'ball'     },   /* 도약 연쇄탄 — 공 + 이음매(아이콘 🎾) */
+  spiral: { fam:'shot',  sh:'swirl'    },   /* 나선탄 — 소용돌이(아이콘 🍥) */
+  drone:  { fam:'drone', sh:'orb'      },   /* 드론 소환 — 소환수 2기(연사 탄은 공용 구슬) */
+  /* ── 번개(폴리라인) ── */
+  bolt:   { fam:'bolt',  sh:'zap'      },   /* 연쇄 번개 — 지그재그 + 가지(기준형) */
+  drain:  { fam:'bolt',  sh:'tether'   },   /* 흡혈의 검 — 떨지 않는 굵은 흡수관 */
+  frost:  { fam:'bolt',  sh:'shard'    },   /* 서리 연쇄 — 곧은 마디 + 마디마다 얼음 결정 */
+  /* ── 장판·빔 ── */
+  poison: { fam:'zone',  sh:'mist'     },   /* 맹독 안개 — 원형 장판 */
+  laser:  { fam:'zone',  sh:'beam'     },   /* 레이저 — 캡슐 빔 */
+  /* ── 광역 폭발 ── */
+  holy:   { fam:'area',  sh:'ray'      },   /* 심판의 빛 — 여덟 갈래 빛살 */
+  nova:   { fam:'area',  sh:'shock'    },   /* 창세의 폭발 — 3겹 동심 충격파 */
+  /* ── 지속형(시전 경로 없음 · 제품 0줄) ── */
+  orbit:  { fam:'hold',  sh:'blade'    },   /* 회전검 — 칼날 공전 */
+  aura:   { fam:'hold',  sh:'flame'    }    /* 신성 오라 — 불길 링 */
+};
+
 /* ---- 장비 (무기 · 방패 · 목걸이) ----
    703·704 (2026-09-02, 저장소 주인 지시) — 부위가 올리는 축이 **부위마다 하나** 였던 것이
    방패·목걸이는 **둘**이 됐다(무기는 그대로 하나):
@@ -22494,6 +22547,26 @@ function fxRingFlat(x, y, r1, col, life, w, dl){       /* 바닥에 눕는 링(�
   fxRing(x, y, r1, col, life, w, r1*0.15, dl);
   rings[rings.length-1].fl = 1;
 }
+/* ⚑ 710 — 광역 폭발 2종(심판의 빛 · 창세의 폭발)이 **같은 폭발 스프라이트 한 장**을 배율만
+   달리해(5.4 ↔ 6.09) 쓰고 있었다. 아틀라스가 `explosion.png` 한 장뿐이라 새 스프라이트를 만들 수
+   없으므로, 412 방식대로 **형상 층을 하나 더 얹어** 가른다 — 스프라이트·피해 반경·색·판정은
+   한 글자도 안 건드린다(밸런스 0줄 · 이 함수가 만드는 것은 링뿐이다).
+     ray   (심판의 빛)   — 여덟 갈래 «빛살»: 짧은 호 8개가 방사로 뻗는다.
+     shock (창세의 폭발) — 3겹 «동심 충격파»: 지연 발화로 안에서 밖으로 밀려 나간다.
+   ⚠ 링 억제(fxRing 4회차 «같은 자리·같은 크기»)를 반드시 피해야 한다 — 빛살 8개는 자리·반경이
+     같아 억제에 걸리면 **한 개만 남는다**. 그래서 `nd`(억제 끄기)를 켜고, 충격파는 지연(dl)이
+     0 이 아니라 억제 대상에서 애초에 빠진다(같은 이유로 마법진과도 안 부딪힌다). */
+function skAreaFx(sh, x, y, r, col){
+  if(sh === 'ray'){
+    for(let i=0;i<8;i++){
+      fxRing(x, y, r*0.92, col, 0.34, FX_W, r*0.30, 0, 1);
+      const q = rings[rings.length-1];
+      q.a0 = i*0.7854; q.aw = 0.30;
+    }
+  }else if(sh === 'shock'){
+    for(let i=0;i<3;i++) fxRingFlat(x, y, r*(0.5 + i*0.25), col, 0.40, FX_W, 0.03 + i*0.07);
+  }
+}
 function burst(x, y, c, n, pw){
   for(let i=0;i<n;i++){
     if(parts.length > PART_CAP) break;
@@ -23184,6 +23257,7 @@ function castGeneric(s, dmg){
       areaDamage(px, py, s.r || 190, dmg, s.col);
       booms.push({ x:px, y:py, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom',
                    scale:(s.scale || 3.4)*1.45, alpha:0.5 });   /* 114 ④ — 화구를 피해 반경에 맞게 */
+      skAreaFx(SK_FX[s.id] && SK_FX[s.id].sh, px, py, s.r || 190, s.col);   /* 710 — 3겹 동심 충격파 */
       /* 698 — 스킬 셰이크 폐지. `s.shake` 를 읽던 유일한 자리라 `SKILLS` 의 `shake:9`(창세의 폭발)도
          선언째 걷어냈다(295-②·399·460 «죽은 코드 금지»). */
       return true;
@@ -23230,6 +23304,7 @@ function sfxCast(id){
 /* ---------------- 스킬 발동 ---------------- */
 function castSkill(s){
   const n0 = shots.length;              /* 114 — 이번 시전이 «새로» 만든 투사체 구간의 시작 */
+  const l0 = bolts.length;              /* 710 — 같은 문법으로 «이번 시전의 번개» 구간도 잡는다 */
   const ok = castSkillRaw(s);
   if(ok) sfxCast(s.id);                 /* 99 — 발동 실패(대상 없음·버프 중복)에는 울리지 않는다.
                                            ⚠ verify99 가 이 두 줄의 «인접»을 소스 정규식으로 본다(LESSONS 110-①).
@@ -23237,6 +23312,18 @@ function castSkill(s){
   /* 114 ⑥ — 등급 가중(트레일 길이·스파크 수 +10%/등급)을 위해 이번 시전의 투사체에만 등급을 찍는다.
      86 교훈 2 대로 기존 13분기는 한 글자도 건드리지 않는다 — 여기 한 줄이면 전 종류가 덮인다. */
   if(ok) for(let i=n0;i<shots.length;i++) shots[i].g = s.g;
+  /* ⚑ 710 — 이번 시전이 만든 연출에 **그 스킬의 실루엣 키**를 찍는다. 114 의 등급 태깅과 같은
+     문법이라 기존 13분기와 `castGeneric` 을 **한 글자도 안 건드린다** — 표는 `SK_FX` 하나뿐이고
+     그리기는 그 키만 읽는다(«표 하나 · 읽는 자리 셋» — 402 의 «사본을 지운다» 와 같은 원칙).
+     ⚠ 태그가 없으면 그림은 옛 공용 분기로 떨어진다(`shotBody` 의 `else`) — 구 세이브가 남긴
+       투사체나 드론 연사 탄처럼 «스킬 시전이 아닌» 발이 그 자리다. */
+  if(ok){
+    const fx = SK_FX[s.id];
+    if(fx){
+      for(let i=n0;i<shots.length;i++) shots[i].sh = fx.sh;
+      for(let i=l0;i<bolts.length;i++) bolts[i].bk = fx.sh;
+    }
+  }
   /* 11회차 AL — «시전 트리거 프레임에 연출이 없다». probe114c 실측으로 0ms 프레임의 그려지는
      잔상이 0 개임을 확인했다(투사체는 이미 있지만 표본이 0 이라 그릴 것이 없다).
      시전 순간 플래시 링 1겹 — Ø 41 게임px(적 몸통 34 의 1.2배) · 수명 0.16s(2프레임).
@@ -23465,6 +23552,7 @@ function castSkillRaw(s){
       magicFlash(px, py, 190, '#fff2b0');                  /* 114 ③ — 시전 순간 바닥 마법진 */
       areaDamage(px, py, 190, dmg, '#fff2b0');
       booms.push({ x:px, y:py, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom', scale:5.4, alpha:0.5 });
+      skAreaFx(SK_FX[s.id] && SK_FX[s.id].sh, px, py, 190, '#fff2b0');   /* 710 — 여덟 갈래 빛살 */
       /* 698 — 심판의 빛 시전 셰이크 폐지 */
       return true;
     }
@@ -24148,7 +24236,9 @@ function step(dt){
            2프레임 남긴다. 링은 이미 여기 뜨므로 메우는 것은 «투사체 ↔ 링» 사이의 빈 프레임 하나다.
            프레임당 34.4 게임px 로 날던 그림이 «사라졌다» 가 아니라 «닿아서 부서졌다» 로 읽힌다. */
         if(ghosts.length >= 24) ghosts.shift();
-        ghosts.push({ k:b.k, col:b.col, a:b.a, spin:b.spin || 0,
+        /* 710 — 잔상은 «한 글자도 다르지 않은 그림» 이라야 «닿아서 부서졌다» 로 읽힌다.
+           실루엣 키를 안 물려주면 잔상만 옛 공용 그림으로 튄다(④ 일관성 붕괴). */
+        ghosts.push({ k:b.k, sh:b.sh, sa:b.sa, col:b.col, a:b.a, spin:b.spin || 0,
                       x:ex + (b.x-ex)*0.25, y:ey + (b.y-ey)*0.25,
                       tg:e, toy:e.r - (b.y-ey)*0.25, t:0, life:0.16 });
         if(b.slow) e.slow = b.slow;
@@ -25156,15 +25246,55 @@ function draw(){
   /* 114 20회차 — 투사체 «그림» 만 떼어낸 것. 원점에 그린다(호출자가 translate/alpha 를 잡는다).
      접촉 잔상(ghosts)이 투사체와 **한 글자도 다르지 않은 그림**을 써야 «닿아서 부서졌다» 로 읽힌다 —
      따로 그리면 ④ 일관성에서 «못 보던 이펙트가 하나 더 생겼다» 가 된다. */
+  /* ⚑ 710 — 그림을 고르는 것은 이제 `b.sh`(스킬별 실루엣 키 · `SK_FX`)이고, 없으면 옛 `b.k` 로
+     떨어진다. 수리 전에는 분기가 다섯뿐이라 **17종이 5개의 그림을 나눠 쓰고 있었다**
+     (`probe710` 실측 — 마스크 IoU 1.000 인 쌍 18개). 아래 열일곱 갈래가 그 표의 다른 쪽 끝이다.
+     ⚠ 412 «한 밴드» — 새 실루엣도 잉크 지름 22~30 게임px · 같은 선 굵기 층(굵은 흐린 밑선 +
+       가는 밝은 코어)을 지킨다. 형상만 갈리고 «한 세트» 라는 인상은 안 깨진다.
+     ⚠ 여기는 그리기뿐이다 — 자리·속도·수명·관통·피해를 읽지도 쓰지도 않는다(밸런스 불변). */
   function shotBody(b){
-    if(b.k === 'slash'){
+    const sh = b.sh || b.k;
+    /* 불덩이 공용 몸 — 화염구·화염병이 «크기만 다른 같은 원» 이던 자리(193 ⑧)를 갈랐지만
+       «불» 이라는 재질은 공유해야 한 세트로 읽힌다. 재질만 함수로 남기고 형상은 각자 그린다. */
+    const fireCore = rr => {
+      const g = ctx.createRadialGradient(0,0,2,0,0,rr*1.9);
+      g.addColorStop(0,'#fff2c0'); g.addColorStop(0.45,'#ff9a3c'); g.addColorStop(1,'rgba(255,80,20,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,rr*1.9,0,6.283); ctx.fill();
+      ctx.fillStyle = '#ffdc8a'; ctx.beginPath(); ctx.arc(0,0,rr*0.6,0,6.283); ctx.fill();
+    };
+    if(sh === 'arc' || sh === 'slash'){          /* 검기 — 초승달 호(기준형) */
       ctx.rotate(b.a);
       ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 11; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.arc(0,0,13,-1.0,1.0); ctx.stroke();
       ctx.strokeStyle = b.col; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.arc(0,0,13,-0.85,0.85); ctx.stroke();
-    }else if(b.k === 'shuri' || b.k === 'boomer'){
-      ctx.rotate(b.spin);
+    }else if(sh === 'rake'){                     /* 멀티 검기 — 호 세 겹(갈퀴) */
+      ctx.rotate(b.a);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 6;
+      for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.78,0.78); ctx.stroke(); }
+      ctx.strokeStyle = b.col; ctx.lineWidth = 2.6;
+      for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.64,0.64); ctx.stroke(); }
+    }else if(sh === 'cross'){                    /* 주변 참격 — X 교차 참격 */
+      ctx.rotate(b.a);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.moveTo(-13,-13); ctx.lineTo(13,13); ctx.moveTo(13,-13); ctx.lineTo(-13,13); ctx.stroke();
+      ctx.strokeStyle = b.col; ctx.lineWidth = 3.4;
+      ctx.beginPath(); ctx.moveTo(-13,-13); ctx.lineTo(13,13); ctx.moveTo(13,-13); ctx.lineTo(-13,13); ctx.stroke();
+    }else if(sh === 'wing'){                     /* 폭풍의 칼날 — 호 + 뒷깃 세 줄 */
+      ctx.rotate(b.a);
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 9;
+      ctx.beginPath(); ctx.arc(0,0,13,-1.0,1.0); ctx.stroke();
+      ctx.strokeStyle = b.col; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0,0,13,-0.85,0.85); ctx.stroke();
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      for(const dy of [-9,0,9]){ ctx.moveTo(1,dy*0.75); ctx.lineTo(-17,dy); }
+      ctx.stroke();
+    }else if(sh === 'star' || sh === 'shuri'){   /* 표창 — 4각 별(기준형) */
+      ctx.rotate(b.spin || 0);
       ctx.fillStyle = b.col;
       ctx.beginPath();
       for(let i=0;i<4;i++){
@@ -25173,25 +25303,178 @@ function draw(){
         ctx.lineTo(Math.cos(a+0.785)*4.5, Math.sin(a+0.785)*4.5);
       }
       ctx.closePath(); ctx.fill();
-    }else if(b.k === 'ice'){
+    }else if(sh === 'rock'){                     /* 돌팔매 — 울퉁불퉁한 바위 육각 */
+      ctx.rotate(b.spin || 0);
+      const rr = [13,10.2,12.6,9.2,13.4,10.8];
+      ctx.fillStyle = b.col;
+      ctx.beginPath();
+      for(let i=0;i<6;i++){ const a = i*1.0472; ctx.lineTo(Math.cos(a)*rr[i], Math.sin(a)*rr[i]); }
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(52,38,24,.75)'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.stroke();
+    }else if(sh === 'bmr' || sh === 'boomer'){   /* 부메랑 — 굽은 막대 */
+      ctx.rotate(b.spin || 0);
+      ctx.strokeStyle = 'rgba(255,224,138,.35)'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(-13,7); ctx.lineTo(2,-12); ctx.lineTo(15,5); ctx.stroke();
+      ctx.strokeStyle = b.col; ctx.lineWidth = 4.5;
+      ctx.beginPath(); ctx.moveTo(-13,7); ctx.lineTo(2,-12); ctx.lineTo(15,5); ctx.stroke();
+    }else if(sh === 'spear' || sh === 'ice'){    /* 얼음창 — 창날 + 냉기 띠(기준형) */
       ctx.rotate(b.a);
       ctx.fillStyle = 'rgba(160,235,255,.4)';
       ctx.beginPath(); ctx.ellipse(-8,0,22,8,0,0,6.283); ctx.fill();
       ctx.fillStyle = b.col;
       ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-10,6); ctx.lineTo(-6,0); ctx.lineTo(-10,-6);
       ctx.closePath(); ctx.fill();
-    }else if(b.k === 'boom' || b.k === 'meteor' || b.k === 'flask'){
-      /* 193 ⑧ — 화염병도 «불덩이» 계열 그림을 그대로 쓴다(착탄 뒤 장판만 다르다) */
-      const rr = b.k === 'meteor' ? 15 : b.k === 'flask' ? 9 : 11;
-      const g = ctx.createRadialGradient(0,0,2,0,0,rr*1.9);
-      g.addColorStop(0,'#fff2c0'); g.addColorStop(0.45,'#ff9a3c'); g.addColorStop(1,'rgba(255,80,20,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,rr*1.9,0,6.283); ctx.fill();
-      ctx.fillStyle = '#ffdc8a'; ctx.beginPath(); ctx.arc(0,0,rr*0.6,0,6.283); ctx.fill();
-    }else{
+    }else if(sh === 'moon'){                     /* 곡선탄 — 초승달(🌙 과 한 벌) */
+      ctx.rotate(b.a);
+      /* ⚠ 초승달은 **파낸 쪽 반대로 무게가 쏠린다** — 두 호가 모두 +x 쪽이라 잉크가 통째로
+         원점 밖(실측 local +10..+26)에 앉고, 그러면 «발 자리 둘레의 잉크» 를 보는 자
+         (`verify752` [A4]·[E2] — 중심 ±44 캔버스px = ±11 local)가 빨개진다.
+         형상은 그대로 두고 **자리만** 되민다: 무게중심 +18 을 원점으로 옮겨 −6..+10 이 된다.
+         ⚠ 부호를 눈대중으로 정하지 마라 — 1회차에 +6 으로 밀어 오히려 더 밖으로 내보냈다.
+           `ctx.arc(…, true)` 는 «긴 쪽» 이 아니라 각도가 줄어드는 **짧은 쪽**(오른쪽)을 그린다. */
+      ctx.translate(-18, 0);
+      /* 412 «한 밴드» — 파낸 형상이라 잉크가 계열 평균의 1/5 로 떨어진다(실측 1,901 ↔ 9,025).
+         형상은 그대로 두고 **같은 초승달을 크게·흐리게** 한 겹 뒤에 깔아 덩치를 맞춘다. */
+      ctx.fillStyle = 'rgba(168,255,208,.30)';
+      ctx.beginPath();
+      ctx.arc(0,0,19,0.80,-0.80,true);
+      ctx.arc(10,0,16,-1.05,1.05,false);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = b.col;
+      ctx.beginPath();
+      ctx.arc(0,0,14,0.72,-0.72,true);           /* 바깥 원호 */
+      ctx.arc(8,0,12,-1.05,1.05,false);          /* 안쪽을 파낸다 */
+      ctx.closePath(); ctx.fill();
+    }else if(sh === 'arrow'){                    /* 꿰뚫는 화살 — 대 + 촉 + 깃 */
+      ctx.rotate(b.a);
+      /* 412 «한 밴드» — 선 그림이라 잉크가 계열의 42% 다(실측 3,829 ↔ 9,025).
+         «가장 빠른 발»(sp 900)이라는 성격 그대로 **속도 줄무늬**를 뒤에 깔아 덩치를 맞춘다. */
+      ctx.fillStyle = 'rgba(255,230,168,.30)';
+      ctx.beginPath(); ctx.ellipse(-10,0,20,6.5,0,0,6.283); ctx.fill();
+      ctx.strokeStyle = b.col; ctx.lineCap = 'butt'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-17,0); ctx.lineTo(12,0); ctx.stroke();
+      ctx.fillStyle = b.col;
+      ctx.beginPath(); ctx.moveTo(21,0); ctx.lineTo(9,5.6); ctx.lineTo(9,-5.6); ctx.closePath(); ctx.fill();
+      ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-17,0); ctx.lineTo(-9,6.5); ctx.moveTo(-17,0); ctx.lineTo(-9,-6.5);
+      ctx.moveTo(-12,0); ctx.lineTo(-4,5.2); ctx.moveTo(-12,0); ctx.lineTo(-4,-5.2);
+      ctx.stroke();
+    }else if(sh === 'lance'){                    /* 천벌의 창 — 긴 창날 + 가로 가드 */
+      ctx.rotate(b.a);
+      ctx.fillStyle = 'rgba(255,208,255,.35)';
+      ctx.beginPath(); ctx.ellipse(-9,0,21,5.5,0,0,6.283); ctx.fill();
+      ctx.fillStyle = b.col;
+      ctx.beginPath(); ctx.moveTo(24,0); ctx.lineTo(3,4.6); ctx.lineTo(-7,0); ctx.lineTo(3,-4.6);
+      ctx.closePath(); ctx.fill();
+      ctx.fillRect(-2.4,-10,3.4,20);             /* 가드 — 창을 «자루 있는 무기» 로 읽히게 */
+    }else if(sh === 'fire' || sh === 'boom'){    /* 화염구 — 둥근 화구(기준형) */
+      fireCore(11);
+    }else if(sh === 'rockfall' || sh === 'meteor'){ /* 운석 — 바위 코어 + 불꼬리 */
+      ctx.save();
+      ctx.rotate(b.a);
+      const g2 = ctx.createLinearGradient(0,0,-48,0);
+      g2.addColorStop(0,'rgba(255,180,80,.85)'); g2.addColorStop(1,'rgba(255,80,20,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.moveTo(0,-12); ctx.lineTo(-48,0); ctx.lineTo(0,12); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      const mr = [15,11.8,14.4,11,15.6,12.4];
+      ctx.fillStyle = '#6b5240';
+      ctx.beginPath();
+      for(let i=0;i<6;i++){ const a = i*1.0472 + 0.3; ctx.lineTo(Math.cos(a)*mr[i], Math.sin(a)*mr[i]); }
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#ffb45c'; ctx.lineWidth = 2.6; ctx.lineJoin = 'round'; ctx.stroke();
+    }else if(sh === 'bottle' || sh === 'flask'){ /* 화염병 — 병 실루엣 + 심지 불 */
+      ctx.rotate(b.spin !== undefined ? b.spin : b.a);
+      ctx.fillStyle = b.col;
+      ctx.beginPath();
+      ctx.moveTo(-3.2,-12); ctx.lineTo(3.2,-12); ctx.lineTo(3.2,-6);
+      ctx.quadraticCurveTo(11,-2,11,5); ctx.quadraticCurveTo(11,13,0,13);
+      ctx.quadraticCurveTo(-11,13,-11,5); ctx.quadraticCurveTo(-11,-2,-3.2,-6);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(60,30,10,.55)'; ctx.lineWidth = 1.8; ctx.stroke();
+      ctx.save(); ctx.translate(0,-16); fireCore(4.5); ctx.restore();   /* 심지 불 */
+    }else if(sh === 'gem'){                      /* 반사탄 — 마름모 결정(🔷) */
+      ctx.rotate(b.a);
+      ctx.fillStyle = b.col;
+      ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(9.5,0); ctx.lineTo(0,13); ctx.lineTo(-9.5,0);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(0,13); ctx.moveTo(-9.5,0); ctx.lineTo(9.5,0); ctx.stroke();
+    }else if(sh === 'ball'){                     /* 도약 연쇄탄 — 공 + 이음매(🎾) */
+      const g = ctx.createRadialGradient(-3,-3,1,0,0,11);
+      g.addColorStop(0,'#ffffff'); g.addColorStop(0.55,b.col); g.addColorStop(1,'rgba(140,110,30,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,11,0,6.283); ctx.fill();
+      ctx.strokeStyle = 'rgba(46,34,12,.8)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(-13,0,10,-0.85,0.85); ctx.stroke();
+      ctx.beginPath(); ctx.arc(13,0,10,3.1416-0.85,3.1416+0.85); ctx.stroke();
+    }else if(sh === 'swirl'){                    /* 나선탄 — 소용돌이(🍥) */
+      ctx.rotate((b.sa || 0) + (b.a || 0));
+      ctx.strokeStyle = b.col; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+      ctx.beginPath();
+      for(let i=0;i<=26;i++){
+        const t = i/26, ang = t*5.6, r = 2 + t*11;
+        const X = Math.cos(ang)*r, Y = Math.sin(ang)*r;
+        if(i) ctx.lineTo(X,Y); else ctx.moveTo(X,Y);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0,0,2.6,0,6.283); ctx.fill();
+    }else{                                       /* 드론 연사 탄·태그 없는 발 — 공용 구슬 */
       const g = ctx.createRadialGradient(0,0,1,0,0,9);
       g.addColorStop(0,'#ffffff'); g.addColorStop(0.5,b.col); g.addColorStop(1,'rgba(120,255,210,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,9,0,6.283); ctx.fill();
     }
+  }
+  /* ⚑ 710 — 번개 폴리라인 3종(연쇄 번개 · 흡혈의 검 · 서리 연쇄)이 **한 그림**을 쓰고 있었다.
+     기준형 `zap`(지그재그 + 가지)은 15~17회차가 손수 맞춘 곡선이라 **한 글자도 안 건드리고**,
+     나머지 둘만 여기서 자기 그림을 그린다(아래 bolts 루프가 이 함수로 갈라 보낸다).
+     ⓑ tether(흡혈) — 떨지 않는 굵은 «흡수관» + 시전자 쪽으로 흐르는 구슬(피가 빨려 온다).
+     ⓒ shard(서리) — 곧은 마디 + 마디마다 얼음 결정(각진 마름모). 둘 다 지터·가지가 없다. */
+  function boltAlt(l, col, f){
+    const p = l.pts;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.globalCompositeOperation = 'lighter';
+    if(l.bk === 'tether'){
+      const x1 = p[0], y1 = p[1], x2 = p[p.length-2], y2 = p[p.length-1];
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      const nx = -(y2-y1), ny = (x2-x1), nd = Math.hypot(nx, ny) || 1;
+      const bow = 16*(1-f);                       /* 팽팽했다가 느슨해진다 */
+      const cx = mx + nx/nd*bow, cy = my + ny/nd*bow;
+      for(let pass=0; pass<2; pass++){
+        ctx.globalAlpha = pass ? Math.pow(1-f, 0.9) : Math.pow(1-f, 1.4)*0.7;
+        ctx.strokeStyle = pass ? col : '#ffffff';
+        ctx.lineWidth = pass ? (FX_W2 + 2)*(1 - f*0.5) : (FX_W0 - 0.4)*(1 - f*0.5);
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(cx,cy,x2,y2); ctx.stroke();
+      }
+      ctx.fillStyle = col;                        /* 흐르는 구슬 — 대상 → 시전자 방향 */
+      for(let i=0;i<3;i++){
+        const t = ((f*1.6) + i/3) % 1, u = 1-t;
+        const X = u*u*x2 + 2*u*t*cx + t*t*x1, Y = u*u*y2 + 2*u*t*cy + t*t*y1;
+        ctx.globalAlpha = (1-f)*0.9;
+        ctx.beginPath(); ctx.arc(X, Y, 3.4, 0, 6.283); ctx.fill();
+      }
+    }else{                                        /* shard */
+      for(let pass=0; pass<2; pass++){
+        ctx.globalAlpha = pass ? Math.pow(1-f, 0.9) : Math.pow(1-f, 1.3)*0.75;
+        ctx.strokeStyle = pass ? col : '#ffffff';
+        ctx.lineWidth = pass ? (FX_W2 - 1.4)*(1 - f*0.6) : (FX_W0 - 0.8)*(1 - f*0.6);
+        ctx.beginPath();
+        ctx.moveTo(p[0], p[1]);
+        for(let i=2;i<p.length;i+=2) ctx.lineTo(p[i], p[i+1]);   /* 지터 없음 = «얼어붙었다» */
+        ctx.stroke();
+      }
+      ctx.globalAlpha = Math.pow(1-f, 0.9);       /* 마디마다 얼음 결정 */
+      ctx.fillStyle = col;
+      for(let i=2;i<p.length-2;i+=2){
+        const s = 5.5*(1 - f*0.5);
+        ctx.beginPath();
+        ctx.moveTo(p[i], p[i+1]-s); ctx.lineTo(p[i]+s*0.6, p[i+1]);
+        ctx.lineTo(p[i], p[i+1]+s); ctx.lineTo(p[i]-s*0.6, p[i+1]);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
   }
   /* 193 ① 드론 — 소환수 2기. 몸통(캡슐) + 프로펠러 링 + 총구 점멸. 아트가 들어오면 이 자리에
      스프라이트만 얹으면 되게 bbox(28×16)를 고정으로 잡았다(측정표 «아트 필요» 표) */
@@ -25265,6 +25548,9 @@ function draw(){
     if(!l.pts) continue;
     const col = l.col || '#cfeaff';
     const f = clamp(l.t/BOLT_LIFE, 0, 1);
+    /* ⚑ 710 — 흡혈(tether)·서리(shard)는 자기 그림을 그리고 빠진다. 기준형 `zap`(아래)은
+       15~17회차가 손수 맞춘 감쇠·지터 곡선이라 이 분기 한 줄 말고는 안 건드렸다. */
+    if(l.bk === 'tether' || l.bk === 'shard'){ boltAlt(l, col, f); continue; }
     /* 코어는 0.15s 까지 «살아 있고», 잔광은 끝까지 램프로 사그라든다.
        1회차 비평 ② — 예전엔 코어가 꺼지는 순간 통째로 사라져 80ms 하드 컷이었다.
        ⑦ — 코어 휘도가 폭발(200+)보다 40% 어두워 같은 게임 연출로 안 읽혔다 → 굵기·알파를 올린다 */
