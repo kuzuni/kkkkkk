@@ -303,7 +303,21 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
   }
 
   /* ── [B] 자리 — 찍힌 픽셀 ─────────────────────────────────────────── */
-  blk('B] 자리 — **찍힌 잉크**로 «알 중심 = 아이콘 중심»(350 규칙)');
+  /* ⚑⚑ 820(2026-09-02) — **이 절의 자를 갈아 끼웠다. 제품은 0줄.**
+     옛 [B1] 은 «알 잉크(후광 포함) 중심 ↔ 아이콘 잉크(후광 없음) 중심» 이라 **두 마스크가 서로
+     달랐다** — 알에만 붙은 `.fx-rlic` 의 마지막 층(`drop-shadow(0 0 6px var(--c))`)은 **반투명**이라
+     배경 대비에 따라 문턱을 넘는 거리가 방향마다 다르고, 그래서 «자리» 가 아니라 «글로우 색» 을 쟀다.
+     `probe820` 이 그것을 찍힌 픽셀로 못박았다(A3-ⓔ «마스크가 다르면 다른 것을 잰다»):
+       · 상자 중심(`rwGainFx` 의 cx·cy) ↔ `<i>` 줄상자 중심 **Δ 0.00, −0.05px** — 자리는 옳다.
+       · 후광을 끈 글리프끼리 **Δ 0.71px** · 불투명 흰 테까지 켠 잉크끼리 **Δ 0.00, −0.50px**.
+       · **같은 노드·같은 자리인데 글로우 «색» 만 바꾸면 잉크 중심이 0.50 → 3.00px 로 움직인다**
+         (앰버 폴백 0.50 · 검정 3.00 · 제품색 3.00) — 폭이 허용치(±2) 전체다.
+       · «위가 그릇에 잘린다» 는 기각 — 잘렸다면 색과 무관해야 하는데 앰버에서는 상 12 ↔ 하 13 이다.
+     ⚠ **허용치를 3 으로 넓혀서 닫지 않았다**(334 «무르게 푼 수리»). 대신 **한 항이 뭉개고 있던 둘을
+     갈랐다** — [B1] «자리»(같은 마스크끼리) · [B2] «그려진 알도 중심에 있다»(불투명 층까지) ·
+     [B3] **되돌림 시험**(3px 밀면 [B1] 이 실제로 빨개진다). 판정에서 뺀 합본 값은 [B4] 가 **매 실행
+     숫자로 찍는다**(326 `ck199` 꼴) — 글로우가 진짜로 한쪽으로 쏠리면 그 수가 먼저 말한다. */
+  blk('B] 자리 — **찍힌 잉크**로 «알 중심 = 아이콘 중심»(350 규칙 · 820 이 마스크를 갈랐다)');
   const inkOf = async (clip, hide) => {
     const A = await READ(p, await p.screenshot({ clip }));
     await ev(p, hide, true); await p.waitForTimeout(120);
@@ -338,24 +352,76 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
     }
     return document.querySelectorAll('#fxl .fx-rlic').length === 1;
   }, geo && geo.id);
-  const pInk = (geo && fired) ? await inkOf(geo.clip, h => {
-    for (const nd of document.querySelectorAll('#fxl .fx-rlic')) nd.style.visibility = h ? 'hidden' : '';
+  /* 한 번 띄운 그 알을 **세 겹으로** 잰다 — 다시 띄우면 `fxFlash` 가 마스크에 섞인다.
+     겹은 CSS 에서 **파생**시킨다(402 «표 두 벌» 규약) — 계산된 `filter` 의 **마지막 drop-shadow**
+     하나가 소프트 글로우이므로 그 자리에서 끊는다. 손으로 사슬을 다시 적으면 CSS 가 바뀔 때 조용히 갈린다. */
+  const layers = fired ? await ev(p, () => {
+    const nd = document.querySelector('#fxl .fx-rlic'); if (!nd) return null;
+    const f = getComputedStyle(nd).filter || '';
+    const cut = f.lastIndexOf('drop-shadow(');
+    return { full: f, ring: cut > 0 ? f.slice(0, cut).trim() : '', tail: cut > 0 ? f.slice(cut) : '',
+             n: (f.match(/drop-shadow\(/g) || []).length };
   }) : null;
+  const paint = async css => ev(p, f => {
+    for (const nd of document.querySelectorAll('#fxl .fx-rlic')) nd.style.filter = f;
+  }, css);
+  const inkEgg = async () => inkOf(geo.clip, h => {
+    for (const nd of document.querySelectorAll('#fxl .fx-rlic')) nd.style.visibility = h ? 'hidden' : '';
+  });
+  const pInk = (geo && fired) ? await inkEgg() : null;          /* 그려진 그대로(합본 — [B4] 기록용) */
+  let rInk = null, gInk = null;
+  if (geo && fired && layers && layers.ring) {
+    await paint(layers.ring); await p.waitForTimeout(80);
+    rInk = await inkEgg();                                       /* 불투명 흰 테까지 */
+    await paint('brightness(0)'); await p.waitForTimeout(80);
+    gInk = await inkEgg();                                       /* 글리프만 */
+    await paint('');
+  }
+  const s = geo ? (geo.scale || 1) : 1;
+  const dOf = (a, b) => ({ dx: (a.cx - b.cx) / s, dy: (a.cy - b.cy) / s,
+                           d: Math.hypot((a.cx - b.cx) / s, (a.cy - b.cy) / s) });
+  ok(!!icInk && !!gInk && !!rInk && !!layers && layers.n >= 5 && /\d+(\.\d+)?px\)?\s*$/.test(layers.tail || 'x'),
+     'B0 전제 — 아이콘·알을 **같은 마스크로** 찍었다(글리프 · 흰 테 · 합본 세 겹 · 겹은 CSS 에서 파생)',
+     (icInk ? icInk.w + '×' + icInk.h : '—') + ' / 글리프 ' + (gInk ? gInk.w + '×' + gInk.h : '—')
+     + ' / 흰 테 ' + (rInk ? rInk.w + '×' + rInk.h : '—')
+     + ' · drop-shadow ' + (layers ? layers.n : 0) + '겹');
+  if (icInk && gInk) {
+    const g = dOf(gInk, icInk);
+    ok(g.d <= EPS_C,
+       'B1 ★ **알 글리프 잉크 중심 = 아이콘 글리프 잉크 중심**(±' + EPS_C + 'px · 753 ③ «유물 위치에서»)'
+       + ' — 820: 후광을 뺀 **같은 마스크**끼리 잰다',
+       'Δ ' + g.dx.toFixed(2) + ', ' + g.dy.toFixed(2) + ' = ' + g.d.toFixed(2) + 'px');
+  }
+  if (icInk && rInk) {
+    const r = dOf(rInk, icInk);
+    ok(r.d <= EPS_C,
+       'B2 ★ **그려진 알(불투명 흰 테까지)도 중심이 같다** — 후광이 대칭이라는 뜻(820 신설)',
+       'Δ ' + r.dx.toFixed(2) + ', ' + r.dy.toFixed(2) + ' = ' + r.d.toFixed(2) + 'px');
+  }
+  /* 되돌림 시험 — 자가 «자리» 를 정말 재는지. 3px 밀면 [B1] 이 빨개져야 한다(334 처방). */
+  if (geo && fired && gInk) {
+    await ev(p, () => { for (const nd of document.querySelectorAll('#fxl .fx-rlic')) {
+      nd.dataset.oldTop = nd.style.top; nd.style.top = (parseFloat(nd.style.top) + 3).toFixed(1) + 'px';
+      nd.style.filter = 'brightness(0)'; } });
+    await p.waitForTimeout(80);
+    const mv = await inkEgg();
+    await ev(p, () => { for (const nd of document.querySelectorAll('#fxl .fx-rlic')) {
+      if (nd.dataset.oldTop !== undefined) { nd.style.top = nd.dataset.oldTop; delete nd.dataset.oldTop; }
+      nd.style.filter = ''; } });
+    const m = mv && icInk ? dOf(mv, icInk) : null;
+    ok(!!m && m.d > EPS_C,
+       'B3 ★ **되돌림 — 알을 3px 내리면 [B1] 이 실제로 빨개진다**(자가 «자리» 를 잰다는 증명 · 334)',
+       m ? 'Δ ' + m.dx.toFixed(2) + ', ' + m.dy.toFixed(2) + ' = ' + m.d.toFixed(2) + 'px > ' + EPS_C : '—');
+  }
   await ev(p, () => { if (window.__oldBye) { window.fxBye = window.__oldBye; delete window.__oldBye; } });
-  ok(!!icInk && !!pInk, 'B0 전제 — 아이콘·알 두 잉크를 다 찍었다',
-     (icInk ? Math.round(icInk.w) + '×' + Math.round(icInk.h) : '—') + ' / '
-     + (pInk ? Math.round(pInk.w) + '×' + Math.round(pInk.h) : '—'));
   if (icInk && pInk) {
-    const s = geo.scale || 1;
-    const dx = (pInk.cx - icInk.cx) / s, dy = (pInk.cy - icInk.cy) / s;
-    ok(Math.hypot(dx, dy) <= EPS_C,
-       'B1 ★ **알 잉크 중심 = 아이콘 잉크 중심**(±' + EPS_C + 'px · 753 ③ «유물 위치에서»)',
-       'Δ ' + dx.toFixed(2) + ', ' + dy.toFixed(2) + ' = ' + Math.hypot(dx, dy).toFixed(2) + 'px');
-    /* ⏸ 실패 아님 — 683 5회차가 남긴 «라벨 가림» 축을 값으로만 찍는다(326 `ck199` 꼴).
-       알 잉크는 683 이 세운 여덟 방향 흰 테 + 6px 글로우 때문에 글리프보다 넓게 찍힌다. */
-    info('⏸ 알 찍힌 잉크 ÷ 아이콘 찍힌 잉크',
-         (pInk.w / icInk.w).toFixed(3) + ' × ' + (pInk.h / icInk.h).toFixed(3)
-         + ' (글리프는 항등 — 차이는 `.fx-rlic` 의 흰 테·글로우 몫)');
+    /* ⏸ 실패 아님 — 판정에서 뺀 «합본»(반투명 글로우 포함) 을 매 실행 숫자로 남긴다(326 `ck199` 꼴).
+       이 수는 «자리» 가 아니라 «글로우가 어느 쪽으로 얼마나 번져 잡히는가» 다 — `probe820` 이
+       같은 노드에서 색만 바꿔 0.50 ↔ 3.00 으로 흔들리는 것을 찍었다. 쏠림이 커지면 여기서 먼저 보인다. */
+    const f = dOf(pInk, icInk);
+    info('⏸ 합본(글로우 포함) Δ — 판정 축 아님',
+         f.dx.toFixed(2) + ', ' + f.dy.toFixed(2) + ' = ' + f.d.toFixed(2) + 'px'
+         + ' · 잉크비 ' + (pInk.w / icInk.w).toFixed(3) + ' × ' + (pInk.h / icInk.h).toFixed(3));
   }
 
   /* ── [R] 되돌림 ───────────────────────────────────────────────────── */
