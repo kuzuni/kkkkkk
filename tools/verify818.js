@@ -27,6 +27,26 @@ const URL = 'file://' + SRC;
 const HOLD_MS = Number(process.env.V818_HOLD || 2600);
 const STEP_MS = Number(process.env.V818_STEP || 16);
 
+/* ⚑⚑ 825 — [C] 의 밀도 판정을 «러너가 정하는 값» 에서 «제품이 정하는 값» 으로 옮겼다.
+   등재문의 가설(«화소 주사가 rAF 를 밀어 평균이 내려간다»)은 `probe825` 1차 재현에서 **기각**됐다
+   (heavy·heavy4·light·inpage 네 표본기가 10.4~10.9알로 전부 겹쳤다 — 주사를 4배로 해도 −4.9%).
+   진짜 뿌리는 **홀드 틱 사슬이 setTimeout 이라는 것**이다. 동시 생존 평균은 곱이고
+       동시 생존 ≈ (발화 한 번이 낳는 알 수) × (알 수명 ÷ **발화 간격**)
+   앞 둘만 제품의 결정(`UPFX_N` 4 · `FXSPARK_MS` 380)이고 발화 간격은 러너가 정한다.
+   `probe825` 가 CPU 스로틀 ×6 으로 **제품 0줄 변경**에서 동시 평균 11.5 → 6.9알(문턱 8 아래)을
+   찍었다 — 등재문이 본 «7.4 ↔ 8.5» 가 그 얼굴이고, 봉우리 축([C2])도 여유 1알로 같이 붙었다.
+   ⇒ **문턱 8 은 한 칸도 안 넓혔다.** 그 값을 러너의 실측 간격 대신 **제품의 가장 성긴 홀드 틱**
+     (`TR_HOLD_IV0` 160ms — 350ms 지연 뒤 반복이 시작하는 간격)에서 읽는다. 실측 동시 평균·봉우리·
+     발화 간격은 **기록으로만** 남긴다(LESSONS 239-① «흔들리는 양은 표에 기록으로만»). */
+const TICK_MS   = Number(process.env.V818_TICK || 160);  /* = index.html `TR_HOLD_IV0` (제품 상수) */
+const UPFX_N    = 4;                                     /* = index.html `UPFX_N`      (제품 상수) */
+const FXSPARK_MS = 380;                                  /* = index.html `FXSPARK_MS`  (제품 상수) */
+const PER_MIN   = 2.5;                                   /* 발화당 스폰 — 무회귀 3.9 ↔ 회귀 1.0 사이 */
+const LIFE_MIN  = 300;                                   /* 알 수명    — 무회귀 445 ↔ 회귀 155 사이 */
+/* 825 — «느린 러너» 손잡이. 기본 1 = 꺼짐이라 **눈금은 한 칸도 안 바뀐다**(695 `freeze` 선례).
+   `V818_CPU=6 node tools/verify818.js` 로 이 자가 러너 속도에 안 흔들리는지 직접 볼 수 있다. */
+const CPU_RATE  = Number(process.env.V818_CPU || 1);
+
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? '  [' + d + ']' : '')); };
 const p1 = n => Math.round(n * 10) / 10;
@@ -74,6 +94,37 @@ const SAMPLE = (sel) => {
   };
 };
 
+/* ── 825 — 페이지 안 관측기. `#fxl` 변이를 직접 보므로 **CDP 왕복이 0회**이고, 재는 것은
+      «발화 한 번이 낳는 알 수» 와 «알 수명» 두 제품 값이다(위 머리말). 위 SAMPLE 과 같은 홀드에
+      얹히고 서로 간섭하지 않는다 — 하나는 잉크 덮임을, 하나는 노드 변이를 본다.
+   ⚠ 338 — «함수를 불렀는가» 가 아니라 화면에 실제로 **놓이고 걷힌 노드**를 센다. */
+const OBS_START = () => {
+  const L = document.getElementById('fxl');
+  const st = { bursts: 0, spawned: 0, lives: [], born: new Map() };
+  window.__v818 = st;
+  const isEgg = nd => nd.nodeType === 1 && /fx-spark/.test(nd.className + '');
+  st.mo = new MutationObserver(recs => {
+    let add = 0; const now = performance.now();
+    for (const r of recs) {
+      for (const nd of r.addedNodes) if (isEgg(nd)) { add++; st.born.set(nd, now); }
+      for (const nd of r.removedNodes) if (isEgg(nd)) {
+        const t0 = st.born.get(nd);
+        if (t0 != null) { st.lives.push(now - t0); st.born.delete(nd); }
+      }
+    }
+    if (add) { st.bursts++; st.spawned += add; }   /* 한 콜백 = 한 발화(cnt 알을 동기로 붙인다) */
+  });
+  st.mo.observe(L, { childList: true });
+};
+const OBS_STOP = () => {
+  const st = window.__v818; window.__v818 = null;
+  if (!st) return null;
+  try { st.mo.disconnect(); } catch (_) {}
+  const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  return { bursts: st.bursts, spawned: st.spawned,
+           per: st.bursts ? st.spawned / st.bursts : 0, life: mean(st.lives), lifeN: st.lives.length };
+};
+
 /* keep = null 이면 인라인 신고를 걷어 **제품 선언 그대로** 본다. 문자열이면 그 값을 주입한다
    ('none' = 아무 요소에도 안 걸리는 타입 셀렉터 = 818 이전의 «구멍 0개»). */
 async function hold(page, t, keep) {
@@ -97,6 +148,7 @@ async function hold(page, t, keep) {
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   }, t);
   if (!g) return null;
+  await page.evaluate(OBS_START);                        /* 825 — 같은 홀드에 얹는다(왕복 0회) */
   await page.mouse.move(g.x, g.y);
   await page.mouse.down();
   const rows = [];
@@ -106,10 +158,16 @@ async function hold(page, t, keep) {
     await page.waitForTimeout(STEP_MS);
   }
   await page.mouse.up();
-  await page.waitForTimeout(60);
+  const wall = Date.now() - t0;
+  await page.waitForTimeout(140);                        /* 마지막 세대의 «걷힘» 까지 봐야 수명이 닫힌다 */
+  const o = (await page.evaluate(OBS_STOP)) || { bursts: 0, spawned: 0, per: 0, life: 0, lifeN: 0 };
   const live = rows.filter(r => r.n > 0);
-  if (!live.length) return { frames: 0, max: 0, n25: 0, n05: 0, eggs: 0, peak: 0, out: 0 };
-  return {
+  const base = { per: o.per, life: o.life, lifeN: o.lifeN, bursts: o.bursts, spawned: o.spawned,
+                 iv: o.bursts ? wall / o.bursts : 0,
+                 /* 660 의 «동시 ≥8알» 을 **제품의 가장 성긴 틱**에서 읽은 값 — 러너 간격을 안 쓴다 */
+                 dens: o.per * o.life / TICK_MS };
+  if (!live.length) return Object.assign(base, { frames: 0, max: 0, n25: 0, n05: 0, eggs: 0, peak: 0, out: 0 });
+  return Object.assign(base, {
     frames: live.length,
     max: Math.max(...live.map(r => r.num)),
     n25: live.filter(r => r.num >= 0.25).length,
@@ -117,7 +175,7 @@ async function hold(page, t, keep) {
     eggs: live.reduce((a, r) => a + r.n, 0) / live.length,
     peak: Math.max(...live.map(r => r.n)),
     out:  Math.max(...rows.map(r => r.out))
-  };
+  });
 }
 
 (async () => {
@@ -150,6 +208,11 @@ async function hold(page, t, keep) {
   await page.goto(URL);
   await page.waitForFunction(() => typeof S !== 'undefined' && typeof openTrain === 'function');
   await page.waitForTimeout(700);
+  if (CPU_RATE > 1) {
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_RATE });
+    console.log('[i] 825 손잡이 — CPU 스로틀 ×' + CPU_RATE + '(느린 러너 재현 · 눈금은 그대로다)');
+  }
 
   /* ── 레이아웃 Δ0px — 룬 껍데기를 씌우기 «전» 과 같은 상자인가 ───────────
      자를 «옛 판을 꺼내 비교» 로 짜면 얕은 클론 밖에서 부패한다(756). 대신 **같은 실행 안에서**
@@ -219,22 +282,35 @@ async function hold(page, t, keep) {
     /* ⚑ 816 은 «수리 전의 85%» 를 눈금으로 썼다. 여기서는 그 비가 아니라 **660 자신의 눈금**을 쓴다 —
        단련은 최악 자릿수의 잉크가 181px(버튼 폭의 53%)이라 구멍의 대가가 −28% 로 그 비를 못 넘는데,
        그것은 «연출이 죽었다» 가 아니라 «넓은 숫자를 비우면 그만큼 좁아진다» 는 산수다.
-       660 이 «터진다» 라고 못 박은 값(`verify660` [B1][E3] 동시 ≥8알)이 이 자리의 옳은 문턱이다. */
-    ok(now[k] && now[k].peak >= 8, 'C2 ' + n + ' 밀도가 660 [E3] 의 눈금 그대로다 — **동시 생존 최대 ≥8알**',
-       (now[k] ? now[k].peak : 0) + '알(최대) ↔ 818 이전 ' + (pre[k] ? pre[k].peak : 0) + '알');
-    /* ⚑ C2 는 660 의 자를 **글자 그대로** 옮긴 것(그쪽도 «최대 동시»)이고, C2b 는 그보다 **엄한** 읽기다 —
-       «봉우리에서만 터진다» 와 «홀드 내내 터진다» 는 다른 말이라 평균도 같이 묻는다.
-       ⚠ 단련은 여기가 문턱에 가깝다(3회 실측 8.6 / 8.7 / 9.0 — 여유 0.6~1.0알). 그 이유는 결함이
-         아니라 **산수**다: 최악 자릿수의 수량 잉크가 181px 로 버튼 폭 340 의 53% 라, 그걸 비우면
-         남는 자리가 그만큼 준다(대가 −33%). 룬은 같은 신고로 −6% 뿐이다(버튼이 420 으로 넓다).
-         이 값이 8 아래로 내려가면 **신고를 줄이는 것이 아니라** 잉크·버튼 폭 쪽을 봐야 한다. */
-    ok(now[k] && now[k].eggs >= 8, 'C2b ' + n + ' 봉우리뿐 아니라 **평균**도 ≥8알 — 홀드 내내 터진다',
-       p1(now[k] ? now[k].eggs : 0) + '알(평균) ↔ 818 이전 ' + p1(pre[k] ? pre[k].eggs : 0) + '알');
+       660 이 «터진다» 라고 못 박은 값(`verify660` [B1][E3] 동시 ≥8알)이 이 자리의 옳은 문턱이다.
+       ⚑⚑ **825 — 그 문턱을 «어디서 읽는가» 만 바꿨다(값은 8 그대로).** 실측 동시 수(봉우리·평균)는
+         발화 «간격» 에 반비례하는데 그 간격은 홀드 틱 사슬(setTimeout)이라 **러너가 정한다** —
+         `probe825` 가 CPU ×6 에서 제품 0줄로 봉우리 17 → 9.3 · 평균 11.5 → 6.9 를 찍었다(둘 다
+         문턱에 붙거나 아래로 내려간다). 제품이 정하는 두 인자만으로 같은 말을 한다:
+             동시 생존  =  발화당 스폰 알  ×  알 수명  ÷  발화 간격
+         간격에 **제품의 가장 성긴 홀드 틱**(`TR_HOLD_IV0` 160ms)을 넣으면 러너가 식에서 빠진다. */
+    ok(now[k] && now[k].dens >= 8,
+       'C2 ' + n + ' 밀도가 660 [E3] 의 눈금 그대로다 — **동시 생존 ≥8알**(제품의 가장 성긴 틱 ' + TICK_MS + 'ms 에서)',
+       p1(now[k] ? now[k].dens : 0) + '알 = 발화당 ' + p1(now[k] ? now[k].per : 0) + '알 × 수명 '
+       + p1(now[k] ? now[k].life : 0) + 'ms ÷ ' + TICK_MS + 'ms  ↔ 818 이전 ' + p1(pre[k] ? pre[k].dens : 0) + '알');
+    /* C2 의 두 인자를 각각도 묻는다 — 곱이 초록인데 한쪽이 죽어 다른 쪽이 메우는 일을 막는다
+       (문턱은 `probe825` 의 «무회귀 최소 ↔ 회귀 최대» 사이에서 골랐다: 발화당 3.9↔1.0 · 수명 445↔155). */
+    ok(now[k] && now[k].per >= PER_MIN,
+       'C2b ' + n + ' 한 번의 발화가 낳는 알이 `UPFX_N`(' + UPFX_N + ') 급이다 — 밀도가 죽지 않았다',
+       p1(now[k] ? now[k].per : 0) + '알/발화 (문턱 ' + PER_MIN + ') · 발화 ' + (now[k] ? now[k].bursts : 0) + '회');
+    ok(now[k] && now[k].life >= LIFE_MIN,
+       'C2c ' + n + ' 알이 **제 수명 끝까지 산다**(`FXSPARK_MS` ' + FXSPARK_MS + 'ms · 660 보강2 «캔슬 금지»)',
+       p1(now[k] ? now[k].life : 0) + 'ms (문턱 ' + LIFE_MIN + ') · 표본 ' + (now[k] ? now[k].lifeN : 0) + '알');
   }
   /* 대가는 «크다/작다» 가 아니라 값으로 남긴다 — 다음 세션이 문턱을 다시 고를 때 읽을 수 있게 */
   for (const k of Object.keys(T))
-    console.log('       · ' + T[k].name + ' 밀도 대가: ' + p1(pre[k].eggs) + ' → ' + p1(now[k].eggs)
-                + '알 (' + p1((now[k].eggs / pre[k].eggs - 1) * 100) + '%)');
+    console.log('       · ' + T[k].name + ' 밀도 대가: ' + p1(pre[k].dens) + ' → ' + p1(now[k].dens)
+                + '알 (' + p1((now[k].dens / pre[k].dens - 1) * 100) + '%)');
+  /* 825 — 러너가 정하는 값은 **기록으로만** 남긴다(LESSONS 239-①). 판정은 위 C2·C2b·C2c 가 한다. */
+  console.log('       ── 러너 의존값(기록 전용 · 판정 안 함) ──');
+  for (const k of Object.keys(T))
+    console.log('       · ' + T[k].name + ' 실측 동시: 평균 ' + p1(now[k].eggs) + '알 · 봉우리 ' + now[k].peak
+                + '알 · 발화 간격 ' + p1(now[k].iv) + 'ms(제품 최속 60 ~ 최성김 ' + TICK_MS + 'ms)');
 
   /* ── [R] 되돌림 ───────────────────────────────────────────────────── */
   console.log('\n[R] 되돌림 — 무르게 푼 수리가 아니다');
@@ -249,6 +325,42 @@ async function hold(page, t, keep) {
     const r3 = await hold(page, T[k], null);
     ok(r3 && r3.n05 === 0, 'R3 ' + n + ' 원복하면 다시 0 이다', '≥5% 표본 ' + (r3 ? r3.n05 : '?') + '개');
   }
+  /* ── 825 — 새 밀도 축의 되돌림 시험. 제품 파일은 **0줄**, `upFx` 를 한 겹 감싸 두 인자를 각각 죽인다.
+        (곱 하나만 물으면 «한쪽이 죽고 다른 쪽이 메우는» 초록이 생긴다 — 그래서 둘을 갈라 죽여 본다.) */
+  const REG = (mode) => {
+    const L = document.getElementById('fxl');
+    if (!window.__v818r) window.__v818r = window.upFx;
+    window.upFx = function (k, h, c, n, nf, iv) {
+      if (mode === 'cnt') return window.__v818r(k, h, c, 1, nf, iv);        /* 밀도를 죽인다 */
+      const before = new Set(L.children);
+      const r = window.__v818r(k, h, c, n, nf, iv);
+      const born = [...L.children].filter(nd => !before.has(nd) && /fx-spark/.test(nd.className + ''));
+      setTimeout(() => { for (const nd of born) { try { nd.remove(); } catch (_) {} } }, 120); /* 619 14회차 시절 */
+      return r;
+    };
+    return true;
+  };
+  const UNREG = () => { if (window.__v818r) { window.upFx = window.__v818r; window.__v818r = null; } return true; };
+  {
+    const t = T.temper;
+    await page.evaluate(REG, 'cnt');
+    const rc = await hold(page, t, null);
+    await page.evaluate(UNREG);
+    ok(rc && rc.per < PER_MIN && rc.dens < 8,
+       'R4 틱당 스폰을 1 로 묶으면 [C2]·[C2b] 가 **빨개진다** — 밀도 축이 무뎌진 게 아니다',
+       p1(rc ? rc.per : 0) + '알/발화 · 동시 ' + p1(rc ? rc.dens : 0) + '알');
+    await page.evaluate(REG, 'life');
+    const rl = await hold(page, t, null);
+    await page.evaluate(UNREG);
+    ok(rl && rl.life < LIFE_MIN && rl.dens < 8,
+       'R5 알을 120ms 에 걷으면(619 14회차 시절) [C2]·[C2c] 가 **빨개진다** — 660 보강2 를 지키는 자다',
+       p1(rl ? rl.life : 0) + 'ms · 동시 ' + p1(rl ? rl.dens : 0) + '알');
+    const rb = await hold(page, t, null);
+    ok(rb && rb.dens >= 8 && rb.per >= PER_MIN && rb.life >= LIFE_MIN,
+       'R6 두 주입을 걷으면 다시 초록이다(주입이 원인이었다)',
+       p1(rb ? rb.dens : 0) + '알 · 발화당 ' + p1(rb ? rb.per : 0) + ' · 수명 ' + p1(rb ? rb.life : 0) + 'ms');
+  }
+
   ok(errs.length === 0, 'F1 콘솔 에러 0건', errs.slice(0, 2).join(' | ') || '0');
 
   await browser.close();
