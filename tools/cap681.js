@@ -121,8 +121,10 @@ async function shot(sc, T, idx, fixed) {
          지연을 두 번 센 것이다. 위상을 맞춰 재는 자(`envelope681` 의 `SAMPLE`)가 그 반대편이다. */
     try { document.getAnimations().forEach(a => { a.pause(); try { a.currentTime = T; at = T; } catch (e) {} }); } catch (e) {}
     /* 정답표 — «보이는 노드» 만 센다(α>0.06 · 최소변 ≥6px — cap58b 41·42회차 규약) */
+    const fopV = n => { const m = /opacity\(([\d.]+)\)/.exec(getComputedStyle(n).filter || '');
+      return m ? parseFloat(m[1]) : 1; };
     const vis = n => { const cs = getComputedStyle(n), bb = n.getBoundingClientRect();
-      return +cs.opacity > 0.06 && Math.min(bb.width, bb.height) >= 6; };
+      return +cs.opacity * fopV(n) > 0.06 && Math.min(bb.width, bb.height) >= 6; };
     const all = [...document.querySelectorAll('#fxl > *')];
     const L = all.filter(vis);
     const kind = n => { const c = (n.className || '') + '';
@@ -131,7 +133,12 @@ async function shot(sc, T, idx, fixed) {
     const cnt = {}; L.forEach(n => { const k = kind(n); cnt[k] = (cnt[k] || 0) + 1; });
     const sp = L.filter(n => /fx-spark/.test((n.className || '') + '') && !/fx-rlic/.test((n.className || '') + ''));
     const bb = sp.map(n => n.getBoundingClientRect());
-    const ops = sp.map(n => +getComputedStyle(n).opacity);
+    /* ⚑ 9회차 — **α 는 `opacity` 하나가 아니다.** 알마다 다른 «생명 시계» 는 곱해지는 둘째 채널
+       (`filter:opacity()`)로 들어오므로, 정답표가 `opacity` 만 적으면 비평가가 보는 화면과
+       표가 갈린다(«자가 만든 유령» — 표는 «전부 0.74» 인데 눈에는 밝은 알과 흐린 알이 섞여 있다). */
+    const fop = n => { const m = /opacity\(([\d.]+)\)/.exec(getComputedStyle(n).filter || '');
+      return m ? parseFloat(m[1]) : 1; };
+    const ops = sp.map(n => +getComputedStyle(n).opacity * fop(n));
     const hb = host.getBoundingClientRect();
     const size = bb.length ? Math.round(bb.reduce((s2, x) => s2 + x.width, 0) / bb.length * 10) / 10 : 0;
     const spread = bb.length ? Math.round(Math.max(...bb.map(x => Math.hypot(
