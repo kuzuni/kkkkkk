@@ -22,6 +22,7 @@
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+const { holdUntil } = require('./holdburst');     /* 785 — 홀드 표본 문턱 공용 부품 */
 const path = require('path');
 const fs = require('fs');
 
@@ -120,8 +121,14 @@ const OPEN = () => {
   openRelw();
 };
 
-/* 한 번의 계측 — «지운다 → 누른다 → 마지막 세대가 제 수명을 다 살 때까지 기다린다» */
-async function press(page, ms) {
+/* 한 번의 계측 — «지운다 → 누른다 → 마지막 세대가 제 수명을 다 살 때까지 기다린다»
+ * ⚑ 785 — 누르는 시간이 아니라 **모을 표본 수**를 받는다. `need` 가 찰 때까지 누르고 `maxMs` 에서
+ *   끊는다(공용 부품 `tools/holdburst.js`). `minMs` 는 종전 «고정 시간» 을 **바닥**으로 남긴 것 —
+ *   빠른 기계에서 지금까지와 똑같이 누르고, 느린 기계에서만 더 기다린다.
+ *   수리 전 이 자는 1800ms 에서 소환 **2회**에 그쳐 [B1](문턱 4)과 [E1](같은 문턱을 분모 전제로
+ *   접어 둔 자리)이 **둘 다** 빨갰다 — 785 재현 로그가 그 값이다. */
+async function press(page, opt) {
+  const o = Object.assign({ need: 4, minMs: HOLD_MS, maxMs: 30000 }, typeof opt === 'number' ? { minMs: opt, maxMs: Math.max(30000, opt) } : opt);
   await page.evaluate(() => { const P = window.__v666; P.add.length = 0; P.gone.length = 0; P.buys.length = 0; });
   const g = await page.evaluate(() => {
     const b = document.getElementById('rwBasin'), gr = document.getElementById('rwGrid');
@@ -131,14 +138,12 @@ async function press(page, ms) {
              grid: { x: gb.x, y: gb.y, w: gb.width, h: gb.height } };
   });
   if (!g) return null;
-  await page.mouse.move(g.btn.x + g.btn.w / 2, g.btn.y + g.btn.h / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(ms);
-  await page.mouse.up();
-  await page.waitForTimeout(520);
+  const hb = await holdUntil(page, { at: { x: g.btn.x + g.btn.w / 2, y: g.btn.y + g.btn.h / 2 },
+                                     need: o.need, minMs: o.minMs, maxMs: o.maxMs, settleMs: 520,
+                                     count: () => window.__v666.buys.length, mode: 'mouse' });
   const d = await page.evaluate(() => { const P = window.__v666;
     return { add: P.add.slice(), gone: P.gone.slice(), buys: P.buys.slice() }; });
-  return Object.assign(d, g);
+  return Object.assign(d, g, { hb });
 }
 const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y - M && a.y <= r.y + r.h + M;
 
@@ -194,7 +199,7 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   await page.evaluate(OPEN);
   await page.waitForTimeout(400);
 
-  const H = await press(page, HOLD_MS);
+  const H = await press(page, { need: 4, minMs: HOLD_MS });
   if (!H) { ok(false, 'B0 89 유물 페이지를 못 열었다'); await browser.close(); process.exit(1); }
   const icons = H.add.filter(a => a.k === 'icon');
   const beads = H.add.filter(a => a.k === 'spark');
@@ -204,7 +209,8 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
 
   /* ── [B] 그림 ─────────────────────────────────────────────────────── */
   console.log('\n[B] 그림 — 버스트 입자가 유물조각 아이콘이다 (홀드 ' + HOLD_MS + 'ms)');
-  ok(H.buys.length >= 4, 'B1 홀드가 여러 번 소환한다(전제 · 488 [E1] 과 같은 문턱)', H.buys.length + '회');
+  ok(H.buys.length >= 4, 'B1 홀드가 여러 번 소환한다(전제 · 488 [E1] 과 같은 문턱 · 785 공용 부품)',
+     H.buys.length + '회 · ' + (H.hb ? H.hb.note : ''));
   ok(icons.length >= 8, 'B2 아이콘 버스트가 실제로 터진다(≥8알)', icons.length + '알');
   ok(beads.length === 0, 'B3 종전 크림 구슬 **0알** — 그림이 한 어휘로 통일됐다', '구슬 ' + beads.length + '알');
   const wrong = icons.filter(a => a.cur !== 'relic');
@@ -332,7 +338,7 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
     /* R1 — `ic` 를 떨군다(= B4·B5 의 축) */
     await reboot(() => { const f = window.fxBurst;
       window.fxBurst = function (t, col, n, strict, iv) { return f.call(this, t, col, n, strict, iv); }; });
-    const d = await press(page, 900);
+    const d = await press(page, { need: 2, minMs: 900, maxMs: 12000 });
     const ic = d ? d.add.filter(a => a.k === 'icon').length : -1;
     const bd = d ? d.add.filter(a => a.k === 'spark').length : -1;
     ok(ic === 0 && bd > 0, 'R1 `ic` 를 떨구면 아이콘 0알 · 종전 구슬로 되돌아간다 — [B2][B4] 이 빨개지는 자리',
@@ -347,7 +353,7 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
         if (it) { const el = document.querySelector('#rwGrid [data-rw="' + it.id + '"]');
           if (el) fxUpOk(el, el, it.n + ' Lv.' + oLv(it.id)); }
         return it; }; });
-    const d = await press(page, 900);
+    const d = await press(page, { need: 2, minMs: 900, maxMs: 12000 });
     const tx = d ? d.add.filter(a => a.k === 'float' || a.k === 'delta').length : -1;
     const gs = d ? d.add.filter(a => (a.k === 'icon' || a.k === 'spark') && !inBox(a, d.btn, 2) && inBox(a, d.grid, 0)).length : -1;
     ok(tx > 0 && gs > 0, 'R2 수리 전 한 줄을 되살리면 텍스트가 뜨고 격자에서 터진다 — [C2][D1] 이 빨개지는 자리',
@@ -356,7 +362,7 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   {
     /* R3 — 회당 연출을 통째로 뺀다(= E1 의 축). «발화가 조용히 빠지는» 상태가 바로 이것이다. */
     await reboot(() => { window.rwSummonFx = function () {}; });
-    const d = await press(page, 900);
+    const d = await press(page, { need: 2, minMs: 900, maxMs: 12000 });
     const ic = d ? d.add.filter(a => a.k === 'icon').length : -1;
     ok(d && d.buys.length > 0 && ic === 0,
        'R3 `rwSummonFx` 를 비우면 소환은 도는데 버스트가 0 이다 — [E1] 이 빨개지는 자리',

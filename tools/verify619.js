@@ -21,12 +21,17 @@
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+const { holdUntil } = require('./holdburst');     /* 785 — 홀드 표본 문턱 공용 부품 */
 const path = require('path');
 const fs = require('fs');
 
 const SRC = path.resolve(__dirname, '../index.html');
 const URL = 'file://' + SRC;
+/* ⚑ 785 — [B1] 의 «시도 ≥ 8» 은 문턱이고, 2400ms 는 그 문턱을 **러너 틱 속도**에 묶는 값이었다
+   (제품 설계 6~16회/초 ↔ 이 러너 실측 2회/초 — `probe785`). 이제 표본이 찰 때까지 누르고
+   시간은 «바닥»(빠른 기계에서 종전과 같은 시간)과 «상한» 으로만 쓴다. */
 const HOLD_MS = Number(process.env.V619_HOLD || 2400);
+const NEED = Number(process.env.V619_NEED || 8), HOLD_MAX = 30000;
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? '  [' + d + ']' : '')); };
@@ -96,11 +101,20 @@ async function hold(page, sp, opt) {
   const r = await page.evaluate(sel => { const el = document.querySelector(sel); if (!el) return null;
     const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; }, sp.sel);
   if (!r || !r.w) return null;
-  await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
-  await page.mouse.down();
-  await page.waitForTimeout(tapOnly ? 20 : HOLD_MS);
-  await page.mouse.up();
-  await page.waitForTimeout(420);
+  /* 785 — «한 번 클릭»([R3] 되돌림)은 그대로 20ms 다. 홀드만 «표본이 찰 때까지» 로 바뀐다 —
+     세는 것은 그 자리의 **시도 수**([B1] 의 축 · 635 규약)이고, 문턱은 한 칸도 안 내렸다. */
+  if (tapOnly) {
+    await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(20);
+    await page.mouse.up();
+    await page.waitForTimeout(420);
+  } else {
+    await holdUntil(page, { at: { x: r.x + r.w / 2, y: r.y + r.h / 2 },
+                            need: (opt && opt.need) || NEED, minMs: HOLD_MS, maxMs: HOLD_MAX, settleMs: 420,
+                            count: k => window.__v619.tries.filter(t => t.kind === k).length,
+                            countArg: sp.id, mode: 'mouse' });
+  }
   const d = await page.evaluate(() => { const P = window.__v619; return { buys: P.buys.slice(), tries: P.tries.slice(), nodes: P.nodes.slice(), max: P.max, blocked: P.blocked, toasts: P.toasts.slice(), up: P.up }; });
   const fires = d.nodes.filter(n => n.k === 'flash' || n.k === 'spark' || n.k === 'spend');
   const buys = d.buys.filter(b => b.kind === sp.id);

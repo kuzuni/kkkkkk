@@ -28,15 +28,19 @@ const path = require('path');
 const fs = require('fs');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+const { holdUntil } = require('./holdburst');     /* 785 — 홀드 표본 문턱 공용 부품 */
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
 const URL = 'file://' + SRC.replace(/\\/g, '/');
 const W = 1080, H = 2280;
-/* ⚑ 753 — 3000ms 는 **이 러너에서 표본이 굶는다**: [B2] 가 요구하는 «6회 이상» 을 채우려면
-   홀드 틱이 2회/초여야 하는데 클라우드 러너 실측은 1.3~1.9회/초라 3~4회에 그친다(수리 전 트리에서
-   같은 값 — `probe753` 로 A/B 대조 확인). 제품이 아니라 **하네스의 문턱**이라 «묻는 것» 을 무르게
-   푸는 대신 **누르는 시간을 늘린다**(같은 표본을 실제로 얻는다). 6000 에서 6회 이상. ⚠ 이 문턱은 러너 속도에 붙어 있어 곁다리 «785» 로 등재했다. */
-const HOLD = Number(process.env.V683_HOLD || 6000);
+/* ⚑⚑ 785 — **문턱을 시간에서 떼어냈다.** 753 은 «표본이 굶는다» 를 «누르는 시간을 3000 → 6000ms»
+   로 풀었고, 그것은 같은 축(러너 틱 속도)을 한 칸 민 것이었다 — 기계가 더 느려지면 다시 빨개진다.
+   ⇒ 이제 **표본 수가 문턱이고 시간은 «상한» 일 뿐**이다: `holdUntil` 이 [B2] 의 6회가 찰 때까지
+   누르고 상한에서 끊는다(공용 부품 `tools/holdburst.js` — `verify666`·`verify682`·`verify619` 가 같이 읽는다).
+   ⚠ **문턱은 한 칸도 안 내렸다**(334 규약) — 내렸으면 그 위에 선 [D4]·[H2] 가 헛초록이 된다.
+   재현·A/B 는 `node tools/probe785.js`(느린 기계 CPU ×8 에서 고정 3000ms = 3·4·3회 ↔ `holdUntil` = 7·8·9회). */
+const NEED = Number(process.env.V683_NEED || 6);          /* [B2] 문턱 = 표본 수 */
+const HOLD_MAX = Number(process.env.V683_HOLD_MAX || 30000);  /* 상한(데드라인 아님) */
 const PAD = 6;              /* 카드 bbox 판정 여유 — 탄생 타원은 테두리 «바깥» 이라 조금 넘친다 */
 
 let pass = 0, fail = 0;
@@ -182,18 +186,8 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   const cdp = await p.context().newCDPSession(p);
   const box = async sel => p.evaluate(s => { const e = document.querySelector(s); if (!e) return null;
     const b = e.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, sel);
-  const holdTouch = async (c, ms) => {
-    if (!c) return;
-    const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
-    const t0 = Date.now();
-    while (Date.now() - t0 < ms) {
-      await new Promise(r => setTimeout(r, 80));
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: c.x + (Math.random() * 4 - 2), y: c.y + (Math.random() * 4 - 2) }] }).catch(() => {});
-    }
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await st.catch(() => {});
-    await p.waitForTimeout(250);
-  };
+  /* 785 — 손으로 적던 홀드는 공용 부품으로 갔다(`tools/holdburst.js`). 누르는 방법은 그대로
+     (CDP 터치 + 80ms 마다 흔들기)이고 **끊는 조건만** «시간» 에서 «표본 수» 로 바뀌었다. */
 
   /* 공용 스파크 수명은 **제품에서 읽는다** — 자에 값을 두 벌로 적으면 402 «표 두 벌» 부패가 난다 */
   const SPARK_MS = (await ev(p, () => (typeof FXSPARK_MS === 'number') ? FXSPARK_MS : 0)) || 0;
@@ -201,12 +195,16 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   await ev(p, () => { try { closeModal(); } catch (_) {} S.relic = 1e12; openRelw(); });
   await p.waitForTimeout(400);
   await ev(p, RESET);
-  await holdTouch(await box('#rwBasin'), HOLD);
+  const HB = await holdUntil(p, { at: await box('#rwBasin'), need: NEED, maxMs: HOLD_MAX,
+                                  count: () => window.__v683.bursts.length, mode: 'touch', cdp });
   const BS = (await ev(p, () => window.__v683.bursts)) || [];
 
   blk('B] 전제 — 관찰자·홀드가 실제로 돌았다');
   ok(armed === true, 'B1 `rwSummonFx` 를 감쌌다');
-  ok(BS.length >= 6, 'B2 홀드가 여러 번 소환한다(전제 · 666 [B1] 과 같은 종류)', BS.length + '회');
+  /* 785 — 문턱(6)은 그대로, 누르는 방법만 «시간» → «표본이 찰 때까지». 상한에서 끊겼으면
+     `HB.reached` 가 false 이고 그때만 이 항이 빨개진다(느린 기계에서 조용히 굶지 않는다). */
+  ok(BS.length >= NEED, 'B2 홀드가 여러 번 소환한다(전제 · 666 [B1] 과 같은 종류 · 785 공용 부품)',
+     BS.length + '회 · ' + HB.note);
   const gain = BS.reduce((n, b) => n + b.born.filter(isGain).length, 0);
   const ids = new Set(BS.map(b => b.id).filter(Boolean));
   info('버스트', BS.length + '회 · 획득 알 ' + gain + '개 · 서로 다른 당첨 유물 ' + ids.size + '종');

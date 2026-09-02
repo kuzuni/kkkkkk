@@ -27,12 +27,16 @@ const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+const { holdUntil } = require('./holdburst');     /* 785 — 홀드 표본 문턱 공용 부품 */
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 const URL = 'file://' + SRC.replace(/\\/g, '/');
 const W = 1080, H = 2280;
-const HOLD = 3200;
+/* ⚑ 785 — [B0] 의 «버스트 ≥ 4» 는 문턱이고, 3200ms 는 그 문턱을 **러너 틱 속도**에 묶는 값이었다
+   (이 러너 실측 2회/초 · CPU ×8 에서 고정 3000ms 는 3~4회 — `probe785`). 이제 표본이 찰 때까지
+   누르고 시간은 상한으로만 쓴다. `HOLD` 는 «바닥»(빠른 기계에서 종전과 같은 시간을 누른다)으로 남는다. */
+const HOLD = 3200, NEED = 4, HOLD_MAX = 30000;
 const GRID = 15;            /* 사람이 «같은 방향» 으로 읽는 폭(도) */
 
 let pass = 0, fail = 0;
@@ -165,24 +169,16 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
   const cdp = await p.context().newCDPSession(p);
   const box = async sel => p.evaluate(s => { const e = document.querySelector(s); if (!e) return null;
     const b = e.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, sel);
-  const holdTouch = async (c, ms) => {
-    if (!c) return;
-    const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
-    const t0 = Date.now();
-    while (Date.now() - t0 < ms) {
-      await new Promise(r => setTimeout(r, 80));
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: c.x + (Math.random() * 4 - 2), y: c.y + (Math.random() * 4 - 2) }] }).catch(() => {});
-    }
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await st.catch(() => {});
-    await p.waitForTimeout(250);
-  };
+  /* 785 — 손으로 적던 `holdTouch` 는 공용 부품(`tools/holdburst.js`)으로 갔다.
+     누르는 방법(CDP 터치 + 80ms 흔들기)은 그대로이고 **끊는 조건만** 시간 → 표본 수다.
+     죽은 사본을 남기지 않는다(295-②·399·460 «죽은 코드 금지»). */
 
   await ev(p, WATCH);
   await ev(p, () => { try { closeModal(); } catch (_) {} S.relic = 1e12; openRelw(); });
   await p.waitForTimeout(400);
   await ev(p, RESET);
-  await holdTouch(await box('#rwBasin'), HOLD);
+  const HB = await holdUntil(p, { at: await box('#rwBasin'), need: NEED, minMs: HOLD, maxMs: HOLD_MAX,
+                                 count: () => window.__v682.fin.length, mode: 'touch', cdp });
   const G = await ev(p, () => ({
     fin: window.__v682.fin, raw: window.__v682.raw, buys: window.__v682.buys,
     up: (typeof RW_FX_UP === 'number') ? RW_FX_UP : null,
@@ -195,7 +191,8 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
   const allRep = [].concat(...rep);
 
   blk('B] 산포 — 연속 버스트가 같은 그림이 아니다');
-  ok(FIN.length >= 4, 'B0 표본(버스트) ≥ 4 — 연속 소환을 실제로 굴렸다(전제)', FIN.length + '버스트 · 알 ' + FIN.reduce((s, b) => s + b.length, 0) + '개');
+  ok(FIN.length >= NEED, 'B0 표본(버스트) ≥ ' + NEED + ' — 연속 소환을 실제로 굴렸다(전제 · 785 공용 부품)',
+     FIN.length + '버스트 · 알 ' + FIN.reduce((s, b) => s + b.length, 0) + '개 · ' + HB.note);
   rep.slice(0, 6).forEach((b, i) => info('버스트 #' + (i + 2) + ' 방향(°)', deg(FIN[i + 1]).map(r1).sort((x, y) => x - y).join(', ')));
   const dup = dupPairs(rep, GRID), cmp = Math.max(0, rep.length - 1);
   info('연속 쌍 «±' + GRID + '° 전원 일치»', dup + '/' + cmp + '쌍');
