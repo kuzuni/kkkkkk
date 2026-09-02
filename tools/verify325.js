@@ -132,6 +132,15 @@ async function state(page) {
         })(),
         nDot: dots.length, dotDisp: d ? getComputedStyle(d).display : 'none',
         dotRect: d ? R(d) : null, card: R(c),
+        /* 822 이관 — 471 규약식의 재료. 좌표 상수를 새로 적지 않는다(«--dot-in 이 몇이냐» 가
+           아니라 «그 값대로 앉았느냐» 를 묻는다). `--dot-bw` 는 정의 안 된 var 를 물면 빈 문자열
+           = CSS 폴백 0 과 같다. `tmBw` 는 그 되빼기가 진짜 테두리와 짝인지 대조할 실측값. */
+        dotIn: d ? (parseFloat(getComputedStyle(d).getPropertyValue('--dot-in-x')) ||
+                    parseFloat(getComputedStyle(d).getPropertyValue('--dot-in')) || 0) : 0,
+        dotInY: d ? (parseFloat(getComputedStyle(d).getPropertyValue('--dot-in-y')) ||
+                     parseFloat(getComputedStyle(d).getPropertyValue('--dot-in')) || 0) : 0,
+        dotBw: d ? (parseFloat(getComputedStyle(d).getPropertyValue('--dot-bw')) || 0) : 0,
+        tmBw: parseFloat(getComputedStyle(tm).borderRightWidth) || 0,
       });
     });
     /* ⚠ 사이드 아이콘의 점등 클래스는 `.alert` 가 아니라 **`.on`** 이다
@@ -231,6 +240,23 @@ const NOW = () => Date.now();
       const cx = dx + dw / 2, cy = dy + dh / 2;
       ok(cx > o.tm[0] + o.tm[2] / 2 && cy < o.tm[1] + o.tm[3] / 2, `[G] ${o.id} 299 우상단 사분면`,
         `중심 (${px(cx - o.tm[0])}, ${px(cy - o.tm[1])})`);
+      /* ⚑ 822 이관(2026-09-02) — 이 자리를 **재현기만 묻고 게이트는 안 묻고 있었다.**
+         `probe325` 가 «링이 알약 219×98 안» 을 단언한 채 471 이후 두 항이 빨갛게 굳었는데,
+         `verify325` 는 사분면과 카드 클립만 봐서 69/69 초록이었다 — 즉 이 자리의 «자리» 는
+         아무 게이트도 안 지키고 있었다(328 교훈: 초록으로 되돌리는 것만으로 끝내면 그 작업이
+         통째로 사라져도 초록인 게이트가 남는다). 재현으로 갈린 답(471 규약이 옳다)을 **게이트가
+         묻는 형태로** 옮긴다: «중심 = 호스트(테두리 상자) 우상단 코너 안쪽 `--dot-in`».
+         ⚠ `getBoundingClientRect` 는 테두리 상자이고 471 기준도 «테두리 바깥 상자» 라
+         CSS 식의 `--dot-bw` 되빼기(절대배치 오프셋이 패딩 상자 기준이라서)는 여기서 상쇄된다 —
+         그래서 안쪽 거리는 `--dot-bw` 와 **무관하게** `--dot-in` 이어야 하고, 그 짝이 어긋나면
+         (`.ifbtn{--dot-bw:var(--gb-bw)}` 의 6px) 5 나 17 로 나와 즉시 빨개진다. */
+      const insetR = (o.tm[0] + o.tm[2]) - cx, insetT = cy - o.tm[1];
+      ok(Math.abs(insetR - o.dotIn) <= 0.5 && Math.abs(insetT - o.dotInY) <= 0.5,
+        `[G] ${o.id} 471 규약 — 닷 중심이 알약 코너 안쪽 --dot-in`,
+        `안쪽 우 ${px(insetR)} 상 ${px(insetT)} / 규약 ${px(o.dotIn)},${px(o.dotInY)}`);
+      ok(Math.abs(o.dotBw - o.tmBw) <= 0.5,
+        `[G] ${o.id} --dot-bw 가 알약의 실제 테두리 두께와 짝이다`,
+        `--dot-bw ${px(o.dotBw)} ↔ border ${px(o.tmBw)}`);
       const ring = 7.5;
       ok(dx - ring >= o.card[0] && dy - ring >= o.card[1] &&
          dx + dw + ring <= o.card[0] + o.card[2] && dy + dh + ring <= o.card[1] + o.card[3],
