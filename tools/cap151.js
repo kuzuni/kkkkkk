@@ -19,10 +19,15 @@ const out = process.argv[2] || 'docs/review/151-r1.png';
 const GEO = process.argv.includes('--geo');
 const OWN = process.argv.includes('--own');
 const CROP = process.argv.includes('--crop');
+/* 667 7회차 — 등재문이 «비평 2인 ≥9 통과 회차(9:19·9:13.3 두 프레임)» 를 요구하는데
+   이 자는 2280 한 프레임만 찍고 있었다(1~6회차가 전부 9:19 만 채점한 뿌리).
+   ⚠ 세로만 바꾼다 — 폭 1080 은 고정이다(지시서 [2] «절대 전체를 비율로 축소하지 마라»). */
+const HI = process.argv.indexOf('--h');
+const VH = HI > 0 ? +process.argv[HI + 1] : 2280;
 
 (async () => {
   const b = await launch(chromium);
-  const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const ctx = await b.newContext({ viewport: { width: 1080, height: VH }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
   p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });

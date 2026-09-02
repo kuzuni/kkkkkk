@@ -20,6 +20,7 @@
 실행:
   python3 tools/scan667.py --ref                 레퍼런스 두 장의 우변 프로파일 · 노치 목록
   python3 tools/scan667.py --cap <png> [--geo <json>]   우리 캡처의 카드별 같은 표
+  ... [--tol <우리 px>]                                 노치 판정 문턱(기본 6). ref 쪽은 /k 로 환산된다.
 """
 import json
 import sys
@@ -79,6 +80,23 @@ def notches(prof, straight, tol):
     return runs(idx, minlen=4)
 
 
+# ⚑ 667 7회차 — **문턱을 «우리 px» 한 단위로 모았다.**
+# 6회차가 «--ref 는 tol=3 · --cap 은 tol=6 이니 먼저 같은 값으로 맞춰 놓고 판단할 것» 을 넘겼다.
+# 두 자가 서로 다른 이미지 축척을 쓰므로 **같은 숫자를 쓰는 것이 오히려 다른 문턱**이다 —
+# 실물 기준으로는 ref 3px × k 2.0628 = 6.19 우리 px 라 둘이 이미 거의 같았다(우연이 아니라
+# 4회차가 그렇게 고른 것인데 근거가 안 적혀 있었다). 이제 문턱은 **우리 px 로 한 번만** 주고
+# ref 쪽은 /k 로 환산해 쓴다 — 스윕(`--tol`)으로 «문턱을 흔들어도 결론이 같은가» 를 확인할 수 있다.
+TOL_OUR = 6.0                    # 기본 문턱(우리 px). ref 에서는 TOL_OUR / K = 2.91 px.
+
+
+def tol_ref():
+    return TOL_OUR / K
+
+
+def tol_cap():
+    return TOL_OUR
+
+
 def report_ref():
     a = np.asarray(Image.open(REF).convert('RGB')).astype(int)
     H, W, _ = a.shape
@@ -101,8 +119,8 @@ def report_ref():
             continue
         straight = int(np.bincount(np.array(vals)).argmax())
         print(f'\n-- {name}  y {y0}..{y1 - 1}  h={y1 - y0}  바탕표본={bg}  곧은변 x={straight}')
-        ns = notches(prof, straight, tol=3)
-        print(f'   노치 {len(ns)} 개 (곧은변에서 3px 이상 들어간 구간, 길이 4행 이상)')
+        ns = notches(prof, straight, tol=tol_ref())
+        print(f'   노치 {len(ns)} 개 (곧은변에서 {tol_ref():.2f}px[= 우리 {TOL_OUR:g}px] 이상 들어간 구간, 길이 4행 이상)')
         for (i0, i1) in ns:
             seg = [prof[i][0] for i in range(i0, i1 + 1) if prof[i]]
             dep = straight - min(seg)
@@ -132,8 +150,8 @@ def report_cap(png, geo):
             continue
         straight = int(np.bincount(np.array(vals)).argmax())
         print(f'\n-- card{i + 1} ({c.get("id", "")}) box {x},{y} {w}x{h}  바탕표본={bg}  곧은변 x={straight}')
-        ns = notches(prof, straight, tol=6)
-        print(f'   노치 {len(ns)} 개')
+        ns = notches(prof, straight, tol=tol_cap())
+        print(f'   노치 {len(ns)} 개 (문턱 우리 {TOL_OUR:g}px)')
         for (i0, i1) in ns:
             seg = [prof[k][0] for k in range(i0, i1 + 1) if prof[k]]
             inner = [prof[k][1] for k in range(i0, i1 + 1) if prof[k]]
@@ -143,6 +161,8 @@ def report_cap(png, geo):
 
 
 if __name__ == '__main__':
+    if '--tol' in sys.argv:
+        TOL_OUR = float(sys.argv[sys.argv.index('--tol') + 1])
     if '--ref' in sys.argv:
         report_ref()
     if '--cap' in sys.argv:
