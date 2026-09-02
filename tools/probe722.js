@@ -559,13 +559,20 @@ const IMM_SEC = 40, REAL_SEC = 60;
   const rxSpread = Math.max(...rxs.map(x => x.rx)) / Math.min(...rxs.map(x => x.rx));
   const byInfl = rxs.slice().sort((a, b) => a.infl - b.infl);
   const botRx = mean(byInfl.slice(0, 2).map(x => x.rx)), topRx = mean(byInfl.slice(2).map(x => x.rx));
+  /* ⚠ **2회차에 여기서 또 한 번 «분포를 가정한 바» 를 놓았다** — 처음엔 «아래 둘의 rx 평균
+     ≤ 0.8 × 위쪽 넷» 이라는 **고정 비**로 적었는데, `rx` 자체가 눌린 실행(최대÷최소 ×1.60 ·
+     보통은 ×2.0~3.8)에서 비 0.82 로 빨개졌다. 갈림의 «크기» 를 묻는 바가 **그 실행에 갈림이
+     얼마나 있는지와 무관한 상수**였던 것이다(§4 와 같은 병의 세 번째 얼굴).
+     ⇒ 요구하는 간격을 **그 실행의 rx 폭에 비례**시킨다 — rx 가 넓게 갈린 실행에서는 많이,
+     눌린 실행에서는 그만큼만 요구한다. 상수는 «폭의 몇 분의 일» 이라는 비율 하나뿐이다. */
+  const rxAll = rxs.map(x => x.rx), rxRange = Math.max(...rxAll) - Math.min(...rxAll);
   console.log('      도달 몫 비 rx(= 한 발이 판의 몇 %를 때리는가, 불사÷실제) — '
     + rxs.map(x => x.id + ' ' + x.rx.toFixed(2)).join(' · '));
-  ok(rxSpread >= 1.5 && botRx <= 0.8 * topRx,
+  ok(rxSpread >= 1.5 && (topRx - botRx) >= 0.25 * rxRange,
      '8-b2 값 배수가 종마다 다른 뿌리는 **도달 몫**이다 — `rx` 가 종마다 갈리고(포화), 값 배수가 낮은 묶음은 그 `rx` 가 포화한 묶음이다',
-     'rx 최대÷최소 ×' + rxSpread.toFixed(2) + '(≥1.5) · 값 배수 아래 둘의 rx 평균 ' + botRx.toFixed(2)
-     + ' ≤ 0.8 × 위쪽 넷의 rx 평균 ' + topRx.toFixed(2) + ' (= ' + (0.8 * topRx).toFixed(2) + ') · 비 '
-     + (topRx ? (botRx / topRx).toFixed(2) : '∞') + '(≤0.80)');
+     'rx 최대÷최소 ×' + rxSpread.toFixed(2) + '(≥1.5) · 아래 둘 평균 ' + botRx.toFixed(2)
+     + ' ↔ 위쪽 넷 평균 ' + topRx.toFixed(2) + ' · 간격 ' + (topRx - botRx).toFixed(2)
+     + ' ≥ rx 폭 ' + rxRange.toFixed(2) + ' 의 1/4 (= ' + (0.25 * rxRange).toFixed(2) + ')');
 
   /* [8-br] — **되돌림 시험(새 상수·새 실행 0).** [8-b] 의 바(중앙값 1.5)가 «하네스 덕» 인지
      «회차 잡음 덕» 인지 가른다: 이미 도는 `P8` 안의 **실제 판** 값끼리 서로 나눠 하네스가 없는
