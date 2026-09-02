@@ -7128,10 +7128,18 @@
     background:conic-gradient(from 45deg,rgba(0,0,0,.088) 0 25%,#0000 0 50%,
       rgba(0,0,0,.088) 0 75%,#0000 0) 0 0/120px 120px,var(--c);
     border:12px solid var(--h);border-top:0;border-radius:31px;
-    -webkit-mask:var(--ntc-bg);mask:var(--ntc-bg)}
+    -webkit-mask:var(--ntc-bg);mask:var(--ntc-bg);
+    /* 667 4회차 — 노치가 여럿이라 마스크가 **여러 겹**이다. 기본 합성(add)은 «둘 중 하나라도 보이면 보임»
+       이라 구멍이 서로를 메운다 ⇒ `intersect`(둘 다 보이는 곳만) 여야 구멍이 남는다. 한 겹일 때도 무해하다. */
+    -webkit-mask-composite:source-in;mask-composite:intersect}
   .pvc>.hdb{left:10px;top:10px;right:10px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
+  /* 667 4회차 — 헤더 밴드는 **형마다 두 값**이다(리본 높이 76/67 과 같은 자리).
+     카드 외곽 상변에서 밴드 하변까지: ref 초록 53.5 → 110.4 ≈ 우리 112(정확) · ref 파랑 51.5 → **106.2**.
+     비평가 AT ⑨ · AU ⑥ 가 «112 ↔ ref 파랑 107.5» 로 2인 일치했고 화소 실측이 그것을 확인했다. */
+  .pvc.ban1>.hdb{height:96px}
   .pvc>.fr{left:0;top:0;right:0;bottom:0;border:10px solid #000;border-radius:44px;pointer-events:none;
-    -webkit-mask:var(--ntc-fr);mask:var(--ntc-fr)}
+    -webkit-mask:var(--ntc-fr);mask:var(--ntc-fr);
+    -webkit-mask-composite:source-in;mask-composite:intersect}
   /* ⑧ 우변 «물결 노치» — ref 카드 실루엣의 규칙이다(측정표 §1-3: «카드 우변은 손그림 물결»).
      초록 카드 실측 깊이 15.6 · 세로 51 · 하변에서 위로 110.7 → k=2.0628 로 깊이 **32** · 길이 **105** ·
      `bottom:108`. 파랑(배너형)도 하변에서 106.3 이라 **하변 기준 상수 하나**로 두 형이 같이 맞는다
@@ -7142,13 +7150,34 @@
      `.ntc` 가 **속이 빈 링**으로 덧댄다. ⚠ 속을 배경색으로 칠하지 않은 이유 — 카드 뒤 바탕은 단색이
      아니라 (54,54,63)~(49,49,58) 로 흐른다(실측). 색을 박으면 자리마다 어긋난다. 구멍이라 진짜 뒤가 비친다.
      타원 중심은 카드 우변 위(x=978)라 **왼쪽 절반만** 카드 안이다 = 깊이 = 가로 반지름 32. */
+  /* ⚑ 667 4회차 — **노치는 하나가 아니다.** 3회차가 «전용 자가 필요하다 · 눈으로 세지 마라» 로 넘긴
+     자리를 `tools/scan667.py`(우변 실루엣 전용 자)로 재니 ref 는 **두 장 다 세 자리**다
+     (초록 하변에서 113·342·567 · 파랑 101·241·382, 전부 우리 px 환산). 곧 «물결» 은 카드 우변을
+     따라 **되풀이되는 무늬**이고 우리는 그중 맨 아래 하나만 그리고 있었다.
+     ⚠ **피치가 형마다 다르다** — 초록(불릿형) **227** · 파랑(배너형) **140**. 리본 높이(76/67)와 같은
+     «ref 자신이 두 값인» 자리라 그 선례를 그대로 따른다(높이에 비례하지도 않는다: 카드 높이 비 1.39,
+     피치 비 1.62). 그래서 **개수는 상수가 아니라 피치가 정한다** — 우리 카드는 ref 보다 짧아
+     (불릿 690 ↔ ref 809 · 배너 534 ↔ ref ≥582) 자연히 두 자리가 된다. 값은 `pvNotches()` 가 낸다.
+     깊이 32 는 세 자리 모두 같고(ref 14~16 × k = 29~33), 길이는 맨 아래만 105(ref 51 — 가장 긴 자리)이고
+     위쪽은 **70**(ref 최빈 34 × k). 아래 CSS 값은 인라인이 없을 때의 폴백(= 맨 아래 한 자리)이다. */
   .pvc{--ntc-cy:calc(100% - 160.5px);                        /* 하변 108 + 세로 반지름 52.5 */
     --ntc-fr:radial-gradient(32px 52.5px at 100% var(--ntc-cy),#0000 98%,#000 100%);
     /* `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10px · 하변에서 150.5» 다 */
     --ntc-bg:radial-gradient(32px 52.5px at calc(100% + 10px) calc(100% - 150.5px),#0000 98%,#000 100%)}
-  .pvc>.ntc{right:0;bottom:108px;width:32px;height:105px;overflow:hidden;z-index:2;pointer-events:none}
-  #shopw .pvc>.ntc>s{position:absolute;left:0;top:0;width:64px;height:105px;box-sizing:border-box;
+  /* ⚑ 667 4회차 ② — **안쪽 밝은 림이 노치를 따라 휜다**(비평가 AT ② · ref 화소로 확인: 노치 최심
+     안쪽에 `--h` 밝은 띠가 **5~6 ref px = 12 우리 px** 으로, 곧은 변의 림(5~8 ref)과 같은 두께로 이어진다).
+     지금까지는 마스크가 `.bg` 의 림을 **잘라내기만** 해서 곡선을 따라 도는 밝은 테가 없었다.
+     ⚠ **림은 «구멍 안» 이 아니라 «카드 안» 이다** — 검정 외곽선의 **왼쪽**(몸통 쪽)에 붙는다.
+     그래서 `.ntc` 를 림 두께만큼 왼쪽으로 넓히고(32 → **44**) 위·아래로도 12 씩 넓혀
+     (`bottom` 은 −12 · 높이는 +24) 림의 호가 잘리지 않게 한다. 링 둘의 중심은 카드 우변 위(local 44)로 같다:
+       · `s` 검정 외곽 = 반지름 32 × len/2 · 테 10 → local 12..22 (구멍 쪽으로 그린다)
+       · `u` 밝은 림   = 반지름 44 × (len+24)/2 · 테 12 → local 0..12 (몸통 쪽으로 그린다)
+     `overflow:hidden` 은 여전히 카드 우변에서 오른쪽 절반을 자른다. */
+  .pvc>.ntc{right:0;bottom:96px;width:44px;height:129px;overflow:hidden;z-index:2;pointer-events:none}
+  #shopw .pvc>.ntc>s{position:absolute;left:12px;top:12px;width:64px;height:105px;box-sizing:border-box;
     border:10px solid #000;border-radius:50%}
+  #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:88px;box-sizing:border-box;
+    border:12px solid var(--h);border-radius:50%}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
   .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:30px 30px 0 0;
     border:7px solid #000;border-bottom:0;background:var(--d);z-index:2}
@@ -33740,6 +33769,27 @@ function syncNoAds(){ const a = $('app'); if(a) a.classList.toggle('noads', noAd
    카드 사이 간격 74(ref 36) 안에 아래 카드의 상태 탭(위로 56)이 들어간다 — ref 와 같은 물림이다. */
 const PVC_W = 978, PVC_H_BAN = 534, PVC_H_BL4 = 772, PVC_BL_ROW = 82, PVC_GAP = 74, PV_Y0 = 470;
 const pvCardH = p => p.ban ? PVC_H_BAN : PVC_H_BL4 - (4 - p.bl.length) * PVC_BL_ROW;
+/* ⑧ 우변 «물결 노치» — 667 4회차. **자리는 하나가 아니라 피치가 정한다**(CSS `.ntc` 주석의 실측표).
+   ref 세 자리의 깊이는 모두 같고(14~16 ref × k), 길이는 맨 아래만 길다(51 ↔ 위쪽 최빈 34).
+   ⚠ 위로 어디까지 찍는가 = **헤더 밴드를 침범하지 않는 데까지**. ref 초록의 맨 위 노치도 밴드 아래
+   31 ref(= 64) 를 띄우고 서 있다 — 그 여백을 상수로 박았다(NTC_TOPGAP).
+   되돌리려면 NTC_PITCH 두 값을 아주 크게 주면 된다(맨 아래 한 자리만 남는다 = 3회차 상태). */
+const NTC_DEP = 32, NTC_LEN0 = 105, NTC_LENU = 70, NTC_BOT0 = 108, NTC_TOPGAP = 64, PVC_HDB = 112;
+const NTC_PITCH = { ban: 140, bl: 227 };
+function pvNotches(p, H){
+  const pitch = p.ban ? NTC_PITCH.ban : NTC_PITCH.bl, hdb = p.ban ? PVC_HDB - 16 : PVC_HDB, out = [];
+  for(let i = 0, b = NTC_BOT0; ; i++, b += pitch){
+    const len = i ? NTC_LENU : NTC_LEN0;
+    if(b + len + NTC_TOPGAP > H - hdb) break;
+    out.push({ b, len });
+  }
+  return out.length ? out : [{ b: NTC_BOT0, len: NTC_LEN0 }];
+}
+/* 마스크는 «구멍» 이므로 겹이 여럿이면 `mask-composite:intersect` 로 합친다(CSS 주석).
+   `.fr` 은 카드 상자 그대로, `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10 · 하변에서 −10» 이다. */
+const pvNtcMask = (ns, inset) => ns.map(n => 'radial-gradient(' + NTC_DEP + 'px ' + (n.len / 2)
+  + 'px at ' + (inset ? 'calc(100% + 10px)' : '100%') + ' calc(100% - ' + (n.b - (inset ? 10 : 0)
+  + n.len / 2) + 'px),#0000 98%,#000 100%)').join(',');
 /* 151 — 카드 3장. `won`(가격 · 588 이후 유일한 가격) · `cp`(마일리지 쿠폰) · `daily`/`once`(보석 지급) ·
    `bl`(★ 불릿) · `ban`(1번 카드 티켓형 배너 문구) 이 한 상품의 전부다.
    ref 팔레트: 1장 파랑 · 2장 초록 · 3장(신설)은 둘과 구분되는 **보라**. */
@@ -33788,8 +33838,10 @@ function renderPassPage(list){
     const RB = p.ban ? { w1:427, g1:17, w2:524, g2:24 } : { w1:353, g1:-97, w2:529, g2:23 };
     const rib = (cls, lab, n, w, gx) => '<div class="rb ' + cls + '" style="width:' + w
       + 'px;--gx:' + gx + 'px"><i>' + lab + '</i><b>' + curIc('dia') + '</b><u>' + fmt(n) + '</u></div>';
+    const cardH = pvCardH(p), ntc = pvNotches(p, cardH);
     h += '<div class="pvc p' + p.pal + (p.ban ? ' ban1' : '') + (own ? ' own' : '') + '"'
-      +  ' data-pv="' + p.id + '" style="top:' + tops[i] + 'px;height:' + pvCardH(p) + 'px">'
+      +  ' data-pv="' + p.id + '" style="top:' + tops[i] + 'px;height:' + cardH + 'px'
+      +  ';--ntc-fr:' + pvNtcMask(ntc, false) + ';--ntc-bg:' + pvNtcMask(ntc, true) + '">'
       +  '<div class="bg"></div><div class="hdb"></div>'
       +  '<div class="stt"><i>' + passStatusTxt(p) + '</i></div>'
       +  '<div class="pil"><em>' + curIc('mile') + '</em><i>마일리지 쿠폰 +' + p.cp + '</i></div>'
@@ -33807,8 +33859,12 @@ function renderPassPage(list){
              477 이 소유한 성질(«하단 줄은 총론 한 줄 · 카드 정보는 카드 안»)은 그대로 살아 있고,
              카드 안에서 말할 것이 «가격 버튼» 하나로 줄었을 뿐이다. */
           : '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i></div>')
-      /* ⑧ 우변 물결 노치 — `.fr` **다음**에 둔다(마스크로 뚫린 검정 테 자리에 호를 덧댄다) */
-      +  '<div class="fr"></div><div class="ntc"><s></s></div></div>';
+      /* ⑧ 우변 물결 노치 — `.fr` **다음**에 둔다(마스크로 뚫린 검정 테 자리에 호를 덧댄다).
+         `s` = 검정 외곽 링 · `u` = 그 안쪽 밝은 림(667 4회차 — ref 는 림이 노치를 따라 휜다) */
+      +  '<div class="fr"></div>'
+      +  ntc.map(n => '<div class="ntc" style="bottom:' + (n.b - 12) + 'px;height:' + (n.len + 24) + 'px">'
+           + '<s style="height:' + n.len + 'px"></s><u></u></div>').join('')
+      +  '</div>';
   });
   /* 기간제 이용권 남은 기간 바 — 보유 중일 때만(자동 축복) */
   const barY = y + 10;
