@@ -7,18 +7,18 @@
  *   먼저 하는 일은 «몇 번에 한 번 빨간가» 를 세는 것이 **아니다** — 그렇게 적으면 물음 자신이
  *   플레이키다(766-④ · 775-④ · 779-②). 대신 **확률을 확정으로 바꾸는 손잡이**를 찍는다:
  *   옛 [3-c] 의 모수는 «그 실행의 밴드 밖 명단» 인데, 그 명단에 들어갈 후보들이 **매 실행 예외 없이**
- *   밴드 가장자리에 자기 K회 폭 이내로 붙어 서 있다([1]). 그리고 그 후보에게 옛 판정을 물으면
- *   우회로가 **하나도 없다**([2]). 둘을 곱하면 «언젠가 반드시 빨갛다» 가 확률 없이 나온다.
+ *   밴드 가장자리에 자기 K회 폭 이내로 붙어 서 있고([1]), 그중 옛 판정의 우회로가 하나도 안 열리는
+ *   것이 **매 실행 2종 이상**이다([2]). 둘을 곱하면 «언젠가 반드시 빨갛다» 가 확률 없이 나온다.
  *
  *   [0] 소스 — `probe680.js` 의 [3-c] 가 손 축 둘을 안 쓰고 `rul504.nearSep` 를 부른다(779-③)
- *   [1] 재현 — 매 실행, 옛 우회로가 안 열리는 미등재 종의 **상위 둘**이 밴드에서 «자기 K회 폭» 이내
- *   [2] 옛 판정에는 우회로가 없다 — 그 둘이 한 번 흔들려 나오면 즉시 빨강(이름은 실행마다 갈린다)
+ *   [1] 재현 — 매 실행, 이탈이 가장 큰 미등재 종이 밴드에서 «자기 K회 폭» 이내에 붙어 있다
+ *   [2] 그러면서 옛 우회로가 하나도 안 열리는 후보가 매 실행 2종 이상 — 나오는 즉시 빨강
  *   [3] 새 판정 — 같은 표에서 R회 전부 초록, 여유가 얼마인가
  *   [4] 되돌림 — 새 판정이 «다 통과» 가 아니다(유령 1마리·3마리·등재 이름)
  *
  * ⚠ **문턱은 한 칸도 안 건드린다** — `TOL_FLOOR` 0.40 은 `probe504` [D] 가 «잰» 값이고,
  *   흔들리는 값에서 문턱을 다시 뽑는 길은 759 가 이미 기각했다(«문턱도 같이 흔들린다»).
- *   ⚠ **`ice` 를 면제 목록에 손으로 더하는 길도 오답이다** — [1] 이 매 실행 **둘 이상**을 찍는다.
+ *   ⚠ **`ice` 를 면제 목록에 손으로 더하는 길도 오답이다** — [2] 가 매 실행 **둘 이상**을 찍는다.
  */
 const path = require('path');
 const fs = require('fs');
@@ -94,33 +94,37 @@ const oldOutBand = (rows) => rows.filter(x => x.off > x.tol && x.id !== 'poison'
   }
   await browser.close();
 
-  /* ── [1] 재현 — 옛 모수가 «동전» 인 이유를 한 실행 안에서 본다 ────────
-     후보 = 미등재(⏸접촉 아님) · poison 아님 · **폭 ≤ 40%**(= 옛 우회로가 안 열리는 종).
-     그중 이탈 상위 둘의 «밴드까지 남은 여유» 를 **그 종 자신의 K회 폭**으로 잰다(778-② —
-     손 상수 대신 그 실행이 스스로 잰 널). 1 을 넘으면 «가장자리가 아니다» 는 뜻이다. */
-  const edge = runs.map(rows => rows
-    .filter(x => x.id !== 'poison' && !RUL.held695(x) && x.spread <= 0.40)
-    .sort((a, b) => b.off - a.off).slice(0, 2)
-    .map(x => Object.assign({}, x, { gap: x.tol - x.off, ratio: (x.tol - x.off) / x.spread })));
-  edge.forEach((e, i) => console.log('     [' + (i + 1) + '회] 가장자리 상위 둘: '
-    + e.map(x => x.id + ' 이탈 ' + pc(x.off) + ' 여유 ' + (x.gap * 100).toFixed(1) + 'p ÷ 폭 '
-      + pc(x.spread) + ' = ' + x.ratio.toFixed(2)).join(' · ')));
-  const worst = Math.max(...edge.map(e => Math.max(...e.map(x => x.ratio))));
-  ok(edge.every(e => e.length === 2 && e.every(x => x.ratio <= 1)),
-     '1 재현 — 매 실행 미등재 종 **둘**이 밴드에서 «자기 K회 폭» 이내에 붙어 있다 ⇒ 옛 [3-c] 의 모수(밴드 밖 명단)는 그 둘이 흔들릴 때마다 바뀐다',
-     '최악 여유/폭 ' + worst.toFixed(2) + ' ≤ 1 (실측 10회 −0.01~0.59) · 둘이므로 **한 이름을 목록에 더해도 다음 종이 남는다**');
-  const names = [...new Set([].concat(...edge.map(e => e.map(x => x.id))))];
-  ok(names.length >= 2,
-     '2-a 그 자리에 서는 이름이 하나가 아니다 ⇒ 처방 ⓒ(`ice` 를 면제 목록에 손으로 더한다)는 다음 종에서 그대로 재발한다',
-     names.join(' · ') + ' (실측 10회 ice · arrow · curve)');
-  /* [2-b] 옛 판정에는 그 후보를 받아 줄 우회로가 하나도 없다 — 나오는 «즉시» 빨강이다.
-     ⚠ 이 항이 [1] 과 짝이다: [1] 이 «언젠가 나온다», [2-b] 가 «나오면 빨갛다». */
-  const escapes = [].concat(...edge).filter(oldSideOk);
-  ok(escapes.length === 0,
-     '2-b 옛 판정(⏸접촉 · cd 0 · 폭 > 40%)에는 그 둘을 받아 줄 우회로가 0개 ⇒ 밴드 밖으로 한 번 나오면 그 실행은 즉시 빨강',
-     escapes.length ? escapes.map(x => x.id).join(',') + ' 가 우회했다' : '우회 0/' + [].concat(...edge).length + '종');
+  /* ── [1]·[2] 재현 — 옛 모수가 «동전» 인 이유를 한 실행 안에서 본다 ────────
+     «가장자리에 붙었다» = 밴드까지 남은 여유가 **그 종 자신의 K회 폭** 이내(778-② — 손 상수 대신
+     그 실행이 스스로 잰 널). 모수는 미등재(⏸접촉 아님)·poison 아님 전 종이다.
+     ⚠ **처음에 이 항을 «상위 둘이 전부 가장자리» 라는 전칭으로 적었다가 자가 기각했다** — 2위 자리에
+     그날 `drone`(폭 13%)이 들어와 1.22 로 빨갰다. 775-① 이 적은 그대로 «전칭에서는 표본 하나가
+     판정을 정한다» 이고, 내가 고치러 온 병을 그대로 옮겨 심을 뻔했다(775-④ «새 항도 K회 돌려라»).
+     ⇒ [1] 은 **최댓값 하나**(누가 먼저 나오는가 = 그 자리의 뜻 자체)에, [2] 는 **개수**(전칭이 아닌
+     셈)에 물린다. */
+  const edge = runs.map(rows => {
+    const pool = rows.filter(x => x.id !== 'poison' && !RUL.held695(x))
+      .map(x => Object.assign({}, x, { gap: x.tol - x.off, ratio: (x.tol - x.off) / x.spread }));
+    const top = pool.reduce((a, b) => a.off > b.off ? a : b);
+    /* «나오면 즉시 빨강» 인 후보 — 가장자리에 붙어 있고 옛 우회로가 하나도 안 열린다 */
+    const hot = pool.filter(x => x.ratio <= 1 && !oldSideOk(x)).sort((a, b) => b.off - a.off);
+    return { top, hot };
+  });
+  edge.forEach((e, i) => console.log('     [' + (i + 1) + '회] 최대이탈 ' + e.top.id + ' ' + pc(e.top.off)
+    + ' (여유 ' + (e.top.gap * 100).toFixed(1) + 'p ÷ 폭 ' + pc(e.top.spread) + ' = ' + e.top.ratio.toFixed(2)
+    + ') · 우회로 없는 가장자리 후보 ' + e.hot.length + '종: ' + e.hot.map(x => x.id).join(',')));
+  const worst = Math.max(...edge.map(e => e.top.ratio));
+  ok(edge.every(e => e.top.ratio <= 1),
+     '1 재현 — 매 실행, 이탈이 가장 큰 미등재 종이 밴드에서 «자기 K회 폭» 이내에 붙어 있다 ⇒ 옛 [3-c] 의 모수(밴드 밖 명단)는 그 종이 한 번 흔들릴 때마다 바뀐다',
+     '최악 여유/폭 ' + worst.toFixed(2) + ' ≤ 1 (실측 30회 −0.01~0.57)');
+  const minHot = Math.min(...edge.map(e => e.hot.length));
+  const names = [...new Set([].concat(...edge.map(e => e.hot.map(x => x.id))))];
+  ok(edge.every(e => e.hot.length >= 2),
+     '2 그렇게 붙어 있으면서 **옛 우회로(⏸접촉 · cd 0 · 폭 > 40%)가 하나도 안 열리는** 후보가 매 실행 2종 이상 ⇒ 나오는 즉시 빨강이고, 한 이름을 목록에 더해도 다음 종이 남는다(처방 ⓒ 기각)',
+     '최소 ' + minHot + '종 ≥ 2 (실측 30회 3~7종) · 이번 ' + REPS + '회에 선 이름 ' + names.join(',')
+     + ' (실측 30회 ice · arrow · curve 가 번갈아 1위)');
   /* 옛 판정이 이 R회에서 실제로 몇 번 빨갰는지는 **관측으로만** 찍는다(778-④) —
-     «N회에 한 번 빨갛다» 를 단언으로 세우면 그 단언 자신이 플레이키다(766-④). 뜻은 [1]·[2-b] 가 진다. */
+     «N회에 한 번 빨갛다» 를 단언으로 세우면 그 단언 자신이 플레이키다(766-④). 뜻은 [1]·[2] 가 진다. */
   const oldRed = runs.filter(rows => !oldOutBand(rows).every(oldSideOk));
   console.log('     [관측] 이 ' + REPS + '회에서 옛 [3-c] 는 ' + oldRed.length + '회 빨강'
     + (oldRed.length ? ' — ' + oldRed.map(rows => oldOutBand(rows).filter(x => !oldSideOk(x))
@@ -135,12 +139,12 @@ const oldOutBand = (rows) => rows.filter(x => x.off > x.tol && x.id !== 'poison'
   const minGap = Math.min(...seps.map(s => s.near - s.rest[0].near));
   ok(seps.every(s => s.isMax),
      '3-a 새 판정(부호) — 재현되는 이탈이 가장 큰 종은 R회 전부 `poison` 이다(⏸접촉 등재분 제외 · 밴드 멤버십 안 씀)',
-     '최소 여유 ' + (minGap * 100).toFixed(1) + 'p (실측 10회 10.5~19.6p)');
+     '최소 여유 ' + (minGap * 100).toFixed(1) + 'p (실측 20회 10.5~22.2p)');
   const minRatio = Math.min(...seps.map(s => s.ratio));
   ok(seps.every(s => s.ratio >= 1.30),
      '3-b 새 판정(크기) — poison 근접이탈 ≥ 1.3 × 다음 셋의 평균(묶음 통계라 준우승 «이름» 이 갈려도 안 흔들린다)',
      '최소 ×' + minRatio.toFixed(2) + ' ≥ 1.30 · 여유 ' + (minRatio - 1.30).toFixed(2)
-     + ' (실측 10회 ×1.59~2.04)');
+     + ' (실측 20회 ×1.59~2.39)');
   /* 옛 항이 빨갰던 그 실행에서도 새 항이 초록인지 — 있으면 못박고, 없으면 그렇게 적는다. */
   ok(oldRed.every(rows => { const s = RUL.nearSep(rows, 'poison'); return s.isMax && s.ratio >= 1.30; }),
      '3-c 옛 항이 빨갰던 실행에서도 새 항은 초록이다(있었을 때만 뜻이 있는 항 — 없으면 공집합)',
