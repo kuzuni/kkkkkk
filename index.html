@@ -7194,10 +7194,10 @@
      (불릿 690 ↔ ref 809 · 배너 534 ↔ ref ≥582) 자연히 두 자리가 된다. 값은 `pvNotches()` 가 낸다.
      깊이 32 는 세 자리 모두 같고(ref 14~16 × k = 29~33), 길이는 맨 아래만 105(ref 51 — 가장 긴 자리)이고
      위쪽은 **70**(ref 최빈 34 × k). 아래 CSS 값은 인라인이 없을 때의 폴백(= 맨 아래 한 자리)이다. */
-  .pvc{--ntc-cy:calc(100% - 160.5px);                        /* 하변 108 + 세로 반지름 52.5 */
-    --ntc-fr:radial-gradient(32px 52.5px at 100% var(--ntc-cy),#0000 98%,#000 100%);
+  .pvc{--ntc-cy:calc(100% - 160px);                          /* 불릿형 폴백 — 중심이 하변에서 160 */
+    --ntc-fr:radial-gradient(40px 57px at 100% var(--ntc-cy),#0000 98%,#000 100%);
     /* `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10px · 하변에서 150.5» 다 */
-    --ntc-bg:radial-gradient(32px 52.5px at calc(100% + 10px) calc(100% - 150.5px),#0000 98%,#000 100%)}
+    --ntc-bg:radial-gradient(40px 57px at calc(100% + 10px) calc(100% - 150px),#0000 98%,#000 100%)}
   /* ⚑ 667 4회차 ② — **안쪽 밝은 림이 노치를 따라 휜다**(비평가 AT ② · ref 화소로 확인: 노치 최심
      안쪽에 `--h` 밝은 띠가 **5~6 ref px = 12 우리 px** 으로, 곧은 변의 림(5~8 ref)과 같은 두께로 이어진다).
      지금까지는 마스크가 `.bg` 의 림을 **잘라내기만** 해서 곡선을 따라 도는 밝은 테가 없었다.
@@ -7207,10 +7207,10 @@
        · `s` 검정 외곽 = 반지름 32 × len/2 · 테 10 → local 12..22 (구멍 쪽으로 그린다)
        · `u` 밝은 림   = 반지름 44 × (len+24)/2 · 테 12 → local 0..12 (몸통 쪽으로 그린다)
      `overflow:hidden` 은 여전히 카드 우변에서 오른쪽 절반을 자른다. */
-  .pvc>.ntc{right:0;bottom:96px;width:44px;height:129px;overflow:hidden;z-index:2;pointer-events:none}
-  #shopw .pvc>.ntc>s{position:absolute;left:12px;top:12px;width:64px;height:105px;box-sizing:border-box;
+  .pvc>.ntc{right:0;bottom:91px;width:52px;height:138px;overflow:hidden;z-index:2;pointer-events:none}
+  #shopw .pvc>.ntc>s{position:absolute;left:12px;top:12px;width:80px;height:114px;box-sizing:border-box;
     border:10px solid #000;border-radius:50%}
-  #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:88px;box-sizing:border-box;
+  #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:104px;box-sizing:border-box;
     border:12px solid var(--h);border-radius:50%}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
   .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:30px 30px 0 0;
@@ -7229,7 +7229,10 @@
   .pvc>.pil>i{color:#fff;font-size:28px;line-height:32px;white-space:nowrap;
     -webkit-text-stroke:5px #000;paint-order:stroke fill}
   /* ② 가치 배지 — 우상단 폭발형(ref 로브 10~11 · r 38→46). 카드 윗변·우변 밖으로 나간다 */
-  .pvc>.bdg{left:816px;top:-43px;width:194px;height:194px;z-index:3}
+  /* ⚑ 667 5회차 — 분홍 잉크 bbox 가 ref 대비 +9%/+6%(AV +13% · AW +8.7%/+5.6%, 2인 일치).
+     **등방 0.92** 로 줄인다(356 «확대·축소는 등방» — AV 의 «폭만» 안은 종횡을 깬다).
+     중심은 이미 정확하므로(우변에서 ref 65 ↔ 우리 64.5) 중심 (913, 54) 를 붙박고 좌·상만 다시 적었다. */
+  .pvc>.bdg{left:824px;top:-35px;width:178px;height:178px;z-index:3}
   .pvc>.bdg>s{position:absolute;inset:0;background:#F43171;border:6px solid #000;border-radius:50%;
     clip-path:polygon(50% 0,58.7% 12.4%,73.2% 6.7%,76.1% 22.4%,91.1% 21.5%,88.2% 37.1%,
       100% 46.9%,89.8% 58.4%,97.3% 72.1%,82.1% 76.6%,83.6% 92.2%,68.5% 88.3%,63.5% 100%,
@@ -7240,10 +7243,13 @@
      ⚠ **글자 크기는 안 건드렸다** — 두 비평가가 잉크 «폭» 을 −7.6% 로 냈지만 **높이는 −0.9%/−3.3% 로 맞다**.
      같은 문자열에서 폭만 좁은 것은 **서체 모양**이고, 지시서 [3] 이 감점 사유에서 뺀 자리다.
      키우면 맞던 높이가 +7% 로 어긋난다(폭을 좇다 높이를 잃는 380 함정). */
-  .pvc>.bdg>i{position:absolute;left:0;right:0;top:53px;text-align:center;color:#FFFC7E;
+  /* ⚑ 5회차 — 뱃지 상자가 194 → 178(등방 0.92)로 줄었으므로 **두 줄도 8px(=(194−178)/2) 올린다**.
+     안 올리면 4회차에 맞춰 둔 «잉크 중심 = 뱃지 중심 −4» 가 그 8만큼 다시 어긋난다.
+     글자 «크기» 는 여전히 안 건드린다(위 주석의 380 함정 — 높이가 맞는 자리다). */
+  .pvc>.bdg>i{position:absolute;left:0;right:0;top:45px;text-align:center;color:#FFFC7E;
     font-size:46px;line-height:48px;-webkit-text-stroke:8px #000;paint-order:stroke fill;
     transform:rotate(-10deg)}
-  .pvc>.bdg>b{position:absolute;left:0;right:0;top:103px;text-align:center;color:#FFFC7E;
+  .pvc>.bdg>b{position:absolute;left:0;right:0;top:95px;text-align:center;color:#FFFC7E;
     font-size:36px;line-height:40px;font-weight:400;-webkit-text-stroke:7px #000;
     paint-order:stroke fill;transform:rotate(-10deg)}
   /* ④ 타이틀 행 — 헤더 밴드 안. ✦ 는 밴드 색보다 밝은 림 색이다(ref) */
@@ -7331,10 +7337,21 @@
      `display:flex` 가 조용히 진다 — `align-items/justify-content` 는 남고 display 만 블록화돼
      안의 `.cic` 이 가운데가 아니라 **판 안쪽 좌상단**에 붙었다(실측 Δ −9.5,−9.5 = 여백 19 의 절반).
      `#shopw` 안에서 i·em·b·u·s 에 display 를 새로 주는 규칙은 전부 이 리셋을 이겨야 한다. */
+  /* ⚑ 667 5회차 — 3회차가 «비평가 둘이 어긋난다» 로 넘긴 자리. 실측으로 갈렸고 **둘 다 반만 맞았다**:
+       ⓐ 금색 면은 ref 도 **형마다 두 값**이다 — 초록 43~44 ref px(= 89~91) · **파랑 38~39(= 79)**.
+         우리는 세 장 다 91 이라 **배너형만 +15% 과대**였다(AV·AW 2인 일치).
+       ⓑ 금색 면 **밖에 검정 외곽선**이 있다(ref 초록 판 가로 단면 y586: 빨강 → **검정 x180** →
+         밝은 금 182 → 주황 184~223 → 밝은 금 224 → **검정 226** → 몸통). 우리는 그 검정이 0 이라
+         금색이 리본 빨강·몸통과 바로 맞닿았다. 자리를 안 넓히려고 `box-shadow` 로 **밖에** 그린다. */
   #shopw .pvc>.rb>b{position:absolute;right:var(--gx);top:-19px;width:91px;height:91px;border-radius:20px;
-    border:6px solid #FDC532;background:#D47D14;display:flex;align-items:center;
+    border:6px solid #FDC532;background:#D47D14;box-shadow:0 0 0 4px #000;display:flex;align-items:center;
     justify-content:center;font-weight:400}
   .pvc>.rb>b>.cic{width:60px;height:60px}
+  /* 배너형: 판 79 (ref 파랑 38~39 ref px) · 아이콘도 같은 비로 · **하변이 리본 하변과 한 줄**
+     (ref 파랑은 위로만 12 돌출한다 — AV·AW 2인 일치. top = 리본 67 − 판 79 = −12) */
+  #shopw .pvc.ban1>.rb>b{width:79px;height:79px;top:-12px;border-radius:17px}
+  .pvc.ban1>.rb>b>.cic{width:52px;height:52px}
+  .pvc.ban1>.rb>u{width:79px;top:52px}
   .pvc>.rb>u{position:absolute;right:var(--gx);top:58px;width:91px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;text-decoration:none;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
@@ -33848,16 +33865,25 @@ const pvCardH = p => p.ban ? PVC_H_BAN : PVC_H_BL4 - (4 - p.bl.length) * PVC_BL_
    ⚠ 위로 어디까지 찍는가 = **헤더 밴드를 침범하지 않는 데까지**. ref 초록의 맨 위 노치도 밴드 아래
    31 ref(= 64) 를 띄우고 서 있다 — 그 여백을 상수로 박았다(NTC_TOPGAP).
    되돌리려면 NTC_PITCH 두 값을 아주 크게 주면 된다(맨 아래 한 자리만 남는다 = 3회차 상태). */
-const NTC_DEP = 32, NTC_LEN0 = 105, NTC_LENU = 70, NTC_BOT0 = 108, NTC_TOPGAP = 64, PVC_HDB = 112;
-const NTC_PITCH = { ban: 140, bl: 227 };
+/* ⚑ 5회차 정정 셋 — 비평가 AV·AW 2인 일치(넷 다 실측으로 재확인했다):
+   ⓐ **깊이 32 는 «바탕 기준» 값을 «실루엣» 자리에 적은 것**이었다. 측정표 §1-3 의 «485.6 → 470 = 15.6»
+     은 **바탕이 시작되는 x** 이고, ref 의 실루엣(검정 바깥선)은 그보다 검정 두께만큼 더 깊다:
+     실측 ref 실루엣 **19.6 ref = 40.4** · 바탕 **14.6 ref = 30.1**. 우리는 32/22 로 둘 다 ~10 얕았다.
+     ⇒ 반지름 32 → **40**(바탕 기준 30 이 따라온다). 4회차까지의 «32 가 맞다» 는 검산은 두 기준을
+     맞바꿔 본 것이라 스스로를 확인해 준 것이었다.
+   ⓑ **길이 = 피치의 절반**이다(AW 실측: 초록 56/111 · 파랑 35/68 ref px). 한 카드 안에서 위·아래
+     길이를 다르게 둘 근거가 없었다(AV 도 «두 흠집으로 읽힌다» 로 같은 자리를 짚었다) ⇒ `pitch/2`.
+   ⓒ **앵커도 형마다 두 값**이다 — 맨 아래 노치 **중심**이 하변에서 ref 초록 160 · **파랑 130**.
+     4회차는 초록 값(108 = 중심 160.5)을 배너형에도 썼다 ⇒ 배너형 중심 **130**.
+   ⚠ 위로 어디까지 찍는가도 정정됐다 — 헤더 밴드가 아니라 **상단 라운드 코너**가 한계다.
+     ref 파랑의 셋째 노치는 밴드 자리로 9px 올라와 있다(막으면 세 자리가 두 자리로 준다). */
+const NTC_DEP = 40, NTC_TOPGAP = 56;              /* 56 = 카드 라운드 44 + 여유 12 */
+const NTC_PITCH = { ban: 139, bl: 227 };          /* 하단 간격 — ref 실측(파랑 140·141 · 초록 229·225) */
+const NTC_CEN0  = { ban: 130, bl: 160 };          /* 맨 아래 노치 **중심** ↔ 카드 하변 (ref 실측) */
 function pvNotches(p, H){
-  const pitch = p.ban ? NTC_PITCH.ban : NTC_PITCH.bl, hdb = p.ban ? PVC_HDB - 16 : PVC_HDB, out = [];
-  for(let i = 0, b = NTC_BOT0; ; i++, b += pitch){
-    const len = i ? NTC_LENU : NTC_LEN0;
-    if(b + len + NTC_TOPGAP > H - hdb) break;
-    out.push({ b, len });
-  }
-  return out.length ? out : [{ b: NTC_BOT0, len: NTC_LEN0 }];
+  const k = p.ban ? 'ban' : 'bl', pitch = NTC_PITCH[k], len = Math.round(pitch / 2), out = [];
+  for(let b = NTC_CEN0[k] - len / 2; b + len + NTC_TOPGAP <= H; b += pitch) out.push({ b, len });
+  return out.length ? out : [{ b: NTC_CEN0[k] - len / 2, len }];
 }
 /* 마스크는 «구멍» 이므로 겹이 여럿이면 `mask-composite:intersect` 로 합친다(CSS 주석).
    `.fr` 은 카드 상자 그대로, `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10 · 하변에서 −10» 이다. */
