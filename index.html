@@ -14308,10 +14308,17 @@
      칸이 하나 줄면 최고속(60ms)에서 동시 5장이 4칸을 쓰지만, 그건 «가끔 한 쌍이 같은 칸» 이고
      지금은 «매 프레임 이웃이 붙어 한 문자열로 읽히는» 것이다 — 뒤가 훨씬 나쁘다. */
   .tr-card{--hb-y:250;--hb-x:.5;--hb-y2:180;--hb-x2:.5;--hb-slots:4;--hb-sw:72;--hb-pad:12;
-    --burst-to:.cb}   /* ⚑ 660 — 훈련 카드의 «강화 버튼» 은 하단 비용 바(`.cb` 310×106)다 —
+    --burst-to:.cb;--burst-keep:i}   /* ⚑ 660 — 훈련 카드의 «강화 버튼» 은 하단 비용 바(`.cb` 310×106)다 —
        카드 전체가 눌리는 자리이지만 «누르는 것» 으로 읽히는 부품은 이 하나뿐이고(초록 알약 + 골드
        아이콘 + 금액), 주인이 «버튼에서 터지는» 이라고 말한 것도 여기다. 카드(326×510) 전체를
-       호스트로 두면 링이 아이콘(.ci)·수치(.cv)·이름(.cn) 위를 지나 «아이콘 쪽 이펙트 0건» 을 깬다. */
+       호스트로 두면 링이 아이콘(.ci)·수치(.cv)·이름(.cn) 위를 지나 «아이콘 쪽 이펙트 0건» 을 깬다.
+     ⚑⚑ 816 — `--burst-keep:i` = 그 버튼 «안» 에서 알이 덮으면 안 되는 잉크 = **가격 숫자**(`.cb>i`).
+       이 버튼만 «지금 누르면 얼마인가» 를 이고 있고 그 값은 누를 때마다 오른다(`fxBurst` 의 `kh` 머리말).
+       ⚠ **코인 아이콘(`s`)은 안 신고한다** — 660 이 알을 «그 탭이 내는 재화 아이콘» 으로 바꾼 뒤로
+         골드 알이 골드 코인 위를 지나는 것은 «정보가 사라지는» 자리가 아니다(같은 그림이다).
+         신고를 둘로 늘리면 구멍이 155px 이 되어 알이 양 끝 두 무더기로 뭉친다(측정은 review §3).
+       ⚠ 단련(`.tr-tp`)·룬(`.tr-rn`)도 670·687 이후 버튼에 «(아이콘) 수량» 을 이고 있다 —
+         같은 결손이지만 버튼이 좁아(340×74) 밀도 예산이 다르므로 **818** 로 등재했다(범위 밖). */
   /* ⚠ 단련 행은 **빈 띠가 하나뿐**이다 — x340..550 · y0..150(그 아래 `.td` 150..186 이 x26..586 을 가로지른다).
      행 사이 틈은 14px 이고 다음 행의 `.tc` 가 y14 부터 시작해 **아래로 새는 길도 없다.**
      ⇒ 두 줄기를 그 한 칸에 위아래로 포갠다: 비용 20..80(위) · 결과 82..148(아래, 서로 안 만난다).
@@ -40504,6 +40511,36 @@ function fxbTextHoles(t, m){
   }
   return out;
 }
+/* ⚑⚑ 816 — **호스트가 «이건 가리지 마라» 고 신고한 잉크**(`--burst-keep`, 자식 셀렉터).
+   660 이 아이콘 버스트에서 글자 구멍을 통째로 안 판 자리의 예외다(아래 `kh` 머리말).
+   ⚠ 위 `fxbTextHoles` 와 **자를 같이 쓴다** — 글자는 `Range` 의 잉크 bbox, 그림은 요소 bbox,
+     둘 다 사방 `m` 만큼 넓힌다(43회차 ⓑ 규약 그대로). 다른 것은 «무엇을 훑는가» 하나뿐이다:
+     저기는 «대상의 모든 자손», 여기는 **신고된 셀렉터에 걸리는 자손뿐**이고 **호스트 자신은
+     절대 안 담는다**(호스트를 담는 순간 빈자리가 0 이 되는 것이 660 이 만난 그 벽이다).
+   ⚠ 신고가 없으면 **빈 배열**이다 — 안 신고한 호스트는 한 값도 안 바뀐다. */
+function fxbKeepHoles(t, m){
+  const f = fxSc(); if(!f || !t || t.nodeType !== 1) return [];
+  let sel = '';
+  try { sel = getComputedStyle(t).getPropertyValue('--burst-keep').trim(); } catch(_){}
+  if(!sel) return [];
+  let els = [];
+  try { els = [...t.querySelectorAll(sel)]; } catch(_){ return []; }
+  const out = [], rg = document.createRange();
+  for(const el of els){
+    const cs = getComputedStyle(el);
+    if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+    let has = false;
+    for(const n of el.childNodes) if(n.nodeType === 3 && n.textContent.trim()){ has = true; break; }
+    let b;
+    if(has){ rg.selectNodeContents(el); b = rg.getBoundingClientRect(); }
+    else b = el.getBoundingClientRect();
+    if(!b.width || !b.height) continue;
+    out.push({ x:(b.left - f.x)/f.s - m, y:(b.top - f.y)/f.s - m,
+               w:b.width/f.s + 2*m, h:b.height/f.s + 2*m });
+    if(out.length >= 8) break;                       /* 안전판 — 위 24 와 같은 규약(신고는 몇 개뿐이다) */
+  }
+  return out;
+}
 function fxbHit(holes, x, y){
   for(const h of holes) if(x > h.x && x < h.x + h.w && y > h.y && y < h.y + h.h) return true;
   return false;
@@ -40589,6 +40626,24 @@ function fxBurst(t, col, n, strict, iv, ic){
        는 keep-out 이 아니라 그쪽이 막는 것이라, 겹쳐도 «판때기» 가 되지 않는다.
      ⚠ 종전 호출(`ic` 없음 — 09·12·17·퀘스트·우편·장비)은 한 값도 안 바뀐다. */
   const kh = (r && !IC) ? fxbTextHoles(t, strict ? Math.round(FXB_KOS * hsc) : undefined) : [];
+  /* ⚑⚑ 816 — **가격을 이고 있는 버튼에서는 그 숫자만 비운다.**
+     바로 위 660 의 근거 ①(«버튼 라벨은 홀드 내내 안 변하는 고정 글자»)이 훈련에서 거짓이다 —
+     훈련의 강화 버튼(`.cb`)이 이고 있는 것은 라벨이 아니라 **«지금 누르면 얼마인가»** 이고
+     그 수치는 강화할 때마다 오른다. 681 1~5회차 비평에서 **여섯 사람이 반복 관측**했고
+     `probe816` 실측이 그대로 찍었다: 숫자 잉크 덮임 **최대 93%** · 살아 있는 표본의 **72% 가 ≥25%**.
+     ⚠ **660 을 되돌리는 것이 아니다.** 660 이 «빈자리가 사실상 0»(4알 중 1알)을 만난 뿌리는
+       라벨이 아니라 **호스트 자신**이었다 — `.cb`·`.tb` 는 배경이 그라디언트라 43회차 ⓐ
+       «배경 이미지를 가진 요소 = 그림 잉크» 판정에 걸려 **상자 통째가 구멍**이 된다.
+       그래서 여기서는 `fxbTextHoles`(호스트+모든 자손)를 안 쓰고 **호스트가 `--burst-keep` 으로
+       신고한 잉크만** 담는다. 신고가 없는 호스트(단련 `.tb` · 룬 `.rbt.b1` · 09·12·17·장비·코스튬)는
+       구멍이 **0개** — 한 값도 안 바뀐다.
+     ⚠ 여유는 «입자 크기에서 나온다»(619 4회차 규칙) — 아이콘 알은 구슬의 `FX_CIC_SC` 배라
+       여유도 그 배로 준다(구슬 최대 반경 17 → 아이콘 최대 반경 27 · `FXB_KOS` 19 × 1.6 = 30).
+       이 한 줄이 «중심만 피하고 잉크는 걸치는» 자리를 막는다.
+     ⚠ 링 기하·가둠 상자·이동량·수명은 **한 값도 안 건드린다** — 42회차 규약대로 각도만 굴린다.
+     ⚠ 660 의 «스폰은 버튼뿐»(주인 지목 · `verify660` [C1][C2])도 그대로다 — 구멍은 버튼 «안»
+       에서 앉을 자리를 고를 뿐이라 알이 버튼 밖으로 나가지 않는다. */
+  if(IC && r) kh.push(...fxbKeepHoles(t, Math.round(FXB_KOS * hsc * FX_CIC_SC)));
   /* ⚑ 619 8회차 — strict 구멍 두 벌 추가(비평가 DT·DU 2인 공통 «스파크가 −n 플로터를 70% 은폐 ·
      진행바 위에 착지»): ① 살아 있는 플로터(`.fx-plus`) — 정보 층인데 #fxl 에 살아 호스트 자손 스캔에
      안 잡힌다 ② 진행바(`.rb`) — 단색 배경이라 43회차 «그림 잉크» 판정(backgroundImage)에 안 걸린다.
