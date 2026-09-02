@@ -31799,12 +31799,19 @@ let rwFxW = 0;                           /* 682 — 버스트마다 도는 저�
      `kh` 가 비어 **버리기 규칙 자체가 안 걸린다**(`if(strict && kh.length && …)`) — 알이 조용히
      사라지는 일이 없다.
    ⚑ 마지막 한 걸음만 이 함수가 한다 — **`.fx-cic`(재화 `<img>`)를 `.fx-rlic`(그 유물 글리프)로.**
-     상자(width/height/margin)는 `fxBurst` 가 적은 값을 **한 픽셀도 안 바꾼다** — 바꾸면 위 ①의
-     가둠 산수가 깨진다. 글리프는 그 상자 «안에» 앉힌다(`RW_GAIN_GS`).
+     ⚠⚠ **753 이 이 문단을 갈아 끼웠다** — 683 시절에는 «상자를 한 픽셀도 안 바꾼다(줄이기만 한다)»
+       였지만, 주인 지시 ②(«크기 = 유물 아이콘») 는 상자를 **키우는** 쪽이라 `fxBurst` 의 가둠(`inM`)
+       부분집합 논증이 성립하지 않는다. 대신 **자리·이동을 이 함수가 다시 적어** 가둠을 안 탄다
+       (`R0 = 0` · `R1` 은 이웃 칸 산수로 묶여 있다 — 아래 753 상수 머리말). 지금 크기·자리는
+       `RW_GAIN_BOX` 와 그 칸 아이콘의 computed font-size / line-height 에서 나온다.
    ⚠ **화면 밖 카드에는 안 쏜다**(518 «쌩뚱맞은 곳에서 이펙트» 재발 방지) — 페이지가 닫혀 있거나
      짧은 프레임에서 칸이 잘려 나가면 파티클만 허공에 뜬다. `rwCardShown()` 이 그 자다.
    ↩ 되돌림: `rwGainFx()` 호출 한 줄(아래 `rwSummonFx` 첫 줄)을 지우면 666 상태와 픽셀 동일하다. */
-/* ⚑⚑ 2회차 — 1회차를 비평가 둘이 **독립으로 3점**(축 ①②③④ 최저 3)으로 잡았다. 셋이 공통이었다:
+/* ⚠⚠ 아래 2·3·4회차 머리말 셋은 **683 시절의 «링» 기하 기록**이다 — 753(주인 재스펙)이 그 기하를
+   폐기했으므로 `RW_GAIN_SC`·`RW_GAIN_GS`·옛 `R0`/`R1` 값은 **더 이상 존재하지 않는다.**
+   지우지 않고 남긴 이유는 이 기록이 «왜 그 값이었나» 의 유일한 근거이고, 되돌릴 때 읽을 자리이기
+   때문이다(58·683 규약). **지금 도는 규격은 위 753 상수 머리말 하나뿐이다.**
+   ⚑⚑ 2회차 — 1회차를 비평가 둘이 **독립으로 3점**(축 ①②③④ 최저 3)으로 잡았다. 셋이 공통이었다:
    ⓐ **너무 크다** — 알 잉크 37~55px 이 카드(151)의 27~39% · 여섯 알 bbox 합이 카드 면의 67~68% 라
       카드 자기 아이콘과 «Lv.n» 이 덮인다(A1 에서 라벨 흰 픽셀 **0개**).
    ⓑ **안 퍼진다 · 갈래가 넷뿐** — 알 중심 각이 41°/136°/222°/315° 네 대각에 고정이고 180ms 동안
@@ -31859,11 +31866,37 @@ let rwFxW = 0;                           /* 682 — 버스트마다 도는 저�
    ⚠ **주행의 자를 «절대 px» 에서 «자기 잉크 대비» 로 옮겼다**([C4]) — R0 를 밀면 절대 주행은
      줄지만 «데칼이 아니다» 라는 뜻은 안 변한다. 35 / 잉크 24 = **1.46배**이고, 1회차의 결손
      (주행 14 / 잉크 21 = **0.67배**)은 새 자에서도 그대로 빨갛다. */
-const RW_GAIN_N0 = 6, RW_GAIN_N = 5;     /* 첫 발 / 홀드 틱당 알 수 — 분리는 R0 가 맡는다(위 머리말) */
-const RW_GAIN_SC = 0.60;                 /* `fxBurst` 가 준 상자 대비 축소율(≤1 — 위 머리말). 44px → 26px */
-const RW_GAIN_GS = 0.74;                 /* 알 상자 대비 글리프 font-size — 4회차: .62 → .74(문양 해상) */
-const RW_GAIN_R0 = 38, RW_GAIN_R1 = 86;  /* 카드 중심 기준 탄생·도달 반경(px) — 위 5회차 머리말의 산수 */
+/* ⚑⚑ 753 — **주인이 이 이미터의 스펙을 다시 적었다**(2026-09-02 05:30 + 05:32 보강). 원문:
+   «유물소환으로 유물에 뜨는 이펙트도 캔슬 되지 말라하고, 유물에 뜨는 파티클 크기 유물 아이콘이랑
+    크기 똑같게 하고, 한번 강화당 알갱이 하나 뜨고 유물 위치에서 터지게 하기 주변에서 터지지 말고»
+   «랜덤방향으로 터지게 하기»
+   ⇒ 683 이 다섯 회차에 걸쳐 세운 «링» 은 통째로 폐기된다 — 네 항이 그 기하를 정면으로 뒤집는다:
+     ① **캔슬 금지** — 홀드 틱이 알 수명을 `fxTickLife` 로 자르던 것을 걷는다(660 보강2 «날아가던
+        입자는 수명 끝까지»). 재현 `probe753` [4-a] 수리 전 실측: 홀드 알 수명 **45~76ms**(공용 380ms
+        의 12~20%) — «캔슬» 이 실재했다.
+     ② **크기 = 그 유물 아이콘과 동일** — 손 상수로 적지 않고 `.rw-c>i` 의 computed font-size 를
+        **그 자리에서 읽는다**(아이콘 규격이 바뀌면 알도 따라온다 · 411·394 규약).
+     ③ **획득 1회당 정확히 1알 · 원점 = 아이콘 중심 ±0** — 링(`R0` 38)이 «주변에서 터진다» 였고
+        주인이 그것을 지목했다. `R0 = 0` 이고 알 수는 첫 발·홀드 모두 1이다.
+     ④ **방향만 난수** — 자리는 고정, 방향은 매번 다르다(682 위상 + 지터 그대로).
+   ⚠ **683 의 [C4]«주행 ÷ 잉크 ≥ 1.4»·[C5]«카드 테를 넘는다»·[D5]«카드 폭의 22% 이하»·
+      [D6][D7]«알 사이 간격» 은 이 지시와 정면으로 부딪힌다** — 333 처방대로 **방향을 뒤집어**
+      갈아 끼웠다(항을 지우지 않았다). 상세는 `docs/review/753-유물획득파티클스펙보강.md` §3.
+   ⚠ **`RW_GAIN_R1` 은 취향이 아니라 이웃 칸이 정한다** — 알 잉크 반폭이 79(상자 158)이고 이웃 칸의
+      가까운 변이 중심에서 100.5 다. 봉투 최대 뻗음은 `@keyframes fxSpark` 의 52% 지점
+      (translate 0.78d · scale 1)이라 `0.78·R1 + 79 < 100.5` ⇒ **R1 ≤ 26**. 22 는 그 안의 값이다
+      (실측 96.4 < 100.5 · 여유 4.1px). 100% 지점은 scale .62 라 `22 + 49 = 71` 로 더 안쪽이다.
+   ⚑ **위임 규약 채택(2026-09-01 22:35) — 아래쪽 섹터 배제(`RW_GAIN_DOWN`)**: 683 5회차 비평가
+      둘이 «단 하나» 로 짚은 것이 «링 하단 호가 «Lv.n» 라벨을 훑는다» 였고 그 처방이 «아래쪽 섹터를
+      빼라» 였다. 753 ④ 의 «랜덤» 은 «고정 패턴이 아니다» 라는 뜻이므로 좁은 하향 원뿔을 빼도
+      네 사분면이 다 열려 있다(허용각 129.6°~410.4° — `probe753` [5-a] 가 매 실행 확인).
+      666 4회차가 지불 버스트에서 «발원점 아래에 정보가 있다» 로 쓴 것과 **같은 처방**이다.
+      ↩ 되돌리려면 `RW_GAIN_DOWN = 0` — 온 원으로 즉시 되돌아온다. */
+const RW_GAIN_N0 = 1, RW_GAIN_N = 1;     /* 753 ③ — 획득 1회당 알갱이 «정확히 1개»(첫 발·홀드 같은 값) */
+const RW_GAIN_BOX = 1.25;                /* 753 ② — 알 상자 ÷ 아이콘 font-size. 10글리프 실측 최대 잉크 155.5 / 126 = 1.234 */
+const RW_GAIN_R0 = 0, RW_GAIN_R1 = 22;   /* 753 ③ — 탄생 반경 0(아이콘 중심) · 도달 반경(위 머리말의 이웃 칸 산수) */
 const RW_GAIN_JIT = 0.28;                /* 칸 폭 대비 ±지터(682 규약과 같은 어휘) */
+const RW_GAIN_DOWN = 0.22;               /* 아래쪽 배제 섹터(원 둘레 비율 · 0 이면 온 원) — 위 위임 규약 머리말 */
 const RW_FLASH_MS = 120;                 /* 5회차 — 당첨 칸 플래시 길이(ms). 위 `rwSummonFx` 머리말의 산수 */
 let rwGainW = 0;                         /* 버스트마다 도는 저불일치 위상(황금비 · 682·619 6회차와 같은 수열) */
 /* 칸이 «지금 화면에 온전히 있는가». 프레임과 89 페이지 두 상자에 다 들어와야 한다
@@ -31875,7 +31908,7 @@ function rwCardShown(r){
   return r.x >= 0 && r.y >= 0 && r.x + r.w <= FRAME_W && r.y + r.h <= frameH
       && r.y >= pr.y - 1 && r.y + r.h <= pr.y + pr.h + 1;
 }
-function rwGainFx(it, el, first, iv){
+function rwGainFx(it, el, first){
   if(!it || !el) return false;
   const L = (typeof fxL === 'function') ? fxL() : null;
   const r = (typeof fxRect === 'function') ? fxRect(el) : null;
@@ -31884,24 +31917,38 @@ function rwGainFx(it, el, first, iv){
   const col = (RW_GLOW[gi] && RW_GLOW[gi][1]) || FXPAL.spark;
   const n = Math.max(1, Math.min(first ? RW_GAIN_N0 : RW_GAIN_N, FXMAX - L.childElementCount - 1));
   const before = new Set(L.children);
-  fxBurst(el, col, n, true, iv, PAY_CUR.relic);
+  /* 753 ① — **다섯째 인자(`iv`)를 안 넘긴다.** 넘기면 `fxBurst` 가 `fxTickLife(iv)` 로 수명을
+     틱 안으로 자르고, 그것이 주인이 지목한 «캔슬» 이다(`probe753` [4-a] 수리 전 45~76ms). */
+  fxBurst(el, col, n, true, null, PAY_CUR.relic);
   const born = [];
   for(const nd of L.children) if(!before.has(nd)) born.push(nd);
-  /* 자리·이동·크기를 여기서 다시 적는다(위 2회차 머리말) — `fxBurst` 는 «알을 낳는 일» 만 했다 */
-  const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  /* 753 ② — **크기와 자리를 그 칸 아이콘에서 읽는다.** 같은 글리프를 같은 font-size 로 그리므로
+     «크기 똑같게» 가 근사가 아니라 **항등**이다(상수를 두 벌로 안 적는다 — 402 «표 두 벌» 규약).
+     ⚠ **자리는 칸이 아니라 `<i>` 상자에서 뽑는다.** `.rw-c` 는 `border:4px` + `box-sizing:border-box`
+       라 `<i>`(`position:absolute; top:0; bottom:0`)의 담는 상자가 **패딩 상자(143)** 이고,
+       `line-height:143` 인 한 줄 block 이므로 글리프 줄상자 중심 = `i.y + 143/2` = 칸 위 + 75.5 다.
+       칸 상자로 계산하면 «테두리 4px» 이 빠져 **4px 위로 굳는다**(1회차에 실제로 그랬고
+       `probe753` [2-a] 가 찍힌 픽셀로 그것을 잡았다). `<i>` 에서 뽑으면 테두리·줄높이가 바뀌어도
+       자리가 저절로 따라온다. */
+  const ic = el.querySelector('i');
+  const cs = ic ? getComputedStyle(ic) : null;
+  const ri = (ic && typeof fxRect === 'function') ? fxRect(ic) : null;
+  const fs = cs ? parseFloat(cs.fontSize) : 0;
+  const lh = cs ? parseFloat(cs.lineHeight) : 0;
+  if(!(fs > 0) || !ri) return born.length > 0;
+  const s3 = Math.round(fs * RW_GAIN_BOX);
+  const cx = ri.x + ri.w / 2, cy = ri.y + ((lh > 0) ? lh / 2 : ri.h / 2);
   const m = born.length, ph = (rwGainW = (rwGainW + 0.6180339887) % 1);
   born.forEach((nd, j) => {
-    const sz = parseFloat(nd.style.width);
-    const s3 = Number.isFinite(sz) ? Math.max(12, Math.round(sz * RW_GAIN_SC)) : 24;
     nd.className = 'fx-spark fx-rlic';
     nd.textContent = it.ic;
-    /* 상자는 «줄이기만» — 줄인 상자는 `fxBurst` 가 잡아 준 가둠 상자의 부분집합이다(머리말) */
     nd.style.width = s3 + 'px'; nd.style.height = s3 + 'px';
     nd.style.margin = (-s3 / 2) + 'px 0 0 ' + (-s3 / 2) + 'px';
-    nd.style.fontSize = Math.round(s3 * RW_GAIN_GS) + 'px';
-    /* 갈래 = 알 수. 반구가 아니라 **온 원**이다 — 카드는 사방이 제 면이라 위로 접을 이유가 없다
-       (버튼과 다른 점 — 666 4회차의 상향 원뿔은 «발원점 아래에 정보가 있다» 는 그 화면의 사정이다). */
-    const u = ((((j + 0.5 + ph + rnd(-RW_GAIN_JIT, RW_GAIN_JIT)) % m) + m) % m) / m;
+    nd.style.fontSize = fs + 'px';
+    /* 753 ④ — **자리는 고정, 방향만 난수**(682 위상 + 지터). 아래쪽 좁은 원뿔만 뺀다
+       (`RW_GAIN_DOWN` — 위 위임 규약 머리말 · 0 이면 온 원). 화면 y 는 아래가 +라 «아래» = u 0.25. */
+    const u0 = ((((j + 0.5 + ph + rnd(-RW_GAIN_JIT, RW_GAIN_JIT)) % m) + m) % m) / m;
+    const u = (0.25 + RW_GAIN_DOWN / 2 + u0 * (1 - RW_GAIN_DOWN)) % 1;
     const a = u * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
     nd.style.left = (cx + ca * RW_GAIN_R0).toFixed(1) + 'px';
     nd.style.top  = (cy + sa * RW_GAIN_R0).toFixed(1) + 'px';
@@ -31923,7 +31970,9 @@ function rwSummonFx(it, first, iv){
        LESSONS 666-⑨ «남의 부품 곡선은 그 행에서 고치지 말고 등재하라»).
        `fxTickLife(iv, 340)` 는 `iv × FXTICK_DUTY` 를 돌려주므로 **원하는 길이를 duty 로 나눠 넘긴다**
        — 새 상수도, 공용 부품 변경도 없다. 120ms 면 A4(130ms) 전에 꺼져 씻기는 구간이 71% → 35% 다. */
-  if(el){ fxFlash(el, first ? RW_FLASH_MS / FXTICK_DUTY : iv); fxHitEl(el); rwGainFx(it, el, first, first ? null : iv); }
+  /* ⚑ 753 ① — 획득 알에는 `iv` 를 **안 넘긴다**(캔슬 금지 · 위 `rwGainFx` 머리말).
+     플래시는 «파티클» 이 아니라 칸의 배경이라 2회차의 틱 물림을 그대로 둔다(한 화면에 흰 카드 두 장 방지). */
+  if(el){ fxFlash(el, first ? RW_FLASH_MS / FXTICK_DUTY : iv); fxHitEl(el); rwGainFx(it, el, first); }
   const L = (typeof fxL === 'function') ? fxL() : null;
   const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
   if(!L || !r) return false;
