@@ -191,7 +191,13 @@ const open = async (browser, H, patch) => {
      (decl.match(/--spc-slv:[^;]*/) || [''])[0].trim());
   ok((code.match(/--spc-slv:/g) || []).length === 1, '[E] 그 선언이 저장소에 **하나뿐**이다 (사본 0)',
      (code.match(/--spc-slv:/g) || []).length + '건');
-  const snap = (code.match(/@supports \(height: round\(down[\s\S]*?\n  \}/) || [''])[0];
+  /* 827 이관 — 옛 식 `code.match(/@supports \(height: round\(down…/)` 은 «저장소의 **첫** round() 블록»
+     을 집었다. 그 전제는 «스냅이 저장소에 하나뿐» 일 때만 참인데, 827(22 퀘스트 리스트)이 같은 꼴의
+     두 번째 스냅을 **더 앞줄(2652)** 에 세우자 이 항이 남의 블록을 읽고 빨개졌다(제품은 무변).
+     ⇒ round() 블록을 전부 모아 **자기 변수를 읽는 것**을 고른다. 세 번째 스냅이 생겨도 안 흔들린다. */
+  const snap = code.split(/@supports \(height: round\(down/).slice(1)
+    .map(s => (s.match(/^[\s\S]*?\n  \}/) || [''])[0])
+    .find(s => /var\(--spc-slv\)/.test(s)) || '';
   ok(/var\(--spc-slv\)/.test(snap) && (snap.match(/var\(--spc-slv\)/g) || []).length === 2,
      '[E] 스냅 식이 그 변수를 **읽는다**(빼는 쪽·더하는 쪽 둘 다 — 손 상수 17 을 다시 적으면 갈린다)',
      (snap.match(/var\(--spc-slv\)/g) || []).length + '회');

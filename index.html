@@ -2634,6 +2634,35 @@
   .qs-pn{position:absolute;left:9px;top:65px;width:844px;bottom:316px;box-sizing:border-box;
     background:#D7C0A1;border-radius:21px;overflow-y:auto;padding:33px 13px 20px}
   .qs-pn::-webkit-scrollbar{display:none}
+  /* 827 — 위 «리스트가 흡수한다» 의 대가를 갚는다. 흡수량이 임의라 **클립선이 행 피치 200 과
+     아무 관계 없는 자리에 선다**: `probe827` 실측(기준 2280 대비 남은 높이/잘림)
+       1600 147/32 · **1653 0/179** · **1700 47/132** · **1750 97/82** · 1800 147/32 · 1841~2600 166/13
+     행 안에서 «내용» 은 상단 기준 **149px** 에서 끝난다(`.qs-b` 하변 — 그 아래 30px 는 빈 둥근 모서리).
+     ⇒ 남은 높이가 149 미만이면 **글리프를 자른다** — 1700 은 보상 보석 −96px · [보상 받기] −102px 로
+     행 한복판이 잘렸다. 등재문이 잰 5프레임(1600 은 −2px)이 결손의 밑바닥을 가리고 있었다.
+     ⚑ **812 가 남긴 교훈 그대로: «피치의 배수» 가 아니라 «레퍼런스가 남기는 양» 으로 스냅한다**
+     (측정표 22 §4 — ref 5행 y1461..1626 = h166 · 잘림 13px. ref 콘텐츠 965 자신이 200 의 배수가 아니다).
+     ⚠ 이 화면은 **키울 수 없다** — 짧은 프레임에서 `#app.shortf #modal{padding:142px/180px}` 은
+     금지구역(`.pedge` 하변 · 탭바 상변) 바닥값이라(390·351) 상자는 이미 상한에 붙어 있다.
+     그래서 모자란 만큼은 **토글 아래 죽은 여백 43px 에서 빌리고**(`--qs-brw`, 12px 은 남긴다),
+     빌려서 못 닿으면 한 칸 내려 스냅하고 **버리는 만큼은 패널↔[모두 받기] 간격이 받는다**(812 와 같은 처방).
+     빌릴 때는 [모두 받기]·토글이 **같이** 내려와 ref 간격 21/25 가 그대로 산다.
+     기준 프레임은 av 966 = 166 + 200×4 라 **스냅이 제자리** — 999/21/1801 전부 Δ0px(`verify22` 가 잡는다).
+     `round()` 미지원 엔진은 위 `bottom:316px` 한 줄로 떨어진다(수리 전과 같은 값). */
+  @supports (height: round(down, 100px, 3px)){
+    .q22 .mbody{
+      --qs-slv:166px;                                   /* ref 가 마지막 행에 남기는 양 (측정표 22 §4) */
+      --qs-brwmax:31px;                                 /* 토글 아래 43 중 빌릴 수 있는 몫 (12 는 남긴다) */
+      --qs-av:calc(100% - 414px);                       /* 자연 콘텐츠 높이 = 100% − top65 − 316 − 패딩33 */
+      --qs-lh:min(calc(var(--qs-av) + var(--qs-brwmax)),
+        calc(var(--qs-slv) + max(0px, round(down, calc(var(--qs-av) + var(--qs-brwmax) - var(--qs-slv)), 200px))));
+      --qs-brw:max(0px, calc(var(--qs-lh) - var(--qs-av)))}
+    /* ⚠ `.qs-all`·`.qs-tg` 의 원 선언은 이 블록보다 **아래**(2776·2797)에 있다 —
+       같은 특이성이면 뒤가 이긴다. 그래서 세 줄 다 `.q22 .mbody>` 로 한 단 올려 적는다. */
+    .q22 .mbody>.qs-pn{bottom:auto;height:calc(33px + var(--qs-lh))}
+    .q22 .mbody>.qs-all{bottom:calc(166px - var(--qs-brw))}
+    .q22 .mbody>.qs-tg{bottom:calc(43px - var(--qs-brw))}
+  }
   /* 행 818×179 pitch 200 (gap 21) */
   .qs-r{position:relative;width:818px;height:179px;margin-bottom:21px;background:#F7ECDA;border-radius:23px}
   .qs-r:last-child{margin-bottom:0}
