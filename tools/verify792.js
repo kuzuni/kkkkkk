@@ -63,6 +63,12 @@ const IOU_MAX = 0.90;
      문턱은 «평탄 판(≈1.0)» 과 «푼 것» 사이의 **빈 구간**에 둔다. 실측은 아래 표에 찍힌다. */
 const FLAT_MAX = 0.60;
 
+/* [B7] 문턱 — «램프 몫»(최빈 알파의 절반 아래로 내려온 후광 화소의 비율)과 그 밴드.
+   5회차(절대 폭)의 실측 밴드가 두 비평가가 각자 잰 7~17배와 같은 자리에 있었다.
+   ⚠ 여기도 관측값을 그대로 박지 않는다 — 실측은 표에 찍히고, 문턱은 그 위 여유에 둔다.
+   ⚠ 밴드는 **문턱이 아니라 기록**이다 — 이유는 [B7] 자리의 주석. */
+const RAMP_MIN = 0.12;
+
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 
@@ -203,7 +209,15 @@ async function measure(browser, url) {
         }
         if (hd[p]) { hx += x; hy += y; }
       }
-      let hmax = 0; for (let i = 0; i < 20; i++) if (hist[i] > hmax) hmax = hist[i];
+      let hmax = 0, hi = 0; for (let i = 0; i < 20; i++) if (hist[i] > hmax) { hmax = hist[i]; hi = i; }
+      /* ⚑ 6회차 [B7] 의 재료 — «가장자리 램프가 후광의 몇 할인가».
+         최빈 칸(= 판의 몸통 알파)의 **절반 아래**로 내려온 화소를 센다. 칼로 자른 판이면 거의 0,
+         잘 풀린 가장자리면 상당한 몫이 된다. [B6](한 칸에 뭉쳤나)이 «판인가» 를 묻는다면
+         이것은 «푼 폭이 종끼리 고른가» 를 묻는다 — 6회차 비평 2인이 각자 짚은 축이 이것이다
+         (CS: 후광두께÷본체폭 stone 9% ↔ boom 64% · CR: falloff 폭 boomer 2px ↔ boom 34px). */
+      const halfA = (hi + 0.5) * 0.05 * 0.5;
+      let ramp = 0;
+      for (let p = 0; p < sf.length; p++) if (sf[p] && out[p] && av[p] < halfA) ramp++;
       const ink = soft + hard;
       /* 후광 ↔ 본체 **중심 어긋남** — 2회차에 비평가 CN·CO 가 2인 공통으로 짚은 축이다
          (곡선탄의 둥근 원반이 코어에서 떨어져 «한 발» 이 아니라 «두 물체» 로 읽혔다).
@@ -223,7 +237,9 @@ async function measure(browser, url) {
                    dL: nb ? +((lb - lg) / nb).toFixed(1) : 0,
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
                    fSpec: +(sp2 / Math.max(1, ink)).toFixed(4),
-                   flat: +(hmax / Math.max(1, soft)).toFixed(3) };
+                   flat: +(hmax / Math.max(1, soft)).toFixed(3),
+                   aMode: +((hi + 0.5) * 0.05).toFixed(3),
+                   fRamp: +(ramp / Math.max(1, soft)).toFixed(3) };
       clearFx();
     }
 
@@ -340,6 +356,33 @@ async function measure(browser, url) {
       ok(flatBad.length === 0, '[B6] 후광이 «평탄한 알파 판» 이 아니다 — α 최빈 칸(폭 0.05) 몫 ≤ ' +
          FLAT_MAX + ' · 실측 최대 ' + Math.max.apply(null, flats).toFixed(3) +
          ' · 넘는 종 ' + flatBad.length + (flatBad.length ? ' (' + flatBad.join(' · ') + ')' : ''));
+      /* [B7] — 6회차. «푼 폭» 이 종끼리 고른가. 5회차는 페이드 반지름을 **절대 px** 로 박았고,
+         후광 덩치가 종마다 4배 넘게 다르므로 번진 몫이 7~17배로 갈렸다(두 비평가가 각자 실측).
+         6회차는 반지름을 √(후광 면적)에 비례시켰다 — 이 항이 그것을 지킨다. */
+      /* ⚠ **자가 못 재는 종은 재는 척하지 않는다.** 이 자는 «최빈 알파의 절반 아래» 를 세는데,
+         화소 검출 문턱이 |Δ색| > 8 이라 후광이 옅은 종은 그 절반 값이 **검출 바닥 아래**로 내려간다
+         (`lance` 후광 α .16 ⇒ 절반 .08 · 검출 한계 ≈ α .055 — 셀 수 있는 띠가 0.025 폭뿐이다).
+         그런 종에서 나온 «램프 몫 0.038» 은 그림의 성질이 아니라 **자의 한계**다.
+         ⇒ 최빈 α 가 0.20 아래인 종은 이 항에서 빼고 **값만 찍는다**(541 [F]·[B4] 의 «기록만» 선례).
+           그 종들은 [B6](한 칸에 뭉쳤나)이 계속 지킨다 — 실제로 lance 0.328 · boom 0.113 로 초록이다.
+         ⚠ 빼는 기준은 «불편해서» 가 아니라 «자가 못 봐서» 다. 다음 회차가 이 바닥을 낮추려면
+           검출 문턱(8)을 내리는 것이 아니라 **더 밝은 바탕에서 한 번 더 재는** 쪽이 맞다(인계). */
+      const ramps = ids.filter(i => out.rows[i].aMode >= 0.20);
+      const dim = ids.filter(i => out.rows[i].aMode < 0.20);
+      const rv = ramps.map(i => out.rows[i].fRamp);
+      const rMin = Math.min.apply(null, rv), rMax = Math.max.apply(null, rv);
+      const rBand = +(rMax / Math.max(1e-6, rMin)).toFixed(2);
+      /* ⚠ **밴드(최대÷최소)를 문턱으로 걸지 않는다 — 걸어 봤고 자가 스스로 플레이키해졌다.**
+         밴드의 «최대» 쪽은 최빈 α 가 0.20 경계에 걸터앉은 종(`boomer` α ≈ 0.20)이 실행마다
+         들락날락하면서 정해진다: 그 종이 들어온 실행은 3.34, 빠진 실행은 1.58 이다.
+         값이 아니라 **표본이 흔들리는** 자리라 문턱을 어디에 두든 반반으로 빨개진다(825 의 병).
+         ⇒ 문턱은 **바닥 하나**(«잰 종이 전부 실제로 램프를 갖는가»)로만 걸고, 밴드는 기록만 한다.
+           수리 전후는 review 에 적는다 — 절대 반지름 4.01 ↔ 비례 반지름 1.58~3.34. */
+      ok(ramps.length >= 12 && rMin >= RAMP_MIN,
+         '[B7] 잰 종이 전부 가장자리 램프를 갖는다 — 잰 종 ' + ramps.length + '(≥12) · 최소 몫 ' +
+         rMin.toFixed(3) + ' ≥ ' + RAMP_MIN + ' (최대 ' + rMax.toFixed(3) + ' · 밴드 ' + rBand + ' — 기록만)');
+      console.log('  (기록) 자가 못 재는 옅은 후광 ' + dim.length + '종 — ' +
+         dim.map(i => i + ':α' + out.rows[i].aMode + '/램프' + out.rows[i].fRamp).join(' · '));
       ok(out.worst.iou <= IOU_MAX,
          '[D1] 710 회귀 짝 — 종별 실루엣 IoU 최댓값 ' + out.worst.iou + ' ≤ ' + IOU_MAX +
          ' (최악 쌍 ' + out.worst.a + '↔' + out.worst.b + ' · 이 쌍은 흔들린다 — 위 주석)');
@@ -352,14 +395,14 @@ async function measure(browser, url) {
       console.log('  (기록) 후광을 굽는 첫 프레임 ' + out.bake + 'ms — 종당 한 번뿐(캐시)');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
-      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫');
+      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫');
       for (const id of ids) {
         const r = out.rows[id];
         console.log('        ' + id.padEnd(9) + r.sh.padEnd(10) +
                     String(r.ink).padStart(7) + '  ' +
                     r.fSoft.toFixed(3) + ' / ' + r.fSpec.toFixed(4) +
                     String(r.off).padStart(8) + String(r.dL).padStart(9) +
-                    String(r.flat).padStart(9));
+                    String(r.flat).padStart(9) + String(r.fRamp).padStart(9));
       }
       console.log('');
     }
