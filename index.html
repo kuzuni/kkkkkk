@@ -7486,9 +7486,17 @@
      각자 «불릿형 −5.6% / 배너형 +7.5%» 로 같은 값을 냈다. 띠 **상변**과 피치는 이미 정확하므로
      (AU: 불릿형 상변 = 하변에서 272·138 · AT: 배너형 로컬 295·413) **상변을 붙박아 두고 높이만** 바꾼다
      ⇒ `bottom` 을 «상변거리 − 새 높이» 로 다시 적는다. 세로 그라디언트·크림 캡·제비꼬리도 같이 비례. */
-  .pvc>.rb{left:-3px;height:76px;border:6px solid #000;border-radius:8px;
+  /* ⚑ 667 9회차 — 리본 좌단이 카드 바깥선보다 **3px 나가 있었다**(비평 BB [5]).
+     ⚠ **측정표 §7-1 «왼쪽이 카드 바깥선보다 1.6px 더 나간다» 가 틀렸다** — 같은 자(«바탕이 아닌 첫
+     화소», 문턱 60)로 ref 네 리본을 전부 재면 카드 바깥선과 리본 바깥선이 **둘 다 x12 로 같다**
+     (n=18~21행 · 돌출 **0.00**). §7-1 자신이 이 값을 «±1.5 · 리본 검정 외곽과 카드 검정 테가 붙어
+     경계가 사라진다» 로 적어 둔 자리였고, 실제로 0 이었다 ⇒ **정오표**(측정표 §7-1).
+     ⚑ **오른끝은 한 픽셀도 안 움직인다** — `left` 를 +3 하면서 `padding-left` 를 같은 3 만큼 줄였다.
+     띠 폭은 내용이 정하므로(flex · width auto) 왼쪽 안여백이 3 줄면 폭도 3 줄어 **우단 불변**이고,
+     8회차가 맞춰 둔 제비꼬리 자리(`.rb2::after`)와 리본 글자 잉크(카드-로컬 44)도 **Δ0px** 이다. */
+  .pvc>.rb{left:0;height:76px;border:6px solid #000;border-radius:8px;
     background:linear-gradient(180deg,#FF8A90 0 8.33%,#FF565D 8.33% 76.4%,#C4343C 76.4% 100%);
-    display:flex;align-items:center;padding:0 24px 0 41px}
+    display:flex;align-items:center;padding:0 24px 0 38px}
   .pvc.ban1>.rb{height:67px}
   /* ref 리본 왼끝은 «접힌 종이» 크림 캡이다(ref 13×31 → 27×64). 검정 테 안쪽에 물린다 */
   .pvc>.rb::before{content:'';position:absolute;left:0;top:0;width:27px;height:64px;
@@ -7535,8 +7543,20 @@
      (ref 파랑은 위로만 12 돌출한다 — AV·AW 2인 일치. top = 리본 67 − 판 79 = −12) */
   #shopw .pvc.ban1>.rb>b{width:79px;height:79px;top:-12px;border-radius:17px}
   .pvc.ban1>.rb>b>.cic{width:52px;height:52px}
-  .pvc.ban1>.rb>u{width:79px;top:52px}
-  .pvc>.rb>u{position:absolute;right:var(--gx);top:58px;width:91px;text-align:center;color:#fff;
+  /* ⚑ 667 9회차 — 수량 잉크가 판 중심에서 오른쪽으로 앉는 결함(비평 BB [4]·BC [8][16] 2인 일치).
+     ⚑ **원인은 글자 side bearing 이 아니라 «상자가 글자보다 좁다» 였다.** `u` 는 판(`b`)과 **같은 상자**를
+     쓰는데(`right:--gx` · width = 판 폭) 이 문자열들의 advance 가 그 상자보다 넓다:
+       배너형(상자 79) «1,500» 89.91 · «10,000» 113.19 ／ 불릿형(상자 91) «16,000» 113.41 · «5,000» 97.14
+     넘치면 `text-align:center` 는 **가운데를 못 잡는다** — 줄 상자가 내용 상자 왼끝에서 시작해
+     **오른쪽으로만** 넘치기 때문이다. 그래서 쏠림이 정확히 **(advance − 상자폭) ÷ 2** 로 떨어진다:
+       배너 «1,500» (89.91−79)/2 = 5.46 ↔ 실측 **+5.0** · 불릿 «5,000» (97.14−91)/2 = 3.07 ↔ 실측 **+3.0**
+       그리고 **안 넘치는 둘**(«1,500»@91 · «750»@91)만 실측 **0.00** 이었다 — 식과 부호가 다 맞는다.
+     ⇒ 상자를 **최장 문자열이 들어가는 한 값(139)** 으로 넓히고, 넓힌 만큼 `right` 를 되물려
+     **중심은 판 중심 그대로** 둔다(δ = (139 − 판폭) ÷ 2 — 불릿 24 · 배너 30).
+     139 는 «999,999»(137.48)까지 받는다 ⇒ 199 가 이용권을 ×배율 상품으로 바꿔도 안 깨진다.
+     ⚠ 글자 크기·색·세로 자리는 **0줄 변경**이고 움직인 것은 **빈 상자의 폭**뿐이다(잉크가 제자리로 온다). */
+  .pvc.ban1>.rb>u{right:calc(var(--gx) - 30px);width:139px;top:52px}
+  .pvc>.rb>u{position:absolute;right:calc(var(--gx) - 24px);top:58px;width:139px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;text-decoration:none;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
   /* ⑦ 가격 버튼 — 우하단 초록(ref 외곽 307×98 · 우 여백 73 · 바닥 31).
@@ -34298,7 +34318,12 @@ function renderPassPage(list){
        그 말이 맞았다 — 판이 왼쪽으로 가면 그만큼 오른쪽 빨강 꼬리가 길어진다(자: 꼬리 6.3 ref →
        10.7 ≈ ref 10.0). 손잡이도 하나(`--gx`)다. 불릿형(g1 −97 · g2 23)은 판 중심이 ref 와
        0.5 ref px 안이라 **안 건드렸다**. */
-    const RB = p.ban ? { w1:427, g1:26, w2:524, g2:34 } : { w1:353, g1:-97, w2:529, g2:23 };
+    /* ⚑ 667 9회차 — 리본 좌단을 카드 바깥선에 맞추느라 `.rb{left:-3px → 0}` 로 **왼끝이 +3** 됐다.
+       띠 폭은 여기서 **인라인으로 박히므로**(shrink-to-fit 이 아니다) 폭을 같이 3 줄여야
+       **오른끝이 제자리**다 — 안 줄이면 띠·금색 판·제비꼬리가 통째로 +3 밀려
+       8회차가 맞춘 판 중심(ref Δ +0.6/+0.9)과 꼬리 자리가 그만큼 어긋난다.
+       ⇒ w1·w2 를 각각 −3 (427→424 · 524→521 ／ 353→350 · 529→526). `--gx` 는 오른끝 기준이라 불변. */
+    const RB = p.ban ? { w1:424, g1:26, w2:521, g2:34 } : { w1:350, g1:-97, w2:526, g2:23 };
     const rib = (cls, lab, n, w, gx) => '<div class="rb ' + cls + '" style="width:' + w
       + 'px;--gx:' + gx + 'px"><i>' + lab + '</i><b>' + curIc('dia') + '</b><u>' + fmt(n) + '</u></div>';
     const cardH = pvCardH(p), ntc = pvNotches(p, cardH);

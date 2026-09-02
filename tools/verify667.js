@@ -299,6 +299,75 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     !near(parseFloat(after8b.w) - parseFloat(after8b.bd), 6, 1),
     (parseFloat(after8b.w) - parseFloat(after8b.bd)).toFixed(1));
 
+  /* ── [G] 9회차 — 리본 좌단 · 수량 상자 ─────────────────────────────────
+     ⚑ 두 자리 다 **비평 2인 일치**였고 둘 다 «상자» 의 결함이었다(글자·색은 0줄 변경).
+     · G1~G2 = BB [5] «리본 좌단이 카드 밖으로» — ref 를 같은 자로 다시 재니 **돌출 0.00**
+       (네 리본 · n=18~21행)이라 BB 가 맞고 **측정표 §7-1 «1.6» 이 틀렸다**(정오표).
+     · G3~G5 = BB [4]·BC [8][16] «수량이 판 중심에서 오른쪽» — 원인은 side bearing 이 아니라
+       **advance > 상자폭** 이었다(넘치면 text-align:center 가 왼끝에서 시작해 오른쪽으로만 넘친다).
+       쏠림 = (advance − 상자폭)/2 이 실측과 소수점까지 맞았다 ⇒ **안 넘치게** 만드는 것이 처방이다. */
+  const g9 = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.pvc').forEach((c) => {
+      const cb = c.getBoundingClientRect();
+      ['rb1', 'rb2'].forEach((k) => {
+        const rb = c.querySelector('.' + k); if (!rb) return;
+        const r = rb.getBoundingClientRect();
+        const b = rb.querySelector('b').getBoundingClientRect();
+        const u = rb.querySelector('u');
+        const ur = u.getBoundingClientRect();
+        const rg = document.createRange(); rg.selectNodeContents(u);
+        out.push({
+          id: c.dataset.pv, k, txt: u.textContent,
+          prot: +(cb.left - r.left).toFixed(2),
+          rbR: +(r.right - cb.left).toFixed(1),
+          bCx: +(b.left + b.width / 2 - cb.left).toFixed(1),
+          uCx: +(ur.left + ur.width / 2 - cb.left).toFixed(1),
+          uW: +ur.width.toFixed(1), adv: +rg.getBoundingClientRect().width.toFixed(2)
+        });
+      });
+    });
+    return out;
+  });
+  ok('[G1] 리본 좌단이 카드 바깥선과 한 줄이다 — 돌출 0 (ref 네 리본 실측 0.00 · BB [5])',
+    g9.every(r => near(r.prot, 0, 0.6)), g9.map(r => r.prot).join(' / '));
+  ok('[G2] 리본 우단은 8회차 자리 그대로다 (좌단만 움직였다 — 판·제비꼬리 Δ0)',
+    g9.filter(r => r.id === 'noads').map(r => r.rbR).every((v, i) => near(v, [424, 521][i], 1.5)),
+    g9.filter(r => r.id === 'noads').map(r => r.rbR).join(' / '));
+  ok('[G3] 수량 글자가 제 상자를 안 넘는다 (advance ≤ 상자폭) — 넘치면 가운데 정렬이 죽는다',
+    g9.every(r => r.adv <= r.uW), g9.map(r => `${r.txt} ${r.adv}≤${r.uW}`).join(' · '));
+  ok('[G4] 수량 상자 중심 = 금색 판 중심 (넓히면서 중심을 지켰다)',
+    g9.every(r => near(r.uCx, r.bCx, 0.6)), g9.map(r => (r.uCx - r.bCx).toFixed(1)).join(' / '));
+  ok('[G5] 수량 상자 폭은 두 형 공통 한 값 139 — «999,999»(advance 137.48)까지 받는다',
+    g9.every(r => near(r.uW, 139, 0.6)), g9.map(r => r.uW).join(' / '));
+
+  /* R7·R8 — 9회차의 두 수리를 되돌린다 */
+  const after9 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    /* 9회차 전: 리본이 카드 밖으로 3px · 수량 상자 = 판 폭 */
+    st.textContent = '.pvc>.rb{left:-3px}.pvc>.rb>u{right:var(--gx);width:91px}'
+      + '.pvc.ban1>.rb>u{right:var(--gx);width:79px}';
+    document.head.appendChild(st);
+    const out = [];
+    document.querySelectorAll('.pvc').forEach((c) => {
+      const cb = c.getBoundingClientRect();
+      ['rb1', 'rb2'].forEach((k) => {
+        const rb = c.querySelector('.' + k); if (!rb) return;
+        const u = rb.querySelector('u');
+        const rg = document.createRange(); rg.selectNodeContents(u);
+        out.push({ prot: +(cb.left - rb.getBoundingClientRect().left).toFixed(2),
+          uW: +u.getBoundingClientRect().width.toFixed(1),
+          adv: +rg.getBoundingClientRect().width.toFixed(2) });
+      });
+    });
+    return out;
+  });
+  ok('R7 «.rb{left:-3px}» 로 되돌리면 [G1] 이 빨개진다 (리본이 카드 바깥선을 3px 넘는다)',
+    after9.every(r => !near(r.prot, 0, 0.6)), after9.map(r => r.prot).join(' / '));
+  ok('R8 수량 상자를 판 폭(91/79)으로 되돌리면 [G3] 이 빨개진다 (넘침이 되살아난다)',
+    after9.some(r => r.adv > r.uW),
+    after9.map(r => `${r.adv}>${r.uW}?`).join(' · '));
+
   ok('[전제] 콘솔 에러 0건', errs.length === 0, errs.slice(0, 3).join(' / '));
   console.log('\nVERIFY667 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   await browser.close();
