@@ -97,8 +97,11 @@ const INJ = {
                    "  d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '') + (lone ? ' lng' : ''); d.style.fontSize = '30px';"],
   /* 씬 D 의 전제 — 강화가 안 나면 «플로터 0장» 이 «연출이 죽었다» 와 구별되지 않는다.
      그 세계에서 [8-a] 가 빨개져야 [8-b] 의 표본 결손을 오독하지 않는다(§R-d 의 씬 D 판). */
-  'R-f': ['[8-a]', "    if(!o.once()){ shake(btn); return; }",
-                   "    if(!(o.once() && false)){ shake(btn); return; }"],
+  /* ⚠ 844 1회차 — 첫 시안은 `bindUpHold` 의 `if(!o.once())` 를 눌렀는데 **`o.once()` 자신은 그대로
+     불려** 강화가 1회 나 [8-a] 가 초록이었다(주입이 «전제» 가 아니라 «반복» 만 껐다).
+     판정 자체를 막는 자리는 `levelUp` 이다 — 여기서는 «한 번도 안 오른다» 가 돼야 뜻이 산다. */
+  'R-f': ['[8-a]', "  if(!canLevel(it)) return false;",
+                   "  if(!canLevel(it) || 1) return false;"],
   /* ⚑ 844 신설 — **값은 맞는데 손으로 적은** 경우. 488 이 실제로 그랬으므로(그 자리에 크기를 적었고
      한때 토큰과 값이 같았다) «같으면 됐다» 로는 그 사고가 안 잡힌다. [8-b] 는 초록인 채 [8-c] 만 빨강. */
   'R-g': ['[8-c]', "  d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '') + (lone ? ' lng' : '');",
