@@ -7264,11 +7264,15 @@
     /* 667 4회차 — 노치가 여럿이라 마스크가 **여러 겹**이다. 기본 합성(add)은 «둘 중 하나라도 보이면 보임»
        이라 구멍이 서로를 메운다 ⇒ `intersect`(둘 다 보이는 곳만) 여야 구멍이 남는다. 한 겹일 때도 무해하다. */
     -webkit-mask-composite:source-in;mask-composite:intersect}
-  .pvc>.hdb{left:10px;top:10px;right:10px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
+  /* ⚑ 667 7회차 — 밴드 높이를 **변수 하나**로 뺐다(`--pvc-h` 선례 · «높이를 두 번 적지 않는다»).
+     제목 줄 `.pvt` 가 이 값을 같이 읽어 **밴드 한가운데**에 앉는다 — 아래 `.pvt` 주석 참조. */
+  .pvc{--hdb-h:102px}
+  .pvc.ban1{--hdb-h:96px}
+  .pvc>.hdb{left:10px;top:10px;right:10px;height:var(--hdb-h);background:var(--s);border-radius:31px 31px 0 0}
   /* 667 4회차 — 헤더 밴드는 **형마다 두 값**이다(리본 높이 76/67 과 같은 자리).
      카드 외곽 상변에서 밴드 하변까지: ref 초록 53.5 → 110.4 ≈ 우리 112(정확) · ref 파랑 51.5 → **106.2**.
      비평가 AT ⑨ · AU ⑥ 가 «112 ↔ ref 파랑 107.5» 로 2인 일치했고 화소 실측이 그것을 확인했다. */
-  .pvc.ban1>.hdb{height:96px}
+  /* 값은 위 `--hdb-h` 두 줄이 갖는다 — 여기서 다시 적으면 제목 줄과 어긋난다(667 7회차). */
   .pvc>.fr{left:0;top:0;right:0;bottom:0;border:10px solid #000;border-radius:44px;pointer-events:none;
     -webkit-mask:var(--ntc-fr);mask:var(--ntc-fr);
     -webkit-mask-composite:source-in;mask-composite:intersect}
@@ -7330,7 +7334,12 @@
   /* ⚑ 667 5회차 — 분홍 잉크 bbox 가 ref 대비 +9%/+6%(AV +13% · AW +8.7%/+5.6%, 2인 일치).
      **등방 0.92** 로 줄인다(356 «확대·축소는 등방» — AV 의 «폭만» 안은 종횡을 깬다).
      중심은 이미 정확하므로(우변에서 ref 65 ↔ 우리 64.5) 중심 (913, 54) 를 붙박고 좌·상만 다시 적었다. */
-  .pvc>.bdg{left:824px;top:-35px;width:178px;height:178px;z-index:3}
+  /* ⚑ 667 7회차 — 배지가 **3.5px 아래**에 있었다. 비평 AZ [8]·BA [10] 이 **같은 값**을 냈다
+     (AZ «우리 상단 51 ↔ ref 47.5» · BA «카드 상단보다 28.5 위 ↔ ref 32.0 위» — 둘 다 Δ+3.5).
+     ⚠ **높이(−6.2/−6.3)는 안 건드렸다** — 별 아웃라인이라 bbox 가 회전에 ±4px 흔들리고,
+     BA 의 임계 스윕에서 **폭 Δ 의 부호가 뒤집힌다**(+19.5 ~ −11.4). 두 비평가가 스스로
+     신뢰도를 «보통/낮음» 으로 적은 축이라 A3-ⓑ 대로 **자리만** 고친다(크기는 8회차 몫). */
+  .pvc>.bdg{left:824px;top:-38.5px;width:178px;height:178px;z-index:3}
   .pvc>.bdg>s{position:absolute;inset:0;background:#F43171;border:6px solid #000;border-radius:50%;
     clip-path:polygon(50% 0,58.7% 12.4%,73.2% 6.7%,76.1% 22.4%,91.1% 21.5%,88.2% 37.1%,
       100% 46.9%,89.8% 58.4%,97.3% 72.1%,82.1% 76.6%,83.6% 92.2%,68.5% 88.3%,63.5% 100%,
@@ -7351,7 +7360,16 @@
     font-size:36px;line-height:40px;font-weight:400;-webkit-text-stroke:7px #000;
     paint-order:stroke fill;transform:rotate(-10deg)}
   /* ④ 타이틀 행 — 헤더 밴드 안. ✦ 는 밴드 색보다 밝은 림 색이다(ref) */
-  .pvc>.pvt{left:38px;top:37px;right:200px;height:64px}
+  /* ⚑ 667 7회차 — **`top` 이 한 값인데 헤더 밴드는 두 값이었다**(비평 AZ [9] · BA [3] 2인 일치).
+     리본 높이(67/76)·밴드 높이(96/102)는 3·4회차가 «형마다 두 값» 으로 갈랐는데 **제목 줄만
+     `top:37` 한 값**으로 남아, 밴드가 6px 낮은 배너형에서 제목이 밴드 한가운데보다 더 내려앉았다.
+     실측(카드 로컬): 밴드 중심 배너 58 · 불릿 61 ↔ 제목 **잉크** 중심 둘 다 63 ⇒ 배너 **+5** · 불릿 +2.
+     ref 는 둘 다 밴드 한가운데다(BA: ref 파랑 0.0 · ref 초록 −1.0 · AZ: ref 파랑 +1.0 ref px).
+     ⚠ 상자 중심이 아니라 **잉크 중심**으로 맞춰야 한다 — 이 서체는 잉크가 line-box 중심보다
+     **4px 위**에 앉는다(상자 중심 67 ↔ 잉크 중심 63, 두 카드 같은 값). 그 4 를 식에 적어 둔다.
+     ⇒ 값을 새로 안 적고 `--hdb-h` 에서 파생시킨다(배너 32 · 불릿 35 — 각각 −5 · −2).
+     ✦ 는 `.pvt` 의 자식이라 같이 내려온다(위 주석 «✦ 까지 같이 밀어 맞던 것을 깨지 마라»). */
+  .pvc>.pvt{left:38px;top:calc(10px + (var(--hdb-h) - 60px) / 2 + 4px);right:200px;height:64px}
   /* ⚑ 667 — ✦ 는 **−11% 작고 3px 낮았다**(AR 24×24@y51 vs 환산 27×27@y48 · AS 동일) ⇒ 27 · top 13.
      제목 글자는 잉크 좌단이 **−5px**(AR 68.5 · AS 68~69 vs 환산 73.5) 이라 `>i` 만 35→40 으로 민다.
      ⚠ `.pvt{left}` 를 통째로 미는 처방(AR)은 **✦ 까지 같이 밀어 맞던 것을 깬다**(✦ x37 ↔ 환산 38). */
