@@ -15064,6 +15064,14 @@
        ② 짧은 프레임에서만 ✕ 를 흐름에서 빼 **팝업 우상단 코너**로 올린다(148px 회수).
           ⇒ 1600 실측 블록 = 126 + 1157 + 21 + 249 + 16 = **1569 ≤ 1600** (여유 31px). */
   #blsw{padding-bottom:clamp(16px, calc(var(--frameh) - 1696px), 146px)}
+  /* 작업 826 — 긴 프레임 아래 가드 = 146 + **143**(흐름에서 빠진 ✕ 의 몫: margin-top 5 + 높이 138).
+     ✕ 가 `.bls` 안으로 들어가 흐름 높이가 1570 → 1427 로 줄었으므로, 그만큼 상자를 깎지 않으면
+     남는 높이를 반씩 먹는 두 `auto` 가 팝업을 71.5px 위로 올린다. 289 를 주면
+     남는 높이 = frameH − 1842 로 **수리 전과 같은 식**이 되고 1920·2280·2600 이 Δ0px 다
+     (`verify826` §2 가 세 프레임을 절대값으로 든다).
+     ⚠ 짧은 프레임은 위 clamp 그대로다 — `.shortf` 는 ✕ 가 수리 전에도 흐름 밖이었고(351),
+       여기에 143 을 더하면 1600 에서 블록이 1712 로 프레임을 넘는다. */
+  #app:not(.shortf) #blsw{padding-bottom:289px}
   #blsw.on{display:flex}
   #blsw i,#blsw em,#blsw b,#blsw s{display:inline-block;font-style:normal;text-decoration:none;font-weight:900}
 
@@ -15425,7 +15433,10 @@
   /* §9 팝업 «바깥» — 초록 프로모 스트립(간격 21) + 닫기 X(간격 31) */
   /* 12회차 — 스트립 모서리 반경: G ref≈17 · H ref≈20 · I ref≈18~19 로 3인이 «우리(30)가 크다» 로 수렴 → 20 */
   /* 15회차 — M «249 vs 252» · N «+2» · Q «+3» 3자 일치 */
-  .bls-promo{position:relative;flex:none;margin-top:21px;width:952px;height:249px;box-sizing:border-box;
+  /* 작업 826 — ✕ 가 `.bls` 안으로 들어가 흐름에서 빠졌으므로(아래 `.bls-x` 주석) **모든 프레임에서**
+     스트립이 마지막 흐름 자식이다. 세로 중앙정렬을 만드는 아래쪽 `auto` 를 여기서 든다
+     (754 가 `.shortf` 에만 걸어 둔 같은 선언은 이제 이 기본값의 사본이라 그 줄에 그렇게 적어 뒀다). */
+  .bls-promo{position:relative;flex:none;margin-top:21px;margin-bottom:auto;width:952px;height:249px;box-sizing:border-box;
     border:5px solid #000;border-radius:20px;overflow:hidden;
     background:linear-gradient(180deg,#0DCB69 0,#07C065 100%)}
   .bls-promo>*{position:absolute}
@@ -15512,7 +15523,20 @@
      ⚠ 세로 흐름(§13-2 함정): 높이가 122→138 로 **+16px** 늘므로 margin-top 을 21→5 로 −16 해서
      흐름 총합을 0 으로 묶는다(팝업 y345 유지). 시각 위치는 흐름에 영향 없는 relative top 으로만 잡는다:
      스트립 하단 1771 + margin 5 + top 16 = **1792** ⇒ 간격 21(R 값). line-height 는 코어(118) 기준이라 그대로. */
-  .bls-x{flex:none;position:relative;top:16px;margin:5px 0 auto;width:138px;height:138px;box-sizing:border-box;border:9px solid #000;
+  /* 작업 826 — **✕ 는 프레임이 아니라 그릇(`.bls`)에 붙는다**(754 규약 ② «한 오버레이 = 한 그릇»).
+     수리 전에는 ✕ 가 `#blsw`(inset:0 = 프레임 좌표계)의 형제 자식이었고, 짧은 프레임에서만
+     `position:absolute;top:134px` 라는 **프레임 상수**로 코너에 앉았다. 그 134 는 «가드 126 + 8» 이라
+     `.bls` 상변과 손으로 맞춘 값이고, 둘을 묶어 주는 것이 아무것도 없어서 `.bls` 가 움직이는 순간
+     ✕ 만 제자리에 남았다 — 821 이 그릇을 126 에 못박기 전 1841 에서 **63.5px 위로 떠 딤에 얹혔다**
+     (`probe826` [C1][C2] 가 821 의 한 줄을 뗀 사본에서 그 어긋남을 다시 만든다).
+     ⇒ 노드를 `.bls` **안**으로 옮기고 두 자리 다 `.bls` 패딩 상자(좌 49 · 상 `.bls`+8) 기준으로 적는다.
+       긴 프레임 : left 422 / top 1440 = 프레임 좌표 471 / `.bls` 상변 +1448 (수리 전 흐름 값과 **Δ0px**)
+       짧은 프레임: left 848 / top 0    = 프레임 좌표 897 / 134            (수리 전 코너 값과 **Δ0px**)
+     이제 상수가 «✕ ↔ `.bls`» 한 쌍뿐이라 그릇이 어디로 가든 ✕ 가 따라간다.
+     ⚠ 흐름에서 빠진 대가는 `#blsw` 가 낸다 — 아래 §「긴 프레임 아래 가드」 참고(중앙정렬 Δ0px).
+     ⚠ 경계(1842)의 **자리 갈아타기 자체는 351 의 설계**이고 없앨 수 없다: 1600 에서 ✕ 를 스트립
+       아래로 되돌리면 126+1157+21+249+138+16 = 1707 > 1600 이라 프레임 밖이다(`probe826` [D1]). */
+  .bls-x{position:absolute;left:422px;top:1440px;margin:0;width:138px;height:138px;box-sizing:border-box;border:9px solid #000;
     /* 17회차 — 링 자체는 회수됐고 두께만 과했다: T «ref 8.4 / 우리 10 (+19%)» · U «ref 9 / 우리 10 (+11%)»
        ⇒ 10 → 9. 바깥 138(T 실측 ref 138.4 · U 140)과 코어는 그대로. */
     border-radius:50%;background:#E04D57;box-shadow:inset 0 0 0 7px #9F2A30;
@@ -15529,7 +15553,7 @@
      앉는다(코너 밖으로 내보내면 위 가드 126 을 넘어 HUD 를 파고든다 — `.bls` 상변보다 위로 못 간다).
      `z-index:2` 는 헤더 띠(`.bls-head`) 위로 올리기 위한 것이고 2280 에서는 겹치는 형제가 없어 무해하다.
      ⚠ 2280·1920 은 이 규칙이 아예 안 붙어 **Δ0px** 다(9:16 은 1920 ≥ 1842). */
-  #app.shortf .bls-x{position:absolute;top:134px;right:45px;margin:0}
+  #app.shortf .bls-x{left:848px;top:0}
   /* 작업 754 7회차 — 위 규칙의 **말 안 한 부작용**: 이 팝업의 세로 중앙은 «첫 자식 `.bls{margin-top:auto}`
      + 마지막 자식 `.bls-x{margin:… auto}`» 두 auto 가 만든다. ✕ 를 흐름에서 빼면 `margin:0` 이라
      **아래쪽 auto 가 통째로 사라져** 남은 것은 위 auto 하나뿐 = 묶음이 «중앙» 이 아니라 **하단 정렬**이 된다.
@@ -15539,6 +15563,8 @@
      ⇒ 새 마지막 흐름 자식(`.bls-promo`)에게 그 auto 를 물려준다. **앵커 모드를 되돌리는 것이 전부**라
      351 이 회수한 148px·423 의 `.shortf` 짝은 한 줄도 안 건드리고, 규칙이 `.shortf` 스코프라
      1920·2280·2600 은 선언이 안 붙어 **Δ0px** 다. 되돌리는 법: 이 한 줄을 지우면 하단 정렬로 돌아온다. */
+  /* ⚠ 826 이후 이 줄은 기본값 `.bls-promo{margin-bottom:auto}` 의 **사본**이다(✕ 가 모든 프레임에서
+     흐름 밖이라 스트립이 늘 마지막 흐름 자식이다). 754 가 무엇을 왜 되돌렸는지의 기록으로 남긴다. */
   #app.shortf #blsw .bls-promo{margin-bottom:auto}
   /* 작업 821 — 754 가 «중앙» 을 되찾자 **경계의 계단**만 남았다. `probe821` 실측(수리 전 `.bls` 상변):
        1600 141.5 · 1700 191.5 · 1711 197 · **1841 197.5** ↔ **1842 126** · 1920 165 · 2280 345
@@ -17715,13 +17741,16 @@
         </div>
         <div class="bls-ft"><i>모든 축복을 활성화하면 보너스 축복이 활성화됩니다.</i></div>
       </div>
+      <!-- 826 — 닫기 ✕ 는 그릇(.bls) 의 자식이다. 그려지는 자리는 프레임에 따라 둘(긴 프레임 = 스트립
+           아래 중앙 · 짧은 프레임 = 팝업 우상단 코너)이지만 **좌표는 둘 다 .bls 기준**이라 그릇이
+           어디로 가든 따라간다(754 규약 ② «한 오버레이 = 한 그릇»). 자리 산수는 .bls-x CSS 주석. -->
+      <div class="bls-x" id="blsX">✕</div>
     </div>
     <div class="bls-promo">
       <s class="ic">⚔️❤️⚡</s>
       <s class="tx">자동으로 모든 축복 받기</s>
       <button class="gb" id="blsAll">이동</button>
     </div>
-    <div class="bls-x" id="blsX">✕</div>
   </div>
   <!-- 21 도감 보너스 팝업 — 딤 위 가운데 다이얼로그 + 하단 깃발 서브탭. 측정표 docs/measure/21-도감보너스팝업.md
        진입점: 소환 탭 컬렉션 섹션의 [세트 도감] 버튼. 세트 = 표시 전용 정적 그룹(COLL21),
