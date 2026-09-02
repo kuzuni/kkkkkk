@@ -41,7 +41,11 @@ const SRC = path.join(ROOT, 'index.html');
 const NEG_SPEC = path.join(ROOT, '.v792-neg-spec-' + process.pid + '.html');
 const NEG_HALO = path.join(ROOT, '.v792-neg-halo-' + process.pid + '.html');
 const TAG_SPEC = `    const spec = fn => { ctx.save(); fn(); ctx.restore(); };`;
-const TAG_HALO = `    const halo = fn => { ctx.save(); fn(); ctx.restore(); };`;
+const TAG_HALO = `    const halo = fn => { const s = haloSprite(sh, fn); if(s){ ctx.drawImage(s.c, s.ox, s.oy, s.w, s.h); } else { ctx.save(); fn(); ctx.restore(); } };`;
+/* 5회차 — 페이드 자체를 끄는 세 번째 사본. `HALO_FADE = 0` 이면 굽기는 그대로 돌되 탭이 한 개(중앙)라
+   **평탄 판**이 나온다 = 4회차까지의 세계. [B6] 이 그것을 실제로 잡는지 [R3] 이 못박는다. */
+const NEG_FADE = path.join(ROOT, '.v792-neg-fade-' + process.pid + '.html');
+const TAG_FADE = `const HALO_FADE = 1;`;
 
 /* 710 [C1] 과 **같은 문턱**을 쓴다.
    ⚠ 1회차에 여기를 «710 이 마감 때 찍은 값 0.796» 으로 박았다가 스스로 빨개졌다 —
@@ -52,6 +56,12 @@ const TAG_HALO = `    const halo = fn => { ctx.save(); fn(); ctx.restore(); };`;
    ⇒ 문턱은 710 의 것(0.90)을 그대로 쓰고, «792 가 되감지 않았다» 는 [B3](후광이 실루엣을
      삼키지 않는다)가 **흔들리지 않는 축으로** 대신 지킨다. 실측 폭은 review §2 에 적었다. */
 const IOU_MAX = 0.90;
+
+/* [B6] 문턱 — «후광 α 의 최빈 칸(폭 0.05)이 후광 화소의 몇 할을 먹는가».
+   1.00 에 가까우면 한 값에서 칼로 잘린 **평탄 판**이고, 낮을수록 가장자리가 풀린 것이다.
+   ⚠ 관측값을 그대로 박지 않는다(825 의 병 · 1회차 [D1] 이 실제로 그렇게 빨개졌다) —
+     문턱은 «평탄 판(≈1.0)» 과 «푼 것» 사이의 **빈 구간**에 둔다. 실측은 아래 표에 찍힌다. */
+const FLAT_MAX = 0.60;
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
@@ -144,6 +154,7 @@ async function measure(browser, url) {
       const m = new Uint8Array(bw * bh);        /* 잉크 전체 */
       const hd = new Uint8Array(bw * bh);       /* 본체 */
       const sf = new Uint8Array(bw * bh);       /* 후광 */
+      const av = new Float32Array(bw * bh);     /* 5회차 — 화소별 α (아래 [B6] «평탄 판» 축의 재료) */
       for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
         let c = 0, best = 0;
         for (let k = 0; k < 3; k++) {
@@ -157,6 +168,7 @@ async function measure(browser, url) {
         let al = 1 - d2 / d1;                   /* α = 1 − (r2 − r1)/(r1 − b) */
         if (!isFinite(al)) al = 1;
         al = al < 0 ? 0 : (al > 1 ? 1 : al);
+        av[p] = al;
         if (al >= A_BODY) { hd[p] = 1; hard++; } else sf[p] = 1;
         if (a0[i] >= 232 && a0[i + 1] >= 232 && a0[i + 2] >= 232) sp2++;
       }
@@ -176,11 +188,22 @@ async function measure(browser, url) {
         if (y < bh - 1) st.push(p + bw);
       }
       let soft = 0, sx = 0, sy = 0, hx = 0, hy = 0;
+      /* ⚑ 5회차 [B6] 의 재료 — 후광 화소의 **α 히스토그램**(폭 0.05).
+         «평탄한 알파 판» 은 한 값에서 칼로 잘린 판이라 α 가 **한 칸에 뭉친다**;
+         가장자리가 풀린 후광은 그 값에서 0 까지 계단을 밟으므로 여러 칸에 퍼진다.
+         CQ 가 눈으로 잰 |∇L|/px 와 같은 것을 보되, **바탕 밝기에 안 흔들리는 축**으로 잰다
+         (α 는 위 «두 겹» 풀이로 바탕과 무관하게 나온다 — 825 의 병을 피하는 자리다). */
+      const hist = new Int32Array(20);
       for (let p = 0; p < sf.length; p++) {
         const x = p % bw, y = (p - x) / bw;
-        if (sf[p] && out[p]) { soft++; sx += x; sy += y; }
+        if (sf[p] && out[p]) {
+          soft++; sx += x; sy += y;
+          let bi = Math.floor(av[p] / 0.05); if (bi > 19) bi = 19; if (bi < 0) bi = 0;
+          hist[bi]++;
+        }
         if (hd[p]) { hx += x; hy += y; }
       }
+      let hmax = 0; for (let i = 0; i < 20; i++) if (hist[i] > hmax) hmax = hist[i];
       const ink = soft + hard;
       /* 후광 ↔ 본체 **중심 어긋남** — 2회차에 비평가 CN·CO 가 2인 공통으로 짚은 축이다
          (곡선탄의 둥근 원반이 코어에서 떨어져 «한 발» 이 아니라 «두 물체» 로 읽혔다).
@@ -199,7 +222,8 @@ async function measure(browser, url) {
       rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off,
                    dL: nb ? +((lb - lg) / nb).toFixed(1) : 0,
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
-                   fSpec: +(sp2 / Math.max(1, ink)).toFixed(4) };
+                   fSpec: +(sp2 / Math.max(1, ink)).toFixed(4),
+                   flat: +(hmax / Math.max(1, soft)).toFixed(3) };
       clearFx();
     }
 
@@ -213,7 +237,30 @@ async function measure(browser, url) {
       const iou = uni ? inter / uni : 0;
       if (iou > worst.iou) worst = { a: ids[i], b: ids[j], iou: +iou.toFixed(4) };
     }
-    return { rows, worst, n: ids.length };
+    /* ⚑⚑ [P1] — 5회차가 세운 **시간 축**. 4회차의 교훈이 이것이다: 페이드 두 안이 게이트 15/15
+       초록에 회귀도 전부 초록인 채 **프레임을 1685배 / 20배** 로 만들었다("자는 그림만 보지
+       시간은 안 본다"). 그 실측을 손에 들고 있지 말고 자에 박아 둔다 — 연출은 상시 도는 코드다.
+       ⚠ 캐시가 더워진 뒤(정상 상태)를 잰다. 굽는 비용은 아래 `bake` 로 따로 찍는다(기록만). */
+    clearFx();
+    const kinds = ids.map(i => specs[i]).filter(Boolean);
+    const perfShot = (n) => { const sp = kinds[n % kinds.length];
+      return { k: sp.k, sh: sp.sh, sa: sp.sa, x: CX - ox + (n % 9) * 6 - 24, y: CY - oy + (n % 7) * 6 - 18,
+               vx: 0, vy: 0, a: 0.4, dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
+               spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
+               tx: sp.tx === undefined ? undefined : CX - ox,
+               ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 }; };
+    const t0 = performance.now();
+    for (let n = 0; n < 60; n++) shots.push(perfShot(n));
+    draw();                                   /* 첫 프레임 = 굽는 프레임 */
+    const bake = performance.now() - t0;
+    for (let n = 0; n < 8; n++) draw();       /* 워밍업 */
+    const ts = [];
+    for (let n = 0; n < 24; n++) { const t = performance.now(); draw(); ts.push(performance.now() - t); }
+    ts.sort((a, b) => a - b);
+    const frame = +ts[Math.floor(ts.length / 2)].toFixed(3);
+    clearFx();
+
+    return { rows, worst, n: ids.length, frame, bake: +bake.toFixed(1), nShot: 60 };
   });
 
   await ctx.close();
@@ -224,7 +271,7 @@ async function measure(browser, url) {
   console.log('=== VERIFY 792 — 스킬 이펙트 연출 규격(세 층) 통일 ===\n');
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const src = fs.readFileSync(SRC, 'utf8');
-  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO]) { try { fs.unlinkSync(f); } catch (_) {} } };
+  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE]) { try { fs.unlinkSync(f); } catch (_) {} } };
 
   try {
     /* ---- [C] 선언 ---- */
@@ -285,18 +332,34 @@ async function measure(browser, url) {
       const dark = ids.filter(i => out.rows[i].dL <= 0);
       ok(dark.length === 0, '[B5] 본체가 배경보다 밝다 (ΔL > 0 — 어두우면 «구멍» 으로 읽힌다) — 어두운 종 ' +
          dark.length + (dark.length ? ' (' + dark.map(i => i + ':' + out.rows[i].dL).join(' · ') + ')' : ''));
+      /* ⚑⚑ [B6] — 5회차가 세운 축. 4회차 비평 2인(CP·CQ)이 «후광이 평탄한 알파 판» 을
+         각자 ② 최저 사유로 짚었는데 **자에 그 축이 없어** 게이트는 15/15 초록이었다.
+         눈이 말한 것을 자가 말하게 한다(335 규약) — 안 그러면 다음 회차가 같은 지적을 또 받는다. */
+      const flats = ids.map(i => out.rows[i].flat);
+      const flatBad = ids.filter(i => out.rows[i].flat > FLAT_MAX);
+      ok(flatBad.length === 0, '[B6] 후광이 «평탄한 알파 판» 이 아니다 — α 최빈 칸(폭 0.05) 몫 ≤ ' +
+         FLAT_MAX + ' · 실측 최대 ' + Math.max.apply(null, flats).toFixed(3) +
+         ' · 넘는 종 ' + flatBad.length + (flatBad.length ? ' (' + flatBad.join(' · ') + ')' : ''));
       ok(out.worst.iou <= IOU_MAX,
          '[D1] 710 회귀 짝 — 종별 실루엣 IoU 최댓값 ' + out.worst.iou + ' ≤ ' + IOU_MAX +
          ' (최악 쌍 ' + out.worst.a + '↔' + out.worst.b + ' · 이 쌍은 흔들린다 — 위 주석)');
+      /* [P1] 문턱 6.0ms 의 근거 — 실측이 **두 무리로 갈려 있고 그 사이가 텅 비었다**:
+         정상 경로 ~1.0ms ↔ 4회차가 되돌린 두 안 20.9ms(3겹) · 1749.8ms(매 프레임 blur).
+         빈 구간 한가운데를 문턱으로 삼는다(825 의 «관측값을 문턱으로 박지 마라» 와 같은 규칙).
+         60fps 예산 16.7ms 안에서도 투사체는 한 프레임의 일부일 뿐이라 6.0 이면 넉넉히 보수적이다. */
+      ok(out.frame <= 6.0, '[P1] 투사체 ' + out.nShot + '발 `draw()` 한 프레임 ' + out.frame +
+         'ms ≤ 6.0 (4회차가 되돌린 두 안 20.9ms · 1749.8ms — 연출은 상시 도는 코드다)');
+      console.log('  (기록) 후광을 굽는 첫 프레임 ' + out.bake + 'ms — 종당 한 번뿐(캐시)');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
-      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL');
+      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫');
       for (const id of ids) {
         const r = out.rows[id];
         console.log('        ' + id.padEnd(9) + r.sh.padEnd(10) +
                     String(r.ink).padStart(7) + '  ' +
                     r.fSoft.toFixed(3) + ' / ' + r.fSpec.toFixed(4) +
-                    String(r.off).padStart(8) + String(r.dL).padStart(9));
+                    String(r.off).padStart(8) + String(r.dL).padStart(9) +
+                    String(r.flat).padStart(9));
       }
       console.log('');
     }
@@ -319,6 +382,19 @@ async function measure(browser, url) {
       const bad = ks.filter(i => rHalo.out.rows[i].fSoft < 0.12);
       ok(bad.length >= 4, '[R2] 새로 세운 후광을 끄면 [A1] 이 빨개진다 — 빠진 종 ' + bad.length +
          '종 ≥ 4 (잰 종 ' + ks.length + ' · ' + bad.join(' · ') + ')');
+    }
+
+    /* [R3] — 페이드만 끈 사본(굽기는 그대로). [B6] 이 **페이드를 재는가**, 아니면
+       그저 «굽는 경로를 지나는가» 를 재는가를 가른다. 이 항이 없으면 [B6] 은 무르게 풀 수 있다. */
+    fs.writeFileSync(NEG_FADE, src.replace(TAG_FADE, `const HALO_FADE = 0;`), 'utf8');
+    const rFade = await measure(browser, 'file://' + NEG_FADE);
+    if (rFade.out && rFade.out.__err) ok(false, '[R3] 사본 측정 예외 — ' + rFade.out.__err);
+    else {
+      const ks = Object.keys(rFade.out.rows);
+      const bad = ks.filter(i => rFade.out.rows[i].flat > FLAT_MAX);
+      const mx = Math.max.apply(null, ks.map(i => rFade.out.rows[i].flat));
+      ok(bad.length >= 8, '[R3] 페이드를 끄면 [B6] 이 빨개진다 — 평탄 판으로 읽힌 종 ' + bad.length +
+         '종 ≥ 8 (잰 종 ' + ks.length + ' · 최대 ' + mx.toFixed(3) + ')');
     }
   } finally {
     clean();
