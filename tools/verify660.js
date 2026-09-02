@@ -64,9 +64,16 @@ const ARM = () => {
   const wrap = (name, kind, okOf) => { const f = window[name]; if (typeof f !== 'function') return;
     window[name] = function (...a) { const r = f.apply(this, a);
       if (okOf(r)) P.buys.push({ kind, t: performance.now() }); return r; }; };
+  /* ⚑ 701 이관(2026-09-02) — **관측점을 코어로 옮겼다.** 701 이 배수 토글을 놓으면서 «한 번 강화»
+     를 `temperUpOne`/`runeTryOne` 이라는 코어로 갈랐고(×N 은 그 코어의 반복이다), 홀드 틱은
+     이제 `temperUpBtn`/`runeBuy`/`runeTry` 를 안 지난다 — 옛 관측점 그대로 두면 이 자는
+     «시도 0회» 로 빨개진다(제품이 멀쩡한데 자만 못 따라가는 게이트 부패다).
+     ⚠ **묻는 것은 한 글자도 안 바뀌었다** — 이 자는 배수 ×1(기본값)에서 돌고, ×1 에서는
+       «코어 호출 1회 = 틱 1회 = 강화 1회» 라 축이 전과 정확히 같다. 배수를 켠 상태의 반대편
+       («틱 1회 = 버스트 1회» — 강화 N회여도 발화는 1회)은 주인 지시라 `verify701` [G] 가 맡는다. */
   wrap('trainBuy', 'train', r => !!r);
-  wrap('temperUpBtn', 'temper', r => !!r);
-  { const f = window.runeTry; if (typeof f === 'function') window.runeTry = function (...a) {
+  wrap('temperUpOne', 'temper', r => !!r);   /* 701 이관 — 코어 */
+  { const f = window.runeTryOne; if (typeof f === 'function') window.runeTryOne = function (...a) {   /* 701 이관 — 코어 */
       const r = f.apply(this, a); if (r && r.up) P.buys.push({ kind: 'rune', t: performance.now() }); return r; }; }
 
   const stamp = nd => {
