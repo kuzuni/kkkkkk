@@ -20563,7 +20563,7 @@ const UPG = [
   { id:'crit',  name:'치명타 확률', icon:'🎯', cost:l => 90*Math.pow(1.23,l),
     val:l => Math.min(0.05 + 0.012*l, 0.85), show:l => pct(Math.min(0.95, U.crit.val(l) + bonus().crit)) },
   { id:'cdmg',  name:'치명타 피해', icon:'💥', cost:l => 130*Math.pow(1.21,l),
-    val:l => 1.6 + 0.18*l, show:l => '×' + (U.cdmg.val(l) + bonus().cdmg).toFixed(2) },
+    val:l => 1.6 + 0.18*l, show:l => fmtMul(U.cdmg.val(l) + bonus().cdmg) },   /* 725 */
   { id:'pierce',name:'관통',        icon:'🏹', cost:l => 400*Math.pow(2.05,l),
     val:l => 1 + l, show:l => U.pierce.val(l) + '명 관통' },
   { id:'hp',    name:'최대 체력',   icon:'❤️', cost:trainCost(30,1.17),
@@ -20583,7 +20583,7 @@ const UPG = [
      이 문단의 «넷» 은 358 시점의 사실이다). 지우기 전 Lv20 에서 115 → 205(+78.3%) 였다. 구 세이브의 `S.lv.spd` 는 남아도
      읽는 곳이 없어 **보상 없이 소멸**한다(88 선례) — 세이브 KEY 는 안 올린다(넘침이 없다). */
   { id:'gold',  name:'골드 획득',   icon:curIc('gold'), cost:l => 150*Math.pow(1.24,l),
-    val:l => 1 + 0.10*l, show:l => '×' + (U.gold.val(l)*mulGold()).toFixed(2) }
+    val:l => 1 + 0.10*l, show:l => fmtMul(U.gold.val(l)*mulGold()) }   /* 725 */
 ];
 const U = byId(UPG);
 
@@ -30337,7 +30337,7 @@ function renderSt(){
     /* 88 — 캐릭터 레벨·경험치 폐기. Lv 자리는 최고 스테이지로 대체(계급은 이미 h3 에 있다). */
     + '<p>' + S.nick + ' — 최고 스테이지 <b>' + S.best + '</b></p>'
     + (nr ? '<p>다음 계급 <b>' + nr.ic + ' ' + nr.n + '</b> — 스테이지 <b>' + nr.stage + '</b> · 전투력 <b>' + fmtB(nr.cp) + '</b><br>'
-          + '계급 보너스 — 공격 · 체력 <b>×' + (1+S.rank*0.25).toFixed(2) + '</b></p>'
+          + '계급 보너스 — 공격 · 체력 <b>' + fmtEff(S.rank*RANK_BONUS) + '</b></p>'   /* 725 — 손 상수 0.25 도 같이 걷었다 */
           /* 267 — 주인이 이름을 댄 «승급전 도전» 버튼. 22 [모두 받기] 규격 `.pbtn`(라벨은 `<b>`) */
           /* 295 — 이 줄은 `nr`(다음 계급)이 있을 때만 그려지므로 입장 게이트가 폐지된 지금
              `disabled` 가 붙을 자리가 없다. 회색 처리도 같이 사라진다(지시 ⓐ). */
@@ -30350,11 +30350,14 @@ function renderSt(){
     + '<div class="sect"><h3>⚔️ 전투력 상세</h3><p>'
     + 'DPS <b>' + fmtB(stat.dps) + '</b> · 공격력 <b>' + fmtB(stat.dmg) + '</b><br>'
     + '체력 <b>' + fmtB(stat.maxHp) + '</b> · 재생 <b>' + fmtB(stat.regen) + '/s</b><br>'
-    + '치명타 <b>' + pct(stat.crit) + '</b> ×<b>' + stat.cdmg.toFixed(2) + '</b> · 공속 <b>×' + (stat.rate/BASE_RATE).toFixed(2) + '</b><br>'
+    /* 725 — 치명타 «확률» 은 % 유지(경계) · 치명타 피해·공속은 배율이라 fmtMul 한 벌로 */
+    + '치명타 <b>' + pct(stat.crit) + '</b> <b>' + fmtMul(stat.cdmg) + '</b> · 공속 <b>' + fmtMul(stat.rate/BASE_RATE) + '</b><br>'
     + '스킬 <b>' + S.eqSkill.length + '/' + skSlotCap() + '</b> · 펫 <b>' + S.eqPet.length + '/3</b> · 유물 Lv <b>' + relicLvSum() + '</b></p></div>'
     + '<div class="sect"><h3>🏆 누적 보너스</h3><p>'
-    + '공격 <b>×' + fmt(b.atk) + '</b> · 체력 <b>×' + fmt(b.hp) + '</b><br>'
-    + '재생 <b>×' + fmt(b.regen) + '</b> · 골드 <b>×' + fmt(b.gold) + '</b> · 펫 <b>×' + b.pet.toFixed(2) + '</b></p></div>'
+    /* 725 — «누적 보너스» 다섯 줄은 `bonus()` 의 배율 그 자체다. 손으로 «×» 를 붙이고
+       자리마다 다른 포매터(fmt · toFixed(2))를 쓰던 것을 fmtMul 한 벌로 모았다. */
+    + '공격 <b>' + fmtMul(b.atk) + '</b> · 체력 <b>' + fmtMul(b.hp) + '</b><br>'
+    + '재생 <b>' + fmtMul(b.regen) + '</b> · 골드 <b>' + fmtMul(b.gold) + '</b> · 펫 <b>' + fmtMul(b.pet) + '</b></p></div>'
     + '<div class="sect"><h3>📊 통계</h3><p>'
     + '총 처치 <b>' + fmt(S.totalKills) + '</b> · 최고 스테이지 <b>' + S.best + '</b><br>'
     + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회 · 유물조각 <b>' + curIc('relic') + ' ' + fmt(S.relic) + '</b><br>'
@@ -33754,9 +33757,9 @@ const PASS_ITEMS = [
   { id:'offplus', n:'오프라인 보상 증가', ic:'⏰', won:7500, perm:true, cp:1,
     q:'평생', pal:'p', val:'1000%', daily:750, once:5000,
     art:'⏳',
-    bl:['오프라인 보상 획득량 ×' + PASS_OFF_MUL.toFixed(1),
+    bl:['오프라인 보상 획득량 ' + fmtMul(PASS_OFF_MUL),   /* 725 */
         '골드·다이아 둘 다 ' + fmtMul(PASS_OFF_MUL), '한 번 사면 평생 적용'],   /* 725 */
-    nt:'오프라인 보상을 ×' + PASS_OFF_MUL.toFixed(1) + ' 로 받습니다 (골드·다이아 둘 다)' }
+    nt:'오프라인 보상을 ' + fmtMul(PASS_OFF_MUL) + ' 로 받습니다 (골드·다이아 둘 다)' }   /* 725 */
 ];
 const passOffPlus = () => !!(S.pass && S.pass.offPlus);
 const passOwned = id => id === 'noads' ? noAdsOn() : id === 'offplus' ? passOffPlus() : autoBlessOn();
@@ -34749,12 +34752,12 @@ function renderSpec(){
        짓는 유일한 축이다. 값은 «초당 몇 회» 라는 실스탯 그대로(배수가 아니다). */
     ['공격 속도',   fmtPct(stat.rate, 2) + '회/s'],
     [U.crit.name,   pct(stat.crit)],
-    [U.cdmg.name,   '×' + stat.cdmg.toFixed(2)],
+    [U.cdmg.name,   fmtMul(stat.cdmg)],                       /* 725 */
     [U.pierce.name, stat.pierce + '명'],
     [U.def.name,    '받는 피해 ' + fmtMul(stat.defMul)],       /* 725 — 훈련 카드와 같은 말 */
     ['공격력 증가', pc(b.atk)],
     ['체력 증가',   pc(b.hp)],
-    [U.gold.name,   '×' + stat.goldMul.toFixed(2)],
+    [U.gold.name,   fmtMul(stat.goldMul)],                    /* 725 */
     /* 358 — 이 행은 «이동 속도 증가율» 이고 레퍼런스(측정표 20 §12 «매옹이 이동 속도 0.2%»)에 있는 줄이라
        지우지 않는다. 다만 값은 **영구히 0%** 다 — 이동 속도를 올리는 축을 전부 없앴으므로(주인 지시)
        여기에 축을 다시 이어붙이지 마라. `verify358` [3] 이 이 자리를 못박는다.
