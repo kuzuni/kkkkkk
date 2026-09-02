@@ -76,6 +76,11 @@ async function shot(sc, T, idx) {
   await p.waitForTimeout(700);
   await p.waitForFunction(() => document.querySelectorAll('#fxl > *').length === 0, null, { timeout: 5000 }).catch(() => {});
 
+  /* 트리거 **전** 호스트 상자 — 클립 고정의 기준(위 머리말) */
+  const pre = await p.evaluate((hostSel) => { const h = document.querySelector(hostSel);
+    if (!h) return null; const r = h.getBoundingClientRect();
+    return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; }, sc.host);
+
   const info = await p.evaluate(async ({ T, sd, btnSel, hostSel }) => {
     let s = sd >>> 0;
     Math.random = function () { s |= 0; s = (s + 0x6D2B79F5) | 0;
@@ -117,11 +122,19 @@ async function shot(sc, T, idx) {
 
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '681-' + ROUND + '-' + sc.id + '-' + idx + '.png');
+  /* ⚑⚑ 5회차 비평 CN 이 **자를 잡았다** — 「캡처 캔버스 폭이 프레임마다 ±5.2% 흔들린다」
+     (relic 690/710/726/733/735/720/720/720 · train 626/641/653/658/658/646/646/646).
+     뿌리는 클립을 **트리거 뒤** 호스트 bbox 에서 뽑은 것이다: 621 의 눌림 애니가 호스트를
+     프레임마다 다른 크기로 만들고, 그 위에 이 클립이 얹힌다. 그러면 비평가는 **배율이 다른 여덟 장**을
+     비교하게 되고 «−5.6% 크기 변화» 같은 것은 그 격자에서 **애초에 판독 불가**가 된다(CN ④-c).
+     ⇒ 클립은 **트리거 전에 한 번** 잰 상자로 고정한다(58 36회차 «하네스가 시각을 흐리면 정답표가
+     거짓» 의 공간판). ⚠ 정답표의 수치는 원래 스크린 좌표에서 재므로 이 변경에 안 흔들린다. */
   const M = 160;                                    /* 여유 — 버스트는 호스트 «테두리 바깥» 에서도 산다 */
-  const clip = info ? {
-    x: Math.max(0, info.clip.x - M), y: Math.max(0, info.clip.y - M),
-    width: Math.min(1080 - Math.max(0, info.clip.x - M), info.clip.w + 2 * M),
-    height: Math.min(2280 - Math.max(0, info.clip.y - M), info.clip.h + 2 * M),
+  const base = pre || (info && info.clip);
+  const clip = base ? {
+    x: Math.max(0, base.x - M), y: Math.max(0, base.y - M),
+    width: Math.min(1080 - Math.max(0, base.x - M), base.w + 2 * M),
+    height: Math.min(2280 - Math.max(0, base.y - M), base.h + 2 * M),
   } : null;
   await p.screenshot({ path: file, clip: clip || undefined });
   await b.close();
