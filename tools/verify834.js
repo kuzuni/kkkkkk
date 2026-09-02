@@ -163,6 +163,27 @@ function launchOpts(){
   ok('[F1] `.spc-rib` 318×56', f.w === 318 && f.h === 56, f.w + '×' + f.h);
   ok('[F2] 자리 left 269 · top 249', f.left === '269px' && f.top === '249px', f.left + ' / ' + f.top);
 
+  /* ---- [H] 최장 라벨 — 라벨이 «데이터 파생» 이 된 대가를 여기서 치른다 ---- */
+  console.log('[H] 최장 칭호도 그릇 안에 든다 (736 «최장 라벨을 담는가» 와 같은 자)');
+  const h = await page.evaluate(() => {
+    S.titles = {}; RANKS.forEach((_, i) => { S.titles[i] = 1; });
+    const worst = { n: '', slack20: 1e9, slack19: 1e9 };
+    RANKS.forEach((r, i) => {
+      S.titleEq = i; save(); openProfile();
+      const e19 = $('pfTtl').getBoundingClientRect(), b19 = $('pfTtl').parentElement.getBoundingClientRect();
+      document.querySelector('.pf-tgl>.lb').click();
+      const e20 = $('spcTtl').getBoundingClientRect();
+      const b20 = document.querySelector('#specw .spc-rib > b').getBoundingClientRect();
+      const s20 = Math.min(e20.left - b20.left, b20.right - e20.right);
+      const s19 = Math.min(e19.left - b19.left, b19.right - e19.right);
+      if (s20 < worst.slack20) { worst.n = r.n; worst.slack20 = +s20.toFixed(1); worst.slack19 = +s19.toFixed(1); }
+      $('spcProfTab').click(); closeProfile();
+    });
+    return worst;
+  });
+  ok('[H1] 20 — 최장 칭호 «' + h.n + '» 가 밴드를 안 넘는다', h.slack20 > 0, '여유 ' + h.slack20 + 'px');
+  ok('[H2] 19 — 같은 칭호가 알약을 안 넘는다', h.slack19 > 0, '여유 ' + h.slack19 + 'px');
+
   /* ---- [R] 되돌림 시험 ---- */
   console.log('[R] 되돌림 — 갱신 경로를 끊으면 [A] 가 실제로 빨개진다');
   const r = await page.evaluate(() => {
