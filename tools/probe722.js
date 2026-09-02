@@ -201,10 +201,14 @@ const IMM_SEC = 40, REAL_SEC = 60;
   console.log('\n  [2] 결정 변수 — ⓒ실제 판의 살아 있는 적 수 · 접촉 반경 안 개체수 (반복 ' + REPS + '회)');
   console.log('      ' + 'id'.padEnd(8) + '반경'.padEnd(8) + '판 위 적 수'.padEnd(26) + '반경 안 개체수');
   const worst = { id: null, w: 0 };
+  /* 781 — 종별 폭을 **버리지 않고 남긴다**. [6-c] 가 «자유 판의 폭» 을 최악 하나가 아니라
+     분포(중앙값)로 물으려면 여기서 잰 값이 그대로 필요하다(새 실행 0회). */
+  const freeW = {};
   CIDS.forEach(id => {
     const pops = R.map(row => row[id].real.pop), nears = R.map(row => row[id].real.near);
     const reals = R.map(row => val(row, id, 'real'));
     const w = mean(reals) ? (Math.max(...reals) - Math.min(...reals)) / mean(reals) : 0;
+    freeW[id] = w;
     if (w > worst.w) { worst.w = w; worst.id = id; }
     console.log('      ' + id.padEnd(8) + String(R[0][id].real.rad || '—').padEnd(8)
       + pops.map(x => x.toFixed(1)).join('/').padEnd(26)
@@ -406,13 +410,77 @@ const IMM_SEC = 40, REAL_SEC = 60;
   ok(split, '6-a **«뭉침» 가설이 기각됐다** — POP 을 고정하고 불사만 켜면 부호가 종마다 갈린다',
      P6.map((p, k) => '위 ' + CIDS.filter(id => infl[id][k] > 1).length + '/6').join(' · ')
      + ' — 오르는 종(lance·flask·poison)과 내리는 종(gale·aura·nova)이 매 실행 같은 편이다');
-  ok(inflWorst > 1.5 && Math.min(...inflAll) < 1,
-     '6-b 그 갈림이 잡음이 아니다 — 오르는 쪽·내리는 쪽 모두 배수가 크다',
-     '최대 ' + CIDS[inflAll.indexOf(inflWorst)] + ' ×' + inflWorst.toFixed(2)
-     + ' · 최소 ' + CIDS[inflAll.indexOf(Math.min(...inflAll))] + ' ×' + Math.min(...inflAll).toFixed(2));
-  const spreadWorst = Math.max(...P6.map(p => Math.max(...CIDS.filter(id => held.indexOf(id) < 0).map(id => p.m[id].spread))));
-  ok(spreadWorst < 0.6, '6-c ⏸접촉을 뺀 표본에서 채택 눈금의 K회 폭은 [C] 자유 판의 실행 간 폭보다 좁다',
-     '최악 K회 폭 ' + pc(spreadWorst) + ' (자유 판 [C] 의 실행 간 폭은 최악 ' + pc(worst.w) + ')');
+  /* ⚑⚑ **781 정오표 — 옛 [6-b] 는 `inflWorst > 1.5`, 즉 «가장 크게 오른 한 종» 하나가 빨강을
+     정하는 모양**이었고 775 가 `probe504` [C2] 에서, 778 이 같은 자의 [8-b] 에서 걷어낸 것과
+     **글자 그대로 같다**(전칭·최댓값 + 손 문턱). 실측(778 수리 후 무경쟁 7회) —
+     ×**1.49**·1.54·1.55·1.61·1.62·1.67·1.99 ⇒ **빨강 1회 · 초록 쪽 최소 여유 0.04** 로 문턱에
+     붙어 산다. 게다가 그 «한 종» 의 이름은 `flask` ↔ `poison` 사이를 오가므로 이름도 못 쓴다
+     (775 §4 «분포가 겹치면 최솟값의 이름이 갈린다»).
+     ⇒ 775·778 처방 그대로 **묶음 중앙값의 비**로 다시 적는다 — 오르는 묶음의 중앙값 ÷ 내리는
+     묶음의 중앙값. 표본이 늘수록 좁아지는 통계라 한 종이 빨강을 정하지 못한다.
+     «묶음이 둘로 갈린다» 는 것 자체는 바로 위 [6-a] 가 이미 지므로 여기는 **갈림의 크기**만 진다.
+     ⚑ 바는 두 겹이다 — ① 중앙값 비 ≥ 1.5(778 [8-b] 와 같은 눈금) · ② 그 초과분이 **그 실행이
+     스스로 잰 널**(하네스를 끈 실제↔실제 짝)의 초과분의 2배 이상(778 §7 «절대 문턱을 못 쓰는
+     자리에서는 그 실행이 스스로 잰 널에 대어 재라»). 널이 시끄러운 실행에서는 바도 같이 오른다.
+     ⚠ 문턱을 다시 뽑는 길은 695-④·759·766·775·778 이 **다섯 번** 기각했다 — 여기서도
+     **문턱을 내리지 않았다**(최댓값 1.5 → 중앙값 비 1.5 + 널 초과 2배 = 더 세다). */
+  const upA = inflAll.filter(x => x > 1), dnA = inflAll.filter(x => x < 1);
+  const upMed = upA.length ? med(upA) : 1, dnMed = dnA.length ? med(dnA) : 1;
+  const gap = upMed / Math.max(1e-9, dnMed);
+  /* 널 — 같은 `P6` 안의 **실제 판끼리** 서로 나눈다(하네스 0 · 새 실행 0). 같은 묶음 모양으로
+     중앙값 비를 내면 «회차 잡음만으로 이 비가 얼마나 나오는가» 가 나온다. */
+  const null6 = [];
+  CIDS.forEach(id => {
+    const v = P6.map(p => p.m[id].mean);
+    for (let i = 0; i < v.length; i++) for (let j = 0; j < v.length; j++) if (i !== j && v[j]) null6.push(v[i] / v[j]);
+  });
+  const nUp = null6.filter(x => x > 1), nDn = null6.filter(x => x < 1);
+  const nullGap = (nUp.length && nDn.length) ? med(nUp) / med(nDn) : 1;
+  ok(upA.length >= 2 && dnA.length >= 2 && gap >= 1.5 && (gap - 1) >= 2 * (nullGap - 1),
+     '6-b 그 갈림이 잡음이 아니다 — 오르는 묶음과 내리는 묶음의 **중앙값**이 갈린다(종별 이름·최댓값은 안 쓴다)',
+     '오르는 ' + upA.length + '종 중앙값 ×' + upMed.toFixed(2) + ' ↔ 내리는 ' + dnA.length + '종 중앙값 ×' + dnMed.toFixed(2)
+     + ' · 비 ×' + gap.toFixed(2) + '(≥1.5) · 널 ×' + nullGap.toFixed(2)
+     + ' ⇒ 초과 ' + (gap - 1).toFixed(2) + ' ≥ 널 초과의 2배 ' + (2 * (nullGap - 1)).toFixed(2)
+     + ' (참고 최댓값 ×' + inflWorst.toFixed(2) + ' — **옛 [6-b] 가 빨강을 맡겼던 한 종**)');
+  ok(nullGap < 1.5,
+     '6-br 되돌림 — 불사 하네스를 끈 짝(실제↔실제)은 [6-b] 의 같은 바를 못 넘는다 ⇒ [6-b] 가 잰 것은 회차 잡음이 아니라 하네스다',
+     '널 ×' + nullGap.toFixed(2) + ' (바 1.5 · 표본 ' + null6.length + '쌍 · 폭 ×'
+     + Math.min(...null6).toFixed(2) + '~×' + Math.max(...null6).toFixed(2) + ')');
+
+  /* ⚑⚑ **781 정오표 — 옛 [6-c] 는 `spreadWorst < 0.6`** 이었다. 두 겹으로 틀렸다:
+     ⓐ 왼쪽이 **최악 하나**(18 표본 중 최댓값)라 빨강을 표본 하나가 정한다 — 실측 무경쟁 7회
+     48·51·52·53·54·55·**63**% 로 빨강 1회 · 최소 여유 0.05 · 여기 1회차 재현에서도 **65% 빨강**.
+     ⓑ 더 큰 것은 **항의 문장과 코드가 다른 것을 본다**는 점이다 — 문장은 «[C] 자유 판의 실행 간
+     폭보다 좁다» 인데 코드는 그 폭(`worst.w`, 실측 139~208%)을 **한 번도 안 보고** 손 상수 0.6 만
+     봤다. 판이 시끄러운 실행에서 자유 판 폭은 같이 커지는데 바는 안 움직인다
+     (778 §7 «절대 문턱을 못 쓰는 자리에서는 그 실행이 스스로 잰 널에 대어 재라»).
+     ⇒ 양쪽을 **같은 모양의 통계**(중앙값)로 맞추고, 바를 **그 실행이 잰 자유 판 폭에 비례**시킨다.
+     ⚠ 이것은 무르게 푼 것이 아니다 — 옛 바 0.6 은 자유 판 폭(중앙값 실측 0.28~0.35)의 **약 2배**라
+     사실상 아무것도 안 막고 있었고, 새 바는 «채택 눈금이 자유 판보다 **실제로 좁다**» 를 요구한다.
+     그 방향은 §R 되돌림(자유 판 폭을 그대로 왼쪽에 넣으면 비 ×1.00 으로 빨강)이 못박는다. */
+  const use6 = CIDS.filter(id => held.indexOf(id) < 0);
+  const spreadsAll = [].concat(...P6.map(p => use6.map(id => p.m[id].spread)));
+  const spreadMed = med(spreadsAll), spreadWorst = Math.max(...spreadsAll);
+  const freeMed = med(use6.map(id => freeW[id]));
+  const narrow = spreadMed ? freeMed / spreadMed : Infinity;
+  ok(narrow >= 1.3,
+     '6-c ⏸접촉을 뺀 표본에서 채택 눈금의 K회 폭은 [C] 자유 판의 실행 간 폭보다 좁다 — 양쪽 다 **중앙값**으로, 바는 그 실행이 잰 자유 판 폭에 비례',
+     '채택 눈금 K회 폭 중앙값 ' + pc(spreadMed) + '(최악 ' + pc(spreadWorst) + ' — **옛 [6-c] 가 빨강을 맡겼던 한 표본**)'
+     + ' ↔ 자유 판 [C] 폭 중앙값 ' + pc(freeMed) + '(최악 ' + pc(worst.w) + ')'
+     + ' ⇒ ×' + narrow.toFixed(2) + ' 좁다(≥1.30)');
+  /* [6-cr] — **되돌림 시험(새 상수·새 실행 0).** «좁다» 가 POP 고정 덕인지 **표본 수 덕**인지
+     가른다: 왼쪽은 K=6 회, 오른쪽은 R=5 회라 표본 수가 다르다. 자유 판에 표본을 **덜** 주면
+     범위는 줄어들 수밖에 없으므로(범위는 표본 수에 단조), 3회만 준 자유 판이 **그래도** 넓으면
+     이 항이 잰 것은 표본 수가 아니라 POP 고정이다. 3회로도 못 넘으면 이 항은 빨개진다. */
+  const free3 = use6.map(id => {
+    const v = R.slice(0, 3).map(row => val(row, id, 'real')), m = mean(v);
+    return m ? (Math.max(...v) - Math.min(...v)) / m : 0;
+  });
+  const free3Med = med(free3);
+  ok(free3Med > spreadMed,
+     '6-cr 되돌림 — 자유 판에 표본을 **덜** 줘도(5회 → 3회 · 범위는 줄 수밖에 없다) 여전히 채택 눈금보다 넓다 ⇒ [6-c] 가 잰 것은 표본 수 차이가 아니라 POP 고정이다',
+     '자유 판 3회 폭 중앙값 ' + pc(free3Med) + ' > 채택 눈금 K회 폭 중앙값 ' + pc(spreadMed)
+     + ' (자유 판 5회 ' + pc(freeMed) + ')');
 
   /* ── [7] 처방 후보 ⓑ — PIN 장면을 «개체수로» 떠낸다 ───────────────────
      `probe504` [A] 는 15·30·45초 **시각**으로 세 프레임을 뜬다. 그 순간의 마릿수는 0~50 이라
