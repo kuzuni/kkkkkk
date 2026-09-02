@@ -335,11 +335,22 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      공용 곡선은 0~52% 가 `scale(1)·opacity:1` 고원이라 아이콘 크기의 알에게는 «가림» 이 된다
      (비평가 2인 공통: «터짐이 한 프레임도 없다 · Lv.n 이 36~49% 지워진다»).
      ⇒ **불투명 구간 안에서 이미 줄어드는가**를 묻는다. 계수 셋은 [C6] 의 봉투 산수와 **같은 값**이어야 한다. */
+  /* ⚑⚑ 681 이관(2026-09-02) — 셋째 항이 **공용 곡선의 옛 글자**(`0%{… scale(1);opacity:1}`)를 그대로
+     읽고 있었다. 그 자리는 681 이 «탄생 박자 없음·빈 껍데기 꼬리» 로 등재해 둔 곡선이고, 이 주석
+     스스로 «681 이 따로 등재했다» 고 적어 두었다 — 즉 **이 항은 남의 작업이 끝나면 반드시 빨개지는
+     래칫**이었다(333 처방: 자리를 비우지 말고 방향을 고쳐 적는다).
+     묻는 뜻은 한 글자도 안 바뀐다: 이 알이 **공용 봉투를 안 탄다**. 다만 그것을 «공용 곡선이 옛날
+     그대로인가» 로 묻지 않고 **«둘이 서로 다른 봉투인가»** 로 묻는다 —
+       ① 전용 `fxRlic` 이 위 세 계수 그대로 있고(= [C6] 봉투 산수와 같은 값)
+       ② 공용 `fxSpark` 가 여전히 **존재**하며(없으면 `animation-name` 갈아 끼우기가 헛일이다)
+       ③ 그 둘의 선언이 **같지 않다**(공용이 바뀌어도 이 알은 안 따라간다).
+     ⇒ 681 이 공용 곡선을 어떻게 고치든 이 항은 «이 알만 다른 봉투» 를 계속 지킨다. */
   const mRlic = code.match(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:\.55\}\s*35%\{transform:translate\(calc\(var\(--dx\)\*\.55\),calc\(var\(--dy\)\*\.55\)\) scale\(\.72\);opacity:\.45\}\s*100%\{transform:translate\(var\(--dx\), ?var\(--dy\)\) scale\(\.45\);opacity:0\}\}/);
-  ok(!!mRlic && /\.fx-spark\.fx-rlic\{[\s\S]{0,400}?animation-name:fxRlic/.test(code)
-     && /@keyframes fxSpark\{0%\{transform:translate\(0,0\) scale\(1\);opacity:1\}/.test(code),
-     'C8 ★ 획득 알이 **전용 봉투(`fxRlic`)** 를 탄다 — 불투명 구간 안에서 이미 줄어들고, **공용 `fxSpark` 는 불변**',
-     mRlic ? '0%s1/α.55 · 35%t.55/s.72/α.45 · 100%t1/s.45/α0' : '전용 곡선을 못 찾았다');
+  const mSpk = code.match(/@keyframes fxSpark\{([\s\S]*?\})\}/);   /* 블록의 끝은 `}}` 다(681) */
+  const sameEnv = !!(mRlic && mSpk) && mSpk[1].replace(/\s+/g, '') === mRlic[0].replace(/^@keyframes fxRlic\{/, '').replace(/\}$/, '').replace(/\s+/g, '');
+  ok(!!mRlic && /\.fx-spark\.fx-rlic\{[\s\S]{0,400}?animation-name:fxRlic/.test(code) && !!mSpk && !sameEnv,
+     'C8 ★ 획득 알이 **전용 봉투(`fxRlic`)** 를 탄다 — 불투명 구간 안에서 이미 줄어들고, 공용 `fxSpark` 와 **서로 다른 봉투**다',
+     mRlic ? '0%s1/α.55 · 35%t.55/s.72/α.45 · 100%t1/s.45/α0 · 공용과 별개 ' + (!sameEnv) : '전용 곡선을 못 찾았다');
   /* ⚑ 753 7회차 — 취소선. `fxBurst` 가 알을 `<s>` 로 낳으므로 기본값 `line-through` 가 살아 있으면
      아이콘 크기에서 **폭 156 · 두께 12px 검정 막대**가 글리프를 가로지른다(비평가 2인 독립 관측). */
   ok(/\.fx-spark\.fx-rlic\{[\s\S]{0,400}?text-decoration:none/.test(code),
