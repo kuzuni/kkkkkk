@@ -26,7 +26,9 @@ const quick = process.argv.slice(2).includes('--quick');
 const TMP = fs.mkdtempSync(path.join(require('os').tmpdir(), 'v557-'));
 
 let pass = 0, fail = 0;
+const skipped = [];    /* 건너뜀 — 환경이 없어 **못 쟀다**. 초록으로도 빨강으로도 세지 않는다(작업 810). */
 const ok = (label, cond, note) => { (cond ? pass++ : fail++); console.log('  ' + (cond ? 'ok  ' : '✗   ') + label + (note ? '  [' + note + ']' : '')); };
+const skip = (label, why) => { skipped.push(label + ' — ' + why); console.log('  –   ' + label + ' 건너뜀 — ' + why); };
 const sec = t => ((Date.now() - t) / 1000).toFixed(1) + '초';
 
 /* verifyProgress 실행 — 종료 코드와 출력을 같이 돌려준다. */
@@ -66,6 +68,28 @@ try {
   } else {
     const t0 = Date.now();
     const b = run(['--file', f498]);
+    /* ── ⚠ 환경 갈래 (2026-09-02, 작업 810) ────────────────────────────────────
+     * [B] 는 «§3 이 498 을 마감 누락으로 부르는가» 를 묻는데, §3 의 E2 축은 그 답을
+     * **`verify498` 의 종료 코드**로 정한다. 그 자가 이 컨테이너에서 아예 **못 돌면**
+     * (playwright 없음 = 종료 코드 2 — 저장소 공용 규약) §3 은 설계대로
+     * «관찰 · 판정 불가» 로 비켜서고, [B-a]~[B-d] 가 4항 줄줄이 빨개진다.
+     * 그 빨강은 «§3 회귀 부패» 와 **글자 하나까지 같은 얼굴**이다 —
+     * 810 등재문이 실제로 그렇게 읽혔고(35/39 · «자 · 회귀 부패» 로 등재),
+     * 뿌리는 `npm i --no-save playwright` 한 줄이었다. 지시서 [-2] 의 «얕은 클론» 처방도
+     * `git stash` 대조도 이 축은 못 가른다 — 둘 다 자를 **돌려 보지 않기** 때문이다.
+     * ⇒ 환경이 원인이면 **빨강이 아니라 건너뜀**으로 밝히고 고치는 법을 같이 찍는다.
+     *   못 본 것을 초록으로 부르지도 않는다 — 이 자리를 [E-e] 가 환경 없이 대신 잰다
+     *   (자가 «못 돌린» 답을 §3 이 어떻게 다루는지가 정확히 그 축이다). */
+    const envUnrun = /498 — 관찰 · 자 .*를 못 돌렸다/.test(b.out);
+    const gateRed = /498 — 관찰 · 자 .*가 빨갛다/.test(b.out);
+    if (envUnrun || gateRed) {
+      const why = envUnrun
+        ? '표본 자 `tools/verify498.js` 가 이 환경에서 안 돈다(§3 은 규약대로 «관찰 · 판정 불가»). '
+          + '고치는 법: npm i --no-save playwright && npx playwright install chromium'
+        : '표본 자 `tools/verify498.js` 가 빨갛다 — §3 이 아니라 **498 의 자**를 먼저 봐라';
+      console.log('  ⚠   [B] 이 절은 §3 의 결손이 아니다 — ' + why);
+      for (const l of ['[B-a]', '[B-b]', '[B-c]', '[B-d]', '[B-e]', '[B2-0]', '[B2-a]', '[B2-b]']) skip(l, envUnrun ? '환경(표본 자 실행 불가)' : '표본 자가 빨갛다');
+    } else {
     ok('[B-a] 종료 코드 1(빨강)', b.code === 1, 'code ' + b.code + ' · ' + sec(t0));
     ok('[B-b] «PROGRESS UNCLOSED» 를 이름으로 낸다', /PROGRESS UNCLOSED 1건 — 498/.test(b.out));
     ok('[B-c] 사유가 «자가 초록» 이다(자산 존재만으로 부르지 않는다)', /498 — 마감 누락 · 그 작업의 자가 초록이다/.test(b.out));
@@ -85,6 +109,7 @@ try {
     finally { if (fs.existsSync(cutPath)) fs.unlinkSync(cutPath); }
     ok('[B2-a] §3 을 걷어낸 사본은 같은 표에서 종료 코드 0(초록)', b2.code === 0, 'code ' + b2.code);
     ok('[B2-b] 그 사본은 §3 을 «건너뜀» 으로 밝힌다', /§3 마감 누락 검사 — 건너뜀/.test(b2.out));
+    }
   }
 
   /* ── [C] 음성 — 자산이 0건인 진짜 미착수 행은 건드리지 않는다 ── */
@@ -132,6 +157,16 @@ try {
         const e2 = run(['--file', write('Preal2.md', REAL)]);
         ok('[E-c] 같은 행이 자만 초록으로 바뀌면 빨갛다(판정이 자의 답 하나로 갈린다)',
            new RegExp('✗ ' + eid + ' — 마감 누락 · 그 작업의 자가 초록이다').test(e2.out) && e2.code === 1, 'code ' + e2.code);
+        /* [E-e] 세 번째 답 — «못 돌렸다» (2026-09-02, 작업 810).
+         * 자의 답은 둘이 아니라 **셋**이다: 초록 · 빨강 · **못 돌림**(playwright 없음 = 종료 코드 2,
+         * 저장소 공용 규약). 앞의 둘만 걸어 두면 셋째 갈래가 무보증으로 남고, 그 갈래가
+         * 곧 810 이 «§3 회귀 부패» 로 읽은 그 자리다. 이 항은 **환경이 없어도 도는** 시험이라
+         * 위 [B] 가 환경으로 건너뛴 회차에서도 §3 의 그 축을 실제로 잰다. */
+        fs.writeFileSync(gp, 'console.error("playwright 없음"); process.exit(2); /* verify557 [E] 임시 표본 */\n');
+        const e3 = run(['--file', write('Preal3.md', REAL)]);
+        ok('[E-e] 자를 «못 돌린» 행은 빨강도 침묵도 아니다 — 관찰 · 판정 불가',
+           new RegExp('⚠  ' + eid + ' — 관찰 · 자 .*를 못 돌렸다').test(e3.out)
+           && !new RegExp('✗ ' + eid + ' — 마감 누락').test(e3.out) && e3.code === 0, 'code ' + e3.code);
       } finally { if (fs.existsSync(gp)) fs.unlinkSync(gp); }
       ok('[E-d] 시험이 임시 자 파일을 도로 지웠다', !fs.existsSync(gp));
     }
@@ -200,5 +235,8 @@ try {
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
 }
 
-console.log('\nVERIFY557 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
+/* 건너뛴 항은 초록으로도 빨강으로도 세지 않는다 — 대신 **마지막 줄이 이름을 밝힌다**(작업 810).
+   조용한 건너뜀은 «못 본 것을 초록으로 부르는» 것과 같다(557 머리말 · verifyProgress --no-gate 규약). */
+console.log('\nVERIFY557 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS')
+  + (skipped.length ? '\n⚠ 안 쟀다 ' + skipped.length + '항 — ' + skipped.join(' · ') : ''));
 process.exit(fail ? 1 : 0);

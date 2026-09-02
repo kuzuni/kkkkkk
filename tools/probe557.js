@@ -154,16 +154,31 @@ function main() {
   if (!okNoMark) bad++;
   if (!okAsset) bad++;
 
+  let unmeasured = null;
   if (noGate) {
     console.log('    –   [2-d] 자 실행 — 안 쟀다(--no-gate)');
+    unmeasured = '[2-d] --no-gate';
   } else {
     const t0 = Date.now();
     const r = gate ? runGate(gate) : { state: 'unrun', why: '자 없음' };
     const sec = ((Date.now() - t0) / 1000).toFixed(1);
     const ok = r.state === 'pass';
-    console.log('    ' + (ok ? 'ok ' : '✗  ') + '[2-d] `' + gate + '` 가 **초록**이다 (' + sec + '초) — ' +
-                (ok ? '끝난 일이라는 값싼 증거' : '판정 ' + r.state + ' · ' + r.why));
-    if (!ok) bad++;
+    /* ⚠ «못 돌렸다» 는 «재현 실패» 가 아니다 (2026-09-02, 작업 810).
+     * runGate 는 답을 셋으로 가른다 — pass · fail · **unrun**(playwright 없음 = 종료 코드 2,
+     * 저장소 공용 규약). 셋째를 실패로 세면 이 재현기는 **환경이 빈 컨테이너에서 무조건 빨갛고**,
+     * 그 빨강이 «자 부패» 와 같은 얼굴이라 착수한 세션이 엉뚱한 것을 뜯는다
+     * (810 이 그 값 하나로 «§3 회귀 부패» 로 등재됐다 — 뿌리는 `npm i --no-save playwright` 였다).
+     * ⇒ unrun 은 «안 쟀다» 로 밝히고 세지 않는다. 다만 **조용히 넘기지도 않는다** —
+     *   마지막 줄이 못 잰 축의 이름과 고치는 법을 같이 찍는다. */
+    if (r.state === 'unrun') {
+      console.log('    –   [2-d] `' + gate + '` 실행 — 안 쟀다(' + r.why + ') · ' + sec + '초');
+      console.log('        고치는 법: npm i --no-save playwright && npx playwright install chromium');
+      unmeasured = '[2-d] 자 실행 불가(' + r.why + ')';
+    } else {
+      console.log('    ' + (ok ? 'ok ' : '✗  ') + '[2-d] `' + gate + '` 가 **초록**이다 (' + sec + '초) — ' +
+                  (ok ? '끝난 일이라는 값싼 증거' : '판정 ' + r.state + ' · ' + r.why));
+      if (!ok) bad++;
+    }
   }
   console.log('    ⇒ «표는 미착수 · 자산은 완료» 가 성립한다. 이 어긋남을 보는 자가 §1·§2 에는 없다.');
 
@@ -190,7 +205,8 @@ function main() {
   console.log('    ⚠ 재현 실측: 마감된 554 의 review 에도 표지가 없다 ⇒ 이 축은 **재현율이 반쪽**이다.');
   console.log('      그래서 자는 이 축으로 «초록» 을 선언하지 않고, 못 본 자리를 요약에 세어 찍어야 한다.');
 
-  console.log('\nPROBE557 ' + (bad ? '✗ ' + bad + '건' : 'OK') + ' — 재현 ' + (bad ? '실패' : '성립'));
+  console.log('\nPROBE557 ' + (bad ? '✗ ' + bad + '건' : 'OK') + ' — 재현 ' + (bad ? '실패' : '성립')
+              + (unmeasured ? '\n⚠ 안 쟀다 — ' + unmeasured + '(빨강이 아니라 «못 쟀다» 다 · 작업 810)' : ''));
   process.exit(bad ? 1 : 0);
 }
 
