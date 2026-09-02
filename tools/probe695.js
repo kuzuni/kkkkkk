@@ -10,7 +10,13 @@
  *   ⓐ 라면 «504 트리 + 오늘 자» 가 선언값을 되짚어야 하고, ⓑ 라면 어느 칸에서도 안 나온다.
  *
  *   [1] 재현 — 오늘 트리·오늘 자로 셋이 밴드 밖(등재문 71~85% 확인)
- *   [2] 제품 드리프트 기각 — **504 당시 트리**(023cd738)를 오늘 자로 재도 같은 자리다 ⇒ ⓐ 기각
+ *   [2] 제품 드리프트 기각 — **504 당시 트리**(023cd738)에서도 선언이 안 나온다 ⇒ ⓐ 기각
+ *       ⚑ **791 이 이 절의 축을 갈았다.** 옛 꼴은 자유 장면에서 «셋 다 밴드 밖»(`off > tol`) 과
+ *       «두 트리 평균비 < 3» 을 물었는데, 자유 장면은 695 자신이 «이 눈금으로 못 잰다» 로
+ *       등재한 장면이라 둘 다 동전이었고(실측 11회 중 1회 빨강), «제품이 옮긴 것이 아니다» 는
+ *       고정 장면에서 재면 **거짓**이었다(orbit ×1.4 · aura ×2.7 · whirl ×1.5).
+ *       지금 꼴 — [2] 방향만(문턱 0) · [2-b] 자유 장면은 못 가른다(≤0.70) · [2-c] 고정 장면은
+ *       갈린다(≥1.76) · [2-d] 그 장면에서 **오늘** 트리만 자기 선언과 맞는다 ⇒ ⓐ 기각 · [2-e] 되돌림.
  *   [3] 자기 재현성 — 같은 자·같은 트리인데 **평균이 재실행 사이에 배로 갈린다** ⇒ 판정 불가
  *   [4] 기계 — 값을 정하는 것은 «판 위 개체수»(POP 로 고정됨)가 아니라 **«반경 안 개체수»**(안 갇힘)
  *   [5] 선언의 출처 — 카이팅을 끄면(플레이어 고정) `aura` 가 **선언 9.4 그 값**으로 돌아온다
@@ -114,17 +120,66 @@ const show = (tag, rows) => rows.forEach(x => console.log('     ' + tag.padEnd(2
        '얕은 클론이라 그 커밋이 없다 · `git fetch --deepen=3000 origin main` 후 다시');
   } else {
     show('[2] 504 트리·오늘 자', old);
-    ok(old.every(x => x.off > x.tol),
-       '2 제품 드리프트 기각 — **504 당시 트리**를 오늘 자로 재도 셋 다 밴드 밖 ⇒ 후보 ⓐ(제품이 그 뒤 바뀌었다) 기각',
-       old.map(x => x.id + ' ' + (x.off * 100).toFixed(0) + '%').join(' / ')
+    /* [2] 자유 장면이 지는 몫은 **방향 하나**다(문턱 0). «선언이 504 트리에서도 안 나온다» 가
+       후보 ⓐ 기각의 알맹이이고, 그것은 평균의 부호만으로 말할 수 있다 — 실측 11회 × 3종
+       33/33 이 같은 방향이고 가장 가까운 표본조차 선언의 65%(`aura` 6.113 ↔ 9.4)다.
+       ⚠ 옛 [2]`old.every(off > tol)` 는 여기서 **밴드 멤버십**을 물었고 그것이 동전이었다(791). */
+    ok(old.every(x => x.mean < x.decl),
+       '2 후보 ⓐ 기각 ① — **504 당시 트리**에서도 K회 평균이 선언에 못 미친다(방향만 · 문턱 0)',
+       old.map(x => x.id + ' ' + x.mean + ' < ' + x.decl).join(' / ')
        + ' · 선언은 이 트리에서 적힌 값 그대로다');
-    /* «오늘 값이 내 수리의 산물이 아니다» 를 같은 자리에서 대조한다(338·344·620-④ 규칙) */
-    const near = IDS.every(id => {
-      const a = now.find(x => x.id === id).mean, b = old.find(x => x.id === id).mean;
-      return Math.max(a, b) / Math.max(1e-9, Math.min(a, b)) < 3;
-    });
-    ok(near, '2-b 두 트리의 실측이 같은 자리 — 제품이 옮긴 것이 아니다(차이는 자의 흔들림 안)',
-       IDS.map(id => id + ' ' + old.find(x => x.id === id).mean + ' → ' + now.find(x => x.id === id).mean).join(' / '));
+
+    /* [2-b]~[2-d] 잴 수 있는 장면(고정)으로 옮겨 같은 물음을 다시 던진다 — 695 [5] 가 이 장면을
+       이미 열어 두었고(`freeze` 손잡이), 거기서는 K회 폭이 3~13% 라 두 트리가 실제로 갈린다(실측 21표본 최소 1.76).
+       ⚠ **자유 장면의 갈림 자체를 단언하지 않는다.** «이 장면에서는 못 가른다»(`ratio < 1`)도 세어 보면
+       동전이다 — 실측 36표본 중 최대 **1.17** 로 단위를 한 번 넘었다(`probe791` [4] 가 그 실행을 잡았다).
+       자유 장면이 지는 몫은 위 [2] 의 **방향 하나**이고, 여기서는 «자유 장면이 실제 차이를 얼마나
+       줄여 보이는가» 만 [2-b] 로 묻는다(둘 다 그 실행이 스스로 잰 값끼리의 비교다). */
+    const p3 = await open(browser, URL);
+    const nowF = dress(await RUL.measure(p3, IDS, { freeze: true }));
+    await p3.context().close();
+    const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'probe695f-'));
+    const f2 = path.join(tmp2, 'index.html');
+    fs.writeFileSync(f2, require('./gitrev756').show(DONE504, 'index.html').buf);
+    const p4 = await open(browser, 'file://' + f2.replace(/\\/g, '/'));
+    const oldF = dress(await RUL.measure(p4, IDS, { freeze: true }));
+    await p4.context().close();
+    fs.rmSync(tmp2, { recursive: true, force: true });
+    show('[2] 고정 오늘 트리', nowF);
+    show('[2] 고정 504 트리', oldF);
+
+    const fixSep = IDS.map(id => ({ id,
+      s: RUL.treeSep(nowF.find(x => x.id === id), oldF.find(x => x.id === id)) }));
+    const dOf = (rows, id) => Math.abs(rows[0].find(x => x.id === id).mean - rows[1].find(x => x.id === id).mean);
+    ok(IDS.every(id => dOf([now, old], id) < dOf([nowF, oldF], id)),
+       '2-b 자유 장면은 그 갈림을 **줄여 보인다** — 종마다 두 트리 평균차가 고정 장면의 것보다 작다(그래서 이 장면에서 «같은 자리»·«밴드 밖» 을 물으면 답을 잡음이 정한다)',
+       IDS.map(id => id + ' 자유 Δ' + dOf([now, old], id).toFixed(2) + ' < 고정 Δ' + dOf([nowF, oldF], id).toFixed(2)).join(' / ')
+       + ' · 참고 — 자유 장면 갈림 '
+       + IDS.map(id => id + ' ×' + RUL.treeSep(now.find(x => x.id === id), old.find(x => x.id === id)).ratio.toFixed(2)).join('/') + '(단언 아님)');
+    ok(fixSep.every(x => x.s.apart),
+       '2-c ⚑ 고정 장면에서는 **두 트리가 갈린다** — 제품은 그 사이 실제로 움직였다(옛 [2-b] «제품이 옮긴 것이 아니다» 는 자유 장면의 잡음이 덮고 있던 **거짓**이었다)',
+       fixSep.map(x => x.id + ' ×' + x.s.ratio.toFixed(2)).join(' / ') + ' · 값 '
+       + IDS.map(id => id + ' ' + oldF.find(x => x.id === id).mean + '→' + nowF.find(x => x.id === id).mean).join(' / '));
+
+    /* ⇒ 그래도 후보 ⓐ(«선언이 낡았다»)는 기각이다 — **낡은 쪽은 504 트리**다.
+       문턱은 새로 안 뽑았다. 여기 쓰는 밴드는 자 자신의 `TOL_FLOOR` 그대로다(실측 오늘 0~11% · 504 트리 48~168%). */
+    ok(nowF.every(x => x.off < RUL.TOL_FLOOR) && oldF.every(x => x.off > RUL.TOL_FLOOR),
+       '2-d 후보 ⓐ 기각 ② — 그 장면에서 **오늘** 트리만 자기 선언과 맞는다(504 트리는 자기 선언 밖) ⇒ 선언은 낡지 않았다',
+       '오늘 ' + nowF.map(x => x.id + ' ' + (x.off * 100).toFixed(0) + '%').join('/')
+       + ' ↔ 504 트리 ' + oldF.map(x => x.id + ' ' + (x.off * 100).toFixed(0) + '%').join('/')
+       + ' · 밴드 ±' + (RUL.TOL_FLOOR * 100).toFixed(0) + '%');
+
+    /* [2-e] 되돌림 — 새 눈금이 «다 통과» 도 «다 빨강» 도 아님을 그 함수에 직접 친다(759-②).
+       ⚠ 표본은 **이번 실행의 실측**이다(합성 강짜 아님) — 같은 구름끼리는 안 갈리고,
+       한 구름을 폭의 세 벌만큼 밀면 갈린다. */
+    const a0 = now.find(x => x.id === 'aura');
+    const shift = (x, d) => ({ each: x.each.map(v => v + d), mean: x.mean + d });
+    const w = Math.max(...a0.each) - Math.min(...a0.each);
+    ok(!RUL.treeSep(a0, a0).apart && RUL.treeSep(a0, shift(a0, 3 * w)).apart
+       && !RUL.treeSep(a0, shift(a0, w / 4)).apart,
+       '2-e 되돌림 — `RUL.treeSep` 은 같은 구름을 «갈렸다» 로 안 읽고(×0), 폭 3벌 이동은 읽고, 폭 1/4 이동은 안 읽는다',
+       '같은 ×' + RUL.treeSep(a0, a0).ratio.toFixed(2) + ' / +3폭 ×' + RUL.treeSep(a0, shift(a0, 3 * w)).ratio.toFixed(2)
+       + ' / +¼폭 ×' + RUL.treeSep(a0, shift(a0, w / 4)).ratio.toFixed(2));
   }
 
   /* ── [3] 자기 재현성 — 판정할 수 있는 자인가 ───────────── */

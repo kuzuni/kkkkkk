@@ -246,6 +246,38 @@ const shakeSep = (x) => {
            ratio: range > 0 ? gap / range : (gap > 0 ? Infinity : 0) };
 };
 
+/* ── 두 트리가 갈리는가 `treeSep` (791, 2026-09-02) ────────────────────────
+   «이 트리와 저 트리가 **같은 자리**인가» 를 재는 눈금. `probe695` [2] 절이 부른다.
+
+   ⚑ **옛 [2]·[2-b] 가 왜 동전이었나.** 둘 다 **자유 장면**에서 물었다 —
+   ⓐ [2] `old.every(off > tol)`(밴드 멤버십)는 695 가 «이 눈금으로 못 잰다»(⏸접촉)로 등재해 둔
+      바로 그 셋에게 그 눈금을 다시 물린다(759-① 이 금지한 자리). 자유 장면의 K회 평균이
+      실행마다 갈리므로 밴드 경계(`aura` 는 9.4×0.6 = 5.64)를 넘나든다 — 실측 11회 중 1회 6.113.
+   ⓑ [2-b] `평균비 < 3` 은 손 상수이고, 같은 갈림에 걸린다(실측 ×1.03~3.05).
+   ⚠ 그리고 ⓑ 는 흔들리기만 한 것이 아니라 **틀린 것을 단언하고 있었다**(788 부류) —
+   «제품이 옮긴 것이 아니다» 는 잴 수 있는 장면(고정)에서 재면 **거짓**이다(orbit ×1.4 ·
+   aura ×2.7 · whirl ×1.5). 자유 장면의 잡음(K회 폭 76~169%)이 실제 이동을 덮고 있었다.
+
+   ⇒ 눈금은 784 의 모양 그대로다 — **거리 ÷ 그 실행이 스스로 잰 널**(손 상수 0 · 새 문턱 0):
+     `ratio` = |평균A − 평균B| ÷ ((폭A + 폭B) / 2)      단위는 `SHAKE_UNIT`(=1 · «폭 한 벌»)
+   널이 **두 폭의 평균**인 이유는 이 물음의 주어가 구름 «둘» 이기 때문이다.
+
+   ⚠ **첫 꼴(양방향 `shakeSep` 의 min)은 내가 값으로 기각했다**(784-② — 옮겨온 처방도 새 항이다).
+   12표본에서 자유 ≤0.26 · 고정 ≥1.71 로 갈려 보였지만, 13번째 실행에서 504 트리의 `orbit` 구름만
+   유난히 넓게 나오자(9.44~12.52) 그 방향의 ratio 가 **0.74** 로 내려앉아 고정 장면이 빨개졌다 —
+   널을 «한쪽 구름의 폭» 으로 잡으면 **넓게 나온 쪽이 판정을 쥔다.** 같은 실행을 두 폭의 평균으로
+   재면 **1.76** 이다. 실측 — 자유 30표본 **최대 0.70** · 고정 13표본(그 실행 포함) **최소 1.76**. */
+const treeSep = (a, b) => {
+  const ea = (a && a.each) || [], eb = (b && b.each) || [];
+  if (!ea.length || !eb.length) return { gap: 0, null: 0, ratio: 0, apart: false };
+  const rA = Math.max(...ea) - Math.min(...ea), rB = Math.max(...eb) - Math.min(...eb);
+  const nul = (rA + rB) / 2;
+  const gap = Math.abs(a.mean - b.mean);
+  /* 폭 0(두 트리가 완전히 재현된다)인데 평균이 다르면 «무한히 멀다» 가 맞다 — shakeSep 과 같은 처분 */
+  const ratio = nul > 0 ? gap / nul : (gap > 0 ? Infinity : 0);
+  return { gap, null: nul, rA, rB, ratio, apart: ratio >= SHAKE_UNIT };
+};
+
 module.exports = { K, SEC, POP, TOL_FLOOR, tolOf, offOf, measure,
                    HOLD199, held199, HOLD695, held695, c2Split, nearOff, nearSep,
-                   SHAKE_UNIT, shakeSep };
+                   SHAKE_UNIT, shakeSep, treeSep };
