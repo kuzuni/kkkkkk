@@ -43,6 +43,26 @@ const eq = (m, got, want, tol = 0) => (Math.abs(got - want) <= tol ? ok(m, `${go
    방향만 뒤집고 «무엇을 증명하는가» 는 그대로다(338 교훈 — 뿌리를 안 짚은 게이트는 헛초록이 된다). */
 const DIMPE = `#panel:has(:is(#bSk,#bPet,#bCos).on)::before{pointer-events:none !important}`;
 
+/* 843 이관(2026-09-02) — §8 의 «흡수» 축을 두 함수 한 곳에 모은다.
+   §8 과 §R 이 **같은 식**을 읽어야 «본항은 이관했는데 되돌림 시험은 옛 식» 이 안 생긴다.
+   재는 것: 짧은 프레임에서 눌린 패널을 리스트가 흡수하고(`resid ≈ 0`), 그 흡수가
+   **내림 스냅 잔차**(812) 만큼만 넘칠 수 있다(`0 ≤ resid < 행 피치`). 잔차의 «정체»
+   (= 패딩 + 온전한 행 n + ref 슬라이버)는 `tools/verify812.js` [B][C][E] 가 든다 —
+   여기서는 **상한만** 든다(같은 것을 두 자가 적으면 한쪽만 늙는다). */
+const spcAxis = (wide, short) => {
+  const pitch = (short.spcRow && short.spcRow.h) || 60;
+  const panelD = wide.spc.h - short.spc.h;
+  const listD = wide.spcList.h - short.spcList.h;
+  const gapW = wide.spcTabs.top - wide.spcList.bot;
+  const gapS = short.spcTabs.top - short.spcList.bot;
+  return { pitch, panelD, listD, resid: listD - panelD, gapW, gapS, gapD: gapS - gapW };
+};
+/* [8-d] 축 — 패널이 눌리고, 리스트가 그 눌린 만큼을 먹고, 넘치는 것은 한 행 미만이다 */
+const spcAbsorbs = (a) => a.panelD > 0 && a.listD > 0 && a.resid >= -2 && a.resid < a.pitch;
+/* [8-g] 축 — 흡수의 대가가 «리스트가 탭 줄을 먹는 것» 이면 안 된다. 벌어지는 쪽은
+   **스냅 잔차와 같은 양**까지만 허용한다(두 항은 한 뿌리의 앞뒤다 — `probe843` [P3]). */
+const spcGapOk = (a) => a.gapD >= -1 && a.gapD < a.pitch && Math.abs(a.gapD - a.resid) <= 1;
+
 /* 처방을 걷어낸 사본 — §R 에서만 주입한다 */
 const REVERT = `
   #blsw{padding-bottom:146px !important}
@@ -60,12 +80,19 @@ const REVERT = `
   #app.shortf #collw{padding:168px 0 276px !important}
 `;
 
+/* 843 신설 — §R 전용 사본 ②. «흡수는 하는데 그 대가로 탭 줄을 먹는» 세계를 만든다.
+   짧은 프레임에만 걸어 2280 을 안 건드린다(안 그러면 두 프레임이 같이 밀려 [8-g] 가
+   상대 비교만으로는 초록이 된다 — 그러면 되돌림 시험이 아무것도 증명하지 않는다). */
+const EATGAP = `#app.shortf .spc-list{height:calc(100% - 520px) !important}`;
+
 async function shot(browser, h, opener, revert) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: h }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   await page.goto(FILE, { waitUntil: 'load' });
   await page.waitForTimeout(1100);
-  if (revert) await page.addStyleTag({ content: revert === 'dimpe' ? DIMPE : REVERT });
+  if (revert) await page.addStyleTag({
+    content: revert === 'dimpe' ? DIMPE : revert === 'eatgap' ? EATGAP : REVERT,
+  });
   if (opener === 'bless') await page.click('.side .ibtn[data-pop="bless"]', { force: true }).catch(() => {});
   else if (opener === 'hero') await page.click('.tab[data-t="hero"]', { force: true }).catch(() => {});
   else if (opener === 'sheet') {
@@ -203,6 +230,9 @@ async function shot(browser, h, opener, revert) {
          위에 못 박혀 있어 패널 밖으로 밀려나던 자리다. */
       specOn: !!document.querySelector('#specw.on'),
       spc: box('.spc'), spcBody: box('.spc-body'), spcList: box('.spc-list'), spcTabs: box('.spc-tabs'),
+      /* 843 이관 — 행 피치를 **제품에게 묻는다**. 아래 두 항이 허용하는 «스냅 잔차» 의 상한이
+         이 값이고, 손으로 60 을 적어 두면 812 가 피치를 바꾼 날 이 자만 옛 세계에 남는다. */
+      spcRow: box('.spc-row'),
       /* §7(406) — 배경 고정 조작 요소가 **닿나**. «덮였나» 가 아니다:
          덮임은 딤만으로도 생기지만 조작 상실은 «포인터가 못 간다» 일 때만 생긴다. */
       reach: (() => {
@@ -445,13 +475,22 @@ async function shot(browser, h, opener, revert) {
        `max-height:100%` 로 **혼자** 눌리던 시절의 값이다. 705(주인 지시 «두 팝업 위치 통일»)로
        상자가 19 프로필과 **한 선언**을 읽게 되면서 같은 프레임에서 1296(= 1396 − pfsh 100)이 된다.
        상수를 새 값으로 갈아 끼우면 이 항은 «흡수 구조가 사라져도 초록» 이 되므로(333 처방)
-       **묻는 것을 관계로 바꾼다**: 짧은 프레임에서 ⓐ 패널이 실제로 눌리고 ⓑ 그 눌린 만큼을 리스트가 먹는다. */
-    (sp13.spc.h < sp19.spc.h && sp13.spcList.h < sp19.spcList.h
-      && (sp19.spc.h - sp13.spc.h) >= (sp19.spcList.h - sp13.spcList.h) - 1)
-      ? ok('[8-d] 1600 패널이 눌리면 그만큼 리스트가 줄어든다',
-        `패널 ${sp19.spc.h}→${sp13.spc.h}(−${sp19.spc.h - sp13.spc.h}) · 리스트 ${sp19.spcList.h}→${sp13.spcList.h}(−${sp19.spcList.h - sp13.spcList.h})`)
-      : no('[8-d] 1600 패널이 눌리면 그만큼 리스트가 줄어든다',
-        `패널 ${sp19.spc.h}→${sp13.spc.h} · 리스트 ${sp19.spcList.h}→${sp13.spcList.h}`);
+       **묻는 것을 관계로 바꾼다**: 짧은 프레임에서 ⓐ 패널이 실제로 눌리고 ⓑ 그 눌린 만큼을 리스트가 먹는다.
+       843 이관(2026-09-02) — 옛 식은 «리스트가 패널보다 **더** 줄면 빨강»(−1 허용)이었다.
+       `probe843` 이 갈래를 갈랐다: 1600 에서 리스트가 20px 더 주는 것은 산수 오류가 아니라
+       **812 의 내림 스냅**(패딩 + 온전한 행 n + ref 슬라이버)이고, 스냅을 걷어낸 사본에서는
+       이 항도 [8-g] 도 그대로 초록으로 돌아온다([P6][P7]). 즉 두 항이 재고 있던 것은
+       결함이 아니라 812 그 자체였다 — 812 를 넣은 커밋이 이 자를 안 이관해 굳은 자리다.
+       ⇒ 항을 눌러 초록으로 만들지 않는다(333). **허용하는 것을 이름 붙여** 다시 적는다:
+         리스트가 눌린 양을 흡수하되, 넘치는 것은 **내림 스냅 잔차 한 행 미만**뿐이다.
+       ⚠ 잔차의 «정체» 를 여기서 다시 묻지 않는다 — 그 짝 항은 `tools/verify812.js` [B][C][E] 다.
+         무르게 푼 것이 아님은 §R [R-l](리스트가 흡수를 그만두면 빨강)이 못박는다. */
+    const ax = spcAxis(sp19, sp13);
+    spcAbsorbs(ax)
+      ? ok('[8-d] 1600 패널이 눌리면 리스트가 그만큼 흡수한다(초과분은 812 스냅 잔차 < 한 행)',
+        `패널 ${sp19.spc.h}→${sp13.spc.h}(−${ax.panelD}) · 리스트 ${sp19.spcList.h}→${sp13.spcList.h}(−${ax.listD}) · 잔차 ${ax.resid} < 피치 ${ax.pitch}`)
+      : no('[8-d] 1600 패널이 눌리면 리스트가 그만큼 흡수한다(초과분은 812 스냅 잔차 < 한 행)',
+        `패널 −${ax.panelD} · 리스트 −${ax.listD} · 잔차 ${ax.resid} (허용 −2..${ax.pitch - 1})`);
     /* ⚑ 본체 — 탭 줄이 패널(크림 본문) 안에 남는가. 이것이 8841 주석이 «삐져나온다» 고 적어 둔 자리다. */
     (sp13.spcTabs.bot <= sp13.spcBody.bot)
       ? ok('[8-e] 1600 탭 줄이 크림 본문 안', `탭 ${sp13.spcTabs.bot} ≤ 본문 ${sp13.spcBody.bot}`)
@@ -470,9 +509,20 @@ async function shot(browser, h, opener, revert) {
         `탭 줄 하변 ${sp13.spcTabs.bot} ≤ 프레임 하변 ${sp13.tabsTop + 180} (탭바 상변 ${sp13.tabsTop})`)
       : no('[8-f] 1600 탭 줄이 프레임 안에 남는다(19 와 같은 자리 — 705 [C4] 가 짝)',
         `탭 줄 하변 ${sp13.spcTabs.bot} · 프레임 하변 ${sp13.tabsTop + 180}`);
-    /* 흡수한 대가가 «리스트가 탭 줄을 먹는 것» 이면 안 된다 — 간격은 2280 과 같은 38.5 여야 한다 */
-    eq('[8-g] 1600 리스트↔탭 줄 간격 = 2280 과 같다', sp13.spcTabs.top - sp13.spcList.bot,
-      sp19.spcTabs.top - sp19.spcList.bot, 1);
+    /* 흡수한 대가가 «리스트가 탭 줄을 먹는 것» 이면 안 된다.
+       843 이관(2026-09-02) — 옛 항은 «1600 간격 = 2280 간격»(±1) 이었고, 812 의 스냅이 버린
+       21px 이 그대로 간격으로 가면서(37.5 → 58.5) 굳었다. 여기서 **막아야 하는 방향은 하나뿐**이다:
+       간격이 **줄어드는** 것(= 리스트가 탭 줄을 먹는다). 벌어지는 쪽은 812 가 버린 만큼이고,
+       그 양은 [8-d] 의 잔차와 **같은 수**여야 한다(한 뿌리의 앞뒤 — `probe843` [P3]).
+       ⇒ ⓐ 2280 의 간격은 여전히 못 박고(9:19 Δ0 — 351 7회차의 «596 = 443.5 + 38.5 + 94 + 20»)
+          ⓑ 1600 은 «줄지 않는다 + 벌어짐 < 한 행 + 벌어진 양 = 잔차» 로 묻는다.
+       무르게 푼 것이 아님은 §R [R-m](간격을 먹는 사본에서 빨강)이 못박는다. */
+    eq('[8-c2] 2280 리스트↔탭 줄 간격(불변 — 596 예산의 한 칸)', ax.gapW, 38, 1);
+    spcGapOk(ax)
+      ? ok('[8-g] 1600 리스트가 탭 줄을 먹지 않는다(벌어짐 = 812 스냅 잔차)',
+        `간격 2280 ${ax.gapW} → 1600 ${ax.gapS} (Δ ${ax.gapD} = 잔차 ${ax.resid} · 피치 ${ax.pitch} 미만)`)
+      : no('[8-g] 1600 리스트가 탭 줄을 먹지 않는다(벌어짐 = 812 스냅 잔차)',
+        `간격 2280 ${ax.gapW} → 1600 ${ax.gapS} (Δ ${ax.gapD} · 잔차 ${ax.resid})`);
     /* ---------------- §9 390 공용 모달 «띠» ---------------- */
     /* 잠그는 것: 짧은 프레임의 띠는 **위 = `.pedge` 하변 · 아래 = 탭바 상변**이고,
        상자는 그 사이에 **정확히** 선다(142 + 180 = 322 는 프레임 높이와 무관한 상수).
@@ -623,6 +673,21 @@ async function shot(browser, h, opener, revert) {
         `탭 줄 ${rp13.spcTabs && rp13.spcTabs.bot} · 본문 ${rp13.spcBody && rp13.spcBody.bot} · 탭바 ${rp13.tabsTop}`);
     const rp19 = await shot(br, 2280, 'spec', true);
     eq('[R-k] 되돌려도 2280 탭 줄 상변은 같다(9:19 무관)', rp19.spcTabs.top, 1692, 1);
+    /* 843 신설 — 이관한 [8-d]·[8-g] 가 **무르게 푼 자**가 아님을 두 사본이 못박는다.
+       [R-l] 리스트를 상수 760 으로 되돌리면(= 흡수 구조 자체가 사라진다) [8-d] 축이 빨개진다.
+       [R-m] 흡수는 하되 그 대가로 탭 줄을 먹는 사본에서는 [8-g] 축이 빨개진다.
+       둘이 없으면 «잔차 < 한 행» 은 그냥 넓힌 허용치와 구별이 안 된다(338 교훈). */
+    const axR = spcAxis(sp19, rp13);
+    !spcAbsorbs(axR)
+      ? ok('[R-l] 리스트를 상수로 되돌리면 [8-d] 축이 빨개진다 — 흡수를 그만두면 잡힌다',
+        `패널 −${axR.panelD} · 리스트 −${axR.listD} · 잔차 ${axR.resid} (허용 −2..${axR.pitch - 1})`)
+      : no('[R-l] 리스트를 상수로 되돌리면 [8-d] 축이 빨개진다', `잔차 ${axR.resid} 인데도 통과한다 — 자가 무르다`);
+    const ep13 = await shot(br, 1600, 'spec', 'eatgap');
+    const axE = spcAxis(sp19, ep13);
+    !spcGapOk(axE)
+      ? ok('[R-m] 간격을 먹는 사본에서 [8-g] 축이 빨개진다 — 벌어짐만 허용하고 겹침은 안 된다',
+        `간격 2280 ${axE.gapW} → 1600 ${axE.gapS} (Δ ${axE.gapD})`)
+      : no('[R-m] 간격을 먹는 사본에서 [8-g] 축이 빨개진다', `Δ ${axE.gapD} 인데도 통과한다 — 자가 무르다`);
   } finally { await br.close(); }
 
   console.log(`\nVERIFY351 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);
