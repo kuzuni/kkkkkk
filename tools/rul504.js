@@ -186,5 +186,31 @@ const c2Split = (rows) => ({
   contact: rows.filter(x => x.off > x.tol && held695(x))                   /* ⏸접촉 — 눈금 미적용 */
 });
 
+/* ── 재현되는 이탈 `nearOff` (783, 2026-09-02) ─────────────────────────────
+   `off` 는 **K회 평균**의 이탈이다. 평균이 실행마다 흔들리는 종에서는 그 평균이 밴드 가장자리를
+   넘나들고, 그러면 «밴드 밖 명단» 자체가 실행마다 바뀐다 — 783 의 뿌리가 그것이다
+   (`probe680` [3-c] 가 그 명단을 모수로 쓰고 있었다: 10회 실측에서 관통 계열 `ice` 가 1회만 밖으로
+   나와 그 한 실행이 빨갰다 · 그 셋 `ice`·`curve`·`arrow` 는 줄이 서는 운이 값을 정해 K회 폭 15~60%).
+   `nearOff` 는 K회 표본 중 **선언에 가장 가까운 것**의 이탈이다 — «선언이 표본 전부의 밖에 있는가,
+   있다면 가장 가까운 표본조차 얼마나 먼가». 한 실행이 스스로 답하고(778-③ «그 사실이 한 실행 안에서
+   보이는가»), **문턱을 새로 뽑지 않는다** — `TOL_FLOOR` 는 한 칸도 안 건드렸다.
+   실측 10회: `poison` 0.408~0.438 ↔ 미등재 나머지 최대 0.225~0.303 (겹침 0 · 최소 여유 0.105). */
+const nearOff = (x) => Math.min(...x.each.map(v => offOf(v, x.decl)));
+
+/* «이 종의 이탈만 재현되는가» 의 판정 한 곳 — 프로브가 **이 함수를 부른다**(판정 사본 0개).
+   ⚠ 모수는 «⏸접촉 등재분(695)을 뺀 전 종» 이고 **밴드 멤버십을 안 쓴다**(그것이 동전이었다).
+   ⚠ 크기는 준우승 하나가 아니라 **상위 셋의 평균**에 물린다(775-① · 778-① · 781 [6-c]) —
+   준우승의 «이름» 은 실행마다 갈린다(실측 `ice`·`arrow`·`curve`·`drone`). */
+const nearSep = (rows, id) => {
+  const pool = rows.filter(x => !held695(x)).map(x => ({ id: x.id, near: nearOff(x) }));
+  const me = pool.find(x => x.id === id) || { id, near: 0 };
+  const rest = pool.filter(x => x.id !== id).sort((a, b) => b.near - a.near);
+  const top = rest.slice(0, 3);
+  const topMean = top.length ? top.reduce((a, b) => a + b.near, 0) / top.length : 0;
+  return { near: me.near, rest, top, topMean, pool,
+           isMax: rest.every(x => x.near < me.near),
+           ratio: topMean > 0 ? me.near / topMean : Infinity };
+};
+
 module.exports = { K, SEC, POP, TOL_FLOOR, tolOf, offOf, measure,
-                   HOLD199, held199, HOLD695, held695, c2Split };
+                   HOLD199, held199, HOLD695, held695, c2Split, nearOff, nearSep };
