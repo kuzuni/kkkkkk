@@ -26582,8 +26582,12 @@ function draw(){
         }
         ctx.closePath(); ctx.fill();
       };
-      halo(() => { ctx.fillStyle = 'rgba(255,232,150,.30)';
-                   ctx.beginPath(); ctx.arc(0,0,12.6,0,6.283); ctx.fill(); });
+      /* ⚠ 2회차 정정 — 원반은 오답이었다. 별이 `spin` 으로 돌면 별의 bbox 가 19.9 로 줄어드는데
+         원반은 25.2 로 그대로라 **원반이 28% 더 커 보이고**, 비평가 CO 가 그것을 정확히
+         «동전 위의 표창» 으로 읽었다(CN 도 «원형 디스크» 문법으로 따로 짚었다).
+         ⇒ 후광도 **같은 별**을 쓴다. 봉우리(13)는 그대로 두고 **골(4.5 → 9.2)만 채워** 오목한
+            사이를 메운다 — bbox 는 여전히 한 픽셀도 안 넓어지고(541 [F]), 후광은 별을 따라간다. */
+      halo(() => { ctx.fillStyle = 'rgba(255,232,150,.30)'; star4(13, 9.2); });
       ctx.fillStyle = b.col;                    star4(13, 4.5);
       spec(() => { ctx.fillStyle = SPEC;
                    ctx.beginPath(); ctx.arc(0,0,2.9,0,6.283); ctx.fill(); });
@@ -26592,6 +26596,15 @@ function draw(){
       /* 비평가 B 1회차 ③ — 표창(같은 줄 기준형)보다 잉크가 2.9배였다. 형상은 그대로 두고
          반지름만 내려 덩치를 줄인다(면적은 r² 라 ×0.81 → 약 −34%). */
       const rr = [9.8,7.7,9.4,6.9,10.0,8.1];
+      /* 792 2회차 ① — 비평가 CN·CO 2인 공통: **이 종만 후광 링이 0px** 이었다(«잉크 bbox 가
+         불투명 bbox 와 1px 차» · «배경 → 본체 1px 급전환»). 시트에서 혼자 정지물로 선다.
+         ⇒ 후광도 **같은 육각을 따라간다**(원반을 깔면 shuri 가 2회차에 먹은 «동전» 지적을 답습한다). */
+      /* ⚠ 배수는 1.62 → **1.35**. 1.62 로는 후광이 잉크의 76.4% 를 먹어 [B1] 밴드가 3.32 로 깨지고
+         (돌은 본체가 작아 같은 배수라도 후광 몫이 커진다) 하이라이트 비율까지 1% 아래로 희석됐다. */
+      halo(() => { ctx.fillStyle = 'rgba(214,190,150,.30)';
+                   ctx.beginPath();
+                   for(let i=0;i<6;i++){ const a = i*1.0472; ctx.lineTo(Math.cos(a)*rr[i]*1.35, Math.sin(a)*rr[i]*1.35); }
+                   ctx.closePath(); ctx.fill(); });
       ctx.fillStyle = b.col;
       ctx.beginPath();
       for(let i=0;i<6;i++){ const a = i*1.0472; ctx.lineTo(Math.cos(a)*rr[i], Math.sin(a)*rr[i]); }
@@ -26605,7 +26618,7 @@ function draw(){
       /* 792 ③ — 그림자 면의 **반대쪽**에 빛 받는 면을 준다(돌은 결이 아니라 면으로 읽힌다). */
       spec(() => { ctx.fillStyle = SPEC;
                    ctx.beginPath();
-                   for(let i=0;i<3;i++){ const a3 = i*1.0472 - 1.9; ctx.lineTo(Math.cos(a3)*rr[i]*0.52, Math.sin(a3)*rr[i]*0.52); }
+                   for(let i=0;i<3;i++){ const a3 = i*1.0472 - 1.9; ctx.lineTo(Math.cos(a3)*rr[i]*0.66, Math.sin(a3)*rr[i]*0.66); }
                    ctx.closePath(); ctx.fill(); });
     }else if(sh === 'bmr' || sh === 'boomer'){   /* 부메랑 — 굽은 막대 */
       ctx.rotate(b.spin || 0);
@@ -26653,13 +26666,21 @@ function draw(){
       /* ⚠ 비평가 H 5회차 ① — 후광을 «긴 타원» 으로 주자 얼음창(긴 캡슐 + 앞쪽 팁)과
          실루엣 계열이 닮아 버렸다. 후광은 남기되 **둥글게** 해서 «달» 쪽으로 되돌린다
          (규격은 공유하고 비율로 갈린다 — 종횡 1 : 1 대 3.6 : 1). */
-      ctx.fillStyle = 'rgba(168,255,208,.26)';
-      ctx.beginPath(); ctx.arc(-1,0,11,0,6.283); ctx.fill();
-      ctx.fillStyle = 'rgba(168,255,208,.42)';
-      ctx.beginPath();
-      ctx.arc(0,0,21,0.86,-0.86,true);
-      ctx.arc(10,0,16.5,-1.10,1.10,false);
-      ctx.closePath(); ctx.fill();
+      /* 792 2회차 ②④ — 비평가 CN·CO 2인 공통: 세 층이 **서로 다른 곳을 가리켰다**.
+         둥근 원반(r11)은 코어에서 떨어져 «한 발» 이 아니라 **두 물체**로 읽혔고(CO: «10px 떨어져
+         붙지 않고 놓여 있다»), 가운데 후광 초승달은 코어보다 50% 크고 파낸 중심이 달라
+         **어긋난 사본**으로 읽혔다(CN: «중심 +26px · 52% 큼»).
+         ⇒ 원반을 버리고 후광을 **본체와 같은 초승달의 등비 확대**(×1.32 — 바깥 호·파낸 호·파낸
+            중심을 한 계수로 같이 곱한다)로 바꾼다. 같은 형상·같은 중심이라 층이 한 발로 붙고,
+            «긴 타원» 이 아니라 «달» 이라 얼음창과도 안 닮는다(5회차 H 지적 유지). */
+      halo(() => {
+        const K = 1.32;
+        ctx.fillStyle = 'rgba(168,255,208,.34)';
+        ctx.beginPath();
+        ctx.arc(0,0,14*K,0.72,-0.72,true);
+        ctx.arc(8*K,0,12*K,-1.05,1.05,false);
+        ctx.closePath(); ctx.fill();
+      });
       ctx.fillStyle = b.col;
       ctx.beginPath();
       ctx.arc(0,0,14,0.72,-0.72,true);           /* 바깥 원호 */
@@ -26733,7 +26754,11 @@ function draw(){
         ctx.fillStyle = gm; ctx.beginPath(); ctx.arc(0,0,17,0,6.283); ctx.fill();
       }
       const mr = [15,11.8,14.4,11,15.6,12.4];
-      ctx.fillStyle = '#6b5240';
+      /* 792 2회차 ②④ — 비평가 CN·CO 2인 공통 **1순위**: 이 종만 **본체가 배경보다 어둡다**
+         (실측 L 84~86 vs 배경 L 96~97). 나머지 16종은 전부 배경보다 밝아(+33~+164%)
+         운석 하나만 «불타는 바위» 가 아니라 **뚫린 구멍**으로 읽혔다.
+         ⇒ 재질(달궈진 돌)은 그대로 두고 명도만 배경 위로 올린다(L 87 → 140 · 배경 대비 +46%). */
+      ctx.fillStyle = '#ab8560';
       ctx.beginPath();
       for(let i=0;i<6;i++){ const a = i*1.0472 + 0.3; ctx.lineTo(Math.cos(a)*mr[i], Math.sin(a)*mr[i]); }
       ctx.closePath(); ctx.fill();
@@ -26807,8 +26832,11 @@ function draw(){
       ctx.restore();
       /* 792 ③ — 위 방사 하이라이트는 가장자리로 갈수록 흐려져 근백색이 97 화소뿐이었다
          (후광을 얹어 잉크가 커지자 0.57% 로 내려앉았다). 같은 자리에 **또렷한 점광**을 하나 얹는다. */
+      /* ⚠ 반지름은 3.4 → **4.6**. 3.4 로는 근백색 화소가 문턱(잉크의 1%) 바로 위라
+         같은 트리에서 0.0165 ↔ 0.0095 로 흔들려 **자를 플레이키하게 만들었다**(825 의 병).
+         이런 자리는 문턱을 내리기 전에 **그림에 여유를 주는 것**이 먼저다. */
       spec(() => { ctx.fillStyle = SPEC;
-                   ctx.beginPath(); ctx.arc(-4.2,-4.2,3.4,0,6.283); ctx.fill(); });
+                   ctx.beginPath(); ctx.arc(-4.2,-4.2,4.6,0,6.283); ctx.fill(); });
     }else if(sh === 'swirl'){                    /* 나선탄 — 소용돌이(🍥) */
       ctx.rotate((b.sa || 0) + (b.a || 0));
       /* 비평가 K 6회차 ③ — 같은 줄(반사탄·도약탄)보다 채색 면적이 40~45% 작았다. 획을 굵혀

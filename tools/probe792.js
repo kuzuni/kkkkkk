@@ -98,33 +98,77 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
     const grab = () => { draw(); return ctx.getImageData(bx, by, bw, bh).data; };
     const base = grab();
 
-    /* 층 분해 — soft / hard / spec */
-    const layersOf = (a0) => {
-      let soft = 0, hard = 0, spec = 0;
-      for (let i = 0; i < a0.length; i += 4) {
-        const d = Math.max(Math.abs(a0[i] - base[i]),
-                           Math.abs(a0[i + 1] - base[i + 1]),
-                           Math.abs(a0[i + 2] - base[i + 2]));
-        if (d <= 8) continue;
-        if (d <= 60) soft++; else hard++;
-        if (a0[i] >= 232 && a0[i + 1] >= 232 && a0[i + 2] >= 232) spec++;
-      }
-      return { soft, hard, spec, ink: soft + hard };
-    };
-
-    const rows = {};
+    /* 층 분해 — soft(후광) / hard(본체) / spec(하이라이트)
+       ⚑⚑ **알파를 «추정» 하지 말고 «푼다».** 3회차까지 이 자리를 세 번 고쳤고 세 번 다 틀렸다:
+         ⓐ 저알파 화소를 그대로 후광으로 세니 돌의 **안쪽 그림자 면**이 후광으로 셌다(비평가 CO 가
+            «stone 은 글로우 0px» 이라고 적었을 때 자는 fSoft 0.384 로 초록이었다).
+         ⓑ 본체 바깥만 세도, 바탕 대비 Δ 로 «저알파 층» 과 «저대비 본체» 를 못 가른다.
+         ⓒ 경계를 60 → 90 으로 옮기자 이번엔 돌의 **본체**가 통째로 후광으로 넘어갔다.
+       뿌리는 하나다 — **합성된 화소 하나에서 알파를 알아낼 수 없다**(α·L + (1−α)·b 는 미지수가 둘).
+       ⇒ **같은 발을 두 번 겹쳐 그려** 방정식을 하나 더 만든다:
+            r1 = α·L + (1−α)·b
+            r2 = α·L + (1−α)·r1        (같은 층을 r1 위에 한 번 더)
+          두 식에서 (r2 − r1) / (r1 − b) = 1 − α  ⇒  **α = 1 − (r2 − r1)/(r1 − b)**
+       바탕 b 가 무엇이든 상관없이 **알파 그 자체**가 나온다. 저대비 본체(α=1)와 저알파 후광(α<1)이
+       이제 원리적으로 갈린다. 채널은 |r1 − b| 가 가장 큰 것을 골라 나눗셈의 분모를 키운다.
+       ⚠ 이 풀이는 그리기가 **source-over** 일 때만 성립한다 — 투사체 경로에는 `globalCompositeOperation`
+         이 한 곳도 없음을 확인했다(있는 자리는 전부 스프라이트 생성기 쪽 19358~19697). */
+    const A_BODY = 0.55;              /* α ≥ 이 값이면 «본체», 아래면 «후광» */
+    const rows = {}, masks = {};
     for (const id in specs) {
       const sp = specs[id];
-      clearFx();
-      shots.push({ k: sp.k, sh: sp.sh, sa: sp.sa, x: CX - ox, y: CY - oy, vx: 0, vy: 0, a: 0,
-                   dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
-                   spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
-                   tx: sp.tx === undefined ? undefined : CX - ox,
-                   ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 });
-      const L = layersOf(grab());
-      rows[id] = { sh: sp.sh, ink: L.ink, soft: L.soft, hard: L.hard, spec: L.spec,
-                   fSoft: +(L.soft / Math.max(1, L.ink)).toFixed(4),
-                   fSpec: +(L.spec / Math.max(1, L.ink)).toFixed(4) };
+      const mk = () => ({ k: sp.k, sh: sp.sh, sa: sp.sa, x: CX - ox, y: CY - oy, vx: 0, vy: 0, a: 0,
+                          dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
+                          spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
+                          tx: sp.tx === undefined ? undefined : CX - ox,
+                          ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 });
+      clearFx(); shots.push(mk());              const a0 = grab();   /* r1 — 한 겹 */
+      clearFx(); shots.push(mk(), mk());        const a2 = grab();   /* r2 — 두 겹 */
+      let hard = 0, sp2 = 0;
+      const m = new Uint8Array(bw * bh);        /* 잉크 전체 */
+      const hd = new Uint8Array(bw * bh);       /* 본체 */
+      const sf = new Uint8Array(bw * bh);       /* 후광 */
+      for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
+        let c = 0, best = 0;
+        for (let k = 0; k < 3; k++) {
+          const v = Math.abs(a0[i + k] - base[i + k]);
+          if (v > best) { best = v; c = k; }
+        }
+        if (best <= 8) continue;
+        m[p] = 1;
+        const d1 = a0[i + c] - base[i + c];
+        const d2 = a2[i + c] - a0[i + c];
+        let al = 1 - d2 / d1;                   /* α = 1 − (r2 − r1)/(r1 − b) */
+        if (!isFinite(al)) al = 1;
+        al = al < 0 ? 0 : (al > 1 ? 1 : al);
+        if (al >= A_BODY) { hd[p] = 1; hard++; } else sf[p] = 1;
+        if (a0[i] >= 232 && a0[i + 1] >= 232 && a0[i + 2] >= 232) sp2++;
+      }
+      /* 본체 바깥 = 테두리에서 «본체가 아닌» 화소를 타고 들어간 영역 */
+      const out = new Uint8Array(bw * bh);
+      const st = [];
+      for (let x = 0; x < bw; x++) { st.push(x); st.push((bh - 1) * bw + x); }
+      for (let y = 0; y < bh; y++) { st.push(y * bw); st.push(y * bw + bw - 1); }
+      while (st.length) {
+        const p = st.pop();
+        if (p < 0 || p >= out.length || out[p] || hd[p]) continue;
+        out[p] = 1;
+        const x = p % bw, y = (p - x) / bw;
+        if (x > 0) st.push(p - 1);
+        if (x < bw - 1) st.push(p + 1);
+        if (y > 0) st.push(p - bw);
+        if (y < bh - 1) st.push(p + bw);
+      }
+      let soft = 0, sx = 0, sy = 0, hx = 0, hy = 0;
+      for (let p = 0; p < sf.length; p++) {
+        const x = p % bw, y = (p - x) / bw;
+        if (sf[p] && out[p]) { soft++; sx += x; sy += y; }
+        if (hd[p]) { hx += x; hy += y; }
+      }
+      const ink = soft + hard;
+      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2,
+                   fSoft: +(soft / Math.max(1, ink)).toFixed(4),
+                   fSpec: +(sp2 / Math.max(1, ink)).toFixed(4) };
       clearFx();
     }
     return { rows, n: Object.keys(rows).length };

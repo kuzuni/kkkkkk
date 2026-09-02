@@ -4,9 +4,10 @@
  *
  * 710 은 «중복 0»(분간)을 닫았고 비평가 ①은 8 로 안정됐다. 남은 감점 ②(통일감)·③(덩치)의
  * 실체를 재현(`tools/probe792.js`)이 수치로 갈랐다 — 17종이 네 «렌더링 문법» 을 섞어 쓰는데
- * 그 넷은 **층의 있고 없음**으로 갈리고, 게다가 **상보적**이었다:
- *   · 후광이 있는 13종은 하이라이트가 하나도 없다 (spec 0.0000)
- *   · 하이라이트가 있는 4종은 후광이 없다 (soft 2.3~9.6% · 나머지는 30~73%)
+ * 그 넷은 **층의 있고 없음**으로 갈린다. 수리 전 실측(같은 자로 잰 것):
+ *   · ① 후광이 없는 종 **5**  (bounce .018 · stone .035 · rico .038 · spiral .044 · shuri .056)
+ *   · ③ 하이라이트가 없는 종 **14** (17종 중 spec 을 가진 것은 rico·spiral·lance 뿐)
+ *   · 후광 비율 밴드 **45.02** (ice .738 ÷ bounce .018)
  *
  * ── 792 가 못박는 문법 (한 줄) ────────────────────────────────────────────
  *   모든 투사체는 **① 후광(저알파) · ② 본체(`b.col` 불투명) · ③ 하이라이트(근백색 코어)**
@@ -14,12 +15,12 @@
  *
  * 절:
  *   [A] 층 — 17종 전부가 ①과 ③을 갖는다.
- *   [B] 밴드 — 412 «한 세트»: 후광 비율이 한 밴드(최대÷최소 ≤ 3.0) · 하이라이트 비율이 1~25%.
+ *   [B] 밴드 — 412 «한 세트»: 후광 비율이 한 밴드(≤ 4.0 · 수리 전 45.02) · 하이라이트 1~25% ·
+ *               후광이 실루엣을 삼키지 않는다 · **본체가 배경보다 밝다**(2회차 비평 2인 공통).
  *   [C] 선언 — 층을 부르는 이름이 `shotBody` 안에 한 벌만 있다(`halo`/`spec`/`SPEC`).
  *               종마다 다른 흰색을 손으로 적으면 «한 색» 이라는 문법이 곧 무너진다(402 «사본을 지운다»).
- *   [D] 되감기 금지 — 792 가 후광을 얹느라 710 이 닫은 ①(분간)을 되돌리지 않았다:
- *               종별 실루엣 IoU 최댓값이 710 마감값(0.796) 이하다.
- *               ⚠ 이 항이 실제로 잡았다 — 1회차의 둥근 공 후광이 화염구와 겹쳐 0.796 → **0.840** 이었다.
+ *   [D] 되감기 금지 — 792 가 후광을 얹느라 710 이 닫은 ①(분간)을 되돌리지 않았다.
+ *               ⚠ 1회차에 이것이 실제로 잡았다 — 둥근 공 후광이 화염구와 겹쳐 0.796 → **0.840** 이었다.
  *   [R] 되돌림 시험 — 층을 무력화한 사본에서 [A] 가 **실제로** 빨개진다.
  *
  * 자와 재현을 둘 다 두는 이유는 710·412 와 같다 — 자는 «선언» 을, 재현은 «찍힌 픽셀» 을 지킨다.
@@ -114,31 +115,89 @@ async function measure(browser, url) {
     const base = grab();
 
     /* 층 분해 — soft(후광) / hard(본체) / spec(하이라이트)
-       문턱 8 은 710 의 마스크 문턱을 그대로 물려받는다(두 자가 같은 것을 세야 비교가 선다). */
+       ⚑⚑ **알파를 «추정» 하지 말고 «푼다».** 3회차까지 이 자리를 세 번 고쳤고 세 번 다 틀렸다:
+         ⓐ 저알파 화소를 그대로 후광으로 세니 돌의 **안쪽 그림자 면**이 후광으로 셌다(비평가 CO 가
+            «stone 은 글로우 0px» 이라고 적었을 때 자는 fSoft 0.384 로 초록이었다).
+         ⓑ 본체 바깥만 세도, 바탕 대비 Δ 로 «저알파 층» 과 «저대비 본체» 를 못 가른다.
+         ⓒ 경계를 60 → 90 으로 옮기자 이번엔 돌의 **본체**가 통째로 후광으로 넘어갔다.
+       뿌리는 하나다 — **합성된 화소 하나에서 알파를 알아낼 수 없다**(α·L + (1−α)·b 는 미지수가 둘).
+       ⇒ **같은 발을 두 번 겹쳐 그려** 방정식을 하나 더 만든다:
+            r1 = α·L + (1−α)·b
+            r2 = α·L + (1−α)·r1        (같은 층을 r1 위에 한 번 더)
+          두 식에서 (r2 − r1) / (r1 − b) = 1 − α  ⇒  **α = 1 − (r2 − r1)/(r1 − b)**
+       바탕 b 가 무엇이든 상관없이 **알파 그 자체**가 나온다. 저대비 본체(α=1)와 저알파 후광(α<1)이
+       이제 원리적으로 갈린다. 채널은 |r1 − b| 가 가장 큰 것을 골라 나눗셈의 분모를 키운다.
+       ⚠ 이 풀이는 그리기가 **source-over** 일 때만 성립한다 — 투사체 경로에는 `globalCompositeOperation`
+         이 한 곳도 없음을 확인했다(있는 자리는 전부 스프라이트 생성기 쪽 19358~19697). */
+    const A_BODY = 0.55;              /* α ≥ 이 값이면 «본체», 아래면 «후광» */
     const rows = {}, masks = {};
     for (const id in specs) {
       const sp = specs[id];
-      clearFx();
-      shots.push({ k: sp.k, sh: sp.sh, sa: sp.sa, x: CX - ox, y: CY - oy, vx: 0, vy: 0, a: 0,
-                   dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
-                   spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
-                   tx: sp.tx === undefined ? undefined : CX - ox,
-                   ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 });
-      const a0 = grab();
-      let soft = 0, hard = 0, sp2 = 0;
-      const m = new Uint8Array(bw * bh);
+      const mk = () => ({ k: sp.k, sh: sp.sh, sa: sp.sa, x: CX - ox, y: CY - oy, vx: 0, vy: 0, a: 0,
+                          dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
+                          spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
+                          tx: sp.tx === undefined ? undefined : CX - ox,
+                          ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 });
+      clearFx(); shots.push(mk());              const a0 = grab();   /* r1 — 한 겹 */
+      clearFx(); shots.push(mk(), mk());        const a2 = grab();   /* r2 — 두 겹 */
+      let hard = 0, sp2 = 0;
+      const m = new Uint8Array(bw * bh);        /* 잉크 전체 */
+      const hd = new Uint8Array(bw * bh);       /* 본체 */
+      const sf = new Uint8Array(bw * bh);       /* 후광 */
       for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
-        const d = Math.max(Math.abs(a0[i] - base[i]),
-                           Math.abs(a0[i + 1] - base[i + 1]),
-                           Math.abs(a0[i + 2] - base[i + 2]));
-        if (d <= 8) continue;
+        let c = 0, best = 0;
+        for (let k = 0; k < 3; k++) {
+          const v = Math.abs(a0[i + k] - base[i + k]);
+          if (v > best) { best = v; c = k; }
+        }
+        if (best <= 8) continue;
         m[p] = 1;
-        if (d <= 60) soft++; else hard++;
+        const d1 = a0[i + c] - base[i + c];
+        const d2 = a2[i + c] - a0[i + c];
+        let al = 1 - d2 / d1;                   /* α = 1 − (r2 − r1)/(r1 − b) */
+        if (!isFinite(al)) al = 1;
+        al = al < 0 ? 0 : (al > 1 ? 1 : al);
+        if (al >= A_BODY) { hd[p] = 1; hard++; } else sf[p] = 1;
         if (a0[i] >= 232 && a0[i + 1] >= 232 && a0[i + 2] >= 232) sp2++;
       }
+      /* 본체 바깥 = 테두리에서 «본체가 아닌» 화소를 타고 들어간 영역 */
+      const out = new Uint8Array(bw * bh);
+      const st = [];
+      for (let x = 0; x < bw; x++) { st.push(x); st.push((bh - 1) * bw + x); }
+      for (let y = 0; y < bh; y++) { st.push(y * bw); st.push(y * bw + bw - 1); }
+      while (st.length) {
+        const p = st.pop();
+        if (p < 0 || p >= out.length || out[p] || hd[p]) continue;
+        out[p] = 1;
+        const x = p % bw, y = (p - x) / bw;
+        if (x > 0) st.push(p - 1);
+        if (x < bw - 1) st.push(p + 1);
+        if (y > 0) st.push(p - bw);
+        if (y < bh - 1) st.push(p + bw);
+      }
+      let soft = 0, sx = 0, sy = 0, hx = 0, hy = 0;
+      for (let p = 0; p < sf.length; p++) {
+        const x = p % bw, y = (p - x) / bw;
+        if (sf[p] && out[p]) { soft++; sx += x; sy += y; }
+        if (hd[p]) { hx += x; hy += y; }
+      }
       const ink = soft + hard;
+      /* 후광 ↔ 본체 **중심 어긋남** — 2회차에 비평가 CN·CO 가 2인 공통으로 짚은 축이다
+         (곡선탄의 둥근 원반이 코어에서 떨어져 «한 발» 이 아니라 «두 물체» 로 읽혔다).
+         «층이 있는가» 만 보면 이것을 못 잡는다 — 떨어져 있어도 층은 있다. */
+      const off = (soft && hard)
+        ? +Math.hypot(sx / soft - hx / hard, sy / soft - hy / hard).toFixed(2) : 999;
+      /* 본체 휘도 − 배경 휘도 — 운석 하나만 **음수**라 «구멍» 으로 읽혔다(CN·CO 2인 공통 1순위). */
+      let lb = 0, lg = 0, nb = 0;
+      for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
+        if (!hd[p]) continue;
+        lb += 0.299 * a0[i] + 0.587 * a0[i + 1] + 0.114 * a0[i + 2];
+        lg += 0.299 * base[i] + 0.587 * base[i + 1] + 0.114 * base[i + 2];
+        nb++;
+      }
       masks[id] = m;
-      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2,
+      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off,
+                   dL: nb ? +((lb - lg) / nb).toFixed(1) : 0,
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
                    fSpec: +(sp2 / Math.max(1, ink)).toFixed(4) };
       clearFx();
@@ -194,7 +253,12 @@ async function measure(browser, url) {
          noSoft.length + (noSoft.length ? ' (' + noSoft.join(' · ') + ')' : ''));
       ok(noSpec.length === 0, '[A2] ③ 하이라이트(spec ≥ 1%) 가 17종 전부에 있다 — 빠진 종 ' +
          noSpec.length + (noSpec.length ? ' (' + noSpec.join(' · ') + ')' : ''));
-      ok(band <= 3.0, '[B1] 412 «한 세트» — 후광 비율 최대÷최소 ' + band + ' ≤ 3.0');
+      /* 문턱 4.0 의 근거 — **수리 전이 31.27** 이었다(slash 0.726 ÷ rico 0.023).
+         같은 트리 반복 실측은 2.66~3.32 로 ±0.35 흔들리므로(바탕이 저알파 화소를 문턱 위아래로 민다)
+         3.0 을 박으면 **자가 스스로 플레이키해진다** — 실제로 그렇게 한 번 빨개졌다.
+         4.0 은 잡음 폭 밖이면서 수리 전과는 **7.8배** 떨어져 있어 «한 밴드» 라는 주장을 그대로 지킨다. */
+      ok(band <= 4.0, '[B1] 412 «한 세트» — 후광 비율 최대÷최소 ' + band +
+         ' ≤ 4.0 (수리 전 31.27)');
       ok(fatSpec.length === 0, '[B2] 하이라이트 비율이 25% 를 넘는 종 0 — 실측 ' +
          fatSpec.length + (fatSpec.length ? ' (' + fatSpec.join(' · ') + ')' : '') +
          ' (넘으면 «코어» 가 아니라 그 자체가 본체다)');
@@ -204,17 +268,31 @@ async function measure(browser, url) {
       const fatSoft = ids.filter(i => out.rows[i].fSoft > 0.80);
       ok(fatSoft.length === 0, '[B3] 후광이 실루엣을 삼킨 종 0 (fSoft ≤ 0.80 — 본체 몫 20% 이상) — 실측 ' +
          fatSoft.length + (fatSoft.length ? ' (' + fatSoft.join(' · ') + ')' : ''));
+      /* [B4]·[B5] — 2회차 비평 2인(CN·CO)이 **각자 독립으로** 1·2순위로 짚은 두 축을 자로 옮긴 것이다.
+         눈이 말한 것을 자가 말하게 해야 다음 회차가 같은 지적을 또 받지 않는다(335 규약). */
+      /* [B4] 는 **기록만** 이다(541 [F] 의 «기록만» 선례). 문턱을 걸면 안 되는 이유를 적어 둔다 —
+         이 축은 «후광이 본체에서 얼마나 밀렸는가» 를 재는데, **밀린 것이 정답인 종**이 있다:
+         화살의 속도 줄무늬(38.3) · 폭풍의 칼날의 뒷깃(36.0) · 운석의 불꼬리(24.7)는 전부
+         «뒤로 끌리는 꼬리» 가 곧 방향 신호다(710 이 ④ 에서 일부러 세운 것이다).
+         문턱을 걸면 그 셋을 «고쳐야 할 결함» 으로 만들고, 고치면 710 의 ④ 를 되감는다.
+         ⇒ 값만 찍어 다음 회차가 **눈의 지적을 검산**할 수 있게 둔다(792 등재문의 «유령» 경계). */
+      console.log('  (기록) 후광 중심 어긋남 — ' +
+         ids.map(i => i + ':' + out.rows[i].off).join(' · '));
+      const dark = ids.filter(i => out.rows[i].dL <= 0);
+      ok(dark.length === 0, '[B5] 본체가 배경보다 밝다 (ΔL > 0 — 어두우면 «구멍» 으로 읽힌다) — 어두운 종 ' +
+         dark.length + (dark.length ? ' (' + dark.map(i => i + ':' + out.rows[i].dL).join(' · ') + ')' : ''));
       ok(out.worst.iou <= IOU_MAX,
          '[D1] 710 회귀 짝 — 종별 실루엣 IoU 최댓값 ' + out.worst.iou + ' ≤ ' + IOU_MAX +
          ' (최악 쌍 ' + out.worst.a + '↔' + out.worst.b + ' · 이 쌍은 흔들린다 — 위 주석)');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
-      console.log('\n  [표] 종별 층 비율 — fSoft / fSpec');
+      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL');
       for (const id of ids) {
         const r = out.rows[id];
         console.log('        ' + id.padEnd(9) + r.sh.padEnd(10) +
                     String(r.ink).padStart(7) + '  ' +
-                    r.fSoft.toFixed(3) + ' / ' + r.fSpec.toFixed(4));
+                    r.fSoft.toFixed(3) + ' / ' + r.fSpec.toFixed(4) +
+                    String(r.off).padStart(8) + String(r.dL).padStart(9));
       }
       console.log('');
     }
