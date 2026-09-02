@@ -17809,7 +17809,8 @@
            `.in` 안쪽 아트 자리 139×138 에 딱 든다. 아틀라스가 아직 없으면 옛 🛡️ 가 폴백으로 선다. -->
       <div class="spc-ava"><div class="in">
         <canvas class="cos-cv por-cv" id="spcPor" width="132" height="138" data-cosav="av0" data-cossc="3" data-coslite></canvas><em class="por-em">🛡️</em></div></div>
-      <div class="spc-rib"><s></s><u></u><b><i>칭호 없음</i></b></div>
+      <!-- 834 — 라벨은 `paintTitleChips()` 가 그린다(19 `#pfTtl` 과 한 곳). 마크업 문자열은 폴백일 뿐이다. -->
+      <div class="spc-rib"><s></s><u></u><b><i id="spcTtl">칭호 없음</i></b></div>
       <div class="spc-nick"><i id="spcNick"></i></div>
       <div class="spc-edit" id="spcEdit">✏️</div>
       <div class="spc-list" id="spcList"></div>
@@ -29828,6 +29829,18 @@ const titleIdx = () => {
     ? t : Math.min(S.rank, RANKS.length - 1);
 };
 const titleOf = () => RANKS[titleIdx()];
+/* 834 — **그리기**. 706 이 세운 축 셋(읽기·표시·쓰기)에 네 번째로 붙는다.
+   결손은 판정도 데이터도 아니라 **19 와 20 이 같은 칩을 따로 적고 있었다**는 것이다:
+   19 는 `titleOf().n` 을 그렸고 20(`.spc-rib`)은 마크업에 «칭호 없음» 을 손으로 적어 둔 채
+   갱신하는 코드가 아예 없어, 칭호를 장착하고 탭만 갈아타면 두 화면이 다른 말을 했다.
+   ⚠ **여기서 값을 복사해 두 곳에 적지 마라** — 그것이 방금 고친 사고다(402 «사본을 지운다»).
+     칩이 늘면 이 목록에 id 를 한 줄 더할 뿐, 그리는 곳은 끝까지 이 함수 하나다.
+   ⚠ HUD 의 `#rankN`(drawHud)은 **여기 넣지 않는다** — 매 프레임 도는 자리라 팝업 두 개를
+     같이 훑게 되고, 그 값은 이미 같은 `titleOf()` 에서 나온다(축은 하나, 호출 시점만 다르다). */
+function paintTitleChips(){
+  const n = titleOf().n;
+  ['pfTtl', 'spcTtl'].forEach(id => { const el = $(id); if(el) el.textContent = n; });
+}
 /* 장착. 보유 밖이면 **바꾸지 않고** 이유를 말한다(664 반려 규약 · 26583·32059 와 같은 «🔒 이름 — 조건» 꼴).
    돌려주는 값은 «실제로 바뀌었는가» 다 — 부르는 쪽이 그것으로 다시 그릴지를 정한다. */
 function titleEquip(ri){
@@ -35373,7 +35386,7 @@ const SPC_TBD = '업데이트 예정';
 function renderProfile(){
   $('pfGid').innerHTML = '<i>' + SPC_TBD + '</i>';
   $('pfNick').innerHTML = ''; { const i = document.createElement('i'); i.textContent = S.nick; $('pfNick').appendChild(i); }
-  $('pfTtl').textContent = titleOf().n;              /* 706 — 계급이 아니라 «장착 칭호» 다 */
+  paintTitleChips();                                 /* 706 — 계급이 아니라 «장착 칭호» 다 · 834 — 20 의 칩과 한 곳에서 */
   porPaint($('pfPor'));            /* 201 ③ — 초상 = 현재 착용 코스튬 */
   let h = '';
   const cur = titleIdx();                            /* 706 — 루프 밖에서 한 번(파생 두 벌 방지) */
@@ -35437,6 +35450,7 @@ function renderSpec(){
      55 설정·고객지원이 아직 쓰므로 선언은 남는다 — 죽은 것은 **이 자리의 표시**뿐이다. */
   $('spcGid').textContent = SPC_TBD;
   $('spcNick').textContent = S.nick;
+  paintTitleChips();                 /* 834 — 칭호 칩(19 와 같은 부품·같은 출처) */
   porPaint($('spcPor'));           /* 705 ② — 아이콘 = 현재 착용 코스튬(19 초상과 같은 부품) */
   const b = bonus();
   const pc = fmtMul;                 /* 725 — «증가율 %» 세 행이 배율 그 자체를 말한다(b.atk 등이 곧 배수) */
