@@ -13573,7 +13573,26 @@
     background:linear-gradient(180deg,rgba(0,0,0,.885) 0 916px,rgba(0,0,0,.79) 966px)}
   #statw.on{display:block}
   #statw i,#statw b{display:inline-block;font-style:normal;transform-origin:50% 50%}
-  /* 리본 그룹 — 09 는 top:50% 센터링이지만 17 은 ref−84 절대 배치(몸통 outer top 877−84=793) */
+  /* ⚑ 754 — «능력 획득» 묶음의 앵커를 **프레임 세로 중앙**으로 (주인 지시 2026-09-02 05:45).
+     426(31 클리어)·661(09 강화 결과)과 **같은 처방**이고, 이 화면은 그 둘이 남겨 둔 자리다
+     (661 주석: «#statw 는 자기 top 을 덮으므로 안 따라온다 — 661 범위 밖»).
+     `probe754` 실측 — 수리 전 이 다섯(리본·불꽃 둘·아이콘·문구)은 **프레임 상단 앵커**라
+     프레임이 어떻게 변해도 793..1415 에 못 박혀 있었고, 「터치하여 닫기」만 하단 앵커였다:
+       1600  문구 1345..1415 ↔ 닫기 1380..1425 = **35px 겹침**(주인 스크린샷의 «문구끼리 겹침»)
+       2600  둘 사이 간극 **965px**(«제각각의 높이에 흩어진다»)
+     ⇒ 앵커는 «상자» 가 아니라 **좌표계 원점**이다(426 과 같은 «높이 0» 꼴):
+       묶음 bbox = 793(.upr-grp 상변) .. 1415(.st-desc 하변) = h622 · 중심 **1104**
+       ⇒ 자식 top T 는 (VH/2 − 1104) + T 에 그려지고 묶음 중심은 어떤 프레임에서도 정확히 VH/2 다.
+     ⚠ **높이를 주지 마라**(426 ⑥) — #statw 는 «아무 데나 누르면 닫힘» 이라 높이 있는 상자로 싸면
+       빈 면 클릭이 그 상자에 먹힌다. ⚠ **z-index 도 주지 마라** — 새 쌓임 맥락이 생긴다.
+     ⚠ **2280 에서 묶음이 36px 내려간다**(중심 1104 → 1140). ref 이탈이지만 주인 지시가 우선이고
+       측정표 17 에 정오표를 남겼다(360·426·661 선례).
+     ⚠ 「터치하여 닫기」를 **안 넣은 이유** — 이 게임에서 그 줄은 «탭바 상단 기준»(.upr-close 주석)
+       이고 754 규약 ① 이 탭바를 정당한 하단 앵커 예외로 명시한다. 넣으면 묶음 중심이 1104 → 1449 라
+       리본·아이콘이 2280 에서 **309px** 올라가 레퍼런스를 크게 깬다. 되돌리려면 이 줄의 1104 를
+       1449 로 바꾸고 `.upr-close` 를 `.st-grp` 안으로 옮기면 된다(값 한 개 + 노드 한 칸). */
+  .st-grp{position:absolute;left:0;right:0;top:calc(50% - 1104px);height:0}
+  /* 리본 그룹 — 몸통 outer top ref 877 − 84 = 793(묶음 좌표계 안의 값이라 수정 없음) */
   #statw .upr-grp{top:793px;margin-top:0;height:230px}
   /* 능력 아이콘 카드 — ref x416–662(w247) y1088–1335(h248 정사각), 검정 5px, radius 28.
      핑크 안쪽 림 7px 는 **4변 전부**(#F33E69 = 실측 243,62,105). 카드 아래 y1336~1368 은
@@ -13763,6 +13782,16 @@
   #defw{position:absolute;inset:0;display:none;z-index:39;cursor:pointer;background:rgba(0,0,0,.62)}
   #defw.on{display:block}
   #defw i,#defw b{display:inline-block;font-style:normal}
+  /* ⚑ 754 — 안내 묶음의 앵커를 **프레임 세로 중앙**으로 (주인 지시 2026-09-02 05:45 · 17·426·661 과 같은 처방).
+     `probe754` 실측 — 수리 전 묶음은 프레임 상단 앵커라 **458..1357 에 못 박혀** 있었고
+     「터치하여 닫기」만 하단 앵커라 둘 사이가 1600 에서 **23px**, 2600 에서 1023px 였다
+     (17 과 같은 결함인데 아직 안 겹쳤을 뿐 — 프레임이 한 칸만 더 짧으면 겹친다).
+       묶음 bbox = 458(.df-emb 상변) .. 1357(.df-card.c3 하변) = h899 · 중심 **907.5**
+     ⇒ 수리 뒤 간극은 1600 **130.5px** · 2600 630.5px 로 갈린다(겹침 0).
+     ⚠ 높이·z-index 를 주지 마라(426 ⑥ — #defw 도 «아무 데나 누르면 닫힘» 계열이다).
+     ⚠ **2280 에서 묶음이 232.5px 내려간다**(중심 907.5 → 1140). 이탈 폭이 17(36px)보다 큰 것은
+       이 화면 콘텐츠가 원래 프레임 위쪽에 몰려 있었기 때문이다 — 측정표 18 에 정오표를 남겼다. */
+  .df-grp{position:absolute;left:0;right:0;top:calc(50% - 907.5px);height:0}
   /* 해골 엠블럼 — 원 221×209(x429), 남색 링 12px #0B4E83 + 시안 밴드(측30·상28·하38 — 하단이
      더 두껍다) #48F6FB + 내부 #0B4B7B. 글로우는 ref 실측 «세기 미미» — 약하게만 */
   .df-emb{position:absolute;left:429px;top:458px;width:221px;height:209px;box-sizing:border-box;
@@ -17204,15 +17233,21 @@
   <!-- 17 스탯업 보너스 팝업 연출. 09 와 같은 «딤 위 연출» — 리본(.upr-*)은 09 CSS 재사용.
        측정표 docs/measure/17-스탯업보너스팝업.md. 훈련(23)의 ↑ 버튼이 openStatUp() 을 호출한다. -->
   <div id="statw">
-    <div class="upr-grp">
-      <div class="upr-tl l"><s></s></div>
-      <div class="upr-tl r"><s></s></div>
-      <div class="upr-rb"><i>능력 획득</i></div>
+    <!-- 754 — 리본·불꽃·아이콘·문구가 **한 그릇**에 든다(앵커 = 프레임 세로 중앙).
+         묶기 전에는 이 다섯이 프레임 상단 앵커, 「터치하여 닫기」만 하단 앵커라
+         1600 에서 문구와 닫기가 35px 겹쳤다(probe754 재현 1호 = 주인 스크린샷).
+         「터치하여 닫기」는 «탭바 기준» 예외라 그릇 밖에 남는다(754 예외 목록 ①). -->
+    <div class="st-grp">
+      <div class="upr-grp">
+        <div class="upr-tl l"><s></s></div>
+        <div class="upr-tl r"><s></s></div>
+        <div class="upr-rb"><i>능력 획득</i></div>
+      </div>
+      <div class="st-spark s1"></div>
+      <div class="st-spark s2"></div>
+      <div class="st-icon"><b id="stIc">⚔️</b></div>
+      <div class="st-desc"><i id="stDesc"></i></div>
     </div>
-    <div class="st-spark s1"></div>
-    <div class="st-spark s2"></div>
-    <div class="st-icon"><b id="stIc">⚔️</b></div>
-    <div class="st-desc"><i id="stDesc"></i></div>
     <div class="upr-close"><i class="st-fat" data-t="터치하여 닫기">터치하여 닫기</i></div>
   </div>
   <!-- 18 패배 화면. 09·17 과 같은 «딤 위 연출» — 표시 전용(자동 부활 로직 불변).
@@ -17248,6 +17283,10 @@
     </div>
   </div>
   <div id="defw">
+    <!-- 754 — 해골·타이틀·안내 카드 3장이 **한 그릇**에 든다(앵커 = 프레임 세로 중앙).
+         묶기 전에는 넷이 프레임 상단 앵커(하변 1357 고정), 「터치하여 닫기」만 하단 앵커라
+         1600 에서 둘 사이가 **23px** 까지 좁아졌다(2280 은 703px — probe754). -->
+    <div class="df-grp">
     <div class="df-emb"><svg width="116" height="107" viewBox="0 0 116 107">
       <path d="M1 0Q13 3 27 12H89Q103 3 115 0v62c0 12-9 19-22 21H23C10 81 1 74 1 62z" fill="#F8FFF8"/>
       <path d="M26 78h64v20a9 9 0 0 1-9 9H35a9 9 0 0 1-9-9z" fill="#F8FFF8"/>
@@ -17266,6 +17305,7 @@
     <div class="df-card c3"><div class="pnl"></div><div class="df-ic3"></div>
       <div class="df-txt"><i>게임 속 UI의 레드닷을 따라가면서 점점 더<br>강해지세요</i><i class="ov" aria-hidden="true">게임 속 UI의 레드닷을 따라가면서 점점 더<br>강해지세요</i></div>
       <button class="df-btn"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
+    </div>
     <div class="upr-close"><i>터치하여 닫기</i></div>
   </div>
   <!-- 20 프로필 팝업 — 플레이어 스펙 정보(종합 스탯 탭). 측정표 docs/measure/20-프로필팝업스펙정보.md
