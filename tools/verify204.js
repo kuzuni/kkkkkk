@@ -140,7 +140,9 @@ const blk = (r, m) => { if (r && r.__err) { ok(false, m + ' — 평가가 죽었
              wrapH: parseInt(getComputedStyle(document.querySelector('.cn-wrap')).height, 10),
              lastBottom: (() => { const c = [...document.querySelectorAll('.cn-cd.dtk')].pop();
                return c ? c.offsetTop + c.offsetHeight : -1; })(),
-             note: (document.querySelector('.cn-tknt i') || {}).textContent || '' };
+             /* 715 — 같은 부품(`.cn-tknt`)을 §9 교환 안내가 먼저 쓴다. 204 가 묻는 것은 §10 안내이므로
+                «교환 안내가 아닌 것» 으로 골라야 한다(안 그러면 남의 줄을 읽고 빨개진다). */
+             note: (document.querySelector('.cn-tknt:not(.ex) i') || {}).textContent || '' };
   });
   if (blk(cards, '[5] 재화 탭 교환 칸')) {
     ok(cards.n === st.ids.length, '재화 탭에 던전 ' + st.ids.length + '개 교환 칸이 다 있다 (실측 ' + cards.n + ')');
@@ -167,7 +169,8 @@ const blk = (r, m) => { if (r && r.__err) { ok(false, m + ' — 평가가 죽었
     const id = DUNGEONS[0].id, pr = dunExPrice(id);
     S.dia = pr * 3; S.dunTk[id] = 0; renderCoinPage($('shopList'));
     const d0 = S.dia;
-    document.querySelector('[data-dunex="' + id + '"]').click();
+    /* 715 — 카드 클릭은 수량 팝업을 열고, 지급은 [교환] 확정에서 난다(204 가 지키는 값은 그대로) */
+    document.querySelector('[data-dunex="' + id + '"]').click(); exSet(1); exRun();
     const saved = JSON.parse(localStorage.getItem(KEY));
     return { id, pr, spent: d0 - S.dia, tk: S.dunTk[id], savedTk: saved.dunTk[id], savedDia: saved.dia };
   });

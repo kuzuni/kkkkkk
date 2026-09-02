@@ -75,7 +75,9 @@ async function open(browser) {
     /* ================= [A] 정적 — 직접 가산이 되살아났는가 ================= */
     console.log('[A] 정적 — 구매 경로가 우편을 안 지나고 그 자리에서 지급하는가(697)');
     const bGrant = body('function grantDiaPack(p)');
-    const bMile  = body('function mileageExchange()');
+    /* 715 이관 — `mileageExchange` 에 «몇 회» 인자가 생겼다(`(n)`). 153 이 지키는 것은 시그니처가
+       아니라 «우편을 안 지나고 grantNow 로 그 자리에서 준다» 이므로 찾는 열쇠만 넓힌다. */
+    const bMile  = body('function mileageExchange(');
     bGrant ? ok('grantDiaPack 본문 확보') : fail('grantDiaPack 본문을 못 찾았다');
     bMile  ? ok('mileageExchange 본문 확보') : fail('mileageExchange 본문을 못 찾았다');
     if (bGrant) {
@@ -90,14 +92,17 @@ async function open(browser) {
       /grantNow\(/.test(bMile) ? ok('mileageExchange — grantNow 경유(즉시 지급)')
                                : fail('mileageExchange 가 grantNow 를 안 쓴다 — 697 회귀');
     }
-    /* 유물조각 교환은 핸들러 안 블록이라 근처 창으로 본다 */
-    const exI = SRC.indexOf("const ex = EXCHANGE.find(");   /* 490 — 키로 찾는다(구: 가격) */
+    /* 유물조각 교환은 «지급하는 자리» 를 창으로 본다.
+       ⚠ 715 이관 — 지급이 클릭 핸들러에서 **교환 정의**(`exDefCur`)의 `run()` 으로 옮겨졌다
+         (수량 슬라이더로 확정한 뒤에 지급한다). 핸들러 창을 계속 보면 «지급을 안 한다» 로
+         빨개지는데 그것은 자리가 옮겨진 것이지 697 회귀가 아니다 — 창을 새 집으로 옮긴다. */
+    const exI = SRC.indexOf("const exDefCur = x => ({");
     /* ⚠ 창을 **주석 제거 후** 본다 — 697 의 설명 주석이 «`ex.mail` 은 선언째 사라졌다» 라고
        적고 있어서, 날것 창으로 grep 하면 «갈래가 되살아났다» 로 잘못 읽힌다(1회차에 실제로 그랬다). */
     const exW = exI >= 0 ? SRC.slice(exI, exI + 1200).replace(/\/\*[\s\S]*?\*\//g, ' ') : '';
     exI >= 0 ? ok('유물조각 교환 블록 확보') : fail('유물조각 교환 블록을 못 찾았다');
     if (exI >= 0) {
-      /S\[ex\.k\]\s*=/.test(exW) ? ok('유물조각 교환 — 그 자리에서 지급한다(697)')
+      /S\[x\.k\]\s*=/.test(exW) ? ok('유물조각 교환 — 그 자리에서 지급한다(697)')
                                 : fail('유물조각 교환이 지급을 안 한다 — 697 회귀');
       !/sendMail\(/.test(exW) ? ok('유물조각 교환 — sendMail 안 지난다(697)')
                               : fail('유물조각 교환이 다시 우편으로 보낸다 — 697 회귀');
@@ -152,12 +157,14 @@ async function open(browser) {
       S.mailx = []; S.mailSeq = 0; S.mail = {}; S.dia = 5e6; S.relic = 0;
       openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
       await new Promise(r => setTimeout(r, 60));
-      /* 490 — `data-ex` 는 재화 키이고 수량은 수량 탭이 정한다(1:1). 유물조각 칸만 고른다. */
+      /* 490 — `data-ex` 는 재화 키다(1:1). 유물조각 칸만 고른다.
+         715 이관 — 수량은 «수량 탭»(`exQtyN`)이 아니라 팝업 슬라이더가 정하고, 지급은 확정에서 난다.
+         153 이 여기서 지키는 것은 «우편이 안 온다» 이므로 자리만 확정 뒤로 옮긴다. */
       const btn = document.querySelector('#shopList [data-ex="relic"]');
       if (!btn) return { err: '유물조각 교환 버튼 없음' };
-      const ex = { dia: exQtyN(), rel: exQtyN() };
+      const ex = { dia: 10, rel: 10 };
       const d0 = S.dia, r0 = S.relic, n0 = S.mailx.length;
-      btn.click();
+      btn.click(); exSet(10); exRun();
       const after = { dDia: S.dia - d0, dRel: S.relic - r0, dMail: S.mailx.length - n0 };
       return { want: { dia: ex.dia, rel: ex.rel }, after };
     });

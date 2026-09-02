@@ -190,39 +190,44 @@ const blk = (t) => console.log('\n── ' + t + ' ' + '─'.repeat(Math.max(0, 
     closeModal(); await sleep(200);
     /* ⓐ 부족이면 한 푼도 안 나간다
        ⚠ 490 이후 `data-ex` 는 «가격» 이 아니라 **재화 키**다(1:1 이라 가격 = 고른 수량).
-          수량 탭을 ×100 으로 올려 «10 다이아로는 못 산다» 를 만든다. */
-    S.dia = 10; S.relic = 0; S.mailx = [];
+       ⚠ 715 이관 — 수량 탭(`.cn-qty`)이 슬라이더로 바뀌었다. «못 산다» 는 상태를 만드는 길도
+         «×100 을 켠다» 가 아니라 **한 개 값보다 잔액이 적다**(0 다이아)로 바뀐다 — 그 상태에서는
+         팝업이 아예 안 열리므로 그것까지 같이 잰다(자리를 비우지 않고 방향만 뒤집었다 — 333). */
+    S.dia = 0; S.relic = 0; S.mailx = [];
     openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
-    const q100 = document.querySelector('#shopList .cn-qty .q[data-exq="100"]');
-    if (!q100) return { err: '수량 탭 없음' };
-    q100.click();
     let btn = document.querySelector('#shopList .bt.buy[data-ex="relic"]');
     if (!btn) return { err: '교환 버튼 없음' };
-    const price = exQtyN(), row = { rel: price };     /* 490 — 1:1 */
+    const price = 100, row = { rel: price };     /* 490 — 1:1 (100개를 고른다) */
     btn.click();
-    const poor = { dia: S.dia, mail: (S.mailx || []).length };
-    /* ⓑ 살 수 있으면 다이아만 즉시 나가고 유물조각은 우편으로 */
+    const poor = { dia: S.dia, mail: (S.mailx || []).length,
+                   open: document.getElementById('modal').classList.contains('on') };
+    /* ⓑ 살 수 있으면 그 자리에서 지급된다(697) */
     S.dia = price; S.mailx = [];
     renderShopPage();
     btn = document.querySelector('#shopList .bt.buy[data-ex="relic"]');
-    btn.click();
+    btn.click(); exSet(price); exRun();
     const m = (S.mailx || [])[0];
     const mid = { dia: S.dia, relic: S.relic, mailN: (S.mailx || []).length, mailT: m && m.t, mailR: m && m.r };
-    /* ⓒ 수령하면 실제로 는다 */
-    const r0 = S.relic;
-    openMail(); claimAllMail(); await sleep(150);
-    closeModal();
-    return { price, want: row && row.rel, poor, mid, gained: S.relic - r0 };
+    /* ⓒ 수령 단계가 **없다** — 교환이 만든 통이 우편함에 0건이다.
+       ⚠ «받아 보고 Δrelic 0» 으로 재면 안 된다 — 우편함에는 이 교환과 무관한 통(부팅 세이브·앞
+         절이 넣은 것)이 있어서 그 수령분이 섞여 들어온다(실측 +1000). 물음은 «내 교환이 통을
+         만들었는가» 이므로 **제목으로 골라** 센다(185-④ 자리 옮김 규칙). */
+    const mine = (S.mailx || []).filter(x => /교환|유물조각/.test((x && x.t) || '')).length;
+    return { price, want: row && row.rel, poor, mid, mine };
   }, null, '[C]');
   if (c && !c.err) {
-    ok(c.poor.dia === 10 && c.poor.mail === 0,
-       'C1 부족이면 다이아가 한 푼도 안 나가고 우편도 안 온다', '다이아 ' + c.poor.dia + ' · 우편 ' + c.poor.mail + '통');
+    ok(c.poor.dia === 0 && c.poor.mail === 0 && c.poor.open === false,
+       'C1 한 개도 못 사면 다이아가 한 푼도 안 나가고 **팝업조차 안 열린다**(715)',
+       '다이아 ' + c.poor.dia + ' · 우편 ' + c.poor.mail + '통 · 팝업 ' + c.poor.open);
     ok(c.mid.dia === 0, 'C2 살 수 있으면 다이아는 **즉시** 나간다', String(c.price) + ' → ' + c.mid.dia);
-    ok(c.mid.relic === 0, 'C3 그 순간 유물조각은 **안 는다**(153 — 즉시 지급이 아니다)', 'Δrelic 0');
-    ok(c.mid.mailN === 1 && c.mid.mailR === c.want && /유물조각/.test(c.mid.mailT || ''),
-       'C4 대신 우편이 한 통 오고 수량이 EXCHANGE 표와 같다',
-       JSON.stringify(c.mid.mailT) + ' r=' + c.mid.mailR + ' (표 ' + c.want + ')');
-    ok(c.gained >= c.want, 'C5 그 우편을 받으면 유물조각이 실제로 는다(흐름 완결)', '+' + c.gained);
+    /* ⚠ 697 이관(2026-09-02, 작업 715 가 같은 흐름을 지나며 마저 옮겼다) — C3·C4 는 **153 의 우편
+       단계**를 단언하고 있었고 그 단계는 697(주인 «교환은 즉각으로 · 우편으로 오지말고»)이 없앴다.
+       **수리 전 트리에서도 같은 2건이 빨갛다**(대조 실행으로 확인 — 338·344 규약). 자리를 비우지
+       않고 방향만 뒤집는다(333): «그 순간 안 는다» → «그 순간 는다» · «우편 한 통» → «우편 0». */
+    ok(c.mid.relic === c.want, 'C3 그 순간 유물조각이 **그 자리에서** 는다(697 — 153 의 우편 단계 폐지)',
+       'Δrelic ' + c.mid.relic + ' (기대 ' + c.want + ')');
+    ok(c.mid.mailN === 0, 'C4 새 우편은 한 통도 안 온다(697)', c.mid.mailN + '통');
+    ok(c.mine === 0, 'C5 수령 단계가 없다 — 우편함에 «교환» 통이 0건이다(697)', c.mine + '통');
     ok(c.price === 100 && c.want === 100,
        'C6 490 — 교환비가 **1:1** 이다(고른 수량 100 → 다이아 100)', c.price + ' 다이아 → ' + c.want + '개');
   } else ok(false, '[C] 교환 흐름', (c && c.err) || 'null');

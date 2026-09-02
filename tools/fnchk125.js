@@ -87,10 +87,12 @@ const ok = (b, act, effect, detail) => {
     const btn = document.querySelector('#shopList .bt.buy[data-ex]');
     if (!btn) return { err: '교환 버튼 없음' };
     /* 기대 수량은 리터럴이 아니라 **런타임 계산**이다(185-①) — 490 이후 교환은 1:1 이고
-       수량은 수량 탭(`exQtyN()`)이 정한다. `data-ex` 는 재화 키다. */
+       **715 부터 수량은 팝업 슬라이더**가 정한다(옛 수량 탭 `exQtyN()` 은 선언째 사라졌다).
+       `data-ex` 는 재화 키다. 여는 순간의 기본값(1)을 그대로 확정해 «한 개» 를 굴린다. */
     const row = EXCHANGE.find(v => v.k === btn.dataset.ex);
-    const want = exQtyN();
     btn.click();
+    const want = exSel ? exSel.n : 0;
+    exRun();
     await sleep(60);
     const mid = { dd: S.dia - d0, dr: S.relic - r0, mailN: (S.mailx || []).length,
                   key: row && row.k, want: want };
@@ -139,8 +141,10 @@ const ok = (b, act, effect, detail) => {
       if (!bad) await sleep(20);
     }
     /* 기대 문구는 리터럴이 아니라 **런타임 계산**이다(185-①) — 값이 바뀌면 자도 따라간다.
-       ⚠ 490 이후 필요액은 «가격 필드» 가 아니라 고른 수량(`exQtyN()`)이다(1:1). */
-    const want = btn ? fmt(exQtyN() - S.dia) + ' 더 필요합니다' : null;
+       ⚠ 490 이후 필요액은 «가격 필드» 가 아니라 수량이고, **715 부터는 «한 개 값»**(`step(0)`)이다 —
+         한 개도 못 사는 상태에서는 팝업을 열지 않고 그 자리에서 부족을 알린다. */
+    const want = btn ? fmt(exDefCur(EXCHANGE.find(v => v.k === btn.dataset.ex)).step(0) - S.dia)
+                       + ' 더 필요합니다' : null;
     return { title: t, want, leak: /img\s|cur-[a-z]+\.svg|[<>]/.test(t), modalOn,
              icons: tn ? [...tn.querySelectorAll('img.cic')].map(i => i.dataset.curIc).join(',') : '', bad };
   });

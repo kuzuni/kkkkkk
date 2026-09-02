@@ -135,16 +135,21 @@ const diaOnly = page => ev(page, () => {
   /* ================= [B] 교환 1:1 ================= */
   blk('[B] 교환 — 2종 · 수량 탭 · 1:1');
   {
+    /* 715 이관 — 수량 탭(`EX_QTYS`)은 주인 보강 «x1 x10 x100 max방식말고» 로 폐지됐다.
+       490 이 지키던 것은 «수량을 고를 수 있는가» 이지 «탭이냐» 가 아니므로, 묻는 자리를
+       **슬라이더 상한**으로 옮긴다(333 처방 — 방향만 뒤집고 자리는 안 비운다). */
     const shape = await ev(p, () => ({
       n: EXCHANGE.length, keys: EXCHANGE.map(x => x.k).join(','),
       fields: [...new Set(EXCHANGE.flatMap(x => Object.keys(x)))].sort().join(','),
-      qtys: EX_QTYS.join(',')
+      qtys: typeof EX_QTYS !== 'undefined' ? 'EX_QTYS 남아 있음' : 'slider'
     }));
     ok(shape && shape.n === 2 && shape.keys === 'relic,rstone',
       '★ [B1] 교환 품목이 **2종**(유물조각 · 룬강화석)이다 — 3단 묶음 카드 폐지', shape ? shape.keys : '');
     ok(shape && !/dia|rel\b|amount|qty/.test(shape.fields),
       '★ [B2] `EXCHANGE` 에 **수량·가격 필드가 없다** — 1:1 이 표가 아니라 구조다', shape ? shape.fields : '');
-    ok(shape && shape.qtys === '1,10,100,MAX', '[B3] 수량 탭 4칸(×1 · ×10 · ×100 · MAX)', shape ? shape.qtys : '');
+    ok(shape && shape.qtys === 'slider',
+      '[B3] 수량을 고르는 자리가 **슬라이더**다(715 — 옛 4칸 탭 `EX_QTYS` 는 선언째 사라졌다)',
+      shape ? shape.qtys : '');
     const ui = await ev(p, () => {
       openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
       const q = [...document.querySelectorAll('#shopList .cn-qty .q')];
@@ -153,8 +158,8 @@ const diaOnly = page => ev(page, () => {
         cards: cd.length, lefts: cd.map(e => e.offsetLeft).join(','),
         tops: [...new Set(cd.map(e => e.offsetTop))].join(',') };
     });
-    ok(ui && ui.q === 4 && ui.on === 1, '[B4] 화면에 수량 탭 4칸이 있고 **하나만** 켜져 있다',
-      ui ? ui.q + '칸 · 켜짐 ' + ui.on : '');
+    ok(ui && ui.q === 0, '[B4] 화면에 옛 수량 탭이 **한 칸도 없다**(715 이관 — 남아 있으면 두 벌이다)',
+      ui ? ui.q + '칸' : '');
     ok(ui && ui.cards === 2 && ui.lefts === '256,546',
       '[B5] 교환 카드가 2칸이고 **2열 중앙**(x256/546 — 365 선례)이다', ui ? ui.lefts : '');
     /* 실제 교환 — 수량을 ×10 으로 올리고 두 칸을 각각 누른다 */
@@ -162,28 +167,35 @@ const diaOnly = page => ev(page, () => {
       const sleep = ms => new Promise(r => setTimeout(r, ms));
       S.dia = 1e6; S.relic = 0; S.rstone = 0; S.mailx = []; S.mailSeq = 0; S.mail = {};
       renderShopPage();
-      document.querySelector('#shopList .cn-qty .q[data-exq="10"]').click();
-      const n = exQtyN();
+      /* 715 이관 — 수량은 «탭을 켠다» 가 아니라 «팝업을 열고 슬라이더를 옮긴다» 로 정한다.
+         490 이 재던 성질(고른 n → 다이아 −n · 재화 +n · 우편 0)은 한 글자도 안 무르게 그대로다. */
+      const n = 10;
+      const pick = sel => { document.querySelector(sel).click(); exSet(n); };
       /* ⓐ 유물조각 — **697 이후 룬강화석과 같은 처리**다(다이아 −n · 그 자리에서 +n · 우편 0).
          153 이 «유물조각만 우편» 으로 갈라 두었던 분기는 주인 지시로 사라졌다. */
       const d0 = S.dia, r0 = S.relic, m0 = S.mailx.length;
-      document.querySelector('#shopList .bt.buy[data-ex="relic"]').click();
+      pick('#shopList .bt.buy[data-ex="relic"]');
+      const picked = exSel.n;                       /* 슬라이더가 실제로 그 수량을 들고 있는가 */
+      exRun();
       await sleep(60);
       const relStep = { dia: d0 - S.dia, rel: S.relic - r0, mail: S.mailx.length - m0 };
       const relGot = relStep.rel;
       /* ⓑ 룬강화석 — 우편 스키마에 자리가 없어 즉시 지급(204 선례) */
       const d1 = S.dia, s0 = S.rstone, m1 = S.mailx.length;
       renderShopPage();
-      document.querySelector('#shopList .bt.buy[data-ex="rstone"]').click();
+      pick('#shopList .bt.buy[data-ex="rstone"]'); exRun();
       const stStep = { dia: d1 - S.dia, st: S.rstone - s0, mail: S.mailx.length - m1 };
-      /* ⓒ 부족이면 한 푼도 안 나간다 */
-      S.dia = 3; renderShopPage();
+      /* ⓒ 부족이면 한 푼도 안 나간다 — 715 이후에는 팝업조차 안 열린다(상한 0) */
+      S.dia = 0; renderShopPage();
       const d2 = S.dia, s2 = S.rstone;
       document.querySelector('#shopList .bt.buy[data-ex="rstone"]').click();
-      const poor = { dia: d2 - S.dia, st: S.rstone - s2 };
-      return { n, relStep, relGot, stStep, poor };
+      const poorOpen = document.getElementById('modal').classList.contains('on');
+      closeModal();
+      const poor = { dia: d2 - S.dia, st: S.rstone - s2, open: poorOpen };
+      return { n, picked, relStep, relGot, stStep, poor };
     });
-    ok(buy && buy.n === 10, '[B6] ×10 을 고르면 수량이 10 이다', buy ? String(buy.n) : '');
+    ok(buy && buy.picked === 10, '[B6] 슬라이더를 10 으로 옮기면 수량이 10 이다(715 — 옛 ×10 탭 자리)',
+      buy ? String(buy.picked) : '');
     ok(buy && buy.relStep.dia === buy.n && buy.relStep.rel === buy.n && buy.relStep.mail === 0,
       '★ [B7] 유물조각 — 다이아 −n · **그 자리에서** +n · 새 우편 0(697 — 153 의 갈래 폐지)',
       buy ? '다이아 −' + buy.relStep.dia + ' · 유물 +' + buy.relStep.rel + ' · 우편 ' + buy.relStep.mail : '');
@@ -192,8 +204,9 @@ const diaOnly = page => ev(page, () => {
     ok(buy && buy.stStep.dia === buy.n && buy.stStep.st === buy.n && buy.stStep.mail === 0,
       '★ [B9] 룬강화석 — 다이아 −n · **즉시** +n · 우편은 안 온다(697 이후 두 줄이 같은 처리다)',
       buy ? '다이아 −' + buy.stStep.dia + ' · 룬강화석 +' + buy.stStep.st : '');
-    ok(buy && buy.poor.dia === 0 && buy.poor.st === 0,
-      '[B10] 부족하면 다이아도 재화도 한 톨 안 움직인다', buy ? '다이아 Δ' + buy.poor.dia : '');
+    ok(buy && buy.poor.dia === 0 && buy.poor.st === 0 && buy.poor.open === false,
+      '[B10] 부족하면 다이아도 재화도 한 톨 안 움직인다(715 — 한 개도 못 사면 팝업조차 안 연다)',
+      buy ? '다이아 Δ' + buy.poor.dia + ' · 팝업 ' + buy.poor.open : '');
   }
 
   /* ================= [C] 입장권 1,000 ================= */
@@ -215,11 +228,14 @@ const diaOnly = page => ev(page, () => {
       const el = document.querySelector('#shopList .bt.buy[data-dunex]');
       const id = el.dataset.dunex, d0 = S.dia, k0 = S.dunTk[id] | 0;
       const shown = el.textContent.replace(/[^0-9]/g, '');
-      el.click();
+      /* 715 이관 — 카드를 누르면 수량 팝업이 뜨고, 1장은 «확정» 을 눌러야 나간다.
+         490 이 지키는 것은 **값**(1,000/1장)이므로 그 자리를 확정 뒤로 옮긴다. */
+      el.click(); exSet(1); exRun();
       return { shown, dia: d0 - S.dia, tk: (S.dunTk[id] | 0) - k0, id };
     });
     ok(buy && buy.dia === 1000 && buy.tk === 1,
-      '[C4] 실제로 눌러도 1,000 이 나가고 입장권이 1장 는다', buy ? '−' + buy.dia + ' → +' + buy.tk + '장' : '');
+      '[C4] 실제로 눌러(팝업에서 1장으로 확정해) 보면 1,000 이 나가고 입장권이 1장 는다',
+      buy ? '−' + buy.dia + ' → +' + buy.tk + '장' : '');
     ok(buy && buy.shown === '1000', '[C5] 카드에 **찍힌 가격**도 1,000 이다(표기와 판정이 한 식)', buy ? buy.shown : '');
   }
 

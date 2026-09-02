@@ -103,8 +103,12 @@ const TOAST_SITES = [
      이름도 «유물조각» → «재화» 로 넓힌다 — 한 자리가 두 재화를 답하는 것이 490 의 구조다.
      ⚠ 자리를 비우지 않았다: 490 이 통째로 되돌아가 묶음 표가 살아나면 `ex.k`·`< n` 이
        사라지므로 두 항이 «조각을 못 찾음» 으로 곧바로 빨개진다. */
-  ['재화 교환 — 다이아 부족',    'if(S.dia < n){ notify('],
-  ['재화 교환 완료(유물조각·룬강화석)', '\'</b> → \' + curIc(ex.k)'],
+  /* ⚠ **715 이관(2026-09-02)** — 교환에 수량 슬라이더가 붙으면서 두 문구의 **자리**가 옮겨졌다:
+     부족 안내는 «팝업을 여는 자리»(`exOpen`, 한 개도 못 사면 안 연다) · 완료 통보는 «확정 뒤»
+     (`exDefCur().run`). 149 가 소유한 성질(둘 다 팝업이 아니라 토스트다)은 그대로이고 조각만
+     새 자리의 것으로 갈아 끼운다(333 — 자리를 비우지 않는다). */
+  ['재화 교환 — 지불 재화 부족',  "fmt(d.step(0) - d.have())"],
+  ['재화 교환 완료(유물조각·룬강화석)', "'</b> → ' + curIc(x.k)"],
   ['광고 보상 수령',             'a.r.freePet) notify('],
   /* ⚠ **588(2026-08-31) 이관** — «다이아 부족» 안내는 이용권을 다이아로 사던 시절의 것이고
      주인 지시(«그 이용권들은 다이아로 못사게 하기»)로 그 분기가 통째로 사라졌다.
@@ -293,11 +297,12 @@ const WORST = [
   ck('§R-c 그 자리가 토스트로 밀리면 빨개진다',
      callerOf(PROMO, SRC.replace("popup('🏅 승급 성공!'", "notify('🏅 승급 성공!'")) === 'notify',
      '팝업 → 토스트 사본에서 notify 로 읽힌다');
-  const EXFRAGS = [TOAST_SITES.find(r => /재화 교환 — 다이아/.test(r[0]))[1],
+  const EXFRAGS = [TOAST_SITES.find(r => /재화 교환 — 지불 재화 부족/.test(r[0]))[1],
                    TOAST_SITES.find(r => /재화 교환 완료/.test(r[0]))[1]];
-  const exBroken = SRC.replace('if(S.dia < n){ notify(', 'if(S.dia < n){ popup(')
-                      .replace("notify(curIc('dia') + ' <b>' + fmt(n) + '</b> → ' + curIc(ex.k)",
-                               "popup(curIc('dia') + ' <b>' + fmt(n) + '</b> → ' + curIc(ex.k)");
+  /* 715 이관 — 되돌림 사본도 새 자리의 문자열로 바꾼다(조각과 사본이 같은 자리를 봐야 한다) */
+  const exBroken = SRC.split("notify(d.ic() + ' <b>'").join("popup(d.ic() + ' <b>'")
+                      .split("notify(curIc('dia') + ' <b>' + fmt(cost) + '</b> → ' + curIc(x.k)")
+                      .join("popup(curIc('dia') + ' <b>' + fmt(cost) + '</b> → ' + curIc(x.k)");
   ck('§R-d 새 교환 조각 둘은 popup 으로 되돌리면 빨개진다',
      EXFRAGS.every(f => callerOf(f, exBroken) !== 'notify'),
      EXFRAGS.map(f => callerOf(f, exBroken) || '못 찾음').join(' · '));

@@ -2162,6 +2162,42 @@
   .mbody .cos269 p{font-size:35px;line-height:1.55}
   .mbody .cos269 p+p{margin-top:26px}
   .mbody .cos269 p em{font-style:normal;font-weight:900;color:#B4571E}
+  /* ── 715 교환 수량 슬라이더 (2026-09-02 주인 지시) ─────────────────────────────
+     A5 공용 모달 본문 위에 얹는 **한 벌짜리** 부품이다(자리마다 다시 그리지 않는다).
+     기하는 새로 만들지 않고 **55 볼륨 트랙의 비례**를 물려받는다 — 트랙 높이 50 · 노브 60×50 ·
+     검정 테 6/5 · 반경 18/16 이 그 값이고, 폭만 모달 본문 폭(826)에 맞춰 늘린다.
+     ⚠ `.mbody p`(24px)는 A5 공용이라 못 건드린다 ⇒ 179·269·478 과 같은 처방으로
+       전용 래퍼 `.ex715` 안에서만 값을 적는다(특이도 0-2-1 이 0-1-1 을 이긴다). */
+  .mbody .ex715{padding:6px 0 4px}
+  .ex715 .ex-gn{display:flex;align-items:center;justify-content:center;gap:16px;height:104px}
+  .ex715 .ex-gn>em{display:block;width:96px;height:96px;font-size:82px;line-height:96px;font-style:normal}
+  .ex715 .ex-gn>em>.cic{width:96px;height:96px}
+  .ex715 .ex-gn>b{font-size:58px;font-weight:900;color:#3A2C20;
+    -webkit-text-stroke:2px #F7ECDA;paint-order:stroke fill}
+  .ex715 .ex-tr{position:relative;margin:22px 24px 0;height:50px;box-sizing:border-box;
+    border:6px solid #000;border-radius:18px;overflow:hidden;background:#8A7355;
+    cursor:pointer;touch-action:none}
+  .ex715 .ex-fill{position:absolute;left:0;top:0;bottom:0;width:0;
+    background:linear-gradient(#F3C744 0 5%,#FEB612 5% 97%,#F2B833 97% 100%)}
+  /* 노브는 트랙 «안» 을 달린다 — 좌우 끝에서 60px 이 삐져나오지 않게 진행률에 노브 폭을 뺀다
+     (55 트랙이 «트랙 왼끝 + 진행률 × (679 − 60)» 으로 푼 것과 같은 산수다). */
+  .ex715 .ex-knob{position:absolute;top:0;width:60px;height:50px;box-sizing:border-box;
+    border:5px solid #000;border-radius:16px;background:#F6F5FA;z-index:2;pointer-events:none}
+  .ex715 .ex-mm{display:flex;justify-content:space-between;margin:8px 26px 0}
+  .ex715 .ex-mm>i{font-size:24px;font-weight:700;font-style:normal;color:#7A6550}
+  .ex715 .ex-adj{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:18px}
+  .ex715 .ex-b{width:132px;height:74px;line-height:74px;border-radius:20px;cursor:pointer;
+    font-size:34px;font-weight:800;color:#F0D9AE;background:linear-gradient(180deg,#4A5570 0,#39415A 100%);
+    box-shadow:inset 0 0 0 4px #141414,0 4px 0 #23293A;user-select:none}
+  .ex715 .ex-b.off{color:#8A8FA0;background:#39415A;box-shadow:inset 0 0 0 4px #141414;cursor:default}
+  .ex715 .ex-q{flex:1;height:74px;line-height:74px;border-radius:20px;background:#F7ECDA;
+    border:4px solid #C8B091;box-sizing:border-box;font-size:40px;font-weight:900;color:#3A2C20}
+  .ex715 .ex-inf{margin-top:20px;background:#F7ECDA;border-radius:22px;padding:18px 24px}
+  .ex715 .ex-inf p{display:flex;justify-content:space-between;align-items:center;font-size:26px}
+  .ex715 .ex-inf p+p{margin-top:8px}
+  .ex715 .ex-inf i{font-style:normal;color:#7A6550}
+  .ex715 .ex-inf b{color:#B4571E;margin-left:8px}
+  .ex715 .ex-inf .cic{width:32px;height:32px;vertical-align:-6px}
   /* ── 478 청약철회 규정 본문 (2026-08-30 주인 지시로 신설된 팝업) ──
      269 와 같은 처방 — 전용 래퍼 `.lgw` 로만 손댄다(`.mbody p` 는 A5 공용이라 못 건드린다).
      ⚠ 여기만 **왼쪽 정렬**이다: 본문이 번호 목록(1~4)이라 가운데 정렬이면 번호가 안 선다.
@@ -6879,23 +6915,15 @@
      z 를 올리면 얼린 값이 **+0.00** 이 된다(대조 «재화 카드 제목» 의 자 바닥 +5.81 미만). */
   .cn-a2>em,.cn-a2>.no,.cn-a2>.gm{z-index:2}
   .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
-  /* 490 §9 — 재화 교환 «수량 선택» 탭 4칸(×1 · ×10 · ×100 · MAX).
-     자리는 §10 안내줄(`.cn-tknt`)과 **같은 문법**이다 — 리본(top 3084, 높이 92)과 첫 카드 행
-     (top 3270) 사이 94px 빈 구간을 쓴다. 그래서 아래 §10 좌표는 한 줄도 안 움직인다.
-     ⚠ 23 배수 탭(`.tr-qty`)을 좌표째 가져오지 않았다 — 그쪽은 레퍼런스 기하(x142 w761)에 묶인
-       부품이라 상점 격자(111..969)에 안 맞는다. 여기서는 카드 격자 폭을 그대로 4등분한다:
-       858 = 210 × 4 + 6 × 3(칸 210 · 사이 6). */
-  .cn-qty{left:111px;top:3186px;width:858px;height:73px}
-  .cn-qty>.q{position:absolute;top:0;width:210px;height:73px;border-radius:20px;cursor:pointer;
-    text-align:center;line-height:73px;font-size:38px;font-weight:700;color:#F0D9AE;
-    background:linear-gradient(180deg,#4A5570 0,#39415A 100%);
-    box-shadow:inset 0 0 0 4px #141414,0 4px 0 #23293A}
-  .cn-qty>.q.on{color:#2A1C0A;
-    background:linear-gradient(180deg,#F6E7AC 0,#E6A64E 100%);
-    box-shadow:inset 0 0 0 4px #141414,0 4px 0 #A87322}
+  /* 715 — 490 의 «수량 선택» 탭 4칸(`.cn-qty`)은 **주인 보강 «x1 x10 x100 max방식말고» 로 폐지**됐다.
+     자리를 비우면 리본↔카드 94px 이 뜬 채 남으므로 §10 안내줄과 **같은 부품**(`.cn-tknt`)을
+     top 만 갈아 그 구간에 세운다 — 아래 §10 좌표는 한 줄도 안 움직인다(490 이 지킨 성질 그대로).
+     되살리려면 `.cn-qty`(left 111 top 3186 858×73 · 칸 210 · 사이 6)와 `[data-exq]` 갈래를
+     같이 되살려야 한다(둘 중 하나만 두면 조용히 아무 일도 안 한다). */
   /* 204 §10 — 던전 입장권 교환 리본 아래 안내 한 줄. «N/2» 의 N 이 분모를 넘는 것이 정상임을 명시한다.
      리본(top 3654, 높이 92)과 첫 카드 행(top 3844) 사이 94px 을 그대로 쓴다. */
   .cn-tknt{left:66px;top:3752px;width:948px;height:46px;text-align:center}
+  .cn-tknt.ex{top:3186px}                       /* 715 — §9 리본(3084) ↔ 첫 카드(3270) 사이 */
   .cn-tknt>i{font-size:30px;line-height:46px;color:#F0D9AE;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill}
   .cn-a2t{left:561px;top:1404px;width:420px;height:80px;text-align:center}
@@ -20651,12 +20679,178 @@ const EXCHANGE = [
   { k:'relic',  n:'유물조각' },
   { k:'rstone', n:'룬강화석' }
 ];
-/* 수량 선택 — 13 재화 탭에는 이 부품이 없어 여기서 처음 세운다(23 배수 탭 `.tr-qty` 는 레퍼런스
-   기하에 묶인 부품이라 좌표째 가져올 수 없다). 세이브에 안 넣는다 — 팝업을 다시 열면 ×1 이다. */
-const EX_QTYS = [1, 10, 100, 'MAX'];
-let exQty = 1;
-/* 지금 고른 수량이 실제로 몇 개인가(«MAX» 는 가진 다이아 전부 · 최소 1) */
-const exQtyN = () => exQty === 'MAX' ? Math.max(1, Math.floor(S.dia)) : exQty;
+/* ==========================================================================
+   715 — 교환 «수량 슬라이더» 공용 부품 (주인 지시 2026-09-02 03:10)
+   ==========================================================================
+   원문: «유물석 룬강화석 교환같은거 클릭하고나서 슬라이더로 개수 조절가능하게 해줘야함».
+   주인 보강(03:12) «x1 x10 x100 max방식말고» ⇒ **교환류에는 배수 토글·MAX 버튼을 두지 않는다.**
+   그래서 490 이 세웠던 수량 탭(`EX_QTYS`/`exQty`/`exQtyN`/`.cn-qty`)은 **선언째 걷어냈다**
+   (333·399 규약 — 죽는 분기와 그 분기를 단언하던 게이트 항을 같이 옮기되 자리는 비우지 않는다:
+   빈 94px 구간은 §10 과 같은 문법의 안내 한 줄 `.cn-tknt.ex` 가 받는다).
+   ⚠ **소환·강화의 배수 토글(668/700/701/713)과는 다른 부품이다** — 주인이 둘을 갈라 놓았으므로
+     `SUM_MULS`/`.sm-mul` 계열을 여기서 재사용하지 마라(반대로도 마찬가지다).
+
+   ── 부품이 하나인 이유(664 규약과 같다) ────────────────────────────────────
+   교환 자리는 지금 셋이고(§9 재화 2종 · §10 입장권 8종 · §8 마일리지) 늘어난다. 자리마다 그리면
+   «어디는 ± 가 있고 어디는 없다» 로 어긋난다 ⇒ **정의(`exDef*`) 만 자리마다 다르고 UI·산수·게이트는
+   이 파일 한 곳**이다. 정의가 답해야 하는 것은 다섯이다:
+     `step(i)` i번째 한 개를 더 사는 값(구간별 비용이면 여기만 갈린다) · `have()` 지불 재화 잔량 ·
+     `cap()` 교환 상한(없으면 생략) · `gain(n)` 그때 받는 양 · `run(n)` 실제 지급(697 즉시).
+   ── ⚠ 비용은 «단가 × N» 이 아니라 **스텝 합산**이다(701 보강 규약) ─────────────
+   지금 세 갈래는 전부 균일 단가라 두 값이 같지만, 그 «같다» 를 코드가 가정하면 구간별 비용이
+   들어오는 순간 조용히 과금이 어긋난다. 균일(`flat`)일 때만 나눗셈 지름길을 쓰고,
+   그 지름길이 합산과 같은 답을 낸다는 것은 `verify715` [C] 가 매 실행 대조한다. */
+const EX_ADJ = [-10, -1, 1, 10];        /* 미세조절 — 드래그로 못 맞추는 한두 개를 여기서 (주인 ⑤) */
+let exSel = null;                       /* 열려 있는 교환 한 건 {d, n, max, src} · 닫히면 null */
+
+/* 총비용 — 스텝 합산이 정의다. 균일 단가는 곱으로 건너뛴다(같은 값임은 [C] 가 지킨다). */
+function exCost(d, n){
+  if(n <= 0) return 0;
+  if(d.flat) return d.step(0) * n;
+  let c = 0;
+  for(let i = 0; i < n; i++) c += d.step(i);
+  return c;
+}
+/* 지금 실제로 살 수 있는 최대 개수 = min(잔량으로 가능한 최대, 교환 상한).
+   ⚠ «가능한 최대» 는 잔액을 **음수로 만들지 않는** 최대다 — `cost(max) ≤ have < cost(max+1)`. */
+function exMax(d){
+  const have = d.have(), cap = d.cap ? d.cap() : Infinity;
+  if(d.flat){
+    const u = d.step(0);
+    return u > 0 ? Math.max(0, Math.min(cap, Math.floor(have / u))) : 0;
+  }
+  let n = 0, c = 0;
+  while(n < cap){ const nc = c + d.step(n); if(nc > have) break; c = nc; n++; }
+  return n;
+}
+/* 슬라이더 한 칸 = 1개. 트랙 위 비율 t(0~1) ↔ 개수 n(1~max) */
+const exNAt = (t, max) => Math.max(1, Math.min(max, Math.round(1 + t * (max - 1))));
+const exTAt = (n, max) => max > 1 ? (n - 1) / (max - 1) : 1;
+
+/* 열려 있는 교환의 표시를 한 번에 맞춘다 — 드래그 중에는 이 함수만 돈다(재렌더 없음).
+   ⚠ 노드를 변수로 쥐지 않고 매번 다시 찾는다(LESSONS 95-③ — 쥐고 있으면 조용히 죽는다). */
+function exSync(){
+  if(!exSel || !$('exTrack')) return;
+  const { d, n, max } = exSel, cost = exCost(d, n), t = exTAt(n, max);
+  $('exFill').style.width = (t * 100) + '%';
+  $('exKnob').style.left  = 'calc(' + (t * 100) + '% - ' + (t * 60) + 'px)';
+  $('exQn').textContent   = fmt(n);
+  $('exGn').innerHTML     = '×' + fmt(d.gain(n));
+  $('exCost').innerHTML   = d.ic() + ' <b>' + fmt(cost) + '</b>';
+  $('exAft').innerHTML    = d.ic() + ' <b>' + fmt(d.have() - cost) + '</b>';
+  [...document.querySelectorAll('#modal [data-exadj]')].forEach(b => {
+    const v = +b.dataset.exadj;
+    b.classList.toggle('off', n + v < 1 || n + v > max);
+  });
+  const go = $('exGo');
+  if(go) go.disabled = !(n >= 1 && n <= max && cost <= d.have());
+}
+/* 개수를 v 로 옮긴다(범위 밖은 클램프 — 실시간이라 «잠깐 넘었다가 되돌아오는» 프레임이 없다) */
+function exSet(v){
+  if(!exSel) return;
+  const n = Math.max(1, Math.min(exSel.max, Math.round(v) || 1));
+  if(n === exSel.n) return;
+  exSel.n = n; exSync();
+}
+/* 교환 팝업 열기 — 이 한 곳이 세 자리(§8·§9·§10)의 유일한 진입점이다 */
+function exOpen(d, src){
+  const max = exMax(d);
+  if(max < 1){                                     /* 한 개도 못 산다 = 옛 «부족» 토스트와 같은 말 */
+    notify(d.ic() + ' <b>' + fmt(d.step(0) - d.have()) + '</b> 더 필요합니다');
+    return false;
+  }
+  exSel = { d, n:1, max, src: src || null };
+  showModal('<h2>' + d.t + '</h2>'
+    + '<div class="ex715">'
+    +   '<div class="ex-gn"><em>' + d.gic() + '</em><b id="exGn">×' + fmt(d.gain(1)) + '</b></div>'
+    +   '<div class="ex-tr" id="exTrack"><s class="ex-fill" id="exFill"></s><b class="ex-knob" id="exKnob"></b></div>'
+    +   '<div class="ex-mm"><i>1</i><i>' + fmt(max) + '</i></div>'
+    +   '<div class="ex-adj">'
+    +     '<b class="ex-b" data-exadj="-10">−10</b><b class="ex-b" data-exadj="-1">−1</b>'
+    +     '<b class="ex-q" id="exQn">1</b>'
+    +     '<b class="ex-b" data-exadj="1">+1</b><b class="ex-b" data-exadj="10">+10</b>'
+    +   '</div>'
+    +   '<div class="ex-inf"><p><i>총비용</i><span id="exCost"></span></p>'
+    +     '<p><i>교환 후 잔액</i><span id="exAft"></span></p></div>'
+    + '</div>'
+    + '<div class="mrow"><button class="gbtn" id="exNo">취소</button>'
+    +   '<button class="gbtn green" id="exGo">교환</button></div>');
+  exSync();
+  const tr = $('exTrack');
+  const at = e => {
+    const r = tr.getBoundingClientRect();
+    if(r.width <= 0) return;
+    exSet(exNAt((e.clientX - r.left) / r.width, exSel.max));
+  };
+  /* 55 볼륨 트랙과 같은 포인터 캡처 — 트랙 밖으로 끌어도 값이 따라온다(PC 마우스·모바일 터치 동일) */
+  tr.addEventListener('pointerdown', e => { e.preventDefault(); tr.setPointerCapture(e.pointerId); at(e); });
+  tr.addEventListener('pointermove', e => { if(tr.hasPointerCapture(e.pointerId)) at(e); });
+  tr.addEventListener('pointerup',   e => { if(tr.hasPointerCapture(e.pointerId)) tr.releasePointerCapture(e.pointerId); });
+  $('modal').querySelector('.ex-adj').addEventListener('click', e => {
+    const b = e.target.closest('[data-exadj]');
+    if(b && exSel) exSet(exSel.n + (+b.dataset.exadj));
+  });
+  $('exNo').onclick = () => { exSel = null; closeModal(); };
+  $('exGo').onclick = () => exRun();
+  return true;
+}
+/* 확정 — 지불·지급·저장·재렌더가 한 틱이다(697 «즉시 지급» — 우편 경유 0) */
+function exRun(){
+  if(!exSel) return false;
+  const { d, n, src } = exSel, cost = exCost(d, n);
+  if(n < 1 || cost > d.have()){ notify(d.ic() + ' <b>' + fmt(cost - d.have()) + '</b> 더 필요합니다'); return false; }
+  /* 518 3회차 — 발원을 화면이 «알려 준다». 팝업이 덮고 있어도 원래 카드가 발원이다. */
+  if(src && src.isConnected) fxAt(src);
+  d.run(n, cost);
+  exSel = null; closeModal();
+  uiDirty = true; save();
+  renderCoinPage($('shopList'));
+  return true;
+}
+window.exOpen = exOpen; window.exRun = exRun; window.exSet = exSet;   /* 게이트·자 진입점 */
+
+/* ── 자리별 정의 셋 — UI·산수는 위 부품이 전부 갖고, 여기는 «무엇을 얼마에» 만 적는다 ── */
+/* §9 재화 교환 — 490 주인 확정 «전부 1:1» (비율을 적을 자리 자체가 없다) */
+const exDefCur = x => ({
+  t: x.n + ' 교환', flat:true,
+  step: () => 1,
+  have: () => Math.floor(S.dia),
+  ic:  () => curIc('dia'),
+  gic: () => curIc(x.k),
+  gain: n => n,
+  run(n, cost){
+    S.dia -= cost;
+    S[x.k] = (S[x.k] || 0) + n;                       /* 697 — 우편 경유 없이 이 자리에서 지급 */
+    fxReward(null, FXCUR[x.k] ? [x.k] : []);          /* 512 — 교환으로 받은 그 재화의 색 */
+    notify(curIc('dia') + ' <b>' + fmt(cost) + '</b> → ' + curIc(x.k) + ' <b>' + fmt(n) + '</b> 지급');
+  }
+});
+/* §10 던전 입장권 — 490 주인 확정 «전부 1000 다이아» (`dunExPrice()` 한 곳에서 온다) */
+const exDefDun = d0 => ({
+  t: d0.n + ' 입장권 교환', flat:true,
+  step: () => dunExPrice(),
+  have: () => Math.floor(S.dia),
+  ic:  () => curIc('dia'),
+  gic: () => curIc(dunTk(d0.id)),
+  gain: n => n,
+  run(n, cost){
+    S.dia -= cost;
+    S.dunTk[d0.id] = (S.dunTk[d0.id] | 0) + n;
+    fxReward();                                       /* 58 — 다른 교환·수령과 같은 피드백 */
+    notify(curIc('dia') + ' <b>' + fmt(cost) + '</b> → <b>' + d0.n + '</b> 입장권 <b>×' + fmt(n)
+      + '</b> (보유 ' + (S.dunTk[d0.id] | 0) + '장)');
+  }
+});
+/* §8 마일리지 — 지불 재화가 다이아가 아닌 자리다(부품이 «지불 재화» 를 정의에서 읽는 이유) */
+const exDefMile = () => ({
+  t: '마일리지 교환', flat:true,
+  step: () => MILE_NEED,
+  have: () => S.mileage | 0,
+  ic:  () => curIc('mile'),
+  gic: () => curIc('dia'),
+  gain: n => n * MILE_DIA,
+  run(n){ mileageExchange(n); }
+});
 
 /* ---- 204 던전 입장권 교환 (다이아 → 던전별 입장권) ----
    ⚑ **490(주인 확정 2026-08-30): «던전 입장권은 전부 1000 다이아로 해줘».**
@@ -28896,6 +29090,9 @@ function closeModal(){
   if(m.classList.contains('on') && m.querySelector('#rouDisc') && rouLocked()) return false;
   m.classList.remove('on');
   modalShell(null);
+  /* 715 — 딤 탭·다른 팝업 전환으로 닫혀도 «열려 있는 교환» 은 같이 닫힌다.
+     남겨 두면 다음 팝업의 [교환] 이 아닌 자리에서 `exRun()` 이 성립해 버린다. */
+  exSel = null;
   return true;
 }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
@@ -32620,14 +32817,17 @@ function buyDiaPack(p){
 }
 /* 디버그 지급 — 결제가 없는 동안 마일리지 적립·교환을 실제로 굴려 보기 위한 유일한 경로 */
 window.devBuyDia = id => buyDiaPack(DIA_PACKS.find(x => x.id === id));
-function mileageExchange(){
-  if((S.mileage || 0) < MILE_NEED) return false;
+/* 715 — 인자 `n`(교환 횟수) 이 생겼다. 옛 호출부·자는 `mileageExchange()` = 1회로 그대로 돈다.
+   ⚠ 차감·지급은 **n 배** 지만 확인 UI(수량 슬라이더)는 위 `exOpen` 이 갖는다 — 이 함수는 실행자다. */
+function mileageExchange(n){
+  const k = Math.max(1, Math.floor(n || 1));
+  if((S.mileage || 0) < MILE_NEED * k) return false;
   /* 697 — 쿠폰 차감도 보상 지급도 같은 틱이다(153 의 «보상은 우편으로» 를 뒤집은 자리) */
-  S.mileage -= MILE_NEED;
-  grantNow({ t:'📦 마일리지 교환', c:MILE_DIA });
+  S.mileage -= MILE_NEED * k;
+  grantNow({ t:'📦 마일리지 교환', c:MILE_DIA * k });
   uiDirty = true; save();
   renderCoinPage($('shopList'));
-  notify(curIc('dia') + ' <b>' + fmt(MILE_DIA) + '</b> 지급 · 남은 마일리지 ' + S.mileage + '개');
+  notify(curIc('dia') + ' <b>' + fmt(MILE_DIA * k) + '</b> 지급 · 남은 마일리지 ' + S.mileage + '개');
   return true;
 }
 function renderCoinPage(list){
@@ -32811,19 +33011,19 @@ function renderCoinPage(list){
      수량 탭(y3186 h73)이 들어간다 — 아래 §10 좌표는 한 줄도 안 움직인다. */
   h += '<div class="cn-rb" style="--jz-d:-2.4s;top:3084px;--jz-ga:' + jzShineA('#1AB4D6') + ';--jz-gd:' + jzShadeA('#1AB4D6') + ';--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물조각 교환</i></div>';
-  const exN = exQtyN();
-  h += '<div class="cn-qty">' + EX_QTYS.map((q, i) =>
-        '<b class="q' + (exQty === q ? ' on' : '') + '" data-exq="' + q + '" style="left:' + (i * 216) + 'px">'
-        + (q === 'MAX' ? 'MAX' : '×' + q) + '</b>').join('') + '</div>';
+  /* 715 — 수량 탭이 있던 94px 구간은 §10 과 **같은 문법**의 안내 한 줄이 받는다(자리를 비우지 않는다).
+     클릭 뒤에 수량을 정한다는 것은 화면이 말해 줘야 한다 — 안 그러면 카드가 «×1 전용» 으로 읽힌다. */
+  h += '<div class="cn-tknt ex"><i>카드를 누르면 슬라이더로 개수를 정합니다</i></div>';
   EXCHANGE.forEach((x, i) => {
-    const px = [256, 546][i], big = exN >= 10000;
+    const px = [256, 546][i];
     h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px' + jzK(i, 4) + ';--fs:40.8px;--sx:.98'
-      +  ';--qx:' + (big ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5'
+      +  ';--qx:1;--hd:#1AB4D6;--hr:#7FE4F5'
       +  ';--jz-ga:' + jzShineA('#1AB4D6') + ';--jz-gd:' + jzShadeA('#1AB4D6') + '">'
       +  '<div class="bg"></div><div class="hd"><i>' + x.n + '</i></div>'
       +  '<div class="pn"><em>' + curIc(x.k) + '</em></div>'
-      +  '<div class="qt">×' + fmt(exN) + '</div>'
-      +  '<div class="bt buy" data-ex="' + x.k + '"><u class="pr">' + curIc('dia') + ' ' + fmt(exN) + '</u></div><i class="stk btstk"></i>'
+      /* 715 — 카드가 적는 것은 **한 개의 값**이다(수량은 슬라이더가 정한다). §10 입장권 칸과 같은 꼴. */
+      +  '<div class="qt">×1</div>'
+      +  '<div class="bt buy" data-ex="' + x.k + '"><u class="pr">' + curIc('dia') + ' 1</u></div><i class="stk btstk"></i>'
       +  '<div class="fr"></div></div>';
   });
   /* §10 던전 입장권 교환 — 204(주인 지시 «상점에서 다이아로 던전별 입장권 교환»).
@@ -32857,36 +33057,12 @@ $('shopList').addEventListener('click', e => {
     shopCat = 'pass'; setShopCatTabs('pass'); renderShopPage(); $('shopList').scrollTop = 0;
     return;
   }
-  /* 490 §9 수량 탭 — 고른 수량만 바꾸고 다시 그린다(세이브 없음 · 재화는 안 움직인다) */
-  const eq = e.target.closest('[data-exq]');
-  if(eq){
-    const v = eq.dataset.exq;
-    exQty = v === 'MAX' ? 'MAX' : +v;
-    renderCoinPage($('shopList'));
-    return;
-  }
-  /* 490 §9 재화 교환 — **1:1**(주인 확정). 수량 n → 다이아 −n · 그 재화 +n. */
+  /* 715 §9 재화 교환 — 누르면 **수량 슬라이더 팝업**이 뜬다(지불·지급은 [교환] 을 눌러야 일어난다).
+     490 의 수량 탭(`[data-exq]`)은 주인 보강 «x1 x10 x100 max방식말고» 로 선언째 사라졌다. */
   const ex0 = e.target.closest('[data-ex]');
   if(ex0){
     const ex = EXCHANGE.find(v => v.k === ex0.dataset.ex);
-    if(!ex) return;
-    const n = exQtyN();
-    if(S.dia < n){ notify(curIc('dia') + ' <b>' + fmt(n - S.dia) + '</b> 더 필요합니다'); return; }
-    S.dia -= n;
-    {
-      /* 697 — 두 갈래(우편 · 즉시)가 하나로 접혔다. 153 이 «유물조각은 우편으로» 로 갈라 둔 분기를
-         주인 지시(«다이아를 다른재화로 바꾸는거는 즉각으로 … 우편으로 오지말고»)가 없앴다 ⇒
-         이제 교환은 재화 종류와 무관하게 **204 입장권과 같은 처리**다(`ex.mail` 은 선언째 사라졌다). */
-      S[ex.k] = (S[ex.k] || 0) + n;
-      /* 518 3회차 — «여기서 났다» 를 화면이 **알려 준다**. 안 알려 주면 fxSrc 가 «마지막으로 누른
-         버튼» 을 추측으로 집는데, 10 상점은 페이지형(z28)이라 3회차부터 «덮는 층» 이다 ⇒ 추측
-         발원은 페이지 아래로 내려가 **진짜 보상이 안 보이게** 된다(probe518p 표의 «재화 O + 발원 X»). */
-      fxAt(ex0);
-      fxReward(null, FXCUR[ex.k] ? [ex.k] : []);   /* 512 — 교환으로 받은 그 재화의 색 */
-    }
-    uiDirty = true; save();
-    renderCoinPage($('shopList'));
-    notify(curIc('dia') + ' <b>' + fmt(n) + '</b> → ' + curIc(ex.k) + ' <b>' + fmt(n) + '</b> 지급');
+    if(ex) exOpen(exDefCur(ex), ex0);
     return;
   }
   /* 204 §10 — 다이아 → 던전별 입장권. **즉시 지급**한다. 204 는 그 이유를 «우편 스키마에 자리가
@@ -32896,17 +33072,8 @@ $('shopList').addEventListener('click', e => {
   const dx = e.target.closest('[data-dunex]');
   if(dx){
     const d = DUNGEONS.find(v => v.id === dx.dataset.dunex);
-    if(!d) return;
-    const pr = dunExPrice();
-    if(S.dia < pr){ notify(curIc('dia') + ' <b>' + fmt(pr - S.dia) + '</b> 더 필요합니다'); return; }
-    S.dia -= pr;
-    S.dunTk[d.id] = (S.dunTk[d.id] | 0) + 1;
-    fxAt(dx);                                 /* 518 3회차 — 위 §9 교환과 같은 이유(아는 발원) */
-    fxReward();                               /* 58 — 다른 교환·수령과 같은 피드백 */
-    uiDirty = true; save();
-    renderCoinPage($('shopList'));
-    notify(curIc('dia') + ' <b>' + fmt(pr) + '</b> → <b>' + d.n + '</b> 입장권 <b>×1</b> (보유 '
-      + (S.dunTk[d.id] | 0) + '장)');
+    /* 715 — 여기도 §9 와 **같은 부품**이다(입장권만 «클릭 = 1장» 으로 남으면 자리마다 조작이 갈린다) */
+    if(d) exOpen(exDefDun(d), dx);
     return;
   }
   /* 44·589 다이아 상품 — **클릭 = 결제 완료**(주인 지시 2026-08-31, 목업). 지급은 우편함(153)이고
@@ -32916,7 +33083,9 @@ $('shopList').addEventListener('click', e => {
     buyDiaPack(DIA_PACKS.find(x => x.id === dp.dataset.diabuy));
     return;
   }
-  if(e.target.closest('#cnExch')){ mileageExchange(); return; }
+  /* 715 — 마일리지도 교환류다(지불 재화만 마일리지로 다르다). 쿠폰이 20개 넘게 쌓여 있으면
+     한 번에 두 번 이상 바꾸는 것이 자연스럽고, 그 판단을 슬라이더가 준다. */
+  if(e.target.closest('#cnExch')){ exOpen(exDefMile(), $('cnExch')); return; }
   const b = e.target.closest('[data-cnad]');
   if(!b) return;
   const a = COIN_ADS.find(x => x.id === b.dataset.cnad);
@@ -42411,7 +42580,9 @@ const DS_BAR_MS = 700;          /* 인디케이터 유지 시간 */
 /* ⚠ `canvas` 를 통째로 빼면 안 된다 — 87 코스튬 카드·10 상점 배너·35 패스 아이콘이 전부 캔버스라
    그 위에서 시작한 드래그가 통째로 죽는다(1회차에 50·10·22·35 가 이 이유로 0px 였다).
    빼야 하는 건 «누르고 있는 동안» 을 입력으로 쓰는 곳뿐이다 — 전투 캔버스(#view = 42 조이스틱)만. */
-const DS_NO = '#view,input,textarea,select,[data-tr],#cfTrack,#rwBasin';
+/* 715 — `#exTrack`(교환 수량 슬라이더)도 «누르고 있는 동안» 을 입력으로 쓰는 자리다.
+   빼지 않으면 95 드래그 스크롤이 포인터를 가져가 값이 안 따라온다(LESSONS 95-② 의 목록 규칙). */
+const DS_NO = '#view,input,textarea,select,[data-tr],#cfTrack,#rwBasin,#exTrack';
 let dsRec = null;               /* 진행 중 제스처 */
 let dsDragged = false;          /* 이 제스처가 «드래그» 로 확정됐는가 — 74 합성기가 읽는다 */
 /* 562 — 드래그로 끝난 제스처의 up 시각. 74 의 «네이티브 click 삼키기» 가 이 값을 읽어

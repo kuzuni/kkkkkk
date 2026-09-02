@@ -98,10 +98,12 @@ function judge(tag, r, key) {
   r = await ev(page, SHOT, { keys: ['dia', 'mileage'], run: 'S.mileage = MILE_NEED; mileageExchange();' });
   judge('[2]', r, 'dia');
 
+  /* 715 이관 — 카드 클릭은 이제 «수량 슬라이더 팝업» 을 열 뿐이고 지급은 [교환] 확정에서 난다.
+     697 이 재는 것(같은 틱 지급 · 새 우편 0)은 그대로이고 **누르는 순서**만 한 칸 늘었다. */
   blk('[3] 유물조각 교환 — 490 EXCHANGE · 실제 DOM 클릭(수리 전 `mail:1` 갈래)');
   await ev(page, () => { S.dia = 1e9; save(); openShopPage(null, 'coin'); uiDirty = true; });
   await page.waitForTimeout(400);
-  r = await ev(page, SHOT, { keys: ['relic', 'dia'], run: 'exQty = 1; var b = document.querySelector(\'[data-ex="relic"]\'); if(!b) throw new Error("교환 버튼 없음"); b.click();' });
+  r = await ev(page, SHOT, { keys: ['relic', 'dia'], run: 'var b = document.querySelector(\'[data-ex="relic"]\'); if(!b) throw new Error("교환 버튼 없음"); b.click(); exSet(1); exRun();' });
   judge('[3]', r, 'relic');
 
   blk('[4] 이용권 구매 보상 — 151 grantPass(cp·once)');
@@ -152,7 +154,7 @@ function judge(tag, r, key) {
   blk('[9] 룬강화석 교환 — EXCHANGE (구조축: 수리 전에도 즉시였다)');
   await ev(page, () => { S.dia = 1e9; openShopPage(null, 'coin'); uiDirty = true; });
   await page.waitForTimeout(300);
-  r = await ev(page, SHOT, { keys: ['rstone'], run: 'exQty = 1; var b = document.querySelector(\'[data-ex="rstone"]\'); if(!b) throw new Error("교환 버튼 없음"); b.click();' });
+  r = await ev(page, SHOT, { keys: ['rstone'], run: 'var b = document.querySelector(\'[data-ex="rstone"]\'); if(!b) throw new Error("교환 버튼 없음"); b.click(); exSet(1); exRun();' });
   if (r === null) ok(false, '[9] 측정 실패');
   else {
     ok(r.d.rstone > 0, '[9] [a] 룬강화석 즉시 지급', 'rstone Δ' + r.d.rstone);

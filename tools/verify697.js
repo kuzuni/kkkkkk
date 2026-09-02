@@ -128,11 +128,13 @@ const reset = `
   for (const ex of ['relic', 'rstone']) {
     const r = await ev(page, '(() => {' + reset + `
       renderCoinPage(document.getElementById('shopList'));
-      exQty = 10;
       const k = '${ex}', v0 = +S[k] || 0, d0 = S.dia;
       const b = document.querySelector('[data-ex="' + k + '"]');
       if(!b) return { err:'버튼 없음' };
-      b.click();
+      /* 715 이관 — 수량은 옛 수량 탭이 아니라 슬라이더가 정하고 지급은 [교환] 확정에서 난다.
+         697 이 지키는 성질(같은 틱 지급 · 새 우편 0)은 그 확정 뒤로 자리만 옮겼다.
+         (이 절은 템플릿 문자열 안이라 역따옴표를 쓰지 않는다.) */
+      b.click(); exSet(10); exRun();
       return { d: (+S[k] || 0) - v0, dDia: S.dia - d0, mails: (S.mailx || []).length };
     })()`);
     ok(r && r.d === 10 && r.dDia === -10 && r.mails === 0,
@@ -142,8 +144,9 @@ const reset = `
   /* 204 던전 입장권 교환 — 재화가 아니라 던전별 카운터라 처음부터 즉시였다(구조축) */
   const C3 = await ev(page, '(() => {' + reset + `
     const d = DUNGEONS[0], n0 = S.dunTk[d.id] | 0;
+    /* 715 이관 — 카드 클릭은 수량 팝업을 열 뿐이고 지급은 확정에서 난다(옛 «클릭 = 1장» 폐지) */
     if(typeof dunExBuy === 'function') dunExBuy(d.id);
-    else { const b = document.querySelector('[data-dunex]'); if(b) b.click(); }
+    else { const b = document.querySelector('[data-dunex="' + d.id + '"]'); if(b){ b.click(); exSet(1); exRun(); } }
     return { d: (S.dunTk[d.id] | 0) - n0, mails: (S.mailx || []).length };
   })()`);
   ok(C3 && C3.d > 0 && C3.mails === 0, 'C3 던전 입장권 교환도 즉시 · 새 우편 0(204 구조축)',
