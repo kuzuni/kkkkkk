@@ -341,6 +341,28 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
   ok('[G5] 수량 상자 폭은 두 형 공통 한 값 139 — «999,999»(advance 137.48)까지 받는다',
     g9.every(r => near(r.uW, 139, 0.6)), g9.map(r => r.uW).join(' / '));
 
+  /* [G6] — 배너형 금색 판의 «세로». 자는 **중심 대 중심**이다(테 두께가 상쇄된다).
+     ref: 배너 +3.50 / +3.00 ref px 위 = +7.2 / +6.2 · 불릿 +1.50 / −0.50 = +3.1 / −1.0(갈린다).
+     ⇒ 배너만 목표 +6.7(±1.5) 로 못박고, **불릿은 «안 건드렸다» 를 그대로 못박는다**(+5.5). */
+  const pv = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.pvc').forEach((c) => {
+      ['rb1', 'rb2'].forEach((k) => {
+        const rb = c.querySelector('.' + k); if (!rb) return;
+        const r = rb.getBoundingClientRect(), b = rb.querySelector('b').getBoundingClientRect();
+        out.push({ ban: c.classList.contains('ban1'),
+          d: +((r.top + r.height / 2) - (b.top + b.height / 2)).toFixed(2) });
+      });
+    });
+    return out;
+  });
+  ok('[G6] 배너형 금색 판 중심이 리본 중심보다 6.7 위다 (ref +7.2/+6.2 — 중심 대 중심 자)',
+    pv.filter(r => r.ban).every(r => near(r.d, 6.7, 1.5)),
+    pv.filter(r => r.ban).map(r => r.d).join(' / '));
+  ok('[G6b] 불릿형은 안 건드렸다 — +5.5 그대로 (ref 가 +3.1/−1.0 로 갈려 목표가 안 선다)',
+    pv.filter(r => !r.ban).every(r => near(r.d, 5.5, 0.6)),
+    pv.filter(r => !r.ban).map(r => r.d).join(' / '));
+
   /* R7·R8 — 9회차의 두 수리를 되돌린다 */
   const after9 = await page.evaluate(() => {
     const st = document.createElement('style');
