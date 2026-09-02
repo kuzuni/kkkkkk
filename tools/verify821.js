@@ -19,9 +19,16 @@ const path = require('path');
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
 const FIX = '  #app.shortf #blsw .bls{margin-top:0}\n';
-const R_X = '  #app.shortf .bls-x{position:absolute;top:134px;right:45px;margin:0}';
+/* 826 이관 — ✕ 가 `#blsw`(프레임 좌표계)에서 `.bls`(그릇) 안으로 옮겨졌다.
+   짧은 프레임의 «코너» 규칙은 살아 있고 좌표만 그릇 기준이 됐다(그려지는 자리는 Δ0px).
+   여기서 이 상수가 하는 일은 하나 — §R 의 «문턱을 1712 로 옮긴» 사본을 만들 때 같이 옮기는 것이다. */
+const R_X = '  #app.shortf .bls-x{left:848px;top:0}';
 const R_PROMO = '  #app.shortf #blsw .bls-promo{margin-bottom:auto}';
 const R_PE = '  #app.shortf #blsw .bls-promo{pointer-events:none}\n  #app.shortf #blsw .bls-promo>.gb{pointer-events:auto}';
+/* 826 이관 — «✕ 가 코너로 간 프레임» 과 «✕ 의 흐름 몫 143 을 아래 가드가 대신 내는 프레임» 은
+   서로의 여집합이라 **한 짝**이다(§3 이 드는 그 짝). 문턱을 옮기는 §R 사본은 이 줄도 같이 옮겨야
+   한다 — 안 옮기면 사본 안에서 «✕ 는 흐름에 · 보상은 켜진» 세계가 돼 계단이 자란다. */
+const R_PB = '  #app:not(.shortf) #blsw{padding-bottom:289px}';
 const TOGGLE = "  app.classList.toggle('shortf', frameH < 1842);";
 
 let pass = 0, fail = 0;
@@ -33,7 +40,7 @@ const eq = (m, got, want, tol) => t(Math.abs(got - want) <= (tol === undefined ?
 
 function src() {
   const s = fs.readFileSync(SRC, 'utf8');
-  for (const [n, k] of [['821 한 줄', FIX], ['351 ✕ 코너', R_X], ['754 auto', R_PROMO], ['423 스트립', R_PE], ['shortf 토글', TOGGLE]]) {
+  for (const [n, k] of [['821 한 줄', FIX], ['351 ✕ 코너', R_X], ['754 auto', R_PROMO], ['423 스트립', R_PE], ['826 아래 가드', R_PB], ['shortf 토글', TOGGLE]]) {
     if (!s.includes(k)) { console.error(`verify821: «${n}» 자리를 못 찾았다. 자를 고쳐라.`); process.exit(3); }
   }
   return s;
@@ -152,6 +159,7 @@ function worstStep(M) {
     .replace(R_X, R_X.replace('#app.shortf ', '#app.shortf2 '))
     .replace(R_PROMO, R_PROMO.replace('#app.shortf ', '#app.shortf2 '))
     .replace(R_PE, R_PE.split('\n').map((l) => l.replace('#app.shortf ', '#app.shortf2 ')).join('\n'))
+    .replace(R_PB, R_PB.replace('#app:not(.shortf) ', '#app:not(.shortf2) '))
     .replace(TOGGLE, TOGGLE + "\n  app.classList.toggle('shortf2', frameH < 1712);");
   const R2 = await measure(browser, tmp('moved', moved), RH);
   const w2 = worstStep(R2);

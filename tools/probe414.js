@@ -61,7 +61,12 @@ async function measure(browser, file, H) {
     const cs = getComputedStyle(w);
     const tb = document.getElementById('tabbar');
     const tbb = box(tb);
-    const kids = [...w.children].map((e) => ({ c: (e.className || e.id || '?').toString().split(' ')[0], ...box(e) }));
+    /* 826 이관 — ✕ 가 `.bls` 안으로 들어가 `#blsw.children` 에서 빠졌다. 이 표는 «그려지는 조각» 을
+       세는 자리(덮임 · 프레임 밖)라 ✕ 를 이름으로 다시 넣는다(verify414 와 같은 이관). */
+    const parts = [...w.children];
+    const xEl = w.querySelector('.bls-x');
+    if (xEl && !parts.includes(xEl)) parts.push(xEl);
+    const kids = parts.map((e) => ({ c: (e.className || e.id || '?').toString().split(' ')[0], ...box(e) }));
     /* ⓑ 탭 5칸 전부 — 포인터가 실제로 가 닿는 하나(406-①) */
     const hits = [...document.querySelectorAll('.tab[data-t]')].map((t) => {
       const r = t.getBoundingClientRect();
@@ -79,8 +84,9 @@ async function measure(browser, file, H) {
       bls: box(q('#blsw .bls')), promo: box(q('#blsw .bls-promo')), x: box(q('#blsw .bls-x')),
       kids,
       /* 흐름 블록 = 스크롤 안에서 실제로 쌓인 것들 (✕ 는 shortf 에서 흐름 밖) */
-      flowTop: Math.min(...kids.filter((k) => k.c !== 'bls-x' || !document.getElementById('app').classList.contains('shortf')).map((k) => k.t)),
-      flowBot: Math.max(...kids.filter((k) => k.c !== 'bls-x' || !document.getElementById('app').classList.contains('shortf')).map((k) => k.b)),
+      /* 826 이관 — ✕ 는 이제 어느 프레임에서든 흐름 밖이다(`.bls` 의 abspos 자식). */
+      flowTop: Math.min(...kids.filter((k) => k.c !== 'bls-x').map((k) => k.t)),
+      flowBot: Math.max(...kids.filter((k) => k.c !== 'bls-x').map((k) => k.b)),
       coverPromo: cover(q('#blsw .bls-promo')), coverX: cover(q('#blsw .bls-x')),
       coverAny: Math.max(...kids.map((k) => Math.max(0, k.b - tbb.t))),
       out: kids.filter((k) => k.b > app.height + 0.5 || k.t < -0.5).map((k) => k.c),

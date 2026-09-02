@@ -26,15 +26,17 @@ const SRC = path.resolve(__dirname, '..', 'index.html');
 
 /* 821 이 넣은 한 줄. 못 찾으면 조용히 초록이 되지 않고 그렇게 말하고 죽는다(neg279·probe423 처방). */
 const FIX = '  #app.shortf #blsw .bls{margin-top:0}\n';
-/* 등재문이 «같이 옮겨야 한다» 고 지목한 세 자리(351 ✕ 코너 · 754 auto 물림 · 423 스트립 닫힘). */
-const R_X = '  #app.shortf .bls-x{position:absolute;top:134px;right:45px;margin:0}';
+/* 등재문이 «같이 옮겨야 한다» 고 지목한 세 자리(351 ✕ 코너 · 754 auto 물림 · 423 스트립 닫힘)
+   + 826 이 더한 한 자리(✕ 의 흐름 몫 143 을 아래 가드가 대신 낸다 — 코너 규칙의 여집합이라 한 짝이다). */
+const R_X = '  #app.shortf .bls-x{left:848px;top:0}';
 const R_PROMO = '  #app.shortf #blsw .bls-promo{margin-bottom:auto}';
 const R_PE = '  #app.shortf #blsw .bls-promo{pointer-events:none}\n  #app.shortf #blsw .bls-promo>.gb{pointer-events:auto}';
+const R_PB = '  #app:not(.shortf) #blsw{padding-bottom:289px}';
 const TOGGLE = "  app.classList.toggle('shortf', frameH < 1842);";
 
 function src() {
   const s = fs.readFileSync(SRC, 'utf8');
-  for (const [n, k] of [['FIX', FIX], ['R_X', R_X], ['R_PROMO', R_PROMO], ['R_PE', R_PE], ['TOGGLE', TOGGLE]]) {
+  for (const [n, k] of [['FIX', FIX], ['R_X', R_X], ['R_PROMO', R_PROMO], ['R_PE', R_PE], ['R_PB', R_PB], ['TOGGLE', TOGGLE]]) {
     if (!s.includes(k)) {
       console.error(`probe821: «${n}» 자리를 못 찾았다 — 821·351·423 의 규칙이 바뀌었다. 자를 고쳐라.`);
       process.exit(3);
@@ -140,6 +142,7 @@ function steps(M) {
     .replace(R_X, R_X.replace('#app.shortf ', '#app.shortf2 '))
     .replace(R_PROMO, R_PROMO.replace('#app.shortf ', '#app.shortf2 '))
     .replace(R_PE, R_PE.split('\n').map((l) => l.replace('#app.shortf ', '#app.shortf2 ')).join('\n'))
+    .replace(R_PB, R_PB.replace('#app:not(.shortf) ', '#app:not(.shortf2) '))
     .replace(TOGGLE, TOGGLE + "\n  app.classList.toggle('shortf2', frameH < 1712);");
   const mv = await measure(browser, tmp('moved', moved), SWEEP);
   console.log('\n[3] 등재문 처방(문턱 1712) — `.bls` 상변');

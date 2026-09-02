@@ -64,9 +64,17 @@ const spcAbsorbs = (a) => a.panelD > 0 && a.listD > 0 && a.resid >= -2 && a.resi
 const spcGapOk = (a) => a.gapD >= -1 && a.gapD < a.pitch && Math.abs(a.gapD - a.resid) <= 1;
 
 /* 처방을 걷어낸 사본 — §R 에서만 주입한다 */
+/* 826 이관(2026-09-02) — 34 축복의 두 줄이 «무엇을 되돌리는가» 는 그대로고, **되돌리는 방법**만 바뀌었다.
+   826 이 ✕ 를 `#blsw`(프레임 좌표계)에서 `.bls`(그릇) 안으로 옮겼으므로
+     ① 아래 가드 회수(351 ①)를 되돌리는 `padding-bottom:146` 은 **짧은 프레임에만** 건다 —
+        긴 프레임의 289 는 «✕ 가 흐름에서 빠진 143» 을 대신 내는 값이라, 같이 지우면
+        되돌림 사본에서 팝업이 71.5px 올라가 [R-c](2280 ✕ 상변 1793)가 이 자리와 무관하게 빨개진다.
+     ② ✕ 를 «코너로 올리기 전» 으로 되돌리는 것은 이제 `position` 이 아니라 **좌표**다 —
+        긴 프레임 자리(그릇 기준 left 422 / top 1440 = 스트립 아래 중앙)를 짧은 프레임에 그대로 준다.
+   두 줄 다 결과는 수리 전과 같은 값이다: 1600 에서 ✕ 하변 1712 > 프레임 1600(넘침 112px). */
 const REVERT = `
-  #blsw{padding-bottom:146px !important}
-  #app.shortf .bls-x{position:relative !important;top:16px !important;right:auto !important;margin:5px 0 auto !important}
+  #app.shortf #blsw{padding-bottom:146px !important}
+  #app.shortf .bls-x{left:422px !important;top:1440px !important}
   .eqp{max-height:calc(100% - 104px) !important}
   #panel{max-height:calc(100% - 284px) !important}
   #app.shortf #modal.ml69{padding:126px 91px !important}

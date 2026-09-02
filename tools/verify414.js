@@ -47,7 +47,11 @@ const SRC = fs.readFileSync(FILE, 'utf8');
 /* 갈아 끼울 자리 둘 — 못 찾으면 조용히 초록이 되지 않고 그렇게 말하고 죽는다(neg279 처방) */
 const GUARD = '#blsw{padding-bottom:clamp(16px, calc(var(--frameh) - 1696px), 146px)}';
 const GUARD_OFF = '#blsw{padding-bottom:146px}';
-const XMOVE = '#app.shortf .bls-x{position:absolute;top:134px;right:45px;margin:0}';
+/* 826 이관 — ✕ 가 `#blsw`(프레임 좌표계) 밖 형제에서 `.bls`(그릇) 의 자식으로 옮겨졌다.
+   짧은 프레임의 «코너로 올린다» 규칙은 그대로 살아 있고 좌표만 그릇 기준이다(그려지는 자리 Δ0px).
+   이 줄을 떼면 ✕ 는 **긴 프레임 자리**(그릇 기준 left 422 / top 1440 = 스트립 아래 중앙)로 돌아가므로
+   §R 이 묻는 것(«회수는 실재하는가»)은 한 글자도 안 바뀐다 — 1600 에서 여전히 프레임을 넘는다. */
+const XMOVE = '#app.shortf .bls-x{left:848px;top:0}';
 const XMOVE_OFF = '#app.shortf .bls-x{}';
 
 const INK = 142;    /* HUD 잉크 끝 = `.pedge` 하변 (351 4회차) */
@@ -74,8 +78,16 @@ async function measure(browser, file, H, opt) {
     const w = document.getElementById('blsw');
     const tb = box(document.getElementById('tabbar'));
     const shortf = app.classList.contains('shortf');
-    const kids = [...w.children].map((e) => ({ c: (e.className || e.id || '?').toString().split(' ')[0], ...box(e) }));
-    const flow = kids.filter((k) => !(shortf && k.c === 'bls-x'));
+    /* 826 이관 — ✕ 가 `.bls` 안으로 들어가 `#blsw.children` 에서 빠졌다. 이 표는 «그려지는 조각» 을
+       세는 자리(덮임 `coverAny` · 프레임 밖 `out`)라 ✕ 를 이름으로 다시 넣는다 —
+       안 넣으면 [2-b]·[3-b] 가 ✕ 를 못 보고 **조용히 초록**이 된다(328 교훈). */
+    const parts = [...w.children];
+    const xEl = w.querySelector('.bls-x');
+    if (xEl && !parts.includes(xEl)) parts.push(xEl);
+    const kids = parts.map((e) => ({ c: (e.className || e.id || '?').toString().split(' ')[0], ...box(e) }));
+    /* 826 이관 — ✕ 는 이제 `.bls` 의 자식이라 `#blsw` 의 흐름 자식은 어느 프레임에서든 «팝업 + 스트립» 둘뿐이다
+       (수리 전에는 짧은 프레임에서만 ✕ 를 빼야 했다). 그래서 걸러 낼 것이 남지 않았다 — 남은 것을 «흐름» 으로 적는다. */
+    const flow = kids.filter((k) => k.c !== 'bls-x');
     /* 2회차 비평 CN 의 반론 둘을 자로 — ① 상단 HUD 가 «살아 있는 터치 영역» 인가
        ② 2280 ✕ 가 있던 가로 대역(x471..609)의 하단이 1600 에서 조작 요소가 되는가 */
     const topHits = [...document.getElementById('top').querySelectorAll('*')]
@@ -263,7 +275,7 @@ async function measure(browser, file, H, opt) {
   ok(RG.scrollH > RG.clientH,
     `[R-a] 아래 가드를 고정 146 으로 되돌린 사본은 1600 에서 **스크롤이 생긴다** (scrollH ${RG.scrollH} > ${RG.clientH}) ⇒ [3-a] 는 공허하지 않다`);
   ok(RX.scrollH > RX.clientH && RX.x.t > RX.promo.b,
-    `[R-b] shortf ✕ 재배치를 뗀 사본은 ✕ 가 흐름으로 돌아와(${r1(RX.x.t)}..${r1(RX.x.b)} > 스트립 ${r1(RX.promo.b)}) `
+    `[R-b] shortf ✕ 재배치를 뗀 사본은 ✕ 가 긴 프레임 자리로 돌아와(${r1(RX.x.t)}..${r1(RX.x.b)} > 스트립 ${r1(RX.promo.b)}) `
     + `1600 에서 ${RX.scrollH - RX.clientH}px 넘친다 (scrollH ${RX.scrollH}) ⇒ 회수는 실재한다`);
   ok(Math.round(RG2.bls.t) === Math.round(M[2280].bls.t) && Math.round(RX2.bls.t) === Math.round(M[2280].bls.t)
      && Math.round(RG2.coverAny) === 0 && Math.round(RX2.coverAny) === 0,
