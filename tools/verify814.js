@@ -118,6 +118,27 @@ async function run(file, h) {
     };
   });
 
+  /* ⚑ 3회차 — **선언한 키프레임이 실제로 렌더되는가**를 제품에게 직접 묻는다.
+     비평가 둘이 캡처 픽셀에서 «0% 의 .84 트로프가 8프레임 어디에도 없다» 를 각자 냈는데,
+     그 판정은 크롭 좌표·안티에일리어스에 기댄 추론이다. 자는 추론하지 말고 **계산된 transform**
+     을 읽는다 — 그러면 다음 사람이 같은 물음을 픽셀로 다시 싸울 필요가 없다. */
+  const K = await p.evaluate(() => {
+    const l = document.querySelector('#bCos .sk-card.sel .sk-clv');
+    if (!l) return { none: true };
+    const an = l.getAnimations();
+    an.forEach((a) => a.pause());
+    const sc = (t) => {
+      an.forEach((a) => { try { a.currentTime = t; } catch (_) {} });
+      const cs = getComputedStyle(l);
+      const m = /matrix\(([-\d.]+)/.exec(cs.transform || '');
+      return { s: m ? +parseFloat(m[1]).toFixed(3) : null, c: cs.color,
+        own: cs.getPropertyValue('--clv-c').trim() };
+    };
+    const f0 = sc(0), fp = sc(100), fe = sc(340);
+    an.forEach((a) => { try { a.play(); } catch (_) {} });
+    return { names: an.map((a) => a.animationName), f0, fp, fe };
+  });
+
   /* 팝업 자리(08 세부) — 같은 말인가 */
   const P = await p.evaluate(() => {
     for (const d of document.querySelectorAll('.fx-plus')) d.remove();
@@ -151,7 +172,7 @@ async function run(file, h) {
   });
 
   await b.close();
-  return { D, P, C, errs };
+  return { D, P, C, K, errs };
 }
 
 /* 델타(텍스트 플로터) 잉크 ↔ 호스트 카드 글자 잉크의 교집합 */
@@ -167,7 +188,7 @@ function inter(plus, inks) {
 
 (async () => {
   console.log('VERIFY814 — 50 코스튬 강화 연출이 호스트 카드의 값 줄을 덮지 않는다\n');
-  const { D, P, C, errs } = await run(process.env.V814_SRC || 'index.html', 2280);
+  const { D, P, C, K, errs } = await run(process.env.V814_SRC || 'index.html', 2280);
 
   console.log('[A] 실제 [강화] 클릭 경로 — 없어진 것');
   console.log('  · 호스트 글자 ' + D.selInks.map((k) => '«' + k.txt + '» dy ' + r0(k.y - D.sel.y) + '..' + r0(k.b - D.sel.y)).join(' · '));
@@ -208,6 +229,22 @@ function inter(plus, inks) {
     console.log('  · 값 줄(' + valRows.map((k) => '«' + k.txt + '»').join(' · ') + ') 위에 앉은 알 '
       + onVal.length + '/' + D.sparkAt.length + ' · 상태 라벨 «착용 중» 포함 ' + onAll.length + '알');
     ok(onVal.length === 0, '[B7] ★ 입자가 **값 줄 두 곳** 위에 안 앉는다 — ' + onVal.length + '알 (링 세로 눌림 `--burst-ry`)');
+  }
+
+  console.log('\n[B-K] 선언한 키프레임이 실제로 렌더되는가(추론 말고 계산값으로)');
+  if (K.none) { ok(false, '[B8] 값 줄 호스트를 못 찾았다'); }
+  else {
+    console.log('  · t=0 scale ' + K.f0.s + ' · ' + K.f0.c + ' | t=100 scale ' + K.fp.s + ' | t=340 scale ' + K.fe.s + ' · ' + K.fe.c);
+    ok(K.f0.s !== null && Math.abs(K.f0.s - 0.84) < 0.01,
+      '[B8] ★ 0% 트로프가 **실제로 렌더된다** — t=0 scale ' + K.f0.s + '(선언 .84 · `both` 가 앞을 채운다)');
+    ok(K.fp.s >= 1.17, '[B9] 정점이 호스트 비례 진폭이다 — t=100 scale ' + K.fp.s + ' ≥ 1.17 (58 22회차 1.07 은 48.5px 글리프의 값)');
+    /* ⚠ «제 색» 은 흰색이 아니다 — 착용 중(dim)·미보유(lk) 카드는 #ACACAC 다. 그래서 이 항은
+       상수와 비교하지 않고 **호스트가 선언한 `--clv-c`** 와 비교한다(색을 변수 뒤로 옮긴 이유가
+       바로 이것이다 — 앰버가 «어디로» 돌아갈지를 카드 상태가 정한다). */
+    const hex = (K.fe.own || '').replace('#', '').toLowerCase();
+    const rgb = hex.length === 6 ? [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ') : null;
+    ok(Math.abs(K.fe.s - 1) < 0.01 && !!rgb && K.fe.c.replace(/\s+/g, ' ') === 'rgb(' + rgb + ')',
+      '[B10] 끝나면 제 자리·**호스트가 선언한 제 색**으로 돌아온다 — scale ' + K.fe.s + ' · ' + K.fe.c + ' = --clv-c ' + K.fe.own);
   }
 
   console.log('\n[C] 연출이 «정보» 를 잃지 않았는가 — 값 자체');

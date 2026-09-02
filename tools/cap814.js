@@ -76,11 +76,25 @@ const clipOf = (sel) => ({ x: Math.max(0, Math.round(sel.x - 226)), y: Math.max(
     let src = 'index.html';
     if (kind === 'pre') {
       const s = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-      const from = 'fxUpOk(card, card);                            /* 17 «성공» 과 같은 한 세트(58 톤) — 814: 문구는 뺀다 */';
-      const to = "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));";
-      if (s.indexOf(from) < 0) throw new Error('수리 전 주입 앵커를 못 찾았다');
+      /* ⚠⚠ 3회차 사고 — «수리 전» 사본이 **호출 한 줄만** 되돌리고 있었다. 그래서 판 B 에도
+         2·3회차가 더한 값 줄 팝·앰버가 그대로 살아 있었고, 비평가 둘이 «A 와 B 의 step 2~8 이
+         md5 까지 같다 ⇒ 이번 회차가 팝을 1px 도 안 바꿨다» 로 읽었다(CR5 잔존 ⑥ · CR6 «미회수»).
+         **대조군이 오염되면 회차의 성과가 통째로 안 보인다.** ⇒ 되돌릴 것을 **넷** 다 되돌린다:
+         호출 · 팝 호출 · 팝/앰버 선언 · 그리고 «색을 변수 뒤로 옮긴 것» 까지. */
+      const REV = [
+        ['fxUpOk(card, card);                            /* 17 «성공» 과 같은 한 세트(58 톤) — 814: 문구는 뺀다 */',
+         "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));"],
+        ['      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n', ''],
+        ['  .sk-clv.fx-cvswap{animation:fxCvSwapS .34s cubic-bezier(.34,1.56,.64,1) both, fxCvLit .34s linear}', ''],
+        ['#bCos .sk-card{--burst-ry:.29}', '']
+      ];
+      let rev = s;
+      for (const [a, b2] of REV) {
+        if (rev.indexOf(a) < 0) throw new Error('수리 전 주입 앵커를 못 찾았다 — ' + a.slice(0, 40));
+        rev = rev.split(a).join(b2);
+      }
       src = '.cap814-pre.html';
-      fs.writeFileSync(path.join(ROOT, src), s.split(from).join(to));
+      fs.writeFileSync(path.join(ROOT, src), rev);
     }
 
     /* ── 벌 1: CSS 진행도 정지 스텝 ─────────────────────────── */
