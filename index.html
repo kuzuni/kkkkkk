@@ -7134,7 +7134,7 @@
      ⚠ 카드 높이는 «본문이 정한다» — ref 두 장이 259 / 374 로 서로 다르다(배너형 vs 불릿형).
        그래서 높이는 CSS 상수가 아니라 렌더가 인라인으로 준다(PVC_H_BAN / PVC_H_BL).
      ========================================================================== */
-  .pvc{position:absolute;left:51px;width:978px}
+  .pvc{position:absolute;left:51px;--pvc-w:978px;width:var(--pvc-w)}
   .pvc>*{position:absolute;box-sizing:border-box}
   /* 팔레트 — ref: 몸통 / 헤더 밴드(몸통보다 어두운 단) / 안쪽 밝은 림 / 상태 탭 */
   .pvc.pb{--c:#43BCF5;--s:#3A86D4;--h:#6AE8FF;--d:#3376BC}   /* 1장 파랑 (ref 실측) */
@@ -7288,9 +7288,23 @@
      ⚠ 이모지를 ref bbox 까지 늘리는 방법은 **글리프마다 배율이 달라져** 셋을 따로 맞춰야 했다
      (▶ 는 세로가 길고 🎟 는 가로가 길다). 대신 **자리 자체를 옅은 판으로 그려** bbox 를 고정하고,
      이모지는 그 안에 자연 비율로 앉힌다 — 나중에 이미지로 교체할 때 판만 지우면 된다. */
-  .pvc>.art{left:500px;top:135px;width:462px;height:303px;
-    background:rgba(255,255,255,.12);border-radius:22px}
-  .pvc.ban1>.art{left:531px;top:78px;width:390px;height:239px}
+  /* ⚑ 667 6회차 — **일러스트 자리가 노치 구멍을 메우고 있었다.** `.art` 는 `.bg`·`.fr` 과 달리 마스크
+     밖의 형제라 노치가 뚫린 자리에도 옅은 판(`rgba(255,255,255,.12)`)이 그대로 남았다. 불릿형은
+     판 우변이 카드 우변에서 **16px** 뿐이라 40 깊이의 구멍과 24px 겹친다 ⇒ `scan667 --cap` 이
+     불릿 카드 **가운데 노치만** 깊이 30 → **16**(바탕 기준)으로 읽었다(배너형은 판 우변이 57 이라 안 닿는다).
+     ref 는 노치가 카드 실루엣을 자르므로 **안에 있는 일러스트도 같이 잘린다** — 즉 마스크가 정답이다.
+     ⚠ 좌표를 손으로 다시 적지 않는다(402 «사본을 지운다») — `--ntc-fr` 은 **카드 상자 기준**이라
+     `mask-size` 를 카드 크기로 두고 `mask-position` 을 판의 좌상단만큼 되밀면 같은 타원이 같은 자리에 온다.
+     그래서 `left/top` 과 `mask-position` 이 **한 변수**(`--art-l/--art-t`)를 같이 읽는다. */
+  .pvc>.art{--art-l:500px;--art-t:135px;left:var(--art-l);top:var(--art-t);width:462px;height:303px;
+    background:rgba(255,255,255,.12);border-radius:22px;
+    -webkit-mask:var(--ntc-fr);mask:var(--ntc-fr);
+    -webkit-mask-composite:source-in;mask-composite:intersect;
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+    -webkit-mask-size:var(--pvc-w) var(--pvc-h);mask-size:var(--pvc-w) var(--pvc-h);
+    -webkit-mask-position:calc(-1 * var(--art-l)) calc(-1 * var(--art-t));
+    mask-position:calc(-1 * var(--art-l)) calc(-1 * var(--art-t))}
+  .pvc.ban1>.art{--art-l:531px;--art-t:78px;width:390px;height:239px}
   .pvc>.art>em{position:absolute;left:0;right:0;top:0;text-align:center;
     font-size:225px;line-height:303px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
   /* ⚑ 480 — 오른쪽 일러스트 자리도 같은 ▶ 라 같은 뿌리로 흐렸다(파랑 판 위 `#E8ECF5` = 대비 1.83:1,
@@ -33958,7 +33972,9 @@ function renderPassPage(list){
       + 'px;--gx:' + gx + 'px"><i>' + lab + '</i><b>' + curIc('dia') + '</b><u>' + fmt(n) + '</u></div>';
     const cardH = pvCardH(p), ntc = pvNotches(p, cardH);
     h += '<div class="pvc p' + p.pal + (p.ban ? ' ban1' : '') + (own ? ' own' : '') + '"'
-      +  ' data-pv="' + p.id + '" style="top:' + tops[i] + 'px;height:' + cardH + 'px'
+      /* `--pvc-h` = 카드 높이를 «값 하나» 로 둔다 — `height` 도 이 변수를 읽고, 일러스트 자리
+         `.art` 의 `mask-size` 도 이 변수를 읽는다(667 6회차 · 높이를 두 번 적지 않는다). */
+      +  ' data-pv="' + p.id + '" style="top:' + tops[i] + 'px;--pvc-h:' + cardH + 'px;height:var(--pvc-h)'
       +  ';--ntc-fr:' + pvNtcMask(ntc, false) + ';--ntc-bg:' + pvNtcMask(ntc, true) + '">'
       +  '<div class="bg"></div><div class="hdb"></div>'
       +  '<div class="stt"><i>' + passStatusTxt(p) + '</i></div>'

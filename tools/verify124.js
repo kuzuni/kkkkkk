@@ -209,8 +209,11 @@ function safeElapsed(bless, until0, cands) {
          자리» 밖의 새 넘침은 그대로 빨개진다 ⑵ 음성항(정말 새는 노드 주입) ⑶ §R2 되돌림
          (`.ntc` 의 `overflow` 를 떼면 그 `<s>` 는 진짜로 새고 [2-s] 가 빨개진다). */
       spill: cds.map(c => spillOf(c, true)),
-      /* 래칫 — 클리핑을 안 보는 옛 축. 값이 «.ntc>s 세 자리» 를 벗어나면 빨개진다 */
+      /* 래칫 — 클리핑을 안 보는 옛 축. 값이 «.ntc 안의 링» 을 벗어나면 빨개진다 */
       spillRaw: cds.map(c => spillOf(c, false)),
+      /* 667 6회차 이관 — 노치는 «카드당 하나» 가 아니다(4·5회차가 피치로 바꿨다). 래칫이
+         자리 수를 셀 수 있게 카드별 `.ntc` 개수를 같이 낸다(상수로 적지 않는다 — 402). */
+      ntcN: cds.map(c => c.querySelectorAll('.ntc').length),
       wrapH: Math.round(document.querySelector('#shopList .cn-wrap.pv').getBoundingClientRect().height
         / (document.getElementById('app').getBoundingClientRect().width / 1080)),
     };
@@ -227,9 +230,17 @@ function safeElapsed(bless, until0, cands) {
   /* 679 래칫 — raw 축은 «잘려 있음이 확인된 자리» 하나만 허용한다. `.ntc>s` 는 667 의 물결
      노치이고 `.ntc{overflow:hidden}` 가 오른쪽 절반을 자른다(위 주석). 그 밖의 raw 넘침이
      새로 생기면 여기서 먼저 빨개져 «클리핑에 가려진 결함»(LESSONS 151-③)이 조용히 지나가지 않는다. */
-  ok('[2-s2] raw 넘침은 «잘려 있음이 확인된» .ntc>s 세 자리뿐 (래칫 — 679)',
-    pv.spillRaw.every(a => a.length === 1 && a[0] === 'S@ntc'),
-    JSON.stringify(pv.spillRaw));
+  /* ⚑ 667 6회차 이관 — 이 항은 «세 자리(카드당 하나)» 라는 **그때의 개수**에 굳어 있었다.
+     667 4회차가 노치를 «피치가 정하는 되풀이 무늬» 로 바꾸고(카드당 2~3개) 5회차가 각 노치에
+     밝은 림 `<u>` 를 더하면서 값이 카드당 4~6 이 됐다 — 제품은 옳고 자만 옛 세계에 있었다.
+     ⚠ **«길이를 안 본다» 로 눌러 초록으로 만들지 않았다**(328-330 교훈 — 그러면 링이 몇 개로 늘어도
+     조용해진다). 물음을 **개수에서 규칙으로** 옮긴다: raw 넘침은 ⑴ 전부 `.ntc` 안의 링이고
+     ⑵ 그 수가 **정확히 노치 수 × 2**(`<s>` 검정 링 + `<u>` 밝은 림)여야 한다. 노치가 하나 더 생기면
+     자리 수가 따라 늘어 초록이지만, `.ntc` **밖**의 새 넘침이나 짝이 안 맞는 링은 그대로 빨개진다. */
+  ok('[2-s2] raw 넘침은 «잘려 있음이 확인된» .ntc 안의 링뿐 · 자리 수 = 노치 수 × 2 (래칫 — 679 · 667 6회차)',
+    pv.spillRaw.every((a, i) => a.length === pv.ntcN[i] * 2
+      && a.every(t => t === 'S@ntc' || t === 'U@ntc')),
+    JSON.stringify(pv.spillRaw) + ' / 노치 ' + JSON.stringify(pv.ntcN));
   /* 679 음성항 — 정말 새는 노드(클리핑 조상 없음)를 주입하면 [2-s] 가 빨개져야 한다.
      안 그러면 «축을 바꾼 것» 이 아니라 «항을 끈 것» 이다. */
   const neg = await page.evaluate(SPILL_SRC => {
@@ -573,9 +584,11 @@ function safeElapsed(bless, until0, cands) {
     return { before, off, offN: off.map(a => a.length), after };
   }, SPILL_SRC);
   ok('[R6-a] 되돌림 전 «보이는 넘침» 0', r2.before.every(n => n === 0), JSON.stringify(r2.before));
-  ok('[R6-b] .ntc 클리핑을 떼면 카드마다 그 <s> 가 «샌다» 로 잡힌다',
-    r2.offN.every(n => n === 1) && r2.off.every(a => a[0] === 'S@ntc'),
-    JSON.stringify(r2.off));
+  /* 667 6회차 이관 — [2-s2] 와 같은 이유로 «카드당 1개» 가 아니라 **노치 수 × 2** 다 */
+  ok('[R6-b] .ntc 클리핑을 떼면 카드마다 그 링들(<s>·<u>)이 «샌다» 로 잡힌다',
+    r2.offN.every((n, i) => n === pv.ntcN[i] * 2)
+      && r2.off.every(a => a.every(t => t === 'S@ntc' || t === 'U@ntc')),
+    JSON.stringify(r2.off) + ' / 노치 ' + JSON.stringify(pv.ntcN));
   ok('[R6-c] 되돌림을 걷으면 다시 0', r2.after.every(n => n === 0), JSON.stringify(r2.after));
 
   /* ================= 9. 콘솔 ================= */
