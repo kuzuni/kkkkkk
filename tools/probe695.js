@@ -88,16 +88,51 @@ const show = (tag, rows) => rows.forEach(x => console.log('     ' + tag.padEnd(2
   const errs = [];
 
   /* ── [1] 재현 ─────────────────────────────────────────── */
+  /* ⚑ **794 가 이 절의 축을 갈았다(2026-09-02).** 옛 꼴은 자유 장면에서 «셋 다 밴드 밖»(`off > tol`)
+     을 물었다 — 791 이 [2] 에서 걷어낸 것과 **같은 밴드 멤버십을 같은 장면**에서 물은 것이라
+     같은 동전이다. 허용은 `max(TOL_FLOOR, 폭 ÷ 2√K)` 이고 이 셋의 K회 폭은 실측 44~283% 라,
+     폭이 **196%** 를 넘는 실행부터 허용이 바닥을 뜨고 **343%** 를 넘으면 이탈(70~85%)을 앞질러
+     판정이 뒤집힌다. 등재 시점 실측 최대 283% — **아직 안 넘었고 여유가 23%p 뿐이다**(794).
+     ⚠ 뒤집힘의 대가는 이 프로브의 빨강 하나가 아니다 — **같은 비교가 게이트 `[C2]` 의 «⏸접촉»
+     소속도 정한다.** 폭이 큰 실행에서는 셋이 밴드 «안» 으로 읽혀 «이 눈금으로 못 잰다» 는 사실이
+     표에서 조용히 사라진다(헛초록). 그래서 이 절은 **밴드를 재현의 축으로 안 쓴다.**
+     지금 꼴 — ① **부호**(선언이 K회 구름 밖 · 문턱 0) · ② **장면 대조**(같은 실행이 잰 두 값 ·
+     문턱 0 · 791-④ 의 모양) · ③ 밴드는 **잴 수 있는 장면에서만** 쓴다(고정 장면 폭 2~13%).
+     ⚠ 옛 축의 값은 지우지 않고 매 실행 표에 그대로 찍는다(아래 «참고» 줄) — 뒤집힘까지의 여유가
+     좁아지는 것을 다음 세션이 눈으로 본다. 옛 꼴이 왜 동전인지는 `probe794` 가 표본째 들고 있다. */
   const page = await open(browser, URL);
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   const now = dress(await RUL.measure(page, IDS, {}));
-  show('[1] 오늘 트리·오늘 자', now);
-  ok(now.every(x => x.off > x.tol),
-     '1 재현 — 셋 다 자기 허용 오차 밖(등재문 orbit 85% · aura 71% · whirl 73%)',
-     now.map(x => x.id + ' ' + (x.off * 100).toFixed(0) + '% > ' + (x.tol * 100).toFixed(0) + '%').join(' / '));
-  ok(now.every(x => x.mean < x.decl),
-     '1-b 방향은 한쪽뿐 — 실측이 선언보다 **낮다**(«더 센데 낮게 적혔다» 가 아니다)',
-     now.map(x => x.id + ' ' + x.mean + ' < ' + x.decl).join(' / '));
+  show('[1] 자유(눈금 장면)', now);
+  /* 같은 트리를 **고정 장면**으로도 잰다(695 [5] 가 열어 둔 `freeze` 손잡이 · 791-①).
+     [2] 절이 이 표를 그대로 다시 쓴다 — 재는 횟수는 옛 꼴과 같다. */
+  const pF = await open(browser, URL);
+  const nowF = dress(await RUL.measure(pF, IDS, { freeze: true }));
+  await pF.context().close();
+  show('[1] 고정(같은 트리)', nowF);
+  const offF = (id) => nowF.find(x => x.id === id).off;
+
+  ok(now.every(x => RUL.shakeSep(x).outside && x.decl > Math.max(...x.each)),
+     '1 재현 ① 부호 — 자유 장면에서는 K회 표본이 **하나도** 선언에 못 닿는다(선언이 구름 위쪽 밖 · 문턱 0)',
+     now.map(x => x.id + ' 최고 표본 ' + Math.max(...x.each) + ' < 선언 ' + x.decl
+       + '(거리 ÷ 폭 ×' + RUL.shakeSep(x).ratio.toFixed(2) + ')').join(' / '));
+  ok(IDS.every(id => now.find(x => x.id === id).off > offF(id)),
+     '1-b 재현 ② 크기 — 같은 트리·같은 자인데 **장면 하나로** 이탈이 갈린다(같은 실행이 잰 두 값 · 문턱 0)',
+     IDS.map(id => id + ' 자유 ' + (now.find(x => x.id === id).off * 100).toFixed(0)
+       + '% ↔ 고정 ' + (offF(id) * 100).toFixed(0) + '%').join(' / '));
+  ok(nowF.every(x => x.off < RUL.TOL_FLOOR),
+     '1-c ⇒ «밴드 밖» 을 만든 것은 선언이 아니라 **장면**이다 — 잴 수 있는 장면(폭이 좁다)에서는 셋 다 밴드 안이다',
+     nowF.map(x => x.id + ' 이탈 ' + (x.off * 100).toFixed(0) + '% · K회 폭 ' + (x.spread * 100).toFixed(0) + '%').join(' / ')
+     + ' · 밴드 ±' + (RUL.TOL_FLOOR * 100).toFixed(0) + '%');
+  ok(RUL.c2Split(now).bad.length === 0 && RUL.c2Split(now).hold.length === 0,
+     '1-d 게이트 면 — 밴드 밖으로 읽히든 안 읽히든 이 셋은 **하드 빨강이 아니다**(⏸접촉 자물쇠가 받는다)',
+     '하드 ' + RUL.c2Split(now).bad.length + ' · ⏸199 ' + RUL.c2Split(now).hold.length
+     + ' · ⏸접촉 ' + RUL.c2Split(now).contact.length + '/3(밴드 밖으로 읽힌 수 — 실행마다 갈려도 좋다)');
+  /* 참고 — 옛 축(밴드 멤버십)의 값과 «뒤집히는 폭» 까지의 여유. **단언 아님**(그것이 794 의 결론이다). */
+  console.log('     [1] (참고 · 단언 아님) 옛 축 «이탈 > 허용» — '
+    + now.map(x => x.id + ' 이탈 ' + (x.off * 100).toFixed(0) + '% ' + (x.off > x.tol ? '>' : '≤')
+      + ' 허용 ' + (x.tol * 100).toFixed(0) + '% · K회 폭 ' + (x.spread * 100).toFixed(0)
+      + '% ↔ 뒤집히는 폭 ' + (x.off * 2 * Math.sqrt(K) * 100).toFixed(0) + '%').join(' / '));
 
   /* ── [2] 제품 드리프트 기각 — 504 당시 트리를 오늘 자로 ── */
   let old = null;
@@ -135,9 +170,8 @@ const show = (tag, rows) => rows.forEach(x => console.log('     ' + tag.padEnd(2
        동전이다 — 실측 36표본 중 최대 **1.17** 로 단위를 한 번 넘었다(`probe791` [4] 가 그 실행을 잡았다).
        자유 장면이 지는 몫은 위 [2] 의 **방향 하나**이고, 여기서는 «자유 장면이 실제 차이를 얼마나
        줄여 보이는가» 만 [2-b] 로 묻는다(둘 다 그 실행이 스스로 잰 값끼리의 비교다). */
-    const p3 = await open(browser, URL);
-    const nowF = dress(await RUL.measure(p3, IDS, { freeze: true }));
-    await p3.context().close();
+    /* ⚑ 794 — 오늘 트리의 고정 장면은 **[1] 이 이미 쟀다**(`nowF`). 여기서 다시 재면 같은 물음의
+       두 표가 생기고 «어느 표로 잰 값인가» 가 다시 값을 바꾼다(680 이 모듈을 뽑은 그 이유). */
     const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'probe695f-'));
     const f2 = path.join(tmp2, 'index.html');
     fs.writeFileSync(f2, require('./gitrev756').show(DONE504, 'index.html').buf);
@@ -145,7 +179,7 @@ const show = (tag, rows) => rows.forEach(x => console.log('     ' + tag.padEnd(2
     const oldF = dress(await RUL.measure(p4, IDS, { freeze: true }));
     await p4.context().close();
     fs.rmSync(tmp2, { recursive: true, force: true });
-    show('[2] 고정 오늘 트리', nowF);
+    show('[2] 고정 오늘(=[1] 표)', nowF);
     show('[2] 고정 504 트리', oldF);
 
     const fixSep = IDS.map(id => ({ id,
