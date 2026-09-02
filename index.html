@@ -3629,12 +3629,9 @@
      13 재화 탭은 `.cbox i>.cic` 를 55 로 따로 맞춰 놨고 여기까지 얹히면 그 값이 깨진다. */
   #app:not(:has(#shopw.on .shp-list.coin)) .fx-fly>.cic{transform:scale(var(--fxgs,1))}
   #app:not(:has(#shopw.on .shp-list.coin)) .fx-lit .cGold i>.cic{width:65.3px;height:65.3px}
-  /* ⚑ 583 — «강화에 쓰는 화폐» 알갱이(`fxSpend`). 획득 비행과 **같은 몸**(`.fx-fly`)을 쓴다 —
-     크기 축(`--fxgs` · `FX3_FLYS` · `FX3_LAND`)과 13 재화 탭 제외 가드를 두 벌로 적지 않기 위해서다.
-     다른 것은 **방향 하나**다: 획득은 «사건 자리 → 알약», 소모는 «알약·보유 표시 → 카드».
-     경로는 JS 가 두 점을 세우고 여기서는 트랜지션만 준다(획득은 rAF 로 굴리는 3박자라 기계가 다르다 —
-     소모는 «빠져나간다» 한 박자라 트랜지션 하나면 충분하고, `fxFlies` 예산도 안 먹는다). */
-  .fx-fly.fx-spd{transition:transform var(--spd-t,.42s) cubic-bezier(.32,0,.62,1),opacity .16s linear}
+  /* ⛔ 678 — 583 «화폐 알갱이» 비행 규칙 `.fx-fly.fx-spd`(+ `--spd-t` 트랜지션)를 걷었다
+     (2026-09-02 · 660 이 소비처를 0 으로 만든 뒤의 청소 — JS 선언 쪽 머리말에 상세).
+     획득 비행(`.fx-fly`)과 착지(`.fx-land`)는 그대로다 — 걷은 것은 «소모 방향» 한 벌뿐이다. */
   /* 꽂힌 뒤 «흡수되듯» 사라진다. transform 은 JS 가 알약 중심 + 축소값으로 세워 두므로
      여기서는 opacity 만 건드린다. 크기를 그대로 두고 천천히 빼면 알약의 코인 아이콘과 겹쳐
      **«이중 원» 버그처럼 읽힌다**(7회차 지적) — 짧게(100ms) 빼고, 축소는 JS 가 준다. */
@@ -40202,172 +40199,25 @@ function fxPay(cur, n){
      «세 씬 중 upg 만 HUD 반응 0» 이었고, 그 반응을 세운 것은 «금액» 이 아니라 **알약 «움푹»**
      (`.fx-pay` scale .945)이다. 그래서 움푹은 한 줄도 안 건드리고 텍스트만 뺐다 —
      주인이 지운 것은 «금액» 이지 «반응» 이 아니다(`probe583` [B4] 가 움푹 1건을 못박는다).
-     ⚠ 무엇을 냈는지는 이제 `fxSpend` 의 **화폐 알갱이**가 말한다(583 ③) — 자리를 비운 것이 아니다. */
+     ⚠ 무엇을 냈는지는 이제 **강화 버튼의 아이콘 버스트**가 말한다(583 ③ 이 세우고 660 이 자리를
+     옮겼다 · 678 이 옛 알갱이 비행을 선언째 걷었다 — 아래 머리말) — 자리를 비운 것이 아니다. */
   return true;
 }
-/* ⚑ 583 — «강화에 쓰는 화폐» 알갱이 (저장소 주인 지시 2026-08-31:
-     «그 알갱이가 골드아이콘으로 되게 하기 왜냐면 골드로 강화하니까 · 단련·룬도 전부 강화하는 화폐 아이콘으로»).
-   ⚠⚠ **518 과 정면으로 부딪히는 자리다.** 518 은 «재화를 안 얻었는데 «획득» 연출이 뜬다» 를
-   전 화면 0 으로 만든 작업인데, 훈련·단련·룬은 화폐를 **쓰는** 자리다. 그래서 획득 연출을
-   복사하지 않고 **방향을 뒤집었다**:
-     · 획득(`fxFly`) — 사건 자리 → 알약. 3박자(퍼짐·머묾·흡수)를 rAF 로 굴리고 `fxFlies` 예산을 먹는다.
-     · 소모(`fxSpend`) — **알약·보유 표시 → 카드**. 한 박자(빠져나감)라 트랜지션 하나면 되고
-       비행 예산·롤링·홀드 어디에도 안 들어간다(획득 기계는 한 줄도 안 건드렸다).
-   ⚑ 크기는 **543 이 세운 축 그대로**다(두 벌 금지) — 몸은 `.fx-fly`, 크기는 `--fxgs`(재화별 잉크
-     보정) × `FX3_FLYS`(2.10 = 0.70 × FX_GRAIN_SC), 끝 크기는 `FX3_LAND`. 543 손잡이를 돌리면
-     소모 알갱이도 같이 따라온다.
-   ⚑ 개수도 543 의 자를 쓴다 — 잉크가 지름 108.3(`FX3_GINK`)이라 «호스트에 몇 개가 겹치지 않고
-     들어가는가» 를 밴드 피치(`FX3_BSPITCH` = 잉크 × 1.22)로 센다. 훈련 카드(326) 3개 ·
-     룬/단련 행(998) 6개. 상한은 `FXMAX` 하나뿐이고 드롭이 나면 아예 안 쏜다(반쯤 난 무리 금지).
-   ⚠ 자리마다 화폐 문자열을 손으로 적지 않는다 — 결제 쪽이 키를 돌려준다(`trainBuyInfo().cur` ·
-     `PAY_CUR[o.tag]`). 표가 한 벌이라 «룬 결제가 다이아로 바뀌면 연출도 따라간다». */
-const FX_SPEND_GAP = 260;                            /* 같은 호스트 재시작 최소 간격(fxPay 의 320 규약 준용) */
-const FX_SPEND_DUR = 0.42;                           /* 주행(s) — 획득 UI 발(0.24~0.30)보다 조금 길다: 나가는 것은 천천히 */
-const FX_SPEND_LAG = 0.05;                           /* 알갱이별 출발 간격 — 한 덩어리로 안 읽히게 */
-/* ⚑ 619 16회차 — 스폰 산포를 **이름 있는 값**으로 뽑았다(종전 `rnd(-26,26)`·`rnd(-16,16)` 리터럴).
-   아래 `fxSpendFrom` 의 «이동 거리 상한» 이 이 값을 읽어야 하기 때문이다 — 클램프는 산포 **전**에
-   걸리므로, 산포 폭을 모르면 딱 그만큼이 그대로 호스트 밖으로 새 나간다(1차 시도가 그랬다).
-   ⚠ 값은 한 값도 안 바뀌었다(26 · 16) — 리터럴을 이름으로 옮긴 것뿐이다. */
-const FX_SPEND_JX = 26, FX_SPEND_JY = 16;
-const fxSpendT = new WeakMap();
-/* 출발 자리 — «그 화폐가 화면 어디에 있는가». 셋을 순서대로 묻는다:
-     ① 알약(HUD `.cGold` · 41 팝업 바 `.pcb-*`)          — 골드·다이아·유물조각
-     ② 호스트 **밖**의 그 화폐 아이콘(`[data-cur-ic]`)   — 단련석(단련 헤더의 «가진 단련석»)
-     ③ 호스트 위 200px                                    — 룬강화석(비용 표기가 카드 «안» 뿐이라 밖에 없다)
-   ⚠ ②에서 호스트 안 아이콘을 제외하는 이유는 «흐름» 이다 — 목적지 안에서 출발하면 방향이 안 보인다. */
-function fxSpendFrom(cur, host, toC){
-  const C = FXCUR[cur]; if(!C) return null;
-  const pill = fxPill(C);
-  if(pill){
-    const q = fxPt(pill.querySelector('i')) || fxPt(pill);
-    if(q) return q;
-  }
-  const hr = host ? fxRect(host) : null;
-  const hc = hr ? { x:hr.x + hr.w/2, y:hr.y + hr.h/2 } : null;
-  /* ⚑ 619 7회차 — **형제 부품 안의 아이콘도 제외한다.** «가장 가까운 밖 아이콘» 이 단련 k0 행에서
-     바로 아래 k1 행의 [단련] 버튼 아이콘을 집어, 파편이 **이웃 카드를 가로질러** 날았다(비평가
-     DR·DS 2인 공통 — «f1 파편이 호스트를 80~170px 이탈해 이웃 행 라벨에 닿는다»). 호스트와 같은
-     부품 클래스의 «다른 개체» 안 아이콘은 출발지가 아니다 — 남는 것이 헤더의 보유 표시(의도한 ②)다. */
-  const hostCls = host && host.classList && host.classList[0];
-  let best = null, bd = Infinity;
-  for(const im of document.querySelectorAll('img.cic[data-cur-ic="' + cur + '"]')){
-    if(host && host.contains && host.contains(im)) continue;
-    if(hostCls){ const sib = im.closest('.' + CSS.escape(hostCls)); if(sib && sib !== host) continue; }
-    const r = fxRect(im); if(!r || !r.w) continue;
-    const q = { x:r.x + r.w/2, y:r.y + r.h/2 };
-    const d = hc ? Math.hypot(q.x - hc.x, q.y - hc.y) : 0;
-    /* ⚑ 619 8회차 — 출발 중심을 아이콘 «하단 아래 44px» 로. 스폰 순간이 알갱이가 제일 클 때
-       (FX3_FLYS 2.1 · 잉크 반경 ≈54)라 아이콘 중심에서 태어나면 보유 라벨을 통째로 가린다
-       (비평가 DT·DU 2인 공통 «단련석 라벨 100% 가림»). 아이콘 밑에서 스며 나오면 출처는 그대로 읽힌다. */
-    if(d < bd){ bd = d; best = { x:q.x, y:q.y + r.h/2 + 44 }; }
-  }
-  /* ⚑⚑ 619 16회차 — **이동 거리 상한**(EK 15회차 「8점을 막는 단 하나」 · EK 의 단련 점수 3점을
-     혼자 만든 자리). 실측: 단련 «비용 단련석» 알갱이의 top y108 이 행 검은 테보다 **32px 위**라
-     위 «단련석» 패널에 잉크 **1,029px** 이 들어가고 패널 테두리 검정이 **−30.7%**((20,20,20) →
-     (224,75,60)) 였다. 14회차는 이 축을 «`fxSpend` 는 호스트 «밖» 에서 출발하는 것이 설계»
-     (7·9회차 — 목적지 안에서 출발하면 흐름이 안 읽힌다)라고 미뤄 뒀는데, **EK 가 그 설계를 안 깨는
-     길을 줬다**: «레인·색·개수·**출발 x** 는 그대로 두고 **이동 거리 상한만**».
-     ⇒ 여기서 바뀌는 것은 `best.y` **하나**다. x·레인·개수·색·수명은 한 값도 안 건드린다.
-     ⚠ 상한은 상수가 아니라 **잉크에서 나온다** — 넘치는 양이 곧 잉크 반경이라, 알갱이 잉크의
-       **위 반쪽**이 호스트 상변 안에 들어오는 자리가 상한이다(`FX3_GINK` 108.3 ⇒ 반경 54.15).
-       543 이 알갱이를 3배로 키운 그 상수에서 파생되므로 크기를 또 바꿔도 저절로 따라온다.
-     ⚠ **골드·다이아는 이 길로 안 온다** — 훈련은 위 ① HUD 알약(`fxPill`)에서 이미 `return` 하므로
-       «먼 알약에서 날아온다» 는 그림이 그대로다. 이 클램프는 ②(호스트 밖 화폐 아이콘 = 단련석)만 탄다.
-     ⚠ 클램프가 «내리기» 전용인 것도 중요하다(`Math.max`) — 아이콘이 호스트보다 **아래**에 있는
-       배치에서는 아무 일도 안 한다(위로 끌어올리면 그 화면에서 새 침범을 만든다). */
-  if(best && hr){
-    /* ⚠ 여유는 **잉크(FX3_GINK)가 아니라 상자**에서 나온다 — 알갱이는 `translate(-50%,-50%)` 로
-       중심에 앉으므로 위로 삐져나오는 양은 «상자 반높이» 다. 실측 115.5 = `ics 55 × FX3_FLYS 2.1`
-       (잉크 108.3 은 그 상자의 93.8% — 잉크로 재면 3.6px 이 남는다. 1차 시도가 그래서 32 → 23.6px
-       에서 멈췄다). 여기에 아래 스폰 산포 `FX_SPEND_JY` 를 더한다 — 산포는 클램프 **뒤에** 걸리므로
-       클램프가 그만큼을 미리 물고 있어야 한다(안 물면 산포 폭만큼 그대로 새 나간다). */
-    /* ⚠ 619 17회차 검증 — 여기 반높이에 `fxGrainSc(cur)` 를 **넣으면 안 된다**(넣어 봤고 되돌렸다).
-       `fxGrainSc` 는 `--fxgs` 로 **안쪽 아이콘**만 키우는 재화별 잉크 보정이고(`verify583` [C] 가
-       재는 것이 그 안쪽이다), 상변을 넘는 것은 `scale(FX3_FLYS)` 만 타는 **바깥 `.fx-spd` 상자**다
-       — 그 크기는 재화와 무관하게 `ics × FX3_FLYS` = 115.5 다. 넣었더니 tstone(0.809)에서 클램프가
-       11px 얕아져 `probe619f` ⓙ 가 0 → **9.17px** 로 3회 연속 빨개졌다. */
-    best.y = Math.max(best.y, hr.y + (C.ics * FX3_FLYS) / 2 + FX_SPEND_JY);
-  }
-  if(best) return best;
-  /* ⚑ 619 7회차 — ③ 폴백을 «호스트 위 200px» → **상변 안쪽 30px** 로. 200px 위는 룬에서 서브탭
-     바(호스트 상단 −95..−55) 한복판이라 젬이 다른 UI «위에서» 태어났다(DR «상단 탭 라벨을 절반
-     덮고 화면 y0 에서 잘림» · DS «잠금 탭 위 통과»). 상변에서 스며 중심으로 흐르면(≈320px 여정)
-     방향은 그대로 읽히고 잉크(반경 ≈54)가 위 형제를 물지 않는다(−40 위로 안 올라간다).
-     9회차 — 가로는 **도착 자리 위**에서 출발한다(toC — 수직 낙하). 상변 «중앙» 출발이면 대각 경로가
-     «Lv. n/500»·진행바를 관통한다(비평가 DV·DW 2인 공통 «경로가 라벨 관통»). */
-  /* ⚑⚑ 619 17회차 — **③ 에 ② 와 같은 클램프를 걸어 봤고, 실측으로 «걸면 안 된다» 가 나왔다.**
-     등재 사유는 진짜다(EL·EM **2인 공통**: 룬 알갱이가 패널 액자보다 EL **49px** · EM **57px**
-     위로 나가 탭 버튼 위에 잉크 582~715px · `probe619g` ⓝ 수리 전 **잉크 25~44px 이탈**).
-     그런데 ② 와 같은 산수(`hr.y + 상자 반높이 + 산포`)를 그대로 주면 룬에서 **출발이 도착 안으로
-     들어간다**: 룬 상자 반높이는 `ics 55 × FX3_FLYS 2.10 / 2` = **57.75** 이라 출발이 `hr.y + 73.75`
-     이 되는데, 룬의 도착지(`--spend-to` 좌측 아이콘 타일, 9회차 결정)는 중심이 `hr.y + 137`
-     부근이고 타일 반높이가 **≈97px** 다 ⇒ 출발이 **도착 타일 «안»** 이 되어 `fxSpendFrom` 머리말의
-     «목적지 안에서 출발하면 방향이 안 보인다» 를 정면으로 깬다(`verify583` [D-rune-0] 이 그 자다).
-     실측 비행 길이 107px → **57px**.
-     ⇒ **여기서는 되돌린다.** 룬 행은 «알갱이 상자(128px) + 읽히는 비행» 을 둘 다 담기에 세로가
-       모자라고, 그건 클램프 산수로 못 푸는 **설계 선택**이다(도착지를 옮기거나 · 룬 알갱이만
-       작게 하거나 · 짧은 비행을 받아들이거나). 18회차가 주인/설계 판단으로 고를 것 — 상세는
-       `docs/review/619-연속강화회당이펙트.md` 17회차 ⑷.
-     ⚠ **«산포 뒤로 클램프를 옮기는» 우회로도 막혔다** — 그렇게 하면 미리 물던 16px 이 사라지는데,
-       그 16px 이 단련에서 «fxSpend 가 받는 호스트 rect» 와 «행 `.tr-tp.k0`» 사이의 **13.25px 기저
-       차이**를 덮고 있었다(제거하자 `probe619f` ⓙ 가 0 → **9.67px** 로 3회 연속 재현). */
-  return hc ? { x:(toC ? toC.x : hc.x), y:hr.y + 30 } : null;
-}
-/* ⛔⛔ 660 — **이 함수는 소비처가 0 이 됐다**(`upFx`·`fxUpOk` 두 곳이 유일한 호출부였고 둘 다 걷혔다).
-   `fxSpendFrom`·`fxSpendT`·`FX_SPEND_*`·`.fx-spd` CSS 도 같은 벌이다.
-   ⚠ **이번 회차에 선언째 걷지 않은 것은 판단이 아니라 선점 규약 때문이다** — 지시서 [-1]·[4]:
-     `docs/claims/619.lock` 이 **살아 있고**(이 회차 시작 시각 기준 heartbeat 1분 전) 619 가 바로
-     이 함수(16·17회차 «이동 거리 상한»·«③ 폴백 클램프»)를 고치는 중이다. 120줄을 지우면 그 세션의
-     진행 중 회차가 통째로 병합 충돌로 죽는다([4] «내 작업 구간이 아닌 곳은 남의 버전을 그대로 둔다»).
-   ⇒ **죽은 코드 철거는 678 로 등재했다**(619 lock 이 풀린 뒤 · 제품 0줄짜리 청소 한 벌).
-     그때까지 이 함수는 **아무도 안 부른다** — 게이트 `verify660` [D] 가 그것을 매 실행 단언한다. */
-function fxSpend(cur, host){
-  const C = FXCUR[cur]; if(!C) return false;
-  const el0 = (typeof host === 'string') ? document.querySelector(host) : host;
-  if(!el0 || !el0.getBoundingClientRect) return false;
-  const now = performance.now();
-  if(now - (fxSpendT.get(el0) || -1e9) < FX_SPEND_GAP) return false;
-  const L = fxL(), hr = fxRect(el0);
-  if(!L || !hr || !hr.w) return false;
-  /* ⚑ 619 9회차 — 도착 자리를 호스트가 `--spend-to`(자식 셀렉터)로 좁힐 수 있다. 기본(신고 없음)은
-     종전 그대로 호스트 중심. 룬·단련은 **좌측 아이콘 타일**로 신고한다 — 중심 도착이면 비행 경로가
-     타이틀·«Lv. n/500»·진행바를 관통한다(비평가 DV «8점을 막는 단 하나» · DW ③ 2인 공통). 아이콘은
-     장식이라 잠깐 지나도 정보 손실이 없고, «이 항목이 재화를 먹었다» 는 뜻도 그대로다. */
-  let tr = hr;
-  try { const s = getComputedStyle(el0).getPropertyValue('--spend-to').trim();
-    if(s){ const c = el0.querySelector(s); const r2 = c && fxRect(c); if(r2 && r2.w) tr = r2; } } catch(_){}
-  const to = { x:tr.x + tr.w/2, y:tr.y + tr.h/2 };
-  const from = fxSpendFrom(cur, el0, to);
-  if(!from) return false;
-  const cnt = clamp(Math.floor(tr.w / FX3_BSPITCH), 3, 6);
-  if(L.childElementCount + cnt > FXMAX) return false;  /* 543 규약 — 반쯤 난 무리는 안 쏜다 */
-  fxSpendT.set(el0, now);
-  const sc = fxGrainSc(cur).toFixed(4);
-  for(let i=0;i<cnt;i++){
-    const el = document.createElement('b');
-    el.className = 'fx-fly fx-spd';
-    el.innerHTML = curIc(C.cur, C.ics);              /* 125 — 이모지가 아니라 CUR_ICON 이미지 1장 */
-    el.style.fontSize = C.fs + 'px';
-    el.style.setProperty('--fxgs', sc);
-    el.style.setProperty('--spd-t', FX_SPEND_DUR.toFixed(3) + 's');
-    const sx = from.x + rnd(-FX_SPEND_JX, FX_SPEND_JX), sy = from.y + rnd(-FX_SPEND_JY, FX_SPEND_JY);
-    /* 도착은 호스트 «중심 근처» 로 흩는다 — 한 점에 모으면 여섯 장이 겹쳐 한 장으로 읽힌다.
-       ±18% 는 잉크(108)가 호스트 밖으로 새지 않는 폭이다(훈련 카드 326×510 검산: ±59/±92). */
-    const tx = to.x + rnd(-tr.w*0.18, tr.w*0.18), ty = to.y + rnd(-tr.h*0.18, tr.h*0.18);   /* 9회차 — 산포도 도착 자리 기준 */
-    const pose = (x, y, s) => 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'
-                            + ' translate(-50%,-50%) rotate(0deg) scale(' + s.toFixed(3) + ')';
-    el.style.transform = pose(sx, sy, FX3_FLYS);
-    el.style.opacity = '1';
-    el.style.transitionDelay = (i*FX_SPEND_LAG).toFixed(3) + 's';
-    L.appendChild(el);
-    void el.offsetWidth;                             /* 시작 포즈를 한 프레임 세운다(트랜지션이 안 걸리는 것 방지) */
-    el.style.transform = pose(tx, ty, FX3_LAND);     /* 543 — 끝 크기는 착지 상수 그대로 */
-    const ms = Math.round((FX_SPEND_DUR + i*FX_SPEND_LAG)*1000);
-    setTimeout(() => { if(el.isConnected) el.style.opacity = '0'; }, ms);
-    fxBye(el, ms + 200);
-  }
-  return true;
-}
+/* ⛔ 678 — «강화에 쓰는 화폐» 알갱이 비행(583 `fxSpend` · `fxSpendFrom` · `fxSpendT` · `FX_SPEND_*`)을
+   **선언째 걷었다**(2026-09-02). 660(= 658 · 주인 «골드가 훈련 버튼쪽으로 가는 연출 없애기. 존나
+   후지다»)이 유일한 호출부 둘(`upFx` · `fxUpOk`)을 걷은 뒤로 소비처가 **0** 이었고, 그 회차가
+   선언을 안 걷은 것은 판단이 아니라 선점 규약(그때 `docs/claims/619.lock` 이 살아 있었다) 때문이라
+   **678 로 등재해 둔 청소**다(PROGRESS 678 · 제품 163줄 삭제 · 레이아웃 Δ0px).
+   ⇒ 그 자리를 대신하는 것은 **강화 버튼에서 터지는 아이콘 버스트**다(660 확정 스펙 ③ — `upFx`).
+     «무엇으로 샀는가» 는 버스트 자신의 그림이 계속 말한다 — 자리를 비운 것이 아니다.
+   ⚠ **되살리지 마라** — 방향이 «알약·보유 아이콘 → 버튼» 이라 660 이 못 박은 «스폰 위치는 강화
+     버튼뿐 · 아이콘 쪽 이펙트 0건»(주인 지목)과 정면으로 반대다.
+   ⚑ **안 걷은 것 둘**: ⓐ 크기·개수 축 `FX3_FLYS`·`FX3_LAND`·`FX3_BSPITCH`·`fxGrainSc()` 는 획득
+     비행이 계속 쓴다(543 — `verify583` [A3] 이 그것을 단언한다) · ⓑ `FXPAL.upNow` 는 소비처가 0
+     이지만 **표에 남겼다**(512 «색은 표에서만» — 팔레트에서 칸을 빼는 것은 이 청소와 반대 방향이라
+     판단이 필요하다. 걷으려면 별도 번호로).
+   ⚑ 자: `tools/verify678.js`(선언·CSS 0건 + 되돌림 시험) · `verify583` [A1]·[A5](방향을 뒤집어 이관)
+     · `verify660` [D6] · `verify658` A1·A2(호출 0건 — 무수정으로 그대로 초록). */
 /* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
 function fxPop(el){
   if(!el || !el.classList) return;

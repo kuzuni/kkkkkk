@@ -13,7 +13,8 @@
  *   둘이 같이 서려면 «획득(사건 자리 → 알약)» 과 «소모(알약·보유 표시 → 카드)» 가 갈려야 한다.
  *   그래서 [D] 가 **방향**을 재고, [F] 가 같은 씬에서 «획득 방향은 여전히 0» 을 못박는다.
  *
- *   [A] 구조   — `fxSpend` 부품 · `PAY_CUR` 한 표 · 새 크기 상수 0개(543 축 재사용) · CSS 규칙
+ *   [A] 구조   — (678 이관) 소모 비행 `fxSpend` 계열이 **선언째 없다** · `PAY_CUR` 한 표 ·
+ *                543 공용 축은 살아 있고 획득 비행이 읽는다 · `.fx-spd` CSS 도 없다
  *   [B] 신원   — 세 자리의 알갱이가 각각 gold · rstone · tstone 이고 **자산이 실제로 로드됐다**
  *   [C] 크기   — 렌더 상자가 **660 산식**(구슬 24~34px × `FX_CIC_SC`)과 같다 · 찍힌 픽셀이 바뀐다
  *                (⚑ 660 이관 — 종전 543 산식 `ics × fxGrainSc × FX3_FLYS` 는 «화면을 가로지르던»
@@ -23,7 +24,8 @@
  *   [E] 금액   — `fxPay` «−n» 0건 · 488 훈련 사다리 «−n» 0건 · 알약 «움푹» 1건(43회차 유지)
  *   [F] 518    — 같은 씬에서 «획득 방향» 노드(알약으로 가는 비행·`+n`·딤 위 복제)는 0
  *   [G] 상한   — `#fxl` 최고 동시 노드 < FXMAX (543 규약 — 드롭 0)
- *   [R] 되돌림 — `fxSpend` 를 무력화한 사본에서는 알갱이 0 · 종전 앰버 버스트가 되살아난다
+ *   [R] 되돌림 — (678 이관) 660 이 세운 «버튼 아이콘 버스트» 를 무력화하면 화폐 아이콘 0 ·
+ *                종전 앰버 스파크는 그대로다
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -78,10 +80,14 @@ const INSTALL = () => {
   const src = fs.readFileSync(SRC, 'utf8');
 
   console.log('[A] 구조 — 부품 하나 · 표 하나 · 새 크기 상수 0개');
-  /* 619 9회차 이관 — fxSpendFrom 이 도착 중심(toC)을 받는다(폴백 출발 x 를 도착 위로 — 경로가
-     라벨을 관통하지 않게). 부품·출발 자리의 존재를 묻는 뜻은 그대로다. */
-  ok(/function fxSpend\(cur, host\)\{/.test(src) && /function fxSpendFrom\(cur, host, toC\)\{/.test(src),
-     '[A1] 소모 알갱이 부품 `fxSpend` / 출발 자리 `fxSpendFrom` 이 있다');
+  /* ⚑⚑ 678 이관 — **방향을 뒤집었다.** 종전 이 항은 «부품 `fxSpend` / 출발 자리 `fxSpendFrom` 이
+     있다» 였다(619 9회차까지의 뜻). 660(= 658, 주인 «골드가 훈련 버튼쪽으로 가는 연출 없애기»)이
+     호출부 둘을 걷어 소비처가 0 이 됐고 **678 이 선언째 걷었으므로**, 있다고 묻는 것은 이제
+     «폐지한 축이 되살아나 있어야 통과» 라는 뜻이 된다 — 333 처방대로 **자리를 비우지 않고 뜻을 뒤집는다**.
+     ⓐ 죽은 선언이 0개 · ⓑ 그 자리를 대신하는 것(`upFx` 의 버튼 버스트)이 살아 있다 — 둘을 같이 묻는다
+     (ⓑ 를 안 물으면 «둘 다 없어도 초록» 인 자가 된다). */
+  ok(!/function fxSpend\(/.test(src) && !/function fxSpendFrom\(/.test(src) && /function upFx\(/.test(src),
+     '[A1] ★ 소모 알갱이 비행(`fxSpend`·`fxSpendFrom`)이 **선언째 없다**(660 폐지 · 678 철거) — 그 자리는 `upFx` 의 버튼 버스트가 대신한다');
   /* ⚑ 660 — **문자열 전체를 박아 두던 것을 뜻으로 바꿨다.** 종전 정규식은 표의 리터럴을 통째로
      고정해서, 표에 **칸이 하나 늘기만 해도** 빨개졌다(2026-09-01 실측: 666 이 유물 버스트를 위해
      `relic:'relic'` 을 더하자 이 항만 빨갛고 나머지 35 항은 전부 초록이었다 — 결함이 아니라 자의 취약함이다).
@@ -98,14 +104,23 @@ const INSTALL = () => {
      `PAY_CUR` 에서만 받게 한 것과 같은 규약 · `verify660` [A7~A10] 의 짝). */
   ok(!/upFx\('(train|rune|temper):'[^)]*'(gold|rstone|tstone)'/.test(src),
      "[A2b] ★ 세 탭의 호출부가 화폐 문자열을 **손으로 안 적는다**(전부 `PAY_CUR` 를 지난다)");
-  /* ⚠ «크기를 두 벌로 적지 않았는가» — fxSpend 본문이 543 상수만 쓰고 새 리터럴을 안 만든다 */
-  const body = (src.match(/function fxSpend\(cur, host\)\{[\s\S]*?\n\}/) || [''])[0];
-  ok(/FX3_FLYS/.test(body) && /FX3_LAND/.test(body) && /FX3_BSPITCH/.test(body) && /fxGrainSc\(cur\)/.test(body),
-     '[A3] ★ 크기·개수 축이 전부 543 상수다(FX3_FLYS · FX3_LAND · FX3_BSPITCH · fxGrainSc)');
-  ok(!/scale\(\s*[\d.]+\s*\)/.test(body.replace(/scale\(' \+ s\.toFixed\(3\) \+ '\)/g, '')),
-     '[A4] 본문에 배율 리터럴이 없다 — 543 손잡이를 돌리면 소모 알갱이도 따라온다');
-  ok(/\.fx-fly\.fx-spd\{transition:transform var\(--spd-t/.test(src),
-     '[A5] CSS `.fx-fly.fx-spd` 가 «몸은 획득과 같고 방향만 다르다» 를 세운다');
+  /* ⚑⚑ 678 이관 — 종전 [A3]·[A4] 는 **`fxSpend` 본문**을 읽어 «크기 축이 543 상수뿐인가» 를 물었다.
+     본문이 사라졌으므로 물을 대상이 없다. 그런데 **묻던 성질은 안 죽었다** — 543 축은 획득 비행이
+     계속 쓰고 있고, 678 이 그 축까지 딸려 지웠으면 이 자가 조용해선 안 된다(LESSONS 264-①·9263-②:
+     «지우는 김에» 가 공용 부품을 데려가는 것이 실제로 나던 사고다). ⇒ 같은 성질을 **살아 있는 쪽**에
+     대고 묻는다: ⓐ 543 축 넷이 선언돼 있고 ⓑ 획득 비행(`fxFly`)이 실제로 그것을 읽는다. */
+  /* ⚠ 읽는 쪽은 `fxFly`(스폰)가 아니라 **`fxTick`(획득 비행 애니메이터)** 이다 — 크기 축은
+     프레임마다 굴러가는 그 함수가 쓴다(1회차에 `fxFly` 로 물었다가 이 항만 빨갰다). */
+  const flyBody = (src.match(/function fxTick\(dt\)\{[\s\S]*?\n\}/) || [''])[0];
+  ok(/\bFX3_FLYS\s*=\s*[\d.]+\s*\*\s*FX_GRAIN_SC/.test(src) && /\bFX3_LAND\s*=\s*[\d.]+/.test(src)
+     && /const FX3_BSPITCH\s*=/.test(src) && /const fxGrainSc\s*=/.test(src),
+     '[A3] ★ 크기·개수 축 543 상수 넷이 **살아 있다**(FX3_FLYS · FX3_LAND · FX3_BSPITCH · fxGrainSc) — 678 이 소모만 걷고 공용 축은 안 데려갔다');
+  ok(/FX3_FLYS/.test(flyBody) && /FX3_LAND/.test(flyBody) && (src.match(/fxGrainSc\(/g) || []).length >= 2,
+     '[A4] ★ 획득 비행 애니메이터(`fxTick`)가 그 축을 실제로 읽는다 — 선언만 남은 «죽은 상수» 가 아니다',
+     'fxGrainSc 호출 ' + (src.match(/fxGrainSc\(/g) || []).length + '곳');
+  /* ⚑⚑ 678 이관 — [A5] 도 [A1] 과 같은 벌이다(CSS 쪽). 종전은 «`.fx-fly.fx-spd` 규칙이 있다» 였다. */
+  ok(!/\.fx-fly\.fx-spd\{/.test(src) && /\.fx-land\{animation:fxLand/.test(src),
+     '[A5] ★ CSS `.fx-fly.fx-spd`(소모 방향) 가 **없다**(678 철거) — 획득 쪽 몸(`.fx-fly`)·착지(`.fx-land`)는 그대로다');
 
   const b = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -114,7 +129,10 @@ const INSTALL = () => {
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + SRC);
-  await p.waitForFunction(() => typeof S !== 'undefined' && typeof fxSpend === 'function');
+  /* ⚑ 678 이관 — 종전 이 줄은 `typeof fxSpend === 'function'` 을 기다렸다. 678 이 그 선언을
+     걷었으므로 그대로 두면 **자가 30초 타임아웃으로 즉사**한다(319 «게이트가 죽은 함수를 부른다»).
+     기다릴 것은 «이 자가 보는 축이 섰는가» 다 ⇒ 살아 있는 소모 연출의 입구 `upFx` 로 옮긴다. */
+  await p.waitForFunction(() => typeof S !== 'undefined' && typeof upFx === 'function');
   await p.waitForTimeout(1200);
   /* ⚠ 표본 재화는 **작게** 넣는다 — 1e18 은 float64 ulp 가 128 이라 «−45» 를 빼도 값이 안 바뀌어
      `fxWatch` 의 감소 판정이 통째로 안 돈다(probe583 1회차가 그 함정에 걸렸다). */
@@ -295,7 +313,9 @@ const INSTALL = () => {
   }
   /* ⚑ 660 — 종전 [D-pill](«출발 자리가 골드 알약 그 자체») 은 `fxSpendFrom` 을 직접 불러
      그 함수의 계약을 물었다. 658·660 이 그 축을 폐지했고 그 함수는 소비처가 0 이라 675 가
-     선언째 걷는다 — 그때 이 항이 같이 죽지 않게 **지금 «아무도 안 부른다» 로 갈아 끼운다**. */
+     선언째 걷는다 — 그때 이 항이 같이 죽지 않게 **지금 «아무도 안 부른다» 로 갈아 끼운다**.
+     ⚑ 678 이 실제로 걷었고(2026-09-02) 이 항은 **한 글자도 안 고쳐도 초록**이다 — 갈아 끼운 자가
+       옳았다는 증거다(호출 0건은 선언이 있든 없든 참이고, 선언 쪽은 [A1] 이 따로 못박는다). */
   ok(!/(?<!function )\bfxSpend\(/.test(src),
      '[D-pill] ★ `fxSpend()` 호출이 **0건**이다 — «알약 → 버튼» 축이 소스에서 죽었다(658·660 · 678 이 선언째 걷는다)');
 
@@ -341,7 +361,16 @@ const INSTALL = () => {
 
   /* ── [R] 되돌림 ───────────────────────────────────────────────────── */
   console.log('\n[R] 되돌림 — 알갱이를 무력화하면 이 게이트가 빨개지고, 종전 앰버가 되살아난다');
-  await p.evaluate(() => { window.__spend0 = window.fxSpend; window.fxSpend = () => false;
+  /* ⚑⚑ 678 이관 — 종전 이 줄은 `window.fxSpend` 를 «무력화» 했다. 678 이 그 선언을 걷었으므로
+     없는 전역에 함수를 꽂는 꼴이 되어 **아무것도 안 되돌리는 헛초록**이 된다(373 «초록인 이유를
+     묻지 않으면 자가 자기모순을 품는다»). ⇒ 되돌릴 대상을 **살아 있는 소모 연출**로 옮긴다:
+     660 이 그 자리에 세운 «강화 버튼 아이콘 버스트»(`upFx` → `fxBurst`)를 죽이면
+     [R1] 버스트 아이콘이 0 이 되고, [R2] 앰버 스파크(다른 층)는 그대로 남는다 —
+     묻던 뜻(«위 [B]·[C] 가 이미 참인 것이 아니다» · «바닥이 얕아지지 않았다»)은 그대로다. */
+  await p.evaluate(() => { window.__burst0 = window.fxBurst;
+    /* ⚠ 아이콘 «자리» 만 뺀다 — 호출을 통째로 막으면 앰버 스파크까지 같이 사라져
+       [R2] 가 «바닥» 을 못 잰다(1회차에 그렇게 물어 0개가 나왔다). */
+    window.fxBurst = function(t, col, n, strict, iv, ic){ return window.__burst0.call(this, t, col, n, strict, iv, null); };
     setTrSub('train'); renderTrain();
     const L = document.getElementById('fxl'); if (L) L.innerHTML = '';
     window.__G583 = Object.assign(window.__G583, { add: [], peak: 0, dent: 0 }); });
@@ -353,12 +382,18 @@ const INSTALL = () => {
     await p.waitForTimeout(260);
   }
   const RV = await p.evaluate(() => window.__G583);
-  const rvSpd = RV.add.filter(a => /\bfx-spd\b/.test(a.cls)).length;
+  const rvCic = RV.add.filter(a => /\bfx-cic\b/.test(a.cls) || a.cur).length;
   const rvSpark = RV.add.filter(a => /\bfx-spark\b/.test(a.cls)).length;
-  ok(rvSpd === 0, '[R1] ★ 되돌린 사본에서 화폐 알갱이가 0 이다(= 위 [B] 가 «이미 참인 것» 이 아니다)', rvSpd + '개');
-  ok(rvSpark >= 10, '[R2] ★ 알갱이를 못 쏘면 **종전 앰버 버스트가 그대로 뜬다** — 바닥이 얕아지지 않았다',
-     rvSpark + '개 (≥10)');
-  await p.evaluate(() => { window.fxSpend = window.__spend0; });
+  ok(rvCic === 0, '[R1] ★ 되돌린 사본에서 **화폐 아이콘 연출이 0** 이다(= 위 [B]·[C] 가 «이미 참인 것» 이 아니다)', rvCic + '개');
+  /* ⚠ 문턱을 10 → 1 로 내린 것은 «무르게 푼 것» 이 아니라 **660 이 바꾼 사실**이다 —
+     583 시절 이 자리는 «화폐 알갱이(비행)» 와 «앰버 버스트» 두 층이라 알갱이를 끄면 앰버 14개가
+     그대로 남았다. 660 이 두 층을 **아이콘 버스트 한 벌**로 합쳤으므로 아이콘을 빼고 남는 것은
+     같은 버스트의 «아이콘 없는 스파크» 뿐이다(실측 2개 — 아이콘이 없으면 keep-out·산포에서 더
+     많이 빠진다). 이 항이 지키는 뜻은 그대로다: **버스트 층 자체는 안 죽었다**(0 이면 [R1] 이
+     «연출이 통째로 없어서» 초록인 헛초록이 된다 — 둘을 같이 봐야 [R1] 이 뜻을 갖는다). */
+  ok(rvSpark >= 1, '[R2] ★ 아이콘을 빼도 **버스트 층 자체는 뜬다** — [R1] 의 0 이 «연출이 통째로 없어서» 가 아니다',
+     rvSpark + '개 (≥1)');
+  await p.evaluate(() => { if (window.__burst0) window.fxBurst = window.__burst0; });
 
   console.log('\n콘솔 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
   ok(errs.length === 0, '[Z] 콘솔 에러 0');

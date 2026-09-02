@@ -25,6 +25,7 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
+const fs = require('fs');
 
 const SRC = path.resolve(__dirname, '../index.html');
 let pass = 0, fail = 0;
@@ -139,10 +140,14 @@ const SITES = [
         const L = document.getElementById('fxl');
         const host = document.querySelector(s.host);
         const hr = host ? host.getBoundingClientRect() : null;
+        /* ⚑ 660·678 이관 — 스파크에도 «화폐 아이콘» 을 같이 담는다. 660 이 «알약 → 버튼» 비행을
+           폐지하면서 아이콘을 **버스트 안**으로 옮겼기 때문이다(종전에는 `.fx-fly` 쪽에만 있었다). */
         const sparks = [...(L ? L.querySelectorAll('.fx-spark') : [])].map(n => {
           const b = n.getBoundingClientRect();
+          const si = n.querySelector('img.cic');
           return { x: b.left + b.width / 2, y: b.top + b.height / 2, w: b.width,
-                   c: n.style.getPropertyValue('--c').trim() };
+                   c: n.style.getPropertyValue('--c').trim(),
+                   cur: si ? si.dataset.curIc : null };
         });
         const flies = [...(L ? L.querySelectorAll('.fx-fly') : [])].map(n => {
           const b = n.getBoundingClientRect();
@@ -175,6 +180,7 @@ const SITES = [
     const spMax  = Math.max(...fr.map(f => f.sparks.length));
     const spCols = [...new Set(fr.flatMap(f => f.sparks.map(x => x.c)))].filter(Boolean);
     const spW    = fr.flatMap(f => f.sparks.map(x => x.w));
+    const spCur  = [...new Set(fr.flatMap(f => f.sparks.map(x => x.cur)))].filter(Boolean);
     const flMax  = Math.max(...fr.map(f => f.flies.length));
     const flCur  = [...new Set(fr.flatMap(f => f.flies.map(x => x.cur)))].filter(Boolean);
     /* 방향 — 알갱이 무리 중심이 호스트 중심에서 얼마나·어느 쪽으로 떨어져 있는가(시간 평균) */
@@ -187,16 +193,28 @@ const SITES = [
       + ' · 488 사다리 [' + hbTxt.join(',') + '] · 알약 움푹 ' + dent
       + ' · 알갱이 최대 ' + spMax + '개 색[' + spCols.join(',') + '] 폭 '
       + (spW.length ? n1(Math.min(...spW)) + '~' + n1(Math.max(...spW)) : 'n/a')
-      + ' · 화폐 아이콘 알갱이 ' + flMax + '개 [' + flCur.join(',') + ']'
+      + ' · 화폐 아이콘 — 비행 ' + flMax + '개 [' + flCur.join(',') + '] · 버스트 [' + spCur.join(',') + ']'
       + ' · 무리 중심 오프셋 (' + (dn ? n1(dx / dn) : '0') + ',' + (dn ? n1(dy / dn) : '0') + ')');
-    B[s.k].__sum = { payTxt, hbTxt, dent, spMax, spCols, flMax, flCur, off: dn ? { x: dx / dn, y: dy / dn } : null };
+    B[s.k].__sum = { payTxt, hbTxt, dent, spMax, spCols, spCur, flMax, flCur, off: dn ? { x: dx / dn, y: dy / dn } : null };
   }
 
   /* ⚠ 프로브는 «옳음» 이 아니라 «지금 무엇이 찍히는가» 를 묻는 자다 — 그래서 수리 전/후 **둘 다**
      PASS 여야 하고, 항목은 상태(`fxSpend` 가 있는가)에 따라 기대를 바꿔 적는다(338 규칙).
      1회차 실측(수리 전 = 등재문 확인) / 2회차 실측(수리 후)은 review 파일에 나란히 있다. */
   const sum = k => (B[k] && B[k].__sum) || {};
-  const AFTER = A.hasSpend;
+  /* ⚑⚑ 678 이관 — **상태 키를 갈았다.** 종전 키는 «`fxSpend` 가 있는가»(A.hasSpend) 한 축이라
+     시대를 **둘**로만 봤는데, 그 사이 660 이 «알약 → 버튼» 비행을 폐지하고 678 이 그 선언을 걷어
+     시대가 **셋**이 됐다. 그대로 두면 678 뒤의 트리가 «수리 전» 으로 읽혀 [B3]·[B5](«−n» 금액이
+     뜬다)가 빨개진다 — 제품이 옳은데 자가 옛 시대를 요구하는, 333 이 말한 그 얼굴이다.
+       · pre583  — «−n» 금액 노드를 아직 만든다(`fxPay` 소스)
+       · post583 — 금액은 없고 **비행 알갱이**(`.fx-fly` + 화폐 아이콘)가 있다(`fxSpend` 선언)
+       · post660 — 비행도 없고 아이콘은 **버스트 안**(`.fx-spark` + 화폐 아이콘) · 678 이 선언 철거
+     ⚠ pre583 과 post660 은 **둘 다 `fxSpend` 가 없다** — 그래서 한 축으로는 못 가른다. */
+  const ERA = /el\.textContent = '−' \+ fmtCur\(cur, n\);/.test(fs.readFileSync(SRC, 'utf8'))
+    ? 'pre583' : (A.hasSpend ? 'post583' : 'post660');
+  console.log('\n  시대 판정: **' + ERA + '**'
+    + (ERA === 'post660' ? ' (660 이 비행을 폐지하고 678 이 선언을 걷었다)' : ''));
+  const AFTER = ERA !== 'pre583';
   const flAll = ['train', 'rune', 'temper'].map(k => sum(k).flMax || 0);
   if(!AFTER){
     ok(sum('train').spMax > 0 && sum('train').spCols.length === 1 && sum('train').spCols[0].toUpperCase() === String(A.up).toUpperCase(),
@@ -210,14 +228,35 @@ const SITES = [
     ok((sum('train').hbTxt || []).some(t => /−/.test(t)),
        '[B5] ★ (수리 전) 훈련 카드에도 488 회당 사다리의 «−n» 금액이 **따로** 있다 — 등재문이 안 적은 두 번째 자리',
        (sum('train').hbTxt || []).join(','));
-  }else{
+  }else if(ERA === 'post583'){
     ok(sum('train').spMax === 0,
-       '[B1] ★ (수리 후) 훈련의 앰버 알갱이는 화폐 알갱이로 **갈렸다**(겹쳐 쏘지 않는다)',
+       '[B1] ★ (583 수리 후) 훈련의 앰버 알갱이는 화폐 알갱이로 **갈렸다**(겹쳐 쏘지 않는다)',
        '앰버 ' + sum('train').spMax + '개');
     ok(flAll.every(v => v >= 3)
        && sum('train').flCur[0] === 'gold' && sum('rune').flCur[0] === 'rstone' && sum('temper').flCur[0] === 'tstone',
-       '[B2] ★ (수리 후) 세 자리가 각각 gold · rstone · tstone 알갱이를 쏜다',
+       '[B2] ★ (583 수리 후) 세 자리가 각각 gold · rstone · tstone **비행** 알갱이를 쏜다',
        flAll.join(' · ') + ' [' + [sum('train').flCur, sum('rune').flCur, sum('temper').flCur].join(' / ') + ']');
+    ok((sum('train').payTxt || []).length === 0,
+       '[B3] ★ (수리 후) `fxPay` 의 «−n» 금액이 0건이다', (sum('train').payTxt || []).join(',') || '0건');
+    ok(!(sum('train').hbTxt || []).some(t => /−/.test(t)),
+       '[B5] ★ (수리 후) 훈련 카드의 488 사다리 «−n» 금액도 0건이다 — 주인이 지운 것은 «금액» 둘 다였다',
+       '[' + (sum('train').hbTxt || []).join(',') + ']');
+  }else{
+    /* ⚑⚑ 660·678 이관 — **같은 질문을 다른 층에 던진다.** 583 은 «화폐가 연출에 나오는가» 를
+       물었고 그 답이 그때는 «비행 알갱이»(`.fx-fly`)였다. 660 이 비행을 폐지하고 아이콘을
+       **버스트 안**(`.fx-spark` 의 자식 `img.cic`)으로 옮겼으므로, 종전 두 항을 그대로 두면
+       «폐지된 축이 있어야 통과» 가 된다(333). ⇒ 표본을 버스트로 옮기고 뜻은 그대로 둔다.
+       ⚠ [B1] 의 «앰버 0» 도 뒤집힌다 — 660 뒤에는 **그 앰버가 곧 화폐 아이콘의 몸**이다. */
+    const spAll = ['train', 'rune', 'temper'].map(k => (sum(k).spMax || 0));
+    ok(spAll.every(v => v >= 3),
+       '[B1] ★ (660 뒤) 세 자리 모두 버튼에서 **버스트가 난다** — 걷어낸 비행 대신 선 층이 있다',
+       spAll.join(' · '));
+    ok(flAll.every(v => v === 0)
+       && (sum('train').spCur || [])[0] === 'gold' && (sum('rune').spCur || [])[0] === 'rstone'
+       && (sum('temper').spCur || [])[0] === 'tstone',
+       '[B2] ★ (660 뒤) 화폐 아이콘이 **버스트 안**에 있다(비행은 0) — gold · rstone · tstone',
+       '비행 ' + flAll.join('·') + ' / 버스트 ['
+         + [sum('train').spCur, sum('rune').spCur, sum('temper').spCur].join(' / ') + ']');
     ok((sum('train').payTxt || []).length === 0,
        '[B3] ★ (수리 후) `fxPay` 의 «−n» 금액이 0건이다', (sum('train').payTxt || []).join(',') || '0건');
     ok(!(sum('train').hbTxt || []).some(t => /−/.test(t)),
