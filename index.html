@@ -12049,9 +12049,19 @@
      ⚠ **471 4회차 이탈** — 잉크좌단은 레퍼런스가 «카드+20» 이지만 `[+]`/`[─]` 가 좌상단 코너로
      옮겨 오면서(아래 `.sk-card>.sk-eq`) 그 자리를 비켜 **+34px 우로** 밀었다. 세로는 Δ0 이다.
      측정표 07 §6-1 정오표·26·50 도 같은 부품이라 같이 움직인다. */
+  /* ⚑ 814 — 색을 **변수 한 겹** 뒤로 옮겼다(계산값 Δ0 · 픽셀 Δ0). 아래 `fxCvLit` 이 «원래 색» 으로
+     돌아오려면 그 색이 무엇인지 알아야 하는데, 카드 상태(`dim`·`lk`)마다 다르기 때문이다. */
   .sk-clv{position:absolute;left:52px;top:14px;height:32px;font-size:26px;line-height:32px;
-    color:#fff}
-  .sk-card.dim>.sk-clv,.sk-card.lk>.sk-clv{color:#ACACAC}
+    --clv-c:#fff;color:var(--clv-c)}
+  .sk-card.dim>.sk-clv,.sk-card.lk>.sk-clv{--clv-c:#ACACAC}
+  /* ⚑ 814 — «값이 바뀐 줄» 이 한 번 더 말하는 축. 58 20회차가 세운 어휘(획득 = 앰버 · 카드 스탯 = 제 색)
+     그대로 340ms 물들었다 돌아온다. 팝(`fxCvSwap`)과 **같은 길이**라 두 축이 한 사건으로 읽히고,
+     잉크 상자는 한 픽셀도 안 움직인다(색만 — 795 가 경계한 «테·글로우로 라벨을 먹는 것» 을 안 한다). */
+  /* ⚠ **두 번째 클래스로 얹으면 안 된다** — `animation` 은 단축 속성이라 나중 규칙이 `fxCvSwap` 을
+     **통째로 덮는다**(1회차에 실제로 팝이 사라졌고 `verify814` [B4] 가 그 자리에서 빨개졌다).
+     그래서 새 클래스를 만들지 않고, 이 호스트에서만 **한 선언에 둘을 같이** 적는다. */
+  @keyframes fxCvLit{0%{color:#FFC02E}55%{color:#FFC02E}100%{color:var(--clv-c)}}
+  .sk-clv.fx-cvswap{animation:fxCvSwap .34s cubic-bezier(.34,1.56,.64,1) both, fxCvLit .34s linear}
   /* 82 — 미보유 카드도 아이콘이 자물쇠 뒤에 비쳐 보이게(05 .wgc.lk>.ic 와 동일 컨셉).
      brightness(0) 완전 실루엣 금지(주인 지시) — 흐린 회색
      225 — `grayscale(1)` 은 색을 **휘도 하나로 접는다.** 채도 높은 빨강·주황 아이콘은 접히고 나면
@@ -36612,7 +36622,7 @@ function cosLvPop(){
   if(!l) return;
   l.classList.remove('fx-cvswap');
   void l.offsetWidth;                                  /* 꾹 누르기 반복분에서도 다시 걸리게 리플로우(58 21회차) */
-  l.classList.add('fx-cvswap');
+  l.classList.add('fx-cvswap');                        /* `.sk-clv.fx-cvswap` 가 팝 + 앰버를 **한 선언**으로 준다 */
   setTimeout(() => l.classList && l.classList.remove('fx-cvswap'), 400);
 }
 $('bCos').addEventListener('click', e => {

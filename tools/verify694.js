@@ -12,7 +12,11 @@
  * 축(각 주입 = 이관이 세운 항 하나를 겨눈다)
  *   §R-a  660 되돌림 — 훈련 첫 발이 다시 «+n» 을 띄운다      ⇒ [7-b] 빨강
  *   §R-b  버스트 폐지 — 아이콘 알갱이가 `.fx-cic` 를 안 단다 ⇒ [7-c] 빨강
- *   §R-c  부품 사망 — `fxDelta` 가 아무것도 안 만든다        ⇒ [7-d] 빨강
+ *   §R-c  부품 사망 — `fxDelta` 가 아무것도 안 만든다        ⇒ **[7-f]** 빨강
+ *         (⚑ 814 이관 2026-09-02 — 겨누는 항이 [7-d] → [7-f] 로 옮겨졌다. 814 가 씬 D(코스튬)의
+ *          호출을 «문구 없음 + 값 줄 팝» 으로 갈면서 [7-d] 는 **음성항**(델타 0장)이 됐고,
+ *          «부품은 살아 있다» 는 양성항이 [7-f](직접 호출이 봉투 안에 선다)로 내려갔다.
+ *          주입을 그대로 두고 겨누는 항만 옮긴다 — 축(«부품이 죽으면 빨개져야 한다»)은 그대로다.)
  *   §R-d  판정 무력화 — 훈련이 골드를 안 쓴다               ⇒ [7-a] 빨강(«씬이 안 났다» 를 초록으로 안 읽는다)
  *   §R-e  자리 이탈 — 버스트를 누른 카드가 아니라 HUD 에서 터뜨린다 ⇒ [7-c2] 빨강(702 가 지킨 «위치 축»)
  * §0 은 청정 트리에서 [7] 여섯 줄이 전부 초록임을 먼저 확인한다(주입 시험이 헛되지 않게).
@@ -60,8 +64,9 @@ const INJ = {
      ⚠ 이것이 없으면 [7-b] 는 «연출이 통째로 사라져도 초록» 인 음성항이 된다(488·583 교훈). */
   'R-b': ['[7-c]', "if(IC){ el.className = 'fx-spark fx-cic';",
                    "if(IC){ el.className = 'fx-spark';"],
-  /* 부품 `fxDelta` 자체가 죽으면 살아 있는 계열(50 코스튬)의 양성항이 빨개져야 한다. */
-  'R-c': ['[7-d]', "function fxDelta(el, txt){\n  const L = fxL(), r = fxRect(el); if(!L || !r || !txt) return;",
+  /* 부품 `fxDelta` 자체가 죽으면 «부품은 살아 있다» 는 양성항([7-f])이 빨개져야 한다.
+     ⚠ 814 전에는 그 양성항이 [7-d] 였다(씬 D 가 부품을 실제로 쓰던 시절). */
+  'R-c': ['[7-f]', "function fxDelta(el, txt){\n  const L = fxL(), r = fxRect(el); if(!L || !r || !txt) return;",
                    "function fxDelta(el, txt){\n  if(1) return;\n  const L = fxL(), r = fxRect(el); if(!L || !r || !txt) return;"],
   /* 전제가 무르지 않다는 증명 — 훈련이 아무것도 안 사면 [7-b] 의 «0장» 은 뜻이 없다.
      그 세계에서 [7-a] 가 빨개져야 «씬이 안 났다» 를 «폐지됐다» 로 오독하지 않는다. */
@@ -74,7 +79,7 @@ const INJ = {
   'R-e': ['[7-c2]', "  if(typeof fxBurst === 'function') fxBurst(fxBurstAt(el), FXPAL.up, cnt, true, null, cur || null);",
                     "  if(typeof fxBurst === 'function') fxBurst(document.getElementById('top') || fxBurstAt(el), FXPAL.up, cnt, true, null, cur || null);"],
 };
-const WANT = { 'R-a': '7-b', 'R-b': '7-c', 'R-c': '7-d', 'R-d': '7-a', 'R-e': '7-c2' };
+const WANT = { 'R-a': '7-b', 'R-b': '7-c', 'R-c': '7-f', 'R-d': '7-a', 'R-e': '7-c2' };
 
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
 

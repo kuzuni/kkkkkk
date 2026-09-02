@@ -107,6 +107,11 @@ async function run(file, h) {
       spark: L ? L.querySelectorAll('.fx-spark').length : 0,
       pop: !!(clv && clv.classList.contains('fx-cvswap')),
       popAnim: clv ? getComputedStyle(clv).animationName : '—',
+      /* 스파크가 «누른 카드» 를 가리키는가 — 개수만 세면 «아무 데서나 터져도 초록» 이다(702·verify93 [7-c2]) */
+      sparkAt: L ? [...L.querySelectorAll('.fx-spark')].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, s: Math.max(r.width, r.height) };
+      }) : [],
       fs: getComputedStyle(document.documentElement).getPropertyValue('--fx-plus-fs').trim()
     };
   });
@@ -176,7 +181,16 @@ function inter(plus, inks) {
   ok(D.flash >= 1, '[B1] 흰 플래시가 남아 있다 (' + D.flash + '장)');
   ok(D.spark >= 1, '[B2] 크림 스파크가 남아 있다 (' + D.spark + '알)');
   ok(D.pop, '[B3] ★ 값이 바뀐 줄(.sk-clv)이 22회차 팝으로 «방금 갱신됐다» 를 말한다');
-  ok(D.popAnim === 'fxCvSwap', '[B4] 팝은 58 22회차의 그 부품이다 (' + D.popAnim + ')');
+  ok(/fxCvSwap/.test(D.popAnim), '[B4] 팝은 58 22회차의 그 부품이다 (' + D.popAnim + ')');
+  ok(/fxCvLit/.test(D.popAnim), '[B5] ★ 그 줄이 58 20회차의 앰버로 물든다 — «방금 갱신됐다» 를 두 축으로 말한다');
+  {
+    const m = D.sparkAt.map((a) => a.s / 2);
+    const out = D.sparkAt.filter((a, i) => a.cx < D.sel.x - m[i] || a.cx > D.sel.r + m[i] || a.cy < D.sel.y - m[i] || a.cy > D.sel.b + m[i]);
+    console.log('  · 스파크 자리 — 잰 ' + D.sparkAt.length + '알 · 카드 상자 밖 ' + out.length + '알 (카드 '
+      + r0(D.sel.w) + '×' + r0(D.sel.h) + ')');
+    ok(D.sparkAt.length >= 3 && out.length === 0,
+      '[B6] ★ 그 버스트가 **누른 카드 상자 안**에서 뜬다 — 밖 ' + out.length + '알 / 잰 ' + D.sparkAt.length + '알 (verify93 [7-c2] 와 같은 축)');
+  }
 
   console.log('\n[C] 연출이 «정보» 를 잃지 않았는가 — 값 자체');
   const b0 = D.before.find((k) => /^Lv\./.test(k.txt)), a0 = D.selInks.find((k) => /^Lv\./.test(k.txt));

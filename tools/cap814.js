@@ -1,16 +1,19 @@
 /* 814 채점용 연속 프레임 캡처 — 지시서 [3]-(다)(«연속 프레임 6~8장 · 비평 2인»)
 
-   씬 두 개를 같은 자로 찍는다:
-     A «격자»  — 50 코스튬 시트 카드 [강화](이 작업이 고친 자리)
-     B «팝업»  — 08 세부 팝업 [강화](같은 행동의 짝 자리 · 736 «짝인 두 자리»)
-   그리고 **수리 전** 사본(옛 호출 = 문구 «Lv. n» 부활)을 같은 타이밍으로 한 벌 더 찍어
-   비평가가 «무엇이 좋아졌고 무엇을 잃었는가» 를 같은 눈금으로 볼 수 있게 한다.
+   ⚠⚠ **1회차 캡처는 무효였다**(비평가 CR1·CR2 가 독립으로 잡아냈다):
+     ⓐ `all[1].click()` 이 카드를 «선택» 한 게 아니라 **상세 팝업을 열었다** — `cosSel` 기본값이
+        `cosBest()` 라 그 카드가 이미 선택돼 있었고, 같은 카드를 다시 누르면 `showCosDetail()` 이다.
+        ⇒ 8장 전부 «팝업이 격자를 덮은 화면» 이었고 채점 대상 카드가 **한 픽셀도 없었다**.
+     ⓑ 실시간 스크린샷은 한 장에 200~480ms 라, 수명 620ms 짜리 연출이 **1~2프레임**밖에 안 잡혔다
+        (2·3·4…장이 바이트 단위로 같았다 — 비평가가 md5 로 그것을 찍었다).
+   ⇒ 둘 다 고친다: **선택만 하고**(팝업이 열리면 예외로 멈춘다) · **두 벌**로 찍는다.
+     · `-step-1..8` — CSS 애니를 정지시키고 진행도를 직접 준다(0/80/…/560ms). 플래시·팝·델타의
+       **시간축이 정확**하다. ⚠ 파티클은 CSS 가 아니라 JS 틱이 움직이므로 이 벌에서는 **정지**다.
+     · `-live-1..6` — 실시간(실측 시각을 같이 적는다). 입자가 실제로 어디로 흩어지는지는 이쪽이 답한다.
 
    ⚠ 캡처는 커밋하지 않는다(ROUTINE 서두 — `docs/review/*.png` 는 .gitignore).
-   ⚠ 잘라 찍는다(카드 둘레 620×560) — 1080×2280 전장을 주면 168px 카드의
-     «값 줄이 덮이는가» 를 사람이 못 본다. 맥락용 전장 1장은 따로 찍는다.
 
-   실행: node tools/cap814.js [--tag r1] */
+   실행: node tools/cap814.js [--tag r2] */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
@@ -19,8 +22,8 @@ const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'docs', 'review');
 const tagIx = process.argv.indexOf('--tag');
-const TAG = tagIx > 0 ? process.argv[tagIx + 1] : 'r1';
-const TS = [0, 90, 180, 270, 360, 450, 540, 630];   /* 트리거 직후 8장 · 90ms 간격(수명 620ms 를 덮는다) */
+const TAG = tagIx > 0 ? process.argv[tagIx + 1] : 'r2';
+const STEPS = [0, 80, 160, 240, 320, 400, 480, 560];   /* 수명 620ms 를 8칸으로 */
 
 async function boot(file) {
   const b = await launch(chromium);
@@ -35,7 +38,8 @@ async function boot(file) {
     S.avatars = S.avatars || {};
     for (const a of AVATARS) S.avatars[a.id] = 1;
     S.avatar = AVATARS[0].id;
-    S.cosLv = S.cosLv || {}; S.cosLv[AVATARS[1].id] = 12;      /* 한 자리 · 두 자리가 같이 보이게 */
+    S.cosLv = S.cosLv || {};
+    for (let i = 0; i < 12; i++) S.cosLv[AVATARS[i].id] = 12;   /* 두 자리 레벨 */
     goTab('hero'); heroSubGo('cos');
     uiDirty = true; if (typeof renderUI === 'function') renderUI();
     try { for (const k in fxSeen) fxSeen[k] = (typeof S[k] === 'number' ? S[k] : fxSeen[k]); } catch (e) {}
@@ -44,71 +48,78 @@ async function boot(file) {
   return { b, p };
 }
 
-/* ⚠ **실시간**으로 찍는다(58 방식 «트리거 직후 80~100ms 간격»). 애니를 정지시켜 진행도를 주는 자
-   (probe/verify)와 달리, 채점용 프레임은 **사람이 보는 그대로**여야 한다 — 파티클은 CSS 가 아니라
-   JS 틱이 움직이므로 `currentTime` 을 밀어도 안 따라오고, 그렇게 찍으면 «4장째부터 똑같은 그림» 이 된다.
-   스크린샷 한 장이 ~120ms 라 간격은 그 위에 얹는다. 실제 시각을 같이 적어 비평 브리핑에 넘긴다. */
-async function shoot(p, prefix, box, t0) {
-  const at = [];
-  for (let i = 1; i <= 8; i++) {
-    at.push(Math.round(Date.now() - t0));
-    await p.screenshot({ path: path.join(OUT, prefix + '-' + i + '.png'), clip: box });
-    const want = i * 90 - (Date.now() - t0);
-    if (want > 0) await p.waitForTimeout(want);
-  }
-  return at;
+/* 선택만 한다 — **이미 선택된 카드를 누르면 상세 팝업이 열린다**(1회차 사고). */
+async function select(p) {
+  const r = await p.evaluate(() => {
+    const all = [...document.querySelectorAll('#bCos [data-cosit]')];
+    const el = all.find((e) => e.dataset.cosit !== cosSel) || all[0];
+    el.scrollIntoView({ block: 'center' });
+    el.click();
+    const sel = document.querySelector('#bCos .sk-card.sel');
+    const md = document.querySelector('#modal') || document.querySelector('#mbox');
+    const open = !!(md && md.offsetParent !== null);
+    const q = sel ? sel.getBoundingClientRect() : null;
+    return { open, sel: q ? { x: q.left, y: q.top, w: q.width, h: q.height } : null };
+  });
+  if (r.open) throw new Error('상세 팝업이 열렸다 — 캡처 무효(1회차 사고 재발)');
+  if (!r.sel) throw new Error('선택 카드가 없다');
+  return r.sel;
 }
+
+const clipOf = (sel) => ({ x: Math.max(0, Math.round(sel.x - 226)), y: Math.max(0, Math.round(sel.y - 150)), width: 620, height: 480 });
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
-  const shots = [];
+  const log = [];
 
-  for (const [file, kind] of [['index.html', 'now'], [null, 'pre']]) {
-    let src = file;
+  for (const kind of ['now', 'pre']) {
+    let src = 'index.html';
     if (kind === 'pre') {
-      /* 수리 전 사본 — 옛 호출(문구 «Lv. n»)로 되돌린다. §R-a 와 같은 주입이다. */
       const s = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
       const from = 'fxUpOk(card, card);                            /* 17 «성공» 과 같은 한 세트(58 톤) — 814: 문구는 뺀다 */';
       const to = "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));";
-      if (s.indexOf(from) < 0) { console.log('⚠ 수리 전 주입 앵커를 못 찾았다 — pre 캡처 건너뜀'); continue; }
+      if (s.indexOf(from) < 0) throw new Error('수리 전 주입 앵커를 못 찾았다');
       src = '.cap814-pre.html';
-      fs.writeFileSync(path.join(ROOT, src), s.split(from).join(to)
-        .split('      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n').join(''));
+      fs.writeFileSync(path.join(ROOT, src), s.split(from).join(to));
     }
-    const { b, p } = await boot(src);
 
-    /* ── 씬 A: 격자 카드 [강화] ─────────────────────────── */
-    const boxA = await p.evaluate(() => {
-      const all = [...document.querySelectorAll('#bCos [data-cosit]')];
-      all[1].click();
-      const r = document.querySelector('#bCos .sk-card.sel').getBoundingClientRect();
-      document.querySelector('#bCos [data-cosup]').click();
-      return { x: Math.max(0, r.left - 230), y: Math.max(0, r.top - 120), width: 620, height: 560 };
-    });
-    const atA = await shoot(p, '814-' + TAG + '-' + kind + '-grid', boxA, Date.now());
-    shots.push('814-' + TAG + '-' + kind + '-grid-1..8.png @ ' + atA.join('/') + 'ms');
+    /* ── 벌 1: CSS 진행도 정지 스텝 ─────────────────────────── */
+    {
+      const { b, p } = await boot(src);
+      const sel = await select(p);
+      const clip = clipOf(sel);
+      await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
+      for (let i = 0; i < STEPS.length; i++) {
+        await p.evaluate((t) => {
+          document.getAnimations().forEach((a) => { a.pause(); try { a.currentTime = t; } catch (_) {} });
+        }, STEPS[i]);
+        await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-step-${i + 1}.png`), clip });
+      }
+      await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-full.png`) });
+      log.push(`${kind}-step-1..8 @ ${STEPS.join('/')}ms (CSS 정지 스텝 · 파티클 정지)`);
+      await b.close();
+    }
 
-    /* 맥락용 전장 1장(연출이 끝난 뒤 — 자리 맥락용) */
-    await p.screenshot({ path: path.join(OUT, '814-' + TAG + '-' + kind + '-grid-full.png') });
+    /* ── 벌 2: 실시간 ──────────────────────────────────────── */
+    {
+      const { b, p } = await boot(src);
+      const sel = await select(p);
+      const clip = clipOf(sel);
+      const t0 = Date.now();
+      await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
+      const at = [];
+      for (let i = 1; i <= 6; i++) {
+        at.push(Date.now() - t0);
+        await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-live-${i}.png`), clip });
+      }
+      log.push(`${kind}-live-1..6 @ ${at.join('/')}ms (실시간 · 입자 실제)`);
+      await b.close();
+    }
 
-    /* ── 씬 B: 08 세부 팝업 [강화] ──────────────────────── */
-    const boxB = await p.evaluate(() => {
-      document.getAnimations().forEach((a) => { try { a.finish(); } catch (_) {} });
-      for (const d of document.querySelectorAll('#fxl > *')) d.remove();
-      showCosDetail(cosSel);
-      const btn = [...document.querySelectorAll('#mbox button')].find((x) => /강화/.test(x.textContent) && !x.disabled);
-      const ic = document.querySelector('#mbox .sk-ic');
-      const r = ic.getBoundingClientRect();
-      if (btn) btn.click();
-      return { x: Math.max(0, r.left - 230), y: Math.max(0, r.top - 90), width: 620, height: 560 };
-    });
-    const atB = await shoot(p, '814-' + TAG + '-' + kind + '-pop', boxB, Date.now());
-    shots.push('814-' + TAG + '-' + kind + '-pop-1..8.png @ ' + atB.join('/') + 'ms');
-
-    await b.close();
     if (kind === 'pre') { try { fs.unlinkSync(path.join(ROOT, src)); } catch (_) {} }
   }
 
-  console.log('CAP814 — ' + shots.join(' · '));
-  console.log('수명 620ms · 8장 · 목표 간격 90ms(실측 시각은 위 줄)');
-})().catch((e) => { console.error(e); process.exit(1); });
+  console.log('CAP814 (' + TAG + ')');
+  for (const l of log) console.log('  · ' + l);
+  console.log('  · 크롭 620×480 · 배율 1 · 카드 좌상단은 크롭 안 (226,150) · 수명 620ms');
+})().catch((e) => { console.error('CAP814 실패 — ' + e.message); process.exit(1); });
