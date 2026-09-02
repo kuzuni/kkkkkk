@@ -5824,9 +5824,10 @@
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000}   /* 126 ② — 5.5px = r .212 */
   .shp-card .cbtn.lack>.sub{color:#EB6D68}   /* 외곽선 두께는 .b1>.sub 의 6px 를 그대로 둔다 */
 
-  /* 잠금 상자(도감 완성) — 딤 + 안내 */
+  /* 잠금 상자(최대치 달성 — 전 종 보유 + 전 종 만렙) — 딤 + 안내.
+     ⚠ 720 이전 주석은 이 자리를 «도감 완성» 이라 불렀는데 판정은 그때도 만렙까지 봤다(probe720). */
   /* 328 — z 5 → 7. 레드닷이 카드 코너(바깥)에서 **버튼 코너(카드 안)** 로 들어오면서 이 딤 위에
-     떠 버렸다. «도감 완성» 칸의 무료 버튼은 유료 소환으로 떨어지므로(25121) 닷이 딤 위에 남으면
+     떠 버렸다. «최대치 달성» 칸의 무료 버튼은 유료 소환으로 떨어지므로(25121) 닷이 딤 위에 남으면
      321 이 남긴 «레드닷 = 지금 누를 수 있다» 약속이 깨진다 — 딤을 닷(z6) 위로 올려 같이 덮는다. */
   .shp-card .clk{inset:7px;border-radius:20px;background:rgba(0,0,0,.6);text-align:center;
     line-height:436px;font-size:40px;color:#e9c98a;-webkit-text-stroke:0;pointer-events:none;z-index:7}
@@ -27156,6 +27157,17 @@ function craftAll(list){
   return { n, made: [...by.values()] };
 }
 const allMaxed = list => list.every(it => atMax(it));
+/* ── 720 (2026-09-02, 저장소 주인 지시) 소환 Lock 의 이름 ─────────────────────────
+   주인 원문: «스킬팝업-> 도감완성 으로 해서 Lock돼지말고 최대치 달성으로 하고 Lock되게 하기».
+   ⚑ **재현(`probe720`)이 등재문을 절반만 확인했다** — 판정은 처음부터 «최대치» 였다
+     (`allMaxed` = 전 종 보유 **+ 전 종 만렙**. 전 종 보유·Lv1 = 도감만 완성한 표본에서
+     딤 0건 · 소환 10회 실행 = probe720 [1]). 어긋난 것은 **이름 하나**였고, 그 이름이
+     두 자리(카드 딤 · 소환 차단 안내)에 **따로 적혀** 있어 판정과 표기가 갈릴 수 있었다.
+   ⇒ 이름을 상수 하나로 모아 두 자리가 같은 것을 읽게 한다(402 «표가 아니라 파생» ·
+     757 «손 상수 금지» 와 같은 처방). 판정식은 한 줄도 안 바꾼다 — 이미 옳았다.
+   ⚠ 장비 3배너는 최상위 등급의 `maxLv` 가 Infinity(무한 강화)라 **구조적으로** 이 상태에
+     닿지 않는다(probe720 [5]). 그것은 720 이 만든 것이 아니라 85·719 의 등급 설계다. */
+const MAXED_TXT = '최대치 달성';
 /* ── 757 (2026-09-02, 저장소 주인 지시) 조각 환급 ──────────────────────────────
    주인 원문: «강화를 해도 스킬들이 100 레벨 다 되고 나머지 스킬들이 조각이 500 막 이런식으로
    남게 되는데, 그렇게 되면 환급 버튼 뜨게 해서 클릭시 그 스킬들 환급해서 다이아로 도로 받게 하기.
@@ -27367,7 +27379,7 @@ function doSummon(b, times){
   const B = BANNERS[b];
   if(gmBlocked(b)) return;                       /* 73 ③ 가이드 소환 미션 진행 중 — 다른 상자는 못 뽑는다 */
   if(allMaxed(B.list)){
-    notify('🏆 ' + B.n + ' 도감 완성 — 재료를 환불하세요');
+    notify('🏆 ' + B.n + ' ' + MAXED_TXT + ' — 재료를 환불하세요');   /* 720 — 이름은 한 곳(MAXED_TXT) */
     return;
   }
   const cost = summonCost(b, times);
@@ -32283,7 +32295,8 @@ function renderShopPage(){
          12 결과 팝업의 [무료] 등 렌더 밖에서도 재고가 변해서, 껐다 켜는 주체를 매 틱 도는
          syncShopSumBtns() 한 곳으로 모으는 편이 «켜진 채 굳는» 사고가 없다(도감 탭 `.cltab` 과 같은 꼴). */
       +  '<s class="updot"></s>'
-      +  (maxed ? '<div class="clk">도감 완성 🏆</div>' : '')
+      /* 720 — 딤 문구도 판정과 같은 출처(MAXED_TXT)에서 나온다. 판정(`maxed` = allMaxed)은 불변 */
+      +  (maxed ? '<div class="clk">' + MAXED_TXT + ' 🏆</div>' : '')
       +  '</div>';
   });
   list.innerHTML = h;

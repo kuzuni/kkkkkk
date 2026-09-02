@@ -201,7 +201,10 @@ const gap = (c, b) => {
   ok(audit.n > 0 && audit.offBad === 0 && audit.onBad === 0,
     '[F] 호스트 전수 — `.alert` 없으면 꺼짐 / 있으면 켜짐', audit.n + '칸 · 위반 ' + audit.offBad + '/' + audit.onBad);
 
-  /* ══ [G] «도감 완성» 칸 — 딤이 닷을 덮는다 ══════════════════════════════ */
+  /* ══ [G] «최대치 달성» 칸 — 딤이 닷을 덮는다 ══════════════════════════════ */
+  /* 720 이관 — 이 칸의 이름이 «도감 완성» 에서 «최대치 달성» 으로 바뀌었다(주인 지시 2026-09-02).
+     [G] 가 재는 성질(«잠기면 딤이 닷을 덮는가» = z 관계)은 이름과 무관하지만, 주입 표본은
+     제품이 실제로 찍는 문자열이어야 «죽은 표본» 이 안 된다(334 처방). */
   /* ⚠ 잠금 국면을 «상태로» 만들 수는 없다 — `maxLv()` 가 최고 등급 장비에 Infinity 를 주므로
      `allMaxed()` 가 그 상자에서는 영원히 거짓이다(20889). 그래서 renderShopPage 가 찍는 것과
      **같은 노드**(`<div class="clk">`)를 그 자리에 직접 넣고 z 겨루기만 잰다 — 이 게이트가 지키려는
@@ -210,7 +213,7 @@ const gap = (c, b) => {
     S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 2, o), {});
     uiDirty = true; renderShopPage(); syncShopSumBtns();
     const c = document.querySelector('#shopList .shp-card');
-    c.insertAdjacentHTML('beforeend', '<div class="clk">도감 완성 🏆</div>');
+    c.insertAdjacentHTML('beforeend', '<div class="clk">' + MAXED_TXT + ' 🏆</div>');
     const d = c.querySelector(':scope > .updot'), clk = c.querySelector('.clk');
     const dr = d.getBoundingClientRect(), kr = clk.getBoundingClientRect();
     /* 닷이 딤 상자 안에 있어야 «덮인다» 가 성립한다(딤은 inset:7px) */
