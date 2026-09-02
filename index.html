@@ -10063,8 +10063,12 @@
      칩 상자(319px)는 양쪽 다 Δ0~2px 이라 **상자는 맞고 라벨만 작다** — 상자 대비 점유율 29.8% → 24.2%.
      fs 31 → 36(×1.16)으로 높이를 채우고, 그 크기에서 폭이 88×(36/31)=102 이므로 sx .9 → .944 로 107 에 맞춘다.
      ⚠ 이 칩은 19·20 **두 화면이 같이 읽는 헤더 부품**이라 한 자리를 고치면 둘 다 따라온다(비평 A 가 20 에서도 같은 항을 냈다). */
-  .pf-ttl>i{font-size:36px;color:#f5f5f5;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    transform:scaleX(.944)}
+  /* 787 4회차 ⓑ — 크기(3회차)에 이어 **세로**도 어긋나 있었다. C «칩 박스 중심 726.5 ↔ 우리 722 = −4.5px» ·
+     D «중심 726.5 ↔ 722.0 = −4.5px» 로 두 사람이 같은 값을 냈다(ref 는 칩 중심과 정확히 일치).
+     ⚠ fs 를 31 → 36 으로 키운 것만으로 이미 +2.5px 가 회수됐다(스탯 라벨에서 겪은 것과 같은 현상) —
+        4.5 를 그대로 얹으니 자가 «+3.0px 아래» 로 반대편에 넘쳤다. 남은 몫 **2px** 만 민다. */
+  .pf-ttl>i{position:relative;top:2px;font-size:36px;color:#f5f5f5;-webkit-text-stroke:6px #000;
+    paint-order:stroke fill;transform:scaleX(.944)}
   /* 닉네임 바 ref y846 h49 — 반투명 (115,103,87), 좌우 알파 페이드 */
   .pf-nick{left:241px;top:331px;width:430px;height:49px;line-height:49px;
     text-align:center;text-indent:-8px;   /* ref 텍스트 중심 x541.5 = 바 중심 −3.5px */
@@ -10155,7 +10159,10 @@
   .pf-bn.g2>s.f{background:
     linear-gradient(90deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.32) 70%) 0 0/100% 6px no-repeat,
     linear-gradient(180deg,var(--bv,#8494A4) 0 6px,var(--gc,#212437) 6px)}
-  .pf-bn>i{font-size:27px;color:#ebebeb;transform:scaleX(.88)}
+  /* 787 4회차 ⓒ — 카드 라벨이 ref 보다 작다. C «글자 피치 21 → 19 = −9.5% · 높이 23~25 → 21~22» ·
+     D «높이 −8.7% · 글자폭 −12%» 로 두 사람이 같은 부호. 카드 크기·pitch·텍스트 중심은 이미 Δ0 이라
+     상자는 안 건드리고 fs 만 27 → 30(×1.11). */
+  .pf-bn>i{font-size:29px;color:#ebebeb;transform:scaleX(.88)}   /* 30 은 잉크 25 로 ref 23 을 +8.7% 넘겼다 — 자로 한 칸 되내렸다 */
   .pf-card:not(.own) .pf-bn>i{color:#A7A7A7}
   /* 자물쇠(미보유) — 흰 몸통 28×32 + 고리, 검정 외곽은 drop-shadow.
      작업 137: 옛 `left:50%;margin-left:-14px` 는 중심이 카드 중심 175 = `.pf-bn`(26+298/2) 안에서
@@ -10292,7 +10299,8 @@
   /* 126 8회차 — r7 비평가 O·P ② 4순위, 둘 다 «72×27~28 vs ref 84×30~31» 로 일치.
      이 자리는 잉크가 하늘색(#8DDCFD)이라 «흰 채움» 마스크를 쓰는 `m126t7` 로는 못 잰다(값 null) —
      그래서 비평가 2명의 일치값만으로 푼다: fs 35×(30/27) = 38.9, 그 크기에서 폭 80 → sx .9×(84/80) = .945. */
-  .pf-tgl>.bn>i{position:relative;font-size:38.9px;color:#8DDCFD;
+  /* 787 4회차 ⓐ — 19 쪽 활성 라벨도 같은 지적(C «Δ −4.5px» · D «Δ −4.5px»). 같은 값으로 내린다. */
+  .pf-tgl>.bn>i{position:relative;top:3.5px;font-size:38.9px;color:#8DDCFD;
     /* 126 ③ 9회차 — 4px = r .103. 잉크가 하늘색이라 외곽선 색만 #001F2C 로 다르다(값은 토큰). */
     -webkit-text-stroke:calc(var(--st-title) * 1em) #001F2C;paint-order:stroke fill;transform:scaleX(.945)}
 
@@ -10383,11 +10391,18 @@
     clip-path:polygon(0 50%,13px 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,13px 100%)}
   .spc-rib>b{position:absolute;left:9px;right:9px;top:11px;bottom:9px;background:#433A35;
     clip-path:polygon(0 50%,10px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,10px 100%);
-    text-align:center;line-height:35px;font-size:30px;color:#fff}
+    text-align:center;line-height:35px;font-size:32.4px;color:#fff}
   /* 8회차 — 7회차에 «림 레이어» 를 끼우며 `<b>` 높이가 44→35 로 줄어 텍스트가 2px 내려갔다.
      실측 잉크 중심 ref 810.5 vs 우리 812.5 (비평가 O 도 독립 지적) → `<i>` 를 2px 올린다.
      `<b>` 는 블록이라 line-height 로는 안 밀린다(28 교훈 ②) */
-  .spc-rib>b>i{position:relative;top:-2px;transform:scaleX(.86)}   /* ref 잉크폭 107 vs 우리 124 */
+  /* 787 4회차 — ⚑ **20 은 칭호 칩을 따로 적고 있었다(`.spc-rib`, 라벨도 손 문자열 «칭호 없음»).**
+     3회차에 19 의 `.pf-ttl>i` 만 키웠더니 20 이 안 따라온 이유가 이것이고, 비평 셋(C·D·E·F)이
+     «19 는 맞는데 20 만 −17~26%» 로 그 불일치를 독립적으로 지목했다(F 는 «두 화면이 서로 다른 값을 쓴다» 고 적었다).
+     `refink787` 로 레퍼런스를 재니 **ref 채움 107×27** 이고 우리는 **88×25** ⇒ fs 30 → 32.4(높이 27) ·
+     sx .86 → .968(폭 107). 세로도 ref 는 칩 중심과 Δ0 인데 우리는 −4.5px 위였다 ⇒ top −2 → **+2**.
+     ⚠ 주석의 «ref 잉크폭 107 vs 우리 124» 는 fs 가 더 크던 시절의 값이라 sx .86 이 그때는 맞았다 —
+        fs 가 내려간 뒤로 sx 만 남아 이중으로 줄이고 있었다. */
+  .spc-rib>b>i{position:relative;top:2px;transform:scaleX(.968)}
   /* 닉네임 스트립 ref x352–695 — 반투명 흑갈, 좌단 30px 페이드.
      텍스트 중심은 스트립이 아니라 «다이얼로그 중심»(ref 539.5) — translateX 로 보정 */
   /* 5회차 — ref 는 스트립 우단(701)이 연필 버튼(696~) **밑으로 파고든다**. 우리는 694 에서 끊겨 2px 틈이
@@ -10460,7 +10475,12 @@
      fs 를 27 → 32 로 올리자 그 쏠림이 −2.5 → **−1.5px** 로 저절로 절반이 회수됐고(잉크가 베이스라인
      위로 자란다 — 6회차가 `.vl` 에서 겪은 것과 같은 현상), 남은 1.5px 만 `top` 으로 민다.
      ⚠ fs 를 올리기 «전» 에 top 을 먼저 밀었으면 지금 +1.0px 로 반대편에 넘쳤을 것이다. */
-  .spc-row>.nm{position:absolute;left:39px;top:1.5px;height:60px;line-height:60px;
+  /* 787 3회차 ⓒ — 목표가 «행 중심» 이 아니라 **«행 중심 + 1.0»** 이었다.
+     비평 D 가 레퍼런스 쪽을 직접 재서 «ref 는 잉크 중심이 스트라이프 중심보다 +0.5~+1.5px **아래**» 임을 냈다
+     (r2 +1.0 · r4 +0.5 · 1행 교차검증도 Δ2.0 로 같은 방향). 2회차는 목표를 0 으로 잡아 −0.5 에서 멈췄다.
+     top 1.5 → 2.5 로 민다 ⇒ 잉크 중심 −0.5 → **+1.0** = ref 관측 범위(+0.5~+1.5)의 한복판.
+     (3.0 은 +1.5 로 범위 상단에 붙어 0.5px 넘쳤다 — 실측으로 한 칸 되내렸다.) */
+  .spc-row>.nm{position:absolute;left:39px;top:2.5px;height:60px;line-height:60px;
     font-size:32px;color:#F9F9F9;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     white-space:nowrap}
   .spc-row>.nm>i{transform:scaleX(.955);transform-origin:0 50%}
@@ -10544,20 +10564,27 @@
      비평 A 실측: 20 활성 «종합 스탯» 잉크 h38 w112 vs ref h41 w135 → **−7% / −17%**.
      fs 37 → 38.9 · sx .84 → .945 로 19 와 같은 값을 읽는다. 폭은 112 → 약 127 로 ref 135 에 붙고,
      금 채움 평평 구간(x174–514 = 340px)에는 여유가 크게 남는다(넘침 0 은 `probe787` 이 잰다). */
-  .spc-tab-on>b>i{position:relative;font-size:38.9px;-webkit-text-stroke:6px #000;
+  /* 787 4회차 ⓐ — 비평 C·D 가 독립으로 «활성 금탭 라벨이 셰브론 중심보다 4.5px 위» 를 냈다.
+     ref 는 라벨 중심이 셰브론 중심보다 **+1.5~+2px 아래**(C 1739.5 vs 1738 · D 1740.0 vs 1738.5)인데
+     우리는 −3~−3.5px 위였다(셰브론 상자 자체는 Δ0.5px 로 정합). ⇒ 라벨만 **3.5px** 내린다
+     (3회차 뒤 F 가 다시 재서 −3.0 을 냈다 — 4.5 는 그만큼 넘치는 값이었다). */
+  .spc-tab-on>b>i{position:relative;top:3.5px;font-size:38.9px;-webkit-text-stroke:6px #000;
     paint-order:stroke fill;transform:scaleX(.945)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
-  /* 787 2회차 — ⚠ **여기를 19 의 값(fs 38.3)으로 «통일» 하려다 되돌렸다. 두 화면의 ref 가 실제로 다르다.**
-     측정표 20 §8-3 은 이 자리(20 비활성 «프로필»)를 잉크 h31 → **한글 ≈33px** 로 적었고,
-     측정표 19 §8-3 의 같은 줄(19 비활성 «종합 스탯»)은 그보다 크다 — 즉 «같은 부품이니 같은 값» 이 아니다.
-     실제로 38.3 을 얹으니 채움 잉크가 ref 31 대비 **+19.4%** 로 넘쳤다(`probe787`).
-     현행 fs 33 이 측정표의 ≈33px 과 정확히 같으므로 **원래 값이 옳다.**
-     ⚠ 이 자리의 잉크는 `#A9A8AE` 라 «흰 채움» 마스크(min>230)로는 못 잰다 — `probe787` 이 `any` 로 재는
-     값은 **외곽선 포함**이라 측정표의 «채움 h31» 과 직접 비교하면 안 된다(126 §9-6 함정). */
+  /* 787 3회차 — ⚠⚑ **2회차에 이 자리를 «원래 값이 옳다» 며 되돌린 것이 오판이었다. 자가 틀렸다.**
+     2회차의 근거는 `probe787` 이 낸 «+19.4% 넘침» 이었는데, 그때 이 자리를 잰 마스크가 `any`(= **외곽선 포함**)라
+     측정표 §8-3 의 «**채움** h31» 과 애초에 댈 수 없는 값이었다(126 §9-6 함정을 자가 그대로 밟았다).
+     이 자리 전용 회색 채움 마스크(`#A9A8AE` — 검정 외곽선·진갈 바탕 배제)를 만들어 **레퍼런스와 우리를
+     같은 자로** 다시 재니 방향이 반대였다:
+       ref 채움 **85×31**(측정표 §8-3 의 h31 과 정확히 일치) ↔ 우리 **69×26** = **높이 −16.1% · 폭 −18.8%**
+     캡처 비평 둘이 독립으로 같은 부호를 냈던 것이 맞다(A «−13%» · D «−20%», D 는 «19 의 같은 라벨은 ref 와 +1%»
+     라는 자체 모순 근거까지 붙였다). ⇒ fs 33 → **39.3**(= 33 × 31/26) · sx .91 → **.941**(= 폭 85 에 맞춤).
+     ⚑ 그 값이 19 의 같은 줄(fs 38.3 · sx .963)과 **3% 안**이다 — 두 화면은 정말 거의 같은 크기였고,
+       2회차에 «두 화면의 ref 가 다르다» 고 적은 것도 같은 잘못된 자에서 나온 결론이었다. */
   .spc-tab-off{position:absolute;left:440px;width:265px;top:0;height:84px;line-height:84px;
-    text-align:center;font-size:33px;font-weight:900;color:#A9A8AE;cursor:pointer}
+    text-align:center;font-size:39.3px;font-weight:900;color:#A9A8AE;cursor:pointer}
   /* ref 는 순흑 외곽선 + 밝은 라벤더그레이 채움 (2회차 D 실측) */
-  .spc-tab-off>i{transform:scaleX(.91);-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .spc-tab-off>i{transform:scaleX(.941);-webkit-text-stroke:5px #000;paint-order:stroke fill}
 
   /* ==========================================================================
      06 장비 팝업 — 측정표 docs/measure/06-장비팝업.md

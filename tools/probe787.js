@@ -89,7 +89,8 @@ async function inkOf(page, sel, mode = 'el', fill = 'any') {
         const R = A.d[o], G = A.d[o + 1], B2 = A.d[o + 2];
         if (fill === 'white' && Math.min(R, G, B2) <= 230) continue;   /* refink787 과 «같은» 문턱 — 행 줄무늬(min 199~210) 배제 */
         if (fill === 'green' && !(G > 200 && B2 < 140 && R < 215)) continue;  /* refink787 과 «같은» 문턱 */
-        if (fill === 'cream' && !(R > 230 && G > 220 && B2 > 150)) continue;  /* 크림흰 #FEF7C1 만 — 금색 배너 #FFC736(B 54) 배제 */
+        if (fill === 'cream' && !(R > 230 && G > 220 && B2 > 150)) continue;
+        if (fill === 'gray' && !(R > 130 && R < 215 && Math.abs(R - G) < 18 && Math.abs(B2 - R) < 26)) continue;  /* 크림흰 #FEF7C1 만 — 금색 배너 #FFC736(B 54) 배제 */
       }
       n++; if (x < lo) lo = x; if (x > hi) hi = x; if (y < top) top = y; if (y > bot) bot = y;
     }
@@ -146,6 +147,8 @@ const box = (page, sel) => page.evaluate((s) => {
     });
     F.f19.tgl = await box(page, '.pf-tgl');
     F.f19.bnInk = await inkOf(page, '.pf-grid .pf-card:nth-child(1) .pf-bn > i', 'text', 'any');
+    F.f19.chipInk = await inkOf(page, '.pf-ttl > i', 'text', 'white');
+    F.f19.chipBox = await box(page, '.pf-ttl');
 
     /* ── 20 종합스탯 탭 ─────────────────────────────────────── */
     await page.evaluate(() => { const e = document.querySelector('.pf-tgl>.lb'); if (e) e.click(); });
@@ -179,13 +182,17 @@ const box = (page, sel) => page.evaluate((s) => {
       }
       return { gap: +worst.toFixed(1), at };
     });
+    /* 787 4회차 — ⚑ 20 은 칭호 칩을 **따로 적고 있다**(`.spc-rib`, 라벨도 손 문자열).
+       19 의 `.pf-ttl>i` 만 키운 3회차가 20 에 안 닿은 이유가 이것이다. 둘을 나란히 잰다. */
+    F.f20.chipInk = await inkOf(page, '.spc-rib > b > i', 'text', 'white');
+    F.f20.chipBox = await box(page, '.spc-rib');
     F.f20.tabs = await box(page, '.spc-tabs');
     F.f20.editBox = await box(page, '#spcEdit');
     /* ② ⑥ 축 — 측정표가 적은 «채움» 잉크만 골라 잰다(외곽선 제외) */
     F.f20.nmInk = await inkOf(page, '.spc-list .spc-row:nth-child(1) > .nm', 'text', 'white');
     F.f20.vlInk = await inkOf(page, '.spc-list .spc-row:nth-child(1) > .vl', 'text', 'green');
     F.f20.tabOnInk = await inkOf(page, '.spc-tab-on > b > i', 'text', 'cream');
-    F.f20.tabOffInk = await inkOf(page, '.spc-tab-off > i', 'text', 'any');
+    F.f20.tabOffInk = await inkOf(page, '.spc-tab-off > i', 'text', 'gray');   /* 787 3회차 — `any` 는 외곽선 포함이라 측정표의 «채움» 과 못 댄다(2회차의 잘못된 되돌림 원인) */
     F.f20.editInk = await inkOf(page, '#spcEdit', 'text');   /* 글리프만 */
     F.f20.editPaint = await inkOf(page, '#spcEdit', 'el');     /* 요소가 칠하는 전부(그림자 포함) */
 
@@ -224,6 +231,11 @@ const box = (page, sel) => page.evaluate((s) => {
     IK(F.f20.tabOnInk, 33, '20 활성 탭 ');
     IK(F.f20.tabOffInk, 31, '20 비활성탭');
     IK(F.f19.bnInk, 23, '19 카드 배너');
+    const CH = (ink, bx, nm) => { if (!ink || !ink.px || !bx) return console.log(`   ${nm} — 못 잼`);
+      const c = ink.y + ink.h / 2, bc = bx.y + bx.h / 2;
+      console.log(`   ${nm} 채움잉크 ${ink.w}×${ink.h} (ref 107×29) · 중심 Δ ${(c - bc).toFixed(1)}px`); };
+    CH(F.f19.chipInk, F.f19.chipBox, '19 칭호칩');
+    CH(F.f20.chipInk, F.f20.chipBox, '20 칭호칩');
     const E = F.f20.editBox, EI = F.f20.editInk;
     if (E) console.log(`ⓐ 20 ✎ 상자     ${E.w}×${E.h} (ref ${REF.editBox.w}×${REF.editBox.h})`);
     if (EI && EI.px) console.log(`   ✎ 글리프 잉크 ${EI.w}×${EI.h} @(${EI.x},${EI.y})  넘침 좌${EI.over.left} 우${EI.over.right} 상${EI.over.top} 하${EI.over.bottom}  ← +면 상자 밖`);

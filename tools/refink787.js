@@ -26,13 +26,17 @@ const WINDOWS = [
   { img: REF20, nm: '20 행1 값  ', x0: 700, x1: 915, y0: 1000, y1: 1060, fill: 'green' },
   { img: REF20, nm: '20 행2 값  ', x0: 700, x1: 915, y0: 1060, y1: 1120, fill: 'green' },
   { img: REF20, nm: '20 활성 탭 ', x0: 200, x1: 500, y0: 1789, y1: 1856, fill: 'cream' },
+  { img: REF20, nm: '20 비활성탭', x0: 640, x1: 830, y0: 1780, y1: 1870, fill: 'gray' },
+  { img: REF20, nm: '20 칭호칩  ', x0: 460, x1: 620, y0: 786, y1: 836, fill: 'white' },
+  { img: REF19, nm: '19 칭호칩  ', x0: 460, x1: 620, y0: 786, y1: 836, fill: 'white' },
 ];
 
 const mask = (f) => ({
   /* 우리 캡처를 잰 것과 **같은** 문턱이다 — 바꾸면 대조가 깨진다 */
   white: (R, G, B) => Math.min(R, G, B) > 230,   /* 행 줄무늬 #FEEFD2(min 210)·#F6E2C7(min 199) 를 넘겨야 한다 */
   green: (R, G, B) => G > 200 && B < 140 && R < 215,  /* #BAFD60 몸통만 — JPEG 프린징 배제 */
-  cream: (R, G, B) => R > 230 && G > 220 && B > 150,   /* 크림흰 #FEF7C1 만 — 금색 배너 #FFC736(B 54) 배제 */
+  cream: (R, G, B) => R > 230 && G > 220 && B > 150,
+        gray: (R, G, B) => R > 130 && R < 215 && Math.abs(R - G) < 18 && Math.abs(B - R) < 26,  /* 비활성 탭 채움 #A9A8AE 만 — 검정 외곽선·진갈 바탕 배제 */   /* 크림흰 #FEF7C1 만 — 금색 배너 #FFC736(B 54) 배제 */
 }[f]);
 
 (async () => {
@@ -56,7 +60,8 @@ const mask = (f) => ({
       const M = {
         white: (R, G, B) => Math.min(R, G, B) > 230,   /* 행 줄무늬 #FEEFD2(min 210)·#F6E2C7(min 199) 를 넘겨야 한다 */
         green: (R, G, B) => G > 200 && B < 140 && R < 215,  /* #BAFD60 몸통만 — JPEG 프린징 배제 */
-        cream: (R, G, B) => R > 230 && G > 220 && B > 150,   /* 크림흰 #FEF7C1 만 — 금색 배너 #FFC736(B 54) 배제 */
+        cream: (R, G, B) => R > 230 && G > 220 && B > 150,
+        gray: (R, G, B) => R > 130 && R < 215 && Math.abs(R - G) < 18 && Math.abs(B - R) < 26,  /* 비활성 탭 채움 #A9A8AE 만 — 검정 외곽선·진갈 바탕 배제 */   /* 크림흰 #FEF7C1 만 — 금색 배너 #FFC736(B 54) 배제 */
       }[fillName];
       let lo = 1e9, hi = -1e9, top = 1e9, bot = -1e9, n = 0;
       for (let y = w.y0; y <= w.y1; y++) for (let x = w.x0; x <= w.x1; x++) {
