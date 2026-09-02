@@ -71,6 +71,16 @@ const READ = () => {
     cntTxt: (cnt.textContent || '').trim(),
     cntNum: +((cnt.querySelector('em') || {}).textContent || 0),
     cntShown: getComputedStyle(cnt).display !== 'none',
+    says: /밀어서/.test(cnt.textContent || ''),
+    /* ⚑ 782 — «한 줄 몇 칸» 은 상수가 아니라 **찍힌 자리**로 센다. `offsetTop` 은 레이아웃 값이라
+       60 쥬시 등장 연출의 scale 과 무관하다(`getBoundingClientRect` 로 재면 같은 줄이 갈라진다). */
+    rowsDrawn: (() => { const s = new Set(cards.map(c => c.offsetTop)); return s.size; })(),
+    firstRow: (() => {
+      if (!cards.length) return 0;
+      const t0 = cards[0].offsetTop; return cards.filter(c => c.offsetTop === t0).length;
+    })(),
+    cols: typeof UPR_COLS !== 'undefined' ? UPR_COLS : null,
+    gw: Math.round(grid.getBoundingClientRect().width),
     closeTop: +(cr.top - app.top).toFixed(1),
     app: { w: app.width, h: app.height },
     lv: cards.map(c => [...c.querySelectorAll('.upr-lv>i')].map(i => i.textContent).join('>'))
@@ -226,7 +236,11 @@ async function boot(browser, url, h) {
          '격자 ' + (r.grid.y + r.grid.h).toFixed(1) + ' ≤ 닫기 ' + r.closeTop);
       ok(r.grp.y >= -0.5, 'D3 묶음 상변이 프레임 안', r.grp.y);
       ok(r.grid.sh > r.grid.ch + 1, 'D4 가려진 행이 있으므로 격자가 스크롤된다', r.grid.sh + '/' + r.grid.ch);
-      ok(/밀어서/.test(r.cntTxt), 'D5 헤더가 «밀어서 더 보기» 로 그 사실을 말한다', '"' + r.cntTxt + '"');
+      /* ⚑ 782 — 예전에는 «밀어서» 라는 낱말만 찾았다. 그래서 [D4] 가 빨간(= 안 넘치는) 판에서도
+         이 항이 초록이었고, **자와 제품이 같은 거짓을 나눠 들었다.** 등호로 묶어 한쪽만은 못 서게 한다. */
+      ok(r.says === (r.grid.sh > r.grid.ch + 1),
+         'D5 ★ 헤더의 «밀어서 더 보기» ↔ 실제 넘침이 서로를 못 배신한다',
+         '말함 ' + r.says + ' vs 넘침 ' + (r.grid.sh > r.grid.ch + 1) + ' · "' + r.cntTxt + '"');
       /* 스크롤 끝까지 밀면 마지막 칸이 격자 안으로 들어온다 = 한 칸도 못 보는 자리가 없다 */
       const last = await ev(r0.page, () => {
         const g = document.getElementById('upCards');
@@ -241,6 +255,67 @@ async function boot(browser, url, h) {
     }
     ok(r0.errs.length === 0, 'D7 콘솔 에러 0', r0.errs.slice(0, 2).join(' | ') || '없음');
     await r0.ctx.close();
+  }
+
+  /* ── [G] 한 줄 칸수 선언(782) ───────────────────────────────────────
+     ⚑ 왜 이 절이 생겼는가 — 726 은 «한 줄 칸수» 를 **JS 에만** 적고 격자는 전폭(1080)으로 두었다.
+       전폭에는 7칸이 들어가므로(137·7 + 14·6 = 1043) 그려진 줄은 7칸인데 `rows = ceil(n/6)` 은
+       6칸으로 세었다 — 행 수·묶음 높이·헤더가 한 칸씩 거짓이었고, 그 거짓이 [D4] 로 새어 나왔다.
+       ⇒ 이 절은 «상수가 몇인가» 가 아니라 **«그려진 줄이 그 상수와 같은가»** 를 묻는다. */
+  blk('G — 한 줄 칸수: 선언(UPR_COLS)과 그려진 줄이 같은 수인가 (782)');
+  {
+    const r0 = await boot(browser, URL, 2280);
+    await ev(r0.page, SEED, { kind: 'pet', n: 14, frag: 30 });
+    await OPEN(r0.page, 'pet');
+    const r = await ev(r0.page, READ);
+    if (!r) ok(false, 'G0 읽기'); else {
+      info('격자 폭', r.gw + 'px ⇒ 산술 최대 ' + Math.floor((r.gw + 14) / 151) + '칸');
+      ok(r.firstRow === r.cols, 'G1 ★ 첫 줄에 선 칸 수 = UPR_COLS(' + r.cols + ')', '실측 ' + r.firstRow + '칸');
+      ok(r.rowsDrawn === Math.ceil(r.n / r.cols),
+         'G2 ★ 그려진 행 수 = ceil(n/UPR_COLS)  (= 묶음 높이·헤더가 세는 그 수)',
+         '그려짐 ' + r.rowsDrawn + ' vs 계산 ' + Math.ceil(r.n / r.cols) + ' (n=' + r.n + ')');
+    }
+    /* 음성항 — 안 넘치는 판에서는 그 말이 **없어야** 한다([D5] 의 반대쪽) */
+    await ev(r0.page, () => closeUpAll());
+    await ev(r0.page, SEED, { kind: 'pet', n: 7, frag: 30 });
+    await OPEN(r0.page, 'pet');
+    const r2 = await ev(r0.page, READ);
+    if (!r2) ok(false, 'G3 읽기'); else {
+      ok(r2.many, 'G3 7칸은 «many» 다 = 이 판도 헤더가 보이는 판이다', r2.many);
+      ok(r2.grid.sh <= r2.grid.ch + 1 && !r2.says,
+         'G4 ★ 안 넘치는 판에서는 «밀어서 더 보기» 가 없다',
+         'sh/ch ' + r2.grid.sh + '/' + r2.grid.ch + ' · 말함 ' + r2.says);
+    }
+    ok(r0.errs.length === 0, 'G5 콘솔 에러 0', r0.errs.slice(0, 2).join(' | ') || '없음');
+    await r0.ctx.close();
+  }
+
+  /* ── [G-R] 되돌림 — 줄 폭 제약을 뺀 사본은 G1 이 실제로 빨개진다 ── */
+  blk('G-R — 되돌림: 줄 폭(`--upr-cw`) 을 뺀 사본은 한 줄이 7칸이 된다');
+  {
+    const rev = code.replace('width:var(--upr-cw,892px);margin:0 auto;', '');
+    ok(rev !== code, 'GR0 되돌림 사본을 만들었다(줄 폭 제약 제거)');
+    const tmp = path.resolve(__dirname, '..', '.rev782.html');
+    fs.writeFileSync(tmp, rev);
+    try {
+      const r0 = await boot(browser, 'file://' + tmp.replace(/\\/g, '/'), 1600);
+      await ev(r0.page, SEED, { kind: 'pet', n: 36, frag: 30 });
+      await OPEN(r0.page, 'pet');
+      const r = await ev(r0.page, READ);
+      if (!r) ok(false, 'GR1 읽기'); else {
+        ok(r.firstRow > r.cols,
+           'GR1 ★ 폭을 안 묶으면 한 줄이 UPR_COLS 를 넘는다 = G1 이 실제로 빨개진다',
+           '실측 ' + r.firstRow + '칸 vs 선언 ' + r.cols);
+        ok(r.rowsDrawn !== Math.ceil(r.n / r.cols),
+           'GR2 ★ 그래서 «그려진 행» 과 «센 행» 이 갈린다 = G2 가 실제로 빨개진다',
+           '그려짐 ' + r.rowsDrawn + ' vs 계산 ' + Math.ceil(r.n / r.cols));
+        /* 782 가 갚은 자리 그 자체 — 줄 폭을 안 묶으면 펫 전종이 짧은 프레임에서도 «안 넘친다» */
+        ok(r.grid.sh <= r.grid.ch + 1,
+           'GR3 ★ 그 사본에서는 [D4] 가 다시 빨개진다(가려진 행이 없다)',
+           r.grid.sh + '/' + r.grid.ch);
+      }
+      await r0.ctx.close();
+    } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
   }
 
   /* ── [R] 되돌림 ─────────────────────────────────────────────────── */

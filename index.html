@@ -12761,8 +12761,15 @@
      프레임에 안 들어가는 행은 이 격자만 스크롤한다 — 딤·리본·닫기 문구는 안 움직인다.
      스크롤바는 이 저장소 규약대로 숨긴다(`.shsc`·`.shp-list`·`.dns-list` 와 같다) — 가려진 행이
      있다는 사실은 «총 N건 강화 · 밀어서 더 보기» 글자가 말한다.
-     ⚠ `align-content:flex-start` 가 없으면 행이 남는 높이를 나눠 가져 **행 간격이 14 가 아니게** 된다. */
+     ⚠ `align-content:flex-start` 가 없으면 행이 남는 높이를 나눠 가져 **행 간격이 14 가 아니게** 된다.
+     ⚑ **782 — 폭을 안 묶으면 «한 줄 칸수» 는 CSS 가 혼자 정한다.** 726 은 격자를 전폭(1080)으로
+       둔 채 JS 에만 `UPR_COLS = 6` 을 적었는데, 전폭에는 **7칸이 들어간다**(137·7 + 14·6 = 1043 ≤ 1080)
+       — 그려진 줄은 7칸인데 `rows = ceil(n/6)` 은 6칸으로 세어 **행 수·묶음 높이·헤더가 전부 한 칸씩
+       거짓**이었다(펫 35종: 실제 5행인데 6행으로 세어 «밀어서 더 보기» 를 붙였다 — `verify726` [D4]).
+       ⇒ 줄 폭을 `--upr-cw`(= `openUpAll` 이 `UPR_COLS` 에서 파생)로 묶어 **선언을 한 곳으로** 모은다.
+       폴백 892px 은 그 파생값과 같은 수다(변수가 없는 `#statw`·`#dclw` 는 `many` 를 안 쓴다). */
   #upw.many .upr-cards{top:183px;flex-wrap:wrap;align-content:flex-start;
+    width:var(--upr-cw,892px);margin:0 auto;
     height:var(--upr-ch,166px);overflow-y:auto;overscroll-behavior:contain;
     -webkit-overflow-scrolling:touch;scrollbar-width:none}
   #upw.many .upr-cards::-webkit-scrollbar{width:0;height:0}
@@ -25963,6 +25970,7 @@ function levelUpAll(list){
      최대 30연으로 상한이 있지만 일괄 강화 건수는 보유 종수만큼 가변이라 «고정 2배» 가 없다.
      대신 가려진 것이 있다는 사실을 **«총 N건 강화» 합계 줄**이 말한다(주인 지시 문면). */
 const UPR_COLS = 6;          /* 한 줄 칸수 — 137·6 + 14·5 = 892 < 1080 (측정표 §3 칸 규격 그대로) */
+const UPR_CEL_W = 137;       /* 칸 폭 — `.upr-cel{width:137px}` 과 같은 수(782: 줄 폭을 여기서 판다) */
 const UPR_ROW_H = 166;       /* 한 행 = 카드 138 + `.upr-lv` margin 5 + 23 */
 const UPR_GAP = 14;          /* 칸 사이 — 가로·세로 같은 값(측정표 §3) */
 const UPR_SLACK = 8;         /* `.upr-lv` 검정 스트로크가 칸 밖으로 7px 넘친다(probe726 [5] 실측) */
@@ -26196,12 +26204,10 @@ function openUpAll(ups){
   const vis  = Math.max(1, Math.min(rows, Math.floor((room - UPR_SLACK + UPR_GAP) / (UPR_ROW_H + UPR_GAP))));
   const gh   = vis*UPR_ROW_H + (vis - 1)*UPR_GAP + UPR_SLACK;
   w.classList.toggle('many', many);
+  /* 줄 폭 — 782. `UPR_COLS` 를 CSS 가 읽을 수 있는 유일한 통로다(안 묶으면 전폭에 7칸이 들어간다). */
+  w.style.setProperty('--upr-cw', (UPR_COLS*UPR_CEL_W + (UPR_COLS - 1)*UPR_GAP) + 'px');
   w.style.setProperty('--upr-gh', (many ? top + gh : 300) + 'px');
   w.style.setProperty('--upr-ch', gh + 'px');
-  /* 합계 줄 — 주인 지시 «전 항목 표시 + «총 N건» 헤더». 가려진 행이 있으면 그렇다고 말한다
-     (스크롤바를 숨기는 것이 이 저장소 규약이라 — `.shsc`·`.shp-list` — 글자가 그 몫을 한다). */
-  $('upCnt').innerHTML = '<i>총</i><em>' + n + '</em><i>건 강화</i>'
-    + (rows > vis ? '<s>밀어서 더 보기</s>' : '');
   $('upCards').innerHTML = list.map(u =>
       '<div class="upr-cel"><div class="upr-card"><b>' + petIcon(u.it, 'up') + '</b></div>'
     + '<div class="upr-lv"><i>' + u.from + '</i>'
@@ -26210,6 +26216,15 @@ function openUpAll(ups){
   $('upCards').scrollTop = 0;
   petPaint($('upCards'));
   w.classList.add('on');
+  /* 합계 줄 — 주인 지시 «전 항목 표시 + «총 N건» 헤더». 가려진 행이 있으면 그렇다고 말한다
+     (스크롤바를 숨기는 것이 이 저장소 규약이라 — `.shsc`·`.shp-list` — 글자가 그 몫을 한다).
+     ⚑ **782 — «밀어서 더 보기» 는 계산한 행 수가 아니라 «그려진 격자» 에게 묻는다.** 726 은
+       `rows > vis`(둘 다 `UPR_COLS` 파생)로 판단해, 줄 폭이 안 묶여 있던 동안 **안 넘치는 판에서도**
+       그 말을 붙였다. `.on` 뒤라야 `#upw{display:none}` 이 풀려 실측이 나오므로 순서가 여기다.
+       레이아웃에 안 끼어드는 자리(`.upr-cnt` 는 absolute)라 격자 기하는 Δ0px 이다. */
+  const gEl = $('upCards'), over = gEl.scrollHeight > gEl.clientHeight + 1;
+  $('upCnt').innerHTML = '<i>총</i><em>' + n + '</em><i>건 강화</i>'
+    + (over ? '<s>밀어서 더 보기</s>' : '');
   sfx('up');                                            /* 78 — 일괄 강화 결과 */
   return true;
 }
