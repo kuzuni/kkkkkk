@@ -105,6 +105,21 @@ async function open1(browser, F, css, kase) {
   if (css) await page.addStyleTag({ content: css });
   await page.evaluate(`try{ ${kase.open} }catch(e){}`);
   await page.waitForTimeout(380);
+  /* 8회차 — **이 자가 4번에 1번 빨갰다**(§2 «묶음 중심 = 프레임 중심» 이 17@2600 Δ6.25 · 18@1920 Δ4.74,
+     TOL 1.5 초과). 뿌리는 제품이 아니라 **이 대기 한 줄**이다: 묶음은 열릴 때 `jzBoxIn`(220ms)을 타고
+     그 곡선이 **오버슛했다가 되돌아온다** — 대기를 60/150/250/380ms 로 쪼개 재니 중심이
+     −88.32 → −77.36 → **+20.62** → 0.00 (17@2600) · −72.60 → −15.91 → **+11.37** → 0.00 (18@1920) 이었다.
+     380ms 는 정착점(≈250~380ms) 바로 뒤라 여유가 130ms 뿐이고, 컨텍스트 10개를 잇달아 띄우는 이 자의
+     부하에서는 애니가 그만큼 밀려 **정착 전에 재는 실행**이 나온다.
+     ⇒ 시각이 아니라 **애니가 끝났는지**를 묻는다(무한 반복은 빼야 한다 — 배경 반짝임이 영영 안 끝난다).
+     되돌리는 법: 이 블록을 지우면 4번에 1번꼴로 §2 가 빨개진다. */
+  await page.evaluate(async (grp) => {
+    const g = document.querySelector(grp);
+    if (!g) return;
+    const as = (g.getAnimations ? g.getAnimations({ subtree: true }) : [])
+      .filter((a) => { const t = (a.effect && a.effect.getTiming) ? a.effect.getTiming() : {}; return t.iterations !== Infinity; });
+    await Promise.all(as.map((a) => a.finished.catch(() => {})));
+  }, kase.grp);
   await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; });
   const m = await page.evaluate(`(${MEASURE})(${JSON.stringify(kase.host)},${JSON.stringify(kase.grp)},${JSON.stringify(kase.close)})`);
   return { ctx, page, m };
