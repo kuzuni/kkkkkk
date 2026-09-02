@@ -45,7 +45,7 @@ const PAD = 3;                    /* 잉크가 상자를 살짝 넘는 자리(�
 const JUDGE_FIT = new Set(['contain', 'scale-down']);
 
 /* ---------- 페이지 안에서 도는 수집기 ---------- */
-const COLLECT = function () {
+const COLLECT = function (base) {
   const app = document.getElementById('app');
   if (!app) return [];
   function pathOf(el) {
@@ -66,8 +66,11 @@ const COLLECT = function () {
     return null;
   }
   const out = [];
-  let i = 0;
+  let i = base || 0;
   for (const el of app.querySelectorAll('img, canvas, svg')) {
+    /* 772 — 앞 쪽(스크롤 위치)에서 이미 잰 노드는 두 번 세지 않는다. 이 한 줄이 «칸 수» 를
+       지키는 자리다: 머리글·탭바처럼 모든 쪽에 걸치는 노드는 **첫 쪽에서 한 번만** 판정에 든다. */
+    if (el.hasAttribute('data-p418')) continue;
     const r = el.getBoundingClientRect();
     if (r.width < 8 || r.height < 8) continue;
     if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
@@ -83,8 +86,57 @@ const COLLECT = function () {
   return out;
 };
 
-const SETOPA = (v) => { for (const e of document.querySelectorAll('[data-p418]')) e.style.opacity = v; };
+/* ⚑ 772 — «전부» 가 아니라 **이번 쪽에서 잰 노드만** 끈다.
+   여러 쪽을 도는 순간 «전부 끄기» 는 앞 쪽에서 이미 잰 노드까지 두 장 사이에서 지워, 그 노드가
+   이번 쪽 노드의 상자에 걸쳐 있으면 남의 잉크가 차분에 섞인다(겹침 검사는 **이번 쪽 목록**만 본다).
+   이번 쪽 것만 끄면 앞 쪽 노드는 두 장에서 똑같아 차분에 **한 픽셀도** 안 남는다.
+   ⚠ 첫 쪽에서는 «이번 쪽 = 전부» 라 값이 한 칸도 안 바뀐다(래칫 보존의 근거). */
+const SETOPA = ([ids, v]) => {
+  for (const id of ids) { const e = document.querySelector(`[data-p418="${id}"]`); if (e) e.style.opacity = v; }
+};
 const SETONE = ([id, v]) => { const e = document.querySelector(`[data-p418="${id}"]`); if (e) e.style.opacity = v; };
+
+/* ---------- 772 — 스크롤 그릇을 쪽으로 나눈다 ----------
+   ⚑ `COLLECT` 의 가시 조건(`r.top > innerHeight` …)은 «지금 뷰포트에 걸치는가» 다. 이 게임은
+   화면마다 스크롤 그릇(`#shopList`·`#dunList`·`#eqList` …)을 두고 그 그릇의 **첫 쪽만** 뷰포트에
+   걸치므로, 1~22회차의 스윕은 그 아래를 **한 번도 안 봤다**(750 이 `.cn-a2>.gm` 를 목록에서 빼며
+   관측 · 772 등재). 실측은 `node tools/probe772.js` 가 화면마다 «안 / 밖» 으로 찍는다.
+   ⇒ 처방은 등재문 후보 ② 다 — 그릇마다 한 쪽씩 굴리고 **그 자리에서 차분 두 장을 다시 찍는다**
+     (차분은 두 장이 같은 스크롤 위치여야 성립하므로 «수집만 넓히는» 길은 없다).
+   ⚠ 쪽 수는 손으로 안 적는다 — 그릇의 `scrollHeight / clientHeight` 에서 **실행 때 판다**.
+     손으로 적으면 카드가 하나 늘어난 날 그 아래가 조용히 다시 감시 밖이 된다.
+   ⚠ 되돌림 손잡이 `PROBE418_NOSCROLL=1` — 끄면 첫 쪽만 본다(= 772 이전의 스윕).
+     `verify772` 가 그 대조로 «이 처방이 일을 하는가» 를 못박는다. 게이트 실행에서 세팅하지 마라. */
+const POTS = function (maxPg) {
+  const app = document.getElementById('app');
+  if (!app) return [];
+  const out = [];
+  let i = 0;
+  for (const el of app.querySelectorAll('*')) {
+    const sh = el.scrollHeight, ch = el.clientHeight;
+    if (ch < 40 || sh <= ch + 1) continue;
+    const ov = getComputedStyle(el).overflowY;
+    if (ov !== 'auto' && ov !== 'scroll') continue;
+    const r = el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight) continue;      /* 안 보이는 그릇은 굴려도 소용없다 */
+    el.setAttribute('data-p772', String(i++));
+    const want = Math.ceil(sh / ch);
+    out.push({ sel: el.id ? '#' + el.id : el.className.split(' ')[0], sh, ch,
+      pages: Math.min(maxPg, want), want });
+  }
+  return out;
+};
+/* 한 쪽 = 그릇의 `clientHeight`. 끝에 닿은 그릇은 그 자리에 머문다(클램프). */
+const SCROLL_PAGE = function (pg) {
+  let n = 0;
+  for (const el of document.querySelectorAll('[data-p772]')) {
+    const max = el.scrollHeight - el.clientHeight;
+    const want = Math.min(max, pg * el.clientHeight);
+    el.scrollTop = want;
+    if (want > 0) n++;
+  }
+  return n;
+};
 
 /* ---------- 750 ⓐ — «형제가 덮은 잉크» 를 문턱이 아니라 **되돌림**으로 가른다 ----------
    ⚑ 이 자의 잉크는 «대상 노드 opacity 0» 두 장의 **차분**이다. 그래서 아이콘 **앞**에서 무언가를
@@ -298,6 +350,14 @@ async function sweep(opt) {
      그 «걸침» 을 보이는 자가 필요해서 뚫었다. 게이트 실행에서 이 env 를 세팅하지 마라. */
   const THR = Number(process.env.PROBE418_THR || 12);
   const NOCOV = process.env.PROBE418_NOCOV === '1' || opt.nocov === true;   /* 750 — 가림 보정 끄기(되돌림) */
+  /* 772 — 스크롤 쪽 넘김 끄기(되돌림) · 한 화면의 쪽 상한(폭주 방지 — 실측 최대 4쪽) */
+  const NOSCROLL = process.env.PROBE418_NOSCROLL === '1' || opt.noscroll === true;
+  /* ⚠ 상한 4 는 «싸게 굴리려고» 고른 값이 아니라 **실측이 고른 값**이다(probe772 전 화면 census):
+     쪽이 둘 이상인 19화면 중 18화면이 2~4쪽에서 **끝난다**. 넘는 것은 35 패스 사다리 하나뿐인데
+     그 그릇은 `psList 1389 → 137,910px` = **99쪽**이라 «끝까지» 가 게이트에서 성립하지 않는다.
+     ⇒ 상한에 걸린 화면은 **조용히 자르지 않고** `capped` 로 세어 돌려준다(397 «스코프를 조용히
+       줄이지 마라»). `verify772` 가 그 수를 단언하므로, 어느 화면이 새로 상한에 걸리면 빨개진다. */
+  const MAXPG = Number(process.env.PROBE418_MAXPG || opt.maxpg || 4);
   const browser = await launch(chromium);
   const calc = await browser.newPage();
   await calc.setContent('<body></body>');
@@ -305,6 +365,7 @@ async function sweep(opt) {
   const rows = [];
   const errs = [];
   const fx = { nodes: 0, cls: 0, left: 0, lost: 0, fin: 0, held: 0 };   /* 530 — 걷은 연출 노드·클래스 수·잔여·스코프 손실 + 정지한 애니 수 */
+  const sc = { screens: 0, pages: 0, pots: [], capped: 0 };   /* 772 — 쪽을 넘긴 화면 수 · 추가로 돈 쪽 수 · 그릇 목록 */
   const wanted = (l) => !ONLY || (Array.isArray(ONLY) ? ONLY.some((o) => l.includes(o)) : l.includes(ONLY));
   for (const [label, steps] of SCREENS) {
     if (!wanted(label)) continue;
@@ -349,8 +410,23 @@ async function sweep(opt) {
       fx.lost += Math.max(0, n0 - n1);
       fx.left += await page.evaluate(COUNT_FXIN, FX_LAYERS);
 
-      const nodes = await page.evaluate(COLLECT);
-      if (!nodes.length) { await ctx.close(); continue; }
+      /* 772 — 스크롤 그릇을 «쪽» 으로 나눠 돈다. 첫 쪽(pg 0)은 772 이전과 **한 글자도 같다**. */
+      const pots = NOSCROLL ? [] : await page.evaluate(POTS, MAXPG);
+      const pages = pots.length ? Math.max(1, ...pots.map((p) => p.pages)) : 1;
+      if (pages > 1) sc.screens++;
+      sc.pages += pages - 1;
+      for (const p of pots) {
+        if (p.pages > 1) sc.pots.push(`${label} ${p.sel} ${p.ch}→${p.sh} (${p.pages}쪽${p.want > p.pages ? ` · 상한에 걸림 — 원래 ${p.want}쪽` : ''})`);
+        if (p.want > p.pages) sc.capped++;
+      }
+      let base = 0;
+      for (let pg = 0; pg < pages; pg++) {
+      const plabel = pg ? `${label} ↓${pg}` : label;
+      if (pg) { await page.evaluate(SCROLL_PAGE, pg); await page.waitForTimeout(220); }
+
+      const nodes = await page.evaluate(COLLECT, base);
+      if (!nodes.length) continue;
+      base += nodes.length;
 
       /* 겹치는 상자 표시 — 이웃 잉크가 차분에 끼어드는 자리 */
       const over = new Set();
@@ -362,11 +438,12 @@ async function sweep(opt) {
 
       const clipOf = (n) => [(n.x - PAD) * DSF, (n.y - PAD) * DSF, (n.x + n.w + PAD) * DSF, (n.y + n.h + PAD) * DSF];
 
+      const pgIds = nodes.map((n) => n.id);
       const on = (await page.screenshot()).toString('base64');
-      await page.evaluate(SETOPA, '0');
+      await page.evaluate(SETOPA, [pgIds, '0']);
       await page.waitForTimeout(150);
       const off = (await page.screenshot()).toString('base64');
-      await page.evaluate(SETOPA, '');
+      await page.evaluate(SETOPA, [pgIds, '']);
       await page.waitForTimeout(120);
 
       const solo = nodes.filter((n) => !over.has(n.id));
@@ -415,7 +492,8 @@ async function sweep(opt) {
         n.ink = d[0];
       }
 
-      for (const n of nodes) rows.push(Object.assign({ screen: label }, n));
+      for (const n of nodes) rows.push(Object.assign({ screen: plabel, page: pg }, n));
+      }   /* ← 772 쪽 루프 */
     } catch (e) {
       errs.push(label + ': ' + String(e.message || e).split('\n')[0]);
     }
@@ -514,7 +592,12 @@ async function sweep(opt) {
     /* 750 ⓐ — 가림 보정: 앞을 덮는 형제가 있어 다시 잰 노드 수 · 그중 값이 실제로 달라진 수 */
     cov: measured.filter((r) => r.cov).length, covFix: measured.filter((r) => r.covFix).length,
     /* 530 — 정규화가 실제로 무엇을 걷었나. `fxLeft` 는 0 이어야 한다(verify356 [S3] ② 가 단언). */
-    fx: fx.nodes, fxCls: fx.cls, fxLeft: fx.left, stillLost: fx.lost, anFin: fx.fin, anHeld: fx.held };
+    fx: fx.nodes, fxCls: fx.cls, fxLeft: fx.left, stillLost: fx.lost, anFin: fx.fin, anHeld: fx.held,
+    /* 772 — 스크롤 쪽 넘김: 쪽이 둘 이상인 화면 수 · 첫 쪽 말고 더 돈 쪽 수 · 그릇 목록 ·
+       그 쪽들에서만 나온 «처음 보는» 노드 수(= 이 처방이 넓힌 스코프의 크기) */
+    scrolled: sc.screens, extraPages: sc.pages, pots: sc.pots, capped: sc.capped, maxpg: MAXPG, noscroll: NOSCROLL,
+    belowFold: measured.filter((r) => r.page > 0).length,
+    belowJudged: measured.filter((r) => r.page > 0 && r.judged).length };
 }
 
 /* 530 — 재현자(`probe530`)가 **같은** 정지·정규화를 쓰게 내놓는다(두 벌로 적으면 한쪽만 늙는다) */
@@ -530,6 +613,7 @@ if (require.main !== module) return;
     console.log(`[probe418]${R.revert ? ' «되돌림»' : ''} DSF${R.dsf} · 화면 ${R.screens}개 · 잉크를 잰 노드 ${R.measured}개 ` +
       `(판정 ${R.judged} · 원본비 없음 ${R.outside} · 가려짐·잘림 ${R.clipped}) · ` +
       `종횡 편차 >${(R.tol * 100).toFixed(1)}% 인 칸 ${R.cells}개 → ${R.groups.length}자리`);
+    console.log(`  [772] 스크롤 쪽 — ${R.noscroll ? '**꺼짐(되돌림)**' : `화면 ${R.scrolled}개에서 쪽 ${R.extraPages}개를 더 돌아 «스크롤 아래» 노드 ${R.belowFold}개를 쟀다(판정 ${R.belowJudged})`}`);
     console.log(`  [750] 가림 보정 — 앞을 덮는 형제가 있어 다시 잰 노드 ${R.cov}개 · 값이 달라진 노드 ${R.covFix}개`);
     console.log(`  [530] 연출 정규화 — 레이어 노드 ${R.fx}개 · fx- 클래스 ${R.fxCls}개를 걷고 «상시» 상태에서 쟀다 (잔여 ${R.fxLeft})`);
     console.log(`  [530] 애니 정지 — 유한 ${R.anFin}개 finish · 무한 ${R.anHeld}개 주기 0 · 타이머 창구 닫음 · 전이 차단 (스코프 손실 ${R.stillLost})`);
