@@ -4157,14 +4157,23 @@
      ⚠ 이동 계수는 **4차 감속 곡선에서 뽑았다**(1−(1−t)^1.7): 구간속도 .00431 → .00376 → .00351 →
        .00311 → .00263 → .00226 → .00156 → .00103 — 마디 계단이 대개 10~15%다(3회차는 25%였다 · CK ③).
      ⚠ 불변: 수명 380ms · scale ≤1 · 끝 scale .5 · 퇴장 폭(알파 고원 끝 33% ⇒ 255ms ≥180ms · 42회차). */
+  /* ⚑ 681 5회차 — 4회차 비평 CM 이 «죽은 구간이 없어진 게 아니라 90~210 → **70~175ms** 로 자리만
+       옮겼다» 를 실측으로 짚었다(그 창에서 지름 A −6.5% · B −1.4% · α −5% — 지름 28~30px 짜리
+       무른 스프라이트의 크기 변별 임계는 7~8%다). 4회차의 «90 → 210ms −12%» 는 **표본 사이를
+       보간해야만** 성립했고 실제 캡처 격자(70·110·175ms)에서는 성립하지 않았다.
+     ⇒ 봉우리 직후의 하강을 **캡처 격자에서 읽히는 폭**으로 다시 잡는다(33/44/56/70% 의 크기·알파를
+       한 칸씩 더 내린다): 70 → 175ms 지름 **−13%** · α **−8%** 이고 이웃 표본 쌍이 전부 ≥6% 다.
+     ⚠ CM 의 «A 는 20ms 에 이미 최종 반경의 88% 를 쓴다» 는 **이 곡선의 몫이 아니다** — 그 88% 는
+       탄생 타원(호스트 bbox + 여유)의 반경이지 이동이 아니고(이 곡선의 20ms 이동 진행률은 8%),
+       사거리 25px 자체가 619 의 clamp 다. 범위 밖 관측으로만 남긴다. */
   @keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity:.6;animation-timing-function:linear}
     11%{transform:translate(calc(var(--dx)*.18),calc(var(--dy)*.18)) scale(.86);opacity:1;animation-timing-function:linear}
     18%{transform:translate(calc(var(--dx)*.28),calc(var(--dy)*.28)) scale(1);opacity:1;animation-timing-function:linear}
-    33%{transform:translate(calc(var(--dx)*.48),calc(var(--dy)*.48)) scale(.96);opacity:.99;animation-timing-function:linear}
-    44%{transform:translate(calc(var(--dx)*.61),calc(var(--dy)*.61)) scale(.92);opacity:.96;animation-timing-function:linear}
-    56%{transform:translate(calc(var(--dx)*.73),calc(var(--dy)*.73)) scale(.86);opacity:.9;animation-timing-function:linear}
-    70%{transform:translate(calc(var(--dx)*.85),calc(var(--dy)*.85)) scale(.78);opacity:.72;animation-timing-function:linear}
-    86%{transform:translate(calc(var(--dx)*.945),calc(var(--dy)*.945)) scale(.66);opacity:.38;animation-timing-function:linear}
+    33%{transform:translate(calc(var(--dx)*.48),calc(var(--dy)*.48)) scale(.92);opacity:.97;animation-timing-function:linear}
+    44%{transform:translate(calc(var(--dx)*.61),calc(var(--dy)*.61)) scale(.87);opacity:.93;animation-timing-function:linear}
+    56%{transform:translate(calc(var(--dx)*.73),calc(var(--dy)*.73)) scale(.81);opacity:.88;animation-timing-function:linear}
+    70%{transform:translate(calc(var(--dx)*.85),calc(var(--dy)*.85)) scale(.73);opacity:.73;animation-timing-function:linear}
+    86%{transform:translate(calc(var(--dx)*.945),calc(var(--dy)*.945)) scale(.62);opacity:.38;animation-timing-function:linear}
     100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
 
   /* ⚑⚑ 660 — **강화 버스트의 알갱이를 «그 탭이 내는 재화 아이콘» 으로 갈아 끼운다**
