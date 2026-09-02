@@ -111,9 +111,13 @@ const blk = (r, m) => {
     ['07 펫 피해 — 설명문 «전투 피해» 칸', /· 전투 피해 <em>'\s*\+\s*fmtB\(petDmg\(it\)\) \+ '<\/em>/],
     ['06 장비 공격력 알약', /class="eqst a"[^\n]*fmtB\(stat\.dmg\)/],
     ['06 장비 체력 알약', /class="eqst b"[^\n]*fmtB\(stat\.maxHp\)/],
-    ['25 정보 탭 공격력', /\['햄지 공격력', fmtB\(stat\.dmg\)\]/],
-    ['25 정보 탭 체력', /\['햄지 체력', fmtB\(stat\.maxHp\)\]/],
-    ['25 정보 탭 재생', /\['햄지 체력 재생', fmtB\(stat\.regen\)/],
+    /* 705 이관(2026-09-02) — 주인 지시로 «햄지» 라벨이 폐지되고 라벨을 **강화 표 `UPG` 에서 읽는다**
+       (`U.atk.name` = «공격력» · `U.hp.name` = «최대 체력» · `U.regen.name` = «체력 재생»).
+       343·662 와 같은 처방: **자리만 지금 그 줄로 옮기고 묻는 것은 그대로 둔다** — 이 값이 fmtB 를 지나는가.
+       ⚠ 라벨 리터럴을 여기 다시 적지 않는다 — `U.<id>.name` 을 짚어야 «표에서 읽는다» 가 깨질 때 빨개진다. */
+    ['25 정보 탭 공격력', /\[U\.atk\.name,\s*fmtB\(stat\.dmg\)\]/],
+    ['25 정보 탭 체력', /\[U\.hp\.name,\s*fmtB\(stat\.maxHp\)\]/],
+    ['25 정보 탭 재생', /\[U\.regen\.name,\s*fmtB\(stat\.regen\)/],
     ['19 스펙 DPS·공격력', /DPS <b>' \+ fmtB\(stat\.dps\)[^\n]*fmtB\(stat\.dmg\)/],
     ['03 던전 요구 전투력', /fmtB\(need\)/],
     ['03 레이드 최고 DPS', /\(b\.dps > 0 \? fmtB\(b\.dps\) : '-'\)/],
@@ -224,9 +228,11 @@ const blk = (r, m) => {
     await sleep(150);
     const rows = [].map.call(document.querySelectorAll('#spcList .spc-row'),
       r => [t('.nm', r), t('.vl', r)]);
-    out.spcAtk = (rows.find(r => r[0] === '햄지 공격력') || [])[1];
-    out.spcHp  = (rows.find(r => r[0] === '햄지 체력') || [])[1];
-    out.spcRg  = (rows.find(r => r[0] === '햄지 체력 재생') || [])[1];
+    /* 705 이관 — 라벨이 `UPG` 표에서 온다. 자도 **같은 표를 짚어** 라벨을 손으로 베끼지 않는다
+       (베끼면 표가 바뀔 때 자만 조용히 «행 없음 = undefined» 이 되어 ③ 이 헛빨강을 낸다). */
+    out.spcAtk = (rows.find(r => r[0] === U.atk.name) || [])[1];
+    out.spcHp  = (rows.find(r => r[0] === U.hp.name) || [])[1];
+    out.spcRg  = (rows.find(r => r[0] === U.regen.name) || [])[1];
     closeSpec();
 
     /* 03 던전 리스트 — «내 전투력» · 요구 전투력.

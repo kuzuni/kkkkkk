@@ -105,12 +105,18 @@ const GEO = [
   /* --- 4. 값이 실제 게임 데이터인가 (NaN·undefined 0건) --- */
   const vals = await page.evaluate(() => ({
     gid: document.getElementById('spcGid').textContent,
+    pfGid: document.getElementById('pfGid').textContent,
     nick: document.getElementById('spcNick').textContent,
     rows: [...document.querySelectorAll('.spc-row')].map(r => [
       r.querySelector('.nm').textContent, r.querySelector('.vl').textContent]),
     sNick: S.nick, dmg: stat.dmg, hp: stat.maxHp
   }));
-  ok('Gamer Id 렌더', /^Gamer Id: [0-9a-f]{8}-/.test(vals.gid), vals.gid.slice(0, 30));
+  /* 705 ④ 이관(2026-09-02) — 주인 지시로 이 줄은 «업데이트 예정» 이 됐다(uuid 는 미구현 표기였다).
+     333 처방대로 **자리를 비우지 않고 방향만 뒤집는다**: ⓐ 그 문구가 서 있는가 ⓑ **uuid 가 되살아나면 빨강**.
+     ⓑ 가 없으면 «그 줄이 통째로 사라져도 초록» 인 게이트가 된다. */
+  ok('상단 줄 = «업데이트 예정»(705 ④)', vals.gid.trim() === '업데이트 예정', vals.gid.slice(0, 30));
+  ok('그 자리에 uuid 가 되살아나지 않았다', !/[0-9a-f]{8}-[0-9a-f]{4}-/.test(vals.gid), vals.gid.slice(0, 40));
+  ok('19 프로필 상단 줄도 같은 문구(한 팝업 = 한 문구)', vals.pfGid.trim() === '업데이트 예정', vals.pfGid.slice(0, 30));
   ok('닉네임 = S.nick', vals.nick === vals.sNick, `${vals.nick} / ${vals.sNick}`);
   const flat = JSON.stringify(vals.rows);
   ok('NaN/undefined/null 0건', !/NaN|undefined|null/.test(flat),

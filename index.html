@@ -9536,11 +9536,19 @@
          1920·2280·2600 은 431 항이 이겨 **Δ0px**(`verify241` §3 · `verify415` §1 이 못박는다).
      ⚠ `verify241` §3 의 LOCAL 표는 이 작업의 계약이라 **1600 만** 갈아 끼웠다 —
         값을 새 상수로 적지 않고 «2280 local − pfsh» 로 물어서, 흡수 구조가 사라지면 빨개진다. */
-  .pf{position:absolute;left:92px;
+  /* 705 ③ — 19 프로필과 20 종합스탯은 **한 팝업의 두 탭**이다(주인 지시 2026-09-02 02:25,
+     «프로필로 자꾸 클릭하면 위치가 바뀜. 그거 제대로 통일 시키기»). 그래서 상자 기하는
+     **선언 한 벌을 둘이 읽는다** — 여기에 적고 `.pf`·`.spc` 는 각자의 «껍데기»(배경·테두리·라운드)만
+     따로 갖는다. ⚠ 값을 어느 한쪽에 **다시 적지 마라** — 상수 두 벌은 조용히 갈라진다(485·402).
+     ⚑ `probe705` 수리 전 실측 — 탭을 눌렀을 때 상자가 튀는 양(20 − 19):
+       2600 Δy **+159.5** · 1920 Δy **−180.5** · 1600 Δy −55 **Δh −56** · 2280 만 Δy −0.5(Δ0 급).
+     즉 «기준 프레임에서만 맞는 통일» 이었고, 20 쪽이 `#specw` 의 flex 중앙정렬(+ translateY 42)로
+     **프레임 높이에 따라 따로 움직이고 있었다.** 이제 둘 다 이 한 줄을 읽는다. */
+  .pf, .spc{position:absolute;left:92px;
     --pfsh:clamp(0px, calc(1700px - var(--frameh, 2280px)), 100px);
     top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px));
-    width:896px;height:calc(1396px - var(--pfsh));background:#000;
-    border-radius:45px}
+    width:896px;height:calc(1396px - var(--pfsh))}
+  .pf{background:#000;border-radius:45px}
   /* 갈색 링 11px = 밝은 (86,68,58) 7 + 어두운 (71,57,46) 4 */
   .pf-ring{position:absolute;inset:7px;border-radius:39px;
     background:linear-gradient(180deg,#56443A 0 0);
@@ -9809,18 +9817,21 @@
      19 프로필 탭(#pfw)과 같은 셸 — 하단 토글로 상호 연결한다.
      ========================================================================== */
   /* 63 2회차 — 순수 중앙 정렬 껍데기 공통 처방(#dgdw 주석 참고). 검산: .spc h1395 → 126+(1920−1395)/2+42 = 430.5 (ref 515−84=431 ✓) */
+  /* 705 ③ — 자리잡기를 **19 와 같은 축**(위 «.pf, .spc» 한 선언)으로 옮겼다. 그래서 여기서는
+     중앙정렬(flex)도 상하 패딩도 쓰지 않는다 — 절대 배치의 기준 상자를 패딩이 밀기 때문이다.
+     ⚠ `padding:126px 0 234px` 을 되살리지 마라: 그 값이 «프레임 높이에 따라 20 만 따로 움직이던»
+       뿌리다(수리 전 1920 Δy −180.5 · 2600 +159.5 — `probe705` §1). */
   #specw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:34;
-    align-items:center;justify-content:center;-webkit-font-smoothing:antialiased;
-    padding:126px 0 234px;box-sizing:border-box}
-  #specw.on{display:flex}
+    -webkit-font-smoothing:antialiased;padding:0;box-sizing:border-box}
+  #specw.on{display:block}
   #specw i,#specw em,#specw b,#specw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
   /* 바깥 박스 — 검정 7 + 갈색 11 + 하이라이트 1(#887661, 크림에 box-shadow).
      상단 갈색 림은 밝→어둠 미세 그라(4회차 H 실측 (84,70,61)→(72,56,43)) */
-  .spc{position:relative;flex:none;width:896px;height:1395px;max-height:100%;
-    background:linear-gradient(180deg,#57483E 0 9px,#4A3C2D 17px,#564438 20px);
-    border:7px solid #000;border-radius:44px;box-sizing:border-box;
-    transform:translateY(42px)}
+  /* 705 ③ — 자리·크기는 위 «.pf, .spc» 가 정한다(19 와 한 벌). 여기 남는 것은 껍데기뿐이다:
+     검정 7 + 갈색 11 + 하이라이트 1. **width·height·position·transform 을 여기 다시 적지 마라.** */
+  .spc{background:linear-gradient(180deg,#57483E 0 9px,#4A3C2D 17px,#564438 20px);
+    border:7px solid #000;border-radius:44px}
   /* 크림 본문 — padding-box 에서 좌우 12 / 상 12 / 하 13 인셋, radius 24 */
   /* 5회차 — 크림 배경의 «별 워터마크» 가 통째로 빠져 있었다(비평가 I·J 독립 검출, 최대 감점원).
      33 재화정보 팝업(.ci-body)과 «같은 게임 자산» 이다: 실측 별 크기 53×51 = 33 타일의 폴리곤과 일치,
@@ -9861,6 +9872,8 @@
   .spc-ava>.in{position:absolute;left:10px;right:9px;top:10px;bottom:10px;
     border:solid #000;border-width:4px 4px 6px;border-radius:4px;background:#3B5A86;overflow:hidden;
     text-align:center;font-size:96px;line-height:145px}
+  /* 705 ② — 코스튬 초상은 아트 자리 한가운데(19 `.pf-por>.art>.por-cv` 와 같은 규칙) */
+  .spc-ava>.in>.por-cv{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
   /* 칭호 육각 배너 318×56(외곽선 포함 ref 783–838) — 채움 #433A35, 사면 하이라이트, 검정 외곽선 3 */
   .spc-rib{left:269px;top:249px;width:318px;height:56px}
   /* 8회차 — 사선 챔퍼가 12px/측으로 ref 15~16 보다 얕았다(비평가 M·P 독립 지적) → 각 겹 +2 */
@@ -9958,8 +9971,11 @@
   /* 하단 토글 탭 컨테이너 767×94 — 검정 5, 세로 그라(66,54,42→53,43,31) + 상하 밝은 인셋 라인 */
   /* 작업 351 7회차 — 앵커를 위(`top:1242`)에서 **아래(`bottom:20`)** 로 돌렸다.
      2280 실측 `.spc-body` 높이 1356 에서 1356 − 1242 − 94 = **20** 이므로 기준 프레임은 Δ0px 이고,
-     1600 에서는 눌린 패널을 따라 같이 올라와 탭바(1420) 밖으로 나가지 않는다. */
-  .spc-tabs{left:46px;bottom:20px;width:767px;height:94px;box-sizing:border-box;
+     1600 에서는 눌린 패널을 따라 같이 올라와 탭바(1420) 밖으로 나가지 않는다.
+     705 ③ — 상자가 19 와 같은 기하를 읽게 되면서 `.spc-body` 가 1356 → **1357**(높이 1395 → 1396)이 됐다.
+     같은 산수 1357 − 1242 − 94 = **21** 이라 이 값만 +1 한다 — 351 이 세운 «탭 줄 상변 1692» 는 Δ0 이다
+     (안 고치면 아래 앵커라 탭 줄이 통째로 +1.5px 내려가 `verify20` `.spc-tab-on` 이 빨개진다). */
+  .spc-tabs{left:46px;bottom:21px;width:767px;height:94px;box-sizing:border-box;
     border:5px solid #000;border-radius:22px;
     background:linear-gradient(180deg,#42362A 0,#352B1F 100%);
     box-shadow:inset 0 5px 0 #5C4F46,inset 0 -5px 0 #5C4F46}
@@ -16991,7 +17007,12 @@
   <div id="specw">
     <div class="spc"><div class="spc-body">
       <div class="spc-gid"><i id="spcGid"></i></div>
-      <div class="spc-ava"><div class="in"><i>🛡️</i></div></div>
+      <!-- 705 ② — 아이콘 = **현재 착용 코스튬**(주인 지시 «방패 모습 말고»). 19 프로필 초상이
+           이미 쓰는 공용 부품 `porPaint`/`drawHeroTo` 를 그대로 쓴다 — 그림 출처가 둘이 되지 않게.
+           캔버스 132×138 은 knight idle0 잉크(44×46)의 **정수 3배**(356 «확대는 등방»)이고
+           `.in` 안쪽 아트 자리 139×138 에 딱 든다. 아틀라스가 아직 없으면 옛 🛡️ 가 폴백으로 선다. -->
+      <div class="spc-ava"><div class="in">
+        <canvas class="cos-cv por-cv" id="spcPor" width="132" height="138" data-cosav="av0" data-cossc="3" data-coslite></canvas><em class="por-em">🛡️</em></div></div>
       <div class="spc-rib"><s></s><u></u><b><i>칭호 없음</i></b></div>
       <div class="spc-nick"><i id="spcNick"></i></div>
       <div class="spc-edit" id="spcEdit">✏️</div>
@@ -33593,16 +33614,16 @@ const PF_BN = [
   { gc:'#212437', bv:'#8494A4' }, { gc:'#212437', bv:'#8494A4' },
   { gc:'#3A1757', bv:'#9D782A', ring:'#9D782A' }, { gc:'#3A1757', bv:'#9D782A', ring:'#9D782A' }
 ];
-/* Gamer Id — uuid 형식 표시 전용(닉네임에서 안정적으로 파생) */
-function pfGamerId(){
-  let a = 0x6df25ce0 >>> 0;
-  for(const ch of S.nick) a = (a * 31 + ch.charCodeAt(0)) >>> 0;
-  const hx = n => (n >>> 0).toString(16).padStart(8, '0');
-  const h = hx(a) + hx(a * 2654435761) + hx(a ^ 0x9e3779b9) + hx(a * 40503);
-  return h.slice(0,8) + '-' + h.slice(8,12) + '-' + h.slice(12,16) + '-' + h.slice(16,20) + '-' + h.slice(20,32);
-}
+/* 705 ④ (주인 지시 2026-09-02 02:25 — «상단에 게이머아이디랑 그런거 일단 업데이트 예정 으로 바꾸기»)
+   두 팝업(19 `#pfGid` · 20 `#spcGid`)의 상단 줄이 읽는 **문구 한 벌**이다. 자리를 비우지 않고
+   «아직 없는 기능» 이라고 말하게 둔다(292·333 처방 — 죽은 표시를 지우면 무엇이 있었는지 사라진다).
+   ⚠ 여기서 지운 것은 **19 쪽 uuid 파생 함수 `pfGamerId`** 다 — 이 자리 말고는 부르는 곳이 없었다.
+     20·55 가 쓰던 `spcGamerId` 는 55 설정·고객지원이 아직 부르므로 그대로 산다.
+   ⚑ 닉네임(`#pfNick`·`#spcNick`)은 **안 건드렸다** — 편집(✎)·저장·HUD 가 전부 살아 있는
+     «구현된» 표기라 «업데이트 예정» 으로 덮으면 도는 기능을 죽인다(되돌림: 이 상수를 그 자리에 쓰면 된다). */
+const SPC_TBD = '업데이트 예정';
 function renderProfile(){
-  $('pfGid').innerHTML = '<i>Gamer Id: ' + pfGamerId() + '</i>';
+  $('pfGid').innerHTML = '<i>' + SPC_TBD + '</i>';
   $('pfNick').innerHTML = ''; { const i = document.createElement('i'); i.textContent = S.nick; $('pfNick').appendChild(i); }
   $('pfTtl').textContent = titleOf().n;              /* 706 — 계급이 아니라 «장착 칭호» 다 */
   porPaint($('pfPor'));            /* 201 ③ — 초상 = 현재 착용 코스튬 */
@@ -33656,29 +33677,41 @@ function spcGamerId(){
   return hex(h) + '-' + hex(h2).slice(0, 4) + '-' + hex(h2).slice(4) + '-'
     + hex(h3).slice(0, 4) + '-' + hex(h3) + hex(h).slice(0, 4);
 }
-/* 레퍼런스는 햄지·매옹이 2캐릭 각 7행 — 우리는 1캐릭(햄지)이라 실제 스탯 13행으로 표시 전용 매핑 */
+/* 705 ① (주인 지시 2026-09-02 02:25 — «햄지 어쩌구로 되있는데 그러지말고 실제 이게임에 스텟들
+   표시되게 해야함. 햄지 빼») — 레퍼런스가 «햄지·매옹이 2캐릭 각 7행» 이라 라벨이 그 이름을 베끼고
+   있었고, 그 김에 **세 줄은 값까지 손으로 적은 «100%»** 였다(`probe705` §2: 상태와 무관한 고정값 5행).
+   ⇒ 라벨은 **강화 표 `UPG` 에서 읽고**(같은 축을 두 곳에서 이름 짓지 않는다 — 402 «사본을 지운다»),
+     값은 **살아 있는 `stat`/`bonus()` 파생**만 쓴다. 손 상수는 한 줄도 없다.
+   ⚠ 행 수 13 은 레퍼런스 격자(측정표 20 §7-1 — 리스트 800×760 안에서 스크롤이 나는 수)라 유지한다.
+   ⚠ 1행은 «공격력»(= `stat.dmg`)로 둔다 — `verify20` §5 가 «강화하면 1행 값이 바뀐다» 로 이 자리를 짚는다. */
 function renderSpec(){
-  $('spcGid').textContent = 'Gamer Id: ' + spcGamerId();
+  /* 705 ④ — 상단 Gamer Id 는 미구현 표기라 «업데이트 예정» 으로(주인 지시). 값 자체(`spcGamerId`)는
+     55 설정·고객지원이 아직 쓰므로 선언은 남는다 — 죽은 것은 **이 자리의 표시**뿐이다. */
+  $('spcGid').textContent = SPC_TBD;
   $('spcNick').textContent = S.nick;
+  porPaint($('spcPor'));           /* 705 ② — 아이콘 = 현재 착용 코스튬(19 초상과 같은 부품) */
   const b = bonus();
   const pc = v => fmtPct((v - 1) * 100, 2) + '%';
   const rows = [
-    ['햄지 공격력', fmtB(stat.dmg)],
-    ['햄지 체력', fmtB(stat.maxHp)],
-    ['햄지 공격력', pc(b.atk)],
-    ['햄지 체력', pc(b.hp)],
-    ['햄지 일반 공격 피해량', '100%'],
-    ['햄지 일반 몬스터 피해량', '100%'],
-    ['햄지 보스 피해량', '100%'],
-    ['햄지 치명타 확률', pct(stat.crit)],
-    ['햄지 치명타 피해량', Math.round(stat.cdmg * 100) + '%'],
-    ['햄지 공격 속도', fmtPct((stat.rate / BASE_RATE - 1) * 100, 2) + '%'],
-    ['햄지 체력 재생', fmtB(stat.regen) + '/s'],
-    ['햄지 골드 획득량', pc(b.gold)],
+    [U.atk.name,    fmtB(stat.dmg)],
+    [U.hp.name,     fmtB(stat.maxHp)],
+    [U.regen.name,  fmtB(stat.regen) + '/s'],
+    ['전투력',      fmtB(cp())],
+    /* 703 이 공속을 목걸이 전속으로 옮기며 `UPG` 에서 그 행이 사라졌다 — 그래서 이름을 여기서
+       짓는 유일한 축이다. 값은 «초당 몇 회» 라는 실스탯 그대로(배수가 아니다). */
+    ['공격 속도',   fmtPct(stat.rate, 2) + '회/s'],
+    [U.crit.name,   pct(stat.crit)],
+    [U.cdmg.name,   '×' + stat.cdmg.toFixed(2)],
+    [U.pierce.name, stat.pierce + '명'],
+    [U.def.name,    '받는 피해 -' + pct(1 - stat.defMul)],
+    ['공격력 증가', pc(b.atk)],
+    ['체력 증가',   pc(b.hp)],
+    [U.gold.name,   '×' + stat.goldMul.toFixed(2)],
     /* 358 — 이 행은 «이동 속도 증가율» 이고 레퍼런스(측정표 20 §12 «매옹이 이동 속도 0.2%»)에 있는 줄이라
        지우지 않는다. 다만 값은 **영구히 0%** 다 — 이동 속도를 올리는 축을 전부 없앴으므로(주인 지시)
-       여기에 축을 다시 이어붙이지 마라. `verify358` [3] 이 이 자리를 못박는다. */
-    ['햄지 이동 속도', '0%']
+       여기에 축을 다시 이어붙이지 마라. `verify358` [3] 이 이 자리를 못박는다.
+       705 — 그 «0%» 도 손으로 적지 않는다: **살아 있는 값에서** 뽑아 축이 되살아나면 즉시 드러나게 한다. */
+    ['이동 속도',   pc(stat.speed / PLAYER_SPEED)]
   ];
   $('spcList').innerHTML = rows.map(r =>
     '<div class="spc-row"><span class="nm"><i>' + r[0] + '</i></span><span class="vl">' + r[1] + '</span></div>').join('');
