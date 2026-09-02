@@ -16,8 +16,9 @@
  *   [F] 회귀   — 327 패널 1080 · 그리드 846 ≥ 최악 5행 846 · 84 버튼/닫기 앵커 Δ0
  *   [G] 배경 탭 — 바를 눌러도 팝업이 안 닫힌다(84 «떨어져 나간 노드» 규약)
  *   [H] 닫힘   — 팝업을 닫으면 배수가 ×1 로 돌아간다(713 위임 규약 채택)
- *   [R] 되돌림 — 이 자가 무르지 않다는 증거: 띠를 668 시절 98 패딩으로 되돌린 사본에서는
- *                바가 그리드를 침범한다(= [A]·[B] 가 «이미 참인 것» 을 세는 게 아니다)
+ *   [R] 되돌림 — 이 자가 무르지 않다는 증거: [R1] 띠를 668 시절 98 패딩으로 되돌린 사본에서는
+ *                바가 그리드를 침범하고, [R2] 713 자리(bottom 15/36)로 되돌린 사본에서는
+ *                [A7] 이 재는 크롬 여유가 0 이 된다(= [A]·[B] 가 «이미 참인 것» 을 세는 게 아니다)
  *
  * ⚠ 프레임 둘(2280 · 1600)에서 같은 것을 묻는다 — 팝업은 짧은 프레임 보호항이 걸린 화면이다.
  * 127 — 클라우드 러너 브라우저 해석은 tools/pwlaunch.js 공용.
@@ -37,8 +38,14 @@ const ok = (b, name, detail) => {
 const near = (a, b, t) => Math.abs(a - b) <= t;
 
 const BAR_L = 36, BAR_W = 724, SHELL_H = 98;   /* 자리·폭·공용 셸 높이 */
-const BAR_BOT = 15, SK_BOT = 36;               /* 띠 [15,113] — 바가 띠를 꽉 채우고 토글은 그 한가운데 */
-const CHROME = 15, MARGIN = 0, PAD_BOT = 113;  /* `.sm-panel::after` · 여유(잔여 739) · padding-bottom */
+/* ⚑ 747 이관(2026-09-02) — 713 1회차 비평 2인의 최대 감점(«바가 하단 테두리에 눌려 붙었다»)을
+   갚으면서 띠가 [15,113] → **[15,127]** 로 14px 넓어졌고 그 여유는 **전부 바 아래**로 갔다.
+   ⇒ 바 bottom 15 → **29** · 토글 bottom 36 → **50**(둘의 세로 중심 78 로 여전히 같다) ·
+     padding-bottom 113 → **127** · 여유 MARGIN 0 → **14**([A7] 이 그 14 를 직접 잰다).
+   ⚠ 값만 갈아 끼운 것이 아니다 — [A5] 는 «띠를 꽉 채운다» 에서 **«그리드에 붙고 크롬과 14 뜬다»**
+     로 뜻이 바뀌었고, 그래서 [A7] 이 새로 있다(무르게 푼 자리가 아님은 [R1] 이 그대로 못박는다). */
+const BAR_BOT = 29, SK_BOT = 50;               /* 띠 [15,127] — 바는 그리드에 붙고 여유 14 는 아래 */
+const CHROME = 15, MARGIN = 14, PAD_BOT = 127; /* `.sm-panel::after` · 크롬과의 여유(747) · padding-bottom */
 const GH = 868, PITCH = 170;                   /* --sm-gh · 결과 그리드 행 pitch */
 const WORST = 868;                             /* 스크롤 0 을 지키는 그리드 하한(배지 돌출 + 중앙정렬 몫) */
 
@@ -130,11 +137,17 @@ const GEO = () => {
       tag + '[A4] 좌 36(그리드 좌단) · 폭 724 · 공용 셸 높이 98',
       '좌 ' + (g.bar.l - g.panel.l) + ' · 폭 ' + g.bar.w + ' · 높이 ' + g.bar.h);
     ok(near(g.panel.b - g.bar.b, BAR_BOT, .5),
-      tag + '[A5] 띠 [15,113] 을 꽉 채운다(bottom 15 = 크롬 바로 위 · 여유는 잔여 739)',
+      tag + '[A5] 띠 [15,127] 안에서 그리드 하변에 붙는다(747 — bottom 29 = 크롬 15 + 여유 14)',
       'bottom ' + (g.panel.b - g.bar.b).toFixed(2));
     ok(g.padBot === PAD_BOT && g.chrome === CHROME && g.gh === GH + 'px',
-      tag + '[A6] [전제] 띠 산수 — padding-bottom 113 · 크롬 15 · --sm-gh 868',
+      tag + '[A6] [전제] 띠 산수 — padding-bottom 127 · 크롬 15 · --sm-gh 868',
       g.padBot + ' / ' + g.chrome + ' / ' + g.gh);
+    /* ⚑ 747 — 이 항이 이 작업의 본체다. 713 1회차 비평 2인이 «바 하변 ↔ 크롬 1~8px» 을
+       ③ 최대 감점(A 4점 · B 5점)으로 독립 지적했다. 여유를 «≥14» 가 아니라 **정확히 14** 로 못박는다
+       — 더 벌어지면 셸이 그리드를 밟거나(위) 바가 버튼 줄로 내려간 것(아래)이라 둘 다 결함이다. */
+    ok(near((g.panel.b - CHROME) - g.bar.b, MARGIN, .5),
+      tag + '[A7] 바 하변 ↔ 하단 크롬 상변 여유 14 (747 — «테두리에 눌려 붙었다» 를 갚은 자리)',
+      ((g.panel.b - CHROME) - g.bar.b).toFixed(2) + 'px');
 
     ok(near(g.bar.cy, g.skip.cy, .5),
       tag + '[B1] 363 스킵 토글과 세로 중심이 같다(둘 다 띠 중앙정렬)',
@@ -277,6 +290,19 @@ const GEO = () => {
     ok(r.bar.t < r.grid.b - .5,
       '[R1] 옛 패딩(98)으로 되돌린 사본에서는 바가 그리드를 침범한다(자가 무르지 않다)',
       '바 상변 ' + r.bar.t + ' < 그리드 하변 ' + r.grid.b + ' (침범 ' + (r.grid.b - r.bar.t).toFixed(2) + 'px)');
+    await ctx.close();
+  }
+  /* ⚑ 747 되돌림 시험 — 713 자리(bottom 15)로 되돌린 사본에서는 [A7] 이 재는 여유가 0 이 된다.
+     이 항이 빨개지지 «않으면» [A7] 은 이미 참인 것을 세고 있는 것이다(338 규칙). */
+  {
+    const { ctx, page } = await open(browser, 2280,
+      '#sumMulBar{bottom:15px !important}#sumSkip{bottom:36px !important}');
+    await openResult(page);
+    const r = await page.evaluate(GEO);
+    const gap = (r.panel.b - CHROME) - r.bar.b;
+    ok(near(gap, 0, .5) && near(r.bar.cy, r.skip.cy, .5),
+      '[R2] 713 자리(bottom 15/36)로 되돌린 사본에서는 바가 크롬에 붙는다 — 여유 0 (747 이 무르지 않다)',
+      '여유 ' + gap.toFixed(2) + 'px · 세로 중심 바 ' + r.bar.cy + ' ↔ 토글 ' + r.skip.cy);
     await ctx.close();
   }
 

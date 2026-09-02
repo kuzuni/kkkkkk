@@ -162,7 +162,10 @@ const HARNESS = () => {
     '[A5] 결과 팝업 그리드 좌단(36)에 서고 폭은 724 = 4 × 181',
     'l ' + (A.shell.l - A.panel.l).toFixed(2) + ' · w ' + A.shell.w.toFixed(1));
   ok(near(A.shell.h, 98, 0.6), '[A6] 높이는 공용 셸 98', A.shell.h.toFixed(2));
-  ok(near(A.panel.bot - A.shell.bot, 15, 0.6), '[A7] 패널 하단 크롬(15) 바로 위에 앉는다',
+  /* ⚑ 747 이관(2026-09-02) — 713 비평 2인이 «바가 하단 테두리에 눌려 붙었다» 를 최대 감점으로
+     짚어 크롬과의 여유 14 가 들어갔다(bottom 15 → **29**). 이 항이 묻던 «크롬 바로 위» 는 그
+     지적 자체라 **뜻을 뒤집어** 묻는다 — «크롬을 안 밟되 여유 14 를 둔다»(자리는 안 비운다 · 333). */
+  ok(near(A.panel.bot - A.shell.bot, 29, 0.6), '[A7] 패널 하단 크롬(15) 위에 여유 14 를 두고 앉는다(747)',
     (A.panel.bot - A.shell.bot).toFixed(2));
   ok(near(A.shell.top - A.gridBot, 0, 0.6) && A.shell.bot < A.btnTop,
     '[A8] 그리드 하변에서 시작해 재소환 버튼 줄 위에서 끝난다(주인이 지목한 «버튼 쪽»)',
