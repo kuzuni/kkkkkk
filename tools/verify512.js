@@ -17,6 +17,13 @@
  *
  * ⚠ 배경 전투가 돌면 킬 골드가 매 프레임 들어와 모든 씬에 금색이 섞인다(probe512 1회차 사고).
  *   `window.step = () => {}` 로 전투만 멈추고 연출 루프(fxTick)는 그대로 돌린다.
+ *
+ * ⚑ 808 (2026-09-02) — [G]·[R] 의 «언제 찍는가» 를 고쳤다. 종전에는 `roulFinish()` 뒤
+ *   **고정 110ms** 에 스크린샷 한 장을 찍었는데, 버스트가 사는 창은 390ms(스파크 수명 .38s +
+ *   `fxBye`)이고 1080×2280 스크린샷은 이 러너에서 0.5s 안팎이라 **캡처가 창보다 크다** —
+ *   부하에 따라 봉우리(크림 2,600~4,000)와 빈 창(430~540ms 구간, 크림 128)이 갈렸다(플레이키).
+ *   이제 `__v512.holdScene()` 이 태어난 연출 노드의 제거·CSS 애니만 세워 두고 찍는다.
+ *   재현·근거는 `node tools/probe808.js`(부하 옵션 포함), 기록은 `docs/review/808-verify512R1플레이키.md`.
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -122,6 +129,33 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
           plusCols: [...new Set(g('fx-plus').map(s => s.col.toLowerCase()))]
         };
       },
+      /* ⚑ 808 — «언제 찍는가» 를 자에서 뺀다(플레이키의 뿌리).
+         버스트는 `.fx-spark` 수명 0.38s 뒤 `fxBye` 가 노드를 걷어 **창이 390ms** 이고,
+         1080×2280 스크린샷 한 장은 이 러너에서 **0.5s 안팎**이다 — 창보다 캡처가 크다.
+         그래서 «수령 +110ms 한 장» 은 러너 부하에 따라 봉우리(크림 2,600~4,000)와
+         **빈 창**(스파크는 죽고 `+n` 은 아직 안 뜬 430~540ms 구간 = 크림 128) 사이를 오갔다.
+         ⇒ 태어난 연출 노드를 **그 프레임에 세운다**: `el.remove`(= `fxBye` 의 손)와 CSS 애니만 멈춘다.
+         색·개수·자리는 제품이 만든 그대로라 축(«되돌리면 수리 전 색이 화면에 찍힌다»)은 안 무뎌진다 —
+         연출이 아예 없으면 노드가 0 이고 [G0] 이 빨개진다. 문턱(500·5배)은 한 칸도 안 내렸다(796). */
+      async holdScene(fn) {
+        const hold = el => { try { el.remove = () => {}; el.style.animationPlayState = 'paused'; } catch (e) {} };
+        const mo = new MutationObserver(rs => {
+          for (const r of rs) for (const n of r.addedNodes) {
+            if (n.nodeType !== 1) continue;
+            hold(n); n.querySelectorAll && n.querySelectorAll('*').forEach(hold);
+          }
+        });
+        /* 관측자는 **끊지 않는다** — 캡처가 끝날 때까지(그 뒤에 태어나는 `+n` 까지) 같이 세운다.
+           측정마다 페이지를 다시 띄우므로 다음 측정에 새지 않는다. */
+        for (const id of ['fxl', 'fxlc']) { const L = document.getElementById(id); if (L) mo.observe(L, { childList: true, subtree: true }); }
+        fn();
+        /* 789 «두 프레임 연속 정적» — 스폰이 끝난 때를 **제품에게 묻는다**(고정 대기를 안 쓴다) */
+        const cnt = () => document.querySelectorAll('#fxl .fx-spark, #fxlc .fx-spark').length;
+        let prev = -1, still = 0, f = 0;
+        for (; f < 120 && still < 2; f++) { await this.raf(); const n = cnt(); still = (n > 0 && n === prev) ? still + 1 : 0; prev = n; }
+        const q = s => document.querySelectorAll(s).length;
+        return { spark: cnt(), fly: q('.fx-fly'), plus: q('.fx-plus'), frames: f };
+      },
       rgb(hex) { const h = hex.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); },
       same(cssCol, hex) {   /* `rgb(a, b, c)` ↔ `#RRGGBB` */
         const m = String(cssCol).match(/(\d+)\D+(\d+)\D+(\d+)/); if (!m) return String(cssCol).toLowerCase() === hex.toLowerCase();
@@ -199,14 +233,15 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
     }, !!revert);
     await p.waitForTimeout(500);
     const before = await p.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
-    await p.evaluate(() => {
+    /* ⚑ 808 — 고정 «+110ms 한 장» 을 폐기하고 **연출을 세워 놓고** 찍는다(위 `holdScene` 머리말).
+       세워 두면 캡처가 0.1s 가 걸리든 2s 가 걸리든 같은 프레임이라, 러너 부하가 값을 못 흔든다. */
+    const nodes = await p.evaluate(() => window.__v512.holdScene(() => {
       const i = ROULETTE.findIndex(x => x && x.dia);
       roulFinish(i < 0 ? 0 : i);
-    });
-    await p.waitForTimeout(110);
+    }));
     const after = await p.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
     /* 350 처방 — 캡처를 페이지로 되돌려 «찍힌 픽셀» 을 읽는다 */
-    return await p.evaluate(async ([b64a, b64b, palette]) => {
+    const px = await p.evaluate(async ([b64a, b64b, palette]) => {
       const load = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = src; });
       const [ia, ib] = await Promise.all([load(b64a), load(b64b)]);
       const cv = document.createElement('canvas');
@@ -236,9 +271,14 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
       Object.fromEntries(Object.entries(Object.assign({ cream: '#FFE9A8' }, cols))
         .map(([k, v]) => [k, [0, 2, 4].map(i => parseInt(v.replace('#', '').substr(i, 2), 16))]))
     ]);
+    return Object.assign(px, { nodes });
   };
   const G = await pixel(false);
-  console.log('  바뀐 픽셀 ' + G.changed + ' · 팔레트 적중 ' + JSON.stringify(G.hits));
+  console.log('  바뀐 픽셀 ' + G.changed + ' · 팔레트 적중 ' + JSON.stringify(G.hits)
+    + ' · 세운 연출 ' + JSON.stringify(G.nodes));
+  /* ⚑ 808 전제 — 홀드가 «없는 연출을 있는 것처럼» 만들지 않는다는 못.
+     버스트가 사라지면 세울 것이 없어 여기가 먼저 빨개진다(자가 무르지 않다). */
+  ok(G.nodes.spark > 0, '[G0] (전제) 잡은 프레임에 버스트가 실제로 서 있다', JSON.stringify(G.nodes));
   ok(G.hits.dia > 200, '[G1] 룰렛(전 칸 dia) 수령 프레임에 **dia 색 픽셀**이 실제로 찍힌다', 'dia ' + G.hits.dia);
   ok(G.hits.gold * 4 < G.hits.dia, '[G2] 그 프레임에 금색이 지배하지 않는다(주인이 본 «골드가 섞여 있다»)',
     'gold ' + G.hits.gold + ' vs dia ' + G.hits.dia);
@@ -246,7 +286,9 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   /* ── [R] 되돌림 ────────────────────────────────────────────────── */
   console.log('\n=== [R] 되돌림 시험 — 상수 한 색으로 되돌리면 빨개진다 ===');
   const R = await pixel(true);
-  console.log('  (되돌림) 바뀐 픽셀 ' + R.changed + ' · 팔레트 적중 ' + JSON.stringify(R.hits));
+  console.log('  (되돌림) 바뀐 픽셀 ' + R.changed + ' · 팔레트 적중 ' + JSON.stringify(R.hits)
+    + ' · 세운 연출 ' + JSON.stringify(R.nodes));
+  ok(R.nodes.spark > 0, '[R0] (전제) 되돌림 프레임에도 버스트가 실제로 서 있다', JSON.stringify(R.nodes));
   /* ⚑ 되돌림의 자는 «dia 픽셀이 준다» 가 아니라 **«수리 전 색이 화면에 있다»** 여야 한다 —
      비행 코인 아이콘 자체가 다이아 스프라이트(시안)라 dia 화소는 색을 되돌려도 남는다.
      수리 전 상수 크림(#FFE9A8)은 그 프레임 어디에도 없어야 정상이다. */
