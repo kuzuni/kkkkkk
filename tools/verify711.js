@@ -201,8 +201,48 @@ async function measure(file, h, withPixels) {
     }
     pix = worst;
   }
+  /* ⚑ 814 이관 — [G] 절이 볼 «실제 [강화] 경로». 여기까지의 측정(합성 `fxDelta` 호출)은 **부품 기하**이고,
+     814 가 고친 것은 **호출**이다(문구를 빼고 값 줄 팝으로 옮겼다) — 둘을 같이 재야 «부품을 지운 것과
+     호출을 옮긴 것» 이 구별된다. 이 블록은 화소 축이 끝난 **맨 뒤**에서만 돈다(클릭이 격자를 재렌더한다). */
+  const real = await p.evaluate(() => {
+    const inksOf = (el) => {
+      const out = []; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let t;
+      while ((t = w.nextNode())) {
+        if (!t.nodeValue.trim()) continue;
+        const g = document.createRange(); g.selectNodeContents(t);
+        const r = g.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) out.push({ txt: t.nodeValue.trim().slice(0, 14), x: r.left, y: r.top, w: r.width, h: r.height, b: r.bottom, r: r.right });
+      }
+      return out;
+    };
+    for (const d of document.querySelectorAll('#fxl > *')) d.remove();
+    const btn = document.querySelector('#bCos [data-cosup]');
+    if (!btn) return { none: true };
+    btn.click();
+    const sel = document.querySelector('#bCos .sk-card.sel');
+    const inks = sel ? inksOf(sel) : [];
+    const dels = [...document.querySelectorAll('.fx-delta')];
+    const anims = dels.flatMap((d) => d.getAnimations());
+    anims.forEach((a) => a.pause());
+    let area = 0;
+    for (let i = 0; i <= 20; i++) {
+      anims.forEach((a) => { try { a.currentTime = (620 * i) / 20; } catch (_) {} });
+      for (const d of dels) {
+        if (parseFloat(getComputedStyle(d).opacity) <= 0.02) continue;
+        const rg = document.createRange(); rg.selectNodeContents(d);
+        const k = rg.getBoundingClientRect();
+        for (const q of inks) {
+          const ox = Math.max(0, Math.min(k.right, q.r) - Math.max(k.left, q.x));
+          const oy = Math.max(0, Math.min(k.bottom, q.b) - Math.max(k.top, q.y));
+          area = Math.max(area, ox * oy);
+        }
+      }
+    }
+    const clv = sel && sel.querySelector('.sk-clv');
+    return { delta: dels.length, area, pop: !!(clv && clv.classList.contains('fx-cvswap')) };
+  });
   await b.close();
-  return { ...D, pix, errs };
+  return { ...D, pix, real, errs };
 }
 
 /* 프레임별 «델타 잉크 ↔ 글자 상자» 교집합 */
@@ -267,12 +307,20 @@ const topInk = (inks) => (inks.length ? Math.min(...inks.map((k) => k.y)) : null
   ok(OB2.area === 0 && sl2 > 0, `[F1] 1600 에서도 겹침 0 · 여유 ${r0(sl2)}px`);
   ok(Math.abs(sl2 - slack) < 1.5, `[F2] 두 프레임의 여유가 같다 (2280 ${r0(slack)} ↔ 1600 ${r0(sl2)}) — 프레임 높이는 이 자리의 축이 아니다`);
 
-  console.log('\n[G] 래칫 — 호스트 카드 «자신» 의 글자 겹침은 **814 몫**(이 자는 «없다» 고 말하지 않는다)');
+  /* ⚑⚑ 814 이관(2026-09-02) — 이 절은 «실재한다» 를 묻던 자리였다. 814 가 닫았으므로 **방향을 뒤집되
+     자리를 비우지 않는다**(333): [G1] 은 **실제 [강화] 경로**가 그 자리를 안 지나는지를 묻고,
+     [G2] 는 «그렇게 된 이유가 부품을 지운 것이 아님» — 합성 호출은 종전 기하 그대로 그 자리를 지난다 —
+     을 붙든다. 둘을 같이 물어야 «fxDelta 를 통째로 죽여도 초록» 인 자가 안 된다.
+     상세한 자는 `tools/verify814.js`(수명 전체 · 남아 있어야 할 것 · §R 되돌림 시험). */
+  console.log('\n[G] 호스트 카드 «자신» 의 글자 — 814 가 닫은 자리');
   const OH = overlap(M.frames, M.selInks);
   console.log(`  · 호스트 글자 ${M.selInks.map((k) => '«' + k.txt + '» dy ' + r0(k.y - M.sel.y)).join(' · ')}`);
-  console.log(`  · 겹침 ${OH.n}진행도 · 교집합 ${r0(OH.area)}px² · 세로 ${(OH.v * 100).toFixed(0)}% · 구간 ${r0(OH.first)}~${r0(OH.last)}ms`);
-  ok(OH.area > 0, `[G1] 이 자리는 **실재한다**(814) — 교집합 ${r0(OH.area)}px²`);
-  ok(OH.area <= 1400, `[G2] 래칫 — 814 가 닫히기 전에 더 나빠지지 않는다 (${r0(OH.area)} ≤ 1400px²)`);
+  console.log(`  · 합성 호출(부품 기하) — 겹침 ${OH.n}진행도 · 교집합 ${r0(OH.area)}px² · 세로 ${(OH.v * 100).toFixed(0)}% · 구간 ${r0(OH.first)}~${r0(OH.last)}ms`);
+  console.log(`  · 실제 [강화] 경로 — 텍스트 델타 ${M.real ? M.real.delta : '—'}장 · 교집합 ${M.real ? r0(M.real.area) : '—'}px² · 값 줄 팝 ${M.real && M.real.pop ? '걸림' : '없음'}`);
+  ok(!!M.real && !M.real.none && M.real.delta === 0 && M.real.area === 0,
+    `[G1] ★ 814 완료 — 실제 [강화] 경로가 호스트 글자 위에 텍스트를 안 세운다 (교집합 ${M.real ? r0(M.real.area) : '—'}px²)`);
+  ok(OH.area > 0 && OH.area <= 1400,
+    `[G2] 부품을 지운 게 아니라 호출을 옮긴 것이다 — 합성 호출은 종전 기하 그대로 (${r0(OH.area)}px², 래칫 ≤ 1400)`);
 
   /* ── §R 되돌림 시험 ─────────────────────────────────────── */
   if (neg) {

@@ -36563,6 +36563,34 @@ function cosHelp(){
     +     '강화 효과는 코스튬마다 곱하지 않고 <em>전체 레벨 합</em>에 한 번 곱해집니다.</p>'
     + '</div>');
 }
+/* ⚑ 814 — «강화 성공» 을 말하는 자리를 **텍스트 델타에서 «값이 바뀐 줄» 로 옮긴다.**
+   재현(`probe814`)이 등재문을 확인했고, 등재문이 안 물은 한 겹을 더 찍었다:
+     ⓐ 델타 문자열 `'Lv. ' + cosLvOf()` 는 호스트 카드의 `.sk-clv` 칸과 **글자까지 같다**
+        (58 19회차가 «이중 인쇄» 로 네 회차를 싸운 자리는 «두 값이 달랐다» — 여기는 그보다 나쁘다).
+     ⓑ 그래서 이 카드에는 «회랑» 이 애초에 없다 — 잉크 폭 예산이 **음수**다:
+        「n/500」 잉크 오른끝 189.9 ↔ 카드 오른끝 244 = 빈 자리 **54.1px** 인데
+        델타 잉크는 «Lv. 2» **77.7** · «Lv. 500» **121.6** · 낱말을 뺀 «500» 조차 **64.9** 다
+        (peak = 키프레임 10% 의 scale 1.06 에서 잰 값 — 이 자리를 t=0 의 .8 로 재면 헛초록이 난다).
+        58 26회차의 훈련 처방(«낱말을 빼고 카드 우측 빈 자리로»)이 **여기서는 산수로 안 된다.**
+   ⇒ 남은 축은 «말» 이고, 그 답은 이미 이 화면에 있다 — **520(주인 지시 «코스튬쪽 + − 표시 없애셈»)**
+     이 홀드 회당 피드백에서 «+1 Lv» 문구를 빼면서 **맥박은 그대로 뒀다**(위 `bindUpHold` 머리말).
+     첫 발도 같은 꼴로 맞춘다: 문구를 빼고, 값이 실제로 바뀌는 줄(`.sk-clv`)이 22회차의 팝으로
+     «방금 갱신됐다» 를 말한다. 흰 플래시·카드 펄스·크림 스파크 10알(= «성공» 신호)은 한 줄도 안 건드렸다.
+   ⚠ **여정·수명(80px/.62s)·글리프 토큰(--fx-plus-fs)은 한 픽셀도 안 건드렸다** — 58 30회차·491 2회차가
+     각각 못박은 값이고, 훈련·09·12·17·장비 델타는 종전 그대로다(`verify711` [A]~[F] 무수정이 그 증거).
+   ⚠ 팝은 **재렌더 «뒤»** 에 건다 — `renderUI()` 가 격자를 통째로 갈아 끼우므로 앞에 걸면 그 노드째 사라진다
+     (58 의 `.fx-cvswap` 은 재렌더가 없는 훈련 카드라 앞에 걸어도 됐다 — 같은 부품, 다른 수명).
+   ⚠ 되돌리려면: 아래 `fxUpOk(card, card)` 를 `fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel))` 로,
+     팝업 자리(`showCosDetail` 의 `fx:`)를 `fxUpOk(at, at, 'Lv. ' + cosLvOf(id))` 로 되돌리고
+     `cosLvPop()` 호출을 지운다(`verify814` 가 즉시 빨개진다). */
+function cosLvPop(){
+  const l = document.querySelector('#bCos .sk-card.sel .sk-clv');
+  if(!l) return;
+  l.classList.remove('fx-cvswap');
+  void l.offsetWidth;                                  /* 꾹 누르기 반복분에서도 다시 걸리게 리플로우(58 21회차) */
+  l.classList.add('fx-cvswap');
+  setTimeout(() => l.classList && l.classList.remove('fx-cvswap'), 400);
+}
 $('bCos').addEventListener('click', e => {
   /* 269 — [?] 도움말이 가장 먼저다(헤더 위에 있어 다른 대상과 겹칠 일이 없지만, 순서로도 못박는다) */
   if(e.target.closest('[data-coshelp]')){ cosHelp(); return; }
@@ -36583,8 +36611,9 @@ $('bCos').addEventListener('click', e => {
        연출 DOM 자체는 #fxl 로 나가므로 카드가 사라져도 살아남는다. */
     const card = $('bCos').querySelector('.sk-card.sel');
     if(cosUpgrade(cosSel)){
-      fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));   /* 17 «성공» 과 같은 한 세트(58 톤) */
+      fxUpOk(card, card);                            /* 17 «성공» 과 같은 한 세트(58 톤) — 814: 문구는 뺀다 */
       renderUI();
+      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */
     }else if(!cosOwn(cosSel))      notify('🔒 승급전에서 획득해야 강화합니다');
     else if(cosMaxed(cosSel))      notify('이미 <b>최대 레벨</b>입니다');
     else                           notify(curIc('stone') + ' <b>강화석</b>이 부족합니다');
@@ -36709,7 +36738,10 @@ function showCosDetail(id){
        회당 갱신하므로 «맥박 + 오르는 숫자» 가 부호 없이 시도 수를 말한다. */
   if(own) bindUpHold(b, {
     once: () => cosUpgrade(id),
-    fx:   () => { const at = $('mbox').querySelector('.sk-ic'); fxUpOk(at, at, 'Lv. ' + cosLvOf(id)); },
+    /* 814 — 격자 카드와 **같은 말**을 쓴다(같은 행동인데 자리마다 문구가 다르면 736 이 «짝인 두 자리의
+       어긋남» 으로 잡은 그 결함이다). 이 자리는 겹치지 않으므로(711 [6] — 호스트 149×149) 기하는
+       한 픽셀도 안 바뀌고, 바뀌는 것은 «문구가 있다/없다» 뿐이다. 회당 맥박은 아래 `beat` 가 그대로 돈다. */
+    fx:   () => { const at = $('mbox').querySelector('.sk-ic'); fxUpOk(at, at); },
     beat: '#mbox .sk-gr',
     txt:  '',
     live: liveCos,

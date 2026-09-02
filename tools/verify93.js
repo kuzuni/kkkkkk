@@ -222,8 +222,11 @@ async function run(scene, span) {
             }
           }
         }
+        /* ⚑ 814 이관 — 씬 D 는 델타 대신 «값 줄 팝»(58 22회차 `fx-cvswap`)이 말한다.
+           프레임마다 그 클래스를 읽어 둔다(팝 수명 .34s 라 한 장만 보면 놓친다). */
+        const cvsw = !!document.querySelector('#bCos .sk-card.sel .sk-clv.fx-cvswap');
         frames.push({
-          t: Math.round(t), list, delta,
+          t: Math.round(t), list, delta, cvsw,
           sg: scaleInline(gp), sd: scaleInline(dp),
           punch: ((typeof fxPunchN === 'number') ? fxPunchN : 0) - punch0,
           gold: (document.getElementById('goldN') || {}).textContent,
@@ -235,13 +238,36 @@ async function run(scene, span) {
       requestAnimationFrame(tick);
     });
     const leftover = document.querySelectorAll('.fx-fly, .fx-plus, .fx-lit').length;
+    /* ⚑ 814 이관 — [7-f] 가 읽을 «부품은 안 죽었다». 호출을 옮긴 것과 부품을 지운 것을 가르려면
+       **직접 부른** 델타가 여전히 호스트 안에서 출발해 선언된 여정만큼 가는지를 봐야 한다. */
+    let synth = null;
+    if (sc === 'cos') {
+      const h = document.querySelector('#bCos .sk-card.sel') || document.querySelector('#bCos [data-cosit]');
+      if (h) {
+        for (const d of document.querySelectorAll('.fx-delta')) d.remove();
+        const hr = h.getBoundingClientRect();
+        fxDelta(h, 'Lv. 2');
+        const d = document.querySelector('.fx-delta');
+        if (d) {
+          const an = d.getAnimations(); an.forEach((a) => a.pause());
+          const ys = [], xs = [];
+          for (let i = 0; i <= 20; i++) {
+            an.forEach((a) => { try { a.currentTime = (620 * i) / 20; } catch (_) {} });
+            const r = d.getBoundingClientRect();
+            ys.push(r.top + r.height / 2 - hr.top); xs.push(r.left + r.width / 2 - hr.left);
+          }
+          synth = { y0: Math.min(...ys), y1: Math.max(...ys), x0: Math.min(...xs), x1: Math.max(...xs), txt: d.textContent };
+          d.remove();
+        }
+      }
+    }
     window.fxPzTick = oTick; window.fxPzHit = oHit;
     const beats = (typeof fxBeatLog !== 'undefined')
       ? fxBeatLog.slice(beat0).map(b => [b[0] - t0, b[1]]).filter(v => v[0] >= -1) : [];
     return {
       frames, rows, cards, p0, leftover, beats, mism: mism.length,
       /* 694 — [7] 이 읽는 셋: 호스트 상자 · 실제 지출 · 버스트 알 수 */
-      cosR, trR, cicAt: [...cicAt.values()], paid: pay0 - (sc === 'cos' ? S.stone : S.gold), cic: cicSeen.size,
+      cosR, trR, synth, cicAt: [...cicAt.values()], paid: pay0 - (sc === 'cos' ? S.stone : S.gold), cic: cicSeen.size,
       plog: plog.map(r => [Math.round(r[0] - t0), r[1], r[2], r[3], r[4]]), dlog,
       goldPill: pillC('gold'), diaPill: pillC('dia'),
       outX: (typeof fx3Out === 'function' && p0) ? fx3Out(p0) : 0,
@@ -484,7 +510,7 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
      ⚑ 새 임계는 하나도 안 만들었다 — [7-d] 의 봉투는 ⓐ 호스트 카드 상자(제품이 그린 것)와
         ⓑ `@keyframes fxDelta` 의 선언(−4px → +80px = 84px)에서 온다. 종전 훈련 회랑 275~396 은
         훈련 카드(326×510)의 «아이콘 아래 ~ 버튼 위» 띠라 코스튬 카드(168×171)에 옮겨 적을 수 없다. */
-  console.log('[7] 델타 플로터 — 660 이관(훈련은 폐지 · 코스튬은 살아 있다)');
+  console.log('[7] 델타 플로터 — 660·814 이관(훈련·코스튬 둘 다 폐지 · 부품 자체는 살아 있다)');
   const uDelta = u.frames.reduce((n, f) => n + f.delta.length, 0);
   ok(u.paid > 0, `[7-a] 전제 — 씬 C 가 났다: 훈련 강화로 골드 ${u.paid} 지출(연출이 아니라 판정에서 읽는다)`);
   ok(uDelta === 0, `[7-b] ★ 660 — 훈련 «+n» 숫자 플로터가 0장이다 (${uDelta}프레임·표본)`);
@@ -501,22 +527,31 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
     `[7-c2] ★ 그 버스트가 **누른 카드 상자 안**에서 뜬다 — 밖 ${bad.length}알 / 잰 ${u.cicAt.length}알`
     + (tr ? ` (카드 ${Math.round(tr.w)}×${Math.round(tr.h)})` : ' (호스트 없음)'));
 
-  const cr = cs.cosR;
-  const cd = [];
-  for (const f of cs.frames) for (const d of f.delta) if (cr) cd.push({ dx: d.x - cr.x, dy: d.y - cr.y });
-  const DJ = 84;   /* 선언 — `@keyframes fxDelta` 0% −4px → 100% +80px */
-  if (!cr || !cd.length) {
-    ok(false, `[7-d] 씬 D 델타 표본 0 — 코스튬 [강화]가 안 났다 (호스트 ${cr ? '있음' : '없음'} · 강화석 지출 ${cs.paid})`);
+  /* ⚑⚑ 814 이관(2026-09-02) — 씬 D(50 코스튬)는 **더 이상 `fxDelta` 를 쓰지 않는다.**
+     694 가 «아직 쓰는 유일한 계열» 이라고 적어 둔 그 자리를 814 가 닫았다(문구가 호스트 카드의
+     «n/500» 을 세로 100% · 155ms 덮었고, 카드 168×171 에는 그것을 피할 회랑이 없다 —
+     `probe814` [4]: 낱말을 빼도 최대 레벨 «500» 이 빈 자리 54.1px 을 못 지난다).
+     ⇒ 660 이 씬 C 에 쓴 규약 그대로 갈아 끼운다(333 — 자리를 비우지 않는다):
+       [7-d 전제] 씬 D 가 **났다**(강화석이 나갔다) — 없으면 «델타 0장» 이 «씬이 안 났다» 와 같아진다.
+       [7-d] 음성 — 씬 D 에 델타 0장. 814 가 되돌아가면 빨개진다.
+       [7-e] 양성 — 그 자리를 **값 줄 팝**(58 22회차 `fx-cvswap`)이 대신한다. 없으면 «814 가
+             통째로 사라져도 초록» 이고, 이 수리가 «옮긴 것» 이 아니라 «지운 것» 이 된다.
+       [7-f] 부품 — `fxDelta` 자체는 안 죽었다: **직접 부르면** 여전히 호스트 안에서 출발해
+             선언된 여정(−4 → +80 = 84px)만큼 가고 가로는 호스트 폭 안이다.
+     ⚑ 새 임계는 하나도 안 만들었다 — 봉투는 종전과 같은 두 출처(호스트 상자 · 키프레임 선언)다. */
+  const cr = cs.cosR, DJ = 84;
+  const cdN = cs.frames.reduce((n, f) => n + f.delta.length, 0);
+  const popN = cs.frames.filter((f) => f.cvsw).length;
+  ok(cs.paid > 0, `[7-d 전제] 씬 D 가 났다 — 코스튬 강화로 강화석 ${cs.paid} 지출(연출이 아니라 판정에서 읽는다)`);
+  ok(cdN === 0, `[7-d] ★ 814 — 씬 D 에 «Lv. n» 델타가 0장이다 (${cdN}프레임·표본)`);
+  ok(popN > 0, `[7-e] ★ 그 자리를 값 줄 팝(fx-cvswap)이 대신한다 (${popN}프레임 · 58 22회차 부품)`);
+  if (!cs.synth || !cr) {
+    ok(false, `[7-f] 부품 표본 0 — 직접 부른 델타가 안 섰다 (호스트 ${cr ? '있음' : '없음'})`);
   } else {
-    const ys = cd.map(o => o.dy), xs = cd.map(o => o.dx);
-    const y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs);
-    ok(cs.paid > 0, `[7-d 전제] 코스튬 [강화]가 실제로 붙었다 — 강화석 ${cs.paid} 지출`);
-    ok(y0 >= 0 && y0 <= cr.h,
-      `[7-d] ★ 부품은 살아 있다 — 델타가 **호스트 안에서 출발한다** 카드기준 y ${y0.toFixed(0)} (0~${Math.round(cr.h)})`);
-    ok(y1 - y0 <= DJ + 8,
-      `[7-e] 그림 = 선언 — 세로 여정 ${(y1 - y0).toFixed(0)}px ≤ 선언 ${DJ}px(+표본 여유 8)`);
-    ok(x0 >= 0 && x1 <= cr.w,
-      `[7-f] 가로는 호스트 폭 안 — x ${x0.toFixed(0)}~${x1.toFixed(0)} (0~${Math.round(cr.w)})`);
+    const q = cs.synth;
+    ok(q.y0 >= 0 && q.y0 <= cr.h && q.y1 - q.y0 <= DJ + 8 && q.x0 >= 0 && q.x1 <= cr.w,
+      `[7-f] ★ 부품은 살아 있다 — 직접 호출이 호스트 안에서 출발(y ${q.y0.toFixed(0)} / 0~${Math.round(cr.h)})해 `
+      + `여정 ${(q.y1 - q.y0).toFixed(0)}px ≤ ${DJ}(+8) · 가로 ${q.x0.toFixed(0)}~${q.x1.toFixed(0)} (0~${Math.round(cr.w)})`);
   }
 
   /* ── [8] 잔여 DOM · 콘솔 ───────────────────────────────── */
