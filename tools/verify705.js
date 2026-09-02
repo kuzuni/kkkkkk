@@ -175,9 +175,14 @@ const REVERT_BOX = `
     openProfile(); renderProfile();
     const pf = document.getElementById('pfGid').textContent.trim();
     openSpec();
+    const tf = sel => { const el = document.querySelector(sel);
+      return el ? getComputedStyle(el).transform : 'n/a'; };
     return { pf, spc: document.getElementById('spcGid').textContent.trim(),
              nick: document.getElementById('spcNick').textContent.trim(), sNick: S.nick,
-             cf: (typeof spcGamerId === 'function') ? spcGamerId() : null };
+             cf: (typeof spcGamerId === 'function') ? spcGamerId() : null,
+             /* ⚠ 두 자리의 마크업이 다르다 — 19 는 `<div id=pfGid><i>…`, 20 은 `<i id=spcGid>` 자신이
+                그 `<i>` 다(`.spc-gid>i` 가 걸리는 노드). 선택자를 베끼면 `n/a` 로 헛빨강이 난다. */
+             tfPf: tf('#pfGid>i'), tfSpc: tf('#spcGid') };
   });
   eq('[D1] 20 종합스탯 상단 줄', D.spc, '업데이트 예정');
   eq('[D2] 19 프로필 상단 줄(한 팝업 = 한 문구)', D.pf, '업데이트 예정');
@@ -187,7 +192,11 @@ const REVERT_BOX = `
   eq('[D6] 죽은 파생 함수 `pfGamerId` 는 선언째 사라졌다(399 처방)',
      (bare.match(/pfGamerId/g) || []).length, 0);
   eq('[D7] 문구는 상수 한 곳에서만 온다(`SPC_TBD`)', (bare.match(/'업데이트 예정'/g) || []).length, 1);
-  ok(A.errs.length === 0, '[D8] 콘솔 에러 0건', A.errs.slice(0, 3).join(' | ') || '없음');
+  /* [D8] 1회차 비평(B)이 잡은 자리 — 두 줄에는 **라틴 uuid 폭 회수** 보정(`scaleX 1.14`·`1.155`)이
+     걸려 있었다. 문자열이 한글이 된 지금 그 값은 회수가 아니라 **왜곡**이다(380·689 라틴 폴백 규약의 반대 자리). */
+  eq('[D8] 19 상단 줄에 라틴 폭 보정이 안 걸려 있다', D.tfPf, 'none');
+  eq('[D8] 20 상단 줄에도 안 걸려 있다', D.tfSpc, 'none');
+  ok(A.errs.length === 0, '[D9] 콘솔 에러 0건', A.errs.slice(0, 3).join(' | ') || '없음');
   await A.ctx.close();
 
   /* ── [C] ③ 두 팝업이 한 상자 ───────────────────────────────────── */

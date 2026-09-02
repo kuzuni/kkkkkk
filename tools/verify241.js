@@ -209,7 +209,10 @@ const MEAS = `(function(){
   const REV241 = [   /* 415 자리 일곱 개를 **전부** 되돌린다 — 상자만 되돌리면 자식이 100px 올라간 채라
                         «장착 중»·토글이 프레임 안에 남아 241 의 원 증상이 재현되지 않는다 */
     ['top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px));', 'top:431px;'],
-    ['height:calc(1396px - var(--pfsh));', 'height:1396px;'],
+    /* 705 이관(2026-09-02) — 이 선언이 `.pf{…}` 에서 **`.pf, .spc{…}`(19·20 공용)** 로 옮겨가면서
+       블록 끝이 됐다(`…var(--pfsh))}`). 자리만 새 글자로 옮기고 **묻는 것은 그대로**다:
+       흡수분을 떼면 짧은 프레임에서 상자가 프레임 밖으로 227px 나간다. */
+    ['height:calc(1396px - var(--pfsh))}', 'height:1396px}'],
     ['height:calc(544px - var(--pfsh));', 'height:544px;'],
     ['top:calc(1026px - var(--pfsh));', 'top:1026px;'],
     ['top:calc(1089px - var(--pfsh));', 'top:1089px;'],

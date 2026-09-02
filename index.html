@@ -9560,8 +9560,11 @@
   .pf-gid{left:0;right:0;top:37px;height:22px;line-height:22px;text-align:center;
     font-size:22px;font-weight:700;color:#fafafa;
     -webkit-text-stroke:3.5px #5F5F5F;paint-order:stroke fill;white-space:nowrap}
-  /* 라틴 uuid 는 이 서체가 레퍼런스보다 14% 좁다 — 폭만 scaleX 로 회수 */
-  .pf-gid>i{transform:scaleX(1.14)}
+  /* 라틴 uuid 는 이 서체가 레퍼런스보다 14% 좁다 — 폭만 scaleX 로 회수.
+     705 ④ — 그 줄이 **한글 «업데이트 예정»** 이 되면서 이 보정은 **뜻을 잃었다**(라틴 폴백 전용 보정이라
+     한글에 걸면 글자만 14% 옆으로 늘어난다 — 380·689 «라틴 폴백 보정» 규약의 반대 자리).
+     ⚠ 되살리려면 «그 줄이 다시 라틴인가» 를 먼저 보라 — 문자열이 한글인 한 이 값은 왜곡이다. */
+  .pf-gid>i{transform:none}
   /* 초상화 ref (451,595) 179×176 — 검정5 / 갈색(113,90,76)12 / 검정4 / 아트 137×138 */
   .pf-por{left:359px;top:80px;width:179px;height:176px;background:#000;border-radius:14px}
   .pf-por>.b{position:absolute;inset:5px;background:#715A4C;border-radius:10px}
@@ -9849,7 +9852,9 @@
      암갈 미세 외곽선(ref 최암부 ~(50,47,42)) */
   .spc-gid{left:0;right:0;top:14px;height:30px;line-height:30px;text-align:center;
     font-size:21px;font-weight:700;color:#FBFBFD}
-  .spc-gid>i{transform:scaleX(1.155);-webkit-text-stroke:3px #14100C;
+  /* 705 ④ — `.pf-gid>i` 와 같은 자리다: `scaleX(1.155)` 는 **라틴 uuid 폭 회수** 보정이었고
+     한글 «업데이트 예정» 에 걸면 글자만 15.5% 늘어난다. 외곽선·색은 그대로 둔다(그건 문자와 무관하다). */
+  .spc-gid>i{transform:none;-webkit-text-stroke:3px #14100C;
     paint-order:stroke fill}
   /* 아바타 액자 179×180 — 검정 5 → 갈색 12(#715A4A) → 검정 라인 2 → 초상화(#3B5A86) */
   /* 5회차 — 코너 반경 18 → 7 (ref 는 dy6 에서 이미 풀폭 x451, 우리는 dy16 이었다. 비평가 I·J 독립 지적).
