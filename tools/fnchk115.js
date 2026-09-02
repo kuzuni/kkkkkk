@@ -10,10 +10,12 @@
  *   3  ◀▶ 로 MAX 단계                                    → 불멸 «0.10%» 로 보인다(옛 «2.75%» 아님)
  *   4  💎 30회 소환 버튼 클릭                             → 다이아가 정확히 summonCost 만큼 줄고
  *                                                          12 결과 팝업이 뜨고 S.summons/S.cnt 가 는다
- *   5  같은 클릭의 HUD 반영                               → #diaN 이 줄어든 다이아를 보여 준다
+ *   5  같은 클릭의 HUD 반영                               → #diaN 이 줄어든 다이아를 fmt() 표기로 보여 준다
  *   6  같은 클릭의 S 반영                                 → S.own 종 수·소환 exp 가 실제로 늘었다
  *   7  만렙 20만 회(summonOne 실경로)                     → 불멸 획득 빈도 ≈0.1% (130~280/200,000)
- *   8  펫 배너(106, 같은 8행 표)                          → 코드 수정 없이 같은 0.10% 가 적용된다
+ *   8  펫 배너(106) 자동 적용                             → 최상단 = GRADE[topG('pet')].n · «불멸» 0건 ·
+ *                                                          표시 확률 = 실제 추첨 빈도 (805)
+ *  8b  같은 식을 장비 배너에                              → 배너마다 다른 답(불멸 ≠ 초월) = 손 상수 아님 (805)
  *   9  05 무기 팝업 2페이지(85 경로)                      → 불멸 무기 선택이 그대로 그려지고 NaN 0건
  *  10  세이브 왕복                                        → 저장 후 재로드해도 소환 레벨·확률·표기 동일
  *
@@ -23,6 +25,13 @@
  *   ②는 «Lv75» 가 만렙을 넘어 MAX 로 튕겨 «불멸 행 없음» 이 영영 거짓이 됐고,
  *   ⑩은 `lv = 100` 이 load() 클램프로 만렙이 되어 «100 유지» 가 영영 거짓이 됐다.
  *   ⇒ 만렙·해금 레벨은 전부 **제품의 표에서 역산**한다(LESSONS 106-1 · 496 이 `verify106` F5 에 쓴 처방).
+ *
+ * ⚑ **805 (2026-09-02) — 같은 병이 «최고 등급» 에서 한 번 더 났다.** ⑧ 이 «불멸» 이라는 등급 이름을
+ *   손으로 적고 있어서, 757 이 펫 불멸 1종을 데이터에서 걷어내자 그 항만 옛 세계에 굳어 빨개졌다
+ *   (제품 0줄 — `probe805` 가 대조로 확정). 위 경고의 «만렙» 자리에 **«등급 이름·행 수»** 를 같이 넣어
+ *   읽어라: 배너의 최고 등급은 `topG(coll)` 이, 행 수는 `rollOf(b)` 가 **데이터에서** 정한다.
+ *   같은 사고를 ⑤ 가 다른 얼굴로 내고 있었다 — 제품에 없는 이름(`closeSumRes`)을 부르고 그 예외를
+ *   `.catch()` 로 삼켜 **헛초록**이었다. 자에서 `.catch(() => 이미_가진_값)` 은 금지다.
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
@@ -123,14 +132,24 @@ const ok = (b, act, expect, got) => {
      '💎 30회 소환 버튼 클릭', '다이아 −' + before.cost + ' · 12 결과 팝업 열림',
      '다이아 ' + before.dia + '→' + after.dia + ' · 결과팝업=' + after.sumw + ' 칸=' + after.cards);
 
-  const hud = await page.evaluate(async () => {
-    closeSumRes && closeSumRes();
-    fxDisp && (fxDisp.dia = S.dia);              /* LESSONS 111-2 — HUD 는 롤링 캐시를 거친다 */
+  /* ⚑ 805 (2026-09-02) — 이 항은 **헛초록이었다.** `closeSumRes` 는 제품에 없는 이름이라
+     (`probe805` [7] — 실제 이름은 `closeSummonResult`) 이 evaluate 가 첫 줄에서 통째로
+     ReferenceError 로 죽었고, 뒤에 달린 `.catch(() => after.diaN)` 이 그것을 삼켜
+     **이미 잡아 둔 값을 다시 읽는** 항이 됐다 — HUD 는 한 번도 다시 그려지지 않았다.
+     EVGUARD 731 이 «삼켜진 evaluate 예외» 로 신고하고 있던 자리다.
+     ⇒ 이름을 고치고 **폴백을 없앤다**: 다음 번 이름 변경은 초록이 아니라 빨강으로 나와야 한다.
+     기대값도 «숫자가 한 자라도 있다» 에서 **제품의 표기 함수**(`fmt`)로 올린다 — 26831 이
+     `$('diaN').textContent = fmt(fxVal('dia'))` 이므로 자가 서식을 손으로 적을 이유가 없다
+     (368 «제품에게 물어라» · `fitNum` 은 font-size 만 눌러 글자를 안 바꾼다). */
+  const hud = await page.evaluate(() => {
+    closeSummonResult();
+    fxDisp.dia = S.dia;                          /* LESSONS 111-2 — HUD 는 롤링 캐시를 거친다 */
     drawHud();
-    return document.getElementById('diaN').textContent;
-  }).catch(() => after.diaN);
-  ok(String(hud).replace(/[^0-9.]/g, '').length > 0,
-     '같은 클릭의 HUD 반영', '#diaN 이 줄어든 다이아를 표시', '#diaN = ' + hud);
+    return { txt: document.getElementById('diaN').textContent, want: fmt(S.dia), dia: S.dia };
+  });
+  ok(hud.txt === hud.want && hud.dia === after.dia,
+     '같은 클릭의 HUD 반영', '#diaN 이 줄어든 다이아를 제품 표기(fmt)로 보여 준다',
+     '#diaN = ' + hud.txt + ' (기대 ' + hud.want + ')');
 
   ok(after.sums === before.sums + 30 && after.cnt === before.cnt + 30 && after.ownN >= before.ownN + 30,
      '같은 클릭의 S(세이브) 반영', 'S.summons·S.cnt.sumEquip +30 · S.own 누적 +30',
@@ -147,15 +166,61 @@ const ok = (b, act, expect, got) => {
   ok(f7.hit >= 130 && f7.hit <= 280, '만렙 무기 20만 회 소환(summonOne 실경로)',
      '불멸 ≈0.1% (130~280건)', f7.hit + '/' + f7.N + ' = ' + f7.pct.toFixed(4) + '%');
 
-  /* 8 — 펫 배너(106) 자동 적용 */
+  /* 8 — 펫 배너(106) 자동 적용.
+     ⚑ 805 (2026-09-02) — 이 항은 «불멸 (0.10%)» 라는 **문자열**을 찾고 있었다. 757 이 펫 불멸
+     1종(`pet7_0`)을 데이터에서 걷어낸 뒤 펫의 최고 등급은 **초월(g6)** 이라 그 문자열은 영영 없다
+     — 제품이 아니라 **자가 낡았다**(`probe805` [1]~[4] · 수리 전 트리에서도 같은 빨강이라
+     740 의 변경과 무관함을 대조로 확인했다 · 338·344 규칙).
+     묻는 것은 처음부터 문자열이 아니라 **«펫 배너가 코드 수정 없이 표에서 파생되는가»** 였으므로
+     이름도 확률도 **제품에게 묻는다**(368·402 «표에게 묻는다»):
+       ① 최상단 등급 행 이름 = `GRADE[topG('pet')].n`   (지금 값: 초월)
+       ② «불멸» 행 **0건** — 757 규약. 333 처방대로 **방향만 뒤집었다**(있어야 통과 → 없어야 통과).
+       ③ 그 확률 = **실제 추첨**(`summonOne('pet')` 20만 회) 빈도와 일치 — 251 «표시와 추첨이 같은 함수».
+     ⚑ ③ 을 넣은 이유: ①② 만 두면 `renderProbInfo` 가 `gradeProbsAt` 를 부르는 것을 그 자신에게
+       되묻는 **동어반복**이라 표가 통째로 어긋나도 초록이다. ③ 이 그 구멍을 막는다.
+     ⚠ 이 항이 «만렙 0.10% 램프» 축을 대신 지우는 것이 아니다 — 그 축은 장비 배너에서 살아 있고
+       ③(위 3번 항)·⑦ 과 `verify115` 가 계속 지킨다(805 등재문의 못).
+     ⚠ 20만 회에서 p≈5.7% 의 표준편차는 상대 0.9% 라 아래 10% 창은 약 11σ 다 — 플레이키 아님. */
   const f8 = await page.evaluate(() => {
+    const g = topG('pet'), want = GRADE[g].n;
     openProbInfo('pet', SUM_MAXLV);            /* 522 — 만렙은 제품에서 읽는다 */
     const h = document.getElementById('prbList').innerHTML;
-    const m = h.match(/불멸 \(([^)]*)\)/);
+    const heads = [...h.matchAll(/<i>([^(<]+)\(([^)]*)\)<\/i>/g)].map(m => m[1].trim());
     closeProbInfo();
-    return m ? m[1] : null;
+    const snap = JSON.stringify(S.own), N = 2e5;
+    let hit = 0;
+    for (let k = 0; k < N; k++) if (summonOne('pet').it.g === g) hit++;
+    S.own = JSON.parse(snap);
+    const shown = gradeProbsAt('pet', SUM_MAXLV)[g] * 100;
+    return { want, top: heads[0] || null, imm: /불멸/.test(h),
+             shown, hit, N, pct: hit / N * 100 };
   });
-  ok(f8 === '0.10%', '동료(펫) 배너 확률 팝업', '같은 8행 표라 코드 수정 없이 0.10%', '불멸=' + f8);
+  const f8rel = Math.abs(f8.pct - f8.shown) / (f8.shown || 1);
+  ok(f8.top === f8.want && !f8.imm && f8rel < 0.10,
+     '동료(펫) 배너 확률 팝업',
+     '최상단 = GRADE[topG(pet)].n · «불멸» 행 0건(757) · 표시 확률 = 실제 추첨 빈도',
+     '최상단=' + f8.top + '(기대 ' + f8.want + ') · 불멸행=' + f8.imm
+     + ' · 표시 ' + f8.shown.toFixed(4) + '% ↔ 추첨 ' + f8.pct.toFixed(4) + '%'
+     + ' (' + f8.hit + '/' + f8.N + ' · 상대오차 ' + (f8rel * 100).toFixed(2) + '%)');
+
+  /* 8b — 8 의 **음성항**(되돌림 시험 대용).
+     8 이 «펫» 이라는 낱말이 아니라 **그 배너의 데이터**를 읽는다는 것을, 같은 식을 장비 배너에
+     대고 돌려 **다른 답**(장비 = 불멸 ≠ 펫 = 초월)이 나오는 것으로 못박는다. 이 항이 없으면 8 은
+     기대값을 «초월» 로 손에 적어도 초록이고, 그러면 다음 번 등급 개편에서 757 때와 똑같이 썩는다
+     (LESSONS 106-1 · 522-①). 동시에 «장비 배너의 최고 등급은 여전히 불멸» 이라는 805 의 못이기도 하다. */
+  const f8b = await page.evaluate(() => {
+    const gp = topG('pet'), ge = topG('equip');
+    openProbInfo('weapon', SUM_MAXLV);
+    const h = document.getElementById('prbList').innerHTML;
+    const heads = [...h.matchAll(/<i>([^(<]+)\(([^)]*)\)<\/i>/g)].map(m => m[1].trim());
+    closeProbInfo();
+    return { pet: GRADE[gp].n, eq: GRADE[ge].n, top: heads[0] || null, rows: heads.length,
+             petRows: rollOf('pet').length, eqRows: rollOf('weapon').length };
+  });
+  ok(f8b.top === f8b.eq && f8b.eq !== f8b.pet && f8b.eqRows !== f8b.petRows,
+     '같은 식을 장비 배너에 — 배너마다 다른 답이 나온다(8 이 손 상수가 아니라는 증거)',
+     '장비 최상단 = GRADE[topG(equip)].n 이고 펫의 답과 다르다',
+     '장비=' + f8b.top + '(' + f8b.eqRows + '행) · 펫=' + f8b.pet + '(' + f8b.petRows + '행)');
 
   /* 9 — 05 무기 팝업 불멸 행 렌더(85 확률 경로).
      186(2026-08-27) 이 4행 페이징을 폐지해 `wpnPage = 1` 이라는 «2페이지로 넘긴다» 단계가 없어졌다.

@@ -63,17 +63,37 @@ const ok = (b, name, detail) => {
   ok(Math.abs(A.tr - 0.06) < 1e-12, 'A4 초월 가중치 0.06 미변경(② 는 제안만)', String(A.tr));
   ok(!/\{\s*unlock:75,\s*p0:0\.00,\s*p1:0\.03\s*\}/.test(SRC), 'A5 옛 리터럴 `unlock:75 … p1:0.03` 부재(소스 스캔)');
 
-  /* ---- [B] 만렙 실효 확률 ---- */
+  /* ---- [B] 만렙 실효 확률 ----
+     ⚑ 805 (2026-09-02) 이관 — 이 절은 네 배너 **전부**에 «만렙 불멸 = 0.10%» 를 물었다.
+     757 이 펫 불멸 1종(`pet7_0`)을 데이터에서 걷어낸 뒤 펫에는 8행째가 없으므로 `p[7]` 은 0 이고,
+     그 항만 빨간 채 굳어 있었다(`probe805` [1]~[2] · `fnchk115` 8번과 **같은 뿌리**).
+     ⚠ 항을 지우거나 펫을 목록에서 빼면 «펫 배너를 아무도 안 보는» 게이트가 된다 —
+     333 처방대로 **방향만 뒤집는다**: 배너가 8행이면 «0.10%», 7행이면 «불멸 0 · 최고 등급은 초월».
+     기대값을 손으로 가르지 않고 `rollOf(b)`(= `topG(coll)` 파생)에게 물으므로, 다음에 어느 배너의
+     최고 등급이 또 접히거나 되살아나도 이 절은 저절로 따라온다(LESSONS 106-1 · 368 «제품에게 물어라»). */
   const B = await page.evaluate(() => {
     const at = (b, L) => { const o = S.sum[b].lv; S.sum[b].lv = L; const p = gradeProbs(b); S.sum[b].lv = o; return p; };
     const r = {};
-    ['weapon', 'shield', 'amulet', 'pet'].forEach(b => { const p = at(b, SUM_MAXLV); r[b] = { g7: p[7], g6: p[6], sum: p.reduce((a, c) => a + c, 0) }; });
+    ['weapon', 'shield', 'amulet', 'pet'].forEach(b => {
+      const p = at(b, SUM_MAXLV);
+      r[b] = { g7: p[7], g6: p[6], sum: p.reduce((a, c) => a + c, 0),
+               rows: rollOf(b).length, top: topG(BANNERS[b].coll), topName: GRADE[topG(BANNERS[b].coll)].n };
+    });
     return r;
   });
   ['weapon', 'shield', 'amulet', 'pet'].forEach(b => {
-    ok(Math.abs(B[b].g7 - 0.0010) <= 0.0001, 'B ' + b + ' 만렙 불멸 = 0.0010 ± 0.0001',
-       (B[b].g7 * 100).toFixed(4) + '%');
+    const has7 = B[b].rows > 7;                 /* 그 배너에 불멸 행이 있는가 — 데이터가 답한다 */
+    ok(has7 ? Math.abs(B[b].g7 - 0.0010) <= 0.0001 : (B[b].g7 === 0 && B[b].g6 > 0),
+       'B ' + b + (has7 ? ' 만렙 불멸 = 0.0010 ± 0.0001'
+                        : ' 불멸 행 없음(757) → 불멸 0 · 최고 등급 ' + B[b].topName + ' > 0'),
+       (B[b].g7 * 100).toFixed(4) + '% · ' + B[b].rows + '행 · 최고=' + B[b].topName
+       + ' ' + (B[b].g6 * 100).toFixed(4) + '%');
   });
+  /* B4b — 위 갈래가 «둘 다 있는» 상태에서만 뜻이 산다(장비 8행 ↔ 펫 7행). 한쪽으로 굳으면
+     갈래 한 줄이 죽은 코드가 되므로 그것을 여기서 못박는다(333 «자리를 비우지 마라»). */
+  ok(B.weapon.rows === 8 && B.pet.rows === 7 && B.weapon.topName === '불멸' && B.pet.topName === '초월',
+     'B4b 배너마다 최고 등급이 다르다 — 장비 8행(불멸) · 펫 7행(초월)',
+     '장비 ' + B.weapon.rows + '행/' + B.weapon.topName + ' · 펫 ' + B.pet.rows + '행/' + B.pet.topName);
   ok(Object.values(B).every(x => Math.abs(x.sum - 1) < 1e-9), 'B5 확률 합 = 1 (재정규화 유지)');
   ok(B.weapon.g6 > B.weapon.g7 * 20, 'B6 초월 ≫ 불멸 (간격 확보)',
      '초월 ' + (B.weapon.g6 * 100).toFixed(3) + '% / 불멸 ' + (B.weapon.g7 * 100).toFixed(3) + '%');
