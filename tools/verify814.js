@@ -120,7 +120,14 @@ async function run(file, h) {
       }) : [],
       sparkAt: L ? [...L.querySelectorAll('.fx-spark')].map((e) => {
         const r = e.getBoundingClientRect();
-        return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, s: Math.max(r.width, r.height) };
+        /* 5회차 — «경로» 는 픽셀로 뒤쫓지 않고 **부품이 적어 둔 이동 벡터**(`--dx`/`--dy`)에서 읽는다.
+           그 두 값이 곧 CSS 가 수명 동안 옮기는 양이고, 캡처 프레임의 매칭 오차를 안 탄다. */
+        const px = (k) => parseFloat(e.style.getPropertyValue(k)) || 0;
+        /* ⚠ 크기는 **찍힌 rect 가 아니라 부품이 적은 상자**(`style.width`)로 읽는다 — rect 는
+           `@keyframes fxSpark` 의 scale 을 타서 재는 순간마다 달라진다(5회차 1차 시도가 실제로
+           «최대 5.7px» 라는 헛초록을 냈다: 그 자는 알을 다시 34 로 키워도 초록이었다). */
+        return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, s: Math.max(r.width, r.height),
+                 bw: parseFloat(e.style.width) || 0, dx: px('--dx'), dy: px('--dy') };
       }) : [],
       fs: getComputedStyle(document.documentElement).getPropertyValue('--fx-plus-fs').trim()
     };
@@ -237,6 +244,25 @@ function inter(plus, inks) {
     console.log('  · 값 줄(' + valRows.map((k) => '«' + k.txt + '»').join(' · ') + ') 위에 앉은 알 '
       + onVal.length + '/' + D.sparkAt.length + ' · 상태 라벨 «착용 중» 포함 ' + onAll.length + '알');
     ok(onVal.length === 0, '[B7] ★ 입자가 **값 줄 두 곳** 위에 안 앉는다 — ' + onVal.length + '알 (링 세로 눌림 `--burst-ry`)');
+    /* ⚑ 5회차 — 3회차가 «값 줄 위 0알» 을 산 **대가**를 여기서 지킨다. 4회차 비평 2인이 각자
+       실측했다: 알갱이 이동 19.43 → 5.74px(−70%) · 그림 띠 점유 12.3 → 22.4%(+82%) — 링을
+       글자 사이에 넣느라 알을 그림 위에 포갠 것이다. `--burst-sz` 로 알을 줄이자 셋이 같이 풀린다.
+       ⚠ 두 항은 **[B7] 과 한 벌**이다 — 알을 다시 키우면 [B7] 이 빨개지고, 링을 다시 누르면
+         여기가 빨개진다. 한쪽만 있으면 다음 사람이 같은 왕복을 또 한다. */
+    const szMax = D.sparkAt.length ? Math.max(...D.sparkAt.map((a) => a.bw)) : 0;
+    const tr = D.sparkAt.map((a) => Math.hypot(a.dx, a.dy));
+    const trAvg = tr.length ? tr.reduce((x, y) => x + y, 0) / tr.length : 0;
+    console.log('  · 알 지름 최대 ' + r0(szMax) + 'px (신고 `--burst-sz` 뒤 상한 24) · 이동 벡터 평균 '
+      + trAvg.toFixed(1) + 'px · 최소 ' + (tr.length ? Math.min(...tr).toFixed(1) : '—'));
+    ok(szMax > 0 && szMax <= 25,
+      '[B12] ★ 알이 그림 띠에 맞게 작다 — 최대 지름 ' + r0(szMax) + 'px ≤ 25 (그림 띠 세로 83px 의 30% 이하 · 점유는 면적이라 ×0.49)');
+    /* ⚠ **비평가의 «이동 −70%» 를 이 자로는 재현하지 못했다**(5회차 §R-c 실측: 3회차 판 10.6px ↔
+       이번 판 11.6px = **+9%**). 두 사람이 잰 것은 «두 프레임 사이 중심 이동» 이라 `@keyframes fxSpark`
+       의 scale 이 만드는 겉보기 이동이 섞이고, 이 자가 재는 것은 **부품이 적어 둔 이동 벡터** 다.
+       그래서 이 항은 «회수했다» 를 주장하지 않고 **바닥을 지킨다** — 다음 사람이 링을 더 누르면
+       (세로 반경이 곧 이동량이라) 여기가 먼저 빨개진다. 겉보기 이동은 채점 캡처의 몫이다. */
+    ok(trAvg >= 8, '[B13] 그 버스트의 **이동 벡터 바닥** — 평균 ' + trAvg.toFixed(1)
+      + 'px ≥ 8 (3회차 판 10.6px · 이동량 상수 `FXB_K` 는 한 값도 안 건드렸다 — 가둠이 열린 만큼만 늘었다)');
   }
   {
     /* 4회차 — 3회차 CR6 «테두리·내부 Δ ≤ 0.2/255 = 카드 본체가 0px 반응한다» 의 자리.
@@ -300,7 +326,11 @@ function inter(plus, inks) {
         'fxUpOk(card, card);                            /* 17 «성공» 과 같은 한 세트(58 톤) — 814: 문구는 뺀다 */',
         "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));"],
       ['R-b', '값 줄 팝만 지운다 (문구도 팝도 없는 상태)',
-        '      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n', '']
+        '      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n', ''],
+      /* ⚑ 5회차 — 3회차 판(«알은 그대로 두고 링만 누른다»)으로 되돌린다. 그 판이 4회차 2인 공통
+         지적의 원본이므로, [B12]·[B13] 이 그 판에서 **실제로 빨개져야** 이 회차가 무른 수리가 아니다. */
+      ['R-c', '3회차 판으로 되돌린다 (알 크기 신고를 빼고 링만 .29 로 누른 상태)',
+        '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}', '#bCos .sk-card{--burst-ry:.29}']
     ];
     for (const [tag, why, from, to] of INJ) {
       if (src.indexOf(from) < 0) { ok(false, '[' + tag + '] 주입 앵커를 못 찾았다 — 조용한 통과 금지'); continue; }
@@ -313,6 +343,15 @@ function inter(plus, inks) {
           : inter(N.D.plus, N.D.selInks);
         console.log('  · [' + tag + '] ' + why + ' — 텍스트 플로터 ' + N.D.plus.length + '장 · 교집합 ' + r0(na) + 'px² · 팝 ' + (N.D.pop ? '걸림' : '없음'));
         if (tag === 'R-a') ok(na > 1000 && N.D.delta > 0, '[R-a] 주입하면 [A1]·[A2] 가 빨개진다 (교집합 ' + r0(na) + 'px²)');
+        else if (tag === 'R-c') {
+          const nz = N.D.sparkAt.length ? Math.max(...N.D.sparkAt.map((a) => a.bw)) : 0;
+          const nt = N.D.sparkAt.map((a) => Math.hypot(a.dx, a.dy));
+          const ntAvg = nt.length ? nt.reduce((x, y) => x + y, 0) / nt.length : 0;
+          console.log('    · 3회차 판 — 알 지름 최대 ' + r0(nz) + 'px · 이동 벡터 평균 ' + ntAvg.toFixed(1) + 'px');
+          ok(nz > 25, '[R-c] 주입하면 [B12] 가 빨개진다 — 알 지름 ' + r0(nz) + 'px (> 25). '
+            + '⚠ 이동 벡터는 ' + ntAvg.toFixed(1) + 'px 로 이번 판(11.6)과 큰 차가 없다 — '
+            + '4회차 비평가의 «−70%» 는 **겉보기 이동**(프레임 간 중심 매칭)이고 이 자의 축이 아니다');
+        }
         else ok(!N.D.pop, '[R-b] 주입하면 [B3] 이 빨개진다 (팝 ' + (N.D.pop ? '걸림' : '없음') + ') — 이 수리는 «지운 것» 이 아니라 «옮긴 것» 이다');
       } finally { try { fs.unlinkSync(path.join(ROOT, tmp)); } catch (_) {} }
     }

@@ -109,7 +109,7 @@ const FREEZE = () => {
          "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));"],
         ['      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n', ''],
         ['  .sk-clv.fx-cvswap{animation:fxCvSwapS .34s cubic-bezier(.34,1.56,.64,1) both, fxCvLit .34s linear}', ''],
-        ['#bCos .sk-card{--burst-ry:.29}', '']
+        ['#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}', '']
       ];
       let rev = s;
       for (const [a, b2] of REV) {
