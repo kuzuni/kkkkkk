@@ -189,7 +189,10 @@ async function arm(page, mode) {
   /* ⚑ 619 14회차 이관 — 서명에 둘째 인자 `iv`(틱 간격)가 붙었다(«회당 연출의 길이는 틱이 정한다»).
      **자를 넓힌 것이 아니라 좁힌 것이다** — 인자를 명시로 박아 두므로 그 축이 사라지면 여기가
      빨개진다. 625 의 뜻(«한 자리에 플래시 한 장»)은 아래 A3~A5 가 그대로 지킨다. */
-  const fxSrc = (/function fxFlash\(el, iv, inset\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
+  /* ⚑ 795 이관 — 넷째 인자 `keep`(라벨 패치 opt-in)이 붙었다. **여기도 넓히지 않고 명시로 박는다** —
+     14회차 이관과 같은 처방이라, 네 축(자리·길이·상자·패치) 중 하나라도 사라지면 이 항이 빨개진다.
+     ⚠ `\([^)]*\)` 같은 «아무 인자나» 로 풀면 그 순간 이 항은 «함수가 있는가» 만 묻는 항이 된다. */
+  const fxSrc = (/function fxFlash\(el, iv, inset, keep\)\{[\s\S]*?\n\}/.exec(code) || [''])[0];
   ok(!!fxSrc, 'A1 `fxFlash()` 를 찾았다', fxSrc ? fxSrc.split('\n').length + '줄' : '없음');
   ok(/const FXFLASH_SAME\s*=\s*\d+/.test(code), 'A2 허용 오차 상수 `FXFLASH_SAME` 이 선언돼 있다',
      (/const FXFLASH_SAME\s*=\s*(\d+)/.exec(code) || [])[1]);

@@ -33365,7 +33365,9 @@ function rwSummonFx(it, first, iv){
        — 새 상수도, 공용 부품 변경도 없다. 120ms 면 A4(130ms) 전에 꺼져 씻기는 구간이 71% → 35% 다. */
   /* ⚑ 753 ① — 획득 알에는 `iv` 를 **안 넘긴다**(캔슬 금지 · 위 `rwGainFx` 머리말).
      플래시는 «파티클» 이 아니라 칸의 배경이라 2회차의 틱 물림을 그대로 둔다(한 화면에 흰 카드 두 장 방지). */
-  if(el){ fxFlash(el, first ? RW_FLASH_MS / FXTICK_DUTY : iv); fxHitEl(el); rwGainFx(it, el, first); }
+  /* ⚑ 795 — 넷째 인자(`keep`)로 **덮인 «Lv.n» 을 플래시 위에 되그린다**(위 `FXKEEP_TXT` 머리말).
+     상자·세기·길이는 한 글자도 안 바뀐다 — 이 카드에서만 라벨이 안 씻긴다(정착 21:1 그대로). */
+  if(el){ fxFlash(el, first ? RW_FLASH_MS / FXTICK_DUTY : iv, false, true); fxHitEl(el); rwGainFx(it, el, first); }
   const L = (typeof fxL === 'function') ? fxL() : null;
   const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
   if(!L || !r) return false;
@@ -40904,6 +40906,27 @@ function fxBurst(t, col, n, strict, iv, ic){
    ⚠ 앞 장을 걷을 때 패치도 **같이** 걷는다(625 «한 자리에 플래시 한 장» — 아래 `__fxKeep`). */
 const FXKEEP_SEL = '.dot,.updot,.bdg,.nw';          /* 배지 부품 이름 — 13558 의 «같은 손맛» 목록과 같은 넷 */
 const FXKEEP_PAD = 4;                               /* 두 비평가가 같이 적은 여유(«원반 bbox + 4px») */
+/* ⚑⚑ 795 — **같은 처방을 «글자» 로 넓힌다: 덮는 대신 라벨을 플래시 «위에» 다시 그린다.**
+   뿌리는 세기가 아니라 **자리**다 — 89 유물 카드의 «Lv.n»(`.rw-c>u` · `top:123px`)은 카드
+   (151×151 · 테두리 4)의 **하변 밖으로 걸쳐** 있어서, 카드 rect 로 뜨는 플래시의 **흰 테 9px 이
+   라벨 띠를 정면으로 지나고 바깥 글로우가 그 아래를 덮는다**. 788 이 자를 «글리프 화소» 로
+   좁히고 나서야 보인 진짜 빨강이고(정착 21:1 ↔ 봉우리 2.16~2.43:1), 부품 갈래도 그 방향이다
+   (`probe788` [6] — 흰 테만 끄면 5.88 · 바깥 글로우만 끄면 3.58 · **채움 워시는 3.14 로 거의 안 움직인다**).
+   ⚠⚠ **«약한 플래시 변종» 으로 푸는 길은 안 골랐다** — `.fx-flash` 는 09·12·17·코스튬·장비 공용이고
+     619 가 **16회차에 걸쳐** 이 상자의 값을 정했다(LESSONS 666-⑨ · `FXFLASH_RIM` 은 손잡이가 아니다:
+     16회차가 8 → 2 로 내려 액자선 훼손이 +365% → +570% 로 되레 나빠졌다). 세기를 유물 경로에서만
+     빼도 «흰 번쩍» 이 그 화면에서만 다른 연출이 된다. ⇒ **세기는 한 글자도 안 건드리고 라벨만 되그린다**
+     — 되그린 라벨의 대비는 «흰 채움 ↔ 검은 테» 라 배경과 무관하다(= 정착과 같은 값).
+   ⚠ **그림을 손으로 베끼지 않는다**(16회차 규약 그대로) — 배지는 `background` 한 줄이면 되지만
+     라벨은 «글자» 라 서체·`-webkit-text-stroke`·`paint-order`·`transform:scaleX(1.1)` 까지 필요하다.
+     ⇒ **노드를 통째로 복제하고 계산값을 전 항 옮긴다**(`getComputedStyle`). 새 상수 0개 ·
+     라벨 서체·색이 아트 교체로 바뀌면 패치도 저절로 따라온다.
+   ⚠ **자리는 «좌표 산수» 가 아니라 «그릇» 으로 푼다.** 복제본은 원본의 위치 CSS
+     (`left:-40px;right:-40px;top:123px`)를 그대로 쥐고 있으므로, 그 CSS 가 풀리는 그릇
+     (= 호스트의 **패딩 상자**)을 프레임 좌표로 재현해 그 안에 담으면 한 픽셀도 안 어긋난다.
+     rect 에는 이미 `scaleX(1.1)` 이 들어 있어서 좌표로 앉히면 **transform 을 두 번 먹는다** —
+     이 길에는 그 사고가 없다(A3-ⓓ 계열). */
+const FXKEEP_TXT = '.rw-c>u';                       /* 795 — 호스트 밖으로 걸친 «글자» 라벨(89 유물 카드 «Lv.n») */
 /* 배지 원반을 플래시 «위에» 다시 그린다 — 되살린 노드 목록을 돌려준다(앞 장과 같이 걷히게). */
 function fxFlashKeep(el, host, owner){
   const L = fxL(), out = [];
@@ -40913,7 +40936,11 @@ function fxFlashKeep(el, host, owner){
      깔린 패치는 배지를 못 지키므로 «패치는 있는데 배지는 지워진» 프레임이 나오고, 그것이 실행마다
      배지 보존 6~9% ↔ 97% 로 뒤집히던 뿌리였다. 패치는 그리는 순서가 곧 위아래라 **살아 있는 장이
      반드시 마지막**이어야 한다. 걷는 비용은 보통 1개다(틱마다 한 장). */
+  /* ⚑ 795 — 걷는 범위를 **같은 호스트**로 좁혔다. 619 의 홀드는 호스트가 하나뿐이라 동작이 같고
+     (같은 카드의 앞 틱 패치는 그대로 걷힌다), 유물 10연처럼 **여러 칸이 잇달아 번쩍이는** 경로에서
+     새 칸의 플래시가 **남의 칸 패치까지 걷어** 그 칸 라벨이 도로 씻기던 자리만 막는다. */
   for(const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))){
+    if(nd.__fxKeepHost && nd.__fxKeepHost !== el) continue;
     try { nd.remove(); } catch(_){}
   }
   for(const k of el.querySelectorAll(FXKEEP_SEL)){
@@ -40926,6 +40953,7 @@ function fxFlashKeep(el, host, owner){
                 r.y + r.h < host.y || r.y > host.y + host.h)) continue;
     const s = document.createElement('s');
     s.className = 'fx-keep';
+    s.__fxKeepHost = el;                            /* 795 — 걷는 범위를 «같은 호스트» 로 좁히는 표 */
     /* 그림은 배지 자신에게서 읽는다(손으로 베끼지 않는다 — 위 머리말) */
     s.style.background = cs.background; s.style.borderRadius = cs.borderRadius;
     /* ⚑⚑ 16회차 — **패치는 배지를 «따라간다».** 자리를 한 번만 찍으면 안 되는 것이 실측으로
@@ -40954,12 +40982,60 @@ function fxFlashKeep(el, host, owner){
     requestAnimationFrame(follow);
     L.appendChild(s); out.push(s);
   }
+  /* ⚑⚑ 795 — **글자 라벨**: 노드째 복제해 «호스트 패딩 상자» 그릇에 담는다(위 `FXKEEP_TXT` 머리말).
+     배지 쪽과 다른 것은 두 가지뿐이다 — ① 그림을 «읽어 오는» 게 아니라 **노드를 복제**한다(글자라
+     한 속성으로는 안 그려진다) ② 자리를 좌표로 앉히지 않고 **그릇을 재현**한다(rect 에 이미 든
+     `scaleX(1.1)` 을 두 번 먹지 않게). 따라가기·수명·원본 소멸 판정은 배지와 **같은 규약**이다. */
+  const hcs = (() => { try { return getComputedStyle(el); } catch(_){ return null; } })();
+  for(const k of (hcs ? el.querySelectorAll(FXKEEP_TXT) : [])){
+    if(L.childElementCount >= FXMAX) break;
+    let cs; try { cs = getComputedStyle(k); } catch(_){ continue; }
+    if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+    const r = fxRect(k); if(!r || !r.w || !r.h) continue;
+    if(host && (r.x + r.w < host.x || r.x > host.x + host.w ||
+                r.y + r.h < host.y || r.y > host.y + host.h)) continue;
+    const b = document.createElement('s');
+    b.className = 'fx-keep';
+    b.__fxKeepHost = el;
+    const cl = k.cloneNode(true);
+    try { for(const pr of cs) cl.style.setProperty(pr, cs.getPropertyValue(pr)); } catch(_){}
+    /* 패치는 «되돌리는» 노드다 — 뜨고 지는 것이 보이면 그 자체가 새 연출이 된다(16회차 규약).
+       ⚠ `z-index` 도 지운다 — 남기면 뒤따라 붙는 스파크(`.fx-spark`)가 이 밑으로 깔린다
+         (위 `.fx-keep` CSS 머리말이 판때기에 z 를 금지한 것과 같은 이유). */
+    cl.style.setProperty('animation', 'none'); cl.style.setProperty('transition', 'none');
+    cl.style.setProperty('z-index', 'auto');   cl.style.setProperty('pointer-events', 'none');
+    b.appendChild(cl);
+    /* 그릇 = 호스트의 **패딩 상자**(= 원본 라벨의 `position:absolute` 가 풀리는 자리).
+       테두리 폭을 그대로 두르면(투명) `box-sizing:border-box` 아래서 패딩 상자가 저절로 맞는다.
+       ⚠ 조상 transform 배율은 «프레임 rect ÷ 레이아웃 폭» 으로 되읽는다 — 보통 1 이고,
+         1 이 아닌 화면(`.rw-mid` 계열 `scale(var(--rwc))`)에서도 그릇째 같이 스케일된다. */
+    const put = () => { const q = fxRect(el); if(!q || !q.w) return;
+      const ow = el.offsetWidth || 0, oh = el.offsetHeight || 0; if(!ow || !oh) return;
+      const sc = q.w / ow;
+      b.style.left = q.x + 'px'; b.style.top = q.y + 'px';
+      b.style.width = ow + 'px'; b.style.height = oh + 'px';
+      b.style.borderStyle = 'solid'; b.style.borderColor = 'transparent';
+      b.style.borderWidth = hcs.borderTopWidth + ' ' + hcs.borderRightWidth + ' '
+                          + hcs.borderBottomWidth + ' ' + hcs.borderLeftWidth;
+      b.style.transformOrigin = '0 0';
+      b.style.transform = (Math.abs(sc - 1) < 1e-4) ? 'none' : ('scale(' + sc + ')'); };
+    put();
+    const follow = () => { if(!b.isConnected) return;
+      if(!k.isConnected || !el.isConnected || (owner && !owner.isConnected)){ try { b.remove(); } catch(_){} return; }
+      put(); requestAnimationFrame(follow); };
+    requestAnimationFrame(follow);
+    L.appendChild(b); out.push(b);
+  }
   return out;
 }
 /* ⚑ 619 14회차 — 둘째 인자 `iv`(틱 간격)를 주면 애니 길이가 그 틱 안에서 끝난다(`fxTickLife` 머리말).
    ⚠ 제거 시각은 손으로 안 적는다 — 아래 `fxBye` 는 41회차 규약대로 **실제로 걸린 애니메이션의 끝**
      에서 재므로 길이를 바꾸면 저절로 따라온다(그래서 여기서 고칠 곳이 «한 줄» 이다). */
-function fxFlash(el, iv, inset){
+/* ⚑ 795 — 넷째 인자 `keep` 는 «상자는 종전 그대로 두고 **패치만** 켠다» 는 opt-in 이다(619 `inset` 선례).
+   `inset`(619 회당 발화)은 종전처럼 «들이기 + 추적 + 패치» 셋을 다 켜고, `keep` 만 준 호출은
+   그림을 한 픽셀도 안 바꾸고 **덮인 라벨·배지만 되그린다** — 09·12·17·코스튬·장비의 단발 플래시는
+   둘 다 안 주므로 한 프레임도 안 바뀐다(`verify619` [K6] 가 그것을 묶는다). */
+function fxFlash(el, iv, inset, keep){
   const L = fxL(), r = fxRect(el); if(!L || !r) return;
   if(L.childElementCount >= FXMAX) return;
   /* ⚑ 625 — **한 자리에 플래시 한 장.** 종전에는 부를 때마다 새 <s> 를 append 만 했다.
@@ -41041,7 +41117,7 @@ function fxFlash(el, iv, inset){
     requestAnimationFrame(follow);
   }
   /* ⚑ 619 16회차 — 배지 keep-out(위 `fxFlashKeep` 머리말). 플래시 **뒤에** 붙어야 그 위에 그려진다. */
-  if(inset){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
+  if(inset || keep){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
   /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
      500 고정은 그래서 138ms 를 투명한 채 남긴다(p58au 실측 — 40차 «upg-5 플래시 1 → 0»). */
   fxBye(d, 500);                                      /* 애니메이션이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
