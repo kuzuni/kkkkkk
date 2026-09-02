@@ -87,6 +87,36 @@ const INK = async (page, src, boxes) => page.evaluate(async ([src, boxes, EDGE, 
   });
 }, [src, boxes, EDGE, DARK]);
 
+/* ⚑⚑ 619 **19회차** — ⓙ·ⓚ 를 **호스트를 따라가게** 고쳤다(아래 `FREEZE`/`THAW`).
+   18회차까지 ⓙ·ⓚ 는 «누르기 **전**» 의 rect 로 잡은 **고정 띠**를 홀드 내내 다시 읽었다.
+   그런데 홀드 중 호스트는 가만히 있지 않는다 — 19회차 실측(같은 자, 훈련 카드 326×510):
+     · `jz-dn`(621 누름 유지) **×0.94** → 306.44px · 좌변 35 → **44.78**(안으로 9.78px)
+     · 그 위에 `jz-hb`(488 맥박) **×1.02** 가 곱해져 312.57px · 좌변 **41.72**
+     · 단련 행은 반대로 998 → 983.03 → **1002.69** 로 «쉴 때보다 크게» 도 간다.
+   ⇒ 고정 띠는 호스트가 **비켜 준 자리**를 읽는다. 그 자리에 있는 것은 «지워진 액자» 가 아니라
+     **패널 바탕**(훈련 실측 평균 RGB 208/179/108 = 금색)이다. 즉 18회차의 ⓙ «보존 1.81%» 는
+     «액자선이 지워졌다» 가 아니라 **«호스트가 움직였다»** 를 센 값이다(자가 잉크가 아니라 이동을 셌다).
+   ⚠ 이 자 자신이 ⓛ 머리말에 그 함정을 이미 적어 뒀다(«두 상자를 서로 다른 순간에 읽으면 안 된다»).
+     ⓛ 은 그것을 지켰고 ⓙ·ⓚ 만 안 지키고 있었다 — 17회차가 플래시 상자에 준 «추적» 을 자에는 안 준 것이다.
+   ⇒ **띠를 매 프레임 «지금 rect» 로 다시 잡는다.** 캡처와 rect 가 어긋나지 않게, 읽는 순간
+     **돌고 있는 애니메이션만 멈췄다가**(`FREEZE`) 찍고 **되돌린다**(`THAW`) —
+     ⚠ 끝난 애니메이션에 `play()` 를 부르면 **처음부터 다시 돈다**. `running` 이던 것만 되돌린다.
+   ⚑ 18회차와 견줄 수 있게 **고정 띠 값도 같이 찍는다**(«고정 띠(참고)» 열) — 두 수의 차가 곧 이동분이다. */
+const FREEZE = async (page, hostSel, hostN, nbSel, nbN) => page.evaluate(([hs, hn, ns, nn]) => {
+  const run = document.getAnimations().filter(a => a.playState === 'running');
+  window.__p619hHeld = run;
+  for (const a of run) { try { a.pause(); } catch (_) {} }
+  const pick = (s, k) => (s ? document.querySelectorAll(s)[k] : null) || null;
+  const R = e => { if (!e) return null; const b = e.getBoundingClientRect();
+    return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }; };
+  return { host: R(pick(hs, hn)), nb: R(pick(ns, nn)) };
+}, [hostSel, hostN, nbSel, nbN]);
+
+const THAW = page => page.evaluate(() => {
+  for (const a of (window.__p619hHeld || [])) { try { if (a.playState === 'paused') a.play(); } catch (_) {} }
+  window.__p619hHeld = null;
+});
+
 /* ⓛ — 살아 있는 `.fx-flash` 의 **레이아웃 상자** ↔ 호스트 **«액자 링 안쪽» 상자** 네 변 Δ (0 = 링에 딱)
    ⚠ 호스트로 고르는 것은 «마지막 노드» 가 아니라 **`__fxHost` 가 그 호스트인 장**이다 —
      1차 시도가 룬에서 «상자 896×160»(= 다른 자리의 플래시)을 집어 −252 를 찍었다. */
@@ -195,13 +225,32 @@ const BOXΔ = async (page, hostSel, hostN) => page.evaluate(([s, k]) => new Prom
     const boxes = [rel(geo.host)].concat(geo.nb ? [rel(geo.nb)] : []);
     const shot = async () => 'data:image/png;base64,' + (await page.screenshot({ clip })).toString('base64');
 
+    /* 19회차 — «지금 rect» 로 띠를 다시 잡아 재는 한 장. 멈춤 → 읽기 → 찍기 → 되돌리기 순서라
+       rect 와 픽셀이 같은 순간의 것이다(고정 띠는 그 둘이 어긋난 채 굳어 있었다). */
+    const shotLive = async () => {
+      const lv = await FREEZE(page, sp.host, sp.hostN, sp.nb, sp.nbN);
+      if (!lv.host) { await THAW(page); return null; }
+      const ps = [lv.host].concat(lv.nb ? [lv.nb] : []);
+      const ax = Math.max(0, Math.min.apply(null, ps.map(b => b.x)) - 2);
+      const ay = Math.max(0, Math.min.apply(null, ps.map(b => b.y)) - 2);
+      const bx = Math.min(1080, Math.max.apply(null, ps.map(b => b.x + b.w)) + 2);
+      const by = Math.min(2280, Math.max.apply(null, ps.map(b => b.y + b.h)) + 2);
+      const cl = { x: ax, y: ay, width: bx - ax, height: by - ay };
+      const png = 'data:image/png;base64,' + (await page.screenshot({ clip: cl })).toString('base64');
+      await THAW(page);
+      const rl = b => ({ x: b.x - ax, y: b.y - ay, w: b.w, h: b.h });
+      return INK(page, png, [rl(lv.host)].concat(lv.nb ? [rl(lv.nb)] : []));
+    };
+
     const base = await shot();
     const b0 = await INK(page, base, boxes);
+    const b0L = (await shotLive()) || b0;               /* 쉴 때는 둘이 같다(움직임이 없다) */
 
     await page.mouse.move(geo.tgt.x + geo.tgt.w / 2, geo.tgt.y + geo.tgt.h / 2);
     await page.mouse.down();
 
     let minH = Infinity, minN = Infinity, worst = null, seen = 0;
+    let minHL = Infinity, minNL = Infinity;
     for (let i = 0; i < SHOTS; i++) {
       await page.waitForTimeout(Math.round(HOLD_MS / SHOTS));
       const d = await BOXΔ(page, sp.host, sp.hostN);
@@ -215,16 +264,25 @@ const BOXΔ = async (page, hostSel, hostN) => page.evaluate(([s, k]) => new Prom
       const k = await INK(page, s, boxes);
       minH = Math.min(minH, k[0]);
       if (k.length > 1) minN = Math.min(minN, k[1]);
+      const kl = await shotLive();                       /* 19회차 — 같은 틱을 «따라가는 띠» 로 한 번 더 */
+      if (kl) { minHL = Math.min(minHL, kl[0]); if (kl.length > 1) minNL = Math.min(minNL, kl[1]); }
     }
     await page.mouse.up();
     await page.waitForTimeout(250);
 
     const keepH = b0[0] ? minH / b0[0] : 1;
     const keepN = (b0.length > 1 && b0[1]) ? minN / b0[1] : null;
+    /* 19회차 — 이쪽이 «잉크» 를 재는 값이고, 위 두 줄은 «잉크 + 호스트 이동» 을 같이 센 참고값이다 */
+    const keepHL = (isFinite(minHL) && b0L[0]) ? minHL / b0L[0] : null;
+    const keepNL = (isFinite(minNL) && b0L.length > 1 && b0L[1]) ? minNL / b0L[1] : null;
 
     console.log('  ' + sp.n + '  (호스트 ' + geo.host.w + '×' + geo.host.h + ')');
-    console.log('    ⓙ 대상 액자선 잉크 **' + b0[0] + ' → 최소 ' + minH + ' = 보존 ' + r2(keepH * 100) + '%**');
-    if (keepN !== null) console.log('    ⓚ 이웃 액자선 잉크 ' + b0[1] + ' → 최소 ' + minN + ' = 보존 **' + r2(keepN * 100) + '%**');
+    if (keepHL !== null)
+      console.log('    ⓙ 대상 액자선 잉크(**따라가는 띠**) **' + b0L[0] + ' → 최소 ' + minHL + ' = 보존 ' + r2(keepHL * 100) + '%**');
+    if (keepNL !== null)
+      console.log('    ⓚ 이웃 액자선 잉크(**따라가는 띠**) ' + b0L[1] + ' → 최소 ' + minNL + ' = 보존 **' + r2(keepNL * 100) + '%**');
+    console.log('    · 참고(18회차까지의 **고정 띠** — 잉크가 아니라 «호스트가 얼마나 비켰나» 를 같이 센다)' +
+      ': ⓙ ' + r2(keepH * 100) + '%' + (keepN !== null ? ' · ⓚ ' + r2(keepN * 100) + '%' : ''));
     if (!worst) {
       console.log('    ⓛ ✗ **표본 0** — 홀드 ' + SHOTS + '장에서 `.fx-flash` 를 한 장도 못 잡았다(발화가 없거나 창이 어긋났다)');
       bad++;
@@ -240,8 +298,11 @@ const BOXΔ = async (page, hostSel, hostN) => page.evaluate(([s, k]) => new Prom
         bad++;
       }
     }
-    if (keepN !== null && keepN < KEEP_NB) {
-      console.log('    ↳ ✗ ⓚ 이웃이 ' + r2(keepN * 100) + '% 로 무너졌다(< ' + (KEEP_NB * 100) + '%) — 대가가 아니라 **이웃 침범**이다');
+    /* 19회차 — 문턱은 «따라가는 띠» 로 본다(고정 띠는 이웃이 안 움직일 때만 우연히 맞는 값이었다).
+       이웃은 눌리지도 맥박치지도 않으므로 두 값이 거의 같지만, 판정의 근거는 잉크 쪽이어야 한다. */
+    const nbKeep = (keepNL !== null) ? keepNL : keepN;
+    if (nbKeep !== null && nbKeep < KEEP_NB) {
+      console.log('    ↳ ✗ ⓚ 이웃이 ' + r2(nbKeep * 100) + '% 로 무너졌다(< ' + (KEEP_NB * 100) + '%) — 대가가 아니라 **이웃 침범**이다');
       bad++;
     }
   }

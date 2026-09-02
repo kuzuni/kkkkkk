@@ -4059,7 +4059,20 @@
      두께·명도로 올린다. box-shadow 는 호스트 자신의 그림자를 밀어내므로 안 쓴다(outline 만). */
   /* 10회차 — 오프셋 −3 → −10: 링이 테두리에 붙으니 카드 «코너 알림 배지» 를 씻었다(DX «f2 가시율
      ~20% · 적→주황 변색»). 안쪽으로 들이면 코너가 비고 «누르는 중» 신호는 그대로다. */
-  .fx-holding{outline:9px solid rgba(255,172,28,.92);outline-offset:-10px}   /* radius 는 호스트 자신의 것을 따른다 */
+  /* ⚑⚑ 19회차 — **호스트 자신의 «액자 링» 만큼 더 들인다.** 18회차 채점의 「8점을 막는 단 하나」가
+     2인 완전 일치였다(ER2·ES2: «대상 호스트의 8px 검은 액자선이 홀드 36/36 프레임에서 지워지고
+     그 자리에 밝기 461 의 금색 링이 온다 — 같은 프레임의 이웃은 12/12 멀쩡»). 18회차는 범인을
+     `.fx-flash` 의 바깥 글로우로 지목하고 19회차 1순위로 넘겼는데, **재 보니 아니었다**:
+     글로우를 통째로 죽여도(`0 0 8px 0`) ⓙ 는 4.78%/0%/0% 이고 `.fx-flash`·`.fx-spark` 를 **둘 다
+     display:none** 으로 꺼도 1.88%/0.03%/0% 다(19회차 스윕 5종 — review 표).
+     범인은 **이 줄**이다: 오프셋 −10 · 두께 9 는 링을 **[1,10]px 띠**에 놓는데 세 호스트의 액자선이
+     바로 그 **[0,8]px 띠**다(`box-shadow rgb(20,20,20) 0 0 0 8px inset`). 색 rgba(255,172,28)의
+     R+G+B = **455** 가 ER2 가 «밝기 461» 로 적은 그 금색이다 — 자기 액자를 자기가 덮고 있었다.
+     ⇒ 들이기를 **액자 링 두께만큼** 더 준다(ring 8 → [9,18] · 액자선 위가 아니라 «바로 안»).
+     ⚠ **손으로 8 을 안 적는다** — `fxHoldMark` 가 18회차의 `fxRingIn()` 으로 호스트에서 읽어
+       `--fxhold-in` 에 넣는다(플래시 상자의 들이기와 **같은 출처**라 둘이 어긋날 수 없다).
+     ⚠ 10회차의 −10(코너 배지 씻김)은 그대로 살아 있다 — 링이 0 인 호스트는 종전과 **한 픽셀도** 안 바뀐다. */
+  .fx-holding{outline:9px solid rgba(255,172,28,.92);outline-offset:calc(-10px - var(--fxhold-in,0px))}   /* radius 는 호스트 자신의 것을 따른다 */
   .fx-spark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
     background:radial-gradient(circle at 42% 38%, #FFF 0%, #FFF 26%, var(--c,#FFE07A) 62%, rgba(0,0,0,0) 88%);
   /* 21회차 — 수명 .58s 는 «무엇을 얻었는지» 를 가린다. 20회차 비평 AG·AH 공통(#3·#5):
@@ -4205,7 +4218,28 @@
        검 아이콘 · +2.4 · 53)이 351×541px 크림색 사각형으로 통째로 사라졌다 —
        비평가 2인이 독립적으로 «강화 성공이 아니라 카드 삭제로 읽힌다» 로 잡았다(④ 2점).
        강조는 **바깥 림**만으로 준다. 안쪽은 26% 워시까지가 상한이다. */
-    box-shadow:0 0 0 4px rgba(255,186,54,.95),0 0 26px 2px rgba(255,206,92,.9);
+    /* ⚑⚑ 19회차 — **바깥 글로우를 «안쪽» 으로 돌렸다(색·두께·알파는 그대로 · 방향만).**
+       18회차가 남긴 1순위(«글로우가 호스트 액자선을 덮는다»)를 자로 갈랐다 —
+       상자는 액자 링(8px) «안» 에 앉는데 이 그림자는 상자 **바깥**으로 뻗는다:
+         하드 림 spread 4 → 호스트 안쪽 [4,8]px 띠 · 흐림 26 spread 2 → 반경 ≈ 15px 라 [0,8] 전부.
+       ⇒ 액자선이 있는 자리에 정확히 앉는다. 19회차 스윕(`probe619h` ⓙ, **따라가는 띠**):
+         | 판 | 훈련 | 룬 | 단련 |
+         | 현행(바깥) | 1.76% | 0.17% | **0%** |
+         | 흐림 26→12 | 1.24% | 60.81% | 16.31% |
+         | 하드 림 삭제 | 1.29% | 60.81% | 7.02% |
+         | **둘 다 inset(채택)** | 1.31% | **60.81%** | **78.69%** |
+         | 플래시를 통째로 display:none | 1.24% | 60.81% | **78.69%** |
+       마지막 두 줄이 같다 = **플래시가 액자선에 내는 손해가 0 이 됐다**(더 내릴 자리가 없다).
+       ⚠ 12회차의 금지(«안쪽 글로우를 쓰지 마라»)는 `inset 0 0 **34px 10px**` α.92 를 가리킨다 —
+         퍼짐 10 + 흐림 34 가 326×510 카드를 통째로 메워 내용이 사라진 판이다. 여기 쓰는 것은
+         **퍼짐 0 · 흐림 18 · α.55** 로 안쪽 반경이 9px 뿐이고, 그 자리는 이미 흰 테(9px)가
+         차지한 [8,17] 띠의 바로 안쪽이다(글자까지 훈련 100px · 단련 40px 이상 남는다).
+       ⚠ 강조는 안 줄었다 — 흰 테 9px·채움 워시·하드 림은 **한 칸도 안 건드렸다**(0 으로 만들지
+         말라는 18회차 단서). 바뀐 것은 «림이 어느 쪽으로 번지는가» 하나다.
+       ⚑ 이 부품은 09·12·17·코스튬·장비 단발 플래시와 **공용**이다(LESSONS 666-⑨) — 795 등재문
+         («흰 테 + 바깥 글로우가 카드 하변 밖 라벨을 지운다»)이 지목한 바깥 번짐도 같이 사라진다.
+         그 행은 내 것이 아니므로 **재측정은 795 를 잡는 세션 몫**이다(값은 여기 표를 쓰면 된다). */
+    box-shadow:inset 0 0 0 4px rgba(255,186,54,.95),inset 0 0 18px 0 rgba(255,206,92,.55);
     animation:fxFlash .34s cubic-bezier(.2,.8,.3,1) forwards}
   /* 봉우리가 뾰족하면 ≥0.7 구간이 90ms 라 8프레임 캡처에 한 장 걸릴까 말까다. 고원을 만든다(≈270ms). */
   /* 확대는 «살짝» 이어야 한다 — 1.14 는 326px 카드에서 +45px 라 카드 간격 16px 를 넘어
@@ -36856,7 +36890,20 @@ function fxHoldMark(host, on, iv){
   if(!el || !el.classList) return;
   el.classList[on ? 'add' : 'remove']('fx-holding');
   if(!on) return;
+  el.style.setProperty('--fxhold-in', fxHoldIn(el) + 'px');   /* 19회차 — 아래 머리말 */
   fxHoldPump(el, iv);
+}
+/* ⚑ 619 19회차 — 홀드 링을 호스트의 «액자 링» **안쪽**에 놓기 위한 들이기(px).
+   값의 출처는 회당 플래시 상자와 **같은 함수**다(`fxRingIn` — 18회차) — 두 링이 어긋날 수 없다.
+   ⚠ **읽는 자리가 둘이라 함수로 뺀다**: CSS(`--fxhold-in`, 골 상태)와 WAAPI 펌프(봉우리·골 둘 다).
+     19회차 1차 시도가 CSS 만 고쳤다가 «펌프가 CSS 를 이긴다» 로 한 픽셀도 못 움직였다.
+   ⚠ 봉우리 두께 17 + 오프셋까지가 상자 절반을 넘으면 링이 뒤집혀 통째로 사라진다 — 거기서 묶는다. */
+function fxHoldIn(el){
+  let ring = 0;
+  try { ring = fxRingIn(el); } catch(_){ return 0; }
+  if(!isFinite(ring) || ring <= 0) return 0;
+  const lim = Math.max(0, Math.min(el.offsetWidth || 0, el.offsetHeight || 0) / 2 - 19);
+  return Math.round(Math.min(ring, lim) * 100) / 100;
 }
 /* 틱 펌프 한 사이클(위 머리말). 노드가 갈려도 앞 노드의 애니메이션은 노드와 함께 사라진다. */
 function fxHoldPump(el, iv){
@@ -36866,6 +36913,7 @@ function fxHoldPump(el, iv){
      0.62 는 봉우리가 14~17% 프레임에만 실려 이번엔 봉우리 쪽이 스침이 된다. 0.80 이 두 상태를
      각각 화면에 남기는 자리다(측정값은 review 13회차 표). */
   const dur = clamp((Number(iv) || TR_HOLD_IV0) * 0.80, HOLD_PUMP_MIN, HOLD_PUMP_MAX);
+  const hin = fxHoldIn(el);                          /* 19회차 — 액자 링 두께(위 `fxHoldIn` 머리말) */
   try { if(el._hpump) el._hpump.cancel(); } catch(_){}
   try {
     el._hpump = el.animate(
@@ -36878,9 +36926,15 @@ function fxHoldPump(el, iv){
          **2px 덮음**). ⇒ 봉우리의 오프셋을 −18 로 같이 밀어 **바깥 변을 두 상태에서 같은 자리
          (테두리 1px 안쪽)로 고정**한다 — 링은 «안쪽으로만» 자란다. 8회차가 box-shadow 를 버리고
          outline 을 고른 이유(레이아웃·형제 UI 를 안 건드린다)가 이 한 줄에 달려 있다. */
-      [{ outlineWidth:'17px', outlineOffset:'-18px', outlineColor:'rgba(255,236,176,1)', offset:0 },
-       { outlineWidth:'17px', outlineOffset:'-18px', outlineColor:'rgba(255,236,176,1)', offset:HOLD_PUMP_HI },
-       { outlineWidth:'9px',  outlineOffset:'-10px', outlineColor:'rgba(255,172,28,.92)', offset:1 }],
+      /* ⚑⚑ 19회차 — 두 상태의 오프셋에 **호스트의 «액자 링» 두께를 더한다**(`fxHoldIn`).
+         이 keyframe 은 WAAPI 라 CSS 의 `outline-offset` 을 **이긴다** — `.fx-holding` 쪽만 고치면
+         홀드 내내 여기 적힌 −18/−10 이 그대로 그려져 고친 것이 한 픽셀도 안 보인다(19회차 1차 시도).
+         고정되는 것은 여전히 «바깥 변» 이고, 그 자리가 «테두리 1px 안» 에서 **«액자선 1px 안»** 으로
+         옮겨졌을 뿐이다 — 링은 종전처럼 안쪽으로만 자라고, 13회차가 지킨 세 자리(코너 배지 · 옆 카드
+         여유 · 아래 행 테두리)는 **더 안전해진다**(바깥 변이 8px 더 안으로 들어간다). */
+      [{ outlineWidth:'17px', outlineOffset:(-18 - hin) + 'px', outlineColor:'rgba(255,236,176,1)', offset:0 },
+       { outlineWidth:'17px', outlineOffset:(-18 - hin) + 'px', outlineColor:'rgba(255,236,176,1)', offset:HOLD_PUMP_HI },
+       { outlineWidth:'9px',  outlineOffset:(-10 - hin) + 'px', outlineColor:'rgba(255,172,28,.92)', offset:1 }],
       { duration: dur, easing:'ease-out' });
     /* 위 «startTime» 머리말 — 대기 구간을 없앤다(619 4회차 계측).
        ⚠ 시각은 `document.timeline.currentTime`(= **직전 프레임**)이 아니라 `performance.now()`(= 지금)로
