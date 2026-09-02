@@ -80,6 +80,11 @@ const READ = () => {
       const t0 = cards[0].offsetTop; return cards.filter(c => c.offsetTop === t0).length;
     })(),
     cols: typeof UPR_COLS !== 'undefined' ? UPR_COLS : null,
+    /* ⚑ 798 — «넘쳤는가» 의 문턱은 `UPR_SLACK` 이다(제품과 같은 선언).
+       예전에는 이 자가 `+ 1` 을 손으로 적고 있었는데, 6칸 이하 판은 격자가 «내용대로» 서면서
+       `.upr-lv` 스트로크가 4~7px 새어 그 문턱을 늘 넘는다 — 자와 제품이 서로 다른 문턱을
+       들면 «한쪽만 늙는다»(798 [D]). 여기서 상수를 읽어 아래 [D5]·[G4] 가 같이 쓴다. */
+    slack: typeof UPR_SLACK !== 'undefined' ? UPR_SLACK : 1,
     gw: Math.round(grid.getBoundingClientRect().width),
     closeTop: +(cr.top - app.top).toFixed(1),
     app: { w: app.width, h: app.height },
@@ -237,10 +242,14 @@ async function boot(browser, url, h) {
       ok(r.grp.y >= -0.5, 'D3 묶음 상변이 프레임 안', r.grp.y);
       ok(r.grid.sh > r.grid.ch + 1, 'D4 가려진 행이 있으므로 격자가 스크롤된다', r.grid.sh + '/' + r.grid.ch);
       /* ⚑ 782 — 예전에는 «밀어서» 라는 낱말만 찾았다. 그래서 [D4] 가 빨간(= 안 넘치는) 판에서도
-         이 항이 초록이었고, **자와 제품이 같은 거짓을 나눠 들었다.** 등호로 묶어 한쪽만은 못 서게 한다. */
-      ok(r.says === (r.grid.sh > r.grid.ch + 1),
+         이 항이 초록이었고, **자와 제품이 같은 거짓을 나눠 들었다.** 등호로 묶어 한쪽만은 못 서게 한다.
+         ⚑ 798 이관 — 문턱을 `+ 1` 에서 `+ r.slack`(= 제품이 쓰는 `UPR_SLACK`)으로 옮겼다.
+           이 [D] 표본(전종@1600)은 넘침이 177px 이라 **어느 문턱이든 판정이 같다** — 초록을
+           지키려고 옮긴 것이 아니라, 두 곳에 적힌 같은 수가 갈라지는 것을 막으려고 옮겼다. */
+      ok(r.says === (r.grid.sh > r.grid.ch + r.slack),
          'D5 ★ 헤더의 «밀어서 더 보기» ↔ 실제 넘침이 서로를 못 배신한다',
-         '말함 ' + r.says + ' vs 넘침 ' + (r.grid.sh > r.grid.ch + 1) + ' · "' + r.cntTxt + '"');
+         '말함 ' + r.says + ' vs 넘침 ' + (r.grid.sh > r.grid.ch + r.slack)
+         + ' (문턱 ' + r.slack + ') · "' + r.cntTxt + '"');
       /* 스크롤 끝까지 밀면 마지막 칸이 격자 안으로 들어온다 = 한 칸도 못 보는 자리가 없다 */
       const last = await ev(r0.page, () => {
         const g = document.getElementById('upCards');
@@ -282,9 +291,12 @@ async function boot(browser, url, h) {
     const r2 = await ev(r0.page, READ);
     if (!r2) ok(false, 'G3 읽기'); else {
       ok(r2.many, 'G3 7칸은 «many» 다 = 이 판도 헤더가 보이는 판이다', r2.many);
-      ok(r2.grid.sh <= r2.grid.ch + 1 && !r2.says,
+      /* ⚑ 798 이관 — 문턱은 제품과 같은 `UPR_SLACK` 이다(위 [D5] 주석과 한 벌).
+         이 표본은 7칸@2280(sh 354 = ch 354)이라 여기서도 판정은 어느 문턱이든 같다.
+         **한 줄(6칸 이하) 판의 거짓 양성은 이 자의 표본 밖**이라 `verify798` [A] 가 맡는다. */
+      ok(r2.grid.sh <= r2.grid.ch + r2.slack && !r2.says,
          'G4 ★ 안 넘치는 판에서는 «밀어서 더 보기» 가 없다',
-         'sh/ch ' + r2.grid.sh + '/' + r2.grid.ch + ' · 말함 ' + r2.says);
+         'sh/ch ' + r2.grid.sh + '/' + r2.grid.ch + ' (문턱 ' + r2.slack + ') · 말함 ' + r2.says);
     }
     ok(r0.errs.length === 0, 'G5 콘솔 에러 0', r0.errs.slice(0, 2).join(' | ') || '없음');
     await r0.ctx.close();
