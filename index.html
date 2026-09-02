@@ -10420,16 +10420,34 @@
      남은 차이(같은 bbox 안 흰 픽셀 ref 963 / 우리 620)는 **글리프 스템 굵기** — 게임 서체 없이는 회수 불가다
      (16 «흰 코어 두께» 천장과 동일). 외곽선은 ref 실측 ≈2.5px 바깥 = stroke 5 로 되돌린다.
      좌 인셋 37→39: 흰 코어 좌단이 ref 180 vs 우리 178 이었다 */
-  .spc-row>.nm{position:absolute;left:39px;top:0;height:60px;line-height:60px;
-    font-size:27px;color:#F9F9F9;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+  /* 787 2회차 — **라벨이 값보다 작아 ref 의 크기 관계가 뒤집혀 있었다.**
+     ref(측정표 §7-3)는 라벨 잉크 h25–26 · 값 h22–23 이라 **라벨 > 값**인데 우리는 라벨 < 값이었다.
+     자 둘이 독립으로 같은 부호를 냈다 — `refink787`(레퍼런스 JPG 를 우리 마스크로 재측정: ref 채움 h26/24)
+     대 `probe787`(우리 캡처 채움 h21) = **−19%**, 캡처 비평 A = «13행 전부 계통적으로 −15%».
+     ⚠ 이 자리는 «채움» 과 «외곽선 포함 총높이» 두 정의가 섞여 부호가 뒤집혀 읽힌다(126 §9-6 계열).
+        그래서 **레퍼런스와 우리를 같은 마스크로** 잰 값만 근거로 쓴다(`refink787` 이 그 자다).
+     fs 27 → 32(×1.185)로 올리면 채움 h 21 → 25 로 ref 26 에 붙고 라벨 > 값 관계가 복원된다. */
+  /* 787 2회차 ⓑ — 비평 A·B 가 독립으로 «라벨만 행 중심보다 2~2.5px 위»(값은 Δ0)를 냈다.
+     fs 를 27 → 32 로 올리자 그 쏠림이 −2.5 → **−1.5px** 로 저절로 절반이 회수됐고(잉크가 베이스라인
+     위로 자란다 — 6회차가 `.vl` 에서 겪은 것과 같은 현상), 남은 1.5px 만 `top` 으로 민다.
+     ⚠ fs 를 올리기 «전» 에 top 을 먼저 밀었으면 지금 +1.0px 로 반대편에 넘쳤을 것이다. */
+  .spc-row>.nm{position:absolute;left:39px;top:1.5px;height:60px;line-height:60px;
+    font-size:32px;color:#F9F9F9;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     white-space:nowrap}
   .spc-row>.nm>i{transform:scaleX(.955);transform-origin:0 50%}
   /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + «순검정» 외곽선 (1회차: 진록 아님, ref (0,0,0)).
      6회차 — 검정 면적비 57.6% vs ref 44.3% 라 stroke 6→5, 초록 몸통 h22 vs ref 23 이라 fs 31→32.5,
      비평가 L 의 «세로중심 −1.5px» 는 fs 를 31→32.5 로 올리자 저절로 해소됐다(잉크가 베이스라인 위로 자란다) —
      top 을 같이 밀면 오히려 +1.5 가 되므로 top 은 0 으로 둔다(실측: fs 만 올린 상태에서 중심 Δ0) */
+  /* 787 2회차 — 값이 ref 보다 **크다**. 세 자가 부호까지 같다:
+       `refink787`(ref JPG 를 우리 마스크로) ref 채움 h22 vs `probe787` 우리 h26 → **+15.6%**
+       · 비평 B «ref 전 행 22px 일정, 우리 24~26 → +9~18%» · 비평 B 처방 «×0.87».
+     ⚠ 6회차가 fs 31 → 33.5 로 올린 근거는 «초록 몸통 h22 vs ref 23» 이었는데, 그때의 ref 23 은
+        측정표 §7-3 의 «22–23» 상단값이고 지금 같은 마스크로 다시 재니 **22** 다. 33.5 는 그만큼 과했다.
+     fs 33.5 → 29(×0.866)로 내리면 채움 h 26 → 22.5 로 ref 에 붙고, 라벨(32px)과의 위계도
+     ref 의 «라벨 > 값» 으로 돌아온다(수리 전 1.12:1 → ref 1.50:1 방향). */
   .spc-row>.vl{position:absolute;right:39px;top:1px;height:60px;line-height:60px;
-    font-size:33.5px;color:#B5F65F;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    font-size:29px;color:#B5F65F;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     text-align:right;white-space:nowrap}
   /* 하단 토글 탭 컨테이너 767×94 — 검정 5, 세로 그라(66,54,42→53,43,31) + 상하 밝은 인셋 라인 */
   /* 작업 351 7회차 — 앵커를 위(`top:1242`)에서 **아래(`bottom:20`)** 로 돌렸다.
@@ -10493,9 +10511,20 @@
   .spc-tab-on>b::after{content:'';position:absolute;left:19px;top:0;width:22px;height:25px;
     background:radial-gradient(70% 60% at 46% 36%,#FFF3B4 0,rgba(255,243,180,.6) 62%,rgba(255,243,180,0) 94%) 0 0/22px 13px no-repeat,
       linear-gradient(180deg,rgba(255,243,180,.9) 0 11px,rgba(255,243,180,.55) 16px,rgba(255,243,180,0) 25px) 0 0/4px 25px no-repeat}
-  .spc-tab-on>b>i{position:relative;font-size:37px;-webkit-text-stroke:6px #000;
-    paint-order:stroke fill;transform:scaleX(.84)}
+  /* 787 2회차 — 활성 라벨도 같은 사본 결함(19 활성 `.pf-tgl>.bn>i` = fs 38.9 · sx .945).
+     비평 A 실측: 20 활성 «종합 스탯» 잉크 h38 w112 vs ref h41 w135 → **−7% / −17%**.
+     fs 37 → 38.9 · sx .84 → .945 로 19 와 같은 값을 읽는다. 폭은 112 → 약 127 로 ref 135 에 붙고,
+     금 채움 평평 구간(x174–514 = 340px)에는 여유가 크게 남는다(넘침 0 은 `probe787` 이 잰다). */
+  .spc-tab-on>b>i{position:relative;font-size:38.9px;-webkit-text-stroke:6px #000;
+    paint-order:stroke fill;transform:scaleX(.945)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
+  /* 787 2회차 — ⚠ **여기를 19 의 값(fs 38.3)으로 «통일» 하려다 되돌렸다. 두 화면의 ref 가 실제로 다르다.**
+     측정표 20 §8-3 은 이 자리(20 비활성 «프로필»)를 잉크 h31 → **한글 ≈33px** 로 적었고,
+     측정표 19 §8-3 의 같은 줄(19 비활성 «종합 스탯»)은 그보다 크다 — 즉 «같은 부품이니 같은 값» 이 아니다.
+     실제로 38.3 을 얹으니 채움 잉크가 ref 31 대비 **+19.4%** 로 넘쳤다(`probe787`).
+     현행 fs 33 이 측정표의 ≈33px 과 정확히 같으므로 **원래 값이 옳다.**
+     ⚠ 이 자리의 잉크는 `#A9A8AE` 라 «흰 채움» 마스크(min>230)로는 못 잰다 — `probe787` 이 `any` 로 재는
+     값은 **외곽선 포함**이라 측정표의 «채움 h31» 과 직접 비교하면 안 된다(126 §9-6 함정). */
   .spc-tab-off{position:absolute;left:440px;width:265px;top:0;height:84px;line-height:84px;
     text-align:center;font-size:33px;font-weight:900;color:#A9A8AE;cursor:pointer}
   /* ref 는 순흑 외곽선 + 밝은 라벤더그레이 채움 (2회차 D 실측) */

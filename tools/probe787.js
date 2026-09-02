@@ -56,7 +56,7 @@ async function load(page, slot, b64) {
  * mode 'text' — **글자만** 지운다(테두리·배경·그림자는 양쪽 장에 그대로 남아 차분에서 상쇄된다).
  * ⚠ 둘을 섞어 쓰지 마라 — `visibility:hidden` 으로 «글리프 넘침» 을 재면 `box-shadow`(여기서는
  *   `0 3px 8px`)가 통째로 잉크로 딸려와 «아래로 2px 넘친다» 는 **가짜 결함**이 나온다(1회차에 실제로 그랬다). */
-async function inkOf(page, sel, mode = 'el') {
+async function inkOf(page, sel, mode = 'el', fill = 'any') {
   await load(page, 'A', await shot(page));
   await page.evaluate(({ s, m }) => {
     const e = document.querySelector(s); if (!e) return;
@@ -70,7 +70,7 @@ async function inkOf(page, sel, mode = 'el') {
     if (m === 'text') { e.textContent = e.dataset.p787 || ''; delete e.dataset.p787; }
     else e.style.visibility = '';
   }, { s: sel, m: mode });
-  return page.evaluate(({ s }) => {
+  return page.evaluate(({ s, fill }) => {
     const A = window.__p787.A, B = window.__p787.B;
     const el = document.querySelector(s);
     if (!el) return null;
@@ -83,6 +83,14 @@ async function inkOf(page, sel, mode = 'el') {
       const o = (y * A.w + x) * 4;
       const d = Math.abs(A.d[o] - B.d[o]) + Math.abs(A.d[o + 1] - B.d[o + 1]) + Math.abs(A.d[o + 2] - B.d[o + 2]);
       if (d < 40) continue;                     /* AA 떨림 문턱 */
+      /* «흰 채움만»/«초록 채움만» — 측정표가 적은 잉크는 **채움**이고 검정 외곽선은 그 밖이다.
+         차분만 쓰면 외곽선까지 딸려와 잉크가 stroke 두께의 2배만큼 부풀어 보인다(126 §9-6 교훈). */
+      if (fill !== 'any') {
+        const R = A.d[o], G = A.d[o + 1], B2 = A.d[o + 2];
+        if (fill === 'white' && Math.min(R, G, B2) <= 230) continue;   /* refink787 과 «같은» 문턱 — 행 줄무늬(min 199~210) 배제 */
+        if (fill === 'green' && !(G > 200 && B2 < 140 && R < 215)) continue;  /* refink787 과 «같은» 문턱 */
+        if (fill === 'cream' && !(R > 230 && G > 220 && B2 > 150)) continue;  /* 크림흰 #FEF7C1 만 — 금색 배너 #FFC736(B 54) 배제 */
+      }
       n++; if (x < lo) lo = x; if (x > hi) hi = x; if (y < top) top = y; if (y > bot) bot = y;
     }
     if (!n) return { px: 0 };
@@ -94,7 +102,7 @@ async function inkOf(page, sel, mode = 'el') {
         top: +(r.top - top).toFixed(1), bottom: +(bot + 1 - r.bottom).toFixed(1),
       },
     };
-  }, { s: sel });
+  }, { s: sel, fill });
 }
 
 const box = (page, sel) => page.evaluate((s) => {
@@ -137,6 +145,7 @@ const box = (page, sel) => page.evaluate((s) => {
         pitchY: ys.length > 1 ? +(ys[1] - ys[0]).toFixed(1) : null, first: r[0] };
     });
     F.f19.tgl = await box(page, '.pf-tgl');
+    F.f19.bnInk = await inkOf(page, '.pf-grid .pf-card:nth-child(1) .pf-bn > i', 'text', 'any');
 
     /* ── 20 종합스탯 탭 ─────────────────────────────────────── */
     await page.evaluate(() => { const e = document.querySelector('.pf-tgl>.lb'); if (e) e.click(); });
@@ -148,8 +157,35 @@ const box = (page, sel) => page.evaluate((s) => {
       const a = rs[0].getBoundingClientRect(), b = rs[1].getBoundingClientRect();
       return { n: rs.length, pitch: +(b.top - a.top).toFixed(1), h: +a.height.toFixed(1) };
     });
+    /* 787 2회차 — 라벨을 키우면 **오른쪽 값과 부딪히는지**가 첫 번째 위험이다(둘 다 nowrap).
+       13행 전부에서 «라벨 우변 ↔ 값 좌변» 최소 간격을 잰다. 음수면 겹친 것이다. */
+    /* 787 2회차 — 비평 A·B 가 **독립적으로** «라벨 잉크 중심이 행 중심보다 2~2.5px 위» 를 냈다
+       (값은 양쪽 다 행 중심과 Δ0). 잉크 중심을 행 밴드 중심과 직접 비교한다. */
+    F.f20.vc = await inkOf(page, '.spc-list .spc-row:nth-child(2) > .nm', 'text', 'white');
+    F.f20.vcRow = await page.evaluate(() => {
+      const r = document.querySelectorAll('.spc-list .spc-row')[1].getBoundingClientRect();
+      return { top: +r.top.toFixed(1), bot: +r.bottom.toFixed(1), mid: +((r.top + r.bottom) / 2).toFixed(1) };
+    });
+    F.f20.vcV = await inkOf(page, '.spc-list .spc-row:nth-child(2) > .vl', 'text', 'green');
+    F.f20.gap = await page.evaluate(() => {
+      const rs = [...document.querySelectorAll('.spc-list .spc-row')];
+      let worst = 1e9, at = null;
+      for (const r of rs) {
+        const a = r.querySelector('.nm'), b = r.querySelector('.vl');
+        if (!a || !b) continue;
+        const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+        const g = rb.left - ra.right;
+        if (g < worst) { worst = g; at = (a.textContent || '').trim() + ' | ' + (b.textContent || '').trim(); }
+      }
+      return { gap: +worst.toFixed(1), at };
+    });
     F.f20.tabs = await box(page, '.spc-tabs');
     F.f20.editBox = await box(page, '#spcEdit');
+    /* ② ⑥ 축 — 측정표가 적은 «채움» 잉크만 골라 잰다(외곽선 제외) */
+    F.f20.nmInk = await inkOf(page, '.spc-list .spc-row:nth-child(1) > .nm', 'text', 'white');
+    F.f20.vlInk = await inkOf(page, '.spc-list .spc-row:nth-child(1) > .vl', 'text', 'green');
+    F.f20.tabOnInk = await inkOf(page, '.spc-tab-on > b > i', 'text', 'cream');
+    F.f20.tabOffInk = await inkOf(page, '.spc-tab-off > i', 'text', 'any');
     F.f20.editInk = await inkOf(page, '#spcEdit', 'text');   /* 글리프만 */
     F.f20.editPaint = await inkOf(page, '#spcEdit', 'el');     /* 요소가 칠하는 전부(그림자 포함) */
 
@@ -169,8 +205,25 @@ const box = (page, sel) => page.evaluate((s) => {
     const L = F.f20.list, RP = F.f20.rowPitch;
     if (L) console.log(`ⓒ 20 리스트     y ${L.y} h ${L.h}   (ref y ${toCap(REF.listY)} h ${REF.listH} · Δy ${(L.y - toCap(REF.listY)).toFixed(1)} Δh ${(L.h - REF.listH).toFixed(1)})`);
     if (RP) console.log(`                행 ${RP.n}개 · 피치 ${RP.pitch} (ref ${REF.rowPitch}, Δ${(RP.pitch - REF.rowPitch).toFixed(1)}) · 높이 ${RP.h}`);
+    const VC = F.f20.vc, VR = F.f20.vcRow, VV = F.f20.vcV;
+    if (VC && VC.px && VR) {
+      const c = VC.y + VC.h / 2;
+      console.log(`   행2 라벨 잉크중심 ${c.toFixed(1)} vs 행중심 ${VR.mid}  → Δ ${(c - VR.mid).toFixed(1)}px (음수면 위로 쏠림)`);
+      if (VV && VV.px) { const cv = VV.y + VV.h / 2; console.log(`   행2 값   잉크중심 ${cv.toFixed(1)}  → Δ ${(cv - VR.mid).toFixed(1)}px`); }
+    }
+    const G = F.f20.gap;
+    if (G) console.log(`   라벨↔값 최소 간격 ${G.gap}px  (음수면 겹침)  최악 행: ${G.at}`);
     const T = F.f20.tabs;
     if (T) console.log(`ⓓ 20 탭 컨테이너 x ${T.x} y ${T.y} ${T.w}×${T.h} (ref x ${REF.spcTabs.x} y ${toCap(REF.spcTabs.y)} ${REF.spcTabs.w}×${REF.spcTabs.h})`);
+    const IK = (o, ref, nm) => o && o.px
+      ? console.log(`   ${nm}  채움잉크 ${o.w}×${o.h}  (ref h ${ref} · Δ ${(o.h - ref).toFixed(1)} = ${(100 * (o.h - ref) / ref).toFixed(1)}%)`)
+      : console.log(`   ${nm}  채움잉크 — 차분 0px`);
+    console.log('② ⑥ 축 — 채움 잉크(외곽선 제외)');
+    IK(F.f20.nmInk, 25.5, '20 행 라벨 ');
+    IK(F.f20.vlInk, 22.5, '20 행 값   ');
+    IK(F.f20.tabOnInk, 33, '20 활성 탭 ');
+    IK(F.f20.tabOffInk, 31, '20 비활성탭');
+    IK(F.f19.bnInk, 23, '19 카드 배너');
     const E = F.f20.editBox, EI = F.f20.editInk;
     if (E) console.log(`ⓐ 20 ✎ 상자     ${E.w}×${E.h} (ref ${REF.editBox.w}×${REF.editBox.h})`);
     if (EI && EI.px) console.log(`   ✎ 글리프 잉크 ${EI.w}×${EI.h} @(${EI.x},${EI.y})  넘침 좌${EI.over.left} 우${EI.over.right} 상${EI.over.top} 하${EI.over.bottom}  ← +면 상자 밖`);
