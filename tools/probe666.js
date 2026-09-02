@@ -25,18 +25,31 @@
  * ⚑ 재현 기록은 수리 전·후 **같은 뜻**이어야 한다(probe452·455·464·498·520 규약).
  *   구조 축([5]·[6])은 수리 전·후 같은 답이고, 갈리는 것은 [1]~[4] 의 **건수**뿐이라 `info` 로 찍는다.
  *
+ * ⚑ **796(2026-09-02) — 이 자의 두 «전제» 가 러너 속도에 붙어 있었다.** 실측(같은 러너 8회):
+ *   `[2-a]` 4·4·**3**·4·5·4·6·5(문턱 4 라 3 이면 빨강) · `[1-a]` **8회 중 3회 «0회»**.
+ *   ⓐ [2] 는 785 가 만든 공용 부품(`tools/holdburst.js`)을 넷 중 **혼자 안 쓰고** `HOLD = 1500` 을
+ *      손으로 적고 있었다(`verify682`·`verify666`·`verify683` 은 785 가 이미 옮겼다) ⇒ `holdUntil` 로 옮겼다.
+ *   ⓑ [1] 은 **더 앞이 뿌리다** — 대조군([5] 훈련)을 닫고 400ms 만 기다렸는데 닫히는 훈련 시트가
+ *      소환 버튼 점을 **900~1000ms** 까지 물고 있어(실측 `elementFromPoint` = `.td`/`.tr-tp`)
+ *      그 창의 터치는 **`pointerdown` 조차 안 왔다**(눌림 0 · 소환 0). 시간을 재는 대신
+ *      **자리가 실제로 내 것이 될 때까지 기다린다**(796 이 `holdburst.waitHittable` 로 신설).
+ *   ⚠ 문턱은 한 칸도 안 내렸다(785 서두) — [2-a] 는 그대로 «≥ 4» 다.
+ *
  * 127 — 클라우드 러너 브라우저 해석은 tools/pwlaunch.js 공용.
  * LESSONS 319 — evaluate 예외는 즉사시키지 말고 그 블록만 빨갛게.
  */
 'use strict';
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { holdUntil, waitHittable } = require('./holdburst');   /* 785·796 — 표본 문턱·자리 대기 공용 부품 */
 const { chromium } = pw();
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
 const URL = 'file://' + SRC.replace(/\\/g, '/');
 const W = 1080, H = 2280;
-const HOLD = 1500;
+/* 785 — 시간이 아니라 **표본 수**가 문턱이다. `HOLD_MIN` 은 «빠른 기계에서는 종전만큼은 누른다» 는
+   바닥이고(회귀 안전판), `HOLD_MAX` 는 «더 안 기다린다» 는 상한일 뿐이다. */
+const NEED = 4, HOLD_MIN = 1500, HOLD_MAX = 30000;
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ✅ ' : '  ❌ ') + m + (d !== undefined && d !== '' ? ' — ' + d : '')); };
@@ -114,41 +127,29 @@ const SPLIT = () => {
   await p.waitForTimeout(900);
 
   const cdp = await p.context().newCDPSession(p);
-  const box = async sel => {
-    const r = await p.evaluate(s => { const e = document.querySelector(s); if (!e) return null;
-      const b = e.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }, sel);
-    return r;
-  };
-  const holdTouch = async (c, ms) => {
-    if (!c) return;
-    const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
-    const t0 = Date.now();
-    while (Date.now() - t0 < ms) {
-      await new Promise(r => setTimeout(r, 80));
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: c.x + (Math.random() * 4 - 2), y: c.y + (Math.random() * 4 - 2) }] }).catch(() => {});
-    }
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await st.catch(() => {});
-    await p.waitForTimeout(250);
-  };
-  const tapTouch = async (c) => {
-    if (!c) return;
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
-    await p.waitForTimeout(60);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await p.waitForTimeout(420);
-  };
+  /* 785·796 — 손으로 적던 «N밀리초 누른다»·«60ms 탭한다» 는 공용 부품으로 갔다.
+     누르는 방법(CDP 터치 + 80ms 흔들기)은 그대로이고 **끊는 조건만** 시간 → 표본 수다.
+     죽은 사본을 남기지 않는다(295-②·399·460 «죽은 코드 금지»). */
+  const hold = (sel, need, opt) => holdUntil(p, Object.assign(
+    { at: sel, need, count: () => window.__p666.sum, mode: 'touch', cdp, maxMs: HOLD_MAX, settleMs: 250 }, opt || {}));
+  /* «단발» = 소환 한 번이 잡히는 순간 뗀다. 제품의 홀드 반복은 `TR_HOLD_DELAY`(350ms) 뒤에나
+     시작하므로 이 누름은 그 앞에서 끝난다 — 그래도 계측 아티팩트(아래 [1] 주석)로 2회가
+     잡힐 수 있어 이 자의 축은 처음부터 «소환당» 이다. */
+  const tap = (sel) => hold(sel, 1, { minMs: 0, maxMs: 4000, settleMs: 420 });
 
   /* ── 대조군([5])을 **먼저** 잰다 — 89 페이지를 열고 닫은 뒤에 재면 23 훈련 시트가 그 프레임에
      아직 자리를 못 잡아 터치가 헛나간다(1회차에 «파티클 0» 이 그래서 나왔다). 순서만 바꾼다. */
   await ev(p, WATCH);
+  let CTLH = null;
   const CTL = await (async () => {
     const okOpen = await ev(p, () => { try { openTrain(); setTrSub('temper'); S.tstone = 1e12; renderTrain(); }
       catch (_) { return false; } return !!document.querySelector('.tr-tp .tb'); });
     if (!okOpen) return null;
     await p.waitForTimeout(400);
     await ev(p, RESET);
-    await holdTouch(await box('.tr-tp .tb'), 900);
+    /* 796 — 대조군도 «시간» 이 아니라 **파티클 표본**이 문턱이다([5-a] 가 묻는 것이 그것이다). */
+    CTLH = await holdUntil(p, { at: '.tr-tp .tb', need: 4, minMs: 900, maxMs: 20000, mode: 'touch', cdp,
+      count: () => window.__p666.nodes.filter(n => /fx-spark/.test(n.cls)).length });
     return ev(p, () => {
       const b = document.querySelector('.tr-tp .tb').getBoundingClientRect();
       const N = window.__p666.nodes.filter(n => /fx-spark/.test(n.cls));
@@ -158,15 +159,18 @@ const SPLIT = () => {
     });
   })();
 
-  /* 89 유물 페이지를 열고 조각을 넉넉히 심는다(274 — 비용은 상수 100) */
+  /* 89 유물 페이지를 열고 조각을 넉넉히 심는다(274 — 비용은 상수 100)
+     ⚑ 796 — 여기서 «400ms 면 다 닫혔겠지» 하던 것이 [1-a] 플레이키의 뿌리였다:
+     닫히는 훈련 시트가 소환 버튼 점을 900~1000ms 까지 히트테스트로 물어 그 창의 터치는
+     `pointerdown` 조차 안 왔다. 시간을 재지 말고 **자리를 묻는다**. */
   await ev(p, () => { try { closeModal(); closeTrain(); closeDungeon(); } catch (_) {}
     S.relic = 1e12; openRelw(); });
-  await p.waitForTimeout(400);
+  const HIT = await waitHittable(p, '#rwBasin', { maxMs: 8000 });
   await ev(p, RESET);
 
   blk('[1] 단발 소환 1회 — #fxl 에 뜨는 노드 전수');
   await ev(p, RESET);
-  await tapTouch(await box('#rwBasin'));
+  const HA = await tap('#rwBasin');
   const A = await ev(p, SPLIT);
   if (A) {
     info('소환 ' + A.sum + '회 · 노드 ' + A.all + '개 · 종류 ' + A.kinds.join(','));
@@ -177,19 +181,21 @@ const SPLIT = () => {
        이벤트를 하나 더 내보내 같은 리스너가 두 번 돈다(실측: 탭 1회 → 소환 2회). 제품 쪽은
        `#relw #rwBasin{touch-action:none}` 이라 실기기에서는 안 겹친다. 이 자의 축은 «몇 번 눌렸나» 가
        아니라 «한 번의 소환이 무엇을 띄우나» 라 소환 수로 나눠 본다(아래 «소환당» 값). */
-    ok(A.sum >= 1, '[1-a] 단발 탭이 소환을 돌린다(전제)', A.sum + '회');
+    info('자리 대기(796)', HIT.note + ' · 누름 ' + HA.ms + 'ms');
+    ok(A.sum >= 1, '[1-a] 단발 탭이 소환을 돌린다(전제 · 796 — 자리를 기다린 뒤 누른다)', A.sum + '회');
   } else ok(false, '[1] 측정 실패');
 
-  blk('[2] 홀드 1.5초 — 소환 N회 ↔ 연출 분포');
+  blk('[2] 홀드 — 표본이 찰 때까지(785 공용 부품) · 소환 N회 ↔ 연출 분포');
   await ev(p, RESET);
-  await holdTouch(await box('#rwBasin'), HOLD);
+  const HB = await hold('#rwBasin', NEED, { minMs: HOLD_MIN });
   const B = await ev(p, SPLIT);
   if (B) {
     info('소환 ' + B.sum + '회 · 노드 ' + B.all + '개');
     info('텍스트 플로터 ' + B.text + '건 (소환당 ' + (B.sum ? (B.text / B.sum).toFixed(2) : '—') + '장)', B.texts.join(' | ') || '없음');
     info('파티클 ' + B.spark + '개 — 버튼 안 ' + B.sparkIn + ' · 격자 안 ' + B.sparkGrid + ' · 그 밖 ' + B.sparkOut);
     info('파티클 중 재화 아이콘 ' + B.sparkIc + '개', B.icKeys.join(',') || '없음');
-    ok(B.sum >= 4, '[2-a] 홀드가 여러 번 소환한다(전제 · 488 [E1] 과 같은 문턱)', B.sum + '회');
+    ok(B.sum >= NEED, '[2-a] 홀드가 여러 번 소환한다(전제 · 488 [E1] 과 같은 문턱 · 785 공용 부품)',
+       B.sum + '회 · ' + HB.note);
   } else ok(false, '[2] 측정 실패');
 
   blk('[3]·[4] 등재문 세 주장의 판정 (수리 전이면 ⓐⓑⓒ 가 참 = 결손 실재)');
@@ -206,6 +212,7 @@ const SPLIT = () => {
 
   blk('[5] 대조 — 660 이 끝낸 23 훈련(단련 행)은 이미 «버튼 발 · 아이콘 버스트» 인가 (맨 처음 측정분)');
   if (CTL) info('단련 홀드 — 파티클 ' + CTL.spark + ' · 버튼 안 ' + CTL.inB + ' · 아이콘 ' + CTL.ic + ' ' + (CTL.keys.join(',') || ''));
+  if (CTLH) info('대조군 홀드(796 — 표본 문턱)', CTLH.note);
   ok(!!CTL && CTL.spark > 0, '[5-a] 대조군(단련)이 실제로 파티클을 낸다 — 이 자의 눈금이 살아 있다는 증거',
      CTL ? CTL.spark + '개' : '측정 실패');
   ok(!!CTL && CTL.ic > 0 && CTL.inB === CTL.spark,

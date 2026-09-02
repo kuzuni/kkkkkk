@@ -23,6 +23,16 @@
  *
  * ⚠ 상한(`maxMs`)에 걸려 끊긴 것은 **실패가 아니라 관측**이다 — 반환값 `reached` 로 알린다.
  *   부르는 자는 여전히 자기 문턱(`H.n >= need`)으로 판정한다(이 부품은 «묻는 것» 을 안 바꾼다).
+ *
+ * ⚑ **796(2026-09-02) — «시간 고정» 은 누르는 쪽에만 있던 게 아니다.**
+ *   `probe666` [1-a](«단발 탭이 소환을 돌린다»)가 8회 중 3회 **0회**로 빨갰는데, 뿌리는 소환도
+ *   홀드도 아니라 **누를 자리가 아직 남의 것**이었다: 대조군([5] 23 훈련)을 닫고 `openRelw()` 를
+ *   부른 뒤 자가 **고정 400ms** 만 기다렸는데, 닫히는 훈련 시트가 그 점을 **900~1000ms** 까지
+ *   히트테스트로 물고 있다(실측 `elementFromPoint` = `.td`/`.tr-tp` · 러너가 바쁘면 더 길다).
+ *   그 창에 떨어진 터치는 **`pointerdown` 자체가 안 온다**(실측: 눌림 0 · 소환 0).
+ *   ⇒ «다 닫혔겠지» 하고 시간을 재는 대신 **자리가 실제로 내 것이 될 때까지 기다린다**(`waitHittable`).
+ *   `at` 이 **선택자**면 `holdUntil` 이 알아서 그 대기를 먼저 돈다 — 좌표 객체를 넘기는 자
+ *   (`verify682`·`verify666`·`verify619`)는 자리를 이미 자기가 재 두었으므로 종전 그대로다.
  */
 'use strict';
 
@@ -49,16 +59,48 @@ async function center(page, at) {
   }, at);
 }
 
+/* 796 — «그 자리가 실제로 내 것이 될 때까지» 기다린다(시간을 재는 대신 자리를 묻는다).
+   중심점의 `elementFromPoint` 가 그 요소이거나 그 자손이면 눌러도 그 요소가 받는다.
+   ⚠ 상한에 걸려도 **끊지 않고 그대로 진행**한다 — 이 부품은 «묻는 것» 을 안 바꾸고,
+   못 기다린 사실은 반환값(`ok`·`ms`·`top`)으로만 알린다(부르는 자가 자기 문턱으로 판정한다). */
+async function waitHittable(page, sel, opt) {
+  const o = Object.assign({ maxMs: 6000, stepMs: 80 }, opt || {});
+  if (typeof sel !== 'string') return { ok: true, ms: 0, polls: 0, top: null, note: '좌표를 직접 받았다(대기 없음)' };
+  const t0 = Date.now();
+  let top = null, polls = 0;
+  while (true) {
+    const r = await page.evaluate(s => {
+      const e = document.querySelector(s); if (!e) return { ok: false, top: '없는 선택자' };
+      const b = e.getBoundingClientRect();
+      if (!b.width || !b.height) return { ok: false, top: '크기 0' };
+      const t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      if (!t) return { ok: false, top: 'null' };
+      return { ok: t === e || e.contains(t), top: (t.id || t.className || t.tagName) + '' };
+    }, sel).catch(() => null);
+    polls++;
+    if (r) { top = r.top; if (r.ok) break; }
+    if (Date.now() - t0 >= o.maxMs) break;
+    await new Promise(r2 => setTimeout(r2, o.stepMs));
+  }
+  const ms = Date.now() - t0, ok = !!(top !== null);
+  const hit = ms >= o.maxMs ? false : true;
+  return { ok: hit, ms, polls, top,
+           note: hit ? '자리 확보 ' + ms + 'ms' : '⚠ 상한 ' + o.maxMs + 'ms 까지 남의 자리였다(맨 위 ' + top + ')' };
+}
+
 /**
  * 표본이 찰 때까지 누른다.
- * @returns {{n:number, ms:number, reached:boolean, polls:number, rate:number, note:string, c:object}}
+ * @returns {{n:number, ms:number, reached:boolean, polls:number, rate:number, note:string, c:object, hit:object}}
  */
 async function holdUntil(page, opt) {
   const o = Object.assign({}, DEF, opt || {});
+  /* 796 — 선택자로 받았으면 **누르기 전에** 그 자리가 내 것이 될 때까지 기다린다.
+     좌표 객체를 받은 자는 자기가 이미 잰 자리라 종전 그대로 지나간다(계약 불변). */
+  const hit = await waitHittable(page, o.at, { maxMs: o.hitMs === undefined ? 6000 : o.hitMs });
   const c = await center(page, o.at);
-  if (!c) return { n: 0, ms: 0, reached: false, polls: 0, rate: 0, note: '누를 자리를 못 찾았다', c: null };
+  if (!c) return { n: 0, ms: 0, reached: false, polls: 0, rate: 0, note: '누를 자리를 못 찾았다', c: null, hit };
   const touch = o.mode === 'touch';
-  if (touch && !o.cdp) return { n: 0, ms: 0, reached: false, polls: 0, rate: 0, note: 'touch 모드인데 cdp 가 없다', c };
+  if (touch && !o.cdp) return { n: 0, ms: 0, reached: false, polls: 0, rate: 0, note: 'touch 모드인데 cdp 가 없다', c, hit };
 
   const down = async () => touch
     ? o.cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] })
@@ -96,8 +138,9 @@ async function holdUntil(page, opt) {
   const reached = n >= o.need;
   const rate = ms > 0 ? +(n / (ms / 1000)).toFixed(2) : 0;
   const note = n + '/' + o.need + '회 · ' + ms + 'ms(상한 ' + o.maxMs + ') · ' + rate + '회/초'
-             + (reached ? '' : ' · ⚠ 상한에서 끊겼다');
-  return { n, ms, reached, polls, rate, note, c };
+             + (reached ? '' : ' · ⚠ 상한에서 끊겼다')
+             + (hit.ok ? (hit.ms > o.stepMs ? ' · 자리 대기 ' + hit.ms + 'ms' : '') : ' · ' + hit.note);
+  return { n, ms, reached, polls, rate, note, c, hit };
 }
 
-module.exports = { holdUntil, center, DEF };
+module.exports = { holdUntil, waitHittable, center, DEF };

@@ -34,6 +34,7 @@ const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { holdUntil } = require('./holdburst');     /* 785 — 홀드 표본 문턱 공용 부품 */
+const { coverMin, pCoverAtMost, cellsFor } = require('./coverstat');   /* 796 — 문턱을 표본에서 판다 */
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
@@ -42,7 +43,14 @@ const W = 1080, H = 2280;
 /* ⚑ 785 — [B0] 의 «버스트 ≥ 4» 는 문턱이고, 3200ms 는 그 문턱을 **러너 틱 속도**에 묶는 값이었다
    (이 러너 실측 2회/초 · CPU ×8 에서 고정 3000ms 는 3~4회 — `probe785`). 이제 표본이 찰 때까지
    누르고 시간은 상한으로만 쓴다. `HOLD` 는 «바닥»(빠른 기계에서 종전과 같은 시간을 누른다)으로 남는다. */
-const HOLD = 3200, NEED = 4, HOLD_MAX = 30000;
+/* ⚑ 796(2026-09-02) — `NEED` 를 4 → **12** 로 **올렸다**(내린 게 아니다 · 785 A3 래칫의 방향).
+   [R4] 는 «칸 위상» 을 표본마다 세는 항인데 그 표본이 `rep = 버스트 − 1` 이고, 빠른 기계에서는
+   `holdUntil` 이 문턱에서 바로 떼므로 **표본이 정확히 NEED−1 = 3~4개**였다. 4개를 5칸에 던져
+   «≥3칸» 이 나올 확률은 산술적으로 0.77 이라 자 자신이 4회 중 1회 빨갰다(등재 실측 2/5 ↔ 4/5).
+   ⚠ 고치는 방향은 «문턱(≥3)을 내린다» 가 아니다(785 서두) — 내리면 위상이 두 자리에만 굳어도
+   초록인 헛초록이 된다. **표본을 늘려** 같은 문턱을 통계적으로 안전하게 만든다:
+   rep ≥ 11 에서 «5칸 중 ≤2칸» 확률은 4.2e-4 로 떨어진다(아래 `coverMin` 이 그 계산을 그 자리에서 한다). */
+const HOLD = 3200, NEED = 12, HOLD_MAX = 45000;
 const GRID = 15;            /* 사람이 «같은 방향» 으로 읽는 폭(도) */
 
 let pass = 0, fail = 0;
@@ -294,13 +302,31 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
   ok(oldRep.length >= 3 && fakeShort > 0,
      'R3 ★ 옛 각에 ±10° 지터를 더 얹는 «가짜 수리» 로는 포갬이 안 풀린다 — 구조를 바꾼 것이 정답이었다',
      '여전히 모자란 버스트 ' + fakeShort + '/' + fake.length);
-  /* R4 — 위상이 실제로 도는가: 칸 위상(정렬 각 평균 mod 칸폭)이 버스트마다 다른 칸에 앉는다 */
+  /* R4 — 위상이 실제로 도는가: 칸 위상(정렬 각 평균 mod 칸폭)이 버스트마다 다른 칸에 앉는다.
+     ⚑ 796 — **손 상수 «5등분 중 ≥3칸» 을 지웠다.** 등분 수도 문턱도 이제 **표본 수에서 판다**:
+     ① 등분 수 K 는 표본에 맞춰 자란다(표본 4개를 5칸에 던지는 것은 애초에 통계가 아니다)
+     ② 문턱 T 는 «무작위라면 T 를 밑돌 확률 < 0.1%» 인 **최대** T 다 — 포함배제로 그 자리에서 센다.
+     ⇒ 표본이 늘수록 자가 **저절로 엄해지고**(강화), 표본이 적으면 헛된 엄격함으로 빨개지지 않는다.
+     ⚠ 얼어붙은 위상(수리 전 = 전 버스트가 같은 자리 = 1칸)은 T ≥ 2 라 **표본과 무관하게 빨갛다** —
+     이 항이 무엇을 지키는지는 안 바뀌었다(아래 [R4-b] 가 그 되돌림을 실제로 굴려 못박는다). */
   const cell = rep.length && rep[0].length ? 180 / rep[0].length : 45;
+  const K = cellsFor(rep.length);                /* 등분 수도 표본 파생(796 공용 부품) */
+  const ALPHA = 1e-3;
+  const T = coverMin(rep.length, K, ALPHA);
   const offs = rep.map(b => (b.reduce((s, v) => s + v, 0) / b.length) % cell);
-  const obin = new Set(offs.map(o => Math.floor(o / (cell / 5))));
+  const obin = new Set(offs.map(o => Math.floor(o / (cell / K))));
   info('칸 위상(칸폭 ' + r1(cell) + '° 안 위치)', offs.map(r1).join(', '));
-  ok(rep.length >= 4 && obin.size >= 3, 'R4 위상이 한 자리에 안 굳는다 — 칸을 5등분해 ' + obin.size + '칸에 앉는다(≥3)',
-     obin.size + '/5');
+  info('문턱 파생(796)', '표본 ' + rep.length + '개 · ' + K + '등분 · 문턱 ≥' + T
+     + ' (무작위가 밑돌 확률 ' + pCoverAtMost(rep.length, K, T - 1).toExponential(1) + ' < ' + ALPHA + ')');
+  ok(rep.length >= 4 && obin.size >= T,
+     'R4 위상이 한 자리에 안 굳는다 — ' + K + '등분해 ' + obin.size + '칸에 앉는다(≥' + T + ' · 문턱은 표본 파생)',
+     obin.size + '/' + K);
+  /* R4-b — 그 문턱이 «아무거나 통과시키는 자» 가 아님을 되돌림으로 못박는다(334·338 규약):
+     수리 전 그림(= 위상이 한 자리에 굳었다)을 같은 자에 먹이면 반드시 빨갛다. */
+  const frozen = rep.map(() => offs[0]);
+  const fbin = new Set(frozen.map(o => Math.floor(o / (cell / K))));
+  ok(fbin.size < T, 'R4-b ★ 되돌림 — 위상이 굳은 표본(전 버스트 같은 자리)은 같은 문턱에서 **빨갛다**',
+     '굳은 표본 ' + fbin.size + '칸 < 문턱 ' + T);
   /* ⚑ 793 — R5: 자기 확인(«자가 그 자리를 보는가»). 이번 결함은 «자가 틀린 함수를 감고 있었다» 이고,
      그 상태의 [E3] 은 «5버스트 / **0**소환» 으로만 말할 뿐 «훅이 빈 껍데기에 붙어 있다» 는 말은
      못 했다. ⇒ 새 훅이 «실행 1건 · 장수 n» 을 정확히 세는지 제품에게 **직접** 물어 못박는다.

@@ -51,7 +51,10 @@ const AT = { x: 100, y: 100 };
   ok(/module\.exports = \{ holdUntil/.test(HB) && /need/.test(HB) && /maxMs/.test(HB),
      'A1 공용 부품 `tools/holdburst.js` 가 «표본 수(`need`) + 상한(`maxMs`)» 계약으로 서 있다');
 
-  const USERS = { 'verify683.js': 6, 'verify666.js': 4, 'verify682.js': 4, 'verify619.js': 8 };
+  /* ⚑ 796(2026-09-02) — 표는 «바닥(래칫)» 이지 «정답» 이 아니다(아래 A3 참조).
+     `probe666.js` 를 다섯째 식구로 넣었다 — 785 때 넷만 옮기고 **혼자 남아** 손으로 적은
+     `HOLD = 1500` 을 쓰고 있었고, 그래서 그 자의 [2-a] 가 러너 속도에 붙어 4회 중 1회 빨갰다. */
+  const USERS = { 'verify683.js': 6, 'verify666.js': 4, 'verify682.js': 4, 'verify619.js': 8, 'probe666.js': 4 };
   const srcs = {};
   for (const f of Object.keys(USERS)) srcs[f] = T(f);
   const noReq = Object.keys(USERS).filter(f => !/require\('\.\/holdburst'\)/.test(srcs[f]));
@@ -64,15 +67,22 @@ const AT = { x: 100, y: 100 };
     'verify683.js': /V683_NEED \|\| (\d+)/,
     'verify666.js': /\{ need: (\d+), minMs: HOLD_MS \}/,
     'verify682.js': /NEED = (\d+)/,
-    'verify619.js': /V619_NEED \|\| (\d+)/
+    'verify619.js': /V619_NEED \|\| (\d+)/,
+    'probe666.js': /NEED = (\d+)/
   };
-  const low = [];
+  /* ⚑ 796 — 이 항은 «내려갔는가» 를 묻는 래칫인데 **같은가**(===)로 적혀 있었다.
+     그래서 «올린다» 도 똑같이 빨개졌다 — 786 이 [R4] 의 표본 굶주림을 고치려고 682 의 문턱을
+     4 → 12 로 **올리는** 순간 이 자가 막아선다. 래칫의 뜻대로 **바닥(≥)** 으로 고쳤다:
+     내려가면 빨갛고, 올라가면 초록이되 그 값이 기록에 남는다(아래 실제 값 출력). */
+  const low = [], now = [];
   for (const f of Object.keys(USERS)) {
     const m = srcs[f].match(thr[f]);
-    if (!m || Number(m[1]) !== USERS[f]) low.push(f + ' = ' + (m ? m[1] : '못 찾음') + '(기대 ' + USERS[f] + ')');
+    const v = m ? Number(m[1]) : NaN;
+    now.push(f.replace(/\.js$/, '') + '=' + (m ? m[1] : '?') + (v > USERS[f] ? '(바닥 ' + USERS[f] + ' 위)' : ''));
+    if (!m || !(v >= USERS[f])) low.push(f + ' = ' + (m ? m[1] : '못 찾음') + '(바닥 ' + USERS[f] + ')');
   }
-  ok(low.length === 0, 'A3 ★ **문턱은 한 칸도 안 내려갔다**(334 규약 · 내리면 [D4]·[E1] 이 헛초록이 된다)',
-     low.length ? low.join(' · ') : '683=6 · 666=4 · 682=4 · 619=8');
+  ok(low.length === 0, 'A3 ★ **문턱은 한 칸도 안 내려갔다**(334 규약 · 내리면 [D4]·[E1] 이 헛초록이 된다 · 796 — 올리는 것은 허용)',
+     low.length ? low.join(' · ') : now.join(' · '));
 
   /* 손으로 적은 «N밀리초만 누른다» 사본이 남아 있으면 그 자는 다시 러너 속도에 붙는다.
      ⚠ [R3]/tap 처럼 **일부러** 짧게 누르는 자리(되돌림 시험)는 홀드가 아니므로 여기서 안 센다. */
