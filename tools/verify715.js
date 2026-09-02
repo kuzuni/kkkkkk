@@ -105,7 +105,7 @@ const openCoin = page => ev(page, () => {
       const g = document.querySelector('#shopList .cn-tknt.ex');
       return g ? { txt: g.textContent.trim(), top: g.offsetTop } : null;
     });
-    ok(guide && guide.top === 3182 && /슬라이더/.test(guide.txt),
+    ok(guide && guide.top === 3200 && /슬라이더/.test(guide.txt),
       '[A5] 수량 탭이 있던 94px 구간을 안내 한 줄이 받는다(자리를 비우지 않는다 · §10 좌표 불변)',
       guide ? 'top ' + guide.top + ' · ' + guide.txt : '없음');
   }
@@ -417,8 +417,8 @@ const openCoin = page => ev(page, () => {
     ok(box && box.infIc !== 'x' && new Set(box.infIc.split(',')).size === 1,
       '★ [F' + (H === 2280 ? 1 : 2) + '-h] ' + H
       + ' — 비용 두 줄의 재화 아이콘이 **같은 x** 에 선다(2회차 채점 ⓕ)', box ? box.infIc : '');
-    ok(box && box.knobW === 84,
-      '[F' + (H === 2280 ? 1 : 2) + '-f] ' + H + ' — 노브 84 폭(±버튼 132 의 64% · 1회차엔 45% 였다)',
+    ok(box && box.knobW === 96,
+      '[F' + (H === 2280 ? 1 : 2) + '-f] ' + H + ' — 노브 96 폭(±버튼 132 의 73% · 1회차엔 45% 였다)',
       box ? String(box.knobW) : '');
     await bb.ctx.close();
   }

@@ -2176,7 +2176,14 @@
         갈라 아이콘은 항상 같은 자리(우측 정렬), 숫자만 오른쪽으로 자란다.
      ⚠ 반려 둘(둘 다 **A5 공용 규격**이라 이 작업 구간이 아니다): 모달 좌우 패딩 8 ↔ 상단 65(A ②) ·
        하단 버튼 404×81 종횡비(B ⑥) — 손대면 16·22·69·70·87·103 … 팝업 전부가 같이 움직인다. */
-  .mbody .ex715{padding:0 0 12px}
+  /* ⚑ 3회차 채점 이관(E ①9②8③8④9 **최저 8 통과** · F ①7②8③7④7 최저 7 미달) — 둘이 일치한 넷:
+     ⓗ 패널 상단 여백 37 ↔ 좌·우·하 12(3.1배) → A5 웰의 33px 을 **내 팝업 안에서만** 되돌려 12 로 ·
+     ⓘ 채움이 노브 **왼쪽 테두리**에서 끊겨 값이 42px(5.2%) 적게 읽혔다 → 노브 **중심**까지 그린다 ·
+     ⓙ 노브 84×64 가 ±버튼(132×74)보다 작다 → **96×80**(띠 50 위아래 15px 돌출) ·
+     ⓚ 비용 두 줄의 «아이콘↔숫자» 간격이 18 ↔ 129px 로 벌어졌다 → 숫자를 **좌정렬**로 바꿔 간격을
+        10px 로 고정(2회차 C 의 «아이콘 칸 고정» 과 3회차 F 의 «간격 고정» 을 동시에 만족하는 유일한 형태다
+        — 우정렬을 지키면 두 줄의 숫자 폭 차이가 그대로 간격 차이가 된다). */
+  .mbody .ex715{margin-top:-21px;padding:0 0 12px}
   /* ⚑ 2회차 채점 이관(C ①6②7③6④5 · D ①6②8③6④5 — 둘 다 최저 5) — 일치한 셋을 고쳤다:
      ⓔ 최대 눈금 라벨(«5,000,000»)이 카드 우변에서 **잘렸다** → 눈금은 노브 중심이 아니라 **축의 양 끝**
         (컬럼 130..949)에 세운다 · ⓕ 비용 두 줄의 «아이콘+숫자» 를 통째로 우정렬해 **아이콘 x 가 줄마다
@@ -2187,7 +2194,7 @@
        만족할 수 없다**(폭이 변하는 두 덩이). 보는 사람은 팝업을 **한 번에 하나만** 보므로 프레임 안에
        실재하는 기준(카드 중심)을 택했다 — 되돌리려면 이 규칙을 `grid-template-columns:1fr 1fr` 로
        바꾸면 된다(그 순간 D 의 지적이 되살아난다). */
-  .ex715 .ex-gn{display:flex;align-items:center;justify-content:center;gap:16px;height:104px}
+  .ex715 .ex-gn{display:flex;align-items:center;justify-content:center;gap:16px;height:96px}
   .ex715 .ex-gn>em{flex:none;display:block;width:96px;height:96px;font-size:82px;line-height:96px;font-style:normal}
   .ex715 .ex-gn>em>.cic{width:96px;height:96px}
   .ex715 .ex-gn>b{font-size:58px;font-weight:900;color:#3A2C20;white-space:nowrap;
@@ -2195,15 +2202,15 @@
   /* ⓒ 트랙은 «띠(50) + 그 위를 달리는 노브(84×64)» 두 겹이다. 포인터를 받는 것은 **바깥 그릇**
      (`#exTrack` · 높이 64)이라 손가락 표적이 띠보다 14px 크고, 띠(`.ex-bar`)는 채움을 자르기 위해
      `overflow:hidden` 을 그대로 쓴다 — 노브를 띠 안에 두면 돌출이 그 자리에서 잘린다. */
-  .ex715 .ex-sl{position:relative;margin:24px 0 0;height:64px;cursor:pointer;touch-action:none}
-  .ex715 .ex-bar{position:absolute;left:0;right:0;top:7px;height:50px;box-sizing:border-box;
+  .ex715 .ex-sl{position:relative;margin:24px 0 0;height:80px;cursor:pointer;touch-action:none}
+  .ex715 .ex-bar{position:absolute;left:0;right:0;top:15px;height:50px;box-sizing:border-box;
     border:6px solid #000;border-radius:18px;overflow:hidden;background:#8A7355}
   .ex715 .ex-fill{position:absolute;left:0;top:0;bottom:0;width:0;
     background:linear-gradient(#F3C744 0 5%,#FEB612 5% 97%,#F2B833 97% 100%)}
   /* 노브는 트랙 «안» 을 달린다 — 좌우 끝에서 삐져나오지 않게 진행률에 노브 폭을 뺀다
      (55 트랙이 «트랙 왼끝 + 진행률 × (679 − 60)» 으로 푼 것과 같은 산수다). */
-  .ex715 .ex-knob{position:absolute;top:0;width:84px;height:64px;box-sizing:border-box;
-    border:5px solid #000;border-radius:18px;background:#F6F5FA;z-index:2;pointer-events:none}
+  .ex715 .ex-knob{position:absolute;top:0;width:96px;height:80px;box-sizing:border-box;
+    border:5px solid #000;border-radius:20px;background:#F6F5FA;z-index:2;pointer-events:none}
   /* ⓔ 눈금은 **축의 양 끝**(컬럼 130..949)에 세운다. 1회차엔 노브 중심(42px 안쪽)에 맞췄는데,
      그러면 «5,000,000» 처럼 긴 값이 중심 정렬 때문에 **양쪽으로 반씩 퍼져 카드 우변에서 잘린다**
      (2회차 C·D 가 독립으로 같은 자리를 짚었다 — 끝자리 14px 소실). 잘림은 «못 읽는다» 이고
@@ -2221,7 +2228,7 @@
     border:4px solid #C8B091;box-sizing:border-box;font-size:40px;font-weight:900;color:#3A2C20}
   /* ⚠ 두 줄이 **한 격자**여야 칸이 맞는다 — 줄마다 `display:grid` 를 주면 격자가 둘이라
      같은 «아이콘 칸» 이 줄마다 제 내용 폭으로 따로 정해진다(그 상태로 한 번 빨갰다). */
-  .ex715 .ex-inf{margin-top:24px;background:#F7ECDA;border-radius:22px;padding:18px 24px;
+  .ex715 .ex-inf{margin-top:32px;background:#F7ECDA;border-radius:22px;padding:18px 24px;
     display:grid;grid-template-columns:1fr 44px auto;align-items:center;column-gap:10px;row-gap:10px}
   /* ⓕ 세 칸 격자 — [이름][아이콘 44][숫자 우정렬]. 아이콘 칸이 **고정**이라 두 줄의 아이콘이
      같은 x 에 선다(2회차 C 실측: 통짜 우정렬이던 1·2회차엔 줄마다 54~113px 흔들렸다).
@@ -2230,7 +2237,7 @@
   .ex715 .ex-inf i,.ex715 .ex-inf s,.ex715 .ex-inf b{font-size:26px}
   .ex715 .ex-inf i{justify-self:start;font-style:normal;color:#7A6550}
   .ex715 .ex-inf s{justify-self:center;text-decoration:none;line-height:0}
-  .ex715 .ex-inf b{justify-self:end;color:#B4571E}
+  .ex715 .ex-inf b{justify-self:start;color:#B4571E}
   .ex715 .ex-inf .cic{width:32px;height:32px;vertical-align:-6px}
   /* ── 478 청약철회 규정 본문 (2026-08-30 주인 지시로 신설된 팝업) ──
      269 와 같은 처방 — 전용 래퍼 `.lgw` 로만 손댄다(`.mbody p` 는 A5 공용이라 못 건드린다).
@@ -6959,7 +6966,7 @@
   .cn-tknt{left:66px;top:3752px;width:948px;height:46px;text-align:center}
   /* 715 — §9 리본(3084 · 높이 92) ↔ 첫 카드(3270) 사이. §10 이 리본 하변에서 **6px** 띄운 것과
      같은 리듬으로 맞춘다(2회차 D 지적5 — 두 구역이 10/38 ↔ 6/46 으로 갈려 있었다). */
-  .cn-tknt.ex{top:3182px}
+  .cn-tknt.ex{top:3200px;left:256px;width:568px}
   .cn-tknt>i{font-size:30px;line-height:46px;color:#F0D9AE;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill}
   .cn-a2t{left:561px;top:1404px;width:420px;height:80px;text-align:center}
@@ -20768,9 +20775,11 @@ const exTAt = (n, max) => max > 1 ? (n - 1) / (max - 1) : 1;
 function exSync(){
   if(!exSel || !$('exTrack')) return;
   const { d, n, max } = exSel, cost = exCost(d, n), t = exTAt(n, max);
-  $('exFill').style.width = (t * 100) + '%';
-  /* 노브 폭 84 — 진행률에서 그만큼을 빼야 양 끝에서 트랙 밖으로 안 나간다(1회차 ⓒ 이후 값) */
-  $('exKnob').style.left  = 'calc(' + (t * 100) + '% - ' + (t * 84) + 'px)';
+  /* 채움은 **노브 중심**까지다 — 노브 왼쪽 테두리에서 끊으면 값이 노브 폭의 절반만큼 적게 읽힌다
+     (3회차 E·F 가 독립으로 실측한 «59.9% vs 66.7%» 가 그 차이다). 노브 폭 96 → 좌표에서 96 을 빼고
+     채움에는 그 절반(48)을 더한다. */
+  $('exFill').style.width = 'calc(' + (t * 100) + '% - ' + (t * 96 - 48) + 'px)';
+  $('exKnob').style.left  = 'calc(' + (t * 100) + '% - ' + (t * 96) + 'px)';
   $('exQn').textContent   = fmt(n);
   $('exGn').innerHTML     = '×' + fmt(d.gain(n));
   $('exCostIc').innerHTML = d.ic();
@@ -33136,7 +33145,7 @@ function renderCoinPage(list){
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물조각 교환</i></div>';
   /* 715 — 수량 탭이 있던 94px 구간은 §10 과 **같은 문법**의 안내 한 줄이 받는다(자리를 비우지 않는다).
      클릭 뒤에 수량을 정한다는 것은 화면이 말해 줘야 한다 — 안 그러면 카드가 «×1 전용» 으로 읽힌다. */
-  h += '<div class="cn-tknt ex"><i>카드를 누르면 슬라이더로 개수를 정합니다</i></div>';
+  h += '<div class="cn-tknt ex"><i>누르면 슬라이더로 개수를 정합니다</i></div>';
   EXCHANGE.forEach((x, i) => {
     const px = [256, 546][i];
     h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px' + jzK(i, 4) + ';--fs:40.8px;--sx:.98'
