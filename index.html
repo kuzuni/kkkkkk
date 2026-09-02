@@ -26487,6 +26487,25 @@ function draw(){
        ⚠ 하이라이트는 «본체 위» 라야 뜻이 있다(허공에 찍으면 그냥 흰 점이다). 그래서 각 가지에서
          본체를 그린 **뒤에** 부르고, 자(`verify792`)는 근백색 화소를 **잉크 안에서** 센다. */
     const SPEC = 'rgba(255,255,255,.94)';
+    /* ⚑ 4회차 — 후광의 «가장자리» 가 문법의 마지막 갈래였다(비평가 CP·CQ 2인 공통, 둘 다 ② 최저).
+       층을 다 갖춰도 **평탄한 알파 판**은 칼로 자른 테두리라 «판 한 장» 으로 읽힌다:
+         CP — «진짜 그라디언트 후광은 boom 하나뿐, 나머지 16종은 전부 평탄 알파 판»
+         CQ — 후광 바깥 경계 기울기 |∇L|/px: boom·flask 2.5 ↔ arrow 34.8 · gale 29.6 · spiral 28.2 …(14배)
+       ⇒ 페이드를 **종마다 그라디언트를 손으로 적어** 넣지 않는다(사본 16벌이 곧 다음 어긋남이다 — 402).
+          층 이름 한 곳에 **한 줄**로 얹어 17종이 같은 falloff 를 쓰게 한다.
+       ⚠ 그래서 후광은 **반드시 `halo()` 를 지나야 한다** — 안 지나면 그 종만 옛 문법으로 떨어진다.
+          `verify792` [C4] 가 호출 자리 수를 세어 그것을 못박는다. */
+    /* ⚑ 4회차에 후광의 «가장자리» 를 고치려다 **두 번 다 성능에 걸렸고, 둘 다 되돌렸다.**
+       비평가 CP·CQ 2인 공통 지적은 옳다 — 후광이 평탄한 알파 판이라 칼로 자른 테두리다
+       (CQ 실측 |∇L|/px: boom·flask 2.5 ↔ arrow 34.8 · gale 29.6 · spiral 28.2 …).
+       그런데 «부드럽게 만드는» 두 길이 전부 **상시 도는 연출에는 못 쓸 값**이었다
+       (실측: 투사체 60발 기준 `draw()` 한 프레임 · 기준 1.04ms):
+         · `ctx.filter='blur(3px)'`           → **1749.8ms (1685배)**  — 그릴 때마다 레이어를 뜨는 CPU 경로
+         · 같은 형상 3겹(scale+globalAlpha)   → **20.9ms (20배)**      — 프레임 예산 16.7ms 를 넘는다
+       ⇒ 4회차는 **페이드를 넣지 않는다.** 대신 구조만 남긴다 — 후광이 전부 이 한 곳을 지나므로
+         (`verify792` [C4]) 값싼 페이드 수단이 생기면 **여기 한 줄만** 고치면 17종이 같이 따라온다.
+         다음 회차가 볼 후보: 종별 그라디언트를 **미리 구운 오프스크린 스프라이트**로 캐시하는 길
+         (매 프레임 만들지 않으므로 blur 를 한 번만 낸다). 상세는 review §4회차. */
     const halo = fn => { ctx.save(); fn(); ctx.restore(); };   /* ① 후광 — 본체 **앞에** 부른다 */
     const spec = fn => { ctx.save(); fn(); ctx.restore(); };   /* ③ 하이라이트 — 본체 **뒤에** 부른다 */
     /* 불덩이 공용 몸 — 화염구·화염병이 «크기만 다른 같은 원» 이던 자리(193 ⑧)를 갈랐지만
@@ -26502,8 +26521,8 @@ function draw(){
     };
     if(sh === 'arc' || sh === 'slash'){          /* 검기 — 초승달 호(기준형) */
       ctx.rotate(b.a);
-      ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 11; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.arc(0,0,13,-1.0,1.0); ctx.stroke();
+      halo(() => { ctx.strokeStyle = 'rgba(150,220,255,.42)'; ctx.lineWidth = 11; ctx.lineCap = 'round';
+                   ctx.beginPath(); ctx.arc(0,0,13,-1.0,1.0); ctx.stroke(); });
       ctx.strokeStyle = b.col; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.arc(0,0,13,-0.85,0.85); ctx.stroke();
       spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
@@ -26511,8 +26530,8 @@ function draw(){
     }else if(sh === 'rake'){                     /* 멀티 검기 — 호 세 겹(갈퀴) */
       ctx.rotate(b.a);
       ctx.lineCap = 'round';
-      ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 6;
-      for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.78,0.78); ctx.stroke(); }
+      halo(() => { ctx.strokeStyle = 'rgba(150,220,255,.42)'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+                   for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.78,0.78); ctx.stroke(); } });
       ctx.strokeStyle = b.col; ctx.lineWidth = 2.6;
       for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.64,0.64); ctx.stroke(); }
       spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.15; ctx.lineCap = 'round';
@@ -26535,8 +26554,8 @@ function draw(){
         ctx.closePath(); ctx.fill();
         ctx.restore();
       };
-      blade(0,    'rgba(150,220,255,.35)');
-      blade(1.57, 'rgba(150,220,255,.35)');
+      halo(() => { blade(0,    'rgba(150,220,255,.42)');
+                   blade(1.57, 'rgba(150,220,255,.42)'); });
       ctx.save(); ctx.scale(0.82,0.82);
       blade(0,    b.col);
       blade(1.57, b.col);
@@ -26551,14 +26570,27 @@ function draw(){
     }else if(sh === 'wing'){                     /* 폭풍의 칼날 — 호 + 뒷깃 세 줄 */
       ctx.rotate(b.a);
       ctx.lineCap = 'round';
-      ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 9;
-      ctx.beginPath(); ctx.arc(0,0,13,-1.0,1.0); ctx.stroke();
+      /* 792 4회차 — 비평가 CP·CQ 2인 공통: 뒷깃 **직선 3줄만 1층**이었다(후광 여백 0px · 코어 델타 0
+         이고 그것이 이 종 잉크의 32% 다). 호에만 층이 있고 깃에는 없어 **한 그림 안에서 문법이 갈렸다.**
+         ⇒ 후광을 호와 깃에 **같이** 준다(같은 `halo()` 한 번 안에서 그린다). */
+      halo(() => { ctx.strokeStyle = 'rgba(150,220,255,.42)'; ctx.lineCap = 'round';
+                   ctx.lineWidth = 9;
+                   ctx.beginPath(); ctx.arc(0,0,13,-1.0,1.0); ctx.stroke();
+                   ctx.lineWidth = 5.4;
+                   ctx.beginPath();
+                   for(const dy of [-9,0,9]){ ctx.moveTo(1,dy*0.75); ctx.lineTo(-17,dy); }
+                   ctx.stroke(); });
       ctx.strokeStyle = b.col; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(0,0,13,-0.85,0.85); ctx.stroke();
       ctx.lineWidth = 2.2;
       ctx.beginPath();
       for(const dy of [-9,0,9]){ ctx.moveTo(1,dy*0.75); ctx.lineTo(-17,dy); }
       ctx.stroke();
+      /* 깃에도 코어를 준다 — 층 수를 호와 맞춘다(CP «깃 코어 델타 0»). */
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.0; ctx.lineCap = 'round';
+                   ctx.beginPath();
+                   for(const dy of [-9,0,9]){ ctx.moveTo(-2,dy*0.8); ctx.lineTo(-14,dy*0.97); }
+                   ctx.stroke(); });
       spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
                    ctx.beginPath(); ctx.arc(0,0,13,-0.46,0.46); ctx.stroke(); });
     }else if(sh === 'star' || sh === 'shuri'){   /* 표창 — 4각 별(기준형) */
@@ -26633,15 +26665,15 @@ function draw(){
         ctx.stroke();
       };
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      bmr(6.5, 'rgba(255,224,138,.35)');
+      halo(() => bmr(6.5, 'rgba(255,224,138,.42)'));
       bmr(3.4, b.col);
       /* 792 ③ — 휘는 바깥쪽 마루에만 서슬을 얹어 «도는 막대» 를 세운다. */
       spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
                    ctx.beginPath(); ctx.moveTo(-7.6,-2.2); ctx.quadraticCurveTo(0,-10.4, 7.6,-2.2); ctx.stroke(); });
     }else if(sh === 'spear' || sh === 'ice'){    /* 얼음창 — 창날 + 냉기 띠(기준형) */
       ctx.rotate(b.a);
-      ctx.fillStyle = 'rgba(160,235,255,.4)';
-      ctx.beginPath(); ctx.ellipse(-8,0,22,8,0,0,6.283); ctx.fill();
+      halo(() => { ctx.fillStyle = 'rgba(160,235,255,.44)';
+                   ctx.beginPath(); ctx.ellipse(-8,0,22,8,0,0,6.283); ctx.fill(); });
       ctx.fillStyle = b.col;
       ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-10,6); ctx.lineTo(-6,0); ctx.lineTo(-10,-6);
       ctx.closePath(); ctx.fill();
@@ -26693,8 +26725,8 @@ function draw(){
       ctx.rotate(b.a);
       /* 412 «한 밴드» — 선 그림이라 잉크가 계열의 42% 다(실측 3,829 ↔ 9,025).
          «가장 빠른 발»(sp 900)이라는 성격 그대로 **속도 줄무늬**를 뒤에 깔아 덩치를 맞춘다. */
-      ctx.fillStyle = 'rgba(255,230,168,.30)';
-      ctx.beginPath(); ctx.ellipse(-10,0,20,6.5,0,0,6.283); ctx.fill();
+      halo(() => { ctx.fillStyle = 'rgba(255,230,168,.36)';
+                   ctx.beginPath(); ctx.ellipse(-10,0,20,6.5,0,0,6.283); ctx.fill(); });
       /* 비평가 D 2회차 ④ — 깃을 두 쌍 그렸더니 «이중 쐐기(≪)» 로 읽혔다. 깃은 **한 쌍**으로
          줄이고 촉을 키워 «촉 + 대 + 깃» 이라는 화살의 세 부분이 한눈에 세어지게 한다. */
       ctx.strokeStyle = b.col; ctx.lineCap = 'butt'; ctx.lineWidth = 3.2;
@@ -26762,8 +26794,10 @@ function draw(){
       ctx.beginPath();
       for(let i=0;i<6;i++){ const a = i*1.0472 + 0.3; ctx.lineTo(Math.cos(a)*mr[i], Math.sin(a)*mr[i]); }
       ctx.closePath(); ctx.fill();
-      /* 같은 이유(비평가 J ②) — 하드 주황 외곽선을 버리고 **달궈진 가장자리**로 바꾼다 */
-      ctx.strokeStyle = 'rgba(255,180,92,.45)'; ctx.lineWidth = 4.5; ctx.lineJoin = 'round'; ctx.stroke();
+      /* 792 4회차 — 비평가 CP·CQ 2인 공통: 이 «달궈진 가장자리» 가 **내부보다 +79% 밝아** 결국
+         하드 외곽선으로 읽혔다(CP: «불투명 본체가 없고 하드 외곽선이 생긴 상태»).
+         ⇒ 띠를 `halo()` 로 보내 페이드시키고 세기를 낮춘다 — 재질(달궈진 돌)은 남고 테두리는 사라진다. */
+      halo(() => { ctx.strokeStyle = 'rgba(255,180,92,.34)'; ctx.lineWidth = 5.5; ctx.lineJoin = 'round'; ctx.stroke(); });
       /* 792 ③ — 진행 방향(앞쪽) 면만 흰불로 달군다. 꼬리는 뒤(−x)라 앞이 밝아야 방향이 산다. */
       /* ⚠ `globalAlpha` 를 겹쳐 흐리면 어두운 바위(#6b5240) 위에서 근백색에 **못 미친다**
          (실측: α .9 × SPEC .94 ⇒ 초록 228 < 232 ⇒ 하이라이트 층이 0 으로 셌다).
@@ -26805,8 +26839,15 @@ function draw(){
       ctx.fillStyle = b.col;
       ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(9.5,0); ctx.lineTo(0,13); ctx.lineTo(-9.5,0);
       ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.8; ctx.lineJoin = 'round';
-      ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(0,13); ctx.moveTo(-9.5,0); ctx.lineTo(9.5,0); ctx.stroke();
+      /* 792 4회차 — 비평가 CP·CQ 2인 공통 2건이 한 자리에 있었다: ⓐ 십자가 본체의 가로·세로를
+         **100% 관통**해 «밝은 코어» 가 아니라 «격자(+ 기호)» 로 읽히고, ⓑ 최고 휘도가 **231 로 17종 중
+         유일하게 232 미만**이었다(나머지 236~254). ⇒ 관통을 끊어 **결정의 면 하나**를 비추는 글린트로
+         줄이고(세로 62% · 가로 58%), 색은 세트 공용 `SPEC` 으로 올린다. */
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                   ctx.beginPath();
+                   ctx.moveTo(0,-8); ctx.lineTo(0,8);
+                   ctx.moveTo(-5.5,0); ctx.lineTo(5.5,0);
+                   ctx.stroke(); });
     }else if(sh === 'ball'){                     /* 도약 연쇄탄 — 공 + 이음매(🎾) */
       /* ⚠ 비평가 L·M 8회차 ②③④ 3인 공통 — «공» 이 아니라 «여는/닫는 괄호» 로 읽혔다.
          내 잘못이었다: 이음매 호를 중심에서 ±13 인 원으로 그렸는데 몸통 반지름이 11 이라
@@ -26825,7 +26866,10 @@ function draw(){
       const gb2 = ctx.createRadialGradient(-4,-4,1,0,0,12);
       gb2.addColorStop(0,'rgba(255,255,255,.85)'); gb2.addColorStop(1,'rgba(255,255,255,0)');
       ctx.fillStyle = gb2; ctx.beginPath(); ctx.arc(0,0,12,0,6.283); ctx.fill();
-      ctx.strokeStyle = 'rgba(46,34,12,.75)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      /* 792 4회차 — 비평가 CP·CQ 2인 공통: 이 이음매가 **세트에서 유일하게 배경보다 어두운 잉크**였다
+         (휘도 44~60 vs 배경 92 — 나머지 16종은 배경 미만 화소가 0px). «모든 층은 배경보다 밝다» 는
+         문법의 유일한 예외라 공만 «구멍 뚫린 것» 으로 읽혔다. ⇒ 같은 이음매를 **밝은 쪽**으로 뒤집는다. */
+      ctx.strokeStyle = 'rgba(255,252,214,.85)'; ctx.lineWidth = 2; ctx.lineCap = 'round';
       ctx.save(); ctx.beginPath(); ctx.arc(0,0,12,0,6.283); ctx.clip();
       ctx.beginPath(); ctx.arc(-9,0,9,-1.1,1.1); ctx.stroke();
       ctx.beginPath(); ctx.arc(9,0,9,3.1416-1.1,3.1416+1.1); ctx.stroke();

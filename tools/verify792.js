@@ -235,7 +235,11 @@ async function measure(browser, url) {
     ok(src.includes(`const SPEC = 'rgba(255,255,255,.94)';`),
        '[C2] 하이라이트 색이 상수 `SPEC` 한 곳에서만 나온다 (종별 사본 금지 — 402)');
     ok(nSpec >= 13, '[C3] 하이라이트를 부른 자리 ' + nSpec + '곳 ≥ 13 (재현이 «빠졌다» 고 센 종 수)');
-    ok(nHalo >= 5, '[C4] 후광을 새로 세운 자리 ' + nHalo + '곳 ≥ 5 (재현이 «빠졌다» 고 센 종 수)');
+    /* 4회차부터 [C4] 는 «몇 자리 고쳤나» 가 아니라 **«모든 후광이 한 곳을 지나는가»** 를 센다 —
+       페이드가 `halo()` 한 줄에 살기 때문에, 이 함수를 안 지나는 후광은 그 종만 옛 문법(평탄 판)으로
+       떨어진다. 방사 그라디언트로 이미 페이드를 갖는 불 계열 둘(fire·bottle)만 예외다. */
+    ok(nHalo >= 14, '[C4] 후광이 전부 `halo()` 를 지난다 — 호출 자리 ' + nHalo +
+       '곳 ≥ 14 (예외는 이미 그라디언트인 fire·bottle 둘뿐)');
 
     /* ---- 본 측정 ---- */
     const { out, errs } = await measure(browser, 'file://' + SRC);
