@@ -1209,10 +1209,18 @@
     filter:grayscale(1) contrast(2.2) brightness(1.7) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000)
       drop-shadow(0 2.5px 0 #000) drop-shadow(0 -2.5px 0 #000)}
   /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
-     아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞춘다 */
+     아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞췄다.
+     736(주인 지시 2026-09-02 04:35) — 표기가 «100» → **«Lv. 100»**(07 시트 `.sk-slv` 와 같은 말)이 되면서
+     잉크가 34.34 → **69.66** 으로 는다. 원(안쪽 37.5)으로는 좌우 각 16.08px 이 넘치므로 **가로만** 늘려
+     알약으로 바꾼다: 폭 88 ⇒ 안쪽 82 = 최장 «Lv. 100» 69.66 + 좌우 6.17(≥6). 세로는 한 값도 안 건드렸다
+     (높이 40.1 · 하단 돌출 9.8 · 중심 — A4 §3 규격 그대로) · 반지름은 높이의 절반이라 **양 끝은 여전히 원**.
+     ⚠ 폭은 자릿수와 무관하게 **고정**이다(735 규약 — 레벨이 오를 때 그릇이 출렁이면 안 된다).
+     ⚠ 88 < 슬롯 118 이라 알약은 자기 슬롯 가로 폭 **안**에 머문다(이웃 슬롯·이웃 뱃지 침범 0).
+     되돌리려면 이 두 값(폭 88 · 반지름 20.05)과 `buildSlots()` 의 «Lv. » 접두를 같이 되돌린다. */
   .slot2 .lvv2{position:absolute;left:50%;bottom:-9.8px;transform:translateX(calc(-50% + 2.3px));
-    width:43.5px;height:40.1px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
-    font-size:21px;line-height:36.5px;text-align:center;font-weight:900;color:#fff;z-index:3}
+    width:88px;height:40.1px;border-radius:20.05px;background:#2b2f45;border:3px solid #030509;
+    font-size:21px;line-height:36.5px;text-align:center;font-weight:900;color:#fff;z-index:3;
+    white-space:nowrap}
 
   /* ============ ④ 좌하단 유틸 / 우하단 미션 배너 / 배속 ============
      측정표 docs/measure/02-기본-메인-화면.md §3~5.
@@ -26459,7 +26467,9 @@ function buildSlots(){
       + (sk ? ' style="--f:' + SK_FILL[sk.g] + ';--r:' + SK_RIM[sk.g] + '"' : '')
       + (sk || free ? '' : ' title="스테이지 ' + skSlotNeed(i) + ' 해금"') + '>'
       + (sk || free ? '' : '<span class="lk">🔒</span>')
-      + (sk ? '<div class="lvv2">' + oLv(id) + '</div>' : '')
+      /* 736 — 레벨 표기는 07 시트 장착 슬롯(`.sk-slv`)과 **글자 그대로 같은 말**이다(«Lv. n»).
+         같은 스킬이 두 화면에서 다른 말을 하던 것이 이 지시였다(689 교훈 ①). */
+      + (sk ? '<div class="lvv2">Lv. ' + oLv(id) + '</div>' : '')
       + '<div class="cdw">' + (sk ? '<span class="si3">' + sk.ic + '</span>' : '')
       + (free ? '<span class="pl3"></span>' : '')
       + '<div class="cdv"></div></div></div>';

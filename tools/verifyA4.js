@@ -80,6 +80,23 @@ function is(name, got, want) {
       lkFs: px(cs(lk).fontSize), lkTr: cs(lk).transform,
       lkDy: (function () { const m = (cs(lk).transform || '').match(/matrix\([^)]*,\s*([-\d.]+)\)$/); return m ? parseFloat(m[1]) : 999; })(),
       bdgW: r(bdg).width, bdgH: r(bdg).height,
+      /* 736 — 뱃지 폭은 이제 «레퍼런스 실루엣 43.5» 가 아니라 **최장 라벨을 담는 그릇**이다.
+         상수를 88 로 고쳐 적으면 서체·표기가 바뀌어도 조용히 초록이므로, 그릇이 담아야 할
+         최장 문자열(«Lv. » + MAX_LEVEL)의 잉크를 **여기서 재서** 같이 넘긴다. */
+      bdgTxt: bdg.textContent,
+      bdgBw: px(cs(bdg).borderTopWidth),
+      bdgMaxInk: (function () {
+        const d0 = document.createElement('span');
+        const c = cs(bdg);
+        d0.style.cssText = 'position:absolute;left:-9999px;top:0;white-space:nowrap;font-weight:' + c.fontWeight
+          + ';font-size:' + c.fontSize + ';font-family:' + c.fontFamily;
+        d0.textContent = 'Lv. ' + MAX_LEVEL;
+        document.body.appendChild(d0);
+        const rng = document.createRange(); rng.selectNodeContents(d0);
+        const w = rng.getBoundingClientRect().width;
+        d0.remove();
+        return w;
+      })(),
       bdgCy: (r(bdg).y + r(bdg).height / 2) - (rects[0].y + rects[0].h / 2),
       bdgOut: (r(bdg).y + r(bdg).height) - (rects[0].y + rects[0].h),
       si3Parent: si3.parentElement.className,
@@ -142,8 +159,26 @@ function is(name, got, want) {
   eq('장착칸 세로 오프셋 (REF 는 장착칸을 조금 낮게 앉힌다)', d.eqTop, 0.45, 0.1);
 
   /* ---- [5] 하단 뱃지 (측정표 §2 «펫/동료 머리 뱃지») ---- */
-  /* 레퍼런스 뱃지는 정원이 아니라 «가로로 누운» 43×39 (비평가 N·P 독립 일치) */
-  eq('뱃지 외곽 폭', d.bdgW, 43.5, 0.5);
+  /* 레퍼런스 뱃지는 정원이 아니라 «가로로 누운» 43×39 (비평가 N·P 독립 일치)
+     ★ 736 이관 (주인 지시 2026-09-02 04:35) — 표기가 «100» → «Lv. 100» 이 되면서 **가로만** 늘었다.
+       레퍼런스 실루엣(폭 43.5)은 이 지시가 덮은 값이라 그 상수를 지웠다. 대신 두 가지를 묻는다:
+       ⓐ 그릇이 최장 라벨(«Lv. » + MAX_LEVEL)을 좌우 여백 6px 이상 두고 담는가 —
+         88 로 «고쳐 적기» 만 했으면 서체·표기가 바뀌어 잘려도 초록이다(328-330 «이관이 본체»).
+       ⓑ 그 그릇이 자기 슬롯 가로 폭(118) 안에 머무는가 — 이웃 슬롯을 밟으면 여기가 빨개진다.
+       세로(높이 40.1 · 돌출 9.8 · 중심 48.8)는 736 이 한 값도 안 건드렸으므로 레퍼런스 값 그대로 남는다. */
+  tot++;
+  {
+    const inner = d.bdgW - 2 * d.bdgBw, m = (inner - d.bdgMaxInk) / 2;
+    if (m >= 6) ok++;
+    else fails.push('뱃지 그릇이 최장 라벨을 못 담는다 (안쪽 ' + inner.toFixed(2) + ' · 최장 잉크 '
+      + d.bdgMaxInk.toFixed(2) + ' ⇒ 좌우 여백 ' + m.toFixed(2) + ' < 6)');
+  }
+  tot++;
+  if (d.bdgW <= d.rects[0].w) ok++;
+  else fails.push('뱃지 폭이 슬롯 지름을 넘는다 (이웃 슬롯 침범): ' + d.bdgW + ' > ' + d.rects[0].w);
+  tot++;
+  if (/^Lv\.\s?\d+$/.test(String(d.bdgTxt).trim())) ok++;
+  else fails.push('뱃지 라벨이 «Lv. n» 이 아니다 (736 주인 지시): «' + d.bdgTxt + '»');
   eq('뱃지 외곽 높이', d.bdgH, 40.1, 0.5);
   eq('뱃지 하단 돌출', d.bdgOut, 9.8, 0.5);
   eq('뱃지 중심 (슬롯 중심 기준)', d.bdgCy, 48.8, 0.5);
