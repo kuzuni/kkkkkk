@@ -142,7 +142,22 @@ async function boot(browser) {
     const att = ATTEND.reduce((n, a) => n + (a.dia || 0), 0);
     const diaDun = DUNGEONS.find(d => d.id === 'dia');
     const dunAt = f => (diaDun.rw(f).dia || 0);
-    const q22 = s => QUESTS.reduce((n, q) => n + (q.rw(s).c || 0), 0);
+    /* ⚑ 841 — 799 이관(333 처방: 자리를 비우지 않는다). 옛 사본은 «칸값 = 단계 함수»
+       `q.rw(s).c` 를 불러 §4 가 통째로 즉사했다(799 가 그 축을 갈아 냈다).
+       799 이후 보상은 **정액 `q.dia`** 이고 목표는 **등차 `q.step`** 이라, 이 축에서
+       하루 수급을 정하는 것은 «몇 번 받았는가» 가 아니라 **하루 플레이량**이다 —
+       그래서 «한 바퀴 값» 은 칸 번호와 무관한 상수가 되고, 하루로 환산하는 손잡이는
+       **단가 `dia/step`**(소환 1회·강화 1회·처치 1마리의 값)이다(801 재정박이 그 다섯을 눌렀다).
+       ⇒ 칸값 대신 ① 단가 ② 한 바퀴 정액 합 ③ «칸 번호를 옮겨도 한 칸치가 같은가» 를 읽는다.
+       ③ 은 제품 함수 `questRw` 로 재고 `S.quest` 는 그대로 되돌린다(§5 를 오염시키지 않는다). */
+    const q22Per = QUESTS.map(q => ({ id: q.id, dia: q.dia, step: q.step, per: q.dia / q.step }));
+    const q22Lap = QUESTS.reduce((n, q) => n + q.dia, 0);
+    const q22Snap = QUESTS.reduce((o, q) => (o[q.id] = S.quest[q.id].s, o), {});
+    const q22Flat = [0, 3, 10].map(s => {
+      QUESTS.forEach(q => { S.quest[q.id].s = s; });
+      return QUESTS.reduce((n, q) => n + questRw(q) / Math.max(1, questSteps(q)), 0);
+    });
+    QUESTS.forEach(q => { S.quest[q.id].s = q22Snap[q.id]; });
     return {
       roulEv, roulTry: ROUL_TRY, adDia, dq,
       /* 498 — 반복 수급 표에서 «1일차 환영 칸» 은 뺀다(첫날 축이지 하루 축이 아니다) */
@@ -156,7 +171,7 @@ async function boot(browser) {
          자르는 축은 하루 예산 `OFF_DAY_CAP_MIN`(분) 하나이고 분당 지급은 `OFF_DIA_PM` 이다
          — «분당 3» 도 199 2회차(48)·21회차(75) 이전의 낡은 사본이라 같이 갈았다. */
       offCapMin: OFF_DAY_CAP_MIN, offPerMin: OFF_DIA_PM,
-      q22: [0, 3, 6, 10].map(st => ({ st, n: q22(st) })),
+      q22Per, q22Lap, q22Flat,
     };
   });
   /* ⚑ 712 위생 — 절이 통째로 비면 그것 자체가 한 항의 실패다(278·319 처방).
@@ -171,7 +186,9 @@ async function boot(browser) {
     info('룰렛      ', fmtN(roul) + '/일 (기대값 ' + day.roulEv + ' × ' + day.roulTry + '회)');
     info('광고 상품 ', fmtN(day.adDia) + '/일 (보석 칸 × cap)');
     info('일일 퀘스트', fmtN(day.dq) + '/일 (5종 전부 수령)');
-    info('22 반복 퀘스트', day.q22.map(q => 'step' + q.st + ' ' + fmtN(q.n)).join(' · ') + ' (5종 한 바퀴)');
+    info('22 업적 퀘스트', day.q22Per.map(q => q.id + ' ' + fmtN(q.dia) + '/' + fmtN(q.step)
+         + '칸 = 단가 ' + q.per.toFixed(3)).join(' · ') + ' (799 — 유입 축은 «하루 플레이량 × 단가»)');
+    info('22 업적 퀘스트 한 바퀴', fmtN(day.q22Lap) + ' (5종 정액 합)');
     info('출석      ', fmtN(attAvg) + '/일 평균 (' + day.attN + '일 합 ' + fmtN(day.attSum) + ')');
     info('출석 패스 ', fmtN(day.attPassFree2) + '/일 무료 칸 (1일차만 ' + fmtN(day.attPassFree) + ')');
     info('스테이지 패스', day.passFree.map(p => '단계' + (p.i + 1) + ' ' + fmtN(p.n)).join(' · ')
@@ -184,6 +201,11 @@ async function boot(browser) {
        fmtN(core) + '/일');
     ok(core < 200000, '[4-b] 목표 20만/일과의 배수 — 지금은 **' + (200000 / core).toFixed(1) + '배 모자라다**',
        fmtN(core) + ' vs 200,000');
+    /* ⚑ 841 — 이 항이 «축이 799 것인가» 를 못 박는다. 옛 «칸값 = c0 + s·d» 로 되돌아가면
+       칸 번호를 옮긴 세 표본이 서로 갈리므로 여기서 빨개진다(그때는 조용히 즉사했다). */
+    ok(day.q22Flat.every(v => Math.abs(v - day.q22Lap) < 1e-9),
+       '[4-c] 22 업적 퀘스트 «한 칸치» 는 칸 번호와 무관한 정액이다 (799 축 — 하루 수급은 플레이량이 정한다)',
+       's=0/3/10 ⇒ ' + day.q22Flat.map(v => fmtN(v)).join(' · ') + ' (정액 합 ' + fmtN(day.q22Lap) + ')');
   }
 
   blk('[5] 콘솔');
