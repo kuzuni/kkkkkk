@@ -121,6 +121,8 @@ async function scene(sc) {
       .filter(n => /fxSpark/.test(getComputedStyle(n).animationName));
     if (!eggs.length) return null;
     const anims = []; document.getAnimations().forEach(a => { try { a.pause(); anims.push(a); } catch (e) {} });
+    /* ⚑ 8회차 — **벽시계**다(`currentTime` 은 음 지연을 포함한 시간이라 그대로 «스폰 후 T ms»).
+       위상을 맞춰 재는 자는 `envelope681` 의 `SAMPLE` 쪽이다. */
     window.__set681 = (T) => { anims.forEach(a => { try { a.currentTime = T; } catch (e) {} }); };
     window.__eggs681 = eggs;
     const rects = stops.map(T => { window.__set681(T);

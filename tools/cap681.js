@@ -97,6 +97,11 @@ async function shot(sc, T, idx) {
     try { const ids = window.__capIds; if (ids) { ids.t.forEach(clearTimeout); ids.i.forEach(clearInterval); } } catch (e) {}
     window.setTimeout = () => 0; window.setInterval = () => 0;
     let at = 0;
+    /* ⚑ 681 8회차 — 여기는 **벽시계**가 맞고, 그래서 한 줄도 안 고쳤다. 알마다 음(−) 지연이
+       걸리지만 `currentTime` 은 지연을 **포함한** 시간이라 «스폰 후 T ms» 가 곧 `currentTime = T` 다
+       (봉투 위상은 `currentTime − delay` 로 알마다 갈리고, 그것이 화면에 보여야 할 그림이다).
+       ⚠ 8회차에 이 자리를 «T − delay» 로 «고쳤다가» B1·B4·B11·B12 를 한꺼번에 빨갛게 만들었다 —
+         지연을 두 번 센 것이다. 위상을 맞춰 재는 자(`envelope681` 의 `SAMPLE`)가 그 반대편이다. */
     try { document.getAnimations().forEach(a => { a.pause(); try { a.currentTime = T; at = T; } catch (e) {} }); } catch (e) {}
     /* 정답표 — «보이는 노드» 만 센다(α>0.06 · 최소변 ≥6px — cap58b 41·42회차 규약) */
     const vis = n => { const cs = getComputedStyle(n), bb = n.getBoundingClientRect();

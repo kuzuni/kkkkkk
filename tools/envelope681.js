@@ -22,6 +22,14 @@ const SAMPLE = (steps) => {
   const dur = (() => { const an = nodes[0].getAnimations()[0];
     const t = an && an.effect && an.effect.getTiming().duration; return typeof t === 'number' ? t : 380; })();
   const anims = [];
+  /* ⚑ 8회차 — 알마다 **음(−) 지연**이 걸린다(`FXSPARK_JIT`). 이 자가 재는 것은 «곡선» 이지
+     «화면» 이 아니므로 재기 전에 **지연을 0 으로 눕힌다** — 그러면 `currentTime` 이 곧 봉투 위상이다.
+     ⚠ `currentTime = T + delay` 로 맞추는 길은 **막혀 있다**: 지연이 −33ms 면 위상 0 의 `currentTime`
+       이 −33ms 라 타임라인 **앞**이고, `fill:forwards` 는 앞을 안 채우므로 그 자리에서 잰 값은
+       애니가 아니라 **요소의 밑 스타일**(scale 1 · α1)이다 — 8회차에 실제로 [B1]·[B2]·[B11]·[B12] 가
+       «출생 100% · 봉우리 0ms» 로 빨개진 자리다.
+     화면(벽시계)은 `SPREAD`·`cap681`·`ink681` 이 지연을 **살린 채** `currentTime = T` 로 잰다. */
+  nodes.forEach(nd => { try { nd.style.animationDelay = '0s'; } catch (_) {} });
   nodes.forEach(nd => nd.getAnimations().forEach(a => { try { a.pause(); anims.push(a); } catch (_) {} }));
   /* ⚑ 6회차 — `steps` 에 **시각 배열**을 주면 그 시각들에서 잰다(균등 격자 대신 «캡처 격자»).
      [B12] 는 비평가가 보는 여덟 장 **바로 그 시각**의 이웃 델타를 물어야 하는데, 균등 19ms 격자로
@@ -157,4 +165,42 @@ function gridSteps(env) {
   return { s, steps: out, peak: s.indexOf(Math.max(...s)) };
 }
 
-module.exports = { SAMPLE, summarize, gridSteps };
+/* ⚑ 8회차 신설 — **위상 지터 자**. 7회차 비평 2인이 «동시 전멸» 을 각각 «살아 있는 알들의 알파
+   편착 175ms 0.9% · 250ms 3.1% · 320ms 6.3%»(CR) · «알파 산포가 전 프레임 ≤0.06 · 70ms 는 0.00»(CS)
+   로 실측했다. 그 축을 그대로 자로 세운다.
+   ⚠ `SAMPLE` 과 **반대로** 감는다 — `SAMPLE` 은 «봉투» 를 재려고 알끼리 위상을 일부러 맞추지만
+     (그래야 «동시» 가 아니라 «곡선» 이 보인다), 이 자는 바로 그 «동시» 를 재므로 **벽시계**로 감고
+     알마다 제 지연을 그대로 살린다. 두 자가 같은 페이지에서 서로 다른 것을 재는 것이 맞다. */
+const SPREAD = (times) => {
+  const L = document.getElementById('fxl');
+  if (!L) return null;
+  const nodes = [...L.querySelectorAll('.fx-spark')].filter(n => /fxSpark/.test(getComputedStyle(n).animationName));
+  if (!nodes.length) return null;
+  window.__oldBye681s = window.fxBye; window.fxBye = () => {};
+  const anims = [];
+  nodes.forEach(nd => nd.getAnimations().forEach(a => { try { a.pause(); anims.push({ a, nd,
+    d: (a.effect && a.effect.getTiming().delay) || 0 }); } catch (_) {} }));
+  const rows = times.map(T => {
+    anims.forEach(x => { try { x.a.currentTime = T; } catch (_) {} });
+    const ops = nodes.map(nd => parseFloat(getComputedStyle(nd).opacity) || 0);
+    return { T, ops };
+  });
+  anims.forEach(x => { try { x.a.cancel(); } catch (_) {} });
+  nodes.forEach(nd => nd.remove());
+  window.fxBye = window.__oldBye681s;
+  return { n: nodes.length, delays: anims.map(x => Math.round(x.d * 10) / 10), rows };
+};
+
+/* 표본 → «알들이 같은 시계를 쓰는가». 산포는 **살아 있는 알**(α>0.02)에서만 잰다 —
+   이미 꺼진 알을 섞으면 «편차가 크다» 가 «다 꺼졌다» 와 구별이 안 된다. */
+function spreadOf(sp) {
+  return sp.rows.map(r => {
+    const live = r.ops.filter(o => o > 0.02);
+    if (live.length < 2) return { T: r.T, n: live.length, range: 0, sd: 0, mean: 0 };
+    const mean = live.reduce((a, b) => a + b, 0) / live.length;
+    const sd = Math.sqrt(live.reduce((a, b) => a + (b - mean) * (b - mean), 0) / live.length);
+    return { T: r.T, n: live.length, range: Math.max(...live) - Math.min(...live), sd, mean };
+  });
+}
+
+module.exports = { SAMPLE, summarize, gridSteps, SPREAD, spreadOf };

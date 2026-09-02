@@ -19,7 +19,7 @@ const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
-const { SAMPLE, summarize, gridSteps } = require('./envelope681');
+const { SAMPLE, summarize, gridSteps, SPREAD, spreadOf } = require('./envelope681');
 
 const SRC = path.resolve(__dirname, '../index.html');
 const URL = 'file://' + SRC;
@@ -44,6 +44,10 @@ const PREV5 = '@keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity
   + '70%{transform:translate(calc(var(--dx)*.85),calc(var(--dy)*.85)) scale(.73);opacity:.73;animation-timing-function:linear}'
   + '86%{transform:translate(calc(var(--dx)*.945),calc(var(--dy)*.945)) scale(.62);opacity:.38;animation-timing-function:linear}'
   + '100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}';
+
+/* 위상 지터를 재는 벽시계 — [B13]·[R8] 이 같이 쓴다. 250·320ms 는 캡처 격자의 늦은 두 장이고
+   7회차 비평 2인이 «동시 전멸» 을 실측한 바로 그 두 시각이다. */
+const PHASE_T = [175, 250, 320];
 
 /* 격자 판정 한 벌 — [B12] 와 [R7] 이 **같은 자**를 쓴다(402 «두 벌 금지»). */
 function gridVerdict(g) {
@@ -82,6 +86,28 @@ async function burstAndSample(page) {
 /* ⚑ 6회차 — **캡처 격자에서 한 번 더** 태워 잰다([B12]·[R7]).
    같은 버스트를 재활용할 수 없다 — `SAMPLE` 은 끝에 노드를 걷어 내기 때문이다(페이지를 망가뜨린
    채 끝내지 않는다는 그 자의 규약). 그래서 «태우고 → 격자에서 재고» 를 한 벌 더 돈다. */
+/* ⚑ 8회차 — 위상 지터는 **벽시계**로만 보인다(`SAMPLE` 은 일부러 위상을 맞춘다). 한 벌 더 태운다. */
+async function burstAndPhase(page, zeroDelay) {
+  const g = await page.evaluate(() => {
+    const h = document.querySelector('#trCards [data-tr]'); if (!h) return null;
+    const b = h.querySelector('.cb') || h; const r = b.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (!g) return null;
+  await page.mouse.move(g.x, g.y);
+  await page.mouse.down();
+  await page.waitForTimeout(90);
+  await page.mouse.up();
+  await page.waitForTimeout(40);
+  /* [R8] 재료 — 지연을 0 으로 눕히면 알들이 다시 «한 시계» 를 쓴다(제품 파일은 안 건드린다) */
+  if (zeroDelay) await page.evaluate(() => {
+    const L = document.getElementById('fxl'); if (!L) return;
+    [...L.querySelectorAll('.fx-spark')].forEach(n => { n.style.animationDelay = '0s'; });
+  });
+  const sp = await page.evaluate(SPREAD, PHASE_T);
+  return sp ? { n: sp.n, delays: sp.delays, rows: spreadOf(sp) } : null;
+}
+
 async function burstAndGrid(page) {
   const g = await page.evaluate(() => {
     const h = document.querySelector('#trCards [data-tr]'); if (!h) return null;
@@ -172,6 +198,7 @@ async function burstAndGrid(page) {
 
   const now = await burstAndSample(page);
   const grid = await burstAndGrid(page);
+  const ph = await burstAndPhase(page);
 
   /* ── [B] 봉투 — 그려진 것으로 잰다 ────────────────────────────────── */
   blk('B] 봉투 — 브라우저가 실제로 그린 상자·알파');
@@ -265,6 +292,20 @@ async function burstAndGrid(page) {
        '봉우리 ' + grid.peakT + 'ms · 진입 +' + p2(grid.rise * 100) + '% · 직후 ' + p2(grid.first * 100)
        + '% · 가장 얕은 하강 ' + p2(grid.worst * 100) + '%');
   } else ok(false, 'B12 ★ 캡처 격자 표본을 못 얻었다');
+  /* ⚑ 8회차 — **[B13] 은 판정이 아니라 관측이다(326 `ck199` 꼴 · 820 ③).**
+     7회차 비평 2인이 ④ 를 7 로 내린 유일한 축이 «동시 전멸» 이라, 8회차에 알마다 음(−) 애니 지연을
+     줘 알파 폭을 250ms 0.03 → 0.13 · 320ms 0.06 → 0.19 로 **실제로 벌렸다**. 그런데 비평은
+     7/7 → 6/4 로 내려갔다 — 위상을 흩으면 알마다 봉우리가 **캡처 표본 사이**에 떨어져 [B12] 가
+     지키는 «봉우리는 표본 한 장» 이 눈에서는 사라진다(CT 추적 알 45→70ms **+1.4%**). ⇒ 제품은
+     되돌렸고, **자와 수는 남긴다** — 다음 회차가 같은 실험을 처음부터 다시 짜지 않도록.
+     판정에서 뺀 수가 먼저 말하는 것이 있다. */
+  if (ph) {
+    const at = T => ph.rows.find(r => Math.round(r.T) === T) || { range: 0, sd: 0, n: 0 };
+    console.log('       · [B13o] 위상 산포(관측 — 판정 아님): '
+      + ph.rows.map(r => Math.round(r.T) + 'ms 폭 ' + p2(r.range) + '(σ ' + p2(r.sd) + ' · 산 알 ' + r.n + ')').join(' · ')
+      + ' · 지연 ' + Math.min(...ph.delays).toFixed(1) + '~' + Math.max(...ph.delays).toFixed(1) + 'ms'
+      + '  [8회차 지터판 실측 250ms 0.13 · 320ms 0.19 — 그 판은 ② 를 잃어 되돌렸다]');
+  }
   ok(errs.length === 0, 'B8 콘솔 에러 0', errs.slice(0, 2).join(' | '));
 
   /* ── [C] 불변 — 남의 것을 안 건드렸다 ─────────────────────────────── */
@@ -326,6 +367,16 @@ async function burstAndGrid(page) {
     ok(p5.first > -0.12,
        'R7 되돌리면 **봉우리가 다시 고원이 된다** — [B12] 가 빨개지는 자리(5회차 비평 2인 공통 지적)',
        '봉우리 ' + p5.peakT + 'ms · 직후 ' + p2(p5.first * 100) + '%(6회차 ' + (grid ? p2(grid.first * 100) : '—') + '%)');
+  }
+
+  /* ⚑ 8회차 — [R8] 도 관측으로 남긴다(위 [B13o] 와 한 벌). 지연을 0 으로 눕힌 사본의 산포가
+     0 이라는 것이, 8회차 지터판의 0.13·0.19 가 **실재했다**는 대조다. 제품은 지금 지연이 없으므로
+     이 두 줄은 같은 수(0)를 낸다 — 다음 회차가 지터를 다시 켜면 그때 다시 갈린다. */
+  const phz = await burstAndPhase(page, true);
+  if (phz) {
+    const az = T => phz.rows.find(r => Math.round(r.T) === T) || { range: 0 };
+    console.log('       · [R8o] 지연을 0 으로 눕힌 사본(관측): 250ms ' + p2(az(250).range)
+      + ' · 320ms ' + p2(az(320).range));
   }
 
   await browser.close();
