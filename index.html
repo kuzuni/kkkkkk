@@ -2202,7 +2202,9 @@
   /* ⓒ 트랙은 «띠(50) + 그 위를 달리는 노브(84×64)» 두 겹이다. 포인터를 받는 것은 **바깥 그릇**
      (`#exTrack` · 높이 64)이라 손가락 표적이 띠보다 14px 크고, 띠(`.ex-bar`)는 채움을 자르기 위해
      `overflow:hidden` 을 그대로 쓴다 — 노브를 띠 안에 두면 돌출이 그 자리에서 잘린다. */
-  .ex715 .ex-sl{position:relative;margin:24px 0 0;height:80px;cursor:pointer;touch-action:none}
+  /* 위 여백 17 + 노브 돌출 15 = **잉크에서 띠까지 32px** — 아래 두 간격(32·33)과 같은 리듬이다
+     (4회차 G 지적4 — 24 로 두면 39px 이라 첫 간격만 벌어져 보인다). */
+  .ex715 .ex-sl{position:relative;margin:17px 0 0;height:80px;cursor:pointer;touch-action:none}
   .ex715 .ex-bar{position:absolute;left:0;right:0;top:15px;height:50px;box-sizing:border-box;
     border:6px solid #000;border-radius:18px;overflow:hidden;background:#8A7355}
   .ex715 .ex-fill{position:absolute;left:0;top:0;bottom:0;width:0;
@@ -6963,7 +6965,11 @@
      같이 되살려야 한다(둘 중 하나만 두면 조용히 아무 일도 안 한다). */
   /* 204 §10 — 던전 입장권 교환 리본 아래 안내 한 줄. «N/2» 의 N 이 분모를 넘는 것이 정상임을 명시한다.
      리본(top 3654, 높이 92)과 첫 카드 행(top 3844) 사이 94px 을 그대로 쓴다. */
-  .cn-tknt{left:66px;top:3752px;width:948px;height:46px;text-align:center}
+  /* ⚑ 4회차 채점 이관 — 비평가 G·H 가 독립으로 «두 안내줄의 리듬이 다르다» 를 짚었다(§9 33/37 ↔
+     §10 **14/60**). §10 의 3752 는 204 가 «리본 하변 + 6» 으로 잡은 값인데 리본 꼬리 장식이
+     하변보다 아래로 내려와 실제로는 **0px 로 붙어** 보인다 ⇒ 두 줄을 같은 규칙(리본 판 하변 + 24)으로
+     맞춘다. 카드 좌표(3844)는 그대로라 §10 아래 기하는 한 픽셀도 안 움직인다. */
+  .cn-tknt{left:66px;top:3770px;width:948px;height:46px;text-align:center}
   /* 715 — §9 리본(3084 · 높이 92) ↔ 첫 카드(3270) 사이. §10 이 리본 하변에서 **6px** 띄운 것과
      같은 리듬으로 맞춘다(2회차 D 지적5 — 두 구역이 10/38 ↔ 6/46 으로 갈려 있었다). */
   .cn-tknt.ex{top:3200px;left:256px;width:568px}
