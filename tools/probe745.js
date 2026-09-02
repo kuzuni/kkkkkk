@@ -76,7 +76,8 @@ const errs = [];
 
 (async () => {
   const browser = await launch(chromium);
-  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1,
+                                        hasTouch: true });
   const page = await ctx.newPage();
   page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   page.on('pageerror', (e) => errs.push(String(e)));
@@ -221,7 +222,8 @@ const errs = [];
   /* ① 진짜 브라우저 스크롤 — 합성 이벤트가 아니라 휠로 굴린다(«정말 굴러가는가» 는 이쪽이 답한다) */
   const gbox = await page.evaluate(() => {
     const r = document.getElementById('sumGrid').getBoundingClientRect();
-    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+    return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2),
+             top: Math.round(r.top), h: Math.round(r.height) };
   });
   await page.mouse.move(gbox.x, gbox.y);
   await page.mouse.wheel(0, 400);
@@ -233,40 +235,44 @@ const errs = [];
   ok(wheel.st > 0 && wheel.open, '[F0] 휠로 실제 스크롤된다 · 팝업은 열린 채',
     'scrollTop ' + wheel.st + ' · ' + (wheel.open ? '열림' : '닫힘'));
 
+  /* ② 진짜 터치 드래그 — CDP 로 굴린다.
+     ⚠ **합성 TouchEvent 로는 이 물음에 답할 수 없다**: 스크롤이 안 일어나므로 브라우저의
+       «굴린 뒤 click 억제» 도 안 일어나고, 그러면 726 이 물은 그 click 을 물어본 적이 없는 것이다.
+     726 은 `#upw` 에서 «끌면 끝에서 click 이 도착해 그대로 닫힌다» 를 밟았다. 여기는 어떤가. */
+  await page.evaluate(() => { document.getElementById('sumGrid').scrollTop = 0; });
+  const cdp = await ctx.newCDPSession(page);
+  const dy0 = Math.round(gbox.top + gbox.h * 0.8), dy1 = Math.round(gbox.top + gbox.h * 0.25);
+  const tp = (y) => [{ x: gbox.x, y, radiusX: 12, radiusY: 12, force: 1, id: 1 }];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp(dy0) });
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent',
+      { type: 'touchMove', touchPoints: tp(Math.round(dy0 + (dy1 - dy0) * i / 10)) });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(500);
   const drag = await page.evaluate(() => {
     const grid = document.getElementById('sumGrid');
-    grid.scrollTop = 0;
-    const r = grid.getBoundingClientRect();
-    const x = Math.round(r.left + r.width / 2);
-    const y0 = Math.round(r.top + r.height * 0.75), y1 = Math.round(r.top + r.height * 0.25);
-    const T = (t, id, cx, cy) => new Touch({ identifier: id, target: grid, clientX: cx, clientY: cy });
-    const fire = (type, cx, cy) => grid.dispatchEvent(new TouchEvent(type, {
-      bubbles: true, cancelable: true, composed: true,
-      touches: type === 'touchend' ? [] : [T(type, 1, cx, cy)],
-      targetTouches: type === 'touchend' ? [] : [T(type, 1, cx, cy)],
-      changedTouches: [T(type, 1, cx, cy)] }));
-    fire('touchstart', x, y0);
-    for (let i = 1; i <= 6; i++) fire('touchmove', x, Math.round(y0 + (y1 - y0) * i / 6));
-    /* 브라우저가 실제로 굴려 주지는 않으므로(합성 터치는 스크롤을 안 낳는다) 손짓의 **결과**를
-       직접 준 뒤, 그 손짓이 «닫기» 로 오인되는지만 본다 — 726 이 물은 것이 그 오인이다. */
-    grid.scrollTop = grid.scrollHeight;
-    fire('touchend', x, y1);
-    const openedAfterDrag = document.getElementById('sumw').classList.contains('on');
-    const st = grid.scrollTop;
     const cards = [...document.getElementById('sumGridIn').children];
     const gb = grid.getBoundingClientRect();
     const full = cards.filter(c => { const b = c.getBoundingClientRect();
       return b.top >= gb.top - 0.5 && b.bottom <= gb.bottom + 0.5; }).length;
-    /* 마지막 칸이 스크롤 끝에서 보이는가 = «회수됨» 의 실질 */
     const last = cards[cards.length - 1].getBoundingClientRect();
-    const lastVisible = last.bottom <= gb.bottom + 0.5 && last.top >= gb.top - 0.5;
-    return { openedAfterDrag, st, full, lastVisible, cards: cards.length };
+    return { open: document.getElementById('sumw').classList.contains('on'),
+             st: Math.round(grid.scrollTop), full, cards: cards.length,
+             lastVisible: last.bottom <= gb.bottom + 0.5 && last.top >= gb.top - 0.5 };
   });
-  ok(drag.st > 0, '[F1] 그리드가 실제로 굴러간다 (scrollTop > 0)', 'scrollTop ' + drag.st);
-  ok(drag.openedAfterDrag, '[F2] 굴리는 손짓이 «배경 탭 = 닫기» 로 오인되지 않는다 (726 함정)',
-    drag.openedAfterDrag ? '팝업 열린 채' : '닫혀 버렸다');
+  ok(drag.st > 0, '[F1] 터치 드래그로 그리드가 실제로 굴러간다', 'scrollTop ' + drag.st);
+  ok(drag.open, '[F2] 굴리는 손짓이 «배경 탭 = 닫기» 로 오인되지 않는다 (726 함정 없음)',
+    drag.open ? '팝업 열린 채' : '닫혀 버렸다');
   ok(drag.lastVisible, '[F3] 끝까지 굴리면 마지막 칸이 보인다 (스크롤로 회수된다)',
     '보임 ' + drag.full + '/' + drag.cards + ' · 마지막 칸 ' + (drag.lastVisible ? '보임' : '못 봄'));
+  /* 짝 항 — «굴림이 안 닫는다» 가 «닫기가 통째로 고장» 이어서 참인 것이 아님을 못박는다 */
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp(dy1) });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(400);
+  const tapClosed = await page.evaluate(() => !document.getElementById('sumw').classList.contains('on'));
+  ok(tapClosed, '[F4] [짝] 굴리지 않고 그냥 탭하면 닫힌다', tapClosed ? '닫힘' : '안 닫힘');
 
   ok(!errs.length, '[Z] 콘솔 에러 0건', errs.length ? errs.slice(0, 2).join(' | ') : '0건');
 

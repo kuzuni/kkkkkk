@@ -11,16 +11,30 @@
 
      · `--sm-gh` = **876px** (CSS 상수. showSummonResult 가 더는 계산하지 않는다)
      · 패널 = 204 + 876 = **1080 = ref 539 × 2.00**            ← 주인이 말한 «세로 2배»
-     · 그리드 876 ≥ 30연 최악 5행(170×5 − 4 = 846)             ← **가려짐이 구조적으로 0**
-       (버튼이 10·10·30 뿐이라 결과는 30칸 = 5행이 상한이다)
+     · 그리드 876 ≥ 30연 최악 5행(170×5 − 4 = 846)             ← **가려짐 0 — 단 «×1» 판에 한해**
      · 패널·리본이 통째로 **103 위로**(709→606 · 641→538)      ← 84 하단 앵커를 안 밀치려고
      · 결과가 적을 때의 빈 면은 `.sm-grid-in` 의 **세로 중앙정렬**이 받는다
 
-   ⚠ 이 게이트가 재는 것은 «커졌다» 하나가 아니라 네 가지다.
+   ⚑ **745 정정(2026-09-02) — 위 «가려짐 0» 은 결과가 ≤ 30칸일 때의 말이다.**
+     327 이 그 괄호에 적어 둔 근거(«버튼이 10·10·30 뿐이라 결과는 30칸 = 5행이 상한»)는
+     668 배수 토글(×1/×10/×100/×1000)이 생기면서 **더는 참이 아니다** — 한 번에 100~30,000장을
+     뽑을 수 있고, 칸은 «고유 종» 만큼 늘어나므로 배너 종수(weapon·shield·amulet **36**)까지 간다.
+     `probe745` 실측: **31칸(6행)부터 넘친다**(scrollH 1027 vs 그리드 868 = 넘침 159px · 가려짐 6칸).
+     ⚠ **닿는 조건의 축은 «장수» 가 아니라 «소환 레벨 × 장수» 다**(`gradeProbs` 가 `l < g.unlock` 으로
+       등급을 잠근다). Lv1 에서는 30,000장을 굴려도 15칸에서 멈추고 — `verify668` [H2] 가 찍고 있는
+       «15칸 / 종수 36» 이 그 상태다 — **Lv50(MAX)에서는 100장(10연 ×10)이 이미 32칸**이다.
+       즉 «×1000 이면» 이라고 적었으면 ×10·×100 에서 이미 깨진 것을 못 잡았다.
+     ⇒ 자를 **두 축으로 가른다**: §E 는 «×1 판(≤ 30칸)» 의 «가려짐 0 · 스크롤 0»,
+       **§M 은 «배수 판(> 30칸)» 의 «스크롤은 나되 회수된다»**. 제품은 0줄이다 —
+       스크롤이 나는 것 자체는 187 의 원래 설계이고(726 도 09 에서 같은 답을 골랐다),
+       `align-content:safe center` 라는 부품도 327 이 이미 깔아 두었다([G5] 가 그 항이다).
+
+   ⚠ 이 게이트가 재는 것은 «커졌다» 하나가 아니라 다섯 가지다.
      ① **2배가 맞나** (§B — ref 539 대비 배율)
-     ② **가려짐이 0 인가** (§E — 187 이 24/30 에서 멈췄던 자리)
+     ② **가려짐이 0 인가** (§E — 187 이 24/30 에서 멈췄던 자리 · **×1 판 한정**)
      ③ **창이 소환마다 튀지 않나** (§A — 187 의 실제 부작용. 고정이 되면서 사라져야 한다)
      ④ **커진 만큼 84 를 밀치지 않나** (§B·§D — 패널 하변 ↔ 버튼 상변 20px)
+     ⑤ **넘치는 판이 회수되나** (§M — 745. 스크롤 0 이 아니라 «스크롤로 닿는가» 를 묻는다)
    §G 되돌림 시험이 ①②③ 각각에 «되돌리면 실제로 빨개지는가» 를 붙인다. */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -192,7 +206,10 @@ const openAt = async (b, vp, n, css) => {
     await d.c.close();
   }
 
-  /* ══ E. 가려짐 0 — 187 이 24/30 에서 멈췄던 자리 ══ */
+  /* ══ E. 가려짐 0 — 187 이 24/30 에서 멈췄던 자리 ══
+     ⚑ 745 — 이 절의 주어는 **«×1 의 10·30연», 즉 결과가 ≤ 30칸인 판**이다. 그 위(배수 판)는 §M 이 든다.
+       `probe745` 실측으로 **×1 은 어떤 소환 레벨에서도 30칸을 못 넘는다**(Lv50 30연 = 고유 19칸)
+       — 그러니 여기 «가려짐 0» 은 좁게 적힌 채로 여전히 참이고, 무르게 푼 것이 아니다. */
   ok('E1 30연 결과 칸 수(고유 30)', g30.cards, 30, 0);
   ok('E2 행수 5', g30.rowsTotal, 5, 0);
   ok('E3 완전히 보이는 행 = 5', g30.rowsFull, 5, 0);
@@ -203,6 +220,111 @@ const openAt = async (b, vp, n, css) => {
   ok('E6 그리드 868 ≥ 하한 868 (713 이관 — 배지 돌출 + 중앙정렬까지 센 값)', GH >= WORST, true, 0);
   ok('E7 열릴 때 scrollTop 0', g30.grid.st, 0, 0);
   ok('E8 마지막 카드 하단이 그리드 안', g30.lastBot <= g30.grid.bot + 0.5, true, 0);
+
+  /* ══ M. 배수 판(> 30칸) — 스크롤은 «나되 회수된다» ══  (745, 2026-09-02)
+     668 배수 토글이 생긴 뒤로 결과 칸은 30 을 넘을 수 있다. §E 의 «스크롤 0» 을 그대로 배수 판에
+     들이대면 자가 거짓말을 하거나(헛초록) 설계를 결함으로 오인한다(헛빨강) — 그래서 축을 가른다.
+     여기가 묻는 것은 «안 넘치는가» 가 아니라 **«넘친 칸에 실제로 닿는가»** 다.
+     ⚠ 726 함정: 격자에 스크롤을 주면 «아무 데나 탭하면 닫힘» 이 끄는 손짓을 삼킬 수 있다.
+       이 팝업은 닫기가 **click** 에 걸려 있어 굴림 제스처가 click 을 안 낳는다 — M6 이 그것을 못박는다. */
+  {
+    /* M0·M1 — «넘치는 판이 실재하는가» 를 제품 데이터로 묻는다(DOM 이 아니라 모델 쪽 근거).
+       ⚠ 표본을 «×1000» 으로 적지 마라 — 축은 «소환 레벨 × 장수» 이고, Lv MAX 에서는
+         100장(10연 ×10)이 이미 30칸을 넘는다(probe745 표). ×1000 으로 적은 자는
+         ×10·×100 에서 이미 깨진 것을 못 잡는다. */
+    /* `hasTouch` — M7·M8 은 **진짜 터치 드래그**로 잰다(합성 TouchEvent 는 스크롤을 안 낳아서
+       «굴림 뒤 click 이 오는가» 를 물어볼 수가 없다 — 726 이 물은 것이 정확히 그 click 이다). */
+    const mc = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1,
+                                    hasTouch: true });
+    const mp = await mc.newPage();
+    mp.on('pageerror', (e) => errs.push(String(e)));
+    mp.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+    await mp.goto(HTML);
+    await mp.waitForTimeout(900);
+    await mp.evaluate(`(() => { S.guide.idx = GUIDE.length;
+      if (typeof gmStart === 'function') gmStart(); })()`);
+
+    const model = await mp.evaluate(`(() => {
+      const spec = Math.max(...BKEYS.map((k) => BANNERS[k].list.length));
+      const muls = (typeof SUM_MULS !== 'undefined' ? SUM_MULS : [1]);
+      const seed = (s) => { let a = s >>> 0; Math.random = () => {
+        a = (a + 0x6D2B79F5) >>> 0; let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+      const orig = Math.random;
+      /* 씨앗은 **고정 목록**이다 — RNG 를 갈아 끼웠으므로 실행마다 같은 값이 나온다(플레이키 아님).
+         한 씨앗만 쓰면 «넘칠 수 있다» 가 그 한 표본의 운에 걸린다(×10 100장은 32 ↔ 30 사이를 오간다). */
+      const SEEDS = [1, 7, 31, 20260902];
+      const run = (bk, lv, times, s) => { seed(s);
+        S.dia = 1e12; S.relic = 1e12; S.own = {}; S.summons = 0;
+        BKEYS.forEach((k) => { S.sum[k].lv = lv; S.sum[k].exp = 0; });
+        return new Set(summonBatch(bk, times).res.map((r) => r.it.id)).size; };
+      const best = (lv, times) => Math.max(...BKEYS.map((k) =>
+        Math.max(...SEEDS.map((s) => run(k, lv, times, s)))));
+      const big = best(SUM_MAXLV, 10 * Math.max(...muls));
+      const x1  = best(SUM_MAXLV, 30);
+      const x10 = best(SUM_MAXLV, 100);
+      Math.random = orig;
+      return { spec, maxMul: Math.max(...muls), big, x1, x10 };
+    })()`);
+    ok('M0 배너 종수 상한이 30 을 넘는다 (칸의 천장)', model.spec > 30, true, 0);
+    ok('M1 배수 최대(×' + model.maxMul + ')로 굴리면 30칸을 넘는다 — 넘치는 판은 실재한다',
+      model.big > 30, true, 0);
+    ok('M2 ×10(100장)에서 이미 30칸을 넘는다 — «×1000 이면» 이라고 적으면 안 된다',
+      model.x10 > 30, true, 0);
+    /* M3 은 «뽑은 장수 ≥ 고유 종수» 라는 산수라 레벨과 무관하게 참이다(30장에서 31종이 날 수 없다).
+       그래도 자에 적어 두는 이유: §E 의 주어(«≤ 30칸»)가 **왜** 좁게 참인지를 자가 말해야
+       다음 세션이 버튼 수(10·30)를 바꿀 때 §E 가 같이 무너진다는 것을 안다. */
+    ok('M3 ×1(30연 = 30장)은 칸이 30 을 못 넘는다 — §E 의 주어가 좁게 참인 근거',
+      model.x1 <= 30, true, 0);
+
+    /* M4~M7 — 천장 판(종수만큼)을 실제로 그려 놓고 «회수» 를 잰다 */
+    await mp.evaluate(SETUP(model.spec));
+    await mp.waitForTimeout(1000);
+    await mp.evaluate(FREEZE);
+    await mp.waitForTimeout(60);
+    const gm = await mp.evaluate(GEO);
+    ok('M4 천장 판은 그리드를 넘친다 (스크롤이 생긴다 — 설계)', gm.grid.sh > gm.grid.h + 0.5, true, 0);
+    ok('M5 열릴 때 scrollTop 0 (미리 내려가 있지 않다)', gm.grid.st, 0, 0);
+    ok('M6 넘쳐도 첫 행이 위로 안 잘린다 (align-content:safe)',
+      +(gm.firstY - gm.grid.y).toFixed(1), 0, 0.5);
+
+    const mbox = await mp.evaluate(`(() => {
+      const r = document.getElementById('sumGrid').getBoundingClientRect();
+      return { x: Math.round(r.left + r.width / 2), top: Math.round(r.top), h: Math.round(r.height) };
+    })()`);
+    const cdp = await mc.newCDPSession(mp);
+    const my0 = mbox.top + Math.round(mbox.h * 0.8), my1 = mbox.top + Math.round(mbox.h * 0.25);
+    const tp = (y) => [{ x: mbox.x, y, radiusX: 12, radiusY: 12, force: 1, id: 1 }];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp(my0) });
+    for (let i = 1; i <= 10; i++) {
+      await cdp.send('Input.dispatchTouchEvent',
+        { type: 'touchMove', touchPoints: tp(Math.round(my0 + (my1 - my0) * i / 10)) });
+      await mp.waitForTimeout(16);
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await mp.waitForTimeout(500);
+    const rec = await mp.evaluate(`(() => {
+      const grid = document.getElementById('sumGrid');
+      const cards = [...document.getElementById('sumGridIn').children];
+      const gb = grid.getBoundingClientRect();
+      const last = cards[cards.length - 1].getBoundingClientRect();
+      return { open: document.getElementById('sumw').classList.contains('on'),
+               st: Math.round(grid.scrollTop),
+               lastVisible: last.bottom <= gb.bottom + 0.5 && last.top >= gb.top - 0.5 };
+    })()`);
+    ok('M7 터치 드래그가 실제로 굴린다 · 굴림이 «배경 탭 = 닫기» 로 오인되지 않는다 (726 함정)',
+      rec.st > 0 && rec.open, true, 0);
+    ok('M8 끝까지 굴리면 마지막 칸이 보인다 (가려짐이 스크롤로 회수된다)', rec.lastVisible, true, 0);
+    /* M9 — «굴림이 안 닫는다» 를 무르게 통과시키지 않는 짝 항: **그냥 탭하면 닫혀야 한다**.
+       이게 없으면 «닫기가 통째로 고장 나도 M7 은 초록» 이다(84·363 이 지킨 그 닫기다). */
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: tp(my1) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await mp.waitForTimeout(400);
+    const tapClosed = await mp.evaluate(`!document.getElementById('sumw').classList.contains('on')`);
+    ok('M9 [짝] 굴리지 않고 그냥 탭하면 닫힌다 (M7 이 «닫기 고장» 으로 초록이 아님)', tapClosed, true, 0);
+    await mc.close();
+  }
 
   /* ══ F. 기능 체크 — 커진 뒤에도 실제로 눌리고, 다시 소환해도 창이 안 튄다 ══ */
   const fc = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
