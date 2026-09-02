@@ -45,8 +45,14 @@ const ARM = () => {
   };
   wrap('trainBuy', 'train');
   wrap('temperUpBtn', 'temper');
-  { const f = window.runeTry; if (typeof f === 'function') window.runeTry = function (...a) {
-      const r = f.apply(this, a); if (r && r.ok) { P.rune.try++; if (r.up) P.rune.up++; } return r; }; }
+  /* ⚑ 701·797 이관(2026-09-02) — 홀드 틱이 지나는 «1회» 는 코어 `temperUpOne`·`runeTryOne` 이다.
+     옛 이름(`temperUpBtn`·`runeTry`)은 죽지 않았지만 **막힌 첫 누름의 안내**로만 남아 홀드를 안 지난다
+     ⇒ 옛 이름만 세면 이 재현기가 «시도 0» 을 찍는다(제품은 멀쩡하다). 홀드에서 둘은 배타적이라
+     같은 장부에 더한다 — `verify349`·`verify488` 이 같은 처방으로 돌아왔다. */
+  wrap('temperUpOne', 'temper');
+  { const f = window.runeTryOne; if (typeof f === 'function') window.runeTryOne = function (...a) {
+      const r = f.apply(this, a); P.rune.try++; if (r && r.up) P.rune.up++; return r; }; }
+
 };
 
 async function hold(page, sp) {

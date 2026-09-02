@@ -53,8 +53,12 @@ const CARD = '#trRunes .tr-rn[data-rune="r1"]';
     /* 계측 — 시도 수 · 받은 pointermove · 옛 판정이 «밖» 이라고 본 순간의 기하 */
     if (!window.__wrap) {
       window.__wrap = 1;
+      /* ⚑ 701·797 이관(2026-09-02) — «1회» 가 코어 `runeTryOne` + 막힌 안내 `runeBuy` 로 갈렸다.
+         홀드에서 둘은 배타적이라 **같은 카운터에 더한다**(`verify349` 와 같은 처방). */
       const o = window.runeBuy;
       window.runeBuy = function () { window.__n = (window.__n || 0) + 1; return o.apply(this, arguments); };
+      const o1 = window.runeTryOne;
+      if (typeof o1 === 'function') window.runeTryOne = function () { window.__n = (window.__n || 0) + 1; return o1.apply(this, arguments); };
     }
     window.__mv = 0; window.__miss = [];
     addEventListener('pointermove', e => {

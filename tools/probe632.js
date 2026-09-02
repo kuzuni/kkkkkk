@@ -43,6 +43,10 @@ const ARM = () => {
   wrap('trainBuy',    'train',  r => !!r);
   wrap('temperUpBtn', 'temper', r => !!r);
   wrap('runeBuy',     'rune',   () => true);
+  /* ⚑ 701·797 이관(2026-09-02) — 홀드 틱이 지나는 «1회» 는 코어다(옛 두 이름은 막힌 안내 전용).
+     홀드에서 둘은 배타적이라 같은 장부에 더한다 — `verify349` 와 같은 처방. */
+  wrap('temperUpOne', 'temper', () => true);
+  wrap('runeTryOne',  'rune',   () => true);
   const HOSTSEL = '.tr-rn,.tr-tp,.tr-card';
   const step = () => {
     if (P.on) {

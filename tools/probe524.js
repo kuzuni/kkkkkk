@@ -53,8 +53,13 @@ const CLOSERS_NEW = ['closeDunClear', 'closeModal', 'closeDungeon', 'closeSummon
     if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
     if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }
     window.__n = 0; window.__cx = 0; window.__def = 0;
+    /* ⚑ 701·797 이관(2026-09-02) — «1회» 가 코어 `runeTryOne` + 막힌 안내 `runeBuy` 로 갈렸다.
+       둘은 홀드에서 배타적이라 **같은 카운터에 더한다**(`verify349` 와 같은 처방 · 옛 이름
+       하나만 세면 이 재현기가 «0회» 로 읽힌다 — 제품은 멀쩡하다). */
     const o = window.runeBuy;
     window.runeBuy = function () { window.__n++; return o.apply(this, arguments); };
+    const o1 = window.runeTryOne;
+    if (typeof o1 === 'function') window.runeTryOne = function () { window.__n++; return o1.apply(this, arguments); };
     addEventListener('pointercancel', () => window.__cx++, true);
     setInterval(() => { try { if (typeof maxHp === 'function' && S.hp != null) S.hp = maxHp(); } catch (_) {} }, 200);
     /* 수리 «후» 팔만 켤 수 있게 스위치로 심는다 — 되돌림 시험이 두 손을 같은 실행에서 비교한다 */

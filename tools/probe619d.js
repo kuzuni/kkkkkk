@@ -67,6 +67,10 @@ const ARM = hostSel => {
   wrap('trainBuy',    r => !!r);
   wrap('runeBuy',     () => true);                  /* 룬은 확률 — «시도» 를 센다(probe619c 와 같은 길) */
   wrap('temperUpBtn', r => !!r);
+  /* ⚑ 701·797 이관(2026-09-02) — 홀드 틱이 지나는 «1회» 는 코어다(옛 두 이름은 막힌 안내 전용).
+     홀드에서 둘은 배타적이라 같은 장부에 더한다 — `verify349` 와 같은 처방. */
+  wrap('runeTryOne',  () => true);
+  wrap('temperUpOne', () => true);
   /* 가시 알파 — 노드 자신 + 애니메이션이 물고 있는 값을 computed 로 읽는다 */
   const vis = nd => { try { return (parseFloat(getComputedStyle(nd).opacity) || 0) > 0.05; } catch (_) { return false; } };
   const scan = () => {

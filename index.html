@@ -32503,10 +32503,29 @@ $('shopList').addEventListener('click', e => {
 const mulBarHTML = cur => SUM_MULS.map(m =>
   '<div class="stab' + (m === cur ? ' on' : '') + '" data-mul="' + m + '">'
   + '<i class="' + (m === cur ? 'ol4' : 'ol3') + '">×' + m.toLocaleString('en-US') + '</i></div>').join('');
-function renderSumMulBar(){
-  const bar = $('sumMulBar'); if(!bar) return;
-  bar.innerHTML = mulBarHTML(sumMul);
+/* ⚑⚑ 797 — **칸을 «칠하는» 곳도 한 벌이다.** 668·700·713 은 «칸을 그리는 말»(`mulBarHTML`)만
+   공유하고 **칠하는 법은 자리마다** 적어 뒀는데, 그 셋 중 둘이 렌더마다 `bar.innerHTML` 로 칸을
+   통째로 갈아 끼우고 있었다 ⇒ **누른 칸이 손가락 밑에서 죽는다**(터치의 암묵적 포인터 캡처가
+   끊긴다 — 64 교훈 1 · 262 ⓑ · LESSONS 50-①). 701 이 단련·룬 두 자리에서 이미 «처음 한 번만
+   만들고 그 뒤로는 클래스만 뒤집는다» 로 고쳤고(`verify491` [2-a] 가 그 팝업의 눌리는 요소
+   **전수**를 묻는다), 상점·유물 두 자리는 491 의 스캔 범위 밖이라 안 잡혔을 뿐이었다.
+   ⇒ 처방을 자리마다 베끼는 대신 **칠하는 법 자체를 이 한 함수로 모은다** — 네 자리가 갈라질
+     방법이 원리적으로 없어진다(700 §2 «칸 모양이 갈라질 방법이 없다» 를 «칸 수명» 축으로 확장).
+   ⚠ 만드는 것은 **칸 수가 다를 때뿐**이다(첫 렌더 · `SUM_MULS` 가 바뀌는 날). 그 뒤로는 노드를
+     그대로 두고 `.on`/`ol4`/`ol3` 만 뒤집는다 — 값이 두 벌이 되지 않게 «말» 은 여전히
+     `mulBarHTML()` 한 곳에서만 온다.
+   ⚠ 재현기·게이트: `probe797`(수리 전 두 자리 kept 0/4) · `verify797` · `verify491` [2-a]. */
+function paintMulBar(bar, cur){
+  if(!bar) return;
+  if(bar.children.length !== SUM_MULS.length) bar.innerHTML = mulBarHTML(cur);
+  [...bar.children].forEach(c => {
+    const on = +c.dataset.mul === cur;
+    c.classList.toggle('on', on);
+    const i = c.querySelector('i');
+    if(i){ i.classList.toggle('ol4', on); i.classList.toggle('ol3', !on); }
+  });
 }
+function renderSumMulBar(){ paintMulBar($('sumMulBar'), sumMul); }   /* 797 — 칠하는 법은 공용 */
 $('sumMulBar').addEventListener('click', e => {
   e.stopPropagation();                 /* 713 — 363 스킵 토글과 같은 꼴(«배경 탭 = 닫기» 에 안 걸린다) */
   const c = e.target.closest('[data-mul]');
@@ -32568,11 +32587,9 @@ const relicSummonReady = () => S.relic >= relicCost();
 let relMul = 1;
 const relicMulCost = () => relicCost() * relMul;
 const relicSummonReadyMul = () => S.relic >= relicMulCost();
-/* 700 — 배수 바는 이 페이지의 부품이다(그리는 곳은 `renderRelw()` 한 군데). */
-function renderRwMulBar(){
-  const bar = $('rwMulBar'); if(!bar) return;
-  bar.innerHTML = mulBarHTML(relMul);
-}
+/* 700 — 배수 바는 이 페이지의 부품이다(그리는 곳은 `renderRelw()` 한 군데).
+   797 — 칠하는 법은 공용 `paintMulBar()` 다(칸을 통째로 갈아 끼우지 않는다 — 그 머리말 참조). */
+function renderRwMulBar(){ paintMulBar($('rwMulBar'), relMul); }
 function renderRelw(){
   const g = $('rwGrid');
   if(!g.childElementCount)
@@ -36575,24 +36592,16 @@ function temperUpBtn(k, quiet){
      pointerdown~click 사이에 칸을 지우면 선택이 유실된다(LESSONS 50-① · 작업 74·142).
      여기서 바꾸는 것은 칸의 innerHTML 뿐이고, 그 갱신도 «값이 달라졌을 때만» 친다. */
 function renderTrMulBars(){
-  ['rnMulBar', 'tpMulBar'].forEach(id => {
-    const bar = $(id); if(!bar) return;
-    /* ⚑ **칸을 만드는 것은 처음 한 번뿐이다** — 그 뒤로는 «누른 그 노드» 를 살려 둔 채 클래스만 뒤집는다.
-       491 [2-a] 가 이 팝업의 눌리는 요소 **전수**에 대해 «누른 노드가 살아남고 `jz-dn` 이 붙는가» 를
-       묻는데, 668·700 처럼 매번 `innerHTML` 을 갈아 끼우면 그 노드가 클릭 한복판에 죽는다
-       (터치의 암묵적 포인터 캡처가 끊긴다 — 64 교훈 1 · 262 ⓑ · LESSONS 50-①).
-       ⚠ 상점(#sumMulBar)·유물(#rwMulBar)은 이 규약을 안 지키고도 초록인데, 491 의 스캔 범위가
-         23 훈련 팝업뿐이라 «아직 안 물어봤을» 뿐이다 — 그 두 자리는 각자의 작업 단위 몫이라
-         손대지 않았고, 곁다리로 등재한다(병렬 세션 규칙 3).
-       칸의 «말» 은 여전히 `mulBarHTML()` 한 벌에서만 온다(668·700·713 과 한 부품 — 700 §2 규약). */
-    if(bar.children.length !== SUM_MULS.length) bar.innerHTML = mulBarHTML(trMul);
-    [...bar.children].forEach(c => {
-      const on = +c.dataset.mul === trMul;
-      c.classList.toggle('on', on);
-      const i = c.querySelector('i');
-      if(i){ i.classList.toggle('ol4', on); i.classList.toggle('ol3', !on); }
-    });
-  });
+  /* ⚑ **칸을 만드는 것은 처음 한 번뿐이다** — 그 뒤로는 «누른 그 노드» 를 살려 둔 채 클래스만 뒤집는다.
+     491 [2-a] 가 이 팝업의 눌리는 요소 **전수**에 대해 «누른 노드가 살아남고 `jz-dn` 이 붙는가» 를
+     묻는데, 매번 `innerHTML` 을 갈아 끼우면 그 노드가 클릭 한복판에 죽는다
+     (터치의 암묵적 포인터 캡처가 끊긴다 — 64 교훈 1 · 262 ⓑ · LESSONS 50-①).
+     ⚑ **797 이관(2026-09-02)** — 701 이 여기 적어 둔 그 처방이 **공용 `paintMulBar()`** 가 됐다.
+       상점(#sumMulBar)·유물(#rwMulBar)은 «491 의 스캔 범위(23 훈련 팝업) 밖이라 아직 안 물어봤을
+       뿐» 이었고, 797 이 `probe797` 로 그 둘을 재 **kept 0/4**(칸 전멸)을 확인한 뒤 처방을 자리마다
+       베끼는 대신 한 함수로 모았다 ⇒ 네 자리가 갈라질 자리 자체가 없다.
+     칸의 «말» 은 여전히 `mulBarHTML()` 한 벌에서만 온다(668·700·713 과 한 부품 — 700 §2 규약). */
+  ['rnMulBar', 'tpMulBar'].forEach(id => paintMulBar($(id), trMul));
 }
 /* 701 — 칸을 고르면 두 탭이 같은 값을 본다(위 `trMul` 머리말 ⓐ). 값이 바뀌면 단련 버튼 라벨의
    수(`temperPlan`)가 달라지므로 통짜 렌더를 한 번 친다 — 룬 라벨은 배수를 안 타므로(아래 ⓒ)

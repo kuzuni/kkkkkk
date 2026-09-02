@@ -66,10 +66,18 @@ const SPOTS = [
     wrap('trainBuy',    'train',  r => !!r);
     wrap('runeBuy',     'rune',   () => true);       /* 룬은 확률이라 «시도» 와 «성공» 을 따로 센다 */
     wrap('temperUpBtn', 'temper', r => !!r);
-    /* 룬 «성공»(레벨이 실제로 오른 시도) — `runeTry` 가 {ok, up, lv} 를 돌려준다 */
+    /* ⚑ 701·797 이관(2026-09-02) — «1회» 함수가 코어와 «막힌 첫 누름의 안내» 로 갈렸다
+       (룬 `runeTryOne` + `runeBuy` · 단련 `temperUpOne` + `temperUpBtn`). 홀드 틱은 이제 코어만
+       지나므로 옛 이름만 세면 이 재현기가 «강화 0회» 를 찍는다(제품은 멀쩡하다).
+       ⚠ 둘은 홀드에서 배타적이라(막히면 코어에 못 간다) **같은 장부에 더한다** —
+         `verify349`·`verify488` 이 같은 처방으로 돌아왔다. */
+    wrap('runeTryOne',   'rune',   () => true);
+    wrap('temperUpOne',  'temper', () => true);
+    /* 룬 «성공»(레벨이 실제로 오른 시도) — 코어 `runeTryOne` 이 {up, lv, rate, cost} 를 돌려준다.
+       ⚠ `runeTry`(=배치 1회 래퍼)도 계속 살아 있지만 홀드는 그것을 안 지난다 — 성공 축도 코어로 옮긴다. */
     {
-      const f = window.runeTry;
-      if (typeof f === 'function') window.runeTry = function (...a) {
+      const f = window.runeTryOne;
+      if (typeof f === 'function') window.runeTryOne = function (...a) {
         const r = f.apply(this, a);
         if (r && r.up) P.buys.push({ kind: 'rune-up', t: performance.now() });
         return r;

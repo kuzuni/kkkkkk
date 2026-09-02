@@ -309,7 +309,16 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
       if (nd.nodeType === 1 && /fx-cic/.test((nd.className || '') + '')) window.__E666++; return r; };
   });
   await p.waitForTimeout(500);
-  await countTries('summonRelic'); await reset();
+  /* ⚑ 797 이관(2026-09-02) — **관측점 이관 누락을 여기서 닫는다.** 700 이 유물 소환을 배치로 접으면서
+     («×N 한 번 ↔ ×1 을 N 번» 을 구조로 보장하는 코어 하나) 홀드 틱·첫 발이 부르는 이름이
+     `summonRelic` → **`summonRelicBatch`** 로 옮겨졌다. 옛 이름 그대로 두면 이 절이 «시도 0회» 로
+     빨개진다(제품은 멀쩡하다 — `probe797` [4] 가 수리 전 트리에서 `summonRelic` 0 · `summonRelicBatch` 5
+     를 직접 쟀다). 이 자가 묻는 것(«회당 피드백이 시도마다 한 번»)은 한 글자도 안 바뀐다.
+     ⚠ 349 교훈 — 옛 이름이 «죽었는가» 를 먼저 봐야 한다. `summonRelic` 은 **안 죽었고**
+       `summonRelicBatch(1, quiet)` 로 **위임**한다(330 게이트·미션·회귀 자가 그 이름을 쓴다) ⇒
+       코어 하나를 세면 두 경로가 **저절로** 같은 카운터에 든다. 349 가 겪은 «둘을 같은 카운터에
+       더해야 한다» 는 두 이름이 **나란한 경로**였던 경우이고, 여기는 한 줄 위임이라 갈래가 없다. */
+  await countTries('summonRelicBatch'); await reset();
   const cE = await box('#rwBasin');
   if (cE) await holdTouch(cE, HOLD);
   const E = await grab();

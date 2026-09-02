@@ -73,6 +73,10 @@ const ARM = hostSel => {
   wrap('trainBuy',    r => !!r);
   wrap('runeBuy',     () => true);                   /* 룬은 확률이라 «시도» 를 센다(실패 틱도 발화 대상) */
   wrap('temperUpBtn', r => !!r);
+  /* ⚑ 701·797 이관(2026-09-02) — 홀드 틱이 지나는 «1회» 는 코어 `runeTryOne`·`temperUpOne` 이다
+     (옛 두 이름은 «막힌 첫 누름의 안내» 로만 남았다). 홀드에서 둘은 배타적이라 같은 장부에 더한다. */
+  wrap('runeTryOne',  () => true);
+  wrap('temperUpOne', () => true);
   const scan = () => {
     /* ⚠ 호스트 노드는 **매 프레임 다시 찾는다** — 홀드 중 통짜 렌더가 노드를 갈면 처음 잡은 참조는
        화면에서 떨어진 사본이 되고, 그 위의 애니메이션 값을 읽어 «상시 17px» 같은 헛수치가 나온다

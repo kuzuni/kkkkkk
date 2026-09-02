@@ -56,6 +56,17 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
       window.__buy.push({ t: performance.now(), id, quiet: !!quiet, ok: !!r });
       return r;
     };
+    /* ⚑ 701·797 이관(2026-09-02) — «1회» 함수가 **둘로 갈렸다**: 코어 `runeTryOne` + 막힌 첫 누름의
+       안내 `runeBuy`. 홀드 틱은 이제 `runeTryBatch` → `runeTryOne` 만 지나므로 옛 이름 하나만 세면
+       이 재현기는 «0회» 를 찍는다(제품은 멀쩡하다 — `verify349` 가 같은 처방으로 29/29 로 돌아왔다).
+       ⚠ 둘을 **같은 장부에 더한다** — 홀드에서 둘은 서로 배타적이라(막히면 코어에 못 간다) 겹치지
+         않고, 그래야 `__buy` 의 뜻(«이 자리가 실제로 부른 1회 — 막힌 안내 포함»)이 안 바뀐다. */
+    const core = window.runeTryOne;
+    if (typeof core === 'function') window.runeTryOne = function (id) {
+      const r = core.apply(this, arguments);
+      window.__buy.push({ t: performance.now(), id, quiet: true, ok: true, core: true });
+      return r;
+    };
     window.__ev = [];
     ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'touchstart', 'touchend', 'touchcancel']
       .forEach(k => addEventListener(k, e => {

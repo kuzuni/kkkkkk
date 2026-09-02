@@ -49,9 +49,12 @@ const ARM = () => {
       let st = null; try { st = { lv: lv(a[0]), cap: trainCap(), stage: trainStage() }; } catch (_) {}
       P.tries.push({ kind: 'train', t, st }); if (r) P.buys.push({ kind: 'train', t, st }); return r; }; }
   wrap('temperUpBtn', 'temper', r => !!r);
-  { const f = window.runeTry; if (typeof f === 'function') window.runeTry = function (...a) {
+  /* ⚑ 701·797 이관(2026-09-02) — 홀드 틱이 지나는 «1회» 는 코어 `temperUpOne`·`runeTryOne` 이다
+     (옛 이름은 «막힌 첫 누름의 안내» 로만 남았다 · 홀드에서 배타적이라 같은 장부에 더한다). */
+  wrap('temperUpOne', 'temper', () => true);
+  { const f = window.runeTryOne; if (typeof f === 'function') window.runeTryOne = function (...a) {
       const r = f.apply(this, a); const t = performance.now();
-      if (r && r.ok) { P.tries.push({ kind: 'rune', t }); if (r.up) P.buys.push({ kind: 'rune', t }); }
+      P.tries.push({ kind: 'rune', t }); if (r && r.up) P.buys.push({ kind: 'rune', t });
       return r; }; }
   /* upFx — 반환값(발화가 실제로 노드를 붙였는가)과 부른 시각을 같이 적는다 */
   { const f = window.upFx; if (typeof f === 'function') window.upFx = function (...a) {

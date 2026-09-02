@@ -66,6 +66,10 @@ const SPOTS = [
     };
     wrap('trainBuy',    'train',  r => !!r);
     wrap('temperUpBtn', 'temper', r => !!r);
+    /* ⚑ 701·797 이관(2026-09-02) — 홀드 틱이 지나는 «1회» 는 코어 `temperUpOne`·`runeTryOne` 이다
+       (옛 두 이름은 «막힌 첫 누름의 안내» 로만 남았다 · 홀드에서 배타적이라 같은 장부에 더한다). */
+    wrap('temperUpOne', 'temper', () => true);
+    wrap('runeTryOne',  'rune',   () => true);
     /* 룬은 확률 시도라 «시도» 를 센다 — 버튼은 성공·실패와 무관하게 매 틱 눌린다(이 행의 축은 «누름» 이다) */
     wrap('runeBuy',     'rune',   () => true);
     /* 프레임 자 — 눌린 노드의 그려진 폭을 매 rAF 로 적는다.
