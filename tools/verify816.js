@@ -122,9 +122,17 @@ async function holdTrain(page, keep) {
   /* 660 의 원형이 그대로 살아 있어야 한다 — 이 작업은 «예외 한 줄» 이지 되돌리기가 아니다 */
   ok(/const kh = \(r && !IC\) \? fxbTextHoles\(t, strict \? Math\.round\(FXB_KOS \* hsc\) : undefined\) : \[\];/.test(code),
      'A6 660 의 원형(«아이콘 버스트는 자손 글자 구멍을 안 판다»)은 한 글자도 안 바뀌었다');
-  ok((code.match(/--burst-keep:/g) || []).length === 1,
-     'A7 신고는 저장소에 **한 자리뿐**이다 — 단련·룬은 아직 안 신고했다(같은 결손이지만 버튼이 좁아 밀도 예산이 다르다 · 818 로 등재)',
-     (code.match(/--burst-keep:/g) || []).length + '자리');
+  /* ⚑ 818 이관 — 이 항이 지키는 뜻은 «한 자리» 라는 수가 아니라 **«신고는 헤프게 뿌리는 것이 아니다»**
+     이다(가격을 이고 있는 버튼에만 있고, 그 밖에는 없다). 818 이 단련·룬을 같은 신고로 닫으면서
+     그 자리가 셋이 됐으므로 **수가 아니라 목록**을 묻는다 — 수만 3 으로 올리면 «네 번째가 아무 데나
+     생겨도 초록» 이 되고, 항을 지우면 «저장소 전체에 뿌려도 초록» 이 된다(333 처방). */
+  const keepAt = [...code.matchAll(/([.#][\w.>\-]*)\{--burst-keep:([^;}]+)/g)].map(m => m[1] + ' → ' + m[2]);
+  ok(keepAt.length === 3
+     && keepAt.some(s => /^\.tr-card>\.cb → i$/.test(s))
+     && keepAt.some(s => /^\.tr-tp>\.tb → \.tbn$/.test(s))
+     && keepAt.some(s => /^\.tr-rn>\.rbt\.b1 → \.rbn$/.test(s)),
+     'A7 신고 자리는 **가격을 이고 있는 버튼 셋뿐**이다 — 훈련 `.cb`→`i` · 단련 `.tb`→`.tbn` · 룬 `.rbt.b1`→`.rbn`(818)',
+     keepAt.join(' · ') || '0자리');
 
   const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -160,20 +168,31 @@ async function holdTrain(page, keep) {
      'C2 밀도를 대가로 안 치렀다 — 동시 알 수가 수리 전의 85% 이상',
      p1(now.eggs) + '알 ↔ 수리 전 ' + p1(pre.eggs) + '알');
   await holdTrain(page, null);                        /* 원복 */
-  /* 미신고 호스트는 이 부품이 **빈 배열**을 돌려준다 — 단련·룬·09 우편 행에 직접 물어본다 */
+  /* 미신고 호스트는 이 부품이 **빈 배열**을 돌려준다.
+     ⚑ 818 이관 — 표본을 «단련 `.tb` · 룬 `.rbt.b1`» 에서 **그 버튼들이 얹혀 있는 행·카드**로 옮겼다.
+     818 이 두 버튼을 같은 신고로 닫았으므로 옛 표본은 뜻이 뒤집혔지만, 이 항이 지키는 것은
+     «신고 안 한 호스트는 한 값도 안 바뀐다» 이고 **그 자리가 바로 816 §4 의 함정**이다 —
+     `--burst-to` 를 지운 사본에서 호스트가 되는 것이 이 행·카드다. 지우지 않고 옮긴다(333 처방). */
   const zero = await page.evaluate(() => {
     const out = {};
     const ask = (name, el) => { out[name] = el ? fxbKeepHoles(el, 30).length : -1; };
     setTrSub('temper'); renderTrain();
+    ask('단련 행 .tr-tp', document.querySelector('#trTemper .tr-tp.k0'));
     ask('단련 .tb', document.querySelector('#trTemper .tr-tp.k0 .tb'));
     setTrSub('rune'); renderTrain();
+    ask('룬 행 .tr-rn', document.querySelector('#trRunes .tr-rn'));
     ask('룬 .rbt.b1', document.querySelector('#trRunes .tr-rn .rbt.b1'));
     setTrSub('train'); renderTrain();
+    ask('훈련 카드 .tr-card', document.querySelector('#trCards [data-tr]'));
     ask('훈련 .cb', document.querySelector('#trCards [data-tr] .cb'));
     return out;
   });
-  for (const k of ['단련 .tb', '룬 .rbt.b1']) ok(zero[k] === 0, 'C3 미신고 호스트 «' + k + '» 구멍 **0개**', zero[k] + '개');
+  for (const k of ['단련 행 .tr-tp', '룬 행 .tr-rn', '훈련 카드 .tr-card'])
+    ok(zero[k] === 0, 'C3 미신고 호스트 «' + k + '» 구멍 **0개**(816 §4 — `--burst-to` 를 지우면 여기가 호스트다)', zero[k] + '개');
   ok(zero['훈련 .cb'] === 1, 'C4 신고한 호스트 «훈련 .cb» 는 구멍 **1개**(가격 숫자 하나)', zero['훈련 .cb'] + '개');
+  /* ⚑ 818 — 옛 [C3] 이 세던 두 자리는 이제 «신고한 호스트» 다. 자리를 비우지 않고 방향만 뒤집는다. */
+  for (const k of ['단련 .tb', '룬 .rbt.b1'])
+    ok(zero[k] === 1, 'C4b 818 이 신고한 호스트 «' + k + '» 도 구멍 **1개**(수량 하나)', zero[k] + '개');
 
   /* ── [R] 되돌림 시험 ──────────────────────────────────────────────── */
   console.log('\n[R] 되돌림 — 무르게 푼 수리가 아니다');
