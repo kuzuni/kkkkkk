@@ -24,7 +24,10 @@ const fs = require('fs');
 const ROUND = process.argv[2] || 'r1';
 const OUT = path.resolve(__dirname, '../docs/shots');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
-const STOPS = [0, 20, 45, 90, 150, 210, 280, 340];
+/* ⚑ 4회차 — 표본 시각을 **봉투에 다시 맞췄다.** 3회차 비평 CK 가 «68ms 램프가 화면에 없다» 고 적었는데
+   그것은 제품이 아니라 이 표의 문제였다(0·20·45 → 90 사이에 봉우리 68ms 이 안 찍혔다 — 비평가는
+   «봉우리가 90ms» 로 읽을 수밖에 없다). 봉우리와 그 직후를 넣고, 마지막 40ms 도 한 장 넣는다. */
+const STOPS = [0, 20, 45, 70, 110, 175, 250, 320];
 const SEED = 20260902;
 
 const SCENES = [

@@ -95,7 +95,10 @@ function summarize(env) {
     s0: rel[0].s,                                            /* 출생 크기(제 최대 대비) */
     bornFull: env.rows[0].per.filter((p, i) => p.w >= wMax[i] - 0.01).length,  /* 첫 프레임에 이미 최대인 알 */
     peakT: peak.T,                                           /* 최대 크기에 닿는 시각 */
-    fadeStart: (() => { for (let i = 0; i < rel.length; i++) if (rel[i].op < 0.995) return rel[i - 1] ? rel[i - 1].T : rel[i].T; return env.dur; })(),
+    /* ⚑ 4회차 — «퇴장이 시작되는 시각» 은 **봉우리 뒤**에서 찾는다. 4회차가 출생 알파 온셋(α.60 → 1)을
+       넣자 종전 판정(«처음으로 α<1 인 표본»)이 **탄생을 퇴장으로 읽어** 퇴장 폭이 380ms 로 부풀었다.
+       ⇒ α 가 1 에 붙어 있던 **마지막** 시각을 퇴장의 시작으로 본다. */
+    fadeStart: (() => { let last = 0; for (let i = 0; i < rel.length; i++) if (rel[i].op >= 0.995) last = rel[i].T; return last; })(),
     tail35: env.dur - under(0.35),                           /* «흐린 얼룩» 구간 */
     tail50: env.dur - under(0.5),
     ink: (T) => { const v = at(T); return v.op * v.s * v.s; },

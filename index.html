@@ -4143,12 +4143,28 @@
        이라 정지컷에서만 읽혔다(CI ①). 이제 38.9ms = 2.3프레임이다.
      ⚠ 여전히 **scale 은 1 을 안 넘고**(619 가둠 전제) 끝 크기는 .5 다(16회차) · 수명 380ms 불변 ·
        퇴장 폭은 오히려 늘었다(알파 고원이 34% 에서 끝난다 ⇒ 42회차 «≥180ms» 는 그대로 참). */
-  @keyframes fxSpark{0%{transform:translate(0,0) scale(.30);opacity:1;animation-timing-function:linear}
-    18%{transform:translate(calc(var(--dx)*.30),calc(var(--dy)*.30)) scale(1);opacity:1;animation-timing-function:linear}
-    34%{transform:translate(calc(var(--dx)*.50),calc(var(--dy)*.50)) scale(.99);opacity:1;animation-timing-function:linear}
-    52%{transform:translate(calc(var(--dx)*.68),calc(var(--dy)*.68)) scale(.96);opacity:.97;animation-timing-function:linear}
-    72%{transform:translate(calc(var(--dx)*.83),calc(var(--dy)*.83)) scale(.86);opacity:.76;animation-timing-function:linear}
-    86%{transform:translate(calc(var(--dx)*.93),calc(var(--dy)*.93)) scale(.68);opacity:.38;animation-timing-function:linear}
+  /* ⚑⚑ 681 4회차 — 3회차 비평 2인(CJ 7 / CK 6)이 **같은 두 자리**를 짚었다:
+       ⓐ **90~210ms(수명 32%)가 지각적으로 정지** — CJ «90·150ms 두 장이 이 축에서 구분 불가
+          (Δ크기 −1.5% · Δα −0.010)» · CK «60fps 환산 0.17px/frame = 가시 문턱 아래 · 8장 중 3장이
+          1× 배율에서 같은 그림이라 380ms 가 8단계가 아니라 **5단계**로 읽힌다».
+       ⓑ **탄생에 알파 온셋이 없다** — 0ms 에 크기는 30% 인데 α 가 이미 1.000 이라 «태어난다» 가
+          아니라 «30% 크기로 팝인» 이다(둘 다 지적). CJ 는 크기 램프 끝(68ms)의 꺾임도 짚었다
+          (+0.478 → −0.012 px/ms — 곡선 전체에서 가장 큰 불연속).
+     ⇒ ⓐ 는 **가운데 마디를 넷으로 쪼개** 크기·알파가 계속 내려가게 했다(90 → 210ms 에서
+       크기 −11% · α −11% — 3회차의 −5.4% · −6%의 두 배).
+       ⓑ 는 **출생 α .60** + 크기 램프를 **감속**으로(0 → 11% 에 .26 → .86, 11 → 18% 에 .86 → 1.00
+       ⇒ 램프 끝 속도 0.0144 → 0.0053/ms 라 봉우리의 꺾임이 0.49 → 0.28 px/ms 로 줄어든다).
+     ⚠ 이동 계수는 **4차 감속 곡선에서 뽑았다**(1−(1−t)^1.7): 구간속도 .00431 → .00376 → .00351 →
+       .00311 → .00263 → .00226 → .00156 → .00103 — 마디 계단이 대개 10~15%다(3회차는 25%였다 · CK ③).
+     ⚠ 불변: 수명 380ms · scale ≤1 · 끝 scale .5 · 퇴장 폭(알파 고원 끝 33% ⇒ 255ms ≥180ms · 42회차). */
+  @keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity:.6;animation-timing-function:linear}
+    11%{transform:translate(calc(var(--dx)*.18),calc(var(--dy)*.18)) scale(.86);opacity:1;animation-timing-function:linear}
+    18%{transform:translate(calc(var(--dx)*.28),calc(var(--dy)*.28)) scale(1);opacity:1;animation-timing-function:linear}
+    33%{transform:translate(calc(var(--dx)*.48),calc(var(--dy)*.48)) scale(.96);opacity:.99;animation-timing-function:linear}
+    44%{transform:translate(calc(var(--dx)*.61),calc(var(--dy)*.61)) scale(.92);opacity:.96;animation-timing-function:linear}
+    56%{transform:translate(calc(var(--dx)*.73),calc(var(--dy)*.73)) scale(.86);opacity:.9;animation-timing-function:linear}
+    70%{transform:translate(calc(var(--dx)*.85),calc(var(--dy)*.85)) scale(.78);opacity:.72;animation-timing-function:linear}
+    86%{transform:translate(calc(var(--dx)*.945),calc(var(--dy)*.945)) scale(.66);opacity:.38;animation-timing-function:linear}
     100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
 
   /* ⚑⚑ 660 — **강화 버스트의 알갱이를 «그 탭이 내는 재화 아이콘» 으로 갈아 끼운다**
