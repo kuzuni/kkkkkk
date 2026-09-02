@@ -62,28 +62,46 @@ async function burstAndSample(page) {
   const body = mk ? mk[1].replace(/\s+/g, ' ') : '';
   ok(!!mk, 'A0 공용 곡선 `@keyframes fxSpark` 가 있다');
   /* 키프레임을 «퍼센트 → scale·opacity» 표로 읽는다 — 값을 자에 다시 적지 않기 위해서다 */
-  const KF = [...body.matchAll(/(\d+)%\{transform:[^}]*?scale\(([\d.]+)\);opacity:([\d.]+)\}/g)]
+  /* ⚠ 마디 끝을 `}` 로 못박지 않는다 — 3회차부터 `;animation-timing-function:linear}` 가 뒤에 붙는다
+     (그렇게 적었더니 [A] 세 항이 «제품이 멀쩡한데» 빨갰다. 1회차의 `}\n` 함정과 같은 계열이다). */
+  const KF = [...body.matchAll(/(\d+)%\{transform:[^}]*?scale\(([\d.]+)\);opacity:([\d.]+)/g)]
     .map(m => ({ p: +m[1], s: parseFloat(m[2]), a: parseFloat(m[3]) }));
   const kf0 = KF.find(k => k.p === 0);
   ok(!!kf0 && kf0.s < 0.6, 'A1 ★ **작게 태어난다** — 0% 의 scale 이 0.6 미만(수리 전 1)',
      kf0 ? 'scale(' + kf0.s + ')' : '0% 를 못 읽음');
   const kfFull = KF.find(k => k.p > 0 && k.s >= 1);
-  ok(!!kfFull && kfFull.p <= 15,
-     'A2 ★ **제 크기까지 한 박자** — 최대 크기에 닿는 키프레임이 15% 이내다(수명의 ≤57ms)',
+  /* ⚠ 3회차에 11% → 18% 로 폈다 — 2회차 램프는 «s<70% 가 15.8ms = 60fps 한 프레임» 이라
+     정지컷에서만 읽혔다(비평 CI ①). 상한 20% 는 «한 박자» 의 경계다(76ms). */
+  ok(!!kfFull && kfFull.p <= 20,
+     'A2 ★ **제 크기까지 한 박자** — 최대 크기에 닿는 키프레임이 20% 이내다(수명의 ≤76ms)',
      kfFull ? kfFull.p + '%' : '최대에 닿는 키프레임이 없다');
   ok(KF.length > 0 && KF.every(k => k.s <= 1),
      'A3 ★ 어느 지점도 scale 1 을 **안 넘는다** — 619 13·14회차의 가둠(`sz/2 + FXB_INPAD`)이 그 전제 위에 있다',
      '최대 scale ' + Math.max(...KF.map(k => k.s)));
-  const kf52 = KF.find(k => k.p === 52);
-  ok(!!kf52 && kf52.s === 1 && kf52.a === 1 && /52%\{transform:translate\(calc\(var\(--dx\)\*\.78\),calc\(var\(--dy\)\*\.78\)\) scale\(1\);opacity:1\}/.test(body),
-     'A4 ★ 52% 고원 경계·이동 계수(.78d)가 **불변** — 42회차가 «퇴장 ≥180ms» 를 그 위에서 계산했다',
-     kf52 ? '52% s' + kf52.s + '/α' + kf52.a : '52% 가 없다');
+  /* ⚑ 3회차 이관 — 1·2회차의 A4 는 «52% 가 **글자 그대로** .78d/scale 1/α1» 이었다. 그 항이 지키던
+     것은 계수가 아니라 **42회차의 «퇴장 ≥180ms»**(= 알파가 늦어도 수명의 52% 에는 내려가기 시작한다)
+     이고, 3회차가 마디 경계의 속도 튐을 없애며 계수를 다시 배분하자 «지키는 뜻은 그대로인데 글자만
+     틀린» 항이 됐다. ⇒ 뜻으로 고쳐 적는다(333) — 알파 고원의 끝 시점 + 이동 계수의 단조성. */
+  const kfFade = KF.find(k => k.a < 1);
+  const coefs = [...body.matchAll(/(\d+)%\{transform:translate\((?:calc\(var\(--dx\)\*([\d.]+)\)|0)/g)]
+    .map(m => ({ p: +m[1], c: m[2] ? parseFloat(m[2]) : 0 }));
+  const mono = coefs.every((c, i) => i === 0 || c.c > coefs[i - 1].c);
+  ok(!!kfFade && kfFade.p <= 52 && mono && /100%\{transform:translate\(var\(--dx\),var\(--dy\)\)/.test(body),
+     'A4 ★ **퇴장이 늦어도 52% 에는 시작한다**(42회차 «퇴장 ≥180ms») · 이동 계수는 **단조 증가**하고 100% 에서 정확히 d 다',
+     (kfFade ? '알파 고원 끝 ' + kfFade.p + '%' : '알파가 안 내려간다') + ' · 계수 ' + coefs.map(c => c.c).join('→'));
   const kf100 = KF.find(k => k.p === 100);
   ok(!!kf100 && kf100.s >= 0.5 && kf100.a === 0,
      'A5 ★ 끝 크기가 .5 아래로 **안 내려간다** — 16회차 «.38 은 중간 프레임이 12px 로 읽힌다»(구슬 26px 이 같이 탄다)',
      kf100 ? 'scale(' + kf100.s + ')/α' + kf100.a : '100% 가 없다');
   ok(/animation:fxSpark \.38s ease-out forwards/.test(code) && /FXSPARK_MS = 380/.test(code),
      'A6 수명 선언(.38s)·`FXSPARK_MS`(380) **불변** — `verify660` [E2]·`verify666` [G] 가 이 값을 읽는다');
+  /* ⚑ 3회차 신설 [A8] — **마디마다 `linear`.** 요소 규칙의 `ease-out` 이 «마디마다» 걸리면
+     경계에서 속도가 0 으로 죽었다가 다시 서서 «앞머리가 가장 느린 버스트» 가 된다(2회차 비평 CI 가
+     구간속도 0.430 → 0.284 → 0.634%/ms 로 역산). 감속은 계수 자신이 진다. */
+  const lin = (body.match(/animation-timing-function:linear/g) || []).length;
+  ok(lin >= KF.length - 1,
+     'A8 ★ **마디마다 `linear`** — 감속은 계수가 지고 마디 경계에서 속도가 안 튄다(3회차 본체)',
+     lin + '/' + (KF.length - 1) + ' 마디');
   ok(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:\.55\}/.test(code)
      && /\.fx-spark\.fx-rlic\{[\s\S]{0,400}?animation-name:fxRlic/.test(code),
      'A7 전용 봉투 `fxRlic`(753 유물 획득 알)은 **한 값도 안 바뀌었다** — 이 곡선을 안 탄다');
@@ -141,6 +159,12 @@ async function burstAndSample(page) {
     /* ⚑ 2회차 신설 [B7] — **끝에서 급정거하지 않는다.** 비평 2인이 1회차 곡선을 같은 자로 쟀다
        (CF «마지막 40ms 기울기가 직전 60ms 의 2.6배» · CG «2.7배»). 그 축을 그대로 자로 세운다:
        실측 — 1회차 2.8 · 수리 전 0.38 · 2회차 0.77. 문턱 1.5 는 그 사이이고, «컷» 쪽만 잡는다. */
+    /* ⚑ 3회차 신설 [B9] — **재가속 0**. 2회차 비평 CI 의 «41.8ms 에 속도 0 → 45~90ms 가 전체
+       최고속(직전의 2.2배)» 을 자로 세운 것이다. 실측 — 3회차 1.00 · 수리 전 1.42 · 2회차 곡선 2.2.
+       문턱 1.20 은 그 사이이고 표본 격자(19ms) 흔들림에 안 뒤집힌다. */
+    ok(now.reaccel <= 1.20,
+       'B9 ★ **이동이 단조 감속한다** — 구간속도의 직전 대비 최대 증가 ≤1.20배(수리 전 1.42 · 2회차 곡선 2.2)',
+       p2(now.reaccel) + '배 · 가장 긴 «아무것도 안 변하는» 구간 ' + p2(now.still) + 'ms');
     const aAt = (T) => now.at(T).op;
     const sLast = aAt(now.dur - 40) / 40, sPrev = Math.max(1e-9, (aAt(now.dur - 100) - aAt(now.dur - 40)) / 60);
     ok(sLast / sPrev <= 1.5,
@@ -187,6 +211,9 @@ async function burstAndSample(page) {
     ok(old.dur - old.fadeStart >= 180,
        'R4 그러나 퇴장 폭(≥180ms)은 되돌려도 참이다 — [B5] 는 «고친 것» 이 아니라 «안 깬 것»',
        p2(old.dur - old.fadeStart) + 'ms');
+    ok(old.reaccel > 1.20,
+       'R5 되돌리면 **이동이 다시 재가속한다** — [B9] 가 빨개지는 자리(마디마다 걸린 ease-out)',
+       p2(old.reaccel) + '배');
   }
 
   await browser.close();

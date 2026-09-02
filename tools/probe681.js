@@ -87,6 +87,7 @@ async function burstAndSample(page) {
   info('꼬리', 'α≤0.50 ' + p2(now.tail50) + 'ms · α≤0.35 ' + p2(now.tail35) + 'ms (수명의 '
        + p2(now.tail35 / now.dur * 100) + '%)');
   info('잉크(α·s²)', [0, 95, 190, 240, 290, 340].map(T => T + 'ms ' + p2(now.ink(T))).join(' · '));
+  info('«큰 채로 흐림»', p2(now.smudge) + 'ms · 재가속 비 ' + p2(now.reaccel) + '배 · 가장 긴 정지 구간 ' + p2(now.still) + 'ms');
 
   /* ── 수리 전 사본 — 옛 곡선을 얹고 같은 자로 다시 잰다 ─────────────────── */
   await page.addStyleTag({ content: OLD });
@@ -106,6 +107,9 @@ async function burstAndSample(page) {
        'P4 그 구간의 잉크가 실제로 비어 있다 — 290ms ' + p2(old.ink(290)) + ' · 340ms ' + p2(old.ink(340)),
        '등재문 «290·340ms 프레임이 정보량 0»');
     console.log('\n[Δ] 지금 ↔ 수리 전');
+    info('재가속 비', p2(now.reaccel) + '배 ↔ ' + p2(old.reaccel) + '배');
+    info('«큰 채로 흐림»', p2(now.smudge) + 'ms ↔ ' + p2(old.smudge) + 'ms');
+    info('가장 긴 정지 구간', p2(now.still) + 'ms ↔ ' + p2(old.still) + 'ms');
     info('출생 크기', p2(now.s0 * 100) + '% ↔ ' + p2(old.s0 * 100) + '%');
     info('α≤0.35 꼬리', p2(now.tail35) + 'ms ↔ ' + p2(old.tail35) + 'ms');
     info('290ms 잉크', p2(now.ink(290)) + ' ↔ ' + p2(old.ink(290)));

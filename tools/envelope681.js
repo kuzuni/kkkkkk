@@ -110,6 +110,16 @@ function summarize(env) {
     /* α≤0.35 인 표본에서 알이 얼마나 큰가(최댓값) — 낮을수록 «작아지며 사라진다» */
     faintMaxS: Math.max(0, ...rel.filter(r => r.op <= 0.35 && r.op > 0).map(r => r.s)),
     mvAt, still: stillest(),                                 /* 이동 진행률 · 가장 긴 «정지» 구간(ms) */
+    /* ⚑ 3회차 — **재가속 비**. `ease-out` 이 «마디마다» 걸리면 마디 경계에서 속도가 0 으로 죽었다가
+       다시 서므로, 방사형 버스트인데 앞머리가 가장 느려진다(2회차 비평 CI 가 봉투 역산으로 잡은 자리).
+       구간속도의 «직전 대비 최대 증가 배수» 로 잰다 — 1 에 가까우면 단조 감속이다.
+       ⚠ 첫 구간은 «정지 → 출발» 이라 당연히 오르므로 뺀다(그것은 탄생이지 재가속이 아니다). */
+    reaccel: (() => {
+      const v = rel.slice(1).map((r, i) => (r.mv - rel[i].mv) / Math.max(1e-9, r.T - rel[i].T));
+      let m = 0;
+      for (let i = 2; i < v.length; i++) m = Math.max(m, v[i] / Math.max(v[i - 1], 1e-9));
+      return m;
+    })(),
     line: rel.map(r => Math.round(r.T) + 'ms s' + r.s.toFixed(2) + '/α' + r.op.toFixed(2)
                        + '/이동' + (r.mv * 100).toFixed(0) + '%').join(' · '),
   };
