@@ -96,7 +96,10 @@ const WATCH = () => {
     const l = L(), seen = new Set(l ? l.children : []);
     const rc = cards();
     const r = o.apply(this, arguments);
-    window.__p753.bursts.push({ id: it && it.id, first: !!first, cards: rc, born: scan(seen) });
+    /* ⚑ 칸 상자를 **버스트 앞뒤로 둘 다** 찍는다. 제품(`rwGainFx`)은 자기가 도는 **그 순간**의
+       `fxRect` 를 읽으므로, 앞에서 찍은 상자와 견주면 그 사이에 한 번이라도 레이아웃이 흔들린 틱에서
+       «자리가 틀렸다» 는 거짓 빨강이 난다(실측: 실행마다 정확히 1알만 ~5px). 뒤 상자가 제품과 같은 순간이다. */
+    window.__p753.bursts.push({ id: it && it.id, first: !!first, cards: rc, cardsAfter: cards(), born: scan(seen) });
     return r;
   };
   return true;
@@ -258,7 +261,7 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
   /* 이동은 «자리» 가 아니라 «방향» 이다 — 탄생 반경이 0 인지는 소스가 아니라 노드로 센다 */
   let r0max = -1, r0n = 0, r0t = 0;
   for (const b of ALL) {
-    const c = b.cards[b.id]; if (!c || !c.ri) continue;
+    const c = (b.cardsAfter && b.cardsAfter[b.id]) || b.cards[b.id]; if (!c || !c.ri) continue;
     const ax = c.ri.x + c.ri.w / 2, ay = c.ri.y + (c.lh > 0 ? c.lh / 2 : c.ri.h / 2);
     for (const q of gains(b)) {
       const d = Math.hypot(q.x - ax, q.y - ay);

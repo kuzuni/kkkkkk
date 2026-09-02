@@ -337,11 +337,11 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      공용 곡선은 0~52% 가 `scale(1)·opacity:1` 고원이라 아이콘 크기의 알에게는 «가림» 이 된다
      (비평가 2인 공통: «터짐이 한 프레임도 없다 · Lv.n 이 36~49% 지워진다»).
      ⇒ **불투명 구간 안에서 이미 줄어드는가**를 묻는다. 계수 셋은 [C6] 의 봉투 산수와 **같은 값**이어야 한다. */
-  const mRlic = code.match(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:1\}\s*35%\{transform:translate\(calc\(var\(--dx\)\*\.55\),calc\(var\(--dy\)\*\.55\)\) scale\(\.72\);opacity:\.78\}\s*100%\{transform:translate\(var\(--dx\), ?var\(--dy\)\) scale\(\.45\);opacity:0\}\}/);
+  const mRlic = code.match(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:\.55\}\s*35%\{transform:translate\(calc\(var\(--dx\)\*\.55\),calc\(var\(--dy\)\*\.55\)\) scale\(\.72\);opacity:\.45\}\s*100%\{transform:translate\(var\(--dx\), ?var\(--dy\)\) scale\(\.45\);opacity:0\}\}/);
   ok(!!mRlic && /\.fx-spark\.fx-rlic\{[\s\S]{0,400}?animation-name:fxRlic/.test(code)
      && /@keyframes fxSpark\{0%\{transform:translate\(0,0\) scale\(1\);opacity:1\}/.test(code),
      'C8 ★ 획득 알이 **전용 봉투(`fxRlic`)** 를 탄다 — 불투명 구간 안에서 이미 줄어들고, **공용 `fxSpark` 는 불변**',
-     mRlic ? '0%s1 · 35%t.55/s.72/α.78 · 100%t1/s.45/α0' : '전용 곡선을 못 찾았다');
+     mRlic ? '0%s1/α.55 · 35%t.55/s.72/α.45 · 100%t1/s.45/α0' : '전용 곡선을 못 찾았다');
   /* ⚑ 753 7회차 — 취소선. `fxBurst` 가 알을 `<s>` 로 낳으므로 기본값 `line-through` 가 살아 있으면
      아이콘 크기에서 **폭 156 · 두께 12px 검정 막대**가 글리프를 가로지른다(비평가 2인 독립 관측). */
   ok(/\.fx-spark\.fx-rlic\{[\s\S]{0,400}?text-decoration:none/.test(code),

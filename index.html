@@ -4072,8 +4072,13 @@
          (길이 .38s · ease-out · forwards 는 `.fx-spark` 것을 그대로 물려받는다).
        ⚠ 뻗음은 오히려 **줄어든다** — 최댓값이 탄생 프레임(= 아이콘 자기 발자국 79px)으로 옮겨 가고
          35% 지점 69.0 · 100% 지점 57.6 이라 이웃 칸(100.5)에서 더 멀어진다(`verify683` [C6] 이 매 실행 센다). */
-  @keyframes fxRlic{0%{transform:translate(0,0) scale(1);opacity:1}
-    35%{transform:translate(calc(var(--dx)*.55),calc(var(--dy)*.55)) scale(.72);opacity:.78}
+  /* ⚑⚑ 753 9회차 — **비평가 둘이 «단 하나» 를 같은 값으로 짚었다: «출생 불투명도 0.55»**.
+     8회차(0% α1.00)는 알이 아이콘과 **같은 모양·같은 크기·같은 자리**라 태어나는 순간 칸이 통째로
+     단색 실루엣이 된다 — M «Lv.1 대비 16.24:1 → 1.06:1 · 아이콘 식별 13.78 → 1.06:1(−92%)» ·
+     N «라벨 14.6 → 1.52:1 · 첫 80ms 동안 아이콘 픽셀의 92.5% 가 바뀐다». 크기·자리는 주인 지시라
+     못 건드리므로 **남은 손잡이는 알파 하나**이고, 둘이 독립으로 같은 수(0.55)를 적었다. */
+  @keyframes fxRlic{0%{transform:translate(0,0) scale(1);opacity:.55}
+    35%{transform:translate(calc(var(--dx)*.55),calc(var(--dy)*.55)) scale(.72);opacity:.45}
     100%{transform:translate(var(--dx),var(--dy)) scale(.45);opacity:0}}
   .fx-spark.fx-rlic{background:none;box-shadow:none;border-radius:0;
     display:flex;align-items:center;justify-content:center;line-height:1;
@@ -32322,7 +32327,13 @@ let rwFxW = 0;                           /* 682 — 버스트마다 도는 저�
       ↩ 되돌리려면 `RW_GAIN_DOWN = 0` — 온 원으로 즉시 되돌아온다. */
 const RW_GAIN_N0 = 1, RW_GAIN_N = 1;     /* 753 ③ — 획득 1회당 알갱이 «정확히 1개»(첫 발·홀드 같은 값) */
 const RW_GAIN_BOX = 1.25;                /* 753 ② — 알 상자 ÷ 아이콘 font-size. 10글리프 실측 최대 잉크 155.5 / 126 = 1.234 */
-const RW_GAIN_R0 = 0, RW_GAIN_R1 = 22;   /* 753 ③ — 탄생 반경 0(아이콘 중심) · 도달 반경(위 머리말의 이웃 칸 산수) */
+/* ⚑ 753 9회차 — `RW_GAIN_R1` 22 → **48**. 비평가 둘이 ③ 에서 같은 것을 적었다:
+   M «이동 15.8px = 아이콘의 10.5% · 어느 시각에도 알갱이가 아이콘 footprint 를 못 벗어난다» ·
+   N «순수 평행이동 18.2px = 프레임당 1.1px — 속도로 안 읽힌다». **원점은 그대로 아이콘 중심**이라
+   주인 ③(«유물 위치에서 … 주변에서 터지지 말고»)은 지켜진다 — 바뀌는 것은 «얼마나 밀려나는가» 다.
+   검산(둘 다 여전히 통과): 주행÷글리프 = 48/126 = **0.38 ≤ 0.5**([C4]) · 중심 48 < 반폭 75.5([C5]) ·
+   봉투 최대 뻗음 max(79, .55·48+.72·79 = 83.3, 48+.45·79 = 83.6) = **83.6 < 100.5**([C6]·[A3]). */
+const RW_GAIN_R0 = 0, RW_GAIN_R1 = 48;   /* 753 ③ — 탄생 반경 0(아이콘 중심) · 도달 반경(위 9회차 머리말) */
 const RW_GAIN_JIT = 0.28;                /* 칸 폭 대비 ±지터(682 규약과 같은 어휘) */
 const RW_GAIN_DOWN = 0.22;               /* 아래쪽 배제 섹터(원 둘레 비율 · 0 이면 온 원) — 위 위임 규약 머리말 */
 const RW_FLASH_MS = 120;                 /* 5회차 — 당첨 칸 플래시 길이(ms). 위 `rwSummonFx` 머리말의 산수 */

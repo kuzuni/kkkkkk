@@ -281,14 +281,21 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
   if (env && env.rows.length) {
     const r0 = env.rows[0], half = env.rows.length >> 1;
     info('봉투', env.rows.map(r => r.T + 'ms w' + r.w.toFixed(0) + '/α' + r.op.toFixed(2)).join(' · '));
-    /* «불투명 구간 안에서 이미 줄어든다» — α ≥ 0.5 인 마지막 시각의 폭이 탄생 폭보다 뚜렷이 작아야 한다 */
-    const opq = env.rows.filter(r => r.op >= 0.5);
-    const last = opq.length ? opq[opq.length - 1] : r0;
+    /* «앞구간에서 이미 줄어든다» — 자를 **시각**으로 든다.
+       ⚠ 9회차에 α 기준(«α≥0.5 구간»)을 시각 기준으로 옮겼다: 출생 α 를 .55 로 낮추자 그 창이
+       한 표본으로 쪼그라들어 **문턱이 아니라 창이 사라지는** 꼴이 됐다(자가 무르게 풀린 것이 아니라
+       재는 구간이 증발한 것이다). 묻는 것(«고원이 없는가»)은 그대로다 — 수명의 앞 35% 를 본다. */
+    const early = env.rows.filter(r => r.T <= env.dur * 0.35);
+    const last = early.length ? early[early.length - 1] : r0;
     const shrink = 1 - last.w / r0.w;
     ok(shrink >= 0.15,
-       'G3 ★ **불투명(α≥0.5) 구간 안에서 이미 15% 이상 줄어든다** — 공용 곡선의 «198ms 정지 고원» 이 빨개지는 자리',
-       'α≥0.5 마지막 t=' + last.T + 'ms · 폭 ' + r0.w.toFixed(0) + ' → ' + last.w.toFixed(0)
+       'G3 ★ **수명의 앞 35% 안에서 이미 15% 이상 줄어든다** — 공용 곡선의 «198ms 정지 고원» 이 빨개지는 자리',
+       't=' + last.T + 'ms · 폭 ' + r0.w.toFixed(0) + ' → ' + last.w.toFixed(0)
        + 'px (−' + (shrink * 100).toFixed(0) + '%)');
+    /* ⚑ 9회차 신설 — 비평가 2인 공통 «출생 불투명도 0.55». 태어나는 순간 알이 칸을 통째로 덮지 않는다. */
+    ok(r0.op <= 0.6,
+       'G5 ★ **출생 불투명도 ≤ 0.6** — 알이 아이콘과 같은 모양·크기·자리라 α1.00 이면 칸이 단색 실루엣이 된다(비평가 2인 공통)',
+       'α(t=0) = ' + r0.op.toFixed(2));
     const far = Math.max(...env.rows.map(r => r.far));
     ok(far <= 100.5 * Math.SQRT2 + 1,
        'G4 봉투 어느 순간에도 알 상자 모서리가 이웃 칸 대각(142.1px) 밖으로 안 나간다',
