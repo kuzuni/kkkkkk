@@ -182,6 +182,9 @@ docs/shots/
 docs/review/*.png
 tools/*.png
 /*.png
+# 667 9회차 — probe667b.js 가 캡처 옆에 뽑는 기하 덤프. 캡처와 한 벌인 중간본이라
+# 같이 막는다(«상자는 DOM 에서, 잉크는 화소에서» — 자를 돌리면 언제든 다시 나온다).
+docs/review/*.geo.json
 
 # 438 probe438.js / verify384.js 가 «409 4회차 수리 전» 대조용으로 git show 로 뽑는 사본
 # (V438_SRC=.v438-pre.html · V384_SRC=.v438-pre.html · 대조가 끝나면 지운다)
