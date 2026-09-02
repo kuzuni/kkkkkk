@@ -65,8 +65,15 @@ const { RESET_CLOSERS } = require('./closers540');
     if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
     if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }
     window.__n = 0; window.__cx = 0;
+    /* ⚑ 701 이관(2026-09-02) — «1회» 함수가 **둘로 갈렸다.** 701 이 배수 토글을 놓으면서 홀드 틱은
+       코어 `runeTryOne` 을 부르고, `runeBuy` 는 **막힌 첫 누름의 안내**에만 남았다(아래 [490] 항의
+       «안내 1회» 가 바로 그것이다). 둘은 서로 겹치지 않으므로 **같은 카운터에 더하면** `__n` 의 뜻이
+       («이 자리가 실제로 부른 1회 횟수 — 막힌 안내 포함») 전과 한 글자도 안 달라진다.
+       옛 이름 하나만 세면 이 자는 «0회» 로 빨개진다(제품은 멀쩡하다). */
     const o = window.runeBuy;
     window.runeBuy = function () { window.__n++; return o.apply(this, arguments); };
+    const o1 = window.runeTryOne;
+    if (typeof o1 === 'function') window.runeTryOne = function () { window.__n++; return o1.apply(this, arguments); };
     addEventListener('pointercancel', () => window.__cx++, true);
     /* 죽어서 18 패배 화면이 버튼을 덮는 것만 막는다(74 규약) — 루프 자체는 **돌린다** */
     setInterval(() => { try { if (typeof maxHp === 'function' && S.hp != null) S.hp = maxHp(); } catch (_) {} }, 200);
