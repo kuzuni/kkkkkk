@@ -26445,6 +26445,20 @@ function draw(){
      ⚠ 여기는 그리기뿐이다 — 자리·속도·수명·관통·피해를 읽지도 쓰지도 않는다(밸런스 불변). */
   function shotBody(b){
     const sh = b.sh || b.k;
+    /* ⚑ 792 — «연출 규격» 세 층 (주인 지시 계열 710 이 남긴 ②통일감·③덩치의 실체)
+       710 은 «중복 0» 을 닫았지만 17종이 네 문법(가는 선화 / 단색 평면 / 파스텔 후광+본체 /
+       방사 발광)을 섞어 썼다. 재현(`probe792`)이 그 넷을 **한 축**으로 갈랐다 —
+       빠진 것은 «색» 이나 «형상» 이 아니라 **층**이고, 게다가 **상보적**이었다:
+         · 후광이 있는 13종은 하이라이트가 **하나도 없고**(spec 0.0000)
+         · 하이라이트가 있는 4종(반사탄·나선탄·도약탄·천벌의 창)은 후광이 **없다**(soft 2~10%).
+       ⇒ 문법을 한 줄로 못박는다: **모든 발은 ① 후광(저알파) · ② 본체(`b.col` 불투명) ·
+          ③ 하이라이트(근백색 코어) 세 층을 전부 갖는다. 하드 외곽선은 쓰지 않는다.**
+       형상은 한 획도 안 바꾼다 — 710 이 여덟 회차에 걸쳐 갈라 놓은 실루엣이 이 작업의 재료다.
+       ⚠ 하이라이트는 «본체 위» 라야 뜻이 있다(허공에 찍으면 그냥 흰 점이다). 그래서 각 가지에서
+         본체를 그린 **뒤에** 부르고, 자(`verify792`)는 근백색 화소를 **잉크 안에서** 센다. */
+    const SPEC = 'rgba(255,255,255,.94)';
+    const halo = fn => { ctx.save(); fn(); ctx.restore(); };   /* ① 후광 — 본체 **앞에** 부른다 */
+    const spec = fn => { ctx.save(); fn(); ctx.restore(); };   /* ③ 하이라이트 — 본체 **뒤에** 부른다 */
     /* 불덩이 공용 몸 — 화염구·화염병이 «크기만 다른 같은 원» 이던 자리(193 ⑧)를 갈랐지만
        «불» 이라는 재질은 공유해야 한 세트로 읽힌다. 재질만 함수로 남기고 형상은 각자 그린다. */
     const fireCore = rr => {
@@ -26452,6 +26466,9 @@ function draw(){
       g.addColorStop(0,'#fff2c0'); g.addColorStop(0.45,'#ff9a3c'); g.addColorStop(1,'rgba(255,80,20,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,rr*1.9,0,6.283); ctx.fill();
       ctx.fillStyle = '#ffdc8a'; ctx.beginPath(); ctx.arc(0,0,rr*0.6,0,6.283); ctx.fill();
+      /* 792 ③ — 이 코어는 `#ffdc8a`(파랑 138)라 «근백색» 이 아니다. 불 계열 셋이 하이라이트
+         층을 통째로 못 갖고 있던 자리다. 형상·크기는 그대로 두고 **가장 안쪽만** 흰불로. */
+      ctx.fillStyle = SPEC; ctx.beginPath(); ctx.arc(0,0,rr*0.3,0,6.283); ctx.fill();
     };
     if(sh === 'arc' || sh === 'slash'){          /* 검기 — 초승달 호(기준형) */
       ctx.rotate(b.a);
@@ -26459,6 +26476,8 @@ function draw(){
       ctx.beginPath(); ctx.arc(0,0,13,-1.0,1.0); ctx.stroke();
       ctx.strokeStyle = b.col; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.arc(0,0,13,-0.85,0.85); ctx.stroke();
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+                   ctx.beginPath(); ctx.arc(0,0,13,-0.52,0.52); ctx.stroke(); });
     }else if(sh === 'rake'){                     /* 멀티 검기 — 호 세 겹(갈퀴) */
       ctx.rotate(b.a);
       ctx.lineCap = 'round';
@@ -26466,6 +26485,8 @@ function draw(){
       for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.78,0.78); ctx.stroke(); }
       ctx.strokeStyle = b.col; ctx.lineWidth = 2.6;
       for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.64,0.64); ctx.stroke(); }
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.15; ctx.lineCap = 'round';
+                   for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.34,0.34); ctx.stroke(); } });
     }else if(sh === 'cross'){                    /* 주변 참격 — X 교차 참격 */
       ctx.rotate(b.a);
       ctx.lineCap = 'round';
@@ -26490,6 +26511,13 @@ function draw(){
       blade(0,    b.col);
       blade(1.57, b.col);
       ctx.restore();
+      /* 792 ③ — 날의 «서슬». 두 날의 뿌리 쪽(두꺼운 쪽)에만 얹어 도는 방향을 한 번 더 세운다. */
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+                   for(const rot of [0,1.57]){
+                     ctx.save(); ctx.rotate(rot);
+                     ctx.beginPath(); ctx.moveTo(-13.5,-7.6); ctx.quadraticCurveTo(-3,-3.4, 5,1.8); ctx.stroke();
+                     ctx.restore();
+                   } });
     }else if(sh === 'wing'){                     /* 폭풍의 칼날 — 호 + 뒷깃 세 줄 */
       ctx.rotate(b.a);
       ctx.lineCap = 'round';
@@ -26501,16 +26529,34 @@ function draw(){
       ctx.beginPath();
       for(const dy of [-9,0,9]){ ctx.moveTo(1,dy*0.75); ctx.lineTo(-17,dy); }
       ctx.stroke();
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+                   ctx.beginPath(); ctx.arc(0,0,13,-0.46,0.46); ctx.stroke(); });
     }else if(sh === 'star' || sh === 'shuri'){   /* 표창 — 4각 별(기준형) */
       ctx.rotate(b.spin || 0);
-      ctx.fillStyle = b.col;
-      ctx.beginPath();
-      for(let i=0;i<4;i++){
-        const a = i*1.5708;
-        ctx.lineTo(Math.cos(a)*13, Math.sin(a)*13);
-        ctx.lineTo(Math.cos(a+0.785)*4.5, Math.sin(a+0.785)*4.5);
-      }
-      ctx.closePath(); ctx.fill();
+      /* 792 ① — 이 기준형이 «단색 평면» 문법의 출처였다(재현: soft 4.4% · spec 0%).
+         ⚠ **«같은 별을 크게·흐리게» 는 오답이었다**(1회차). 후광 별(rOut 20)이 실루엣 bbox 를
+           13 → 20 으로 넓히자 `verify541` [F](«스킬 그림 = 수리 전 ×2» — 잉크 bbox 로 잰다)가
+           48 ↔ 58 로 **흔들렸다**(같은 트리 4회에 1회 빨강). 뿌리는 두 겹이다:
+             ⓐ 후광이 bbox 를 넓혀 ×2 관계를 깬다.
+             ⓑ 저알파 후광은 **2배 크기에서만** 문턱을 넘어(1배 사본에서는 안 잡힌다) 비율이 어긋난다.
+           수리 전 트리 5회는 47/47.5 로 붙박이였으니 **내가 만든 플레이키**다(344 규칙대로 대조했다).
+         ⇒ 후광을 **바깥으로** 두르지 않고 별의 **오목한 사이(notch)를 채우는 원반**으로 준다.
+            반지름을 본체의 봉우리(13)와 같게 잡아 **bbox 가 한 픽셀도 안 넓어지고**(541 [F] 초록 유지),
+            네 갈래 사이의 빈 곳이 차서 후광 층은 오히려 더 넓게 잡힌다. 형상은 한 획도 안 바뀐다. */
+      const star4 = (rOut, rIn) => {
+        ctx.beginPath();
+        for(let i=0;i<4;i++){
+          const a = i*1.5708;
+          ctx.lineTo(Math.cos(a)*rOut, Math.sin(a)*rOut);
+          ctx.lineTo(Math.cos(a+0.785)*rIn, Math.sin(a+0.785)*rIn);
+        }
+        ctx.closePath(); ctx.fill();
+      };
+      halo(() => { ctx.fillStyle = 'rgba(255,232,150,.30)';
+                   ctx.beginPath(); ctx.arc(0,0,12.6,0,6.283); ctx.fill(); });
+      ctx.fillStyle = b.col;                    star4(13, 4.5);
+      spec(() => { ctx.fillStyle = SPEC;
+                   ctx.beginPath(); ctx.arc(0,0,2.9,0,6.283); ctx.fill(); });
     }else if(sh === 'rock'){                     /* 돌팔매 — 울퉁불퉁한 바위 육각 */
       ctx.rotate(b.spin || 0);
       /* 비평가 B 1회차 ③ — 표창(같은 줄 기준형)보다 잉크가 2.9배였다. 형상은 그대로 두고
@@ -26526,6 +26572,11 @@ function draw(){
       ctx.beginPath();
       for(let i=0;i<4;i++){ const a2 = i*1.0472 + 1.6; ctx.lineTo(Math.cos(a2)*rr[i]*0.82, Math.sin(a2)*rr[i]*0.82); }
       ctx.closePath(); ctx.fill();
+      /* 792 ③ — 그림자 면의 **반대쪽**에 빛 받는 면을 준다(돌은 결이 아니라 면으로 읽힌다). */
+      spec(() => { ctx.fillStyle = SPEC;
+                   ctx.beginPath();
+                   for(let i=0;i<3;i++){ const a3 = i*1.0472 - 1.9; ctx.lineTo(Math.cos(a3)*rr[i]*0.52, Math.sin(a3)*rr[i]*0.52); }
+                   ctx.closePath(); ctx.fill(); });
     }else if(sh === 'bmr' || sh === 'boomer'){   /* 부메랑 — 굽은 막대 */
       ctx.rotate(b.spin || 0);
       /* 비평가 B 1회차 ③ — 같은 줄의 표창보다 잉크가 4.0배였다. 획을 얇게·팔을 짧게 해서
@@ -26541,6 +26592,9 @@ function draw(){
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       bmr(6.5, 'rgba(255,224,138,.35)');
       bmr(3.4, b.col);
+      /* 792 ③ — 휘는 바깥쪽 마루에만 서슬을 얹어 «도는 막대» 를 세운다. */
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+                   ctx.beginPath(); ctx.moveTo(-7.6,-2.2); ctx.quadraticCurveTo(0,-10.4, 7.6,-2.2); ctx.stroke(); });
     }else if(sh === 'spear' || sh === 'ice'){    /* 얼음창 — 창날 + 냉기 띠(기준형) */
       ctx.rotate(b.a);
       ctx.fillStyle = 'rgba(160,235,255,.4)';
@@ -26548,6 +26602,11 @@ function draw(){
       ctx.fillStyle = b.col;
       ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-10,6); ctx.lineTo(-6,0); ctx.lineTo(-10,-6);
       ctx.closePath(); ctx.fill();
+      /* 792 ③ — 천벌의 창이 이미 갖고 있던 «날 끝 흰 섬광» 을 기준형에도 준다
+         (그것이 이 계열의 하이라이트 규격이다 — 규격은 공유하고 비율로 갈린다). */
+      spec(() => { ctx.fillStyle = SPEC;
+                   ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(6.5,2.5); ctx.lineTo(6.5,-2.5);
+                   ctx.closePath(); ctx.fill(); });
     }else if(sh === 'moon'){                     /* 곡선탄 — 초승달(🌙 과 한 벌) */
       ctx.rotate(b.a);
       /* ⚠ 초승달은 **파낸 쪽 반대로 무게가 쏠린다** — 두 호가 모두 +x 쪽이라 잉크가 통째로
@@ -26576,6 +26635,9 @@ function draw(){
       ctx.arc(0,0,14,0.72,-0.72,true);           /* 바깥 원호 */
       ctx.arc(8,0,12,-1.05,1.05,false);          /* 안쪽을 파낸다 */
       ctx.closePath(); ctx.fill();
+      /* 792 ③ — 달의 «등»(바깥 원호) 쪽에만 얹는다. 파낸 안쪽에 얹으면 초승달이 다시 찬다. */
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+                   ctx.beginPath(); ctx.arc(0,0,13.2,0.56,-0.56,true); ctx.stroke(); });
     }else if(sh === 'arrow'){                    /* 꿰뚫는 화살 — 대 + 촉 + 깃 */
       ctx.rotate(b.a);
       /* 412 «한 밴드» — 선 그림이라 잉크가 계열의 42% 다(실측 3,829 ↔ 9,025).
@@ -26596,6 +26658,10 @@ function draw(){
       ctx.moveTo(-20,7.5); ctx.lineTo(-10,0); ctx.lineTo(-20,-7.5);
       ctx.moveTo(-14.5,5.5); ctx.lineTo(-6,0);
       ctx.stroke();
+      /* 792 ③ — 같은 줄(얼음창·천벌의 창)의 «촉 끝 섬광» 규격을 화살촉에도. */
+      spec(() => { ctx.fillStyle = SPEC;
+                   ctx.beginPath(); ctx.moveTo(23,0); ctx.lineTo(12.5,3.2); ctx.lineTo(12.5,-3.2);
+                   ctx.closePath(); ctx.fill(); });
     }else if(sh === 'lance'){                    /* 천벌의 창 — 긴 창날 + 가로 가드 */
       ctx.rotate(b.a);
       /* 비평가 D 2회차 ④ — 가로 «가드» 를 세우니 십자(+)로 읽혀 창이 아니게 됐다. 가드를 버리고
@@ -26605,6 +26671,11 @@ function draw(){
       /* 비평가 K 6회차 ① — 후광 타원이 남아 있는 한 얼음창과 «타원 + 앞쪽 촉» 이라는 같은
          구조로 읽힌다. 후광을 **버리고** 날만 남긴다 — 얼음창(짧고 넓은 캡슐)과 천벌의 창
          (길고 가는 대못)이 이제 «구조» 로 갈린다. 빠진 덩치는 날 뒤의 잔광 줄로 메운다. */
+      /* 792 ① — 후광이 잉크의 7.2% 뿐이라 이 종만 «단색 평면» 쪽으로 떨어져 있었다.
+         ⚠ 6회차가 버린 **타원 후광을 되살리면 안 된다**(얼음창과 «타원 + 앞쪽 촉» 으로 다시 붙는다).
+         그래서 후광도 «길고 가는» 구조 그대로 — 같은 축의 잔광 줄을 한 겹 더 넓고 흐리게 깐다. */
+      halo(() => { ctx.strokeStyle = 'rgba(255,208,255,.16)'; ctx.lineWidth = 19; ctx.lineCap = 'round';
+                   ctx.beginPath(); ctx.moveTo(-31,0); ctx.lineTo(12,0); ctx.stroke(); });
       ctx.strokeStyle = 'rgba(255,208,255,.42)'; ctx.lineWidth = 9; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(-30,0); ctx.lineTo(8,0); ctx.stroke();
       ctx.fillStyle = b.col;
@@ -26638,6 +26709,13 @@ function draw(){
       ctx.closePath(); ctx.fill();
       /* 같은 이유(비평가 J ②) — 하드 주황 외곽선을 버리고 **달궈진 가장자리**로 바꾼다 */
       ctx.strokeStyle = 'rgba(255,180,92,.45)'; ctx.lineWidth = 4.5; ctx.lineJoin = 'round'; ctx.stroke();
+      /* 792 ③ — 진행 방향(앞쪽) 면만 흰불로 달군다. 꼬리는 뒤(−x)라 앞이 밝아야 방향이 산다. */
+      /* ⚠ `globalAlpha` 를 겹쳐 흐리면 어두운 바위(#6b5240) 위에서 근백색에 **못 미친다**
+         (실측: α .9 × SPEC .94 ⇒ 초록 228 < 232 ⇒ 하이라이트 층이 0 으로 셌다).
+         하이라이트는 종마다 세기를 달리 주지 말고 **한 색(SPEC)** 으로 — 그게 이 문법이다. */
+      spec(() => { ctx.rotate(b.a); ctx.fillStyle = SPEC;
+                   ctx.beginPath(); ctx.moveTo(11.5,-5.2); ctx.quadraticCurveTo(15.5,0, 11.5,5.2);
+                   ctx.quadraticCurveTo(7.4,0, 11.5,-5.2); ctx.closePath(); ctx.fill(); });
     }else if(sh === 'bottle' || sh === 'flask'){ /* 화염병 — 병 실루엣 + 심지 불 */
       ctx.rotate(b.spin !== undefined ? b.spin : b.a);
       /* 비평가 C 3회차 ③ — 같은 줄의 화염구(기준형·안 건드린다)보다 잉크가 절반이었다.
@@ -26657,9 +26735,18 @@ function draw(){
          하드 외곽선이 있어 줄 안 규격이 갈렸다. 외곽선을 버리고 **안쪽 밝은 면**으로 유리를 낸다. */
       ctx.fillStyle = 'rgba(255,255,255,.22)';
       ctx.beginPath(); ctx.ellipse(-4,4,3.6,6.5,-0.3,0,6.283); ctx.fill();
+      /* 792 ③ — 위 «유리 면» 은 α .22 라 근백색에 못 미친다(자가 세는 층이 아니다).
+         유리는 넓게 흐린 면 + **좁은 밝은 띠**로 읽히므로 그 띠만 또렷하게 얹는다. */
+      spec(() => { ctx.fillStyle = SPEC;
+                   ctx.beginPath(); ctx.ellipse(-4.6,3.4,1.5,4.6,-0.3,0,6.283); ctx.fill(); });
       ctx.save(); ctx.translate(0,-16); fireCore(4.5); ctx.restore();   /* 심지 불 */
     }else if(sh === 'gem'){                      /* 반사탄 — 마름모 결정(🔷) */
       ctx.rotate(b.a);
+      /* 792 ① — 이 기준형이 «단색 평면» 문법의 다른 출처였다(재현: soft 2.3% — 17종 중 최저).
+         형상은 그대로, **같은 마름모를 크게·흐리게** 뒤에 깔아 후광 층만 세운다. */
+      halo(() => { ctx.fillStyle = 'rgba(180,230,255,.28)';
+                   ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(14.6,0); ctx.lineTo(0,20); ctx.lineTo(-14.6,0);
+                   ctx.closePath(); ctx.fill(); });
       ctx.fillStyle = b.col;
       ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(9.5,0); ctx.lineTo(0,13); ctx.lineTo(-9.5,0);
       ctx.closePath(); ctx.fill();
@@ -26670,6 +26757,14 @@ function draw(){
          내 잘못이었다: 이음매 호를 중심에서 ±13 인 원으로 그렸는데 몸통 반지름이 11 이라
          **호가 몸통 밖으로 나가** 공은 흐린 발광만 남고 선 두 개만 또렷했다.
          ⇒ 몸통을 **채운 원**으로 세우고 이음매를 그 **안쪽**(±9 · 반지름 9)으로 넣는다. */
+      /* 792 ① — 후광 9.6%. ⚠ **둥근 후광은 오답이었다** — 1회차에 반지름 18.5 원으로 줬더니
+         `verify710` [C1] 의 최악 쌍이 `stone↔bounce` 0.796 에서 **`boom↔bounce` 0.840** 으로
+         올라갔다(화염구의 방사 발광도 같은 크기의 둥근 덩어리다). 710 이 여덟 회차에 걸쳐 닫은
+         ①(분간)을 792 가 되감는 꼴이라 그대로 둘 수 없다.
+         ⇒ **납작한 타원**으로 준다. «튀는 공은 눌린다» 는 뜻이 살아 ④ 도 같이 얻고,
+            마스크가 원이 아니게 되어 화염구와 겹치지 않는다(실측 0.840 → 아래 [C1]). */
+      halo(() => { ctx.fillStyle = 'rgba(214,255,170,.26)';
+                   ctx.beginPath(); ctx.ellipse(0,0,19.5,12.6,0,0,6.283); ctx.fill(); });
       ctx.fillStyle = b.col;
       ctx.beginPath(); ctx.arc(0,0,12,0,6.283); ctx.fill();
       const gb2 = ctx.createRadialGradient(-4,-4,1,0,0,12);
@@ -26680,18 +26775,28 @@ function draw(){
       ctx.beginPath(); ctx.arc(-9,0,9,-1.1,1.1); ctx.stroke();
       ctx.beginPath(); ctx.arc(9,0,9,3.1416-1.1,3.1416+1.1); ctx.stroke();
       ctx.restore();
+      /* 792 ③ — 위 방사 하이라이트는 가장자리로 갈수록 흐려져 근백색이 97 화소뿐이었다
+         (후광을 얹어 잉크가 커지자 0.57% 로 내려앉았다). 같은 자리에 **또렷한 점광**을 하나 얹는다. */
+      spec(() => { ctx.fillStyle = SPEC;
+                   ctx.beginPath(); ctx.arc(-4.2,-4.2,3.4,0,6.283); ctx.fill(); });
     }else if(sh === 'swirl'){                    /* 나선탄 — 소용돌이(🍥) */
       ctx.rotate((b.sa || 0) + (b.a || 0));
       /* 비평가 K 6회차 ③ — 같은 줄(반사탄·도약탄)보다 채색 면적이 40~45% 작았다. 획을 굵혀
          «선 하나» 가 아니라 «감긴 띠» 로 보이게 한다 — 소용돌이라는 형상은 그대로다. */
-      ctx.strokeStyle = b.col; ctx.lineWidth = 5.6; ctx.lineCap = 'round';
-      ctx.beginPath();
-      for(let i=0;i<=26;i++){
-        const t = i/26, ang = t*5.6, r = 2 + t*12.5;
-        const X = Math.cos(ang)*r, Y = Math.sin(ang)*r;
-        if(i) ctx.lineTo(X,Y); else ctx.moveTo(X,Y);
-      }
-      ctx.stroke();
+      /* 792 ① — 후광 3.6%(17종 중 두 번째로 낮았다). 소용돌이는 **같은 나선을 굵고 흐리게**
+         깔면 후광이 형상을 그대로 따라가므로 실루엣이 안 흐려진다(원형 후광은 «구슬» 로 되돌린다). */
+      const coil = (w, st) => {
+        ctx.strokeStyle = st; ctx.lineWidth = w; ctx.lineCap = 'round';
+        ctx.beginPath();
+        for(let i=0;i<=26;i++){
+          const t = i/26, ang = t*5.6, r = 2 + t*12.5;
+          const X = Math.cos(ang)*r, Y = Math.sin(ang)*r;
+          if(i) ctx.lineTo(X,Y); else ctx.moveTo(X,Y);
+        }
+        ctx.stroke();
+      };
+      halo(() => coil(13.5, 'rgba(255,214,236,.24)'));
+      coil(5.6, b.col);
       ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0,0,2.6,0,6.283); ctx.fill();
     }else{                                       /* 드론 연사 탄·태그 없는 발 — 공용 구슬 */
       const g = ctx.createRadialGradient(0,0,1,0,0,9);
