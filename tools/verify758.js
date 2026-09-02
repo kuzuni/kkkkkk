@@ -24,6 +24,10 @@
          기준선 표는 **옛 계수**로 설명된다 = 두 표가 서로 다른 세대임을 자가 스스로 확인)
      [R] 되돌림 시험 — 측정표의 오프라인 축만 옛 계수로 되돌리면 [C]·[D] 가 **빨개진다**
          (334·348·364 규약 — 무르게 푼 수리가 아님을 못박는 자리)
+     [S] 같은 자로 잰 비교인가(calib sha) · ② 를 **말미 창**에서도 잰다
+     [T] **④ 두 정책 간격**(199 25회차 신설 · 24-7 3번) — 판정 줄(교차일 비 · 소환 예산 장부)이
+         §0 창 1.8~2.0 안인가. ④ 는 758 하향이 만든 손해(24정정6)라 하향의 자가 같이 지킨다.
+         음성항은 **커밋된 직전 세대 표**(r801-post · 같은 κ sha)다 — 그 표에서는 2.5 로 창 밖이다.
    ========================================================================== */
 const fs = require('fs');
 const path = require('path');
@@ -44,13 +48,24 @@ const SRC = fs.readFileSync(SRCF, 'utf8');
    [S1] 이 그것을 자로 못박는다. */
 const BASE_M = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-base-k.md');
 const BASE_J = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-base-k.json');
-const CUR_J  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-both.json');
-const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-both.md');
+/* ⚑ **199 25회차** — 이 회차 열을 r25 로 옮긴다(제품이 `OFF_DAY_CAP_MIN` 을 660 으로 내렸으므로
+   r24 표는 더 이상 «지금 제품» 의 사진이 아니다 — 그대로 두면 [E1] 이 옳게 빨개진다). */
+const CUR_J  = path.join(ROOT, 'docs/review/199-bot-2026-09-02-r25.json');
+const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-02-r25.md');
 /* 23회차 표 — [S4] 가 «이 자가 그 결함을 실제로 잡는가» 를 되돌림 표본으로 쓴다(PM=15 세대) */
 const R23_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r23-both.md');
+/* 801 직후 표(= 25회차 직전 세대 · calib sha 가 base-k 와 **같다**) — [T2] 의 빨강 표본 */
+const PRE_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-02-r801-post.md');
 
 /* 옛 계수 — 되돌림 시험의 «빨강 표본» 이자 [E2] 의 기준선 설명값 */
 const OLD_PM = 75;
+/* 기준선 트리(`adeb739^`)의 하루 예산 — [E2] 가 «기준선 표는 옛 세대» 를 확인할 때 쓰는 값이다.
+   ⚠ 25회차가 제품의 `OFF_DAY_CAP_MIN` 을 1440 → 660 으로 내렸으므로 이 값을 소스에서 읽으면
+   기준선 표를 660×75 로 설명하려다 **틀리게 빨개진다**(기준선은 1440 세대다). 세대 상수는
+   세대와 함께 적는다. */
+const BASE_CAP_MIN = 1440;
+/* ④ 두 정책 간격 — §0 «비 1.8~2.0» (판정 줄 = 교차일 비 · 22정정4 · 24정정5) */
+const RATIO_LO = 1.8, RATIO_HI = 2.0;
 /* 과녁 창 — §0 개정(758): 50% ± 5%p */
 const WIN_LO = 0.45, WIN_HI = 0.55;
 /* ② — §0 원문 «한 축이 유입의 50% 를 넘지 않는다» */
@@ -112,6 +127,22 @@ function tailOfMd(md, pol) {
   return total ? { axes, total } : null;
 }
 function calShaOf(md) { return ((md.match(/calib sha\s+\*{0,2}([0-9a-f]{12})/) || [])[1]) || null; }
+/* ⚑ **199 25회차 신설** — ④ 의 판정 줄을 표에서 읽는다.
+   [G] 표의 «④ 교차일 … 〔소환 예산 장부…〕» 행이 그 줄이다(결2 ⓐ = ④ 의 판정 장부 · 22정정4
+   «비는 판정, 도달일은 관측» · 24정정5 «말미 기울기 비·«참고» 행을 판정으로 읽지 마라»).
+   같은 머리글이 정책별 [E2] 표에도 있으므로 **칸이 넷인 [G] 행**(라벨·부지런·대충·비)만 고른다 —
+   비 칸은 안 읽고 두 값에서 다시 나눈다(표가 스스로 적은 수를 그대로 믿지 않는다). */
+function crossOfMd(md) {
+  for (const line of md.split('\n')) {
+    if (!/④ 교차일/.test(line) || !/소환 예산 장부/.test(line)) continue;
+    const c = line.split('|');
+    if (c.length < 6) continue;                       /* 정책별 [E2] 행(칸 셋)은 건너뛴다 */
+    const num = s => { const m = String(s).match(/([\d,]+(?:\.\d+)?)/); return m ? Number(m[1].replace(/,/g, '')) : NaN; };
+    const d = num(c[2]), k = num(c[3]);
+    if (Number.isFinite(d) && Number.isFinite(k) && d > 0) return { dil: d, cas: k, ratio: k / d };
+  }
+  return null;
+}
 function maxAxis(axes, total) {
   let name = null, v = -1;
   Object.entries(axes).forEach(([k, x]) => { if (x > v) { v = x; name = k; } });
@@ -250,8 +281,8 @@ function maxAxis(axes, total) {
        을 실제 값으로 좁히는 자리다(둘이 어긋나면 표나 상수 중 하나가 낡은 것이다). */
     eq('[E1b] 표에서 역산한 분당 값 = 제품 상수 (정수 일치 — 상수를 못박는 항)',
        Math.round(offDayCur / Number(capMin)), PM);
-    near('[E2] [전제] 기준선 표의 오프라인/일은 **옛 계수(' + OLD_PM + ')** 로 설명된다 (두 표는 다른 세대다)',
-         offDayBase, Number(capMin) * OLD_PM, 0.06, '하루 예산 ' + capMin + '분 × ' + OLD_PM);
+    near('[E2] [전제] 기준선 표의 오프라인/일은 **옛 계수(' + OLD_PM + ')·옛 예산(' + BASE_CAP_MIN + '분)** 로 설명된다 (두 표는 다른 세대다)',
+         offDayBase, BASE_CAP_MIN * OLD_PM, 0.06, '하루 예산 ' + BASE_CAP_MIN + '분 × ' + OLD_PM);
 
     /* ── [R] 되돌림 시험 ────────────────────────────────────────────────── */
     console.log('\n[R] 되돌림 — 오프라인 축만 옛 계수로 되돌린 표는 빨갛다');
@@ -310,6 +341,37 @@ function maxAxis(axes, total) {
     yes('[S4] [전제] 23회차 표(PM=15)에서는 [S2]·[S3] 가 **빨갛다** (자가 그 결함을 실제로 잡는다)',
         !!m3D && !!m3C && m3D.share > AXIS_CAP && m3C.share > AXIS_CAP,
         m3D && m3C ? '부지런 ' + pct(m3D.share) + ' · 대충 ' + pct(m3C.share) : '(r23 표 없음)');
+
+    /* ── [T] ④ 두 정책 간격 ─────────────────────────────────────────────────
+       24-7 3번: «`verify758` 에 ④ 항을 세운다(현재 0개) — 비 1.8~2.0 을 판정 줄(교차일 비)로».
+       ④ 는 758 이 만든 손해다(24정정6 — 하향 전 비 1.356 이 창 안이었다). 그래서 하향의 자가
+       그것을 같이 지키는 것이 맞다. ⚠ 도달일 자체는 **관측**이라 여기서 판정하지 않는다(22-0). */
+    console.log('\n[T] ④ 두 정책 간격 — 판정 줄(교차일 비 · 소환 예산 장부 · 22정정4·24정정5)');
+    const crC = crossOfMd(cmd);
+    yes('[T0] [전제] 이 회차 표에서 판정 줄(교차일 · 소환 예산 장부)을 두 정책 다 읽었다',
+        !!crC, crC ? '부지런 ' + crC.dil + '일 · 대충 ' + crC.cas + '일' : '(행 없음)');
+    yes('[T1] **④ 교차일 비(대충/부지런)가 §0 창(' + RATIO_LO + '~' + RATIO_HI + ') 안이다**',
+        !!crC && crC.ratio >= RATIO_LO && crC.ratio <= RATIO_HI,
+        crC ? crC.ratio.toFixed(3) : '(행 없음)');
+    /* 진짜 음성항 — 손으로 만든 표본이 아니라 **커밋된 직전 세대 표**다. r801-post 는 calib sha 가
+       base-k 와 같아(6a013a86ea41) [S1] 이 금지한 «해시 다른 두 표» 문제도 없다. 이 항이 빨개지면
+       [T1] 은 아무 표나 통과시키는 것이다(24정정8 이 [R3] 에서 지적한 결함을 여기서는 안 만든다). */
+    const preMd = fs.existsSync(PRE_M) ? fs.readFileSync(PRE_M, 'utf8') : null;
+    const crP = preMd ? crossOfMd(preMd) : null;
+    yes('[T2] [음성항] **직전 세대 표**(r801-post · 같은 κ sha)를 이 자에 대면 창을 **넘는다**',
+        !!crP && crP.ratio > RATIO_HI,
+        crP ? crP.ratio.toFixed(3) + ' (' + calShaOf(preMd) + ')' : '(직전 표 없음)');
+    /* 이 회차 손잡이의 주장 자체 — «하루 예산은 대충에 Δ0» (대충은 1회 상한 10.5h=630분에
+       먼저 걸리므로 예산 660분은 대충을 안 자른다). 주장이 깨지면 ④ 도 ② 도 뜻이 달라진다. */
+    const casCur = curMd.c && curMd.c.axes['오프라인'] / days;
+    const preC = preMd ? incOfMd(preMd, 'casual') : null;
+    const casPre = preC && preC.axes['오프라인'] / days;
+    near('[T3] 대충 오프라인/일은 직전 세대와 **같다** (하루 예산 손잡이는 대충에 Δ0 · 1회 상한이 먼저 자른다)',
+         casCur, casPre, 0.02, fmt(casCur) + ' ↔ ' + fmt(casPre));
+    /* 그리고 부지런은 실제로 내려왔는가 — 예산 상수로 설명되는가([E1] 의 정책 쌍) */
+    yes('[T4] 부지런 오프라인/일은 **내려왔다** (같은 두 표 · 하루 예산이 실제로 자른 축)',
+        Number.isFinite(offDayCur) && Number.isFinite(casPre) && offDayCur < (preMd ? incOfMd(preMd, 'diligent').axes['오프라인'] / days : Infinity),
+        fmt(offDayCur) + ' ↔ 직전 ' + fmt(preMd ? incOfMd(preMd, 'diligent').axes['오프라인'] / days : NaN));
   }
 
   /* ── 결과 ─────────────────────────────────────────────────────────────── */
