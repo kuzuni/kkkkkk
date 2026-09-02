@@ -34967,7 +34967,13 @@ function chRowHTML(m, i){
     + '<i class="ch-tm">' + m.t + '</i>';
   const body = m.vs ? chCardHTML(m, i)
     : '<div class="ch-bb">' + chEsc(m.m).replace(/\n/g, '<br>') + '</div>';
-  return '<div class="ch-row' + (m.vs ? ' vs' : '') + '">' + chAvHTML('chAv' + i) + name + body + '</div>';
+  /* 작업 717 — 채팅 줄에는 **등장 애니를 걸지 않는다**(주인 지시 2026-09-02 «다 안뜨게 해줘야함 애니메이션»).
+     주인이 본 «하단 4개만 빼고 애니» 는 뷰포트도 스크롤 유입도 아니라 60 쥬시의 카드 스태거
+     `jzStagGo(kids, Math.min(kids.length, 20))` 의 **상수 20** 이었다 — `CHAT_SEED` 가 24행이라
+     앞 20행만 걸리고 끝 4행이 남는다(probe717 [1-b] 가 그 자리를 [20,21,22,23] 로 찍는다).
+     ⚠ 부품(`jzStagger`/`.jz-st`)은 카드 격자 여럿이 그대로 쓰므로 **호출부만** 뗀다(659 규약) —
+     그 «손대지 마라» 표시가 `jz-x` 다(363 이 세운 축: «내가 건다»(fx-pop) 와 «아무것도 안 건다» 는 다른 말). */
+  return '<div class="ch-row jz-x' + (m.vs ? ' vs' : '') + '">' + chAvHTML('chAv' + i) + name + body + '</div>';
 }
 /* 아바타는 랭킹 단상(작업 80)과 **같은 경로**다 — look 하나로 drawHeroTo 가 그린다.
    아틀라스가 아직 안 왔으면 false 를 돌려주므로 다 칠할 때까지만 재시도한다(무한 raf 루프 금지). */
