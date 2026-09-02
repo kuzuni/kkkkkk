@@ -49,9 +49,12 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
     if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }
     window.__n = 0; window.__cx = 0;
-    const lu = window.levelUp, sr = window.summonRelic, cu = window.cosUpgrade;
+    /* ⚑⚑ 793 이관 — `summonRelic` 은 700(배수 토글) 뒤로 아무도 안 부르는 껍데기다.
+       재현 자가 «0회» 를 세면 재현 자체가 거짓이 되므로 감는 자리를 배치로 옮긴다
+       (같은 이관: `verify354` · `verify682` · `probe666`). */
+    const lu = window.levelUp, sr = window.summonRelicBatch, cu = window.cosUpgrade;
     window.levelUp = function () { window.__n++; return lu.apply(this, arguments); };
-    window.summonRelic = function () { window.__n++; return sr.apply(this, arguments); };
+    window.summonRelicBatch = function () { window.__n++; return sr.apply(this, arguments); };
     if (typeof cu === 'function') window.cosUpgrade = function () { window.__n++; return cu.apply(this, arguments); };
     addEventListener('pointercancel', () => window.__cx++, true);
     /* 죽어서 18 패배 화면이 버튼을 덮는 것만 막는다(74 규약) — 루프 자체는 **돌린다** */

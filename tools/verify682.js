@@ -17,8 +17,14 @@
  *   [C] 겹침 — 한 버스트 안 갈래 수 = 알 수(접혀 포개지지 않는다)
  *   [D] 반구 — 666 4회차 상향 원뿔이 한 알도 안 새어 나간다
  *   [E] 불변 — 666 이 세운 축(스폰 = 버튼 · 이동 거리 · 1:1)을 이번 변경이 안 건드렸다
+ *              · E4(793) 배수를 안 켠 홀드의 실행 단위는 «1장»
  *   [R] 되돌림 — R1 옛 뒤집기면 갈래가 준다 · R2 «지터만 키우는 가짜 수리» 로는 안 풀린다
- *              · R3 위상이 실제로 돈다
+ *              · R3 위상이 실제로 돈다 · R5(793) 훅이 «실행 · 장수» 를 정확히 센다
+ *
+ * ⚑ 793(2026-09-02) — [E3] 의 소환 계수기가 **항상 0** 이었다: 700(유물 소환 배수 토글)이
+ *   호출 경로를 `summonRelic` → `summonRelicBatch` 로 옮겼는데 이 자의 훅만 안 따라갔다
+ *   (같은 훅을 쓰던 `verify666` 은 700 이 이관했다). 훅을 배치로 옮기고 단위를 «실행» 으로
+ *   못박았다 — 자세한 것은 아래 [WATCH] 주석과 `docs/review/793-소환계수기훅이관.md`.
  *
  * 127 — 브라우저 해석은 tools/pwlaunch.js 공용 · LESSONS 319 — evaluate 예외는 그 블록만 빨갛게.
  */
@@ -121,12 +127,26 @@ const WATCH = () => {
     }; }
   wrap('fxBurst', 'raw');            /* 후처리 **전** — [R1] 이 옛 뒤집기를 다시 걸 원본 */
   wrap('rwSummonFx', 'fin');         /* 후처리 **후** — 제품이 실제로 그리는 방향 */
-  /* 소환 횟수(1:1 축) */
-  window.__v682.buys = 0;
-  const s = window.summonRelic;
-  window.summonRelic = function () { const r = s.apply(this, arguments); if (r) window.__v682.buys++; return r; };
+  /* 소환 횟수(1:1 축)
+     ⚑⚑ 793 이관 — **세는 자리를 `summonRelicBatch` 로 옮겼다.** 700(유물 소환 배수 토글)이
+     홀드 틱·첫 발 두 호출부를 `summonRelicBatch(relMul, …)` 로 갈면서 `summonRelic` 은
+     «아무도 안 부르는 얇은 껍데기»(index.html `summonRelic(quiet){ return summonRelicBatch(1, quiet); }`)가
+     됐다 — 옛 훅은 그 껍데기를 감고 있어 홀드를 아무리 굴려도 **0 을 셌고** [E3] 이 «5버스트 / 0소환»
+     으로 빨갰다. 700 은 같은 훅을 쓰던 `verify666` 만 이관하고 이 자를 빠뜨렸다.
+     ⚠ **세는 단위는 «장» 이 아니라 «실행» 이다** — 700 규약이 «1 실행 = 버스트 1회» 라서
+       (index.html `summonRelicBatch` 주석 «회당 연출(666)이 1 실행 = 버스트 1회») 장수로 세면
+       ×N 을 켠 순간 제품이 옳은데도 자가 빨개진다. 장수(`n`)는 같이 적어 두고 [E4]·[R5] 가 쓴다.
+     ⚠ 배치를 감으면 되돌림에도 강하다 — 700 이 통째로 되돌아가 호출부가 `summonRelic` 으로
+       돌아가도 그 껍데기가 배치를 지나므로 이 훅은 계속 센다. */
+  window.__v682.buys = [];
+  const s = window.summonRelicBatch;
+  window.summonRelicBatch = function (...a) {
+    const r = s.apply(this, a);
+    if (r) window.__v682.buys.push({ n: a[0] });
+    return r;
+  };
 };
-const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v682.buys = 0;
+const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v682.buys = [];
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild); };
 
 (async () => {
@@ -238,9 +258,18 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
   const trav = flat.map(q => Math.hypot(q.dx, q.dy)).sort((a, b) => a - b);
   const tmed = trav.length ? trav[Math.floor(trav.length / 2)] : 0;
   ok(tmed >= 80, 'E2 이동 거리 중앙값 ≥ 80px(666 [C3] «링이 아니라 터짐»)', r1(tmed) + 'px');
-  ok(G && G.buys > 0 && FIN.length >= G.buys * 0.95,
-     'E3 소환마다 버스트가 터진다(666 [E1] 1:1 — 발화가 조용히 안 빠진다)',
-     FIN.length + '버스트 / ' + (G ? G.buys : 0) + '소환');
+  /* 793 — 축의 이름이 «소환» 에서 «실행» 으로 바뀌었다(700 규약). 묻는 것은 그대로다:
+     «발화가 조용히 빠지지 않는다». 장수는 [E4] 가 따로 묻는다. */
+  const EX = (G && G.buys) || [];
+  ok(EX.length > 0 && FIN.length >= EX.length * 0.95,
+     'E3 실행마다 버스트가 터진다(666 [E1] 1:1 · 700 이후 단위는 «실행» — 발화가 조용히 안 빠진다)',
+     FIN.length + '버스트 / ' + EX.length + '실행 (뽑은 장수 ' + EX.reduce((s, b) => s + (b.n || 0), 0) + ')');
+  /* ⚑ 793 — 328~330 교훈(«누른 항을 묻는 항을 한 줄 더»). [E3] 만으로는 홀드가 배수를 켠 채
+     돌아도 초록이다(실행 1건에 버스트가 있기만 하면 되니까) — 그러면 [B][C] 의 표본이 «×N 한 벌»
+     이라는 것을 아무도 안 말한다. `verify666` [E2] 와 같은 축이고, 그쪽은 상점 경로를 본다. */
+  ok(EX.length > 0 && EX.every(b => b.n === 1),
+     'E4 ★ 배수를 안 켠 홀드의 실행 단위는 «1장» — 700 이 켠 축이 이 자의 표본으로 새지 않았다',
+     '실행별 장수 ' + [...new Set(EX.map(b => b.n))].join(',') + ' (실행 ' + EX.length + '건)');
   const r0s = flat.map(q => Math.hypot(q.x - (G.btn.x + G.btn.w / 2), q.y - G.cy));
   info('탄생 반경(px) 최소~최대', r1(Math.min(...r0s)) + '~' + r1(Math.max(...r0s)) + ' (fxBurst 의 22×jt 그대로)');
 
@@ -272,6 +301,19 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
   info('칸 위상(칸폭 ' + r1(cell) + '° 안 위치)', offs.map(r1).join(', '));
   ok(rep.length >= 4 && obin.size >= 3, 'R4 위상이 한 자리에 안 굳는다 — 칸을 5등분해 ' + obin.size + '칸에 앉는다(≥3)',
      obin.size + '/5');
+  /* ⚑ 793 — R5: 자기 확인(«자가 그 자리를 보는가»). 이번 결함은 «자가 틀린 함수를 감고 있었다» 이고,
+     그 상태의 [E3] 은 «5버스트 / **0**소환» 으로만 말할 뿐 «훅이 빈 껍데기에 붙어 있다» 는 말은
+     못 했다. ⇒ 새 훅이 «실행 1건 · 장수 n» 을 정확히 세는지 제품에게 **직접** 물어 못박는다.
+     훅을 다시 죽은 자리(`summonRelic` 껍데기)로 옮기면 이 항이 «실행 +0» 으로 즉시 빨개진다. */
+  const SC = await ev(p, () => {
+    const P = window.__v682, b0 = P.buys.length;
+    const it = summonRelicBatch(3, true);
+    const last = P.buys[P.buys.length - 1];
+    return { ok: !!it, d: P.buys.length - b0, n: last ? last.n : null };
+  });
+  ok(!!SC && SC.ok && SC.d === 1 && SC.n === 3,
+     'R5 ★ 훅이 «호출 수» 가 아니라 «실행 · 장수» 를 센다 — `summonRelicBatch(3)` 한 번이 실행 +1 · 장수 3 으로 잡힌다',
+     SC ? '실행 +' + SC.d + ' · 장수 ' + SC.n : 'n/a');
 
   blk('H] 마감');
   ok(errs.length === 0, 'H1 페이지 에러 0건', errs.slice(0, 3).join(' | ') || '없음');

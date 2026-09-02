@@ -68,9 +68,14 @@ const WATCH = () => {
   new MutationObserver(ms => {
     for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) snap(n);
   }).observe(L, { childList: true });
-  /* 소환 횟수는 제품 함수를 감싸 센다(349·354 규약 — 화면이 아니라 실제 호출을 센다) */
-  const o = window.summonRelic;
-  window.summonRelic = function () { const r = o.apply(this, arguments); if (r) window.__p666.sum++; return r; };
+  /* 소환 횟수는 제품 함수를 감싸 센다(349·354 규약 — 화면이 아니라 실제 호출을 센다)
+     ⚑⚑ 793 이관 — 감는 자리가 `summonRelic` → **`summonRelicBatch`** 다. 700(배수 토글)이
+     홀드 틱·첫 발을 `summonRelicBatch(relMul, …)` 로 갈아 `summonRelic` 은 아무도 안 부르는
+     껍데기가 됐고, 옛 훅은 그 껍데기를 감고 있어 [1-a]·[2-a] 두 **전제**가 «0회» 로 빨갰다
+     (수리 전 실측 3/5). 단위는 «장» 이 아니라 «실행» 이다 — 700 규약이 «1 실행 = 버스트 1회» 라
+     이 자의 [2] «소환당 텍스트 n장» 도 실행 기준으로 읽어야 뜻이 산다. */
+  const o = window.summonRelicBatch;
+  window.summonRelicBatch = function () { const r = o.apply(this, arguments); if (r) window.__p666.sum++; return r; };
 };
 
 const RESET = () => { window.__p666.nodes = []; window.__p666.sum = 0;

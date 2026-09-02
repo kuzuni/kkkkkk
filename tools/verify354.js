@@ -21,7 +21,7 @@
  * 절: [A] 터치 홀드가 연속으로 돈다  [B] 드리프트 내성 + 처방 + 스크롤 무해 증명
  *     [C] 정지 조건(뗌·이탈·팝업 닫힘)  [D] 재화 정확 차감  [R] 되돌림 시험  [G] 회귀
  *
- * ⚠ #rwBasin 의 «시도 횟수» 는 #mLv 보다 낮게 나온다(1.5초에 3~8회) — `summonRelic` 이
+ * ⚠ #rwBasin 의 «시도 횟수» 는 #mLv 보다 낮게 나온다(1.5초에 3~8회) — `summonRelicBatch`(793 이관 · 옛 `summonRelic`) 가
  *   매회 `renderRelw()`(캔버스 10칸 재도색) + `fxUpOk` 를 돌기 때문이다. 그래서 이 게이트는
  *   **절대 횟수를 조이지 않고** «연속이 도는가(≥3) · pointercancel 0» 만 묻는다(355 교훈 —
  *   타이밍에 민감한 임계를 세우면 플레이키 게이트가 된다).
@@ -65,9 +65,16 @@ const BASIN = '#relw #rwBasin';
     window.__n = 0; window.__ok = 0; window.__cx = 0;
     /* `__n` = **시도**(호출) · `__ok` = **성공**. 소진 시 홀드는 «한 번 더 시도해서 실패하면 정지» 라
        [D] 의 «정확히 n회» 는 반드시 성공 쪽으로 세야 한다(시도는 항상 n+1 이다). */
-    const lu = window.levelUp, sr = window.summonRelic;
+    /* ⚑⚑ 793 이관 — 유물 쪽에서 감는 자리가 `summonRelic` → **`summonRelicBatch`** 다.
+       700(배수 토글)이 `rwHold` 의 두 호출부를 `summonRelicBatch(relMul, …)` 로 갈면서
+       `summonRelic` 은 아무도 안 부르는 껍데기가 됐고, 그 결과 이 자의 #rwBasin 항 7개가
+       «0회» 로 빨갰다(수리 전 실측 24/31 — [A]·[B]×4·[C]·[D]).
+       ⚠ 시도/성공 셈법은 한 글자도 안 바꿨다 — 배치도 «모자라면 한 장도 안 뽑고 null» 이라
+         `__n`(시도) · `__ok`(성공)의 뜻이 그대로다. 배수가 ×1 인 이 자의 표본에서는
+         «실행 수 = 뽑은 장수» 이므로 [D] 의 «정확히 4회» 도 뜻이 안 바뀐다. */
+    const lu = window.levelUp, sr = window.summonRelicBatch;
     window.levelUp = function () { window.__n++; const r = lu.apply(this, arguments); if (r) window.__ok++; return r; };
-    window.summonRelic = function () { window.__n++; const r = sr.apply(this, arguments); if (r) window.__ok++; return r; };
+    window.summonRelicBatch = function () { window.__n++; const r = sr.apply(this, arguments); if (r) window.__ok++; return r; };
     addEventListener('pointercancel', () => window.__cx++, true);
     /* 죽어서 18 패배 화면이 버튼을 덮는 것만 막는다(74 규약) — 루프 자체는 **돌린다** */
     setInterval(() => { try { if (typeof maxHp === 'function' && S.hp != null) S.hp = maxHp(); } catch (_) {} }, 200);
