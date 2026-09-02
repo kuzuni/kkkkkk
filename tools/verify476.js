@@ -28,7 +28,7 @@
  *   §2 되돌림 — `--covtest` ⓐ 양성(이미 가려진 탭바) · ⓑ 음성(멀쩡히 보이는 HUD)
  *   §3 두 자 일치 — 같은 자리를 `cover351lib` 로 재면 배너 보임 0%(2280·1600) = 유령의 근거
  *   §4 음성항 — 실재하는 자리(34 축복 띠 ↔ 탭바, 100% → 19.7%)는 이름표가 **안 붙는다**
- *   §R 되돌림 — `--wm-sk` 를 0 으로 되돌리면 겹침이 30 → **37**(등재문 값)로 돌아온다(806)
+ *   §R 되돌림 — `--wm-sk`(제품이 선언한 손잡이)를 0 으로 되돌리면 겹침이 **그 손잡이만큼** 늘어난다(806)
  */
 const fs = require('fs');
 const os = require('os');
@@ -77,8 +77,19 @@ const MEASOV = function () {
     if (cs.overflowY !== 'visible' && (pr.top > gr.top + 0.01 || pr.bottom < gr.bottom - 0.01)) cut++;
     if (cs.overflowX !== 'visible' && (pr.left > gr.left + 0.01 || pr.right < gr.right - 0.01)) cut++;
   }
+  /* 558 의 손잡이도 **제품에게 묻는다** — §R 이 «되돌리면 이만큼 움직인다» 를 손 상수로 적으면
+     그 상수가 곧 다음 부패다(이 작업이 고친 것과 같은 얼굴).
+     ⚠ `getComputedStyle(...).getPropertyValue('--wm-sk')` 는 **못 쓴다** — 등록되지 않은 사용자 속성의
+     계산값은 `clamp(…)` **문자열 그대로**라 `parseFloat` 가 0 을 준다(1회차에 이 함정을 밟아 §R 이
+     «기대 0 · 실제 7» 로 빨갰다). ⇒ 그 값을 길이로 쓰는 **탐침 노드**를 심어 실제로 잰다. */
+  const w = document.getElementById('wpnw');
+  const pin = document.createElement('div');
+  pin.style.cssText = 'position:absolute;left:-9999px;top:0;width:1px;height:var(--wm-sk,0px)';
+  w.appendChild(pin);
+  const sk = pin.getBoundingClientRect().height;
+  pin.remove();
   return {
-    found: true, cut,
+    found: true, cut, sk,
     by: Math.round(Math.min(gr.bottom, tr.bottom) - Math.max(gr.top, tr.top)),
     wide: Math.round(Math.min(gr.right, tr.right) - Math.max(gr.left, tr.left)),
   };
@@ -191,9 +202,10 @@ const MEASOV = function () {
 
     /* ── §R 되돌림 시험(806) — «상수를 뺐다» 가 말뿐이 아님을 못박는다 ──────────
        §1 의 기대값이 정말 **제품에서 읽힌 것**이라면, 제품을 되돌렸을 때 그 값도 되돌아가야 한다.
-       558 이 만든 손잡이 `--wm-sk`(1600 에서 7px)를 0 으로 되돌리면 05 상자가 7px 내려가고
-       겹침은 30 → **37** = 등재문의 그 값이 된다. 값이 안 움직이면 어딘가에 아직 상수가 있다. */
-    console.log('§R 되돌림 시험 — `--wm-sk` 를 0 으로 되돌리면 겹침이 등재문의 37 로 돌아온다 (806)');
+       558 이 만든 손잡이 `--wm-sk` 를 0 으로 되돌리면 05 상자가 그만큼 내려가고 겹침이 그만큼 는다
+       (실측: 손잡이 7px · 겹침 30 → 37 = 등재문의 그 값). 값이 안 움직이면 어딘가에 아직 상수가 있다.
+       ⚠ **여기에도 «7»·«37» 을 적지 않는다** — 적는 순간 이 작업이 고친 것과 같은 부패를 다시 심는다. */
+    console.log('§R 되돌림 시험 — `--wm-sk` 를 0 으로 되돌리면 겹침이 그 손잡이만큼 늘어난다 (806)');
     const { ctx, page } = await fresh(browser, 1080, 1600);
     await drive(page, { label: 'eqslot:weapon', hero: '#eqCards [data-eqslot="weapon"]' });
     await settle(page);
@@ -204,8 +216,12 @@ const MEASOV = function () {
     }).then(() => page.evaluate(MEASOV));
     await ctx.close();
     eq('[R] 되돌리기 전 겹침 = §1 이 쓴 실측값', now.by, exp.by);
-    eq('[R] `--wm-sk` 0 으로 되돌리면 겹침이 7px 늘어난다 (558 이 옮긴 그 7px)', back.by - now.by, 7);
-    eq('[R] 그 값이 등재문의 «세로 37» 이다 (등재 당시 자는 옳았고, 상수라서 굳었다)', back.by, 37);
+    ok(now.sk > 0, `[R] 1600 에서 손잡이가 실제로 켜져 있다 (\`--wm-sk\` = ${now.sk}px · 0 이면 이 시험은 공허하다)`);
+    eq('[R] 되돌린 판에서는 손잡이가 0 이다', back.sk, 0);
+    /* ⚠ 여기 «7» 도 «37» 도 적지 않는다 — 늘어나는 양은 **제품이 선언한 손잡이 값** 그 자체다.
+       (등재 당시 값 37 = 30 + 7 은 review 806 §5 에 기록만 남긴다. 다시 상수로 심으면 같은 부패다.) */
+    eq('[R] 되돌리면 겹침이 손잡이만큼 늘어난다 (558 이 옮긴 그 값 — 상수 아님)',
+      back.by - now.by, Math.round(now.sk));
     eq('[R] 가로는 `--wm-sk` 와 무관하다 (세로 손잡이다)', back.wide, now.wide);
   }
   } finally { await browser.close(); }
