@@ -98,6 +98,19 @@ const HOSTS = [
      ⇒ 55 를 제 호스트로 돌리고, 잘못 적힌 김에 표본 밖이던 56 도 같이 세웠다. */
   { id: '55',  name: '설정',              sel: '#cfw',   open: `openConf()` },
   { id: '56',  name: '절전 모드',          sel: '#svw',   open: `openSaver()` },
+  /* ⚑ 5회차 편입 — 1~4회차 표본은 `tools/smoke.js` 의 오프너 목록보다 **좁았다**.
+     smoke 가 여는 `#*w` 호스트 18종 중 아래 여섯이 표본 밖이었다(= 한 번도 안 재 봤다).
+     주인 지시 문면이 «전 팝업·오버레이 오프너 목록(smoke 66/최신)» 이므로 이 여섯이 빠진 채로는
+     «전면 스윕» 이 아니다. ⚠ 이 여섯은 팝업이 아니라 **탭/페이지 시트**가 섞여 있다 —
+     하단 앵커가 정당한 자리가 더 많을 수 있으니 [❌] 가 나오면 «예외인가» 를 먼저 물어라. */
+  { id: '03',  name: '던전 페이지',        sel: '#dunw',  open: `openDungeon()` },
+  { id: '10',  name: '상점 페이지',        sel: '#shopw', open: `openShopPage()` },
+  { id: '89',  name: '유물 소환',          sel: '#relw',  open: `openRelw()` },
+  { id: '52',  name: '▦ 메뉴',            sel: '#mnw',   open: `openMenu()` },
+  { id: '54',  name: '랭킹',              sel: '#rkw',   open: `openRank()` },
+  /* 06 장비 시트는 «여는 함수» 가 없다 — 패널 상태(panelOpen · curTab · heroTab)의 파생이다.
+     그래서 상태를 만들고 동기화 함수를 부르는 것이 이 화면의 오프너다. */
+  { id: '06',  name: '장비 시트',          sel: '#eqw',   open: `panelOpen = true; curTab = 'hero'; heroTab = 'eq'; syncPanel()` },
 ];
 
 /* 한 호스트의 «떠 있는 자식» 기하를 프레임 좌표로 훑는다.
