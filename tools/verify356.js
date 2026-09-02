@@ -56,6 +56,10 @@ const R32 = require('./probe356r32.js');
 /* 33회차 — 매체 축 × 시간 × **WAAPI**([Q]). `PIN` 이 닿지 못하는 매체를 못박는 손(`PIN_WA`)과
    그 인구조사(`WA_CENSUS`)·한 주기 훑기(`sweepCycle`)를 `probe356r33` 에서 받아 쓴다(13회차 [R12]). */
 const R33 = require('./probe356r33.js');
+/* 34회차 — 매체 축 × 시간 × **전이(`transition`)**([R]). `PIN` 도 `PIN_WA` 도 안 닿는 층을 못박는
+   손(`PIN_TR`)과 그 인구조사(`TR_CENSUS`)·제품 누름(`WAKE_PRESS`)·한 램프 훑기(`sweepCycle`)를
+   `probe356r34` 에서 받아 쓴다(13회차 [R12] — 자를 두 벌로 안 적는다). */
+const R34 = require('./probe356r34.js');
 const { PIN: PIN_PHASE } = require('./probe356r25.js');
 const { COLLECT_PSEUDO } = R26;
 
@@ -249,6 +253,7 @@ async function sweep(browser, inject) {
   const seenO = [];       /* [O] 같은 매체 축을 **한 주기**(위상 16칸) 훑어 화면분으로 접은 것 (31회차) */
   const seenP = [];       /* [P] 같은 «한 주기» 를 **리사이즈 뒤**(1080×1600)에 한 번 더 훑은 것 (32회차) */
   const seenQ = [];       /* [Q] 화면별 «WAAPI 로 도는 애니» 인구조사 — `PIN` 이 못 세는 매체 (33회차) */
+  const seenR = [];       /* [R] 화면별 «전이» 인구조사 — `PIN` 도 `PIN_WA` 도 안 닿는 층 (34회차) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
@@ -308,6 +313,13 @@ async function sweep(browser, inject) {
             가라앉은 화면에서는 0 이다. 그 0 을 커버리지로 읽지 않으려고 판정은 아래 [Q] 절이
             **제품의 틱을 깨워서** 한다(§[Q-c]). 여기 수는 «지금 트리에 상시 WAAPI 가 없다» 는 관측이다. */
       seenQ.push({ label, wa: await page.evaluate(R33.WA_CENSUS) });
+
+      /* ── [R] 매체 축 × 시간 × **전이** (34회차) — 같은 손으로 한 번 더 센다(`evaluate` 한 번).
+         `PIN` 은 `animation-*` 손잡이라 전이에 안 닿고, `PIN_WA` 는 `CSSTransition` 을 **일부러 걸러 낸다**
+         (33회차 §40-4 · 교훈 ④ 가 그 `continue` 한 줄을 «다음 프런티어의 주소» 로 넘겼다).
+         ⚠ 여기서도 **세기만** 한다 — 전이는 «상태가 바뀌는 동안» 만 살아서 가라앉은 화면에서는 0 이다.
+            그 0 을 커버리지로 읽지 않으려고 판정은 아래 [R] 절이 **제품의 누름을 실제로 만들어서** 한다. */
+      seenR.push({ label, tr: await page.evaluate(R34.TR_CENSUS) });
 
       /* ── [O] 매체 축 × 시간 (31회차) — [J]·[L]·[M]·[N] 과 **같은 손**이다: 스윕을 한 벌 더 돌지 않고
          이미 열려 있는 이 페이지에서 위상만 옮겨 가며 `evaluate` 를 더 한다.
@@ -3400,6 +3412,195 @@ async function sweep(browser, inject) {
           else bad(`[Q-d2] 결정성 실패 — 못박음 ${w1 && w1.w} → ${w2 && w2.w} · 푼 뒤 ${w3 && w3.w}`);
         }
       } catch (e) { bad('[Q-d] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+  }
+
+  /* ── [R] 34회차 — **매체 축 × 시간 × 전이(`transition`)**. 33회차 인계문 §40-8 의 «다음 자리 후보 ⓒ»:
+        > 전이 — 키프레임이 아니라 **상태 전환 도중**의 상자. `PIN` 의 손잡이(`animation-delay`)가 안 닿고,
+        > `PIN_WA` 도 `CSSTransition` 을 **일부러 걸러 낸다**. **31·32·33 세 회차에서 이월된 항이고,
+        > 이제 이것이 남은 구멍 중 제일 크다.**
+     24회차 규율이 그것을 이 회차의 일로 만든다 — «자기 한계를 글로 넘긴 회차는 그 한계를 안 닫은 것이다.»
+
+     ⚠ **이 절이 [O]·[P]·[Q] 의 사본이 아닌 이유** — 다섯이 보는 것은 같은 «상자 ↔ 비트맵» 이고
+        갈리는 것은 **못박는 손**이다. 이제 손이 셋인데 셋 다 자기 층만 본다:
+          `PIN`(CSSAnimation) · `PIN_WA`(WAAPI · CSSTransition 을 걸러 냄) · **`PIN_TR`(CSSTransition)**.
+        `probe356r34` [2] 실측 — **같은 램프**(200→140px)를 CSS 애니로 걸면 d=0.7182 로 잡히는데
+        전이로 걸면 최악 편차 **0.0004 = 초록**이고, 그 스윕이 램프에서 본 구간은 **0.06%** 다.
+     ⚑ **이것은 가정이 아니라 제품에 있는 층이다** — 상자를 미는 전이가 두 벌이고 둘 다 아이콘의 **조상**이다:
+        `.jz-dn{scale:.94;translate:0 8px;transition:scale .06s,translate .06s}`(60 쥬시 누름 · index.html 13929) ·
+        `.tr-rn,.tr-tp{transition:scale .07s,translate .07s}`(23 훈련·룬 카드 · 13956).
+        지금 값은 등방(`scale` 한 값)이라 결함이 아니다 — 이 절이 닫는 것은 **그물의 구멍**이다.
+     ⚠ 전이는 «상태가 바뀌는 동안» 만 산다 ⇒ **가라앉은 화면의 0 은 «없어서 0»** 이다.
+        그래서 판정은 [R-b] 가 **제품 자신의 경로로 누름을 만들어서** 한다(`pointerdown` 을 실제로 쏜다 —
+        `#app` 캡처 리스너가 `.jz-dn` 을 건다 · 합성 클래스를 손으로 붙이지 않는다 · 26회차 [J] 규율). */
+  console.log('\n[R] 34회차 — 매체 축 «한 램프» 를 **전이 도중**에서도 훑는다: `PIN` 도 `PIN_WA` 도 안 닿는 층');
+  {
+    const okR = seenR.filter((s) => s.tr);
+    const sumR = (f) => okR.reduce((a, s) => a + f(s), 0);
+    const trRest = sumR((s) => s.tr.inApp);
+    const cssRest = sumR((s) => s.tr.css);
+    /* «상시 전이가 **매체를 품은** 자리» — 래칫이다. 하나라도 생기면 [O]·[P]·[Q] 는 그 노드를
+       구조적으로 못 보므로 이 축을 그 화면까지 넓혀야 한다(그때 이 항이 빨개진다). */
+    const trMedia = okR.flatMap((s) => (s.tr.tr || []).filter((w) => w.media > 0).map((w) => `${s.label} ${w.sel}(매체 ${w.media})`));
+
+    /* ⓐ 전제 — 인구조사가 정말 돌았는가(아무것도 못 본 자는 언제나 0건이다 · 11·21·26·29~33회차) */
+    if (okR.length && cssRest)
+      ok(`[R-a] 전제 — ${okR.length}/${SCREENS.length}화면에서 전이 인구조사가 돌았다 (같은 실행이 CSS 애니 ${cssRest}개를 세었다) · `
+        + `그중 **전이 ${trRest}개** — 전이는 «상태가 바뀌는 동안» 만 살아서 가라앉은 화면에서는 0 이다. `
+        + '**이 0 은 «없어서 0» 이지 커버리지가 아니다**(근거는 [R-b]·[R-c]·[R-d])');
+    else bad(`[R-a] 전제 실패 — 인구조사 화면 ${okR.length}/${SCREENS.length} · CSS 애니 ${cssRest}개 (0 이면 아래 초록은 전부 헛초록)`);
+
+    /* ⓐ2 래칫 — «상시 전이 + 그 안에 매체» 가 생기면 앞의 세 손이 구조적으로 못 보는 자리가 생긴 것이다 */
+    if (!trMedia.length) ok('[R-a2] 상시(가라앉은 화면) 전이가 매체를 품은 자리 0곳 — [O]·[P]·[Q] 의 스윕이 «못박히지 않은 채» 읽는 아이콘이 지금은 없다');
+    else bad(`[R-a2] 상시 전이가 매체를 품은 자리 ${trMedia.length}곳 — 앞의 세 손은 이 노드의 위상을 못박지 못한다: ${trMedia.slice(0, 5).join(' · ')}`);
+
+    /* ⓑ **판정** — 제품의 누름(60 쥬시)을 **제품 자신의 경로로** 만들어 그 한 램프를 훑는다.
+       ⚠ 60~70ms 짜리라 «깨우기 → 못박기» 를 한 태스크 안에서 한다(`R34.wakeAndPin` 의 이유). */
+    {
+      const PICKR = ['02 메인', '23 훈련', '23 룬', '10 상점'];
+      let woke = 0, born = 0, pinnedR = 0, movedR = 0, mediaR = 0, badR = [], maxDevR = 0, hostMedia = 0, hosts = 0;
+      for (const name of PICKR) {
+        const found = SCREENS.find((s) => s[0] === name);
+        if (!found) continue;
+        const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+        const page = await ctx.newPage();
+        try {
+          await page.goto(URL, { waitUntil: 'load' });
+          await page.waitForTimeout(600);
+          for (const st of (found[1] || [])) { try { await STEP(page, st); } catch (_) {} await page.waitForTimeout(200); }
+          await page.waitForTimeout(250);
+          /* ⚑ 손을 두 벌로 안 적는다 — `PIN_TR`·`WAKE_PRESS` 의 **원본**을 페이지에 심고 한 태스크에서 부른다.
+             ⚠ 한 번에 **하나만** 누른다: 60 쥬시는 한 손가락짜리라(`jzRelease()`) 넷을 누르면
+                앞의 셋이 취소되고 마지막 하나만 남는다(`probe356r34` 1판이 그 사실을 찍었다). */
+          await page.evaluate(([ps, ws]) => {
+            window.__r34pinTr = eval('(' + ps + ')');
+            window.__r34wake = eval('(' + ws + ')');
+          }, [R34.PIN_TR.toString(), R34.WAKE_PRESS.toString()]);
+          const w = await page.evaluate(() => {
+            const o = window.__r34wake(1);
+            o.atBirth = window.__r34pinTr(0);
+            return o;
+          });
+          const cen = await page.evaluate(R34.TR_CENSUS);
+          hosts += w.hosts; woke += w.woke; born += cen.inApp;
+          hostMedia += (cen.tr || []).reduce((a, t) => a + t.media, 0);
+          const arm = await R34.sweepCycle(page, name, 'tr');
+          pinnedR += arm.pinnedTr; movedR += arm.fold.boxMoved; mediaR += arm.fold.rows;
+          maxDevR = Math.max(maxDevR, arm.fold.maxDev);
+          badR = badR.concat(arm.cyc.bad.map((x) => Object.assign({ screen: name }, x)));
+          try { await page.evaluate(R34.RELEASE_PRESS); } catch (_) {}
+        } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 */ }
+        await ctx.close();
+      }
+      if (!woke || !born) bad(`[R-b] 전제 실패 — 누른 호스트 ${woke}개(후보 ${hosts}) · 태어난 전이 ${born}개 (0 이면 아래 판정은 헛초록)`);
+      else if (!pinnedR) bad(`[R-b] 전이는 태어났는데(${born}개) 스윕이 한 개도 못박지 못했다 — 왕복 사이에 죽은 것이다(이 0 은 «안 재서 0» 이다)`);
+      else if (!movedR) bad(`[R-b] 못박기는 했는데 위상 사이에 상자가 한 자리도 안 움직였다 — 이 0 은 같은 순간을 ${R31.PHASES}번 잰 0 이다`);
+      else if (badR.length) bad(`[R-b] 전이 한 램프 안에서 매체 비균등 ${badR.length}자리: `
+        + badR.slice(0, 5).map((x) => `${x.screen} ${x.row.sel} d=${x.row.d} @위상 ${(x.at * 100).toFixed(0)}%`).join(' · '));
+      else ok(`[R-b] 제품 — 누름을 ${woke}자리에서 만들어(후보 ${hosts}곳 · 태어난 전이 ${born}개 · 그 안의 매체 ${hostMedia}개) `
+        + `전이 ${pinnedR}개를 못박고 램프 ${R31.PHASES}칸을 훑었다: 매체 ${mediaR}행 · 위상 사이 상자 이동 ${movedR}자리 · `
+        + `비균등 **0자리** · 최악 편차 ${maxDevR.toFixed(4)} ⇒ `
+        + '`.jz-dn` 의 눌림은 등방(`scale` 한 값)이라 이 0 은 «값이 옳아서 0» 이다');
+    }
+
+    /* ⓒ **되돌림(합성)** — **같은 램프**를 CSS 애니와 전이로 **나란히** 걸어 «못 보는 것이 결함의 모양이 아니라
+       못박는 손» 임을 못박는다(33회차 교훈 ②). ⓣ(전이)·ⓤ(CSS)는 값·길이·이징이 한 글자도 안 다르다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.setContent(R34.SYN_TR);
+        await page.waitForTimeout(200);
+        await page.evaluate(() => {
+          document.getElementById('cTrKf').classList.add('go');
+          document.getElementById('cTrIso').classList.add('go');
+          void document.getElementById('app').offsetWidth;
+        });
+        await page.waitForTimeout(120);
+        const oldArm = await R34.sweepCycle(page, 'syn', 'old');
+        const trArm = await R34.sweepCycle(page, 'syn', 'tr');
+        const pick = (c, id) => c.bad.find((x) => x.key.indexOf('#' + id) >= 0);
+        const seenAll = (c, id) => c.all.find((x) => x.key.indexOf('#' + id) >= 0);
+        const missed = !pick(oldArm.cyc, 'cTrKf'), twin = pick(oldArm.cyc, 'cCssKf'), caught = pick(trArm.cyc, 'cTrKf');
+        if (missed && twin && caught)
+          ok(`[R-c] 되돌림 — 같은 램프(한 축만 200→140px)를 CSS 애니로 걸면 [O]·[P]·[Q] 의 손이 d=${twin.row.d} 로 잡는데 `
+            + `전이로 걸면 최악 편차 ${seenAll(oldArm.cyc, 'cTrKf').dev.toFixed(4)} = 초록(그 스윕이 본 구간은 램프의 ${(oldArm.seenFrac * 100).toFixed(2)}%) `
+            + `↔ \`PIN_TR\` 을 얹으면 같은 페이지·같은 수집기에서 d=${caught.row.d} @위상 ${(caught.at * 100).toFixed(0)}% 로 빨개진다 `
+            + `⇒ [R-b] 의 0 은 «안 보는 자» 의 0 이 아니다`);
+        else bad(`[R-c] 되돌림 실패 — 전이 놓침 ${missed} · CSS 쌍둥이 ${!!twin} · PIN_TR 로 잡힘 ${!!caught}`);
+
+        const iso = pick(trArm.cyc, 'cTrIso'), isoAll = seenAll(trArm.cyc, 'cTrIso');
+        if (!iso && isoAll)
+          ok(`[R-c2] 음성항 — 전이로 «종횡을 같이» 미는 상자(제품 \`.jz-dn\` 의 꼴)는 어느 위상에도 안 빨개진다 (최악 편차 ${isoAll.dev.toFixed(4)}) `
+            + `— «전이가 걸렸으니 뭐라도 어긋나겠지» 로 재면 이것이 헛빨강이 된다`);
+        else bad(`[R-c2] 음성항 실패 — 멀쩡한 등방 전이를 결함이라 부른다: ${JSON.stringify(iso ? iso.row : null)}`);
+      } catch (e) { bad('[R-c] 합성 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
+      await ctx.close();
+    }
+
+    /* ⓓ **제품 되돌림** — [O-f]·[P-f]·[Q-d] 와 같은 손이되 거는 층이 전이다.
+       02 메인의 **실제 캔버스**에 한 축만 미는 전이를 걸고, 두 팔(앞의 세 손 ↔ 이 절의 손)로
+       같은 페이지를 훑어 갈리는지 본다. ⓓ2 는 그 자리에서 **결정성**까지 못박는다. */
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      try {
+        await page.goto(URL, { waitUntil: 'load' });
+        await page.waitForTimeout(700);
+        const hit = await page.evaluate(() => {
+          const app = document.getElementById('app');
+          const c = [...app.querySelectorAll('canvas')].find((x) => { const r = x.getBoundingClientRect(); return r.width > 8 && r.height > 8 && x.width && x.height; });
+          if (!c) return null;
+          const r = c.getBoundingClientRect();
+          c.style.height = r.height + 'px';
+          c.style.width = r.width + 'px';
+          if (!c.id) c.id = '__r34';                      /* ⓓ2 가 «그 노드» 를 다시 집을 수 있게 */
+          /* 한 축만 민다 — 배율은 한 줄도 안 걸고 상자만 흔든다([A]·[I] 는 구조적으로 못 본다).
+             ⚠ 키프레임이 아니라 **전이**다: 선언을 먼저 얹고 스타일을 갱신한 뒤 값을 바꿔야 램프가 태어난다. */
+          c.style.transition = 'width 200s linear';
+          void getComputedStyle(c).width;
+          c.style.width = (r.width * 0.7).toFixed(2) + 'px';
+          void getComputedStyle(c).width;
+          return c.id;
+        });
+        await page.waitForTimeout(200);
+        const oldArm = await R34.sweepCycle(page, '02 메인', 'old');
+        const trArm = await R34.sweepCycle(page, '02 메인', 'tr');
+        if (!hit) bad('[R-d] 되돌림 표본이 없다 — 02 메인에 잴 수 있는 캔버스가 한 자리도 없다');
+        else if (!oldArm.cyc.bad.length && trArm.cyc.bad.length)
+          ok(`[R-d] 제품 되돌림 — 02 메인의 실제 캔버스 «${hit}» 에 **전이로 한 축만** 미는 램프를 걸면 `
+            + `[O]·[P]·[Q] 의 손으로는 ${oldArm.cyc.bad.length}자리(초록) ↔ 이 절의 손으로는 ${trArm.cyc.bad.length}자리 `
+            + `(최악 d=${trArm.cyc.bad[0].row.d} @위상 ${(trArm.cyc.bad[0].at * 100).toFixed(0)}%) `
+            + `⇒ 이 절이 합성에서만 사는 자가 아니라 **제품 화면에 정말 물려 있다**`);
+        else bad(`[R-d] 제품 되돌림 실패 — 앞의 손 ${oldArm.cyc.bad.length}자리 / +PIN_TR ${trArm.cyc.bad.length}자리 (표본 «${hit}»)`);
+
+        /* ⓓ2 결정성 — 못박은 위상에서 두 번 읽으면 같고, 풀어 주면 흐른다.
+           안 그러면 이 절의 0 은 «흔들리는 0» 이고 [R-b] 의 초록도 우연이다. */
+        if (hit) {
+          await page.evaluate(R34.PIN_TR, 0.5);
+          const a1 = await page.evaluate(COLLECT_MEDIA);
+          await page.waitForTimeout(260);
+          const a2 = await page.evaluate(COLLECT_MEDIA);
+          const g = (rowsArr) => rowsArr.find((r) => r.sel.indexOf('#' + hit) >= 0) || null;
+          const w1 = g(a1), w2 = g(a2);
+          /* 풀어 준 뒤 «흐르는가» 는 200초 램프로는 안 보인다(300ms 에 0.09px) ⇒ 짧은 램프를 하나 더 건다 */
+          await page.evaluate(R34.PIN_TR, null);
+          await page.evaluate((id) => {
+            const c = document.getElementById(id);
+            c.style.transition = 'width 1.2s linear';
+            void getComputedStyle(c).width;
+            c.style.width = (parseFloat(getComputedStyle(c).width) * 0.7).toFixed(2) + 'px';
+          }, hit);
+          await page.waitForTimeout(700);
+          const a3 = await page.evaluate(COLLECT_MEDIA);
+          const w3 = g(a3);
+          const same = w1 && w2 && Math.abs(w1.w - w2.w) < 0.01;
+          const flowed = w3 && w2 && Math.abs(w3.w - w2.w) > 1;
+          if (same && flowed) ok(`[R-d2] 결정성 — 못박은 채 260ms 뒤 다시 읽어도 같은 값(${w1.w}px)이고, 풀고 짧은 램프를 걸면 700ms 만에 ${w3.w}px 로 흐른다 ⇒ 못박기가 실제로 시간을 세운다`);
+          else bad(`[R-d2] 결정성 실패 — 못박음 ${w1 && w1.w} → ${w2 && w2.w} · 푼 뒤 ${w3 && w3.w}`);
+        }
+      } catch (e) { bad('[R-d] 제품 되돌림 실행 실패: ' + String(e.message || e).slice(0, 80)); }
       await ctx.close();
     }
   }
