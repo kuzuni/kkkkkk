@@ -13,6 +13,12 @@
  * [B] **전수(스코프 구멍 방지)** — 골드를 늘리는 자리와 `giveReward` 호출부를 소스에서 전부 뽑아
  *     «전투·클리어 계열(무음)» / «비전투 수령(512 유지)» 분류표와 **정확히** 맞는지 본다.
  *     새 자리가 분류 없이 생기면 그 순간 빨개진다(610 꼴 구멍 방지).
+ *     ⚑ **804 — 분류는 «이름» 이 아니라 «방향» 이다.** 697(상점 구매 즉시 지급)이 `grantNow` 에
+ *     골드 자리를 하나 더 만들어 [B3] 이 «미분류» 로 빨개졌다. 표에 이름만 적어 초록으로
+ *     되돌리면 그 자리가 나중에 무음으로 바뀌어도 표는 조용하다(328~330 «누른 항» 교훈) ⇒
+ *     표에 **무음이어야 하는가**를 같이 적고 [B3m] 이 소스와 대조한다. 되돌림은 [R5]·[R6].
+ * [8] 경계 둘째 — 697 `grantNow` 는 `giveReward` 를 **한 번도 안 지난다**. [6](우편)이 초록이어도
+ *     이 자리가 무음일 수 있어 찍힌 코인으로 따로 못박는다.
  * [1] 스테이지 보스 격파 → 클리어 보너스 — 코인 0 · 골드는 정상 증가
  * [2] 파도 전멸 보너스 — 코인 0 · 골드는 정상 증가
  * [3] 던전 «황금 동굴» 클리어 보상 — 코인 0 **그리고 보상 버스트도 0**(#FFE9A8 = 512 가 지목한 그 금색)
@@ -91,6 +97,11 @@ const SCENE = `async ({ scene, on }) => {
     arm(); giveReward(arenaReward(true), fxClearMute());
   } else if (scene === 'mail') {
     arm(); giveReward({ gold: 123456 });          /* 비전투 수령 — 512 경계 표본 */
+  } else if (scene === 'grant') {
+    /* 804 — 697 «상점 구매 즉시 지급» 의 골드 자리. giveReward 를 **한 번도 안 지나는**
+       두 번째 유음 경로라 [6](우편)만으로는 못 덮는다. 여기서 0 이 나오면 654 의 무음이
+       상점 구매까지 번진 것이다. (⚠ 이 절은 template literal 안이라 백틱 금지) */
+    arm(); grantNow({ g: 123456 });
   }
 
   const t0 = performance.now();
@@ -133,9 +144,9 @@ const SCENE = `async ({ scene, on }) => {
 
   /* ── [B] 전수 — 분류표와 소스가 정확히 맞는가 ─────────────────────────────
      주석을 걷어낸 «실제 코드» 에서 뽑는다(이 파일도, 제품 주석도 같은 문자열을 인용한다). */
-  const codeOnly = (() => {
+  const stripComments = source => {
     let inb = false;
-    return src.split('\n').map((ln, i) => {
+    return source.split('\n').map((ln, i) => {
       let out = '', j = 0;
       while (j < ln.length) {
         if (inb) { const e = ln.indexOf('*/', j); if (e < 0) { j = ln.length; } else { inb = false; j = e + 2; } }
@@ -148,7 +159,8 @@ const SCENE = `async ({ scene, on }) => {
       }
       return { i: i + 1, ln: out };
     });
-  })();
+  };
+  const codeOnly = stripComments(src);
   const fnAt = idx => {
     for (let k = idx - 1; k >= 0; k--) {
       const m = codeOnly[k].ln.match(/^\s*(?:async\s+)?function\s+(\w+)/);
@@ -173,16 +185,49 @@ const SCENE = `async ({ scene, on }) => {
      '[B2] 나머지 지급은 전부 **비전투 수령**이고 512 연출을 그대로 쓴다 — '
      + JSON.stringify(keepCalls.map(o => o.fn + '@' + o.i))
      + ' (새 호출부가 분류 없이 생기면 이 항이 곧바로 빨개진다)');
-  /* 골드를 늘리는 자리 전수 — `giveReward` 안의 한 줄까지 포함해 여덟이다. */
-  const GOLD = { killEnemy: 'combat(592 무음)', step: 'combat(654 무음)', giveReward: '경로(위 [B1][B2])',
-                 claimMail: '비전투', claimAllMail: '비전투', renderCoinPage: '비전투(광고)',
-                 claimOffline: '비전투(오프라인)' };
-  const goldSites = codeOnly.map((o, idx) => ({ i: o.i, fn: fnAt(idx), ln: o.ln }))
-    .filter(o => /S\.gold\s*\+=/.test(o.ln));
+  /* 골드를 늘리는 자리 전수 — `giveReward` 안의 한 줄까지 포함해 아홉이다.
+     ⚑ **804 — «분류» 는 이름이 아니라 «방향» 이다.** 697(상점 구매 즉시 지급)이 `grantNow` 에
+       골드 자리를 하나 더 만들자 [B3] 이 «미분류» 로 빨개졌는데, 이 표에 이름 한 줄만 적어
+       초록으로 되돌리는 것은 **누른 항**이다(328~330 교훈) — 그러면 다음에 누가 그 자리를
+       무음으로 바꿔도 표는 그대로 초록이라 654 의 경계(«비전투 512 연출은 유지»)가 조용히 죽는다.
+       ⇒ 이름 옆에 **무음이어야 하는가**를 적고, [B3m] 이 그것을 소스의 실제 모양과 대조한다.
+       `giveReward` 만 `'경로'` 다 — 무음 여부를 부르는 쪽이 정하고 그건 [B1]·[B2] 가 본다. */
+  const GOLD = {
+    killEnemy:      { mute: true,   why: 'combat(592 무음) — 킬 드랍' },
+    step:           { mute: true,   why: 'combat(654 무음) — 클리어 보너스 · 파도 보너스' },
+    giveReward:     { mute: '경로', why: '부르는 쪽이 정한다(위 [B1][B2])' },
+    claimMail:      { mute: false,  why: '비전투 수령(512 유지)' },
+    claimAllMail:   { mute: false,  why: '비전투 수령(512 유지)' },
+    renderCoinPage: { mute: false,  why: '비전투(광고 보상)' },
+    claimOffline:   { mute: false,  why: '비전투(오프라인 보상)' },
+    grantNow:       { mute: false,  why: '비전투(697 상점 구매 즉시 지급) — 512 연출 그대로' },
+  };
+  /* 자리의 «실제 방향» 은 바로 앞 세 줄의 `fxSilent('gold'` 로 읽는다 — 592·654 의 무음은
+     예외 없이 «`fxAt` 대신 `fxSilent`» 한 줄이고, [B4] 가 이미 그 모양을 전투 세 자리에서 쓴다.
+     여기서는 그 자를 **전 자리**로 넓혀 «유음이어야 하는 자리에 무음이 없는가» 까지 묻는다. */
+  const scanGold = source => {
+    const co = stripComments(source);
+    const at = idx => { for (let k = idx - 1; k >= 0; k--) { const m = co[k].ln.match(/^\s*(?:async\s+)?function\s+(\w+)/); if (m) return m[1]; } return '?'; };
+    return co.map((o, idx) => ({ i: o.i, fn: at(idx), ln: o.ln }))
+      .filter(o => /S\.gold\s*\+=/.test(o.ln))
+      .map(o => ({ ...o, silent: co.slice(Math.max(0, o.i - 4), o.i).some(x => /fxSilent\('gold'/.test(x.ln)) }));
+  };
+  const goldSites = scanGold(src);
   const unknown = goldSites.filter(o => !GOLD[o.fn]);
   ok(unknown.length === 0,
      '[B3] `S.gold +=` 자리가 **전부 분류돼 있다** — ' + JSON.stringify(uniq(goldSites.map(o => o.fn)))
      + (unknown.length ? ' · 미분류 ' + JSON.stringify(unknown.map(o => o.fn + '@' + o.i)) : ''));
+  /* 방향 대조 — 표가 «무음» 이라 적은 자리는 실제로 무음이고, «유음» 이라 적은 자리는 실제로 유음이다. */
+  const mismatch = src2 => scanGold(src2)
+    .filter(o => GOLD[o.fn] && GOLD[o.fn].mute !== '경로' && GOLD[o.fn].mute !== o.silent)
+    .map(o => o.fn + '@' + o.i + (o.silent ? '(무음)' : '(유음)'));
+  const mis = mismatch(src);
+  ok(mis.length === 0,
+     '[B3m] 분류표의 **방향**이 소스와 맞는다 — 무음 '
+     + JSON.stringify(goldSites.filter(o => o.silent).map(o => o.fn + '@' + o.i))
+     + ' · 유음 ' + JSON.stringify(goldSites.filter(o => !o.silent && GOLD[o.fn] && GOLD[o.fn].mute !== '경로').map(o => o.fn))
+     + (mis.length ? ' · 어긋남 ' + JSON.stringify(mis) : '')
+     + ' (이름만 등재하고 방향을 안 적으면 이 항이 없다 — 804)');
   const combatGold = goldSites.filter(o => o.fn === 'killEnemy' || o.fn === 'step');
   ok(combatGold.length === 3 && combatGold.every(o =>
        codeOnly.slice(Math.max(0, o.i - 4), o.i).some(x => /fxSilent\('gold'/.test(x.ln))),
@@ -240,6 +285,15 @@ const SCENE = `async ({ scene, on }) => {
      '[6] 비전투 수령(512)은 **그대로** — 코인 ' + ml.fly + '개 ' + JSON.stringify(ml.flyL) + ' · 버스트 O '
      + '(«전부 끄기» 가 아니라 «전투 계열만» 이라는 경계. verify512 와 서로 반대를 단언하지 않는 자리다)');
 
+  /* ── [8] 경계 둘째 — 697 상점 구매 즉시 지급(`grantNow`)도 512 연출 그대로 ────────
+     804 — [B3m] 이 «표가 유음이라 적었다» 를 소스로 말한다면 이 항은 **찍힌 코인**으로 말한다.
+     `grantNow` 는 `giveReward` 를 안 지나므로 [6] 이 초록이어도 이 자리가 무음일 수 있다. */
+  const gr = await run('grant');
+  ok(gr.gold > 0 && gr.fly > 0 && gr.flyL.includes('fxl') && gr.burst === true,
+     '[8] 697 상점 구매 즉시 지급도 **512 연출 그대로** — 골드 +' + gr.gold + ' · 코인 ' + gr.fly
+     + '개 ' + JSON.stringify(gr.flyL) + ' · 버스트 ' + (gr.burst ? 'O' : 'X')
+     + ' (무음은 전투·클리어 계열뿐이라는 경계의 두 번째 표본)');
+
   /* ── [7] HUD — 무음 골드는 붙잡히지 않는다 ─────────────────────────────── */
   ok(st.holdF === 0 && wv.holdF === 0 && dn.holdF === 0,
      '[7] 무음 골드는 fxHold 에 안 걸린다(숫자가 2초 뒤에 튀지 않는다) — 홀드 프레임 '
@@ -260,6 +314,21 @@ const SCENE = `async ({ scene, on }) => {
      이 세 항이 빨개지면 그때는 정말 죽은 코드이니 선언째 걷어내야 한다(index.html 35240 원장). */
   ok(r1.flyL.includes('fxlc') && r2.fly > 0,
      '[R4] 되살아난 코인은 **#fxlc(전투 발 · 팝업 아래)** 로 간다 = 592 원장의 combat 기계가 살아 있다');
+
+  /* ── [R5]·[R6] 되돌림 — [B3m] 이 «무르게 푼 항» 이 아님을 못박는다 (804) ────────
+     소스 **사본**에 한 줄을 넣거나 빼서 두 방향을 각각 뒤집어 본다(제품 파일은 안 건드린다).
+     이름만 등재하는 옛 [B3] 로는 둘 다 초록이었다 — 그것이 이 두 항의 존재 이유다. */
+  const injected = src.replace(/^(\s*)(S\.gold \+= g; S\.dia \+= c; S\.relic \+= r;)$/m,
+                               "$1fxSilent('gold', g);\n$1$2");
+  ok(injected !== src && mismatch(injected).length > 0,
+     '[R5] `grantNow` 를 **무음으로 바꾸면** [B3m] 이 즉시 빨개진다 — '
+     + JSON.stringify(mismatch(injected))
+     + ' (= 697 상점 구매의 512 연출이 조용히 꺼지는 길이 막혀 있다)');
+  const removed = src.replace(/^(\s*)else fxSilent\('gold', g\);$/m, '$1else ;');
+  ok(removed !== src && mismatch(removed).length > 0,
+     '[R6] 반대로 전투 자리(`killEnemy`)의 `fxSilent` 를 **빼면** 그것도 빨개진다 — '
+     + JSON.stringify(mismatch(removed))
+     + ' (방향 대조가 한쪽으로만 도는 자가 아니다)');
 
   ok(errs.length === 0, '[X] 콘솔 에러 0건 — ' + JSON.stringify(errs.slice(0, 3)));
 
