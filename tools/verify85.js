@@ -12,7 +12,8 @@
  *   [E] 소환 시뮬 — 무기 10연 ×300 (**만렙**) 에서 8등급(g7) 실제 등장 + 아이템 undefined 0건
  *   ⚠ 528(2026-08-31) — [D]·[E]·[G] 의 «만렙» 은 제품 `SUM_MAXLV` 에서 읽는다. 손으로 적으면
  *      만렙이 바뀌는 날 조용히 다른 레벨을 재게 된다(115 → 196 → 496 에서 두 번 그랬다 — 522·528).
- *   [F] 합성 — weapon5(Lv100+5개) → g6 5종 중 하나 · weapon6 → 'weapon7' 고정 · weapon7 은 canCraft false
+ *   [F] 합성 — **719 이관**: weapon5(Lv100+5개) → 같은 등급 다음 티어 weapon5_3 고정(랜덤 폐지) ·
+ *       등급 끝 weapon6_4 → 다음 등급 최저 티어 weapon7 · weapon7 은 canCraft false
  *   [G] 11 확률 팝업 — 무기 MAX 단계에 «초월·불멸» 행 · 스킬 팝업엔 없음 · NaN/undefined 0건
  *   [H] 05 팝업 — (186) 페이징 폐지: 한 화면에 8행 40칸 · 초월·불멸 행 렌더 · NaN/undefined 0건
  *   [I] 도감 — COLL.equip.tiers 마지막 need === 108(전 종 수집)
@@ -193,23 +194,27 @@ const ok = (b, name, detail) => {
   ok((E.got[7] || 0) > 0, 'E2 8등급(불멸) 실제 등장', JSON.stringify(E.got));
   ok((E.got[6] || 0) > 0, 'E3 7등급(초월) 실제 등장', String(E.got[6] || 0));
 
-  /* [F] 합성 */
+  /* [F] 합성 — ⚑ 719(2026-09-02, 주인 지시)로 **종착지가 «다음 등급 랜덤» → «다음 티어» 로 뒤집혔다.**
+     333 처방대로 표본(weapon5 계열)은 그대로 두고 **방향만** 갈아 끼운다: 자리를 비우면 «85 가
+     세우던 합성 축» 이 통째로 사라진다. 새 산식의 전수·되돌림은 `verify719` [A]·[R] 가 지고,
+     여기서는 85 가 원래 묻던 세 가지(가능한가 · 등급 경계는 어디로 · 최고 등급은 막히는가)를 묻는다. */
   const F = await page.evaluate(() => {
     S.own.weapon5 = { n: 5, l: 100 };
     const can5 = canCraft(EQ.weapon5);
+    /* 랜덤이 폐지됐으므로 60번 물어도 «한 칸» 이어야 한다(옛 F1 의 «5종 풀» 과 정확히 반대) */
     const res5 = new Set();
-    for (let i = 0; i < 60; i++) { const nx = nextGradeItem(EQ.weapon5); if (nx) res5.add(nx.id + ':' + nx.g); }
-    const g6ok = [...res5].every(x => x.endsWith(':6'));
-    S.own.weapon6 = { n: 5, l: 100 };
-    const can6 = canCraft(EQ.weapon6);
-    const nx6 = nextGradeItem(EQ.weapon6);
+    for (let i = 0; i < 60; i++) { const nx = nextTierItem(EQ.weapon5); if (nx) res5.add(nx.id + ':' + nx.g); }
+    S.own.weapon6_4 = { n: 5, l: 100 };                    /* g6 의 **마지막 티어**(j4) */
+    const can6 = canCraft(EQ.weapon6_4);
+    const nx6 = nextTierItem(EQ.weapon6_4);
     const can7 = (S.own.weapon7 = { n: 5, l: 100 }, canCraft(EQ.weapon7));
     const canSk = canCraft(SK.holy);
-    delete S.own.weapon6; delete S.own.weapon7;
-    return { can5, pool5: res5.size, g6ok, can6, nx6: nx6 && nx6.id, can7, canSk };
+    delete S.own.weapon6_4; delete S.own.weapon7;
+    return { can5, pool5: res5.size, one5: [...res5][0], can6, nx6: nx6 && nx6.id, can7, canSk };
   });
-  ok(F.can5 && F.g6ok && F.pool5 >= 2, 'F1 weapon5 합성 → 초월 5종 중 랜덤', '표본 ' + F.pool5 + '종');
-  ok(F.can6 && F.nx6 === 'weapon7', 'F2 weapon6 합성 → weapon7 고정(1종)', String(F.nx6));
+  ok(F.can5 && F.pool5 === 1 && F.one5 === 'weapon5_3:5',
+     'F1 weapon5 합성 → **같은 등급 다음 티어** 고정(랜덤 폐지)', F.one5 + ' · 표본 ' + F.pool5 + '종');
+  ok(F.can6 && F.nx6 === 'weapon7', 'F2 등급 끝(weapon6_4) 합성 → 다음 등급 최저 티어 weapon7', String(F.nx6));
   ok(!F.can7 && !F.canSk, 'F3 불멸 장비·신화 스킬은 합성 불가');
 
   /* [G] 11 확률 팝업 — 이 절의 단언문이 «MAX 단계» 라고 말하므로 **MAX 단계에 서야** 한다.
@@ -291,7 +296,7 @@ const ok = (b, name, detail) => {
     return { err, ...r };
   });
   ok(!J.err, 'J1 옛 lv120 신화 장비 로드 후 판정·렌더 무에러', J.err || '');
-  ok(J.atMax && !J.canLv && !J.canCr && J.canCr2 && J.refund, 'J2 lv120 → MAX 취급 · 5개 모으면 초월 합성 가능');
+  ok(J.atMax && !J.canLv && !J.canCr && J.canCr2 && J.refund, 'J2 lv120 → MAX 취급 · 5개 모으면 다음 티어 합성 가능(719)');
 
   /* [K] 콘솔 */
   ok(errs.length === 0, 'K1 콘솔 에러 0건', errs.slice(0, 3).join(' | '));

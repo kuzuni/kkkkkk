@@ -20,7 +20,8 @@
                제목이 실이름으로 열린다. 옛 «제목 = ???» 항을 «제목 = 데이터 실이름 + 그래도
                [장착]은 비활성» 짝 항으로 갈아 끼웠다(333 처방 — 자리를 비우지 않는다).
      §6 기능   실제로 동작한다 — [장착] 토글이 S 에 반영 · [강화] 가 Lv 를 올림 ·
-               [최대 강화] 가 재료를 다 씀 · [합성](`mCraft`)이 다음 등급을 준다.
+               [최대 강화] 가 재료를 다 씀 · **719 이관**: [합성](`mCraft`) 폐지 →
+               05 [일괄합성](`wpnBtnCf`)이 **다음 티어**를 준다.
      §7 펫 그림 174 규칙 — 펫 아이콘은 이모지가 아니라 스프라이트 캔버스이고 잉크가 칸 중앙에 있다.
      §8 회귀   스킬 세부(`showSkillDetail`)는 한 픽셀도 안 바뀐다 · 콘솔/페이지 에러 0. */
 const { pw, launch } = require('./pwlaunch');
@@ -274,18 +275,21 @@ const READ = (partList) => {
      ITEM_FN ? 'anchor ok' : 'showItem 앵커를 못 찾았다');
   ok(!notOwn.n3, '[미보유 장비] 버튼 2개라 .n3 아님');
 
-  /* 만렙 장비 — [합성] 버튼(mCraft)이 그 자리에 온다 (verify149 가 이 id 를 쓴다) */
+  /* ⚑ 719 이관(2026-09-02, 주인 «일괄합성 버튼만 … 합성버튼 말고») — 여기 있던 개별 [합성]
+     버튼(`mCraft`)이 폐지됐다. 자리를 비우지 않고 **방향을 뒤집는다**(333 처방): 만렙 장비의
+     버튼 행은 이제 만렙 펫과 **같은 [장착]·[MAX](비활성)** 이고, 합성 진입점은 05 [일괄합성]
+     하나뿐이다(그 동작은 아래 §6 과 `verify719` 가 센다). */
   const maxedEq = await p.evaluate(() => {
-    const x = EQUIPS.find(e => !isTopGrade(e) && nextGradeItem(e));
+    const x = EQUIPS.find(e => !isTopGrade(e) && nextTierItem(e));
     S.own[x.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
     closeModal(); showItem(x.id);
     const bs = [...document.querySelectorAll('#mbox .sk-act button')];
     return { id: x.id, ids: bs.map(b => b.id), labels: bs.map(b => b.textContent.trim()),
              dis: bs.map(b => b.disabled), pb: document.querySelector('#mbox .sk-pb b').textContent.trim() };
   });
-  eq('[만렙 장비] 버튼 id', maxedEq.ids.join(','), 'mEq,mCraft');
-  eq('[만렙 장비] 합성 라벨', maxedEq.labels[1], '합성');
-  ok(!maxedEq.dis[1], '[만렙 장비] 합성 가능 → 활성');
+  eq('[만렙 장비] 버튼 id (719 — 개별 합성 버튼 폐지)', maxedEq.ids.join(','), 'mEq,mLv');
+  eq('[만렙 장비] 라벨 = MAX', maxedEq.labels[1], 'MAX');
+  ok(maxedEq.dis[1], '[만렙 장비] MAX 는 비활성(719 — 합성은 05 [일괄합성] 몫)');
   eq('[만렙 장비] 진행바 MAX', maxedEq.pb, 'MAX');
   /* 만렙 펫 — 합성이 없으므로 «MAX» 비활성 */
   const maxedPet = await p.evaluate(() => {
@@ -345,21 +349,27 @@ const READ = (partList) => {
   ok(fAll.n < 7, '[최대 강화] 남은 재료가 다음 필요분 미만', fAll.n);
   eq('[최대 강화] 팝업 Lv 표기 갱신', fAll.shown, 'Lv. ' + fAll.lv);
 
+  /* ⚑ 719 이관 — 합성을 «누르는 자리» 가 08 세부 팝업에서 **05 [일괄합성]** 으로 옮겨졌고
+     산식도 «다음 등급 랜덤» → «다음 티어» 로 바뀌었다. 랜덤이 없어졌으므로 지급물을 **id 로**
+     집을 수 있다(옛 주석의 «풀 전체 보유 수» 우회가 더는 필요 없다). */
   const fCraft = await p.evaluate(() => {
-    const x = EQUIPS.find(e => !isTopGrade(e) && nextGradeItem(e));
-    S.own[x.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
-    closeModal(); showItem(x.id);
-    /* 85 ⑤ — 합성 결과는 «다음 등급 5종 중 랜덤» 이라 지급물을 id 로 못 집는다.
-       그 등급 풀 전체의 보유 수가 늘었는지로 본다. */
-    const pool = EQUIPS.filter(e => e.slot === x.slot && e.g === x.g + 1);
-    const before = pool.filter(e => S.own[e.id]).length;
-    document.getElementById('mCraft').onclick();
-    return { id: x.id, gone: !S.own[x.id] || S.own[x.id].n < CRAFT_NEED,
-             got: pool.filter(e => S.own[e.id]).length > before,
-             toast: document.querySelectorAll('.fx-toast').length };
+    const x = EQUIPS.find(e => nextTierItem(e) && e.slot === 'weapon');
+    const nx = nextTierItem(x);
+    S.own = {}; S.own[x.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
+    closeModal(); openWeapon(null, x.slot);
+    const btn = document.getElementById('wpnBtnCf');
+    const shown = getComputedStyle(btn).display !== 'none';
+    btn.click();
+    return { id: x.id, nx: nx.id, shown,
+             gone: !S.own[x.id] || S.own[x.id].n < CRAFT_NEED,
+             got: !!S.own[nx.id],
+             noOld: !document.getElementById('mCraft') };
   });
-  ok(fCraft.gone, '[합성] 재료가 소모됐다');
-  ok(fCraft.got, '[합성] 다음 등급 장비를 얻었다');
+  ok(fCraft.shown, '[일괄합성] 가능할 때 버튼이 떠 있다', fCraft.id);
+  ok(fCraft.gone, '[일괄합성] 재료가 소모됐다');
+  ok(fCraft.got, '[일괄합성] **다음 티어** 장비를 얻었다', fCraft.id + ' → ' + fCraft.nx);
+  ok(fCraft.noOld, '[일괄합성] 개별 [합성] 버튼(mCraft)은 화면에 0건');
+  await p.evaluate(() => { closeUpAll(); closeWeapon(); });
 
   /* ── §7 펫 그림 (174 규칙) ── */
   console.log('\n§7 펫 그림 — 이모지가 아니라 스프라이트 캔버스');

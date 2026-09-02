@@ -210,8 +210,8 @@ async function open(browser, seed) {
 
   /* [J] 263 — 합성 뒤에도 장착 목록이 그대로다(등재문이 지정한 단언) */
   const cr = await page.evaluate(() => {
-    /* nextGradeItem 은 다음 등급 풀에서 «무작위» 로 고른다 — 풀 전체를 미보유로 만들어야
-       craft 가 무엇을 뽑든 «처음 얻은 것» 이 된다 */
+    /* 719 — 산출은 이제 `nextTierItem` 으로 **결정적**이지만, 풀 전체를 미보유로 미는 이 준비는
+       그대로 둔다(«처음 얻은 것이어도 안 낀다» 라는 이 절의 뜻이 더 강한 표본이다) */
     const clearNext = it => EQUIPS.filter(e => e.slot === it.slot && e.g === it.g + 1).forEach(e => delete S.own[e.id]);
     const base = BANNERS.shield.list.find(e => !isTopGrade(e));
     if (!base) return { skip: true };

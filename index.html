@@ -9004,6 +9004,22 @@
     #3E8A10 107px 115px,#000 115px)}
   .wm-b2:not(.off)::before{border-color:#C9F07E}
   .wm-b2:not(.off)::after{background:#C9F07E}
+  /* ⚑ 719 — [일괄합성](`.wm-b3`) 이 뜬 «세 칸» 배치. **레퍼런스 이탈은 이 상태에서만** 이고,
+     버튼이 0건이라 숨는 평시에는 위 두 줄(137/447 · 폭 274)이 한 픽셀도 안 바뀐다
+     (측정표 05 정오표 · `verify719` [D] 가 두 상태를 같이 잰다).
+     산수: 본문 폭 858 = 30(여백) + 246·3 + 30(칸 사이)·2 + 30(여백) — 좌우 여백이 같아 가운데다.
+     라벨은 폭이 274 → 246 으로 줄어든 만큼만 줄인다(41 → 35 · scaleX .97 → .86 ⇒ 잉크 −25%,
+     최장 라벨 «일괄 강화 (36)» 이 링 7px 안쪽에 들어간다). 색·굽·링 규격은 두 버튼 것 그대로다. */
+  .wm-b3{left:447px;color:#DFDFDF}
+  .wm-b3:not(.off){color:#fff;background:linear-gradient(180deg,#8FDC33 0 11px,#63B41C 101px,
+    #3E8A10 107px 115px,#000 115px)}
+  .wm-b3:not(.off)::before{border-color:#C9F07E}
+  .wm-b3:not(.off)::after{background:#C9F07E}
+  .wm-in.n3 .wm-btn{width:246px}
+  .wm-in.n3 .wm-b1{left:30px}
+  .wm-in.n3 .wm-b2{left:306px}
+  .wm-in.n3 .wm-b3{left:582px}
+  .wm-in.n3 .wm-btn>i{font-size:35px;transform:scaleX(.86)}
 
   /* 6 좌우 페이지 화살표 ◀▶ — **186 에서 폐지**(2026-08-27, 저장소 주인 지시).
      레퍼런스에는 모달 박스 바깥(ref x14~76 / 1003~1065, y1152~1267)에 있었고 4회차까지
@@ -16869,6 +16885,9 @@
         <div class="wm-tot" id="wpnTotal"></div>
         <button class="wm-btn wm-b1" id="wpnBtnEq"></button>
         <button class="wm-btn wm-b2" id="wpnBtnUp"></button>
+        <!-- 719 — [일괄합성]. 합성 가능한 조합이 0 이면 `renderWpn` 이 통째로 숨긴다(그때 이 줄은
+             레퍼런스 2버튼 배치 그대로). 뜰 때만 `.wm-in.n3` 가 세 칸 배치로 바꾼다. -->
+        <button class="wm-btn wm-b3" id="wpnBtnCf" style="display:none"></button>
       </div></div>
     </div>
   </div>
@@ -26985,7 +27004,11 @@ function petPaint(root){
     if(!okd && cv.parentNode) cv.parentNode.textContent = UPR_FB[k] || '❔';
   });
 }
-function openUpAll(ups){
+/* 719 ⑤ — 합성 결과도 «09 팝업 꼴» 로 낸다(주인 지시). 껍데기·기하·연출은 한 벌 그대로이고
+   달라지는 것은 **합계 줄의 낱말** 하나뿐이다(`opt.tail`. 기본값은 종전 문자열이라 강화 경로는 Δ0).
+   두 벌로 그리지 않는 이유는 726·782 가 이 팝업에서 고친 것(전 항목 표시 · 스크롤 · 밀어서 더 보기)이
+   합성에도 그대로 필요하기 때문이다 — 복제하면 그 셋이 한쪽에만 남는다. */
+function openUpAll(ups, opt){
   if(!ups || !ups.length) return false;
   const list = uprMerge(ups), n = list.length, w = $('upw');
   const many = n > UPR_COLS;
@@ -27019,7 +27042,7 @@ function openUpAll(ups){
        그 말을 붙였다. `.on` 뒤라야 `#upw{display:none}` 이 풀려 실측이 나오므로 순서가 여기다.
        레이아웃에 안 끼어드는 자리(`.upr-cnt` 는 absolute)라 격자 기하는 Δ0px 이다. */
   const gEl = $('upCards'), over = gEl.scrollHeight > gEl.clientHeight + 1;
-  $('upCnt').innerHTML = '<i>총</i><em>' + n + '</em><i>건 강화</i>'
+  $('upCnt').innerHTML = '<i>총</i><em>' + n + '</em><i>' + ((opt && opt.tail) || '건 강화') + '</i>'
     + (over ? '<s>밀어서 더 보기</s>' : '');
   sfx('up');                                            /* 78 — 일괄 강화 결과 */
   return true;
@@ -27076,19 +27099,27 @@ document.querySelectorAll('#defw .df-btn').forEach(b => b.addEventListener('clic
   if(b.dataset.dfgo) goTab(b.dataset.dfgo);
 }));
 
-/* 85 ⑤ (주인 지시) — 합성 결과는 «다음 등급 5종 중 랜덤», 7→8 은 풀이 1종이라 자연히 고정.
-   canCraft 는 !!(존재 여부)만 보므로 랜덤이어도 판정↔지급이 어긋나지 않는다 —
-   실제 지급은 craft() 안의 nextGradeItem 호출 1번이 결정한다. */
-const nextGradeItem = it => {
-  const pool = EQUIPS.filter(e => e.slot === it.slot && e.g === it.g + 1);
-  if(!pool.length) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
+/* ⚑ 719 (2026-09-02, 저장소 주인 지시) — **합성의 종착지가 «다음 등급 랜덤» 에서 «다음 티어» 로 바뀌었다.**
+   주인 원문: «합성시 현재꺼 5개소모해서 **다음티어꺼 1개** 되고, 다음티어 없으면 **다음등급 제일 낮은
+   티어꺼** 1개 되고, 그런식으로 해야하고, 제일 높은 등급꺼는 합성없고 … 장비레벨 100레벨 된거만 합성 가능함».
+   ⇒ 85 ⑤ 의 `nextGradeItem`(같은 부위 · 다음 등급 5종 **랜덤**)을 **선언째** 갈아 끼웠다.
+     남겨 두면 «랜덤이던 시절» 의 호출부가 조용히 살아남는다(LESSONS 295-② — 죽은 축은 자리째).
+   ⚑ **표를 손으로 적지 않는다**(402 규약) — 티어는 `EQUIPS[].j`(260 이 정한 등급 안 «약→강» 자리)이고
+     «다음 등급의 최저 티어» 는 그 등급에서 j 가 가장 작은 칸이다. 종이 늘어도 이 두 줄이 답을 낸다.
+   ⚑ **랜덤이 사라져 판정↔지급이 항등**이 됐다 — 85 ⑤ 가 «!!(존재 여부)만 본다» 로 맞춰 두던 자리가
+     이제 «같은 함수가 같은 칸을 돌려준다» 로 더 강해진다(게이트 `verify719` [A] 가 이 항등을 센다). */
+const nextTierItem = it => {
+  const up = EQUIPS.filter(e => e.slot === it.slot && e.g === it.g && e.j === it.j + 1);
+  if(up.length) return up[0];                                   /* ① 같은 등급 다음 티어 */
+  const ng = EQUIPS.filter(e => e.slot === it.slot && e.g === it.g + 1);
+  if(!ng.length) return null;                                   /* ③ 최고 등급은 합성 없음 */
+  return ng.reduce((m, e) => (e.j < m.j ? e : m));              /* ② 다음 등급의 최저 티어 */
 };
-const canCraft = it => catOf(it) === 'equip' && !isTopGrade(it) && oLv(it.id) >= MAX_LEVEL
-                    && frag(it.id) >= CRAFT_NEED && !!nextGradeItem(it);
+const canCraft = it => catOf(it) === 'equip' && oLv(it.id) >= MAX_LEVEL
+                    && frag(it.id) >= CRAFT_NEED && !!nextTierItem(it);
 function craft(it){
   if(!canCraft(it)) return null;
-  const nx = nextGradeItem(it);
+  const nx = nextTierItem(it);
   S.own[it.id].n -= CRAFT_NEED;
   const isNew = !has(nx.id);
   if(isNew) S.own[nx.id] = { n:0, l:1 }; else S.own[nx.id].n++;
@@ -27096,6 +27127,33 @@ function craft(it){
   /* 263 — 합성물 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
   return nx;
+}
+/* 719 ④ — [일괄합성]. 「가능한 조합을 소진까지」 이고 **낮은 것부터** 돈다(등급 → 티어 순).
+   낮은 칸이 만든 산출이 다시 5개를 채우면 그 칸도 이어서 합성된다 — 그래서 한 번 훑고 끝내지 않고
+   «이번 바퀴에 한 건이라도 했으면 다시 훑는다»(연쇄. 위임 규약으로 채택 — 되돌리려면 do/while 을
+   한 바퀴로 줄이면 된다). 산출은 항상 Lv1 이므로 연쇄는 **이미 만렙이던 칸**에서만 일어난다.
+   ⚑ **장착분은 재료가 아니다** — 소모하는 것은 `S.own[id].n`(여분)뿐이고 밑동 1개와 강화 Lv 는
+     그대로 남는다. 그래서 장착 중인 칸도 «장착이 풀리거나 사라지는» 일이 구조적으로 없다
+     (`verify719` [E] 가 `S.eqSlot` 3칸과 그 칸의 has/oLv 를 같이 센다).
+   ⚠ `levelUpMax` 와 같은 이유로 `craft()` 를 호출하지 않고 여기서 직접 돈다 — 건마다 save() 를
+     치면 수백 건짜리 일괄에서 그 값을 다 치른다. 저장은 끝에 한 번이다. */
+function craftAll(list){
+  const by = new Map(); let n = 0, guard = 0;
+  let did; do{
+    did = 0;
+    list.filter(canCraft).sort((a, b) => a.g - b.g || a.j - b.j).forEach(it => {
+      while(canCraft(it) && guard++ < 100000){
+        const nx = nextTierItem(it);
+        S.own[it.id].n -= CRAFT_NEED;
+        if(!has(nx.id)) S.own[nx.id] = { n:0, l:1 }; else S.own[nx.id].n++;
+        const r = by.get(nx.id) || { it: nx, from: 0, to: 0 };
+        r.from += CRAFT_NEED; r.to++; by.set(nx.id, r);
+        n++; did++;
+      }
+    });
+  }while(did);
+  if(n){ markDirty(); uiDirty = true; save(); }
+  return { n, made: [...by.values()] };
 }
 const allMaxed = list => list.every(it => atMax(it));
 /* ── 757 (2026-09-02, 저장소 주인 지시) 조각 환급 ──────────────────────────────
@@ -29788,10 +29846,12 @@ function showItem(id){
     : cat === 'equip'
       ? '<em>' + slot.n + '</em> 부위에 장착하는 장비입니다.<br>'
         + '장착 효과 — ' + slot.stat + ' <em>+' + pctB(equipVal(it)) + '</em><br>'   /* 472 — 자릿수 접기 */
+        /* 719 — 설명도 «다음 등급» 이 아니라 **다음 티어**를 말한다(합성 산식이 그렇게 바뀌었다).
+           이름은 `nextTierItem` 이 돌려주는 그 칸에서 그대로 읽는다 — 두 자리가 다른 말을 못 하게. */
         + (isTopGrade(it)
             ? '최고 등급 장비라 <em>무한 강화</em>됩니다.'
             : 'Lv. <em>' + MAX_LEVEL + '</em> 달성 후 같은 장비 <em>' + CRAFT_NEED + '개</em>로<br>'
-              + '<em>' + GRADE[it.g+1].n + '</em> 등급으로 합성할 수 있습니다.')
+              + '<em>' + (nextTierItem(it) || it).n + '</em> 1개로 합성할 수 있습니다.')
       /* 429(2026-08-30 주인 지시) — 여기 있던 두 줄(«장착 없이 보유만으로 항상 적용됩니다» ·
          «유물을 소환할 때마다 유물 하나가 Lv +1 됩니다»)은 **어느 유물 칸에서도 글자 하나 안 바뀌는
          공통 문장**이었다(`probe429` ⓐ — 표본 3칸 3/3). 89 페이지 좌상단 [?] → `relicHelp()` 로
@@ -29824,7 +29884,11 @@ function showItem(id){
     mdLive({ lv:'Lv. ' + oLv(id), p:b2.p, pTxt:b2.t, cell:ct3Now(), desc:descNow(), own:ownNow() }); };
   /* 버튼 행 — 08 규격(250x120). 유물은 할 수 있는 행동이 없어 행 자체를 안 낸다(위 주석). */
   const canUp = own && !maxed && canLevel(it);
-  const crafting = own && maxed && cat === 'equip' && !isTopGrade(it);
+  /* ⚑ 719 ③ (주인 지시 2026-09-02) — 여기 있던 **개별 [합성] 버튼(`mCraft`)을 폐지**했다.
+     주인 원문: «**일괄합성 버튼만** 만들어주면될듯. **합성버튼 말고**».
+     합성 진입점은 이제 05 무기 팝업의 [일괄합성] 하나뿐이고, 이 자리는 다른 계열과 같은
+     [MAX](만렙 · 비활성)로 돌아간다 — 분기를 «남겨 두고 숨기지» 않고 `crafting` 변수째 걷어냈다
+     (333 규약 — 죽은 분기는 자리째. 되살리려면 이 세 줄과 아래 `mCraft` 핸들러가 한 벌이다). */
   let acts = '';
   if(!rel){
     /* 664 ③ — «장착만 막는다». 막는 것은 종전 그대로 `disabled`(2368 규약: `:disabled` = 회색)이고,
@@ -29832,10 +29896,8 @@ function showItem(id){
        이 자리로 왔다(코스튬이 같은 뜻을 토스트로 말하는 것과 짝 · 182·333 반려 선례). */
     acts = '<button class="sk-e" id="mEq"' + (own ? '' : ' disabled') + '><b>'
       + (own ? (eq ? '해제' : '장착') : '미보유') + '</b></button>'
-      + (crafting
-          ? '<button class="sk-u" id="mCraft"' + (canCraft(it) ? '' : ' disabled') + '><b>합성</b></button>'
-          : '<button class="sk-u" id="mLv"' + (canUp ? '' : ' disabled') + '><b>'
-            + (own && maxed ? 'MAX' : '강화') + '</b></button>')
+      + '<button class="sk-u" id="mLv"' + (canUp ? '' : ' disabled') + '><b>'
+      + (own && maxed ? 'MAX' : '강화') + '</b></button>'
       + (canUp ? '<button class="sk-u" id="mLvAll"><b>최대 강화</b></button>' : '');
   }
 
@@ -29864,7 +29926,7 @@ function showItem(id){
   $('mbox').scrollTop = 0;
   if(cat === 'pet') petPaint($('mbox'));     /* 174 규약 — 스프라이트 캔버스는 삽입 «후» 한 번 칠한다 */
   modalShell('sk8').classList.add('on');   /* 465 — 남의 껍데기를 먼저 뗀다(MODAL_SHELLS) */
-  const e = $('mEq'), l = $('mLv'), b = $('mLvAll'), c = $('mCraft');
+  const e = $('mEq'), l = $('mLv'), b = $('mLvAll');   /* 719 — `mCraft` 폐지(개별 합성 버튼 없음) */
   if(e && own) e.onclick = () => { toggleEquip(it, cat); showItem(id); };
   /* 58 — 강화 성공: 레벨 칸이 흰 플래시 + 버튼 자리에서 성공 파티클 (08 스킬과 같은 자리)
      262 — click → pointerdown «꾹 누르면 연속»(공용 bindUpHold). 옆의 [최대 강화]·[합성]은
@@ -29880,11 +29942,6 @@ function showItem(id){
   if(b) b.onclick = () => {
     const t = $('mbox').querySelector('.sk-lv'), n = levelUpMax(it);
     if(n) fxUpOk(t, b); showItem(id); if(n) fxHitEl('#mbox .sk-lv');
-  };
-  if(c) c.onclick = () => {
-    const nx = craft(it);
-    /* 206 — 합성 «성공» 통보. 결과물은 바로 뒤 재렌더된 목록 카드가 보여 준다 */
-    if(nx) notify('⚗️ 합성 성공 — ' + GRADE[nx.g].n + ' <b>' + nx.n + '</b> 획득!');
   };
 }
 
@@ -33922,6 +33979,17 @@ function renderWpn(){
   $('wpnBtnUp').classList.toggle('alert', !!up);
   $('wpnBtnUp').innerHTML = '<i>일괄 강화' + (up ? ' (' + up + ')' : '') + '</i>'
     + (up ? '<s class="updot"></s>' : '');
+  /* ⚑ 719 ③ — [일괄합성]. 주인 문면이 «합성할수있는 시기가 됐을때부터 뜨게» + «일괄합성 버튼만»
+     이라 이 버튼은 **가능한 조합이 0 이면 노드째 숨는다**(321 «누를 수 있을 때만» 과 짝).
+     ⚠ 그래서 **0건일 때 이 시트는 종전과 한 픽셀도 다르지 않다** — 버튼 2개 자리(137/447)는
+       레퍼런스 값 그대로이고, 3개 배치(`.wm-in.n3`)는 «뜰 때만» 켜진다(`verify719` [D] 가 둘을 같이 센다). */
+  const cf = l.filter(x => canCraft(x)).length;
+  $('wpnBtnCf').classList.toggle('off', !cf);
+  $('wpnBtnCf').classList.toggle('alert', !!cf);
+  $('wpnBtnCf').innerHTML = '<i>일괄합성' + (cf ? ' (' + cf + ')' : '') + '</i>'
+    + (cf ? '<s class="updot"></s>' : '');
+  $('wpnBtnCf').style.display = cf ? '' : 'none';
+  $('wpnw').querySelector('.wm-in').classList.toggle('n3', !!cf);
 }
 function openWeapon(id, part){
   wpnPart = (part && SLOTS.some(s => s.k === part)) ? part
@@ -33964,6 +34032,17 @@ $('wpnBtnUp').onclick = () => {
   uiDirty = true; renderUI();                   /* 202 — 탭바 영웅 칸·장비 서브탭 레드닷 즉시 소등 */
   if(!openUpAll(r.ups))
     notify('강화할 수 있는 <b>' + wpnSlotDef().n + '</b>가 없습니다');
+};
+/* 719 — [일괄합성]. 482 규약(«강화가 순위를 뒤집으면 선택이 따라간다»)은 합성에도 그대로다 —
+   합성은 더 높은 티어를 «새로» 만들기 때문에 순위가 바뀌는 것이 오히려 정상이다. */
+$('wpnBtnCf').onclick = () => {
+  const r = craftAll(wpnList());
+  const best = wpnBest();
+  if(best) wpnSel = best.id;
+  renderWpn();
+  uiDirty = true; renderUI();
+  if(!openUpAll(r.made, { tail:'건 합성' }))
+    notify('합성할 수 있는 <b>' + wpnSlotDef().n + '</b>가 없습니다');
 };
 /* 186 — 페이지 화살표(`wpnPrev`/`wpnNext`)와 `wpnPages()` 폐지. 격자가 8행 전부를 담고
    세로 스크롤로 본다. 남아 있던 호출부는 게이트 2건뿐이었다(verify85 [H] · fnchk115 9) — 같이 옮겼다.

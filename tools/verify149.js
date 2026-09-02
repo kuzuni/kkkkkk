@@ -153,7 +153,9 @@ const TOAST_SITES = [
      «시간 안에» 를 계속 잡으면 사망 사유가 유일한 문구가 되는 날 이 항이 자리째 사라진 것처럼 빨개진다.
      («어느 문구가 맞는가» 는 verify458 [3-e] 가 따로 못 박는다.) */
   ['206 승급 실패',        "'💀 승급 실패 — '"],
-  ['206 합성 성공',        '⚗️ 합성 성공 — '],
+  /* ⚑ 719 이관 — 개별 [합성] 버튼이 폐지되며 «합성 성공» 토스트가 사라졌다(결과는 09 팝업이 말한다).
+     같은 계열에서 **살아 있는** 토스트로 자리를 옮긴다 — 05 [일괄합성] 의 반려 문구. */
+  ['206 합성 반려',        "'합성할 수 있는 <b>'"],
   ['206 레이드 결과',      "' — DPS <b>' + fmtB(dps)"],
   ['206 아레나 결과',      "'🏅 아레나 승리' : '💀 아레나 패배'"],
   /* 589 이관 — «결제 준비 중» 은 주인 지시(«클릭시 걍 결제된거로 쳐주기»)로 폐기됐다.
@@ -253,7 +255,7 @@ const WORST = [
      닿았다(1회차 실측). 제품 문구에서 뺐고, 여기 워스트케이스도 뺀 판으로 잰다. */
   { n: '206 도감 강화',     f: 'D => "🏆 " + D.collSet + " 도감 <b>10단계</b> 강화!"' },
   { n: '206 조각 환급',     f: 'D => "♻️ " + D.ban + " 조각 환급 — " + D.icDia + " <b>+999.99Z</b>"' },   /* 757 이관 */
-  { n: '206 합성 성공',     f: 'D => "⚗️ 합성 성공 — " + D.grade + " <b>" + D.equip + "</b> 획득!"' },
+  { n: '206 합성 반려',     f: 'D => "합성할 수 있는 <b>" + D.wpn + "</b>가 없습니다"' },   /* 719 이관 */
   /* 589 — 세 상품이 같은 문구 틀을 쓰므로 워스트케이스는 «가장 긴 상품 이름» 으로 만든다 */
   { n: '589 이용권 결제 완료', f: 'D => "💳 결제 완료 — " + D.pass + " 이용권 · 우편함을 확인하세요"' },
   { n: '589 다이아 결제 완료', f: 'D => "💳 결제 완료 — " + D.diaPack + " · 우편함을 확인하세요"' },
@@ -483,13 +485,16 @@ const WORST = [
         B.list.forEach(it => { S.own[it.id] = { n: 3, l: maxLv(it) === Infinity ? MAX_LEVEL : maxLv(it) }; });
         if (!allMaxed(B.list)) throw new Error('배너가 전부 최대가 아니다');
         doRefund(bk); });
-      run('206 합성 성공 †',    () => { const it = EQUIPS.find(e => canCraft(e) || (!isTopGrade(e) && nextGradeItem(e)));
-        if (!it) throw new Error('합성 가능한 장비가 없다');
-        S.own[it.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
-        showItem(it.id);
-        const c = document.getElementById('mCraft');
-        if (!c) throw new Error('[합성] 버튼이 없다');
-        c.onclick(); }, true);
+      /* ⚑ 719 이관(2026-09-02) — 옛 표본은 개별 [합성] 버튼(`mCraft`)의 «합성 성공» 토스트였는데,
+         주인 지시로 그 버튼이 폐지되고 결과는 **09 팝업**이 말한다(토스트가 아니다). 333 처방대로
+         자리를 비우지 않고 **살아 있는 합성 계열 토스트**로 갈아 끼운다 — 05 [일괄합성] 의 반려
+         («합성할 수 있는 …가 없습니다»). 실제 버튼을 눌러 분기를 밟는다(위 «코스튬 — 미보유 강화» 규칙). */
+      run('206 합성 반려 — 일괄합성 0건', () => {
+        S.own = {}; S.own.weapon0 = { n: 0, l: 1 };
+        openWeapon(null, 'weapon');
+        const b = document.getElementById('wpnBtnCf');
+        if (!b) throw new Error('[일괄합성] 버튼이 없다');
+        b.onclick(); }, true);
       run('206 이용권 구매',    () => { const p = PASS_ITEMS.find(x => !passOwned(x.id));
         if (!p) throw new Error('미보유 이용권 없음');
         S.dia = 1e12;

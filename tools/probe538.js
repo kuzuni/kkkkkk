@@ -92,13 +92,16 @@ const ok = (c, msg, extra) => {
     o.ownRatio = +(ownVal(hi) / ownVal(lo)).toFixed(4);
     o.eqRatio = +(equipVal(hi) / equipVal(lo)).toFixed(4);
     o.eqvSkill = eqv(SKILLS[0]); o.eqvRelic = eqv(RELICS[0]);
-    /* 합성 — 75 는 «같은 j 유지 · 결정적» 을 기대했다 */
+    /* 합성 — 75 는 «같은 j 유지 · 결정적» 을 기대했다.
+       ⚑ 719 이관(2026-09-02) — 85 ⑤ 의 랜덤 `nextGradeItem` 이 **`nextTierItem`(다음 티어, 결정적)**
+         으로 갈아 끼워졌다. 이 재현기는 «75 의 기대가 지금도 참인가» 를 찍는 자이므로 호출 이름만
+         옮긴다 — 그러면 `craftSeen` 이 1 로 떨어져 **75 의 «결정적» 기대가 도로 참**이 된 것이 찍힌다. */
     const seen = new Set();
-    for (let i = 0; i < 200; i++) seen.add(nextGradeItem(EQ['weapon0_3']).id);
+    for (let i = 0; i < 200; i++) seen.add(nextTierItem(EQ['weapon0_3']).id);
     o.craftSeen = seen.size;
     o.craftPool = EQUIPS.filter(e => e.slot === 'weapon' && e.g === 1).length;
     const top = EQUIPS.filter(e => e.slot === 'weapon').reduce((a, b) => (b.g > a.g ? b : a));
-    o.craftTopNull = nextGradeItem(top) === null;
+    o.craftTopNull = nextTierItem(top) === null;
     return o;
   });
   ok(m.total !== 54, '① 총 종 수 — 옛 기대 54 / 실측 ' + m.total + ' (85 «8등급 × 5종»)', JSON.stringify(m.per));
@@ -116,9 +119,12 @@ const ok = (c, msg, extra) => {
      '실측 비 ' + m.eqRatio);
   ok(m.eqRatio > 1, '⑨ 그래도 «v 큰 쪽이 장착값도 크다» 는 산다 — 260 이 j 를 v 오름차순으로 정렬했으므로');
   ok(m.eqvSkill === 1 && m.eqvRelic === 1, '⑩ 스킬·유물에는 `eqv` 가 안 붙는다(75 의 «v 영향 없음») — 지금도 참');
-  ok(m.craftSeen === m.craftPool && m.craftPool > 1,
-     '⑪ 합성은 **결정적이 아니다** — 200회에 다음 등급 ' + m.craftPool + '종이 전부 나온다(85 ⑤ 주인 지시)',
-     m.craftSeen + '/' + m.craftPool);
+  /* ⚑ 719 이관(2026-09-02, 주인 지시 «다음티어») — 85 ⑤ 의 «다음 등급 5종 랜덤» 이 폐지되고
+     산출이 **다음 티어 한 칸**으로 결정됐다. 이 항이 원래 묻던 것은 «75 가 기대한 결정성이
+     아직도 깨져 있는가» 이므로, 자리를 비우지 않고 **방향만** 뒤집는다 — 이제 결정적이다. */
+  ok(m.craftSeen === 1,
+     '⑪ 합성은 **결정적이다** — 200회에 한 칸만 나온다(719: 다음 티어 · 85 ⑤ 랜덤 폐지)',
+     m.craftSeen + '종 (다음 등급 풀 ' + m.craftPool + '종은 이제 무관)');
   ok(m.craftTopNull, '⑫ 최상위 등급은 합성 결과가 null = 75 의 항은 지금도 참');
 
   /* ── [4] 옛 질문의 새 형태 ── */
