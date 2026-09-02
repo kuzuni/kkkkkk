@@ -46,17 +46,19 @@ const ok = (b, act, want, got) => {
   await page.waitForFunction(() => typeof S !== 'undefined' && typeof openWeapon === 'function');
   await page.waitForTimeout(800);
 
-  /* 1 — 정식 진입점(06 장비 시트의 무기 슬롯)으로 연다. 팝업이 8등급 40칸을 담고 있어야 한다. */
+  /* 1 — 정식 진입점(06 장비 시트의 무기 슬롯)으로 연다. 팝업이 8등급 전 종을 담고 있어야 한다.
+     740 이관 — 종전 기대값 «8등급 × 5칸 = 40» 은 1종뿐인 불멸 행에 더미 4칸을 세던 값이다.
+     이제 그 부위의 **실제 종 수**(EQUIPS)가 기대값이다. */
   const f1 = await page.evaluate(() => {
     gmHero('eq');
     const slot = document.querySelector('#eqCards [data-eqslot="weapon"]');
     slot.click();
     const on = document.getElementById('wpnw').classList.contains('on');
     const cells = document.getElementById('wpnGrid').children.length;
-    return { on, cells };
+    return { on, cells, want: EQUIPS.filter(e => e.slot === 'weapon').length };
   });
-  ok(f1.on && f1.cells === 40, '06 장비 시트 → 무기 슬롯 클릭',
-    '05 팝업 열림 · 8등급 × 5칸 = 40칸', 'on=' + f1.on + ' 칸=' + f1.cells);
+  ok(f1.on && f1.cells === f1.want, '06 장비 시트 → 무기 슬롯 클릭',
+    '05 팝업 열림 · 8등급 전 종 ' + f1.want + '칸', 'on=' + f1.on + ' 칸=' + f1.cells);
 
   /* 2 — 열자마자 «상위 4등급» 이 실제로 격자 안에 있는가(옛 2페이지 감금분). */
   const f2 = await page.evaluate(() => {
@@ -74,10 +76,14 @@ const ok = (b, act, want, got) => {
      ⚑ 767(2026-09-01) — 여기 있던 «소환 Lv.5 … Lv.75» 는 186 당시 세계의 스냅샷이었다.
        196(만렙 100 → 25)·496(25 → 50)이 해금 사다리를 두 번 옮기는 동안 제품은 `GRADE_ROLL_EQ`
        한 표로 따라갔지만 이 상수는 못 따라와 **두 세대 내내 빨간 채** 남았다(522-① 과 같은 사고).
-       ⇒ 기대값은 **재료(`GRADE_ROLL_EQ` · `WPN_COLS`)에서 매 실행 파생**한다. 사다리를 또 옮겨도
+       ⇒ 기대값은 **재료(`GRADE_ROLL_EQ` · 종 목록)에서 매 실행 파생**한다. 사다리를 또 옮겨도
        이 자는 따라온다. 형제 자 `verify186.js` [E] 가 처음부터 그렇게 적혀 있었다 — 그쪽을 베낀 것이다.
+     ⚑ **740 이관(2026-09-02)** — 칸 수를 세던 `잠긴 등급 × WPN_COLS` 의 그 `WPN_COLS`(=5)가
+       선언째 사라졌다. 740 이 «남는 칸을 잠금 더미로 채운다» 를 폐지해 **1종뿐인 불멸 행은
+       1칸**이 됐기 때문이다(그 더미 4칸이 «불멸 아이템 5개» 로 읽힌 것이 740 의 등재 사유).
+       ⇒ 칸 수도 **등급별 실제 종 수의 합**으로 파생한다 — 세는 것을 그만두지 않는다(328).
      ⚠ 파생은 잘못 쓰면 «제품에게 답을 묻고 그 답을 채점하는» 헛초록이 된다(765-②). 그래서
-       ① 제품 함수(`rollOf`)가 아니라 **표 자체**를 읽고 ② 칸 수(잠긴 등급 × `WPN_COLS`)를 같이 세고
+       ① 제품 함수(`rollOf`)가 아니라 **표 자체**를 읽고 ② 칸 수를 같이 세고
        ③ 아래 5번에 **되돌림 시험**(표를 흔들면 화면도 흔들린다)을 둔다. */
   const f3 = await page.evaluate(() => {
     const need = GRADE_ROLL_EQ.map(g => g.unlock);
@@ -87,13 +93,14 @@ const ok = (b, act, want, got) => {
     const t = [...document.querySelectorAll('#wpnGrid .ulk')].map(u => u.textContent.trim());
     const uniq = [...new Set(t)];
     S.sum.weapon.lv = o;
+    const per = locked.map(i => EQUIPS.filter(e => e.slot === 'weapon' && e.g === i).length);
     return { n: t.length, uniq: uniq.join(' '),
-             wantN: locked.length * WPN_COLS,
+             wantN: per.reduce((a, c) => a + c, 0), per: per.join('+'),
              want: locked.map(i => '소환 Lv.' + need[i]).join(' '), nLocked: locked.length };
   });
   ok(f3.n === f3.wantN && f3.uniq === f3.want,
     '소환 Lv 1 상태로 팝업을 봄',
-    '미해금 ' + f3.nLocked + '등급 × ' + (f3.wantN / f3.nLocked) + '칸 = ' + f3.wantN + '칸에 해금 레벨 표기 — 기대 «' + f3.want + '»',
+    '미해금 ' + f3.nLocked + '등급의 종 수 ' + f3.per + ' = ' + f3.wantN + '칸에 해금 레벨 표기 — 기대 «' + f3.want + '»',
     f3.n + '칸 · ' + f3.uniq);
 
   /* 4 — 소환 레벨이 올라가면 그 등급 안내가 사라진다(살아 있는 데이터를 읽는가).
@@ -212,12 +219,14 @@ const ok = (b, act, want, got) => {
       openWeapon(null, p);
       const g = document.getElementById('wpnGrid');
       r[p] = g.children.length + '칸/' + new Set([...g.children].map(c => Math.round((c.offsetTop - 32) / 190))).size + '행';
+      r[p + 'Want'] = EQUIPS.filter(e => e.slot === p).length + '칸/8행';   /* 740 이관 */
     }
     closeWeapon();
     return r;
   });
-  ok(f9.shield === '40칸/8행' && f9.amulet === '40칸/8행', '부위 전환(방패 · 목걸이)',
-    '세 부위 모두 40칸 / 8행', '방패 ' + f9.shield + ' · 목걸이 ' + f9.amulet);
+  ok(f9.shield === f9.shieldWant && f9.amulet === f9.amuletWant, '부위 전환(방패 · 목걸이)',
+    '세 부위 모두 그 부위 종 수(' + f9.shieldWant + ') 그대로',
+    '방패 ' + f9.shield + ' · 목걸이 ' + f9.amulet);
 
   /* 10 — 저장 → 재로드 후에도 그대로 (세이브 구조는 안 건드렸다) */
   await page.evaluate(() => { save(); });
@@ -228,12 +237,13 @@ const ok = (b, act, want, got) => {
     openWeapon(null, 'weapon');
     const g = document.getElementById('wpnGrid');
     const r = { cells: g.children.length, eq: S.eqSlot.weapon,
+                want: EQUIPS.filter(e => e.slot === 'weapon').length,      /* 740 이관 */
                 arrows: document.querySelectorAll('#wpnw .wm-ar').length };
     closeWeapon();
     return r;
   });
-  ok(f10.cells === 40 && f10.arrows === 0, '저장 → 재로드',
-    '40칸 유지 · 화살표 0개 · 장착 유지',
+  ok(f10.cells === f10.want && f10.arrows === 0, '저장 → 재로드',
+    f10.want + '칸 유지 · 화살표 0개 · 장착 유지',
     '칸=' + f10.cells + ' 화살표=' + f10.arrows + ' 장착=' + f10.eq);
 
   ok(errs.length === 0, '전 과정 콘솔', '에러 0건', errs.length + '건' + (errs[0] ? ' — ' + errs[0].slice(0, 80) : ''));

@@ -78,8 +78,14 @@ const ok = (b, name, detail) => {
   ok(A.rows === A.grades, 'A4 WPN_ROWS 가 등급 수(GRADE.length)를 따라간다',
     A.rows + ' vs ' + A.grades);
 
-  /* [B] 세 부위 전부 8행 40칸 · 8등급 아이템이 격자 안에 있다.
-     «40» 은 하드코딩이 아니라 GRADE.length × WPN_COLS 에서 나온다 — 등급이 늘면 같이 늘어야 한다. */
+  /* [B] 세 부위 전부 8행 · 8등급 아이템이 격자 안에 있다.
+     ⚑ **740 이관(2026-09-02)** — 종전 기대값은 `GRADE.length × WPN_COLS`(= 40칸)였다.
+       740 이 «남는 칸을 잠금 더미로 채운다» 를 폐지하면서 `WPN_COLS` 가 선언째 사라졌고,
+       그 40 은 **1종뿐인 불멸 행에 더미 4칸을 세던 값**이라 이제 거짓이다(그 4칸이 주인 눈에
+       «불멸 아이템 5개» 로 읽힌 것이 740 의 등재 사유다).
+     ⚠ 항을 눌러 초록으로 되돌리는 것(«칸 수를 안 센다»)은 328 이 경고한 헛초록이다 —
+       그러면 «격자가 통째로 비어도 초록» 이 된다. 기대값을 **데이터**(그 부위의 실제 종 수)로
+       갈아 끼우고, 아래 B1b 로 «칸 수 = 종 수» 가 우연이 아님을 등급별로 못박는다. */
   const B = await page.evaluate(() => {
     const out = {};
     for (const part of ['weapon', 'shield', 'amulet']) {
@@ -92,8 +98,13 @@ const ok = (b, name, detail) => {
       const ids = new Set(cells.map(c => c.dataset.wpn).filter(Boolean));
       /* 미보유 칸은 data-wpn 이 없다 → 아이콘 문자열로 등급 행 존재를 확인 */
       const rowsSeen = new Set(cells.map(c => Math.round((c.offsetTop - 32) / 190)));
+      const perGrade = GRADE.map((_, gi) => EQUIPS.filter(e => e.slot === part && e.g === gi).length);
+      /* 등급별로 «그 행에 그려진 칸 수»(top = 32 + g·190 으로 되찾는다) ↔ «그 등급의 종 수» */
+      const drawnPerGrade = GRADE.map((_, gi) =>
+        cells.filter(c => Math.round((c.offsetTop - 32) / 190) === gi).length);
       out[part] = {
-        cells: cells.length, want: GRADE.length * WPN_COLS,
+        cells: cells.length, want: perGrade.reduce((a, c) => a + c, 0),
+        perGrade, drawnPerGrade,
         rows: rowsSeen.size, owned: ids.size, firstOfGrade,
         bad: /NaN|undefined/.test(h)
       };
@@ -103,7 +114,13 @@ const ok = (b, name, detail) => {
   });
   for (const part of ['weapon', 'shield', 'amulet']) {
     const b = B[part];
-    ok(b.cells === b.want, 'B1 ' + part + ' — 격자 ' + b.want + '칸 일괄 렌더', b.cells + '칸');
+    ok(b.cells === b.want, 'B1 ' + part + ' — 격자 ' + b.want + '칸(= 그 부위 종 수) 일괄 렌더',
+      b.cells + '칸');
+    /* 740 — B1 의 합이 «우연히» 맞는 것을 막는 짝. 등급별로 «그린 칸 = 그 등급 종 수» 여야 하고,
+       특히 불멸 행은 **1칸**이다(종전 5칸 = 더미 4). */
+    ok(b.drawnPerGrade.join(',') === b.perGrade.join(','),
+      'B1b ' + part + ' — 등급별 칸 수 = 그 등급 종 수(불멸 행 1칸)',
+      '그림 ' + b.drawnPerGrade.join(',') + ' vs 종 ' + b.perGrade.join(','));
     ok(b.rows === 8, 'B2 ' + part + ' — 서로 다른 등급 행 8개', String(b.rows));
     ok(b.firstOfGrade.every(Boolean), 'B3 ' + part + ' — 8등급 모두 대표 아이템 존재',
       b.firstOfGrade.join(','));
@@ -116,8 +133,15 @@ const ok = (b, name, detail) => {
     openWeapon(null, 'weapon');
     const g = document.getElementById('wpnGrid');
     const bad = [];
+    /* 740 이관 — 종전에는 «DOM 순번 i» 를 고정 열 수로 나눠 (행, 열)을 되찾았다. 행마다 칸 수가
+       다를 수 있게 된 뒤로 그 식은 성립하지 않는다. 이제 **아이템의 (등급 g, 등급 안 자리 j)**
+       가 곧 (행, 열)이다 — 카드의 `data-wpn` 으로 그 아이템을 찾아 좌표를 역산한다.
+       ⚠ 이렇게 해야 «칸이 빠져도 남은 칸이 왼쪽으로 밀리지 않는다» 까지 같이 지킨다. */
+    const seq = [...g.children].map(c => EQUIPS.find(e => e.id === c.dataset.wpn) || null);
     [...g.children].forEach((c, i) => {
-      const r = (i / WPN_COLS) | 0, col = i % WPN_COLS;
+      const it = seq[i];
+      if(!it){ bad.push(i + ': data-wpn 없음(더미 칸 — 740 이 폐지했다)'); return; }
+      const r = it.g, col = it.j;
       const wx = 10 + col * 170, wy = 32 + r * 190;
       if (c.offsetLeft !== wx || c.offsetTop !== wy || c.offsetWidth !== 148 || c.offsetHeight !== 158)
         bad.push(i + ':' + c.offsetLeft + ',' + c.offsetTop + ' ' + c.offsetWidth + 'x' + c.offsetHeight
@@ -127,7 +151,7 @@ const ok = (b, name, detail) => {
     closeWeapon();
     return { bad, gr };
   });
-  ok(C.bad.length === 0, 'C1 40칸 전부 148×158 · x=10+c·170 · y=32+r·190',
+  ok(C.bad.length === 0, 'C1 전 칸 148×158 · x=10+j·170 · y=32+g·190 (740 — 자리는 (등급,티어)가 정한다)',
     C.bad.length ? C.bad.slice(0, 3).join(' | ') : '어긋남 0건');
   ok(C.gr.w === 844 && C.gr.h === 621, 'C2 격자 크기 844×621 유지',
     C.gr.w + 'x' + C.gr.h);
@@ -175,11 +199,14 @@ const ok = (b, name, detail) => {
       return byRow;
     };
     return { lv1: read(1), lv100: read(100),
-             need: GRADE_ROLL_EQ.map(g => g.unlock) };
+             need: GRADE_ROLL_EQ.map(g => g.unlock),
+             /* 740 이관 — 「행마다 5칸」은 «등급당 5종» 이 참일 때만 성립하는 상수였다.
+                불멸(1종) 행은 1칸이므로 기대값을 **그 등급의 종 수**에서 파생한다. */
+             perGrade: GRADE.map((_, gi) => EQUIPS.filter(e => e.slot === 'weapon' && e.g === gi).length) };
   });
   const lockedRows = E.need.map((n, i) => (n > 1 ? i : -1)).filter(i => i >= 0);
-  const e1 = lockedRows.every(r => E.lv1[r] && E.lv1[r].n === 5 && E.lv1[r].txt === '소환 Lv.' + E.need[r]);
-  ok(e1, 'E1 Lv1 — 미해금 등급 행(' + lockedRows.join(',') + ') 잠금 칸 5개에 «소환 Lv.N»',
+  const e1 = lockedRows.every(r => E.lv1[r] && E.lv1[r].n === E.perGrade[r] && E.lv1[r].txt === '소환 Lv.' + E.need[r]);
+  ok(e1, 'E1 Lv1 — 미해금 등급 행(' + lockedRows.join(',') + ') 잠금 칸 전부(등급별 ' + lockedRows.map(r => E.perGrade[r]).join('/') + '칸)에 «소환 Lv.N»',
     lockedRows.map(r => r + ':' + (E.lv1[r] ? E.lv1[r].n + '칸 ' + E.lv1[r].txt : '없음')).join(' / '));
   const openRows = E.need.map((n, i) => (n <= 1 ? i : -1)).filter(i => i >= 0);
   ok(openRows.every(r => !E.lv1[r] || E.lv1[r].n === 0),
