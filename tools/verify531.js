@@ -124,6 +124,32 @@ const LIVE = `(async () => {
   return out;
 })`;
 
+/* 824 — `#upCnt` 안에는 **살아 있는 `<s>`** 가 있다(782 «밀어서 더 보기», index.html 27574).
+   짝을 `#upCnt s` 처럼 넓게 적으면 그 안내문이 통째로 꺼지므로, 리본([C2])과 같은 꼴의 «무르게
+   풀지 않았다» 항이 하나 더 필요하다. 넘치는 판을 만들려고 세이브를 심고 버튼을 누르는 대신
+   제품 함수(`openUpAll`)를 **직접** 부른다 — 재는 것은 «그 `<s>` 가 보이는가» 하나뿐이라
+   경로가 짧을수록 자가 덜 흔들린다(783 «자는 자기 결함이 넷»).
+   ⚠ 칸 수는 «넉넉히» 가 아니라 **넘치는 판**이어야 한다 — 2280 프레임에서 27칸(스킬 전종)은
+     5행이 통째로 보여 `over` 가 거짓이고 그 안내문이 아예 안 그려진다(1차 실행이 «노드 없음»
+     으로 빨갰다). 그래서 세 목록을 다 이어 붙인다(170칸 · sh 5211 > ch 1614). */
+const UPNOTE = `(() => {
+  const cat = [];
+  if (typeof SKILLS !== 'undefined') cat.push(...SKILLS);
+  if (typeof PETS !== 'undefined') cat.push(...PETS);
+  if (typeof EQUIPS !== 'undefined') cat.push(...EQUIPS);
+  const ups = cat.map(it => ({ it, from: 1, to: 2 }));
+  const opened = typeof openUpAll === 'function' ? openUpAll(ups) : false;
+  const cnt = document.getElementById('upCnt');
+  const s = cnt && cnt.querySelector('s');
+  return {
+    opened, n: ups.length,
+    many: !!(document.getElementById('upw') || {}).classList
+       && document.getElementById('upw').classList.contains('many'),
+    has: !!s, txt: (s && s.textContent) || '',
+    disp: s ? getComputedStyle(s).display : 'none'
+  };
+})`;
+
 async function open(browser, css) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -164,13 +190,18 @@ const KILL_PAIR = `(() => {
   ok(!!off, '[A1] 짝의 «꺼짐» 줄이 있다 — `:is(<스코프>) :is(s.updot,s.bdg,s.dot){display:none}`');
   ok(!!on, '[A2] 짝의 «켜짐» 줄이 있다 — 같은 스코프 · `.alert>` 축');
   const ids = off ? (off[0].match(/#[\w-]+/g) || []) : [];
-  ok(ids.length === 23, '[A3] 스코프 23자리 — probe531 [1] 이 «심어서» 고른 목록', ids.length + '자리');
+  /* 자리 수는 **자라도록 설계된 값**이다 — 새 화면이 «축 없이 켜지는» 재료를 들고 오면 [B1]·[B2] 가
+     먼저 빨개지고, 그 id 를 짝에 더한 뒤 여기를 같이 올린다(824 에서 23 → 24 = `#upCnt`).
+     그래서 이 항은 «몇 자리인가» 가 아니라 «[B] 가 고른 목록과 짝이 같은 것을 보는가» 를 묻는다. */
+  ok(ids.length === 24, '[A3] 스코프 24자리 — probe531 [1] 이 «심어서» 고른 목록 (824: `#upCnt` 편입)', ids.length + '자리');
   ok(!/:is\([^)]*\)\s*:is\(\.updot/.test(CODE) && !/\.alert>:is\(\.updot,\.bdg/.test(CODE),
     '[A4] 짝을 **클래스 꼴**(`.bdg`)로 적지 않았다 — 상점 배너 리본 `<div class="bdg">` 을 안 건드리려면 `<s>` 꼴이어야 한다');
   ok(!/:is\(#bSk[^)]*\)\s*:is\(\.on|\.on>:is\(s\.updot/.test(CODE),
     '[A5] `.on` 을 점등 축으로 쓰지 않았다 — `.stab.on` 은 «고른 탭» 이지 «알림» 이 아니다');
   ok(!ids.includes('#dunw'),
     '[A6] `#dunw` 는 목록에 **없다** — 341 던전 카드 닷은 `display` 선언 없이 «노드 유무» 로 켜는 자리라 짝이 그것을 끈다');
+  ok(ids.includes('#upCnt'),
+    '[A7] `#upCnt` 는 목록에 **있다**(824) — 726 «총 N건 강화» 헤더의 `.upr-cnt s{display:inline-block}` 은 클래스 급이라 `.updot{display:none}` 을 이긴다');
 
   /* ── [B] 심어서 잰 함정 0자리 (본체) ────────────────────────────────────────── */
   const h = await open(browser);
@@ -210,6 +241,10 @@ const KILL_PAIR = `(() => {
   ok(onAxisBad.length === 0,
     '[C3] «지금 고른 탭»(`.stab.on`) 에 닷을 심어도 안 켜진다 — `.on` 은 «선택» 이지 «알림» 이 아니다',
     onAxisBad.length + '자리');
+  const note = await h.page.evaluate(UPNOTE + '()');
+  ok(note.opened && note.has && /밀어서/.test(note.txt) && note.disp !== 'none',
+    '[C4] `#upCnt` 의 «밀어서 더 보기» `<s>`(782)는 그대로 보인다 — 짝이 세 클래스만 집기 때문이다(824)',
+    (note.has ? '"' + note.txt + '" display:' + note.disp : '노드 없음') + ' · ' + note.n + '칸');
   ok(h.errs.length === 0, '[X] 콘솔 에러 0건', h.errs.slice(0, 3).join(' / '));
   await h.ctx.close();
 
@@ -255,6 +290,17 @@ const KILL_PAIR = `(() => {
     '[R4] 등재문 처방 ⓐ 대로 `#dunw` 까지 넓힌 사본에서는 341 던전 카드 닷이 **전부 꺼진다** — [A6]·[C1] 가 허수가 아니다',
     live4.dunOn + '/' + live4.dun + '개만 보임');
   await hR4.ctx.close();
+
+  /* R5 — 824 의 짝을 «태그 꼴»(`#upCnt s`)로 넓게 적은 사본: 782 안내문이 꺼진다.
+     [C4] 가 «이미 참인 것을 굳힌 헛초록» 이 아님을 못박는다 — [R2]([A4] 클래스 꼴)와 같은 짝이다.
+     ⚠ 특이성 — 주입한 `#upCnt s`(1,0,1) 는 `.upr-cnt s`(0,1,1) 를 이긴다. */
+  const hR5 = await open(browser,
+    `:is(${clsPair}) s{display:none}\n:is(${clsPair}) .alert>s{display:block}`);
+  const note5 = await hR5.page.evaluate(UPNOTE + '()');
+  ok(note5.has && note5.disp === 'none',
+    '[R5] 짝을 **태그 꼴**(`#upCnt s`)로 넓힌 사본에서는 «밀어서 더 보기» 가 꺼진다 — [C4] 가 허수가 아니다',
+    (note5.has ? 'display:' + note5.disp : '노드 없음'));
+  await hR5.ctx.close();
 
   await browser.close();
   console.log('\nVERIFY531 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));

@@ -12329,11 +12329,20 @@
      넣었더니 고른 탭 배지 4개가 켜졌다(probe531 [3] 1차 실행).
      ⚠ **`#dunw` 는 일부러 뺐다.** 03 던전 카드 닷(341 `.dnc .dot`)은 `display` 선언 자체가 없고
      «노드를 만들거나 말거나» 로 켜는 자리라, 여기에 짝을 깔면 그 닷 2장이 **꺼진다**(같은 실행이 찍었다).
-     이 짝을 지우면 `verify531` [R] 이 빨개진다. 새 화면을 만들면 그 id 를 아래 목록에 더한다. */
+     이 짝을 지우면 `verify531` [R] 이 빨개진다. 새 화면을 만들면 그 id 를 아래 목록에 더한다.
+
+     ⚑ **824 (2026-09-02) — 목록이 실제로 자랐다: `#upCnt` 추가(23 → 24자리).** 726 이 09 일괄 강화
+     결과에 «총 N건 강화» 헤더를 만들면서 `.upr-cnt s{display:inline-block}`(13298)을 같이 깔았는데,
+     그 줄은 **클래스 급이라 `.updot{display:none}` 을 이긴다** — 즉 이 자리에 닷을 심으면 축 없이
+     켜진다(`verify531` [B1]·[B2] 가 «래칫 0 → 1자리» 로 빨개져 있었다 · `probe531` [1] 재현 = 함정 root 1개).
+     ⚠ **`#upCnt` 안에는 살아 있는 `<s>` 가 있다** — 782 의 «밀어서 더 보기»(27574)다. 짝을 `#upCnt s`
+     처럼 **넓게** 적으면 그 안내문이 통째로 꺼진다(`.bdg` 를 클래스 꼴로 적었을 때 상점 리본이 꺼진
+     것과 같은 사고). 짝이 `s.updot,s.bdg,s.dot` 세 클래스만 집기 때문에 그 `<s>` 는 그대로 산다 —
+     `verify531` [C4]·[R5] 가 그것을 못박는다. */
   :is(#bSk,#bPet,#bCos,#shopw,#relw,#trw,#wpnw,#prbw,#mnw,#ciw,#blsw,#collw,#psw,#pfw,#sumw,
-      #stDesc,#dclw,#specw,#bagw,#cfw,#rkw,#chw,#svw) :is(s.updot,s.bdg,s.dot){display:none}
+      #stDesc,#dclw,#specw,#bagw,#cfw,#rkw,#chw,#svw,#upCnt) :is(s.updot,s.bdg,s.dot){display:none}
   :is(#bSk,#bPet,#bCos,#shopw,#relw,#trw,#wpnw,#prbw,#mnw,#ciw,#blsw,#collw,#psw,#pfw,#sumw,
-      #stDesc,#dclw,#specw,#bagw,#cfw,#rkw,#chw,#svw) .alert>:is(s.updot,s.bdg,s.dot){display:block}
+      #stDesc,#dclw,#specw,#bagw,#cfw,#rkw,#chw,#svw,#upCnt) .alert>:is(s.updot,s.bdg,s.dot){display:block}
   /* ══ 471 (2026-08-30, 저장소 주인 보고) — 레드닷 «호스트 우상단 코너» 규약 ═════════════
      주인 원문: «저거 빨간점도 짤려보임. 팝업에 빨간점들이 오른쪽위에 딱있어야하는데 위치가 다 어정쩡함».
      `node tools/probe471.js` 재현(수리 전) — 자리 27곳의 «호스트 테두리 바깥 상자 우상단 코너 ↔
