@@ -10,12 +10,25 @@
  *      내비와의 겹침. **거르지 않는다**(424-② — 필터로 넣으면 407·420 이 갚은 자리가 사라진다).
  *   ③ `--covtest` 되돌림 시험 — 이름표가 «켜지고» 또 «아무 데나 안 붙는다» 를 양쪽으로 못박는다.
  *
+ * ⚑ 806(2026-09-02) — §1 의 «세로 37» 이 **상수라서** 빨개졌다(33/34 · `by30`).
+ *   제품은 옳다: **558**(`--wm-sk` — 눌린 프레임의 여유 14 를 위/아래 7/7 로 나눔)이 1600 에서
+ *   `#wpnw` 위 패딩을 126 → 119 로 줄여 **05 상자를 통째로 7px 올렸다**(실측 대조 — 476 당시 트리
+ *   `9171c3a1` 에서 `.wm` top 156 · `#wpnGrid` 708..1129 → **1136**, 현재 top 149 · 1129.
+ *   `#tuto` 는 두 트리 다 1099..1249 로 **한 픽셀도 안 움직였다** ⇒ 겹침 37 → 30).
+ *   558 은 `verify467` [R2] 는 이관했지만 여기 굳어 있던 37 은 못 봤다.
+ *   ⇒ **허용 오차를 넓히지 않고**(368 §R2) 상수를 뺐다 — 겹침은 이제 **제품에게 묻는다**
+ *   (368 선례 «자리를 상수에서 뺀다» · 212-① «기대값은 근거 데이터에서»).
+ *   기대값은 `#wpnGrid`·`#tuto` 의 실측 상자에서 나오고, 그 값이 probe351 의 `drawn` 과 같은
+ *   값임을 **«접는 조상 0»** 항이 못박는다(clipped 사본을 두지 않는 이유 — 385 자매 자 드리프트).
+ *
  * 본다:
  *   §0 전제   — 모듈이 있고, 두 자가 **그것을** 읽고, 사본이 남아 있지 않고, 문턱은 그대로다
  *   §1 재현   — `eqslot:*` 3화면의 D7 3건이 **그대로 3건**이고(거른 것 0) 셋 다 `이미 가려짐 0%→0%`
+ *              겹침 px 은 상수가 아니라 **그 자리를 실측한 값**과 맞춘다(806)
  *   §2 되돌림 — `--covtest` ⓐ 양성(이미 가려진 탭바) · ⓑ 음성(멀쩡히 보이는 HUD)
  *   §3 두 자 일치 — 같은 자리를 `cover351lib` 로 재면 배너 보임 0%(2280·1600) = 유령의 근거
  *   §4 음성항 — 실재하는 자리(34 축복 띠 ↔ 탭바, 100% → 19.7%)는 이름표가 **안 붙는다**
+ *   §R 되돌림 — `--wm-sk` 를 0 으로 되돌리면 겹침이 30 → **37**(등재문 값)로 돌아온다(806)
  */
 const fs = require('fs');
 const os = require('os');
@@ -45,7 +58,35 @@ const MEASVIS = function (opt) {
   return { visPct: c.visPct, n: c.n, found: true };
 };
 
+/* ⚑ 806 — §1 의 기대 겹침을 **제품에게 묻는** 자.
+   probe351 D7 은 `#wpnGrid` 의 «지금 실제로 그려지는» 상자(drawn — 조상 클리핑을 접은 것)와
+   `#tuto` 의 겹침을 잰다. 여기서 `clipped` 를 베끼면 자가 둘이 되어 385(자매 자 드리프트)를
+   그대로 다시 만든다 ⇒ **베끼지 않고**, «이 자리에는 자르는 조상이 0 개» 임을 먼저 단언한다.
+   그게 참인 동안 drawn = raw 이므로 raw 파생 기대값이 곧 probe 가 내야 할 값이다.
+   («0 개» 가 깨지면 그 항이 빨개져 **어느 정의가 움직였는지**를 이름으로 말한다 — 조용히 안 어긋난다.) */
+const MEASOV = function () {
+  const g = document.querySelector('#wpnGrid');
+  const t = document.getElementById('tuto');
+  if (!g || !t) return { found: false, hasGrid: !!g, hasTuto: !!t };
+  const gr = g.getBoundingClientRect(), tr = t.getBoundingClientRect();
+  let cut = 0;
+  for (let p = g.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+    const pr = p.getBoundingClientRect();
+    if (cs.overflowY !== 'visible' && (pr.top > gr.top + 0.01 || pr.bottom < gr.bottom - 0.01)) cut++;
+    if (cs.overflowX !== 'visible' && (pr.left > gr.left + 0.01 || pr.right < gr.right - 0.01)) cut++;
+  }
+  return {
+    found: true, cut,
+    by: Math.round(Math.min(gr.bottom, tr.bottom) - Math.max(gr.top, tr.top)),
+    wide: Math.round(Math.min(gr.right, tr.right) - Math.max(gr.left, tr.left)),
+  };
+};
+
 (async () => {
+  const browser = await launch(chromium);
+  try {
   /* ── §0 전제 — «한 벌» 이 말이 아니라 코드인가 ───────────────────────────── */
   console.log('§0 전제 — 덮임 계산이 한 벌이고, 두 자가 그것을 읽는다');
   ok(/module\.exports\s*=\s*\{[^}]*COVER_SRC/.test(LIB), '`cover351lib` 가 `COVER_SRC` 를 내보낸다');
@@ -66,6 +107,19 @@ const MEASVIS = function (opt) {
 
   /* ── §1 재현 — eqslot 3화면 ─────────────────────────────────────────────── */
   console.log('§1 재현 — `eqslot:*` 3화면: D7 3건 그대로 · 셋 다 «이미 가려짐 0%→0%»');
+  /* 기대 겹침은 **1600 에서** 잰다 — D7 은 «1600 에서만 나빠진 것» 을 내는 차분이라
+     겹치는 프레임이 짧은 쪽뿐이다(2280 은 겹침 자체가 음수 — 위 §3 이 같은 자리를 다시 연다). */
+  const exp = await (async () => {
+    const { ctx, page } = await fresh(browser, 1080, 1600);
+    await drive(page, { label: 'eqslot:weapon', hero: '#eqCards [data-eqslot="weapon"]' });
+    await settle(page);
+    const m = await page.evaluate(MEASOV);
+    await ctx.close();
+    return m;
+  })();
+  ok(exp.found, '[1] 기대값을 물을 두 노드(`#wpnGrid`·`#tuto`)가 1600 에 살아 있다',
+    JSON.stringify(exp));
+  eq('[1] `#wpnGrid` 를 자르는 조상이 0 개 ⇒ drawn = raw (probe351 과 같은 상자를 잰다)', exp.cut, 0);
   const jf = path.join(os.tmpdir(), 'v476-eqslot.json');
   execFileSync(process.execPath, [path.join(__dirname, 'probe351.js'), '--only', 'eqslot', '--json', jf],
     { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], timeout: 900000 });
@@ -78,7 +132,13 @@ const MEASVIS = function (opt) {
   eq('그 3건이 전부 D7 이다', d7.length, 3);
   ok(d7.every((d) => d.path === '#wpnGrid' && d.k === 'covers:tuto'),
     '자리는 등재문 그대로 `#wpnGrid` → `covers:tuto`', d7.map((d) => d.path + ' ' + d.k).join(' / '));
-  ok(d7.every((d) => d.by === 37 && d.wide === 342), '겹침도 등재문 그대로 세로 37 · 가로 342',
+  /* ⚑ 806 — 여기 «37» 이 상수로 박혀 있었고, 558(`--wm-sk`)이 05 상자를 7px 올리자 빨개졌다.
+     허용 오차를 넓히는 대신(368 §R2 금지) **기대값을 제품에게 묻는다.** */
+  ok(exp.by > 2 && exp.wide > 40,
+    `그 겹침은 여전히 D7 문턱(세로 > 2 · 가로 > 40)을 넘는다 — 안 넘으면 §1 은 «0건» 으로 공허해진다`,
+    `세로 ${exp.by} / 가로 ${exp.wide}`);
+  ok(d7.every((d) => d.by === exp.by && d.wide === exp.wide),
+    `겹침은 실측 그대로 세로 ${exp.by} · 가로 ${exp.wide} (상수 아님 — 806)`,
     d7.map((d) => `by${d.by}/wide${d.wide}`).join(' / '));
   ok(d7.every((d) => d.axis === '이미 가려짐'), '셋 다 이름표가 «이미 가려짐»',
     d7.map((d) => d.axis).join(' / '));
@@ -100,8 +160,7 @@ const MEASVIS = function (opt) {
   ok(/\[covtest\] PASS/.test(cov), '[covtest] PASS');
 
   /* ── §3·§4 두 자 일치 + 음성항 ─────────────────────────────────────────── */
-  const browser = await launch(chromium);
-  try {
+  {
     console.log('§3 두 자 일치 — 같은 자리를 공용 자로 재면 배너는 두 해상도 다 보임 0% (유령의 근거)');
     for (const H of [2280, 1600]) {
       const { ctx, page } = await fresh(browser, 1080, H);
@@ -129,6 +188,26 @@ const MEASVIS = function (opt) {
       `[4][1600] 탭바가 실제로 가려졌다 = 실재하는 결함 (보임 ${vals[1600]}% · 문턱 ${GONE})`);
     ok(!(vals[2280] <= GONE && vals[1600] <= GONE),
       '[4] 이 자리는 «두 해상도 다 0%» 가 아니다 ⇒ 이름표가 붙을 수 없다 (424-② 의 대가를 안 치른다)');
+
+    /* ── §R 되돌림 시험(806) — «상수를 뺐다» 가 말뿐이 아님을 못박는다 ──────────
+       §1 의 기대값이 정말 **제품에서 읽힌 것**이라면, 제품을 되돌렸을 때 그 값도 되돌아가야 한다.
+       558 이 만든 손잡이 `--wm-sk`(1600 에서 7px)를 0 으로 되돌리면 05 상자가 7px 내려가고
+       겹침은 30 → **37** = 등재문의 그 값이 된다. 값이 안 움직이면 어딘가에 아직 상수가 있다. */
+    console.log('§R 되돌림 시험 — `--wm-sk` 를 0 으로 되돌리면 겹침이 등재문의 37 로 돌아온다 (806)');
+    const { ctx, page } = await fresh(browser, 1080, 1600);
+    await drive(page, { label: 'eqslot:weapon', hero: '#eqCards [data-eqslot="weapon"]' });
+    await settle(page);
+    const now = await page.evaluate(MEASOV);
+    const back = await page.evaluate(function () {
+      document.getElementById('wpnw').style.setProperty('--wm-sk', '0px');
+      return null;
+    }).then(() => page.evaluate(MEASOV));
+    await ctx.close();
+    eq('[R] 되돌리기 전 겹침 = §1 이 쓴 실측값', now.by, exp.by);
+    eq('[R] `--wm-sk` 0 으로 되돌리면 겹침이 7px 늘어난다 (558 이 옮긴 그 7px)', back.by - now.by, 7);
+    eq('[R] 그 값이 등재문의 «세로 37» 이다 (등재 당시 자는 옳았고, 상수라서 굳었다)', back.by, 37);
+    eq('[R] 가로는 `--wm-sk` 와 무관하다 (세로 손잡이다)', back.wide, now.wide);
+  }
   } finally { await browser.close(); }
 
   console.log(`\nVERIFY476 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);
