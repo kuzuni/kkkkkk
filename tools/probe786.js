@@ -36,7 +36,19 @@ const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 /* verify125 의 `CUR_EMOJI` 와 **같은 목록**을 든다 — 자기만의 사본을 들면 «자는 빨간데
    재현기는 초록» 이 되어 다음 세션이 또 갈래를 못 가른다(334 교훈). */
 const CUR_EMOJI = ['\u{1FA99}', '\u{1F4B0}', '\u{1F947}', '\u{1F48E}', '\u{1F4A0}', '\u{1F52E}', '\u{1F39F}', '\u{1F3AB}'];
-const DIA = '\u{1F48E}';
+const DIA = '\u{1F48E}', GIFT = '\u{1F381}';
+
+/* ── 수리 전 소스 — **이 재현기는 수리 뒤에도 그대로 돌아야 한다** ──────────────
+   재현기가 «수리 전 트리에서만 초록» 이면 다음 세션은 그것을 돌릴 수 없고, 결국
+   «무엇이 결함이었는지» 를 글로만 읽게 된다(756: 고정 SHA 로 사본을 꺼내는 자가
+   얕은 클론에서 게이트 부패와 똑같은 얼굴로 빨개진 자리 — git 을 안 쓰는 것이 더 튼튼하다).
+   ⇒ 수리가 **한 글자**(제목 머리 글리프)라 되돌림도 한 글자다. 메모리 위에서 되돌린 사본을
+      «수리 전 소스» 로 삼고, 소스 층 항([2]·[6])은 그것을 잰다. 수리 **전**에 돌리면
+      되돌릴 것이 없으므로 사본 = 현재 소스가 되어 같은 값을 낸다(그때도 그대로 재현기다). */
+const PRE = SRC.indexOf("t:'" + DIA + " 환영 '") >= 0
+  ? SRC                                                   /* 수리 전에 돌린 경우 */
+  : SRC.replace("t:'" + GIFT + " 환영 '", "t:'" + DIA + " 환영 '");
+const PRE_FIXED = PRE !== SRC;                            /* 되돌림이 실제로 일어났는가 */
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
@@ -69,8 +81,8 @@ async function boot(browser) {
 (async () => {
   console.log('\n=== probe786 — 환영 우편 제목의 💎 가 화면에 오는가 ===');
 
-  /* ── [6] 소스 층 — 우편 제목 리터럴 전수 ─────────────────────────── */
-  const lits = titleLiterals(SRC);
+  /* ── [6] 소스 층 — 우편 제목 리터럴 전수 (**수리 전 소스**를 잰다) ───────── */
+  const lits = titleLiterals(PRE);
   const withGlyph = lits.filter((x) => !/[가-힣\w]/.test(x.head));
   const curHead = withGlyph.filter((x) => x.cur);
 
@@ -181,8 +193,12 @@ async function boot(browser) {
   console.log('\n--- 판정 ---');
   ok(P.made === 1 && P.madeC > 0,
      '[2] `claimAttend()` 가 환영 우편을 **실제로 만든다**(재현 가능) — «' + P.madeT + '» 다이아 ' + P.madeC);
-  ok(P.madeT !== null && P.madeT.indexOf(DIA) === 0,
-     '[2] 그 제목 리터럴의 **머리글자가 💎** 다 = A1 이 센 그 한 건 — «' + P.madeT + '»');
+  const preWelcome = lits.filter((x) => /환영 $/.test(x.t) || /환영 /.test(x.t));
+  ok(preWelcome.some((x) => x.head === DIA),
+     '[2] **수리 전 소스**에서 그 통의 제목 머리글자는 💎 였다 = A1 이 센 그 한 건 · 되돌림 적용 ' + PRE_FIXED
+       + ' — ' + preWelcome.map((x) => x.line + ': «' + x.t + '»').join(' | '));
+  ok(P.madeT !== null && !/[가-힣\w]/.test(Array.from(P.madeT)[0]),
+     '[2] 지금 트리에서도 그 통의 제목은 **머리 글리프 한 자 + 한글** 관행 그대로다(관행을 지워서 푼 것이 아니다) — «' + P.madeT + '»');
   ok(P.titleTxt !== null && P.titleTxt.indexOf(DIA) < 0,
      '[3] 제목 자리 `.ml-t` 에는 💎 가 **안 온다** — 두 렌더 자리가 `^[^가-힣\\w]+` 로 머리 기호를 뗀다 · 실측 «' + P.titleTxt + '»');
   ok(P.diaLeaf.length === 0,
