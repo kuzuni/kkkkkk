@@ -27,6 +27,8 @@
  *   [4] 패널 상변부터 자르면(ROI) 차분이 **전 쌍 0** 이다(늙힌 쌍까지)
  *   [5] 그 ROI 가 글로우 상자를 **통째로** 담는다(현행 490 · 옛 550 둘 다) — 좁혀서 감춘 게 아니다
  *   [6] 되돌림 시험 — ROI 안에 진짜 변화(글로우 끄기)를 넣으면 차분이 그대로 잡힌다
+ *   [7] 처방의 되돌림 시험 — **같은 페이지에서 시계를 끊으면** 2.5초 뒤에도 전 프레임이 한 픽셀도
+ *       안 바뀌고, **안 끊으면 바뀐다**(`verify432` 가 네 판을 한 페이지에서 찍을 수 있는 근거)
  *
  * ⚑ `roi()` 는 `verify432.js` 가 **이 파일에서 그대로 가져다 쓴다**(385 «자매 자 드리프트» —
  *   재는 창을 두 곳에 적으면 두 자가 서로 다른 것을 재게 되는 날이 온다).
@@ -101,6 +103,29 @@ function main() {
     }, [a.toString('base64'), b.toString('base64'), r || null]);
   }
 
+  /* `verify432` 가 쓰는 것과 **같은 얼리기** — 여기서 한 번 더 적지 않도록 그 자와 같은 몸이다 */
+  const FREEZE = function () {
+    window.requestAnimationFrame = function () { return 0; };
+    const top = setTimeout(function () {}, 0);
+    for (let i = 1; i <= top; i++) { clearTimeout(i); clearInterval(i); }
+    clearTimeout(top);
+  };
+
+  /* [7] — 한 페이지에서 두 번 찍는다. `freeze` 면 시계를 끊고, 아니면 그대로 둔다. */
+  async function samePage(browser, h, freeze, waitMs) {
+    const { ctx, page } = await fresh(browser, 1080, h);
+    await drive(page, OPENER);
+    await settle(page);
+    if (freeze) await page.evaluate(FREEZE);
+    await page.waitForTimeout(150);
+    const a = await page.screenshot({ type: 'png' });
+    await page.waitForTimeout(waitMs);
+    const b = await page.screenshot({ type: 'png' });
+    const m = await page.evaluate(MEASURE);
+    await ctx.close();
+    return { a, b, m };
+  }
+
   async function shot(browser, h, css, ageMs) {
     const { ctx, page } = await fresh(browser, 1080, h);
     await drive(page, OPENER);
@@ -115,7 +140,7 @@ function main() {
 
   (async () => {
     const browser = await launch(chromium);
-    const nat = [], aged = [], negs = [];
+    const nat = [], aged = [], negs = [], frz = [];
     try {
       const dctx = await browser.newContext({ viewport: { width: 300, height: 300 } });
       const dpage = await dctx.newPage();
@@ -137,6 +162,11 @@ function main() {
           const N = await shot(browser, h, '#relw .rw-mid::before{display:none !important}', 0);
           const R = roi(A.m, h);
           negs.push({ h, R, neg: await diffBox(dpage, A.b, N.b, R) });
+        }
+        {   /* [7] — 처방(«한 페이지 + 얼리기»)의 되돌림 시험 */
+          const on = await samePage(browser, h, true, AGE_MS);
+          const off = await samePage(browser, h, false, AGE_MS);
+          frz.push({ h, on: await diffBox(dpage, on.a, on.b, null), off: await diffBox(dpage, off.a, off.b, null) });
         }
       }
       await dctx.close();
@@ -187,6 +217,14 @@ function main() {
     for (const o of negs) {
       ok(o.neg.n > 10000,
         `[6-${o.h}] 글로우를 끄면 ROI 안 차분 **${o.neg.n}px**(bbox ${o.neg.w}×${o.neg.h}) — 창을 좁힌 것이 «안 보이게 한 것» 이 아니다`);
+    }
+
+    console.log('\n[7] 처방의 되돌림 시험 — 시계를 끊으면 화면이 정말 언다 ────');
+    for (const o of frz) {
+      ok(o.on.n === 0,
+        `[7-${o.h}] **얼린** 한 페이지는 ${AGE_MS}ms 뒤에도 전 프레임 차분 **${o.on.n}px** (= verify432 가 네 판을 한 페이지에서 찍어도 되는 근거)`);
+      ok(o.off.n > 0,
+        `[7-${o.h}n] **안 얼린** 같은 페이지는 같은 시간에 **${o.off.n}px** 이 바뀐다 (bbox ${o.off.w}×${o.off.h} @ y${o.off.y1}) — 얼리기가 «장식» 이 아니다`);
     }
 
     console.log(`\nPROBE789 ${pass}/${pass + fail} ` + (fail ? 'FAIL' : 'PASS'));

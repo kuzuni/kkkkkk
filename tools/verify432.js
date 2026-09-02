@@ -121,18 +121,40 @@ async function diffBox(dpage, a, b, r) {
   }, [a.toString('base64'), b.toString('base64'), r || null]);
 }
 
-/* ⚠ 상태마다 **새로 띄운다.** 한 페이지에서 스타일만 갈아 끼우고 연달아 찍으면
-   그 사이에 전투 캔버스·미션 배너·토스트가 움직여 차분에 섞인다(1회차에 밟았다 —
-   2600 에서 1080×93 짜리 띠가 «클립이 지운 잉크» 로 읽혔다). 같은 순서로 새로 띄우면
-   렌더가 결정적이라 같은 내용끼리는 **정확히 0px** 이 나온다(`probe432` [5] 가 그 근거다). */
-async function shotState(browser, h, css) {
+/* ⚑ 789 — **한 페이지에서 찍되, 찍기 전에 시간을 세운다.**
+   원래 이 자는 «상태마다 새로 띄웠다»(432-④: 한 페이지에서 스타일만 갈아 끼우고 연달아 찍으면
+   그 사이에 전투 캔버스·미션 배너·토스트가 움직여 차분에 섞인다). 그 처방은 **위상**을 지웠지만
+   새로 띄우는 순간 **«그 판이 얼마나 굴렀는가» 라는 새 축**이 생긴다 — 위상은 리셋돼도
+   **누적값(골드·알림 문턱)은 리셋되지 않는다**. 그것이 789 가 잡은 플레이키의 본체다
+   (`probe789` [1]~[3] — 41 재화 바의 골드가 로드마다 갈린다).
+   ⇒ 갈래를 **뒤집는다**: 한 페이지에서 찍되 **정착 뒤 시계를 끊어**(rAF·타이머 전부) 그 사이에
+     아무것도 안 움직이게 한다. 그러면 네 판이 «우리가 넣은 CSS» 말고는 **바이트로 같은 화면**이라
+     432-④ 가 걱정한 것도, 789 가 잡은 것도 동시에 사라진다. **그 증거가 `[0-e]` A/A 항**이다
+     (같은 페이지에서 아무 것도 안 바꾸고 두 번 찍어 **정확히 0** 을 요구한다 — 얼지 않았으면 빨개진다).
+   ⚠ 얼리기는 **`settle()` 뒤**에 해야 한다 — `settle()` 자신이 `requestAnimationFrame` 을 기다린다. */
+const FREEZE = function () {
+  window.requestAnimationFrame = function () { return 0; };
+  const top = setTimeout(function () {}, 0);
+  for (let i = 1; i <= top; i++) { clearTimeout(i); clearInterval(i); }
+  clearTimeout(top);
+};
+
+/* 한 판 찍기 — `css` 를 넣고 찍은 뒤 **그 style 태그를 도로 뗀다**(다음 판이 깨끗하게 시작한다) */
+async function shotCss(page, css) {
+  const tag = css ? await page.addStyleTag({ content: css }) : null;
+  await page.waitForTimeout(120);            /* rAF 를 끊었으므로 드라이버 쪽 시계로 기다린다 */
+  const b = await page.screenshot({ type: 'png' });
+  if (tag) await tag.evaluate((n) => n.remove());
+  return b;
+}
+
+async function openFrozen(browser, h) {
   const { ctx, page } = await fresh(browser, 1080, h);
   await drive(page, OPENER);
-  if (css) await page.addStyleTag({ content: css });
   await settle(page);
-  const m = await page.evaluate(MEASURE);
-  const b = await page.screenshot({ type: 'png' });
-  return { ctx, page, m, b };
+  await page.evaluate(FREEZE);
+  await page.waitForTimeout(150);
+  return { ctx, page, m: await page.evaluate(MEASURE) };
 }
 
 (async () => {
@@ -142,12 +164,13 @@ async function shotState(browser, h, css) {
     const dctx = await browser.newContext({ viewport: { width: 300, height: 300 } });
     const dpage = await dctx.newPage();
     for (const h of FRAMES) {
-      const A = await shotState(browser, h, null);                                       /* 지금 판 */
-      const A2 = await shotState(browser, h, null);                                      /* 789 — A/A 대조판 */
-      const V = await shotState(browser, h, '#relw>.rw-panel{overflow:visible !important}');
-      const N = await shotState(browser, h, '#relw .rw-mid::before{display:none !important}');
-      const L = await shotState(browser, h, '#relw .rw-mid::before{background-size:auto !important}');
-      /* 789 — 재는 창(패널 상변 ~ 프레임 바닥). 네 판의 패널 기하는 같으므로 A 것 하나로 못박는다 */
+      const S = await openFrozen(browser, h);
+      const A = { m: S.m, b: await shotCss(S.page, null) };                               /* 지금 판 */
+      const A2 = { b: await shotCss(S.page, null) };                                      /* 789 — A/A 대조판 */
+      const V = { b: await shotCss(S.page, '#relw>.rw-panel{overflow:visible !important}') };
+      const N = { b: await shotCss(S.page, '#relw .rw-mid::before{display:none !important}') };
+      const L = { b: await shotCss(S.page, '#relw .rw-mid::before{background-size:auto !important}') };
+      /* 789 — 재는 창(패널 상변 ~ 프레임 바닥). `.pcb`(프레임 0~108)는 이 축이 닿을 수 없는 띠다 */
       const R = roi(A.m, h);
       /* §0 [0-e] — A/B 를 묻기 전에 A/A 부터(432-④). 창 안이 0 이 아니면 아래 세 차분은 못 읽는다 */
       const aaInk = await diffBox(dpage, A.b, A2.b, R);
@@ -157,19 +180,20 @@ async function shotState(browser, h, css) {
       const glowInk = await diffBox(dpage, A.b, N.b, R);
       /* §R2 — 높이만 490 이고 background-size 를 풀면 글로우가 작아지는가 */
       const looseInk = await diffBox(dpage, L.b, N.b, R);
-      /* §R — 옛 선언으로 되돌린 판의 넘침(레이아웃 값이라 같은 페이지에서 재도 안전하다) */
-      const rev = await A.page.evaluate(async () => {
+      /* §R — 옛 선언으로 되돌린 판의 넘침(레이아웃 값이라 같은 페이지에서 재도 안전하다).
+         ⚠ 789 — 시계를 끊었으므로 `requestAnimationFrame` 을 기다리면 **영영 안 온다**.
+            `scrollHeight` 읽기 자체가 강제 동기 레이아웃이라 기다릴 것이 없다. */
+      const rev = await S.page.evaluate(() => {
         const s = document.createElement('style');
         s.textContent = '#relw .rw-mid::before{height:550px !important;background-size:auto !important}';
         document.head.appendChild(s);
-        await new Promise((r) => requestAnimationFrame(() => r()));
         const pn = document.querySelector('#relw>.rw-panel');
         const v = { ovfY: pn.scrollHeight - pn.clientHeight };
         s.remove();
         return v;
       });
       rows.push({ h, m: A.m, R, aaInk, clipInk, glowInk, rev, looseInk });
-      for (const s of [A, A2, V, N, L]) await s.ctx.close();
+      await S.ctx.close();
     }
     await dctx.close();
   } finally { await browser.close(); }
@@ -190,7 +214,7 @@ async function shotState(browser, h, css) {
      아니라 «그 사이에 흐른 무언가» 를 읽고 있는 것이다 — 그때 이 자는 조용히 흔들리는 대신
      **여기서 이름을 대고 멈춘다**(그것이 789 가 고친 결함이다). */
   ok(rows.every((r) => r.aaInk.n === 0),
-    `[0-e] **A/A** — 같은 상태 두 로드가 재는 창 안에서 정확히 같다: ${rows.map((r) => `${r.h}:${r.aaInk.n}`).join(' · ')}` +
+    `[0-e] **A/A** — 아무것도 안 바꾸고 두 번 찍으면 창 안이 정확히 같다(= 화면이 정말 얼었다): ${rows.map((r) => `${r.h}:${r.aaInk.n}`).join(' · ')}` +
     (rows.some((r) => r.aaInk.n) ? ` ⚠ 비영 bbox ${rows.filter((r) => r.aaInk.n).map((r) => `${r.aaInk.w}×${r.aaInk.h}@y${r.aaInk.y1}`).join('·')}` : ''));
   ok(rows.every((r) => r.m.glowTopAbs >= r.R.y && r.R.y + r.R.height >= r.m.panelBot + 104),
     `[0-f] 그 창이 축을 **통째로** 담는다 — 글로우 상변 ${rows.map((r) => r.m.glowTopAbs).join('·')} ≥ 창 상변 ${rows.map((r) => r.R.y).join('·')} · 창 하변은 패널 하변 + 104(넘침 최댓값)보다 아래다`);
