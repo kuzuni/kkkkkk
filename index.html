@@ -16605,8 +16605,8 @@
     <div class="ofr-ad"><em><b>AD</b></em></div>
     <div class="ofr-bn"><u></u><div class="ofr-art"><i>🐸</i></div><s></s><s></s><s></s></div>
     <div class="ofr-t1 ot"><i>오프라인 보상 획득량</i></div>
-    <div class="ofr-t2 s"><i>×1.20배</i></div>
-    <div class="ofr-t2"><i>×1.20배</i></div>
+    <div class="ofr-t2 s"><i>×1.2배</i></div>
+    <div class="ofr-t2"><i>×1.2배</i></div>
     <button class="ofr-go" id="ofrGo"><i>이동</i></button>
     <div class="ofr-tag"><i>구매 즉시 반영!</i></div>
   </div></div>
@@ -18216,8 +18216,14 @@ const pct = v => (v*100).toFixed(v < 0.1 ? 1 : 0) + '%';
      · `fmtMul(m)` — **배율 그 자체**(1.08 · 102 · 0.75)를 받는다.
      · `fmtEff(v)` — 저장·계산이 «배수 − 1» 로 들고 있는 **효과값**(0.081 → ×1.08배)을 받는다.
        프로젝트의 효과값(ownVal·equipVal·relicVal·runeVal·temperVal·cosEffNow·collEff…)은 전부 이 꼴이다.
-   반올림(위임 규약 채택 · PROGRESS 725 ②): **유효숫자 3자리** — 10 미만 소수 2자리(×1.08) ·
-   100 미만 1자리(×12.4) · 그 위는 정수 + 세 자리 쉼표(×102 · ×1,024).
+   반올림(위임 규약 채택 · PROGRESS 725 ② **정정**): **유효숫자 3자리를 바닥으로 하되, 옛 표기가
+   갖고 있던 «0.1%p» 해상도를 잃지 않는다** — 10 미만 소수 3자리 · 100 미만 2자리 · 1000 미만 1자리 ·
+   그 위는 정수 + 세 자리 쉼표. 그런 다음 **꼬리 0 을 떨군다**(×1.08 · ×12.4 · ×102 · ×1,024 —
+   등재문의 예시 넷이 전부 이 규칙에서 그대로 나온다).
+   ⚑ 등재문의 «소수 2자리 고정» 을 그대로 쓰면 **정보가 사라진다**: 코스튬 Lv.0(+4.0%)과 Lv.1(+4.4%)이
+     둘 다 «×1.04배» 로 뭉개져 «강화해도 숫자가 안 바뀐다» 가 된다(`verify346` [3c] 가 바로 그 자리를
+     묻고 있고, 옛 `pct`/`wpct` 는 10% 미만에서 소수 1자리 = 0.1%p 해상도였다).
+     되돌림 = 아래 자릿수 표 한 줄을 `toFixed(2)`/`toFixed(1)`/정수로 되돌리는 것뿐이다.
    접기: 백만 배를 넘으면 472 선례 그대로 `fmtB` 로 접는다(«×1.87B배») — 그릇을 넘는 자릿수만 접고
    새 표기 규칙은 만들지 않는다.
    경계(위임 규약 채택 · PROGRESS 725 ④): **확률**(치명타 확률·소환/강화 확률 `fmtProbPct`)과
@@ -18228,9 +18234,11 @@ function mulNum(m){
   if(!isFinite(m)) return '∞';
   if(m >= MUL_FOLD) return fmtB(m);
   const a = Math.abs(m);
-  return a < 10  ? m.toFixed(2)
-       : a < 100 ? m.toFixed(1)
-       : Math.round(m).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const d = a < 10 ? 3 : a < 100 ? 2 : a < 1000 ? 1 : 0;
+  /* 꼬리 0 제거 — «1.080» 은 «1.08», «102.0» 은 «102» 로 읽는다(등재문 예시와 같은 모양) */
+  const s = m.toFixed(d).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  const [i, f] = s.split('.');
+  return i.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (f ? '.' + f : '');
 }
 const fmtMul  = m  => '×' + mulNum(m) + '배';
 const fmtEff  = v  => fmtMul(1 + v);
@@ -29926,7 +29934,8 @@ function showItem(id){
            수치 자체는 남긴다(표 «피해량» 칸과 같은 값 · 188 표기층 싱크가 이 자리를 센다).
            ⚠ 강화 Lv 는 이 줄의 **앞 칸(장착 효과)만** 올린다 — 뒤 칸(전투 피해)은 레벨을 안 탄다. */
       ? '따라다니며 <em>' + it.cd.toFixed(2) + '초</em>마다 플레이어 공격력으로 공격합니다.<br>'
-        + '장착 효과 — 공격력 <em>' + fmtEff(petEquipVal(it)) + '</em> · 전투 피해 <em>'   /* 725 */
+        /* 725 — «+n%» → «×N배». 뒤 칸(전투 피해)은 절대값이라 fmtB 그대로다(188 싱크). */
+        + '장착 효과 — 공격력 <em>' + fmtEff(petEquipVal(it)) + '</em> · 전투 피해 <em>'
         + fmtB(petDmg(it)) + '</em><br>'
         + '펫은 최대 <em>3마리</em>까지 장착합니다.'   /* 173 — «동료는» → «펫은»(조사가 같이 바뀐다, 369) */
     : cat === 'equip'

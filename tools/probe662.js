@@ -6,7 +6,7 @@
  * 이 자가 하는 일은 하나다 — **미보유 상태의 08 세부 팝업을 스킬 27종 전수로 열어
  * «가려진 칸» 을 센다.** 한 칸만 열어 보면 «? 하나» 로 보이지만 실제로 가려진 자리는 다섯이다:
  *   ① 제목  `???`      ② 아이콘 `❔`      ③ 피해량 `—`
- *   ④ 보유 효과 `+0%`  ⑤ 설명문 통째 («아직 획득하지 못했습니다…» 안내문으로 갈아 끼움)
+ *   ④ 보유 효과 `×1배`(강제 0 · 725 이전에는 `+0%`)  ⑤ 설명문 통째 («아직 획득하지 못했습니다…» 안내문으로 갈아 끼움)
  *
  * ⚑ **수리 전/후를 같은 자로 잰다.** `--old` 를 주면 index.html 의 사본에 수리 전 분기를
  *   되돌려 넣고 그 사본을 연다 — 등재문의 «? 로 뜬다» 가 몇 칸짜리였는지가 그 실행의 출력이다.
@@ -36,8 +36,10 @@ function revert(src){
       "+   '<div class=\"sk-ic\">' + (own ? it.ic : '❔') + '</div>'");
   sub('const dmgNow = () => fmtB(skillDmgAt(it, own ? oLv(id) : 1));',
       "const dmgNow = () => own ? fmtB(skillDmg(it)) : '—';");
-  sub("const ownNow = () => '공격력 <em>+' + pct(ownValAt(it, own ? oLv(id) : 1)) + '</em>';",
-      "const ownNow = () => '공격력 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>';");
+  /* 725 이관 — 표기가 «×N배» 로 갔다. 되돌림 사본이 재현하는 **결손은 그대로**다(미보유를 0 으로
+     눌러 적는 것) — 옛 «+0%» 자리에 이제 `fmtEff(0)` = «×1배» 가 선다. */
+  sub("const ownNow = () => '공격력 <em>' + fmtEff(ownValAt(it, own ? oLv(id) : 1)) + '</em>';   /* 725 */",
+      "const ownNow = () => '공격력 <em>' + (own ? fmtEff(ownVal(it)) : fmtEff(0)) + '</em>';");
   sub('  const desc = skillDescText(it)',
       "  const desc = (own ? skillDescText(it) : '아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.')");
   /* 여섯째 — 레벨 축. 수리 전 미보유는 **Lv. 0** 이었다(격자 카드는 Lv.1 이라 같은 스킬이
@@ -98,7 +100,7 @@ function revert(src){
   const hidTitle = out.filter(r => /\?/.test(r.title));
   const hidIc    = out.filter(r => r.ic === '❔' || r.ic === '');
   const hidDmg   = out.filter(r => r.dmg === '—' || r.dmg === '');
-  const hidOwn   = out.filter(r => /\+0%/.test(r.own));
+  const hidOwn   = out.filter(r => /×1배/.test(r.own));   /* 725 — «강제 0» = 배율 1 */
   const hidDesc  = out.filter(r => /획득하지 못했습니다/.test(r.desc));
   const total    = hidTitle.length + hidIc.length + hidDmg.length + hidOwn.length + hidDesc.length;
 
@@ -107,7 +109,7 @@ function revert(src){
   console.log('  ① 제목 «?»        ' + hidTitle.length + '/' + out.length);
   console.log('  ② 아이콘 «❔»      ' + hidIc.length + '/' + out.length);
   console.log('  ③ 피해량 «—»       ' + hidDmg.length + '/' + out.length);
-  console.log('  ④ 보유 효과 «+0%»  ' + hidOwn.length + '/' + out.length);
+  console.log('  ④ 보유 효과 «×1배»(강제 0)  ' + hidOwn.length + '/' + out.length);
   console.log('  ⑤ 설명문 안내문     ' + hidDesc.length + '/' + out.length);
   console.log('  ⇒ 가려진 칸 합계 **' + total + '**');
   console.log('  표본 3종: ' + JSON.stringify(out.slice(0, 3).map(r =>

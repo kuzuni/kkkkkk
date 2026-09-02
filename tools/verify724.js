@@ -173,20 +173,20 @@ const boot = async (b, url) => {
     AVATARS.slice(0, 3).forEach(a => { S.avatars[a.id] = 1; });
     S.cosLv[AVATARS[0].id] = 5;
     markDirty();
-    /* ⚠ 값을 «비슷한가» 로 재면 표기 반올림(`pct` 는 정수 자리다)에 묻혀 결합 모델이 바뀌어도
-       초록이 될 수 있다 — **제품이 쓰는 포매터로 만든 문자열과 글자까지 맞춘다**(340·194 규약). */
+    /* ⚠ 값을 «비슷한가» 로 재면 표기 반올림에 묻혀 결합 모델이 바뀌어도 초록이 될 수 있다 —
+       **제품이 쓰는 포매터로 만든 문자열과 글자까지 맞춘다**(340·194 규약 · 725 로 포매터가 `fmtEff`). */
     const txt = (fn, sel) => { try { fn(); } catch (e) { return 'ERR:' + e.message; }
       const el = document.querySelector(sel); return el ? el.textContent.trim() : ''; };
     let wp = ''; try { renderWpn(); const el = document.getElementById('wpnTotal'); wp = el ? el.textContent.trim() : ''; }
     catch (e) { wp = 'ERR:' + e.message; }
     return {
       skTxt: txt(renderSkill, '#bSk .sk-tot em'),
-      skWant: '공격력 +' + pct(SKILLS.reduce((t, s) => has(s.id) ? t + ownVal(s) : t, 0)),
+      skWant: '공격력 ' + fmtEff(SKILLS.reduce((t, s) => has(s.id) ? t + ownVal(s) : t, 0)),
       ptTxt: txt(renderPet, '#bPet .sk-tot em'),
-      ptWant: '공격력 +' + pct(PETS.reduce((t, s) => has(s.id) ? t + ownVal(s) : t, 0)),
+      ptWant: '공격력 ' + fmtEff(PETS.reduce((t, s) => has(s.id) ? t + ownVal(s) : t, 0)),
       csTxt: txt(renderCos, '#bCos .sk-tot em'),
-      csWant: '공격력 ' + pct(cosOwnSum('atk') + cosLvVal('atk')),
-      wpTxt: wp, wpWant: '총 보유 효과: 공격력 +' + wpct2(wpnTotalOwn())
+      csWant: '공격력 ' + fmtEff(cosOwnSum('atk') + cosLvVal('atk')),
+      wpTxt: wp, wpWant: '총 보유 효과: 공격력 ' + fmtEff(wpnTotalOwn())   /* 725 이관 — wpct2 선언째 철거 */
     };
   }, RESET_SRC);
   ok(C.skTxt === C.skWant, 'C1 07 스킬 시트 «총 보유 효과» = Σ ownVal', C.skTxt + ' ↔ ' + C.skWant);
@@ -313,7 +313,8 @@ const boot = async (b, url) => {
       renderSkill();
       const el = document.querySelector('#bSk .sk-tot em');
       return { got: el ? el.textContent.trim() : '',
-               want: '공격력 +' + pct(SKILLS.reduce((x, s) => has(s.id) ? x + ownVal(s) : x, 0)) };
+               /* 725 이관 — C1 이 쓰는 기대식과 **같은 말**이어야 이 되돌림 시험이 뜻을 갖는다 */
+               want: '공격력 ' + fmtEff(SKILLS.reduce((x, s) => has(s.id) ? x + ownVal(s) : x, 0)) };
     }, RESET_SRC);
     ok(!!c3.got && c3.got !== c3.want,
        'R3 스킬 시트 표기만 Π−1 로 되돌리면 [C1] 이 빨개진다',

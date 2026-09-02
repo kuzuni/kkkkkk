@@ -419,7 +419,7 @@ const table = [];
     S.temper = { alloc: { atk: 25, hp: 0, regen: 0 } };
     openTrain(); setTrSub('temper'); renderTemper();
     const td = document.querySelector('.tr-tp[data-temper="atk"] .td').textContent;
-    return { td, want: pct(temperVal('atk')) };
+    return { td, want: fmtEff(temperVal('atk')) };   /* 725 이관 — 표기가 «×N배» */
   });
   ok(show.td.indexOf(show.want) >= 0,
     '카드 효과 표기가 bonus() 와 **같은 식**(temperVal)을 쓴다', show.td.replace(/\s+/g, ' '));

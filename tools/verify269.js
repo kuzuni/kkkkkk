@@ -234,7 +234,7 @@ const GENERAL = ['영구 적용', '한 계단', '등급이 없', '외형이 바�
     /* 346 — 이 칸이 «지금 걸려 있는 값» 을 말하는지 보려면 기대값을 상수에서 따로 세워야 한다:
        보유 계단 + 강화(lv×COS_LV). 레벨을 내려 같은 자리가 **따라 움직이는지**도 같이 본다
        (문구만 맞고 값이 굳어 있으면 «그렸다» 로 통과해 버린다 — LESSONS 307-④). */
-    const sum = (k, lv) => pct(cosOwnStep(k, cosOwnIdx(own)) + lv * COS_LV[k]);
+    const sum = (k, lv) => fmtEff(cosOwnStep(k, cosOwnIdx(own)) + lv * COS_LV[k]);   /* 725 이관 */
     out.want40 = ['atk', 'hp', 'gold'].map(k => sum(k, 40));
     S.cosLv[own] = 3; save(); closeModal(); showCosDetail(own);
     out.own3 = rd(); out.want3 = ['atk', 'hp', 'gold'].map(k => sum(k, 3));
@@ -344,7 +344,7 @@ const GENERAL = ['영구 적용', '한 계단', '등급이 없', '외형이 바�
        반영됐는지까지 본다(문구만 보면 값이 굳어도 초록이다). */
     const wantG = await page.evaluate(lv => {
       const id = AVATARS[0].id;
-      return ['atk', 'hp', 'gold'].map(k => pct(cosOwnStep(k, cosOwnIdx(id)) + lv * COS_LV[k]));
+      return ['atk', 'hp', 'gold'].map(k => fmtEff(cosOwnStep(k, cosOwnIdx(id)) + lv * COS_LV[k]));   /* 725 이관 */
     }, G.lv);
     /* 520 이관 — 부호를 뺐다(주인 지시). 머리말은 그대로 묻고 «부호 없음» 을 한 항 더 세운다(328·330). */
     ok(/^공격 /.test(plain) && /체력 /.test(plain) && /골드 /.test(plain),

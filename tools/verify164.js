@@ -55,7 +55,8 @@ const eq = (label, got, want) => (got === want ? ok(label + ' = ' + JSON.stringi
   /* ⚑ 199 21회차 이관(333) — 상품이 «+4시간» 에서 «×배율» 로 바뀌었다(결3 ⓑ). 164 가 지키는 것은
      «홍보 문구와 착지가 같은 상품을 가리키는가» 이므로, 문자열을 새로 박지 않고 **제품의 상수에서
      기대값을 만든다**(문구만 옛 값으로 남는 부패를 이 항이 잡는다). */
-  const pct = await page.evaluate(() => Math.round((PASS_OFF_MUL - 1) * 100) + '% 증가');
+  /* 725 이관 — 표기가 «n% 증가» 에서 «×N배» 로 갔다. 기대값은 여전히 **제품 상수에서** 만든다. */
+  const pct = await page.evaluate(() => fmtMul(PASS_OFF_MUL));
   (promo.includes(pct) && !/4시간/.test(promo) ? ok : fail)(
     '  홍보 문구가 3번 카드의 배율과 같은 말을 한다(«' + pct + '» 포함 · 옛 «4시간» 없음): ' + JSON.stringify(promo));
   /* 애니메이션이 끝난 뒤 실제 좌표로 누른다(버튼이 아직 움직이는 중이면 헛클릭이 난다) */

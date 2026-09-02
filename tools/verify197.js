@@ -226,7 +226,8 @@ async function open(browser) {
       renderCos();
       const el = document.querySelector('#bCos .sk-tot em');
       const want = cosOwnSum('atk') + cosLvVal('atk');
-      return { txt: el ? el.textContent : null, want: pct(want) };
+      /* 725 이관 — 표기가 «×N배» 다. 기대값은 여전히 제품 포매터에서 만든다(식이 갈라지면 빨강). */
+      return { txt: el ? el.textContent : null, want: fmtEff(want) };
     });
     ok(G.txt != null && G.txt.indexOf(G.want) >= 0,
        'G1 코스튬 시트 «총효과» 표기 = 보유 Σ + 강화 (식이 갈라지지 않는다 · 724)',

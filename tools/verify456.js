@@ -140,8 +140,10 @@ const ok = (b, name, detail) => {
   });
   ok(E.clkMax === '00:30:00', 'E1 Lv51 에서 켠 직후 카드 시계가 00:30:00', E.clkMax);
   ok(E.clk1 === '00:30:00', 'E2 레벨업이 걸린 활성화에서도 00:30:00', E.clk1);
-  ok(E.toasts.length === 1 && /%/.test(E.toasts[0]) && !/분/.test(E.toasts[0]),
-     'E3 레벨업 토스트는 «효과 +n%» 한 장 — «+n분» 을 말하지 않는다', JSON.stringify(E.toasts));
+  /* 725 이관 — 토스트가 «효과 +n%» 에서 «효과 ×N배» 로 갔다. 이 항이 지키는 뜻(«효과를 말하지
+     지속시간을 말하지 않는다»)은 그대로다 — 묻는 얼굴만 배율 표기로 옮긴다. */
+  ok(E.toasts.length === 1 && /×[\d.,]+배/.test(E.toasts[0]) && !/분/.test(E.toasts[0]),
+     'E3 레벨업 토스트는 «효과 ×N배» 한 장 — «+n분» 을 말하지 않는다', JSON.stringify(E.toasts));
   ok(!/\+\s*\d+\s*분|분\s*(증가|추가|늘)/.test(E.sheet),
      'E4 34 팝업 문구에 «지속이 는다» 표현 0건', E.sheet.replace(/\s+/g, ' ').slice(0, 60) + '…');
 

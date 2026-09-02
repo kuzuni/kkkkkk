@@ -68,8 +68,10 @@ function revert(src){
       "+   '<div class=\"sk-ic\">' + (own ? it.ic : '❔') + '</div>'");
   sub('const dmgNow = () => fmtB(skillDmgAt(it, own ? oLv(id) : 1));',
       "const dmgNow = () => own ? fmtB(skillDmg(it)) : '—';");
-  sub("const ownNow = () => '공격력 <em>+' + pct(ownValAt(it, own ? oLv(id) : 1)) + '</em>';",
-      "const ownNow = () => '공격력 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>';");
+  /* 725 이관 — 표기가 «×N배» 로 갔다. 되돌림 사본이 재현하는 **결손은 그대로**다(미보유를 0 으로
+     눌러 적는 것) — 옛 «+0%» 자리에 이제 `fmtEff(0)` = «×1배» 가 선다. */
+  sub("const ownNow = () => '공격력 <em>' + fmtEff(ownValAt(it, own ? oLv(id) : 1)) + '</em>';   /* 725 */",
+      "const ownNow = () => '공격력 <em>' + (own ? fmtEff(ownVal(it)) : fmtEff(0)) + '</em>';");
   sub('  const desc = skillDescText(it)',
       "  const desc = (own ? skillDescText(it) : '아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.')");
   sub('const dLv = own ? oLv(id) : 1, lv = dLv;', 'const lv = oLv(id);');
@@ -112,7 +114,9 @@ const numTxt = v => (v == null ? null : String(+(+v).toFixed(2)));
   bad('제목에 «?»',        r => /\?/.test(r.title));
   bad('아이콘 «❔»/빈칸',   r => r.ic === '❔' || r.ic === '');
   bad('피해량 «—»/빈칸',   r => r.dmg === '—' || r.dmg === '');
-  bad('보유 효과 «+0%»',   r => /\+0%/.test(r.own));
+  /* 725 이관 — «강제 0» 의 얼굴이 «+0%» 에서 «×1배» 로 바뀌었다(값이 0 이면 배율이 1 이다).
+     미보유 칸도 Lv.1 기준의 실값이라 «×1배» 는 여전히 «눌러 적었다» 는 뜻뿐이다. */
+  bad('보유 효과 «×1배»(강제 0)', r => /×1배/.test(r.own));
   bad('설명문 안내문 대체', r => /획득하지 못했습니다/.test(r.desc));
   bad('쿨타임 빈칸',       r => !r.cool);
   ok(R.every(r => r.title === r.desc.slice(0, 0) + r.title && r.title.length >= 2
@@ -211,7 +215,7 @@ const numTxt = v => (v == null ? null : String(+(+v).toFixed(2)));
     const oHid = old.rows.filter(r => /\?/.test(r.title)).length
                + old.rows.filter(r => r.ic === '❔').length
                + old.rows.filter(r => r.dmg === '—').length
-               + old.rows.filter(r => /\+0%/.test(r.own)).length
+               + old.rows.filter(r => /×1배/.test(r.own)).length   /* 725 — 강제 0 = 배율 1 */
                + old.rows.filter(r => /획득하지 못했습니다/.test(r.desc)).length;
     ok(oHid === 135, '[R1] 수리 전 사본은 [A] 가 빨갛다 — 가려진 칸 ' + oHid + ' (27종 × 5자리)');
     ok(old.rows.every(r => r.lv === 'Lv. 0'),

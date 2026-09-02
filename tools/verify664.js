@@ -226,11 +226,14 @@ async function scan(browser, src) {
    쓰게 묶는다 — 두 항이 각자 다른 눈으로 세면 한쪽이 부패해도 다른 쪽이 안 알려 준다. */
 const REJECT = /🔒|미보유|획득하세요|착용합니다/;
 
+/* 725 이관 — 표기가 «+n%» 에서 «×N배» 로 갔다. 이 자는 «적힌 수 = 실값» 을 묻는 자이므로
+   **읽는 축만** 옮긴다(배율 = 1 + 효과값). 허용 오차도 그 축으로 환산한다(0.15%p = 0.0015배).
+   ⚠ 무르게 풀지 않으려고 «수를 못 찾으면 거짓» 은 그대로 둔다 — 표기가 통째로 사라져도 빨갛다. */
 const pctNear = (txt, v) => {
   if (txt == null) return false;
-  const m = String(txt).match(/-?\d+(?:\.\d+)?/);
+  const m = String(txt).match(/-?[\d,]+(?:\.\d+)?/);
   if (!m) return false;
-  return Math.abs(parseFloat(m[0]) - v * 100) <= 0.15;   /* 표기는 소수 1자리 반올림 */
+  return Math.abs(parseFloat(m[0].replace(/,/g, '')) - (1 + v)) <= 0.0015;
 };
 
 (async () => {
@@ -266,7 +269,7 @@ const pctNear = (txt, v) => {
     ok(o.eq && !!o.eq.name && !/\?/.test(o.eq.name), '§2-a 05 장비: 이름이 실물이다', JSON.stringify(o.eq && o.eq.name));
     ok(o.eq && pctNear(o.eq.ownV, o.eq.trueOwn),
       '§2-b 05 장비: **보유 효과**가 `ownVal()` 그대로다(강제 0 아님)',
-      o.eq ? o.eq.ownV + ' ↔ ' + (o.eq.trueOwn * 100).toFixed(2) + '%' : '');
+      o.eq ? o.eq.ownV + ' ↔ ×' + (1 + o.eq.trueOwn).toFixed(4) + '배' : '');
     ok(o.eq && pctNear(o.eq.eqV, o.eq.trueEq),
       '§2-c 05 장비: **장착 효과**가 `equipVal()` 그대로다(강제 0 아님)',
       o.eq ? o.eq.eqV + ' ↔ ' + (o.eq.trueEq * 100).toFixed(2) + '%' : '');
@@ -374,8 +377,10 @@ const pctNear = (txt, v) => {
     const subs = [
       ["        +  (real ? ' data-wpn=\"' + real.id + '\"' : '')",
        "        +  (mine ? ' data-wpn=\"' + real.id + '\"' : '')", 'R1 칸 클릭'],
-      ["  $('wpnOwnV').innerHTML  = '<i>+' + wpct(ownVal(cur)) + '</i>';",
-       "  $('wpnOwnV').innerHTML  = '<i>+' + wpct(own ? ownVal(cur) : 0) + '</i>';", 'R2 보유 효과'],
+      /* 725 이관 — `wpct` 는 선언째 사라졌다(표기 한 벌 `fmtEff` 로 모임). 되돌림이 재현하는
+         결손(미보유를 0 으로 눌러 적기)은 그대로다. */
+      ["  $('wpnOwnV').innerHTML  = '<i>' + fmtEff(ownVal(cur)) + '</i>';",
+       "  $('wpnOwnV').innerHTML  = '<i>' + fmtEff(own ? ownVal(cur) : 0) + '</i>';", 'R2 보유 효과'],
       ["  $('mtitle').textContent = it.n;",
        "  $('mtitle').textContent = own ? it.n : '???';", 'R3 제목'],
       ["      + (own ? (eq ? '해제' : '장착') : '미보유') + '</b></button>'",

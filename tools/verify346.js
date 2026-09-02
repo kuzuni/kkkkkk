@@ -61,7 +61,7 @@ const READ = (lv) => {
   return { lv, id, n,
     sl: t('.sk-sl'), db: t('.sk-db p'), owK: t('.sk-ow .k'), owV: t('.sk-ow .v'),
     all: box.textContent,
-    want: ['atk', 'hp', 'gold'].map(k => pct(cosOwnStep(k, n) + lv * COS_LV[k])) };
+    want: ['atk', 'hp', 'gold'].map(k => fmtEff(cosOwnStep(k, n) + lv * COS_LV[k])) };
 };
 
 async function boot(url) {
@@ -77,7 +77,8 @@ async function boot(url) {
   return { browser, page, errs };
 }
 
-/* 팝업 전체 글자에서 그 % 가 몇 번 적혔는가 */
+/* 팝업 전체 글자에서 그 배율 표기가 몇 번 적혔는가 (725 이관 — 이전에는 «%» 였다.
+   기대값은 여전히 **제품의 포매터**로 만든다: 모델 값이 틀리면 그대로 빨개진다) */
 const count = (hay, v) => (hay.match(new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
 
 (async () => {
@@ -124,7 +125,7 @@ const count = (hay, v) => (hay.match(new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g,
     for (const v of r.want)
       ok(count(r.all, v) === 1, '4 Lv.' + r.lv + ' «' + v + '» 이 팝업에 한 번만 적힌다',
         count(r.all, v) + '회');
-    ok(!/%/.test(r.owV || ''), '4b Lv.' + r.lv + ' 알약은 % 를 안 든다', r.owK + ' | ' + r.owV);
+    ok(!/%|배/.test(r.owV || ''), '4b Lv.' + r.lv + ' 알약은 수치 표기(% · ×N배)를 안 든다', r.owK + ' | ' + r.owV);
     ok(r.owK === '보유 순번' && (r.owV || '').indexOf(String(r.n) + '번째') >= 0,
       '4c Lv.' + r.lv + ' 알약 = 순번(«보유 순번» | «n번째 코스튬»)', r.owK + ' | ' + r.owV);
   }
@@ -149,7 +150,7 @@ const count = (hay, v) => (hay.match(new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g,
       lv: cosLvOf(AVATARS[0].id),
       db: (document.querySelector('#mbox .sk-db p') || {}).textContent,
       want: (() => { const id = AVATARS[0].id, lv = cosLvOf(id), n = cosOwnIdx(id);
-        return ['atk', 'hp', 'gold'].map(k => pct(cosOwnStep(k, n) + lv * COS_LV[k])); })(),
+        return ['atk', 'hp', 'gold'].map(k => fmtEff(cosOwnStep(k, n) + lv * COS_LV[k])); })(),
     }));
     ok(one.lv === 11, '5A [강화] 1회로 레벨이 10 → 11', 'Lv. ' + one.lv);
     ok(one.db !== before, '5B 그 줄이 바뀌었다', '«' + before + '» → «' + one.db + '»');
@@ -164,7 +165,7 @@ const count = (hay, v) => (hay.match(new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g,
       if (typeof upHold !== 'undefined' && upHold) clearTimeout(upHold.timer);
       const id = AVATARS[0].id, lv = cosLvOf(id), n = cosOwnIdx(id);
       return { lv, db: (document.querySelector('#mbox .sk-db p') || {}).textContent,
-               want: ['atk', 'hp', 'gold'].map(k => pct(cosOwnStep(k, n) + lv * COS_LV[k])) };
+               want: ['atk', 'hp', 'gold'].map(k => fmtEff(cosOwnStep(k, n) + lv * COS_LV[k])) };
     });
     await page.mouse.up();
     await page.waitForTimeout(300);

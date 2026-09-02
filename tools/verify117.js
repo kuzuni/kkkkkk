@@ -215,11 +215,13 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
                fill: document.getElementById('blsFill').style.width }; };
     return { l1: rd(1), l2: rd(2), l6: rd(6), l11: rd(11) };
   });
-  ok(F.l1.vl.join(',') === '+20%,+20%,+20%' && F.l1.bn === '+50%', 'F1 Lv1 카드 +20% · 보너스 +50% (34 회귀)',
+  /* 725 이관 — 표기가 «+20%» 에서 «×1.2배» 로 갔다. **값은 한 글자도 안 바뀌었다**(20% = ×1.2배)
+     — 손으로 적은 기대 문자열만 새 규약으로 옮겨 적는다. 값이 틀어지면 종전대로 빨개진다. */
+  ok(F.l1.vl.join(',') === '×1.2배,×1.2배,×1.2배' && F.l1.bn === '×1.5배', 'F1 Lv1 카드 ×1.2배 · 보너스 ×1.5배 (34 회귀)',
      F.l1.vl.join(',') + ' | ' + F.l1.bn);
-  ok(F.l2.vl.join(',') === '+22%,+22%,+22%' && F.l2.bn === '+55%', 'F2 Lv2 카드 +22% · 보너스 +55%',
+  ok(F.l2.vl.join(',') === '×1.22배,×1.22배,×1.22배' && F.l2.bn === '×1.55배', 'F2 Lv2 카드 ×1.22배 · 보너스 ×1.55배',
      F.l2.vl.join(',') + ' | ' + F.l2.bn);
-  ok(F.l6.vl[0] === '+30%' && F.l11.vl[0] === '+40%', 'F3 Lv6 +30% · Lv11 +40%', F.l6.vl[0] + '/' + F.l11.vl[0]);
+  ok(F.l6.vl[0] === '×1.3배' && F.l11.vl[0] === '×1.4배', 'F3 Lv6 ×1.3배 · Lv11 ×1.4배', F.l6.vl[0] + '/' + F.l11.vl[0]);
   /* 500(2026-08-30) — 진행바 분모가 상수 4 에서 **레벨별 필요 경험치 표**로 바뀌었다(주인 지시).
      여기서 묻던 뜻(«Lv 알약·경험치·채움이 같이 갱신된다»)은 그대로 두고 분모만 그 레벨의 값으로
      갈아 끼운다 — Lv11 의 필요량은 55 이므로 «1/55 · 1.82%» 다. 상수 4 로 되돌아가면 다시 빨개진다. */
@@ -286,7 +288,7 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
     return { lv: S.bless.lv, toasts: t, popped: !!document.querySelector('#blsCards .bls-c.fx-pop') };
   });
   ok(I.lv === 4, 'I1 마지막 한 칸에서 활성 → Lv4', String(I.lv));
-  ok(I.toasts.length === 1 && /축복 Lv\.4 — 효과 \+26%/.test(I.toasts[0]), 'I2 레벨업 토스트 1장 (실효 %)',
+  ok(I.toasts.length === 1 && /축복 Lv\.4 — 효과 ×1\.26배/.test(I.toasts[0]), 'I2 레벨업 토스트 1장 (실효 배율 · 725)',
      JSON.stringify(I.toasts));
   ok(I.popped, 'I3 카드 팝 연출(fxPop) 부착', String(I.popped));
 

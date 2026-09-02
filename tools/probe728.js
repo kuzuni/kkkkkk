@@ -98,8 +98,9 @@ const SCAN = `(async function(){
 const REVERTS = [
   ["        +  (real ? ' data-wpn=\"' + real.id + '\"' : '')",
    "        +  (mine ? ' data-wpn=\"' + real.id + '\"' : '')", 'R1 장비 칸 클릭 대상'],
-  ["  $('wpnOwnV').innerHTML  = '<i>+' + wpct(ownVal(cur)) + '</i>';",
-   "  $('wpnOwnV').innerHTML  = '<i>+' + wpct(own ? ownVal(cur) : 0) + '</i>';", 'R2 보유 효과 강제 0'],
+  /* 725 이관 — `wpct` 선언째 철거, 표기는 `fmtEff` 한 벌 */
+  ["  $('wpnOwnV').innerHTML  = '<i>' + fmtEff(ownVal(cur)) + '</i>';",
+   "  $('wpnOwnV').innerHTML  = '<i>' + fmtEff(own ? ownVal(cur) : 0) + '</i>';", 'R2 보유 효과 강제 0'],
   ["  $('mtitle').textContent = it.n;",
    "  $('mtitle').textContent = own ? it.n : '???';", 'R3 제목 «???»'],
   ["      + (own ? (eq ? '해제' : '장착') : '미보유') + '</b></button>'",

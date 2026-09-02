@@ -329,7 +329,7 @@ const table = [];
     /* 표기(카드 문구)와 식이 같은가 */
     renderTrain(); setTrSub('rune');
     const shown = document.querySelector('.tr-rn>.rd').textContent;
-    const want = '공격력 +' + pct(runeVal('r1', 'atk'));
+    const want = '공격력 ' + fmtEff(runeVal('r1', 'atk'));   /* 725 이관 — 표기가 «×N배» */
     /* 전투력(cp)까지 실제로 오르는가 — «다른 화면에 반영» 의 최종 확인 */
     S.rune = { r1: 0, r2: 0, r3: 0 }; markDirty(); const cp0 = cp();
     S.rune = { r1: 300, r2: 0, r3: 0 }; markDirty(); const cp1 = cp();

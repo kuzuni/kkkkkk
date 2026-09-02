@@ -182,10 +182,11 @@ const ok = (b, name, detail) => {
     if (typeof closeModal === 'function') closeModal();
     delete S.own[p.id];
     return { html, lines: (html.match(/<br>/g) || []).length + 1, over, rect, pRect,
-             hasEq: /장착 효과 — 공격력 \+/.test(txt), hasDmg: /전투 피해/.test(txt),
+             /* 725 이관 — «+n%» 가 «×N배» 로 갔다. 항의 뜻(«장착 효과 줄에 공격력 수치가 있다»)은 그대로다. */
+             hasEq: /장착 효과 — 공격력 ×[\d.,A-Z]+배/.test(txt), hasDmg: /전투 피해/.test(txt),
              oldTxt: /전투에 참여해/.test(txt), digits: (txt.match(/\d/g) || []).length };
   });
-  ok(E.hasEq, 'E1 08 세부 팝업이 «장착 효과 — 공격력 +n%» 를 말한다', E.html);
+  ok(E.hasEq, 'E1 08 세부 팝업이 «장착 효과 — 공격력 ×N배» 를 말한다(725)', E.html);
   ok(E.hasDmg && !E.oldTxt, 'E2 옛 문구(«전투에 참여해 n 피해»)는 «전투 피해» 로 갈아 끼웠다 (481 — 라벨 단축)');
   ok(E.lines === 3, 'E3 줄 수 3 — 485 전과 같다(`.sk-db` 750×290 고정이라 한 줄이 늘면 넘친다)',
      String(E.lines));

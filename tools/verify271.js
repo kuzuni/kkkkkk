@@ -357,8 +357,9 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
         cur: rows.map(e => e.querySelector('i').textContent.trim()).join(' | '),
         nx: rows.map(e => e.querySelector('s').textContent.trim()).join(' | '),
         st: document.querySelector('.tr-rn>.rst').textContent.trim(),
-        wantCur: '공격력 +' + pct(runeVal('r1', 'atk')),
-        wantNx: '다음 +' + pct(RN.r1.eff.atk * RUNE_LIN),
+        /* 725 이관 — 표기가 «+n%» 에서 «×N배»(누적)·«+n배»(증분)로 갔다. 묻는 뜻은 그대로다. */
+        wantCur: '공격력 ' + fmtEff(runeVal('r1', 'atk')),
+        wantNx: '다음 ' + fmtMulStep(RN.r1.eff.atk * RUNE_LIN),
         wantSt: '1레벨당 증가폭이 Lv.1 ~ Lv.' + RUNE_MAXLV + ' 내내 같습니다'
       });
     });
@@ -375,14 +376,14 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     'Lv ' + o.l + ' — 축마다 한 줄(일반룬 2줄) · 왼쪽이 runeVal 과 같은 식',
     o.rows + '줄 · ' + o.cur));
   say.out.forEach(o => ok(o.nx.indexOf(o.wantNx) === 0,
-    'Lv ' + o.l + ' — 오른쪽 «다음 +n%» 이 eff × RUNE_LIN 과 같다(489 · 레벨 무관 상수)', o.nx));
+    'Lv ' + o.l + ' — 오른쪽 «다음 +n배» 가 eff × RUNE_LIN 과 같다(489 · 레벨 무관 상수)', o.nx));
   ok(new Set(say.out.map(o => o.nx)).size === 1,
-    '★ 489 — 다섯 레벨(0·99·100·250·499)의 «다음 +n%» 이 **글자까지 같다**(계단이 되살아나면 갈라진다)',
+    '★ 489 — 다섯 레벨(0·99·100·250·499)의 «다음 +n배» 가 **글자까지 같다**(계단이 되살아나면 갈라진다)',
     say.out.map(o => o.l + ':' + o.nx).join(' / '));
   say.out.forEach(o => ok(o.st.indexOf(o.wantSt) === 0,
     'Lv ' + o.l + ' — 안내줄이 «전 구간 같은 증가폭»(선형)을 말한다', o.st));
   ok(/^최대(,최대)*$/.test(say.maxNx) && say.maxBtn && !say.hintAtMax,
-    '만렙에서는 «다음 +n%» 대신 «최대» · MAX 판 · 실패 안내 없음', say.maxNx);
+    '만렙에서는 «다음 +n배» 대신 «최대» · MAX 판 · 실패 안내 없음', say.maxNx);
   ok(say.hint0.indexOf('실패해도 레벨은 그대로') >= 0,
     '시도 가능할 때는 «실패해도 레벨은 그대로» 안내가 상시 붙는다', say.hint0);
 
