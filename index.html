@@ -10058,8 +10058,13 @@
   .pf-ttl{left:289px;top:268px;width:319px;height:56px;line-height:56px}
   .pf-ttl>s.o{background:#000}
   .pf-ttl>s.f{background:linear-gradient(180deg,#635145 0 6px,#433A35 6px)}
-  .pf-ttl>i{font-size:31px;color:#f5f5f5;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    transform:scaleX(.9)}
+  /* 787 3회차 — 칭호 칩 라벨이 ref 보다 작다. 비평 2인이 **독립으로 같은 문자열**(«칭호 없음»)을 재서 일치했다:
+       A «ref 107×29 → 우리 88×25 (폭 −17.8% · 높이 −13.8%)» · B «ref 107×28 → 우리 88×25 (−17.8% / −10.7%)».
+     칩 상자(319px)는 양쪽 다 Δ0~2px 이라 **상자는 맞고 라벨만 작다** — 상자 대비 점유율 29.8% → 24.2%.
+     fs 31 → 36(×1.16)으로 높이를 채우고, 그 크기에서 폭이 88×(36/31)=102 이므로 sx .9 → .944 로 107 에 맞춘다.
+     ⚠ 이 칩은 19·20 **두 화면이 같이 읽는 헤더 부품**이라 한 자리를 고치면 둘 다 따라온다(비평 A 가 20 에서도 같은 항을 냈다). */
+  .pf-ttl>i{font-size:36px;color:#f5f5f5;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    transform:scaleX(.944)}
   /* 닉네임 바 ref y846 h49 — 반투명 (115,103,87), 좌우 알파 페이드 */
   .pf-nick{left:241px;top:331px;width:430px;height:49px;line-height:49px;
     text-align:center;text-indent:-8px;   /* ref 텍스트 중심 x541.5 = 바 중심 −3.5px */
@@ -10093,7 +10098,12 @@
     /* 240 정정(2026-08-27) — 위 10회차의 «본문 토큰 .16» 은 **「초상화」의 ㅇ 로만 확인된 값**이다.
        201 이 그 칸을 폐기해 남은 「칭호」로 옮겨 재니 받침 ㅇ 이 76% 막혀 있었다(격리 4.6 · 화면 3.4).
        이 자리 전용 토큰 `--st-pft`(.115) 로 내린다 — 근거·스윕은 :root 의 토큰 주석과 측정표 240. */
-    font-size:38px;color:#A9A8AD;-webkit-text-stroke:calc(var(--st-pft) * 1em) #000;paint-order:stroke fill;
+    /* 787 3회차 — 탭 라벨(«칭호») 잉크가 ref 보다 작다. 비평 2인 독립 일치:
+       A «ref 64×42 → 우리 61×38 (높이 −9.5% · 폭 −4.7%)» · B «ref 64×42 → 우리 61×38 (−9.5%)».
+       탭 상자(228px)와 중심 x 는 양쪽 다 완전 일치라 **상자는 맞고 라벨만 작다.**
+       fs 38 → 42(×1.105). ⚠ 240 이 잡은 `--st-pft`(.115)는 **em 기준**이라 fs 를 올려도
+       «칭» 받침 ㅇ 의 속공간 대 스트로크 비는 그대로다 — 그 튜닝을 깨지 않는다. */
+    font-size:42px;color:#A9A8AD;-webkit-text-stroke:calc(var(--st-pft) * 1em) #000;paint-order:stroke fill;
     /* 126 ③ 20회차 — `.pf-tab`(칭호·초상화·프레임) 라벨에도 **드롭이 통째로 없었다.**
        19회차에 AL 단독이라 못 넣었던 자리를 «둘 다 재라» 로 지정해 20회차에 닫았다 —
        **세 명이 두 라운드에 걸쳐 같은 답**을 냈다:
@@ -10110,7 +10120,7 @@
   /* 201 ① — `.t2`(초상화)·`.t3`(프레임)는 폐기했다(마크업·CSS·라벨 폭 근거까지). 남은 칸은 t1 뿐이다. */
   .pf-tab.t1{left:84px}
   /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
-  .pf-tab.on{height:71px;background:#D0B195;z-index:2;font-size:38px;color:#FFF8C1;
+  .pf-tab.on{height:71px;background:#D0B195;z-index:2;font-size:42px;color:#FFF8C1;   /* 787 3회차 — 위 `.pf-tab` 과 같은 값(비활성과 활성이 따로 놀면 안 된다) */
     box-shadow:none}
   .pf-tab.on::before{content:'';position:absolute;inset:0 0 9px 0;border-radius:16px 16px 0 0;
     box-shadow:inset 0 4px 0 #A6896B,inset 4px 0 0 #A6896B,inset -4px 0 0 #A6896B,

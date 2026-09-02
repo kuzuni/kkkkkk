@@ -4,7 +4,19 @@
    버그: `.pf-tab` 이 `--st-body`(.16 → fs38 에서 **6.08px**)를 두르는데, 「칭」의 **작은 받침 ㅇ** 이
    그 두께에 76% 막혀 있었다 — 격리 렌더 4.6 px² · **화면(드롭 포함) 3.4 px²**, 둘 다 하한 8.0 미만.
    126 은 이 자리를 내내 «초상화» 의 큰 ㅇ 하나로 재고 있었고(30.4), 201 이 그 칸을 폐기하면서 드러났다.
-   처방: 이 자리 전용 토큰 `--st-pft`(.115 → **4.37px**). 드롭(dy 1.9 · dx 1.06)은 손대지 않는다.
+   처방: 이 자리 전용 토큰 `--st-pft`(.115 → fs38 에서 **4.37px**). 드롭(dy 1.9 · dx 1.06)은 손대지 않는다.
+
+   ⚑ 787 이관(2026-09-02, sess-1643-19449) — **fs 를 38 → 42 로 올리면서 이 자의 상수 넷이 빨개졌다.**
+     비평 2인이 독립으로 «탭 라벨 잉크 ref 64×42 vs 우리 61×38 = −9.5%» 를 냈고 상자·중심 x 는 완전 일치라
+     라벨만 키운 것이다. 빨개진 넷은 **전부 fs 38 에서 파생된 절대 px** 였다:
+       스트로크 4.37(= 38×.115) · 음성항 6.08(= 38×.16) · 라벨 x 261.42 · 라벨 자연폭 57.14.
+     ⇒ 333 처방대로 **자리를 비우지 않고 «뜻» 으로 갈아 끼웠다** — 이 자가 지키려던 것은 «4.37px» 이라는
+       숫자가 아니라 «이 자리의 스트로크는 `--st-pft` 비율이다 · 스트로크가 레이아웃을 못 민다» 이다:
+       · 스트로크 → **실측 fs × .115** 와 대조(fs 를 읽어서 기대값을 만든다)
+       · 음성항  → **실측 fs × .16**
+       · 라벨 x   → «탭 상자 중심과 라벨 중심이 같다»(스트로크가 밀면 이게 깨진다)
+       · 라벨 폭  → «자연폭 ÷ fs = 1.5037»(fs 를 바꿔도 글리프 advance 비는 안 변한다)
+     속공간 하한 8 px² 과 음성 대조는 **한 줄도 안 무르게** 두었다 — 실제로 13.3 px² 로 더 넓어졌다.
 
    본다:
      §1 화면   드롭까지 켠 «실제로 보이는» 속공간이 하한 8.0 px² 이상이고, 고치기 전(3.4)의 2배 이상.
@@ -130,12 +142,16 @@ const RECT = `(function(sel){
   ok(!!now, '탭 라벨 「칭호」를 찾았다', SEL);
   ok(now && now.hole >= FLOOR, `화면 속공간 ${now && now.hole} px² ≥ 하한 ${FLOOR}`);
   ok(now && now.hole >= BEFORE * 2, `고치기 전(${BEFORE}) 대비 2배 이상 — ${now && now.hole}`);
-  near('스트로크 = fs38 × .115', now.sw, 4.37, 0.05);
+  /* 787 이관 — 기대값을 «실측 fs × 토큰» 으로 만든다(fs 를 바꿔도 뜻이 살아 있다) */
+  const FS = await p.evaluate(`(() => { const e = document.querySelector('${SEL}');
+    return e ? parseFloat(getComputedStyle(e).fontSize) : null; })()`);
+  ok(FS > 0, `탭 라벨 fs 실측 ${FS}px`);
+  near(`스트로크 = fs${FS} × .115`, now.sw, +(FS * 0.115).toFixed(2), 0.05);
 
   /* ── §2 음성 대조 ── */
   console.log('§2 음성 대조 — 옛 값(.16)으로 되돌리면 다시 막힌다');
   const old = await p.evaluate(`(${HOLE})('${SEL}', 0.16)`);
-  near('되돌린 스트로크 6.08px', old.sw, 6.08, 0.05);
+  near(`되돌린 스트로크 = fs${FS} × .16`, old.sw, +(FS * 0.16).toFixed(2), 0.05);
   ok(old.hole < FLOOR, `옛 값에서는 ${old.hole} px² < 하한 ${FLOOR} (잣대가 살아 있다)`);
   ok(now.hole > old.hole, `새 값이 옛 값보다 넓다 (${old.hole} → ${now.hole})`);
   const back = await p.evaluate(`(${HOLE})('${SEL}', 0)`);
@@ -157,8 +173,11 @@ const RECT = `(function(sel){
   eq('탭 칸 y (ref 917 − 84 = 833)', g.tab.y, 833);
   eq('탭 칸 w (ref 228)', g.tab.w, 228);
   eq('탭 칸 h (활성 71)', g.tab.h, 71);
-  near('라벨 x', g.lab.x, 261.42, 0.02);
-  near('라벨 w (자연폭 · scaleX 전)', g.lab.w, 57.14, 0.02);
+  /* 787 이관 — «스트로크가 레이아웃을 못 민다» 를 fs 에 안 묶인 꼴로 적는다.
+     ① 라벨 중심 = 탭 칸 중심(스트로크가 한쪽으로 밀면 즉시 깨진다)
+     ② 자연폭 ÷ fs = 글리프 advance 비(fs 를 바꿔도 안 변한다. 38 에서 57.14 → 1.5037) */
+  near('라벨 중심 = 탭 칸 중심', +(g.lab.x + g.lab.w / 2).toFixed(2), +(g.tab.x + g.tab.w / 2).toFixed(2), 0.6);
+  near('자연폭 ÷ fs (글리프 advance 비)', +(g.lab.w / FS).toFixed(4), 1.5037, 0.004);
   eq('콘텐츠 패널 y (ref 985 − 84 = 901)', g.grid.y, 901);
   eq('콘텐츠 패널 w', g.grid.w, 780);
   eq('콘텐츠 패널 h', g.grid.h, 544);
@@ -191,7 +210,7 @@ const RECT = `(function(sel){
     await p.waitForTimeout(200);
     const r = await p.evaluate(`(${HOLE})('${SEL}', 0)`);
     ok(r && r.hole >= FLOOR, `[${h}] 화면 속공간 ${r && r.hole} px² ≥ ${FLOOR}`);
-    near(`[${h}] 스트로크 4.37px`, r.sw, 4.37, 0.05);
+    near(`[${h}] 스트로크 = fs${FS} × .115`, r.sw, +(FS * 0.115).toFixed(2), 0.05);
   }
   eq('콘솔 에러', errs.length, 0, errs.slice(0, 3).join(' | '));
 
