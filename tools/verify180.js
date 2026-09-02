@@ -54,12 +54,20 @@ function body(sig) {
   return null;
 }
 
-/* save 를 심어 두고 연다. save 가 null 이면 «세이브 없는 신규 유저» 다. */
-async function open(browser, save) {
+/* save 를 심어 두고 연다. save 가 null 이면 «세이브 없는 신규 유저» 다.
+   freezeClock=true 면 프레임 시계를 고정한다(790 — 아래 [G] 전용, 쓰는 자리에 이유가 적혀 있다). */
+async function open(browser, save, freezeClock) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
-  await ctx.addInitScript(([k, v]) => {
+  await ctx.addInitScript(([k, v, freeze]) => {
     try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {}
-  }, [KEY, save === null ? null : JSON.stringify(save)]);
+    /* 790 — 618 이 verify123 §10 에서 쓴 것과 같은 처방. 제품 loop 의 dt = (now-last)/1000 이 0 이 되어
+       step(0) = 전투 정지, 렌더·부팅 지급(dailyCheck 월별 우편)은 그대로다 — probe790 [3] 이 대조로 못박았다.
+       **기본값은 끔**: [B]~[F]·[H] 는 전투가 도는 채로 물어야 하는 절이라 이 절에만 켠다. */
+    if (freeze) {
+      const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (cb) => raf(() => cb(0));
+    }
+  }, [KEY, save === null ? null : JSON.stringify(save), !!freezeClock]);
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e)));
@@ -225,12 +233,22 @@ const MK_JS = `(d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'
 
     /* ================= [G] 구 세이브 — 소급 없음 + 이번 달 한 통 ================= */
     console.log('\n[G] 구 세이브(lastMonthly 없음) — 신규분 소급 없음');
-    const g = await open(browser, { gold: 12345, dia: 1000, stage: 7, best: 7, mailx: [], mailSeq: 0, mail: {} });
+    /* 790 — 프레임 시계 고정(open 의 3번째 인자). 이 절이 묻는 것은 «load() 가 구 세이브 값을 지키는가» 인데,
+       부팅 즉시 도는 자동 전투가 아래 900ms 대기 중 첫 킬 드랍을 내면 골드 표본이 오염된다 —
+       probe790 [1] 실측: 첫 킬이 **정확히 900ms 창 끝자락**(t≈900ms 에 kills 0→1 · gold 12345 → 12354.66)이라
+       실행마다 들락날락한다. stage 7 이라 드랍이 ~10 이고, 그것이 12355.737 의 정체다.
+       오프라인 축은 결백(표본에 time 이 없어 offPend 자체가 안 생긴다 — probe790 [2]).
+       ⚠ `12345` 엄격 비교를 «≈» 로 무르게 풀지 마라(등재문 반려 사유) — 그러면 «구 세이브 값이 그대로다»
+       라는 단언이 뜻을 잃는다. 아래 «킬 0» 항이 이 고정을 지킨다(고정이 빠지면 골드 항보다 먼저,
+       뜻이 보이는 이름으로 빨개진다). 지급 축이 안 멈추는 것은 probe790 [3] 이 대조로 확인했다. */
+    const g = await open(browser, { gold: 12345, dia: 1000, stage: 7, best: 7, mailx: [], mailSeq: 0, mail: {} }, true);
     const gGot = await g.page.evaluate((mkjs) => ({
       dia: S.dia, key: S.lastMonthly, mk: eval(mkjs)(new Date()),
-      n: (S.mailx || []).filter(m => m.src === 'monthly').length, gold: S.gold, stage: S.stage
+      n: (S.mailx || []).filter(m => m.src === 'monthly').length, gold: S.gold, stage: S.stage,
+      kills: S.totalKills
     }), MK_JS);
     eq('구 세이브 dia — 소급 없이 그대로', gGot.dia, 1000);
+    eq('골드 표본 창에 전투 수입이 안 섞였다(시계 고정 = 킬 0 — 790)', gGot.kills, 0);
     eq('구 세이브 gold·stage 불변', [gGot.gold, gGot.stage], [12345, 7]);
     eq('구 세이브도 이번 달 우편 1통', gGot.n, 1);
     eq('구 세이브 달 열쇠 채워짐', gGot.key, gGot.mk);
