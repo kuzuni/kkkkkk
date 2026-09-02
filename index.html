@@ -2177,16 +2177,25 @@
      ⚠ 반려 둘(둘 다 **A5 공용 규격**이라 이 작업 구간이 아니다): 모달 좌우 패딩 8 ↔ 상단 65(A ②) ·
        하단 버튼 404×81 종횡비(B ⑥) — 손대면 16·22·69·70·87·103 … 팝업 전부가 같이 움직인다. */
   .mbody .ex715{padding:0 0 12px}
-  /* ⓓ 아이콘 칸 · 숫자 칸을 반씩 — 아이콘 오른변이 늘 같은 자리다(자릿수와 무관) */
-  .ex715 .ex-gn{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:center;height:104px}
-  .ex715 .ex-gn>em{justify-self:end;display:block;width:96px;height:96px;font-size:82px;line-height:96px;font-style:normal}
+  /* ⚑ 2회차 채점 이관(C ①6②7③6④5 · D ①6②8③6④5 — 둘 다 최저 5) — 일치한 셋을 고쳤다:
+     ⓔ 최대 눈금 라벨(«5,000,000»)이 카드 우변에서 **잘렸다** → 눈금은 노브 중심이 아니라 **축의 양 끝**
+        (컬럼 130..949)에 세운다 · ⓕ 비용 두 줄의 «아이콘+숫자» 를 통째로 우정렬해 **아이콘 x 가 줄마다
+        54~113px 흔들렸다** → 아이콘 칸을 고정하고 숫자만 우정렬 · ⓖ 블록 간격 26/25/16/12 → **24 통일**.
+     ⚠ **1회차 ⓓ(아이콘 자리 고정)를 2회차에 되돌렸다** — 1회차 비평(A·B)은 캡처 셋을 나란히 놓고
+       «자릿수가 늘면 아이콘이 146px 움직인다» 를 지적했고, 2회차 비평(D)은 한 장 안에서
+       «행 중심이 카드 중심에서 119.5px 벗어난다(좌여백 318 : 우여백 79)» 를 지적했다. 둘은 **동시에
+       만족할 수 없다**(폭이 변하는 두 덩이). 보는 사람은 팝업을 **한 번에 하나만** 보므로 프레임 안에
+       실재하는 기준(카드 중심)을 택했다 — 되돌리려면 이 규칙을 `grid-template-columns:1fr 1fr` 로
+       바꾸면 된다(그 순간 D 의 지적이 되살아난다). */
+  .ex715 .ex-gn{display:flex;align-items:center;justify-content:center;gap:16px;height:104px}
+  .ex715 .ex-gn>em{flex:none;display:block;width:96px;height:96px;font-size:82px;line-height:96px;font-style:normal}
   .ex715 .ex-gn>em>.cic{width:96px;height:96px}
-  .ex715 .ex-gn>b{justify-self:start;text-align:left;font-size:58px;font-weight:900;color:#3A2C20;
+  .ex715 .ex-gn>b{font-size:58px;font-weight:900;color:#3A2C20;white-space:nowrap;
     -webkit-text-stroke:2px #F7ECDA;paint-order:stroke fill}
   /* ⓒ 트랙은 «띠(50) + 그 위를 달리는 노브(84×64)» 두 겹이다. 포인터를 받는 것은 **바깥 그릇**
      (`#exTrack` · 높이 64)이라 손가락 표적이 띠보다 14px 크고, 띠(`.ex-bar`)는 채움을 자르기 위해
      `overflow:hidden` 을 그대로 쓴다 — 노브를 띠 안에 두면 돌출이 그 자리에서 잘린다. */
-  .ex715 .ex-sl{position:relative;margin:22px 0 0;height:64px;cursor:pointer;touch-action:none}
+  .ex715 .ex-sl{position:relative;margin:24px 0 0;height:64px;cursor:pointer;touch-action:none}
   .ex715 .ex-bar{position:absolute;left:0;right:0;top:7px;height:50px;box-sizing:border-box;
     border:6px solid #000;border-radius:18px;overflow:hidden;background:#8A7355}
   .ex715 .ex-fill{position:absolute;left:0;top:0;bottom:0;width:0;
@@ -2195,22 +2204,33 @@
      (55 트랙이 «트랙 왼끝 + 진행률 × (679 − 60)» 으로 푼 것과 같은 산수다). */
   .ex715 .ex-knob{position:absolute;top:0;width:84px;height:64px;box-sizing:border-box;
     border:5px solid #000;border-radius:18px;background:#F6F5FA;z-index:2;pointer-events:none}
-  /* 눈금은 **노브 중심이 실제로 닿는 두 끝**에 세운다 — 트랙 외곽에 붙이면 노브 폭의 절반(42px)만큼
-     늘 어긋난다(1회차 A ④ 지적6 이 30.0/32.5px 로 실측한 그 값이다). 칸 폭 = 노브 폭. */
+  /* ⓔ 눈금은 **축의 양 끝**(컬럼 130..949)에 세운다. 1회차엔 노브 중심(42px 안쪽)에 맞췄는데,
+     그러면 «5,000,000» 처럼 긴 값이 중심 정렬 때문에 **양쪽으로 반씩 퍼져 카드 우변에서 잘린다**
+     (2회차 C·D 가 독립으로 같은 자리를 짚었다 — 끝자리 14px 소실). 잘림은 «못 읽는다» 이고
+     노브 중심과의 42px 차이는 «축 끝 라벨» 이라는 흔한 읽기라, 잘림을 없애는 쪽을 골랐다.
+     ⚠ 150 규약 때문에 «5M» 로 접는 길은 막혀 있다(골드 말고는 단위를 안 접는다). */
   .ex715 .ex-mm{display:flex;justify-content:space-between;margin:6px 0 0}
-  .ex715 .ex-mm>i{width:84px;text-align:center;font-size:24px;font-weight:700;font-style:normal;color:#7A6550}
-  .ex715 .ex-adj{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:18px}
+  .ex715 .ex-mm>i{max-width:46%;white-space:nowrap;font-size:22px;font-weight:700;font-style:normal;color:#7A6550}
+  .ex715 .ex-mm>i:last-child{text-align:right}
+  .ex715 .ex-adj{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:24px}
   .ex715 .ex-b{width:132px;height:74px;line-height:74px;border-radius:20px;cursor:pointer;
     font-size:34px;font-weight:800;color:#F0D9AE;background:linear-gradient(180deg,#4A5570 0,#39415A 100%);
     box-shadow:inset 0 0 0 4px #141414,0 4px 0 #23293A;user-select:none}
   .ex715 .ex-b.off{color:#8A8FA0;background:#39415A;box-shadow:inset 0 0 0 4px #141414;cursor:default}
   .ex715 .ex-q{flex:1;height:74px;line-height:74px;border-radius:20px;background:#F7ECDA;
     border:4px solid #C8B091;box-sizing:border-box;font-size:40px;font-weight:900;color:#3A2C20}
-  .ex715 .ex-inf{margin-top:20px;background:#F7ECDA;border-radius:22px;padding:18px 24px}
-  .ex715 .ex-inf p{display:flex;justify-content:space-between;align-items:center;font-size:26px}
-  .ex715 .ex-inf p+p{margin-top:8px}
-  .ex715 .ex-inf i{font-style:normal;color:#7A6550}
-  .ex715 .ex-inf b{color:#B4571E;margin-left:8px}
+  /* ⚠ 두 줄이 **한 격자**여야 칸이 맞는다 — 줄마다 `display:grid` 를 주면 격자가 둘이라
+     같은 «아이콘 칸» 이 줄마다 제 내용 폭으로 따로 정해진다(그 상태로 한 번 빨갰다). */
+  .ex715 .ex-inf{margin-top:24px;background:#F7ECDA;border-radius:22px;padding:18px 24px;
+    display:grid;grid-template-columns:1fr 44px auto;align-items:center;column-gap:10px;row-gap:10px}
+  /* ⓕ 세 칸 격자 — [이름][아이콘 44][숫자 우정렬]. 아이콘 칸이 **고정**이라 두 줄의 아이콘이
+     같은 x 에 선다(2회차 C 실측: 통짜 우정렬이던 1·2회차엔 줄마다 54~113px 흔들렸다).
+     숫자는 그대로 우변에 맞춰 «자릿수가 달라도 끝자리가 한 줄» 이라는 성질을 지킨다. */
+  .ex715 .ex-inf p{display:contents;font-size:26px}
+  .ex715 .ex-inf i,.ex715 .ex-inf s,.ex715 .ex-inf b{font-size:26px}
+  .ex715 .ex-inf i{justify-self:start;font-style:normal;color:#7A6550}
+  .ex715 .ex-inf s{justify-self:center;text-decoration:none;line-height:0}
+  .ex715 .ex-inf b{justify-self:end;color:#B4571E}
   .ex715 .ex-inf .cic{width:32px;height:32px;vertical-align:-6px}
   /* ── 478 청약철회 규정 본문 (2026-08-30 주인 지시로 신설된 팝업) ──
      269 와 같은 처방 — 전용 래퍼 `.lgw` 로만 손댄다(`.mbody p` 는 A5 공용이라 못 건드린다).
@@ -6937,7 +6957,9 @@
   /* 204 §10 — 던전 입장권 교환 리본 아래 안내 한 줄. «N/2» 의 N 이 분모를 넘는 것이 정상임을 명시한다.
      리본(top 3654, 높이 92)과 첫 카드 행(top 3844) 사이 94px 을 그대로 쓴다. */
   .cn-tknt{left:66px;top:3752px;width:948px;height:46px;text-align:center}
-  .cn-tknt.ex{top:3186px}                       /* 715 — §9 리본(3084) ↔ 첫 카드(3270) 사이 */
+  /* 715 — §9 리본(3084 · 높이 92) ↔ 첫 카드(3270) 사이. §10 이 리본 하변에서 **6px** 띄운 것과
+     같은 리듬으로 맞춘다(2회차 D 지적5 — 두 구역이 10/38 ↔ 6/46 으로 갈려 있었다). */
+  .cn-tknt.ex{top:3182px}
   .cn-tknt>i{font-size:30px;line-height:46px;color:#F0D9AE;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill}
   .cn-a2t{left:561px;top:1404px;width:420px;height:80px;text-align:center}
@@ -20751,8 +20773,10 @@ function exSync(){
   $('exKnob').style.left  = 'calc(' + (t * 100) + '% - ' + (t * 84) + 'px)';
   $('exQn').textContent   = fmt(n);
   $('exGn').innerHTML     = '×' + fmt(d.gain(n));
-  $('exCost').innerHTML   = d.ic() + ' <b>' + fmt(cost) + '</b>';
-  $('exAft').innerHTML    = d.ic() + ' <b>' + fmt(d.have() - cost) + '</b>';
+  $('exCostIc').innerHTML = d.ic();
+  $('exAftIc').innerHTML  = d.ic();
+  $('exCost').textContent = fmt(cost);
+  $('exAft').textContent  = fmt(d.have() - cost);
   [...document.querySelectorAll('#modal [data-exadj]')].forEach(b => {
     const v = +b.dataset.exadj;
     b.classList.toggle('off', n + v < 1 || n + v > max);
@@ -20786,8 +20810,8 @@ function exOpen(d, src){
     +     '<b class="ex-q" id="exQn">1</b>'
     +     '<b class="ex-b" data-exadj="1">+1</b><b class="ex-b" data-exadj="10">+10</b>'
     +   '</div>'
-    +   '<div class="ex-inf"><p><i>총비용</i><span id="exCost"></span></p>'
-    +     '<p><i>교환 후 잔액</i><span id="exAft"></span></p></div>'
+    +   '<div class="ex-inf"><p><i>총비용</i><s id="exCostIc"></s><b id="exCost"></b></p>'
+    +     '<p><i>교환 후 잔액</i><s id="exAftIc"></s><b id="exAft"></b></p></div>'
     + '</div>'
     + '<div class="mrow"><button class="gbtn" id="exNo">취소</button>'
     +   '<button class="gbtn green" id="exGo">교환</button></div>');

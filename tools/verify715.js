@@ -105,7 +105,7 @@ const openCoin = page => ev(page, () => {
       const g = document.querySelector('#shopList .cn-tknt.ex');
       return g ? { txt: g.textContent.trim(), top: g.offsetTop } : null;
     });
-    ok(guide && guide.top === 3186 && /슬라이더/.test(guide.txt),
+    ok(guide && guide.top === 3182 && /슬라이더/.test(guide.txt),
       '[A5] 수량 탭이 있던 94px 구간을 안내 한 줄이 받는다(자리를 비우지 않는다 · §10 좌표 불변)',
       guide ? 'top ' + guide.top + ' · ' + guide.txt : '없음');
   }
@@ -386,6 +386,14 @@ const openCoin = page => ev(page, () => {
         colR: [tr.right, adj.right, inf.right, document.querySelector('#modal .mrow').getBoundingClientRect().right]
           .map(v => Math.round(v)).join(','),
         knobW: Math.round(document.getElementById('exKnob').getBoundingClientRect().width),
+        /* 2회차 채점 ⓔ — 눈금 라벨이 컬럼(과 카드)을 넘어 잘리지 않는가. 최대 눈금이 가장 긴 값이다. */
+        mm: (() => { const l = [...w.querySelectorAll('.ex-mm>i')].map(e => e.getBoundingClientRect());
+          const card = w.parentElement.getBoundingClientRect();
+          return l.length === 2 && l[0].left >= tr.left - 0.6 && l[1].right <= tr.right + 0.6
+            && l[1].right <= card.right - 0.6; })(),
+        /* 2회차 채점 ⓕ — 비용 두 줄의 아이콘이 같은 x 에 서는가 */
+        infIc: (() => { const l = [...w.querySelectorAll('.ex-inf s')].map(e => Math.round(e.getBoundingClientRect().left));
+          return l.length === 2 ? l.join(',') : 'x'; })(),
         goIn: go.top >= app.top && go.bottom <= app.bottom + 0.6,
         clip: body.scrollHeight - body.clientHeight,
         knob: (() => { const k = document.getElementById('exKnob').getBoundingClientRect();
@@ -403,6 +411,12 @@ const openCoin = page => ev(page, () => {
     ok(one, '★ [F' + (H === 2280 ? 1 : 2) + '-e] ' + H
       + ' — 트랙·스테퍼·비용상자·[교환] 이 **한 컬럼**이다(1회차 채점 ④ — 좌변이 셋이었다)',
       box ? '좌 ' + box.col + ' · 우 ' + box.colR : '');
+    ok(box && box.mm,
+      '★ [F' + (H === 2280 ? 1 : 2) + '-g] ' + H
+      + ' — 눈금 라벨이 축 안에 든다(2회차 채점 — «5,000,000» 이 카드 우변에서 잘렸다)');
+    ok(box && box.infIc !== 'x' && new Set(box.infIc.split(',')).size === 1,
+      '★ [F' + (H === 2280 ? 1 : 2) + '-h] ' + H
+      + ' — 비용 두 줄의 재화 아이콘이 **같은 x** 에 선다(2회차 채점 ⓕ)', box ? box.infIc : '');
     ok(box && box.knobW === 84,
       '[F' + (H === 2280 ? 1 : 2) + '-f] ' + H + ' — 노브 84 폭(±버튼 132 의 64% · 1회차엔 45% 였다)',
       box ? String(box.knobW) : '');
