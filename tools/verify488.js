@@ -143,7 +143,12 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     await st.catch(() => {});
     await p.waitForTimeout(200);
   };
-  /* 시도 수는 각 자리가 실제로 부르는 «1회» 함수를 감싸 센다 */
+  /* 시도 수는 각 자리가 실제로 부르는 «1회» 함수를 감싸 센다.
+     ⚑ 701 이관(2026-09-02) — 그 «1회» 함수의 이름이 옮겨졌다. 701 이 배수 토글을 놓으면서
+     «한 번 강화» 를 코어로 갈랐고(룬 `runeTryOne` · 단련 `temperUpOne` · ×N 은 그 반복이다),
+     홀드 틱은 이제 `runeBuy`/`temperUpBtn` 을 안 지난다 — 옛 이름 그대로 두면 이 자가
+     «시도 0회» 로 빨개진다(제품은 멀쩡하다). 묻는 것(«회당 피드백이 시도마다 한 번»)은 그대로다:
+     이 자는 배수 ×1 에서 돌고 ×1 에서는 «코어 1회 = 틱 1회 = 시도 1회» 라 축이 전과 같다. */
   const countTries = fn => p.evaluate(name => {
     if (window['__o_' + name]) window[name] = window['__o_' + name];
     const o = window[name]; window['__o_' + name] = o;
@@ -186,7 +191,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
 
   console.log('[B] 룬 [강화] 홀드 — 회당 피드백 (홀드 ' + HOLD + 'ms · 게임 루프 ON)');
   await runeSetup(1); await p.waitForTimeout(450);
-  await countTries('runeBuy'); await reset();
+  await countTries('runeTryOne'); await reset();
   await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1'   /* 490 — 결제 갈래가 하나라 버튼도 하나 */), HOLD);
   const B1 = await grab();
   console.log('  · 전부 성공 — pulse호출 ' + B1.pulse + ' · 시도 ' + B1.tries + ' · 맥박 ' + B1.hb + '/' + B1.hbx + ' · 플로터 ' + B1.node + ' (비용 ' + B1.nodeDn + ') · 토스트 ' + B1.toast + ' · 문구 ' + B1.txts.join(','));
@@ -218,7 +223,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      B1.txts.join(',') || '문구 0장');
 
   await runeSetup(0); await p.waitForTimeout(450);
-  await countTries('runeBuy'); await reset();
+  await countTries('runeTryOne'); await reset();
   await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1'   /* 490 — 결제 갈래가 하나라 버튼도 하나 */), HOLD);
   const B2 = await grab();
   console.log('  · 전부 실패 — 시도 ' + B2.tries + ' · 맥박 ' + B2.hb + '/' + B2.hbx + ' · 플로터 ' + B2.node + ' · 색 ' + B2.cols.join(','));
@@ -248,7 +253,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     S.tstone = 1e12; openTrain(); setTrSub('temper'); renderTrain();   /* 613 — 직접 지불이라 전환 없음 */
   });
   await p.waitForTimeout(450);
-  await countTries('temperUpBtn'); await reset();
+  await countTries('temperUpOne'); await reset();
   const cC = await box('#trTemper .tr-tp[data-temper] .tb');
   if (cC) await holdTouch(cC, HOLD);
   const C = await grab();
@@ -971,7 +976,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
   });
   await p.waitForTimeout(450);
-  await countTries('runeBuy'); await reset();
+  await countTries('runeTryOne'); await reset();
   await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1'   /* 490 — 결제 갈래가 하나라 버튼도 하나 */), HOLD);
   const R = await grab();
   console.log('  · (되돌림) 시도 ' + R.tries + ' · 맥박 ' + (R.hb + R.hbx) + ' · 플로터 ' + R.node + ' · 토스트 ' + R.toast);

@@ -36400,10 +36400,23 @@ function temperUpBtn(k, quiet){
      pointerdown~click 사이에 칸을 지우면 선택이 유실된다(LESSONS 50-① · 작업 74·142).
      여기서 바꾸는 것은 칸의 innerHTML 뿐이고, 그 갱신도 «값이 달라졌을 때만» 친다. */
 function renderTrMulBars(){
-  const html = mulBarHTML(trMul);
   ['rnMulBar', 'tpMulBar'].forEach(id => {
     const bar = $(id); if(!bar) return;
-    if(bar.innerHTML !== html) bar.innerHTML = html;
+    /* ⚑ **칸을 만드는 것은 처음 한 번뿐이다** — 그 뒤로는 «누른 그 노드» 를 살려 둔 채 클래스만 뒤집는다.
+       491 [2-a] 가 이 팝업의 눌리는 요소 **전수**에 대해 «누른 노드가 살아남고 `jz-dn` 이 붙는가» 를
+       묻는데, 668·700 처럼 매번 `innerHTML` 을 갈아 끼우면 그 노드가 클릭 한복판에 죽는다
+       (터치의 암묵적 포인터 캡처가 끊긴다 — 64 교훈 1 · 262 ⓑ · LESSONS 50-①).
+       ⚠ 상점(#sumMulBar)·유물(#rwMulBar)은 이 규약을 안 지키고도 초록인데, 491 의 스캔 범위가
+         23 훈련 팝업뿐이라 «아직 안 물어봤을» 뿐이다 — 그 두 자리는 각자의 작업 단위 몫이라
+         손대지 않았고, 곁다리로 등재한다(병렬 세션 규칙 3).
+       칸의 «말» 은 여전히 `mulBarHTML()` 한 벌에서만 온다(668·700·713 과 한 부품 — 700 §2 규약). */
+    if(bar.children.length !== SUM_MULS.length) bar.innerHTML = mulBarHTML(trMul);
+    [...bar.children].forEach(c => {
+      const on = +c.dataset.mul === trMul;
+      c.classList.toggle('on', on);
+      const i = c.querySelector('i');
+      if(i){ i.classList.toggle('ol4', on); i.classList.toggle('ol3', !on); }
+    });
   });
 }
 /* 701 — 칸을 고르면 두 탭이 같은 값을 본다(위 `trMul` 머리말 ⓐ). 값이 바뀌면 단련 버튼 라벨의

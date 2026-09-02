@@ -330,7 +330,14 @@ async function holdCensus(page, sel, ms) {
 
   /* ── §5 홀드 — 반복이 돌고 그동안 노드가 안 갈린다 ── */
   {
-    await page.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub('temper'); renderTrain(); });
+    /* ⚑ 701 이관(2026-09-02) — **§2 의 «전수 누르기» 가 상태를 남긴다.** 701 이 이 팝업에 배수 토글을
+       놓으면서 그 스윕이 «×1,000» 칸까지 누르게 됐고(누르면 배수가 바뀌는 것이 그 칸의 일이다),
+       그대로 §5 에 들어오면 900ms 홀드가 단련석 1e6 을 한두 틱에 태워 **홀드가 스스로 멈춘다**
+       ⇒ [5-a] 는 초록인데 [5-b] 만 빨간 모양이 된다(제품은 멀쩡하다 — 자가 앞 절의 잔재를 물고 온 것).
+       이 절이 재는 것은 «홀드가 도는가» 이므로 재기 전에 배수·재화를 **기준 상태로 되돌린다**. */
+    await page.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain();
+      if (typeof setTrMul === 'function') setTrMul(1);
+      S.tstone = 1e6; setTrSub('temper'); renderTrain(); });
     await page.waitForTimeout(400);
     const r = await page.evaluate(() => {
       const e = document.querySelector('#trTemper .tr-tp.k0 .tb'); const b = e.getBoundingClientRect();
