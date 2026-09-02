@@ -132,7 +132,8 @@ const evOf = p => async (fn, a) => {
     const wb = w.getBoundingClientRect();
     const tops = ['.tr-tp.k0', '.tr-tp.k1', '.tr-tp.k2'].map(s => { const r = w.querySelector(s).getBoundingClientRect();
       return { y: +(r.y - wb.y).toFixed(1), h: +r.height.toFixed(1) }; });
-    return { ti: g('.ti'), tn: g('.tn'), tl: g('.tl'), td: g('.td'), tc: g('.tc'), tb: g('.tb'), tops };
+    return { ti: g('.ti'), tn: g('.tn'), tl: g('.tl'), td: g('.td'), tc: g('.tc'), tb: g('.tb'), tops,
+             rowW: +rb.width.toFixed(1) };
   });
   if (D.__err) ok(false, 'evaluate 실패: ' + D.__err);
   else {
@@ -144,10 +145,16 @@ const evOf = p => async (fn, a) => {
        상자가 버튼 하나뿐이므로 과녁만 옮긴다(333 처방: 자리를 비우지 말고 방향·과녁을 고친다). */
     ok(D.tn.x2 <= D.tb.x, '[D3] 이름 잉크가 오른쪽 상자(686 이후 = 버튼)를 안 밟는다',
        D.tn.x2 + ' ≤ ' + D.tb.x);
-    /* [D4] 가로는 여전히 584 값이고(632 · 340 — 자릿수 예산) 세로만 686 값이다(22 · 178). */
-    ok(D.tb.x === 632 && D.tb.w === 340 && D.tb.y === 22 && D.tb.h === 173,
-       '[D4] [단련] 버튼 — 가로 584 Δ0(632 · 340) · 세로 686(22 · 코어 173 + 립 5)',
-       D.tb.x + ',' + D.tb.y + ' ' + D.tb.w + '×' + D.tb.h);
+    /* [D4] ⚑ 769 이관 — 가로가 584 값(632 · 340)에서 **769 값(476 · 496)** 으로 갔다.
+       769 가 `.td` 예약 폭을 실측으로 다시 재(392 → 236) 남는 폭을 버튼에 준 결과다.
+       ⚠ 좌표를 새로 «적어» 두면 다음에 또 같이 굳는다 — 612 가 여기서 지키려던 것은
+       «버튼이 세로만 686 을 따르고 가로 규약은 제 자리에 있다» 이므로 **관계**로 묻는다:
+       우변 여백 26(584 불변) · 좌변 = `.td` 우변 + 16(584 [7-b] 간격) · 세로는 686 값 Δ0.
+       폭 자체의 근거(자릿수 예산)는 `verify769` [D] 가 잰다. */
+    ok(Math.abs(D.rowW - D.tb.x2 - 26) < 0.5 && Math.abs(D.tb.x - (D.td.x2 + 16)) < 0.5
+       && D.tb.y === 22 && D.tb.h === 173,
+       '[D4] [단련] 버튼 — 우변 26(584) · 좌변 = `.td` 우변 + 16 · 세로 686(22 · 코어 173 + 립 5)',
+       D.tb.x + ',' + D.tb.y + ' ' + D.tb.w + '×' + D.tb.h + ' (`.td` 우변 ' + D.td.x2 + ')');
     /* [D5] 는 방향을 뒤집었다 — «있어야 한다» 에서 «없어야 한다» 로. 되살아나면 빨개진다.
        ⚠ 값(비용)이 화면에서 사라진 것이 아니다: 그것은 [D5b] 가 버튼 라벨에서 확인한다. */
     ok(D.tc === null, '[D5] 686 — 비용 열(.tc)이 없다(되살아나면 빨강)',
@@ -168,24 +175,38 @@ const evOf = p => async (fn, a) => {
     const at = lv => { o.alloc.atk = lv; renderTemper();
       const row = w.querySelector('.tr-tp.k0'), rb = row.getBoundingClientRect();
       const i = row.querySelector('.td i'), r = i.getBoundingClientRect();
+      const bx = row.querySelector('.td').getBoundingClientRect();
       return { lv, x2: +(r.x - rb.x + r.width).toFixed(1), h: +r.height.toFixed(1),
+               box: +(bx.right - rb.x).toFixed(1),
                br: !!i.querySelector('br'), txt: row.querySelector('.td').textContent.length }; };
     const res = [0, 999, 99999].map(at);
     o.alloc.atk = keep; renderTemper();
     /* 297 — liveTemper 경로와 같은 그림인가(태그가 글자로 안 찍히나) */
     rtHold = { tag: 'temper' }; o.alloc.atk = 137; markDirty(); renderTemper();
     const liveTxt = w.querySelector('.tr-tp.k0 .td').textContent;
+    /* 769 이관 — «갱신됐는가» 를 **살아 있는 표기 한 벌**에 물어 본다(옛 «274%» 리터럴 대신) */
+    const want = fmtEff(temperVal('atk'));
     rtHold = null; o.alloc.atk = keep; markDirty(); renderTemper();
-    return { res, liveTxt };
+    return { res, liveTxt, want };
   });
   if (E.__err) ok(false, 'evaluate 실패: ' + E.__err);
   else {
     ok(E.res.every(r => r.br), '[E1] 효과 줄이 <br> 두 줄이다');
-    ok(E.res.every(r => r.x2 <= 616), '[E2] 최악 자릿수(Lv 99,999)에서도 상자 안(≤616)',
-       E.res.map(r => 'Lv' + r.lv + '→' + r.x2).join(' · '));
+    /* ⚑ 769 이관 — «≤616» 은 예약 폭 392 시절의 **좌표 사본**이었다(224 + 392). 769 가 그 예약을
+       실측으로 다시 재면서(392 → 236) 이 상수가 곧바로 거짓 초록이 된다(어떤 잉크든 616 아래다).
+       ⇒ 상자 우변을 **런타임에서 읽어** 묻는다(333 처방: 자리를 비우지 말고 과녁을 고친다).
+       예약 폭 자체가 최악을 담는지는 `verify769` [B]·[C] 가 잰다. */
+    ok(E.res.every(r => r.x2 <= r.box + 0.5), '[E2] 최악 자릿수(Lv 99,999)에서도 상자 안(우변은 런타임 값)',
+       E.res.map(r => 'Lv' + r.lv + '→' + r.x2 + '/' + r.box).join(' · '));
     ok(E.res.every(r => r.h <= 68.5), '[E3] 세 줄로 접히지 않는다(h ≤ 68)', E.res.map(r => r.h).join(' · '));
-    ok(E.liveTxt.indexOf('<br>') < 0 && /137|274/.test(E.liveTxt.replace(/,/g, '')),
-       '[E4] 홀드 중(liveTemper)에도 태그가 글자로 안 찍히고 값은 갱신된다', E.liveTxt.slice(0, 40));
+    /* ⚑ 769 곁다리 수리 — 이 항은 **725 이후 계속 빨갰다**(수리 전 트리에서도 25/26 임을 직접
+       대조 실행으로 확인했다 — 338·344 규칙). 「Lv 137 이면 «274%»」 라는 **옛 표기의 리터럴**을
+       찾고 있었는데 725 가 표기를 «×N배» 로 갈아엎어 그 글자가 영영 안 나온다(지금 값은 ×3.74배).
+       ⇒ 자릿수 사본을 지우고 **살아 있는 표기 한 벌**(`fmtEff(temperVal)`)이 낸 문자열을 묻는다 —
+       표기 규칙이 또 바뀌어도 이 항은 «홀드 경로가 통짜 경로와 같은 값을 그린다» 만 계속 잰다. */
+    ok(E.liveTxt.indexOf('<br>') < 0 && E.liveTxt.indexOf(E.want) >= 0,
+       '[E4] 홀드 중(liveTemper)에도 태그가 글자로 안 찍히고 값은 갱신된다(표기 한 벌과 대조)',
+       E.liveTxt.slice(0, 40) + ' ⊃ ' + E.want);
   }
 
   /* ══ [F] 9:13.3 ══════════════════════════════════════════════════════ */

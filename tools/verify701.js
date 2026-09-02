@@ -234,11 +234,31 @@ const EQ = m => `(() => { ${SEEDED};
       return out;
     };
     const A = await shot(pre.url), B = await shot(URL);
-    const moved = [];
-    for (const H of FRAMES) for (const s of SEL) if (A[H][s] !== B[H][s]) moved.push(H + ' ' + s + ' ' + A[H][s] + ' → ' + B[H][s]);
+    /* ⚑ 769 이관 — 이 항은 «수리 전 트리»(701 직전 SHA)와 대조한다. 그래서 **701 뒤에 온
+       의도적 변경**은 전부 여기서 빨개진다(자가 상한다는 뜻이 아니라, 그 변경을 이름과 함께
+       적어 줘야 한다는 뜻이다 — 333 처방: 자리를 비우지 말고 «무엇이 왜 움직였나» 를 적는다).
+       769 = `.td` 과예약(392 → 236)을 걷어 그 폭을 단련 버튼에 넘겼다 ⇒ `.tb` 폭 340 → 496,
+       좌변 −156. **세로(top·height)는 한 픽셀도 안 움직인다** — 그 조건까지 같이 건다. */
+    const LATER = {
+      '.tr-tp.k0 .tb': { why: '769 — 폭 340 → 496(좌변 −156) · 세로 Δ0', dx: -156, dw: 156 }
+    };
+    const moved = [], okLater = [];
+    for (const H of FRAMES) for (const s of SEL) {
+      if (A[H][s] === B[H][s]) continue;
+      const L = LATER[s];
+      if (L) {
+        const a = A[H][s].split(',').map(Number), b = B[H][s].split(',').map(Number);
+        if (Math.abs(b[0] - (a[0] + L.dx)) < 0.5 && Math.abs(b[1] - a[1]) < 0.5
+            && Math.abs(b[2] - (a[2] + L.dw)) < 0.5 && Math.abs(b[3] - a[3]) < 0.5) {
+          okLater.push(H + ' ' + s); continue;
+        }
+      }
+      moved.push(H + ' ' + s + ' ' + A[H][s] + ' → ' + B[H][s]);
+    }
     ok(moved.length === 0,
-      '[C] 바를 얹어도 **12개 요소 × 네 프레임이 한 픽셀도 안 움직인다**(룬 잔량 헤더만 의도적 이탈)',
-      moved.length ? moved.slice(0, 4).join(' | ') : '48/48 Δ0');
+      '[C] 바를 얹어도 **12개 요소 × 네 프레임이 한 픽셀도 안 움직인다**(룬 잔량 헤더 · 769 버튼 폭만 의도적 이탈)',
+      moved.length ? moved.slice(0, 4).join(' | ')
+                   : (48 - okLater.length) + '/48 Δ0 · 769 이탈 ' + okLater.length + '건(폭 +156 · 세로 Δ0)');
   }
 
   /* ── [D]~[H] 동작 ──────────────────────────────────────────────────────── */
