@@ -10026,7 +10026,17 @@
   .pf-ring{position:absolute;inset:7px;border-radius:39px;
     background:linear-gradient(180deg,#56443A 0 0);
     box-shadow:inset 0 0 0 7px #56443A,inset 0 0 0 11px #47392E}
-  .pf-fill{position:absolute;inset:18px;border-radius:30px;background:#F0D9BA;
+  /* 787 마감 — ⚑ **네 번째 «두 화면이 같은 것을 따로 적은» 자리이고, 이건 통째로 «없는» 쪽이었다.**
+     20 `.spc-body` 는 배경에 별 워터마크 타일(236×234 SVG)을 깔고 있는데 19 `.pf-fill` 은 단색이었다.
+     비평 J 가 «레퍼런스 19 에 별 11개 · 우리 19 에 0개 · 그런데 우리 20 에는 11개 다 있다» 로 잡았다
+     (⚠ 같은 회차의 비평 G 는 «두 캡처 다 있다» 고 반대로 적었다 — 갈린 것을 **소스로** 갈랐다: 아래 선언이 증거다).
+     ⚠ 처음엔 «`.pf-fill` inset 18 vs `.spc-body` 12 니까 −6px/−6px» 로 되밀었는데 자로 재니 **그게 오답**이었다
+        (별이 ref 대비 −7/−5px). 실측이 가리킨 값 35px/−24px 은 20 이 쓰는 34px/−23px 과 **1px 안**이라,
+        자리마다 매직넘버를 새로 잡지 않고 **20 과 같은 상수를 그대로 읽는다**(126 §26-6 «값 고르는 법»).
+        결과 실측: 별 11개, 첫 3개 ref (259,542)·(730,542)·(146,662) ↔ 우리 (258,543)·(730,543)·(144,660). */
+  .pf-fill{position:absolute;inset:18px;border-radius:30px;
+    background:#F0D9BA
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px -23px/236px 234px repeat;
     box-shadow:0 0 0 1px #887662}
   .pf>*{position:absolute}
   /* Gamer Id — 라틴 잉크 15 → font 21(÷0.72). 얇은 회흑 외곽선 2px */
