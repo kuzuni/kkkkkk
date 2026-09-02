@@ -783,6 +783,8 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
       return { r, ok: mk(false), pay: mk(true) };
     };
     const hit = (e, k) => !(e.x2 <= k.x || e.x1 >= k.x + k.w || e.y2 <= k.y || e.y1 >= k.y + k.h);
+    /* 780 — 봉투는 호스트 기준 px 라, 자식 rect 를 호스트 기준으로 옮길 때 쓰는 원점 */
+    const h0 = host => host.getBoundingClientRect().top;
     const kidsOf = (host, skip) => [...host.children]
       .map(el => { const h = host.getBoundingClientRect(), b = el.getBoundingClientRect();
         return { cls: (el.className || '').split(/\s+/)[0], x: b.left - h.left, y: b.top - h.top, w: b.width, h: b.height }; })
@@ -793,10 +795,24 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
       const host = document.querySelector('.tr-rn'), e = envs(host);
       /* 카드 아래 띠를 쓰므로 «그릇(#trRunes) 안» 인지도 같이 본다 */
       const wrap = document.getElementById('trRunes').getBoundingClientRect();
-      out.rune = { ok: kidsOf(host, []).filter(k => hit(e.ok, k)).map(k => k.cls),
-                   pay: kidsOf(host, []).filter(k => hit(e.pay, k)).map(k => k.cls),
+      /* ⚑⚑ 780 — `.ri` 는 **아이콘 액자(아트)**라 «정보 요소» 가 아니다 — 훈련 `.ci`([I4])·단련 `.ti`([I6])
+         와 **같은 규약**이고, 687 이 카드를 700 → 648 로 줄여 «바↔효과 행» 띠를 56 → 32px 로 만든 뒤
+         룬의 두 줄기가 이사한 자리가 바로 그 액자다(빈 띠 전수 36·16·10·10·8·10 — 56 이 없다).
+         ⚠ 예외를 «비운» 것이 아니라 **옮겼다** — 아래 `inRi` 가 «그럼 액자 안에는 드는가» 를 새로 묻고
+           ([I3]), 밟는 자식 목록은 여전히 0 을 요구한다. 신고가 옛 값(248/224)으로 되돌아가면 `.rd` 가
+           그 목록에 다시 뜬다(`probe780` §R 이 그 되돌림을 매 실행 재현한다). */
+      const ri = host.querySelector('.ri').getBoundingClientRect();
+      const inRi = en => en.y1 >= ri.top - h0(host) - 2 && en.y2 <= ri.bottom - h0(host) + 2;
+      out.rune = { ok: kidsOf(host, ['ri']).filter(k => hit(e.ok, k)).map(k => k.cls),
+                   pay: kidsOf(host, ['ri']).filter(k => hit(e.pay, k)).map(k => k.cls),
                    inWrap: e.ok.y2 <= wrap.height + 4 && e.pay.y2 <= wrap.height + 4,
-                   xsplit: e.ok.x2 <= e.pay.x1 };
+                   inRi: inRi(e.ok) && inRi(e.pay),
+                   /* 780 — 두 줄기는 좌우가 아니라 **위아래**로 갈렸다(단련 [I7] 과 같은 꼴).
+                      재는 뜻은 그대로 «둘이 서로 안 만난다» 이고, 간격 문턱은 글리프 높이
+                      `HB_INK_H` 34 다(619 13회차가 «룬만 두 띠가 24px» 를 결함으로 적어 둔 값). */
+                   sep: Math.max(0, Math.min(e.ok.y2, e.pay.y2) - Math.max(e.ok.y1, e.pay.y1)) === 0
+                        && Math.abs(parseFloat(getComputedStyle(host).getPropertyValue('--hb-y2'))
+                                  - parseFloat(getComputedStyle(host).getPropertyValue('--hb-y'))) >= 34 };
     }
     setTrSub('train'); renderTrain();
     {
@@ -854,14 +870,19 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     }
     return out;
   });
-  console.log('  · 룬  결과 봉투가 밟는 자식 [' + I.rune.ok.join(',') + '] · 비용 [' + I.rune.pay.join(',') + '] · 그릇 안 ' + I.rune.inWrap + ' · 좌우 분리 ' + I.rune.xsplit);
+  console.log('  · 룬  결과 봉투가 밟는 자식 [' + I.rune.ok.join(',') + '] · 비용 [' + I.rune.pay.join(',') + '] · 그릇 안 ' + I.rune.inWrap + ' · 액자 안 ' + I.rune.inRi + ' · 두 줄기 분리 ' + I.rune.sep);
   console.log('  · 훈련 비용 봉투가 밟는 «정보» 자식 [' + I.train.pay.join(',') + '] · 아이콘 띠 안 ' + I.train.inCi + ' · 사다리 폭 ' + Math.round(I.train.ladder) + ' ≤ 카드 ' + Math.round(I.train.hostW));
   console.log('  · 단련 결과 봉투 [' + I.temper.ok.join(',') + '] · 비용 봉투 [' + I.temper.pay.join(',') + '] · 두 줄기 분리 ' + I.temper.sep);
   ok(I.rune.ok.length === 0 && I.rune.pay.length === 0,
-     '[I1] ★ 룬 — 두 봉투가 카드 자식(진행바·효과줄·버튼)을 한 개도 안 밟는다',
+     '[I1] ★ 룬 — 두 봉투가 카드 자식(진행바·효과줄·버튼)을 한 개도 안 밟는다(아이콘 .ri 는 아트 — [I4] 규약)',
      '[' + I.rune.ok.join(',') + '] / [' + I.rune.pay.join(',') + ']');
   ok(I.rune.inWrap, '[I2] 그 자리가 그릇(#trRunes 778px) 안이다 — 팝업 밖으로 안 샌다', String(I.rune.inWrap));
-  ok(I.rune.xsplit, '[I3] 룬은 두 줄기를 좌우로 갈랐다 — 사다리 둘이 서로 안 겹친다', String(I.rune.xsplit));
+  /* ⚑ 780 — [I3] 은 «좌우 분리» 에서 **«둘이 서로 안 만난다»** 로 방향을 옮겼다(333 처방).
+     묻는 성질은 한 칸도 안 줄었다 — 옛 항은 «x 로 갈렸는가» 하나였는데, 새 항은 «봉투 겹침 0» **과**
+     «레인 간격 ≥ 글리프 34» 둘을 요구한다(단련이 이미 [I7] 로 쓰던 세로 분리 규약). 여기에 액자 안
+     [I3-b] 가 붙어 «예외를 옮긴 자리» 를 못박는다 — 봉투가 아트를 벗어나면 곧바로 빨갛다. */
+  ok(I.rune.sep, '[I3] 룬은 두 줄기를 위아래로 갈랐다 — 봉투 겹침 0 · 레인 간격 ≥ 34(글리프 높이)', String(I.rune.sep));
+  ok(I.rune.inRi, '[I3-b] ★ 780 — 두 봉투가 아이콘 액자 `.ri` 안에 든다(밟아도 되는 유일한 자리)', String(I.rune.inRi));
   ok(I.train.pay.length === 0 && I.train.inCi,
      '[I4] ★ 훈련 — 비용 봉투가 «공격력»·«Lv» 같은 정보 자식을 안 밟고 아이콘 띠 안에 든다',
      '[' + I.train.pay.join(',') + '] · inCi ' + I.train.inCi);
