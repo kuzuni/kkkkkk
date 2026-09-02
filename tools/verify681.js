@@ -48,6 +48,12 @@ const PREV5 = '@keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity
 /* 위상 지터를 재는 벽시계 — [B13]·[R8] 이 같이 쓴다. 250·320ms 는 캡처 격자의 늦은 두 장이고
    7회차 비평 2인이 «동시 전멸» 을 실측한 바로 그 두 시각이다. */
 const PHASE_T = [175, 250, 320];
+/* ⚑ 9회차 — «보이는 꺼짐» 이 언제인지는 늦은 쪽을 촘촘히 봐야 보인다([B16]).
+   PHASE_T 를 앞에 두고 한 번에 재서 «태우고 재기» 를 한 벌 더 돌지 않는다(SAMPLE 이 노드를 걷는다). */
+const LIFE_T = [...PHASE_T, 335, 345, 355, 365, 375, 379];
+/* 실효 소멸 하한 — `verify666` [G1]「수명 < 제 예정의 0.9배 = 조기 소멸」과 **같은 계수**를
+   보이는 채널에도 적용한다(380 × 0.9 = 342ms). 손 상수가 아니라 남의 자에서 빌린 값이다. */
+const DIE_MIN = 380 * 0.9;
 
 /* 격자 판정 한 벌 — [B12] 와 [R7] 이 **같은 자**를 쓴다(402 «두 벌 금지»). */
 function gridVerdict(g) {
@@ -100,12 +106,35 @@ async function burstAndPhase(page, zeroDelay) {
   await page.mouse.up();
   await page.waitForTimeout(40);
   /* [R8] 재료 — 지연을 0 으로 눕히면 알들이 다시 «한 시계» 를 쓴다(제품 파일은 안 건드린다) */
+  /* [R8] 재료(8회차) — 지연을 눕힌다. [R9] 재료(9회차) — **알별 생명 시계 두 변수를 1 로 눕힌다**.
+     둘 다 제품 파일은 한 줄도 안 건드리고 «그 채널이 없었다면» 을 페이지에서만 만든다. */
   if (zeroDelay) await page.evaluate(() => {
     const L = document.getElementById('fxl'); if (!L) return;
-    [...L.querySelectorAll('.fx-spark')].forEach(n => { n.style.animationDelay = '0s'; });
+    [...L.querySelectorAll('.fx-spark')].forEach(n => { n.style.animationDelay = '0s';
+      n.style.setProperty('--fxk', '1'); n.style.setProperty('--fxxr', '1'); });
   });
-  const sp = await page.evaluate(SPREAD, PHASE_T);
-  return sp ? { n: sp.n, delays: sp.delays, rows: spreadOf(sp) } : null;
+  const sp = await page.evaluate(SPREAD, LIFE_T);
+  return sp ? { n: sp.n, delays: sp.delays, rows: spreadOf(sp), raw: sp.rows } : null;
+}
+
+/* ⚑ 9회차 — 알마다 «보이는 꺼짐»(실효 α ≤0.02)이 처음 오는 시각. 표본 사이는 선형으로 읽는다.
+   ⚠ 아직 안 꺼진 알은 마지막 표본 시각이 아니라 **수명 380ms** 로 센다(그 알은 끝까지 산다). */
+function dieTimes(raw) {
+  const rows = raw.slice().sort((a, b) => a.T - b.T);
+  const n = rows[0] ? rows[0].ops.length : 0;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let t = 380;
+    for (let k = 1; k < rows.length; k++) {
+      const a = rows[k - 1].ops[i], b = rows[k].ops[i];
+      if (a > 0.02 && b <= 0.02) {
+        t = rows[k - 1].T + (rows[k].T - rows[k - 1].T) * ((a - 0.02) / Math.max(1e-9, a - b));
+        break;
+      }
+    }
+    out.push(t);
+  }
+  return out;
 }
 
 async function burstAndGrid(page) {
@@ -306,6 +335,45 @@ async function burstAndGrid(page) {
       + ' · 지연 ' + Math.min(...ph.delays).toFixed(1) + '~' + Math.max(...ph.delays).toFixed(1) + 'ms'
       + '  [8회차 지터판 실측 250ms 0.13 · 320ms 0.19 — 그 판은 ② 를 잃어 되돌렸다]');
   }
+  /* ⚑⚑ 9회차 신설 [B14]·[B15]·[B16] — **«동시 전멸» 을 판정으로 세운다.**
+     7회차 비평 2인(CR·CS)이 ④ 를 7 로 내린 유일한 축이고, 검수 기준까지 둘이 같이 냈다
+     («250ms 산포 ≥0.25 · 320ms ≥0.30»). 문턱은 그 요구가 아니라 **이 채널이 실제로 낼 수 있는
+     값과 두 세계 사이**에 세운다 — 7회차 실측 0.031·0.063 ↔ 9회차 0.2~0.3 대.
+     ⚠ 8회차의 [B13o] 를 판정으로 승격하지 **않는다** — 그 축(위상)은 ② 를 팔아 ④ 를 샀고
+       되돌렸다. 이 셋이 재는 것은 **알파 채널만**이라 [B12](크기 계단)와 같이 설 수 있다. */
+  if (ph) {
+    const at = T => ph.rows.find(r => Math.round(r.T) === T) || { range: 0, sd: 0, n: 0 };
+    ok(at(250).range >= 0.20 && at(320).range >= 0.15,
+       'B14 ★ **알들이 한 시계를 안 쓴다** — 살아 있는 알의 실효 알파 폭이 250ms ≥0.20 · 320ms ≥0.15(7회차 0.031 · 0.063)',
+       '175ms ' + p2(at(175).range) + ' · 250ms ' + p2(at(250).range) + ' · 320ms ' + p2(at(320).range));
+    /* [B4] 의 실효판 짝 — 평균이 아니라 **최댓값**을 묻는다. 알을 일부러 안 고르게 만든 뒤로는
+       «그 프레임에 정보량이 있는가» 를 평균이 대답하지 못한다(어두운 알이 밝은 알을 지운다).
+       눈이 읽는 것은 살아남은 가장 밝은 알이다. 평균은 아래 줄에 관측으로 같이 찍는다. */
+    const s320 = now ? now.at(320).s : 0, o320 = at(320);
+    const raw320 = (ph.raw.find(r => Math.round(r.T) === 320) || { ops: [0] }).ops;
+    const inkMax = Math.max(...raw320) * s320 * s320;
+    ok(inkMax >= 0.12,
+       'B15 ★ **찍히는 마지막 장에 정보량을 지닌 알이 남는다** — 실효 잉크 최대 ≥0.12([B4] 의 실효판 짝)',
+       '최대 ' + p2(inkMax) + ' · 평균 ' + p2(o320.mean * s320 * s320) + ' · 크기 ' + p2(s320 * 100) + '%');
+    const die = dieTimes(ph.raw);
+    const dMin = Math.min(...die), dMax = Math.max(...die);
+    /* ⚠ **문턱을 손으로 안 적는다.** 이 축은 위아래가 둘 다 남의 자에 못박혀 있다 —
+       위는 공용 봉투 자신이 꺼지는 시각(그보다 늦게 꺼질 수는 없다), 아래는 `verify666` [G1]
+       의 0.9배 계수(342ms)다. 그 사이가 **구조적으로 쓸 수 있는 창 전부**이므로, 요구는
+       «몇 ms» 가 아니라 «그 창의 몇 %» 로 적는다. 손 상수를 적으면 실측이 문턱에 붙는 순간
+       («폭 24.96 ≥ 25») 무르게 내리고 싶어지고, 그것이 574 가 등재한 플레이키 게이트의 얼굴이다. */
+    const envDie = (() => {
+      const r = now ? now.rel : [];
+      for (let i = 1; i < r.length; i++) if (r[i].op <= 0.02 && r[i - 1].op > 0.02)
+        return r[i - 1].T + (r[i].T - r[i - 1].T) * ((r[i - 1].op - 0.02) / Math.max(1e-9, r[i - 1].op - r[i].op));
+      return 380;
+    })();
+    const win = Math.max(1e-9, envDie - DIE_MIN);
+    ok((dMax - dMin) >= 0.70 * win && dMin >= DIE_MIN,
+       'B16 ★ **보이는 꺼짐이 한 프레임에 안 몰린다** — 소멸 시각 폭이 «쓸 수 있는 창»의 ≥70%, 단 가장 이른 것도 342ms 이상(`verify666` [G1] 의 0.9배 계수)',
+       '폭 ' + p2(dMax - dMin) + 'ms = 창 ' + p2(win) + 'ms(하한 ' + p2(DIE_MIN) + ' ↔ 봉투 소멸 '
+       + p2(envDie) + ')의 ' + p2((dMax - dMin) / win * 100) + '% · ' + p2(dMin) + '~' + p2(dMax) + 'ms');
+  } else { ok(false, 'B14 ★ 벽시계 표본을 못 얻었다'); ok(false, 'B15 ★'); ok(false, 'B16 ★'); }
   ok(errs.length === 0, 'B8 콘솔 에러 0', errs.slice(0, 2).join(' | '));
 
   /* ── [C] 불변 — 남의 것을 안 건드렸다 ─────────────────────────────── */
@@ -320,9 +388,35 @@ async function burstAndGrid(page) {
     el.remove();
     return { a, d, a2, ms: (typeof FXSPARK_MS !== 'undefined' ? FXSPARK_MS : null) };
   });
-  ok(inv.a === 'fxSpark' && inv.d === '0.38s',
-     'C1 `.fx-spark` 가 그대로 `fxSpark` 0.38s 를 탄다', inv.a + ' · ' + inv.d);
+  /* ⚑ 9회차 이관(333) — 이 항이 지키던 뜻은 «공용 알이 **공용 크기 봉투**를 0.38s 로 탄다» 이지
+     «애니가 하나뿐이다» 가 아니었다. 9회차가 곱해지는 **알파 채널**(`fxSparkX`)을 얹었으므로
+     글자 그대로 두면 «채널을 하나 더 얹었다» 는 사실만으로 빨개진다 — 뜻으로 고쳐 적는다.
+     ⚠ 그래도 **무르게 풀지 않는다**: 크기 채널이 여전히 `fxSpark` 로 **첫 번째**이고 그 길이가
+       0.38s 임을 그대로 못박고(순서가 뒤집히면 `envelope681` 의 `dur` 이 알파 채널을 읽는다),
+       둘째 채널의 길이는 «수명의 0.9~1.0배» 안이어야 한다(`verify666` [G1] 계수). */
+  const nm = inv.a.split(',').map(s => s.trim()), du = inv.d.split(',').map(s => s.trim());
+  const x2 = parseFloat(du[1]) || 0;
+  ok(nm[0] === 'fxSpark' && du[0] === '0.38s' && nm[1] === 'fxSparkX'
+     && x2 >= 0.38 * 0.9 && x2 <= 0.38,
+     'C1 ★ 크기 채널은 그대로 `fxSpark` 0.38s **첫 번째**이고, 알파 채널 `fxSparkX` 가 그 0.9~1.0배로 얹혀 있다',
+     inv.a + ' · ' + inv.d);
   ok(inv.a2 === 'fxRlic', 'C2 `.fx-rlic` 는 그대로 전용 봉투를 탄다(753 — 이 작업이 안 건드린다)', String(inv.a2));
+  /* ⚑ 9회차 신설 [C4] — **양자화가 선언에 있다.** 알별 인라인 문자열로 흩으면 `verify619` [M3]
+     (홀드 동안 rAF 프레임 >20)이 값을 치른다(8회차 실측 22 → 17). 클래스 넷으로 못박고,
+     넷이 실제로 **서로 다른 값**을 내는지(하나로 뭉치면 채널이 조용히 꺼진다) 같이 묻는다. */
+  const q = await page.evaluate(() => {
+    const L = document.getElementById('fxl') || document.body;
+    return [0, 1, 2, 3].map(i => {
+      const el = document.createElement('s'); el.className = 'fx-spark fxq' + i;
+      L.appendChild(el); const cs = getComputedStyle(el);
+      const v = { k: parseFloat(cs.getPropertyValue('--fxk')) || 0, d: cs.animationDuration };
+      el.remove(); return v;
+    });
+  });
+  const ks = q.map(v => v.k), ds = q.map(v => (v.d.split(',')[1] || '').trim());
+  ok(new Set(ks).size === 4 && new Set(ds).size === 4 && Math.min(...ks) >= 0.6,
+     'C4 ★ 생명 시계가 **선언의 네 칸**이다 — 밝기·길이가 넷 다 다르고 가장 어두운 알도 0.6 이상(알별 인라인 문자열 0 · [M3])',
+     'k ' + ks.join('/') + ' · 알파 길이 ' + ds.join('/'));
   ok(inv.ms === 380, 'C3 `FXSPARK_MS` 380 불변', String(inv.ms));
 
   /* ── [R] 되돌림 시험 ──────────────────────────────────────────────── */
@@ -372,12 +466,18 @@ async function burstAndGrid(page) {
   /* ⚑ 8회차 — [R8] 도 관측으로 남긴다(위 [B13o] 와 한 벌). 지연을 0 으로 눕힌 사본의 산포가
      0 이라는 것이, 8회차 지터판의 0.13·0.19 가 **실재했다**는 대조다. 제품은 지금 지연이 없으므로
      이 두 줄은 같은 수(0)를 낸다 — 다음 회차가 지터를 다시 켜면 그때 다시 갈린다. */
+  /* ⚑ 9회차 — 같은 «눕히기» 가 이제 [R9] 를 겸한다: `--fxk`·`--fxxr` 를 1 로 되돌리면
+     알들이 다시 **한 시계**를 쓴다. [B14]·[B16] 이 무른 자가 아님을 이 대조가 못박는다. */
   const phz = await burstAndPhase(page, true);
   if (phz) {
     const az = T => phz.rows.find(r => Math.round(r.T) === T) || { range: 0 };
     console.log('       · [R8o] 지연을 0 으로 눕힌 사본(관측): 250ms ' + p2(az(250).range)
       + ' · 320ms ' + p2(az(320).range));
-  }
+    const dz = dieTimes(phz.raw);
+    ok(az(250).range < 0.20 && (Math.max(...dz) - Math.min(...dz)) < 5,
+       'R9 ★ 생명 시계 두 변수를 1 로 눕히면 **다시 한 시계가 된다** — [B14]·[B16] 이 빨개지는 자리',
+       '250ms 폭 ' + p2(az(250).range) + ' · 소멸 폭 ' + p2(Math.max(...dz) - Math.min(...dz)) + 'ms');
+  } else ok(false, 'R9 ★ 눕힌 사본 표본을 못 얻었다');
 
   await browser.close();
   console.log('\nVERIFY681 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));

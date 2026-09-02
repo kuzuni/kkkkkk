@@ -180,10 +180,20 @@ const SPREAD = (times) => {
   const anims = [];
   nodes.forEach(nd => nd.getAnimations().forEach(a => { try { a.pause(); anims.push({ a, nd,
     d: (a.effect && a.effect.getTiming().delay) || 0 }); } catch (_) {} }));
+  /* ⚑ 9회차 — **눈이 보는 알파는 `opacity` 하나가 아니다.** 알마다 다른 «생명 시계» 는 곱해지는
+     둘째 채널(`filter:opacity()`)로 들어오므로, 이 자가 `opacity` 만 읽으면 새 채널이 통째로
+     안 보인다(8회차 판에서는 그 둘이 같은 속성이라 안 갈렸다). 실효 알파 = `opacity` × 필터 알파.
+     ⚠ 필터가 `none` 이거나 다른 함수뿐이면 1 로 읽는다 — 없는 채널을 0 으로 세면 «다 꺼졌다» 가 된다. */
+  const fop = (nd) => {
+    const f = getComputedStyle(nd).filter || '';
+    const m = /opacity\(([\d.]+)\)/.exec(f);
+    return m ? parseFloat(m[1]) : 1;
+  };
   const rows = times.map(T => {
     anims.forEach(x => { try { x.a.currentTime = T; } catch (_) {} });
-    const ops = nodes.map(nd => parseFloat(getComputedStyle(nd).opacity) || 0);
-    return { T, ops };
+    const env = nodes.map(nd => parseFloat(getComputedStyle(nd).opacity) || 0);
+    const ops = nodes.map((nd, i) => env[i] * fop(nd));
+    return { T, ops, env };
   });
   anims.forEach(x => { try { x.a.cancel(); } catch (_) {} });
   nodes.forEach(nd => nd.remove());
