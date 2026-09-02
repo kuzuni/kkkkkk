@@ -266,6 +266,17 @@ for (const line of curText.split('\n')) {
   if (g) headOnly.add(g[1]);
 }
 for (const [id, line] of cur) {
+  /* 축 ⓓ 는 **완료 표지보다 먼저** 본다 (작업 809). 807 까지는 이 검사가 `if (!d) continue`
+     아래에 있어서, 칸이 밀려 완료 표지가 구현 칸 **밖으로** 나간 행일수록 자가 더 조용했다 —
+     정확히 거꾸로다. 657 이 실제로 ⏹ 종료행인데 티어 스캔에 «미착수» 로 보였고, 그 순간
+     `verify572` 만 빨갛고 이 자는 초록이었다(지시서 [4] 는 이 자만 push 게이트로 지목한다).
+     ⚠ 넓혀도 **정상 등재 push 는 안 막힌다** — 문턱은 «칸 수» 하나뿐이고 제대로 쓴 등재 행은
+     7칸이다. 걸리는 행은 GitHub 이 이미 칸을 버리고 있는 행뿐이며, 이제 `fix572` 가
+     양방향(too-many·too-few)을 자동으로 편다(809 ⓐ). 못박는 자는 `tools/verify809.js` §R. */
+  if (!headOnly.has(id)) {
+    const nc = cellsOf(line).length;
+    if (nc !== COLS) { muteWatch.push({ id, n: nc, done: DONE_DATED.test(line) }); continue; }
+  }
   const d = DONE_DATED.exec(line);
   if (!d) continue;                                /* 진짜 미착수 — 자가 건드리면 안 되는 자리 */
   const y = NOT_YET.exec(line);                    /* 축 ⓐ 구현 칸까지 등재 상태 (388) */
@@ -277,9 +288,7 @@ for (const [id, line] of cur) {
   /* ⓐ·ⓑ 는 «낱말» 을 읽으므로 표가 달라도 그대로 도는데, ⓒ 는 **자리**를 읽는다 —
      헤더가 4칸인 위쪽 «작업 단위» 표는 자리 규약이 달라 ⓒ 의 범위 밖이다 (572). */
   if (headOnly.has(id)) continue;
-  const cells = cellsOf(line);
-  if (cells.length !== COLS) { muteWatch.push({ id, n: cells.length }); continue; }
-  const impl = cells[3];
+  const impl = cellsOf(line)[3];                   /* 칸 수는 위 축 ⓓ 가 이미 걸렀다 (809) */
   /* 축 ⓔ 구현 칸이 **낱말 그대로 «미착수»** 인 완료행 (604).
      ⓐ 는 비고 머리말까지 등재 상태일 때만 울고, ⓒ 는 `BARE_IMPL` 로 이 낱말을 **면제**한다 —
      그 사이에 «구현 칸만 등재 당시 그대로인 완료행» 이 통째로 빠져 있었다(592 가 그 꼴이었다).
@@ -566,10 +575,13 @@ if (contra.length) {
 /* 축 ⓓ — «판정 불가» 자체를 빨강으로 센다 (604).
    566 이 축 ⓒ 를 세우고 572 가 132행을 7칸으로 되돌렸는데도, 자는 «판정 불가 n건» 을 경고로만
    찍고 **종료 코드 0** 이었다. 그래서 8칸 행이 다시 생겨도 push 게이트가 조용했고, 592 가
-   구현 칸에 «미착수.» 를 단 채 완료행으로 하루를 났다. 범위는 **완료 표지가 있는 행**뿐이다 —
-   진짜 미착수 행은 위에서 이미 빠졌으므로(§2 첫 `continue`) 등재 중인 워커의 push 는 안 막는다. */
+   구현 칸에 «미착수.» 를 단 채 완료행으로 하루를 났다.
+   ⚑ **범위 개정(809)** — 옛 범위는 «완료 표지가 있는 행» 이었는데, 그 표지 자체가 칸이 밀리면
+   구현 칸 밖으로 나가 §2 가 그 행을 «미착수» 로 보고 건너뛰었다: **밀린 행일수록 조용했다.**
+   지금 범위는 «칸 수가 7이 아닌 행 전부»(위쪽 4칸 표는 제외)다. 정상 등재 행은 7칸이라 안 걸린다. */
 for (const w of muteWatch) console.log('  ✗ ' + w.id + ' — 판정 불가 · 칸 수가 ' + w.n +
-  '(헤더 7)이라 구현 칸의 자리를 못 믿는다 — 완료 표지가 있는 행이다');
+  '(헤더 7)이라 구현 칸의 자리를 못 믿는다 — ' +
+  (w.done ? '완료 표지가 있는 행이다' : '완료 표지가 **구현 칸 밖으로 밀렸을 수도** 있다(809 — 표지 유무로 거르지 않는다)'));
 
 if (muteWatch.length) {
   console.log('\nPROGRESS UNJUDGEABLE ' + muteWatch.length + '건 — ' + muteWatch.map(w => w.id).join(' '));
@@ -577,6 +589,7 @@ if (muteWatch.length) {
   console.log('    = 그 행 안에 자기모순이 숨어도 표도 자도 조용하다(572 등재 사유 그대로).');
   console.log('  고치는 법: node tools/fix572.js          (미리보기 — 어디를 어떻게 합칠지만 찍는다)');
   console.log('             node tools/fix572.js --write  (무손실 — 글자는 한 자도 안 지운다)');
+  console.log('    ⚑ 809 부터 `fix572` 는 **칸이 모자란 행(too-few)도** 자리 점수로 편다 — 손으로 풀 일이 아니다.');
   console.log('  ⚠ 자리를 되돌린 뒤 그 행이 §2 자기모순에 걸리면 지시서 [1] 대로 **세 칸을 같이** 고쳐라 —');
   console.log('    ① 구현 칸  ② 루프 횟수  ③ 비고 머리말. 등재문 본문은 지우지 마라.');
 }

@@ -130,21 +130,20 @@ for (const b of BROKEN) {
 
 /* ── [3] 갈래 ─────────────────────────────────────────────────────────────── */
 console.log('\n[3] 갈래 — `fix572` 가 어느 쪽을 펴는가 (등재문 ⓐ·ⓑ)');
+console.log('  ⚑ **방향 이관(809)** — 807 때 이 절은 «too-few 는 못 고친다» 를 못박는 절이었다.');
+console.log('    809 가 그 비대칭을 없앴으므로 같은 관측점에서 **편다** 를 묻는다(333 처방).');
 
 for (const b of BROKEN) {
   if (!b.line) { ok('[3-' + b.id + ']', false, '되만든 행이 없어 못 잰다'); continue; }
   const r = fix572.fixRow(b.line);
   const n = r.line === b.line ? -1 : fix572.split(r.line).cells.length;
-  if (b.want > fix572.COLS) {
-    ok('[3-' + b.id + ']', n === fix572.COLS,
-      'too-many(' + b.want + ') 는 자동으로 7칸이 된다 (실측 ' + n + ' · ' + r.why + ')');
-    ok('[3-' + b.id + 'L]', fix572.lossless(b.line, r.line), '무손실 — 글자는 한 자도 안 지웠다');
-  } else {
-    ok('[3-' + b.id + ']', r.line === b.line && /^too-few/.test(String(r.why)),
-      'too-few(' + b.want + ') 는 **못 고친다**(«' + r.why + '») — 손으로 펴야 한다');
-  }
+  const kind = b.want > fix572.COLS ? 'too-many' : 'too-few';
+  ok('[3-' + b.id + ']', n === fix572.COLS,
+    kind + '(' + b.want + ') 는 자동으로 7칸이 된다 (실측 ' + n + ' · ' + r.why + ')');
+  ok('[3-' + b.id + 'L]', r.line !== b.line && fix572.lossless(b.line, r.line),
+    '무손실 — 글자는 한 자도 안 지웠다');
 }
-console.log('  ⚑ 이 비대칭이 807 이 남기는 잔여다 — 재발하면 또 T1 세션 하나가 든다(곁다리 등재).');
+console.log('  ⚑ 807 이 남긴 잔여(too-few 비대칭)는 809 가 닫았다 — 이제 양방향 모두 자동이다.');
 
 /* ── [4] 자 둘이 갈라진다 ─────────────────────────────────────────────────── */
 console.log('\n[4] 두 자 — 같은 축(«칸 7»)을 `verify572` 와 `verifyProgress` 가 따로 잰다');
@@ -169,18 +168,20 @@ ok('[4-a]', old657 !== null && fix572.split(old657).cells.length === 5,
 if (old657) {
   const t = cur.slice(); t[at657] = old657;
   const g = gauge(writeTmp(t, 'PROGRESS.md'));
-  /* ⚑ 여기가 이 절의 본체 — 종료 표지가 구현 칸 밖으로 밀리면 §2 는 그 행을 «미착수» 로 보고
-     첫 `continue` 로 건너뛴다. 축 ⓓ 의 범위가 «완료 표지가 있는 행» 이라 **보기 전에 놓친다.** */
-  ok('[4-b]', g.code === 0 && !/PROGRESS UNJUDGEABLE/.test(g.out),
-    '⏹ 종료 표지가 밀려난 5칸 행에 `verifyProgress` 는 **조용하다**(종료 코드 ' + g.code + ') — 축 ⓓ 가 못 본다');
+  /* ⚑ 여기가 이 절의 본체 — 807 때는 종료 표지가 구현 칸 밖으로 밀리면 §2 가 그 행을 «미착수» 로
+     보고 첫 `continue` 로 건너뛰어 **보기 전에 놓쳤다**(축 ⓓ 범위 = «완료 표지가 있는 행»).
+     809 가 범위를 «칸 수가 7이 아닌 행 전부» 로 넓혔으므로 같은 관측점에서 **짖는다** 를 묻는다. */
+  ok('[4-b]', g.code === 1 && /PROGRESS UNJUDGEABLE/.test(g.out) && /✗ 657 — 판정 불가/.test(g.out),
+    '⏹ 종료 표지가 밀려난 5칸 행에 `verifyProgress` 가 **657 을 이름으로 부른다**(종료 코드 ' + g.code + ') — 809 축 ⓓ 개정');
   const v = (() => {
     try { execFileSync(process.execPath, [path.join(ROOT, 'tools', 'verify572.js')],
       { encoding: 'utf8', cwd: ROOT, maxBuffer: 1 << 26 }); return 0; }
     catch (e) { return e.status === undefined ? -1 : e.status; }
   })();
   ok('[4-c]', v === 0, '같은 순간 `verify572` 는 작업 트리(7칸)에 **초록**이다 — 자를 둘 다 봐야 한다');
-  console.log('  ⚑ 지시서 [4] 는 push 게이트로 `verifyProgress` 만 지목한다 ⇒ 이 모양은 **아무도 안 짖는다**.');
-  console.log('    657·681 이 실제로 그 상태로 서 있었고 `verify572` 만 16/17 로 빨갰다 (곁다리 809).');
+  console.log('  ⚑ 지시서 [4] 는 push 게이트로 `verifyProgress` 만 지목한다 — 807 때는 그래서 이 모양이');
+  console.log('    **아무에게도 안 짖었다**(657·681 이 실제로 그 상태로 섰고 `verify572` 만 16/17 로 빨갰다).');
+  console.log('    809 가 축 ⓓ 범위를 넓혀 그 자리를 지목받는 자 쪽으로 옮겼다 — 게이트는 그대로 하나다.');
 }
 
 /* 지금 표에는 그 모양이 하나도 없어야 한다 */
