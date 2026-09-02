@@ -19,16 +19,44 @@ const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
-const { SAMPLE, summarize } = require('./envelope681');
+const { SAMPLE, summarize, gridSteps } = require('./envelope681');
 
 const SRC = path.resolve(__dirname, '../index.html');
 const URL = 'file://' + SRC;
 const STEPS = Number(process.env.V681_STEPS || 20);
+/* 비평가가 실제로 보는 여덟 장의 시각(`cap681` 의 STOPS). [B12] 는 **이 격자에서만** 뜻이 있다. */
+const STOPS = [0, 20, 45, 70, 110, 175, 250, 320];
 
 /* 수리 전 곡선(= 되돌림 시험의 재료). `probe681` 과 같은 문자열이다. */
 const OLD = '@keyframes fxSpark{0%{transform:translate(0,0) scale(1);opacity:1}'
   + '52%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(1);opacity:1}'
   + '100%{transform:translate(var(--dx),var(--dy)) scale(.62);opacity:0}}';
+
+/* ⚑ 6회차 — [R7] 전용 재료. **5회차 곡선**이다(수리 전 곡선이 아니다).
+   [B12] 가 «무르게 푼 자» 가 아님을 보이려면 되돌릴 상대가 **바로 앞 회차**여야 한다 —
+   수리 전 곡선은 0~52% 가 통째로 평평해서 어떤 격자에서도 빨개지므로 이 항을 못 가른다. */
+const PREV5 = '@keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity:.6;animation-timing-function:linear}'
+  + '11%{transform:translate(calc(var(--dx)*.18),calc(var(--dy)*.18)) scale(.86);opacity:1;animation-timing-function:linear}'
+  + '18%{transform:translate(calc(var(--dx)*.28),calc(var(--dy)*.28)) scale(1);opacity:1;animation-timing-function:linear}'
+  + '33%{transform:translate(calc(var(--dx)*.48),calc(var(--dy)*.48)) scale(.92);opacity:.97;animation-timing-function:linear}'
+  + '44%{transform:translate(calc(var(--dx)*.61),calc(var(--dy)*.61)) scale(.87);opacity:.93;animation-timing-function:linear}'
+  + '56%{transform:translate(calc(var(--dx)*.73),calc(var(--dy)*.73)) scale(.81);opacity:.88;animation-timing-function:linear}'
+  + '70%{transform:translate(calc(var(--dx)*.85),calc(var(--dy)*.85)) scale(.73);opacity:.73;animation-timing-function:linear}'
+  + '86%{transform:translate(calc(var(--dx)*.945),calc(var(--dy)*.945)) scale(.62);opacity:.38;animation-timing-function:linear}'
+  + '100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}';
+
+/* 격자 판정 한 벌 — [B12] 와 [R7] 이 **같은 자**를 쓴다(402 «두 벌 금지»). */
+function gridVerdict(g) {
+  const post = g.steps.filter(x => x.from >= STOPS[g.peak]);
+  const rise = g.steps.find(x => x.to === STOPS[g.peak]);
+  return {
+    peakT: STOPS[g.peak],
+    rise: rise ? rise.d : 0,
+    first: post.length ? post[0].d : 0,
+    worst: post.length ? Math.max(...post.map(x => x.d)) : 0,   /* 가장 얕은 하강(= 0 에 가까운 쪽) */
+    line: g.steps.map(x => x.from + '→' + x.to + ' ' + (x.d >= 0 ? '+' : '') + (x.d * 100).toFixed(1) + '%').join(' · '),
+  };
+}
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? '  [' + d + ']' : '')); };
@@ -49,6 +77,25 @@ async function burstAndSample(page) {
   await page.waitForTimeout(40);
   const env = await page.evaluate(SAMPLE, STEPS);
   return env ? summarize(env) : null;
+}
+
+/* ⚑ 6회차 — **캡처 격자에서 한 번 더** 태워 잰다([B12]·[R7]).
+   같은 버스트를 재활용할 수 없다 — `SAMPLE` 은 끝에 노드를 걷어 내기 때문이다(페이지를 망가뜨린
+   채 끝내지 않는다는 그 자의 규약). 그래서 «태우고 → 격자에서 재고» 를 한 벌 더 돈다. */
+async function burstAndGrid(page) {
+  const g = await page.evaluate(() => {
+    const h = document.querySelector('#trCards [data-tr]'); if (!h) return null;
+    const b = h.querySelector('.cb') || h; const r = b.getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (!g) return null;
+  await page.mouse.move(g.x, g.y);
+  await page.mouse.down();
+  await page.waitForTimeout(90);
+  await page.mouse.up();
+  await page.waitForTimeout(40);
+  const env = await page.evaluate(SAMPLE, STOPS);
+  return env ? gridVerdict(gridSteps(env)) : null;
 }
 
 (async () => {
@@ -124,6 +171,7 @@ async function burstAndSample(page) {
   await page.waitForTimeout(400);
 
   const now = await burstAndSample(page);
+  const grid = await burstAndGrid(page);
 
   /* ── [B] 봉투 — 그려진 것으로 잰다 ────────────────────────────────── */
   blk('B] 봉투 — 브라우저가 실제로 그린 상자·알파');
@@ -188,6 +236,20 @@ async function burstAndSample(page) {
        'B7 ★ **끝에서 급정거하지 않는다** — 마지막 40ms 기울기가 직전 60ms 의 1.5배 이하(1회차 2.8배 = «컷»)',
        p2(sLast / sPrev) + '배 · α(280ms) ' + p2(aAt(now.dur - 100)) + ' → α(340ms) ' + p2(aAt(now.dur - 40)));
   }
+  /* ⚑⚑ 6회차 신설 [B12] — **캡처 격자의 이웃이 전부 구분된다.** 5회차 비평 2인이 같이 짚은 것을
+     그대로 자로 세운다(CN «70→110ms −4.0% 로 지각 임계 아래 · train-4/5 가 같은 그림» ·
+     CO «B 는 70·110 이 0.0% · A 는 105ms 가 한 장»). 문턱의 출처는 그 두 사람이 쓴 **지각 임계 7~8%**
+     이고, 봉우리 직후만 «−10% 이상» 으로 더 세운 것은 5회차 §5-1 ⓐ 가 적어 둔 처방 기준이다.
+     ⚠ 이 항은 **캡처 격자에서만** 뜻이 있다 — 균등 격자로 보간하면 봉우리가 두 표본 사이로 뭉개져
+       같은 곡선이 −10.1% 대신 −6.9% 로 읽힌다(6회차에 실제로 그렇게 나왔다).
+     ⚠ 짝 항 [R7] 이 이 자가 무르지 않다는 것을 못박는다 — 되돌릴 상대는 **5회차 곡선**이다. */
+  if (grid) {
+    console.log('       · 격자 델타: ' + grid.line);
+    ok(grid.rise >= 0.12 && grid.first <= -0.10 && grid.worst <= -0.08,
+       'B12 ★ **봉우리가 표본 한 장이다** — 오르는 마지막 쌍 ≥+12% · 봉우리 직후 ≤−10% · 봉우리 뒤 모든 쌍 ≤−8%',
+       '봉우리 ' + grid.peakT + 'ms · 진입 +' + p2(grid.rise * 100) + '% · 직후 ' + p2(grid.first * 100)
+       + '% · 가장 얕은 하강 ' + p2(grid.worst * 100) + '%');
+  } else ok(false, 'B12 ★ 캡처 격자 표본을 못 얻었다');
   ok(errs.length === 0, 'B8 콘솔 에러 0', errs.slice(0, 2).join(' | '));
 
   /* ── [C] 불변 — 남의 것을 안 건드렸다 ─────────────────────────────── */
@@ -234,6 +296,20 @@ async function burstAndSample(page) {
     ok((old.at(90).s - old.at(210).s) < 0.08 && old.at(0).op >= 0.99,
        'R6 되돌리면 **가운데가 다시 굳고 출생 알파 온셋이 사라진다** — [B10]·[B11] 이 빨개지는 자리',
        '90→210ms 크기 −' + p2((old.at(90).s - old.at(210).s) * 100) + '% · 출생 α ' + p2(old.at(0).op));
+  }
+
+  /* ⚑ 6회차 신설 [R7] — **5회차 곡선**을 얹으면 [B12] 가 빨개진다.
+     여기만 되돌릴 상대가 «수리 전» 이 아니라 «바로 앞 회차» 다 — 5회차 곡선은 [B1]~[B11] 을 전부
+     통과하고 오직 이 항에서만 무너진다. 그것이 6회차가 «새로 닫은 것» 의 정확한 크기다. */
+  await page.addStyleTag({ content: PREV5 });
+  await page.waitForTimeout(60);
+  const p5 = await burstAndGrid(page);
+  ok(!!p5, 'R7-0 대조군 성립 — 5회차 곡선 사본에서도 알이 태어난다');
+  if (p5) {
+    console.log('       · 5회차 격자 델타: ' + p5.line);
+    ok(p5.first > -0.10,
+       'R7 되돌리면 **봉우리가 다시 고원이 된다** — [B12] 가 빨개지는 자리(5회차 비평 2인 공통 지적)',
+       '봉우리 ' + p5.peakT + 'ms · 직후 ' + p2(p5.first * 100) + '%(6회차 ' + (grid ? p2(grid.first * 100) : '—') + '%)');
   }
 
   await browser.close();

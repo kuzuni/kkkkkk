@@ -23,9 +23,15 @@ const SAMPLE = (steps) => {
     const t = an && an.effect && an.effect.getTiming().duration; return typeof t === 'number' ? t : 380; })();
   const anims = [];
   nodes.forEach(nd => nd.getAnimations().forEach(a => { try { a.pause(); anims.push(a); } catch (_) {} }));
+  /* ⚑ 6회차 — `steps` 에 **시각 배열**을 주면 그 시각들에서 잰다(균등 격자 대신 «캡처 격자»).
+     [B12] 는 비평가가 보는 여덟 장 **바로 그 시각**의 이웃 델타를 물어야 하는데, 균등 19ms 격자로
+     보간하면 봉우리(68.4ms)가 57·76ms 두 표본 사이로 뭉개져 70→110ms 가 −10.1% 대신 −6.9% 로
+     읽힌다(자가 만든 유령 — 619 20회차 계열). 시각을 직접 주면 그 뭉갬이 구조적으로 안 생긴다. */
+  const times = Array.isArray(steps) ? steps.slice()
+    : Array.from({ length: steps + 1 }, (_, i) => dur * i / steps);
   const rows = [];
-  for (let i = 0; i <= steps; i++) {
-    const T = dur * i / steps;
+  for (let i = 0; i < times.length; i++) {
+    const T = times[i];
     anims.forEach(a => { try { a.currentTime = T; } catch (_) {} });   /* 알끼리 위상이 갈리면 «동시» 를 못 잰다 */
     rows.push({ T, per: nodes.map(nd => { const b = nd.getBoundingClientRect();
       return { w: b.width / sc, op: parseFloat(getComputedStyle(nd).opacity) || 0,
@@ -97,8 +103,15 @@ function summarize(env) {
     peakT: peak.T,                                           /* 최대 크기에 닿는 시각 */
     /* ⚑ 4회차 — «퇴장이 시작되는 시각» 은 **봉우리 뒤**에서 찾는다. 4회차가 출생 알파 온셋(α.60 → 1)을
        넣자 종전 판정(«처음으로 α<1 인 표본»)이 **탄생을 퇴장으로 읽어** 퇴장 폭이 380ms 로 부풀었다.
-       ⇒ α 가 1 에 붙어 있던 **마지막** 시각을 퇴장의 시작으로 본다. */
-    fadeStart: (() => { let last = 0; for (let i = 0; i < rel.length; i++) if (rel[i].op >= 0.995) last = rel[i].T; return last; })(),
+       ⇒ α 가 **제 봉우리에 머문 마지막** 시각을 퇴장의 시작으로 본다.
+       ⚑⚑ 6회차 — 판정을 «α ≥ 0.995» 에서 **«봉우리 α 에서 0.005 안»** 으로 옮겼다(같은 뜻, 다른 글자).
+       6회차 곡선은 알파 고원을 **한 점**(18% = 68.4ms)으로 좁혔는데 표본 격자(19ms)가 그 점을 안 밟아
+       실측 최대가 0.99 가 됐고, 그러자 «0.995 이상인 마지막 표본» 이 **하나도 없어** fadeStart 가 0 으로,
+       퇴장 폭이 **380ms** 로 읽혔다 — [B5] 가 초록인데 **아무것도 안 재는 헛초록**이다(그 항이 지키는
+       것은 «퇴장이 계조인가» 이지 «α 가 1 에 닿았는가» 가 아니다). 봉우리 기준은 고원이 한 점이든
+       한 구간이든 같은 것을 재고, 옛 곡선(고원 190ms)에서도 190ms 로 종전과 같은 값을 낸다. */
+    fadeStart: (() => { const mx = Math.max(...rel.map(r => r.op));
+      let last = 0; for (let i = 0; i < rel.length; i++) if (rel[i].op >= mx - 0.005) last = rel[i].T; return last; })(),
     tail35: env.dur - under(0.35),                           /* «흐린 얼룩» 구간 */
     tail50: env.dur - under(0.5),
     ink: (T) => { const v = at(T); return v.op * v.s * v.s; },
@@ -128,4 +141,20 @@ function summarize(env) {
   };
 }
 
-module.exports = { SAMPLE, summarize };
+/* ⚑ 6회차 신설 — **캡처 격자의 이웃 델타**. 5회차 비평 2인(CN·CO)이 «정점이 한 장이 아니라 고원»
+   을 같이 짚었고, 그 지적은 **여덟 장 사이의 크기 차** 하나로 잰다(지각 임계 7~8% — 28~30px
+   스프라이트 · 4·5회차 비평이 반복해 쓴 값).
+   ⚠ 정규화는 «격자 안에서의 제 최대» 다 — `tools/ink681.js`(잉크 자)와 **같은 정규화**라야 두 자의
+   수를 나란히 놓을 수 있다(6회차에 그 둘이 ~2%p 안에서 겹치는 것을 확인했다). */
+function gridSteps(env) {
+  const wMax = env.rows[0].per.map((_, i) => Math.max(...env.rows.map(r => r.per[i].w)));
+  const s = env.rows.map(r => r.per.reduce((a, p, i) => a + p.w / wMax[i], 0) / r.per.length);
+  const out = [];
+  for (let i = 1; i < env.rows.length; i++) {
+    out.push({ from: Math.round(env.rows[i - 1].T), to: Math.round(env.rows[i].T),
+               d: (s[i] - s[i - 1]) / Math.max(1e-9, s[i - 1]) });
+  }
+  return { s, steps: out, peak: s.indexOf(Math.max(...s)) };
+}
+
+module.exports = { SAMPLE, summarize, gridSteps };

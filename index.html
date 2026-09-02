@@ -4166,14 +4166,39 @@
      ⚠ CM 의 «A 는 20ms 에 이미 최종 반경의 88% 를 쓴다» 는 **이 곡선의 몫이 아니다** — 그 88% 는
        탄생 타원(호스트 bbox + 여유)의 반경이지 이동이 아니고(이 곡선의 20ms 이동 진행률은 8%),
        사거리 25px 자체가 619 의 clamp 다. 범위 밖 관측으로만 남긴다. */
+  /* ⚑⚑ 681 6회차 — 5회차 비평 2인(CN·CO)이 **정점 고원**을 같이 짚었다(CN «70→110ms 실측 −4.0% ·
+       지각 임계 7~8% 아래» · CO «B 는 70·110 이 0.0% · A 는 70·110·175 가 3.4% 안 = 105ms 가 한 장»).
+     ⚑ **먼저 자를 잉크로 옮겼다**(`tools/ink681.js` 신설 — 5회차가 «1번보다 먼저» 로 넘긴 자리).
+       상자(`getBoundingClientRect`)가 아니라 **그려진 알파 마스크**(`#fxl` 을 끈 사본과의 차분,
+       `probe820`·`verify753` [B] 와 같은 자)를 재니 두 자가 ~2%p 안에서 겹쳤고 — 5회차가 «표와 눈이
+       절반씩 어긋난다» 로 본 것의 실체는 **하네스**였다(그 회차 캡처의 클립이 621 눌림을 따라
+       ±5.2% 흔들렸다 · CN 이 잡아 `cap681` 에서 이미 닫았다). ⇒ **고원은 유령이 아니라 실재**다:
+       잉크로도 train 70→110ms **−4.9%** · relic 110→175ms **0.0%** 였다.
+     ⇒ **제어점을 캡처 격자에 얹는다.** 4·5회차가 반복해 실패한 이유가 이것이다 — 마디가 격자와
+       어긋나 있으면 «표본 사이를 보간해야만» 성립하는 하강이 되고, 비평가가 보는 여덟 장에서는
+       이웃이 붙는다(5회차 기록 §4 그대로). 5·12·18·29·46·66·84% = 19·45.6·68.4·110.2·174.8·250.8·319.2ms
+       이므로 여덟 표본 **전부**가 마디 위에 앉고, 그 자리의 값이 곧 화면의 값이다.
+     실측(상자 기준 이웃 델타) — 45→70 **+12.8%** · 70→110 **−10.1%** · 110→175 **−10.6%** ·
+       175→250 **−10.9%** · 250→320 **−11.9%**: 봉우리 뒤가 **전부 ≥10%**(봉우리는 표본 한 장).
+     ⚠ 봉우리 뒤를 «균등하게» 만든 것은 잉크 자가 시켰다 — 1차 배분(−10.1/−8.9/−9.3/−14.0)은 상자로는
+       전부 임계 위인데 **잉크로는 train 175→250 이 −6.1%** 였다(33 → 31px · 1px 이 3%인 자리라
+       상자의 −9.3% 가 화소 격자에서 반올림으로 먹혔다). 얕은 쌍 하나를 남기면 그 쌍이 곧 «같은 그림» 이다.
+     ⚠ 총량은 못 늘린다 — 1.00 → .50 은 고정이라(끝 scale 불변) «어느 구간을 깊게» 만 고를 수 있다.
+       그래서 봉우리 직후를 −10% 로 깊게 파고 **마지막 60ms(격자 밖)**에 남은 몫을 몰았다.
+     ⚠ 알파 꼬리는 **거의 안 건드렸다** — [B4](290ms 잉크 ≥0.25 · 실측 .273)와 [B7](끝 급정거 ≤1.5배 ·
+       실측 1.15)가 서로 반대로 당기는 자리라 5회차 값이 이미 그 사이에 서 있었다. 크기가 더 작아진
+       만큼(잉크 = α·s²) α 를 66% 에서 .73 → **.80** 으로 되받아 [B4] 를 지켰다.
+     ⚠ 이동 계수는 4회차와 같은 감속 곡선(1−(1−t)^1.7)에서 다시 뽑았다 — 구간속도 .00442 → .00417 →
+       .00399 → .00371 → .00322 → .00251 → .00170 → .00072 = **단조 감속**(재가속 비 1.00 유지).
+     ⚠ 불변: 수명 380ms · scale ≤1 · 끝 scale .5 · 알파 고원 끝 ≤52% (퇴장 폭 323ms ≥180 · 42회차). */
   @keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity:.6;animation-timing-function:linear}
-    11%{transform:translate(calc(var(--dx)*.18),calc(var(--dy)*.18)) scale(.86);opacity:1;animation-timing-function:linear}
-    18%{transform:translate(calc(var(--dx)*.28),calc(var(--dy)*.28)) scale(1);opacity:1;animation-timing-function:linear}
-    33%{transform:translate(calc(var(--dx)*.48),calc(var(--dy)*.48)) scale(.92);opacity:.97;animation-timing-function:linear}
-    44%{transform:translate(calc(var(--dx)*.61),calc(var(--dy)*.61)) scale(.87);opacity:.93;animation-timing-function:linear}
-    56%{transform:translate(calc(var(--dx)*.73),calc(var(--dy)*.73)) scale(.81);opacity:.88;animation-timing-function:linear}
-    70%{transform:translate(calc(var(--dx)*.85),calc(var(--dy)*.85)) scale(.73);opacity:.73;animation-timing-function:linear}
-    86%{transform:translate(calc(var(--dx)*.945),calc(var(--dy)*.945)) scale(.62);opacity:.38;animation-timing-function:linear}
+    5%{transform:translate(calc(var(--dx)*.084),calc(var(--dy)*.084)) scale(.55);opacity:.79;animation-timing-function:linear}
+    12%{transform:translate(calc(var(--dx)*.195),calc(var(--dy)*.195)) scale(.89);opacity:.97;animation-timing-function:linear}
+    18%{transform:translate(calc(var(--dx)*.286),calc(var(--dy)*.286)) scale(1);opacity:1;animation-timing-function:linear}
+    29%{transform:translate(calc(var(--dx)*.441),calc(var(--dy)*.441)) scale(.895);opacity:.965;animation-timing-function:linear}
+    46%{transform:translate(calc(var(--dx)*.649),calc(var(--dy)*.649)) scale(.801);opacity:.915;animation-timing-function:linear}
+    66%{transform:translate(calc(var(--dx)*.84),calc(var(--dy)*.84)) scale(.713);opacity:.83;animation-timing-function:linear}
+    84%{transform:translate(calc(var(--dx)*.956),calc(var(--dy)*.956)) scale(.631);opacity:.42;animation-timing-function:linear}
     100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
 
   /* ⚑⚑ 660 — **강화 버스트의 알갱이를 «그 탭이 내는 재화 아이콘» 으로 갈아 끼운다**
