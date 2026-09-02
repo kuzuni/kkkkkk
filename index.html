@@ -10675,13 +10675,22 @@
        카드 −52 는 전부 **잉크 없는 세로 여백**에서 걷었다(아이콘 200 · 글줄·바 높이 전부 불변):
        rd 280→256(아이콘 밑 40→16) · rst 452→428 · rbt 512→478 · rhint 632→598(버튼 밑 8 유지).
      ⚠ 카드 높이를 키우려면 이 뺄셈부터 다시 하라(게이트 verify271 [2] 가 겹침 0 을 잰다). */
-  /* 687 — 재화 잔량 헤더. 껍데기는 단련 .tp-hd 와 같은 카드 베벨 체계(한 부품 꼴 — 688 이
-     단련 쪽을 이 규약으로 끌어올 때 그대로 합쳐진다). 높이만 88 → 56(예산 §위 뺄셈). */
-  .rn-hd{left:24px;top:24px;width:998px;height:88px;border-radius:22px;background:#FFFDF2;
+  /* ⚑ 688 — «재화 잔량 헤더» **공용 부품**(주인 지시 2026-09-02 01:25 «(아이콘) 수량» 만 ·
+     한글 재화명 금지 · 중앙 정렬 · «룬부분도 표시한다면 중앙으로»). 613 이 단련 탭에 세우고
+     687 이 룬 탭에 세운 두 헤더가 각자 CSS 를 갖고 있었다 — 껍데기는 같은 값을 두 번 적고
+     속(아이콘 36/53 · 글자 36/52 · 정렬 start/center)은 갈려 있었다. 여기 한 벌로 묶는다
+     (664·96 «부품은 하나» — 두 탭이 따로 그리면 다음 손질에서 반드시 어긋난다).
+     각 탭이 적는 것은 **자리(left/top/width)뿐**이고, 텍스트 짝은 `curHeadTxt()` 다.
+     ⚠ 광학 중앙 보정 `--cur-dx` 는 **아이콘 아트마다 다르다** — 상자 대비 잉크 폭이
+     rstone 40/64 = .625(좌우 투명 10px씩) · tstone 48/48 = **1.0**(여백 0)이라
+     687 4회차의 −10 을 그대로 물려주면 단련 쪽은 반대로 −5 어긋난다. 기본값 0. */
+  .cur-hd{height:88px;border-radius:22px;background:#FFFDF2;
     box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823;
     text-align:center;line-height:88px;font-size:52px;color:#2C1E10}
-  .rn-hd b{color:#B4571E}
-  .rn-hd .cic{vertical-align:-10px;margin-right:12px;margin-left:-10px}
+  .cur-hd b{color:#B4571E}
+  .cur-hd .cic{vertical-align:-10px;margin-right:12px;margin-left:var(--cur-dx,0px)}
+  /* 687 — 룬 헤더는 이제 «자리 + 그 아트의 광학 보정» 만 적는다. */
+  .rn-hd{left:24px;top:24px;width:998px;--cur-dx:-10px}
   /* ↑ 687 4회차 — 광학 중앙: rstone 아트는 53 상자에 잉크 폭 33(종횡 .625 · §5161 표)이라 좌우
      투명 10px 씩을 낀 채 상자 기준으로 중앙을 잡으면 «보이는 잉크» 는 +5px 우편향으로 읽힌다
      (비평 3회차 2인 실측 +4). margin-left −10 은 전체를 −5 옮겨 잉크 중심을 0 에 놓는다. */
@@ -10816,13 +10825,12 @@
   .tr-temp{left:24px;top:34px;width:998px;height:900px}
   .tr-temp>*{position:absolute}
   /* 보유 줄(613) — 현재 단련석 개수 한 줄. [충전] 버튼(.cg)은 전환 단계와 함께 사라졌다.
-     카드 껍데기와 같은 베벨 체계 */
-  .tr-temp>.tp-hd{left:0;top:0;width:998px;height:88px;border-radius:22px;background:#FFFDF2;
-    box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
-  .tr-temp>.tp-hd>*{position:absolute}
-  .tr-temp>.tp-hd>.pv{left:28px;top:16px;height:56px;line-height:56px;font-size:36px;color:#2C1E10}
-  .tr-temp>.tp-hd>.pv b{color:#B4571E}
-  .tr-temp>.tp-hd .cic{vertical-align:-4px;margin-right:6px}
+     ⚑ 688 — 껍데기·속은 전부 공용 부품 `.cur-hd`(위 §687 자리) 몫이다. 여기 남는 것은
+     **자리뿐**이고, 그래서 «단련 헤더만 아이콘 36 · 글자 36 · 왼쪽 정렬» 이던 어긋남이
+     구조적으로 못 생긴다(값을 두 번 안 적는다). tstone 아트는 여백 0 이라 `--cur-dx` 는 기본값 0.
+     ⚠ `>*{position:absolute}` 를 걷어낸 것이 중앙 정렬의 기계다 — `.pv` 가 절대 위치이면
+     `text-align:center` 는 아무것도 못 한다(왼쪽 정렬의 진짜 원인은 라벨이 아니라 이 한 줄이었다). */
+  .tr-temp>.tp-hd{left:0;top:0;width:998px}
   /* 축 카드 3장 — 자리는 클래스로 못 박는다(nth-of-type 은 형제가 늘면 조용히 어긋난다: 203 교훈) */
   .tr-tp{width:998px;height:222px;border-radius:26px;background:#FFFDF2;
     box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
@@ -16537,7 +16545,7 @@
              613 «탭 재화 잔량 헤더» 규약의 룬판 — 보강(01:25)대로 «(아이콘) 수량» 만 · 중앙 정렬.
              마크업은 하위 바와 같은 이유로 **정적**이다(renderRunes 0.35초 재렌더 — LESSONS 50-①).
              값 갱신은 renderRunes/liveRunes 가 <i> 안만 고쳐 쓴다(홀드 중에도 실시간 감소 반영). -->
-        <div class="rn-hd" id="rnHd"><span class="pv"><i></i></span></div>
+        <div class="rn-hd cur-hd" id="rnHd"><span class="pv"><i></i></span></div>
         <div class="stabs sp3 rn-subs" id="rnSubs">
           <!-- 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 배지 노드 자체를 뗐다(죽은 마크업 금지 — 134/166 관례) -->
           <div class="stab on" data-runesub="r1"><i class="ol3">일반룬</i><span class="sk-lock"></span></div>
@@ -35006,6 +35014,13 @@ $('eqTabs').addEventListener('click', e => {
      그 둘까지 올리려면 210 이 정한 단련 탭 세로 예산(898)을 통째로 다시 짜야 한다 —
      측정표 23 정오표에 그 이유를 남긴다. */
 const TR_CUR_PX = 53;
+/* ⚑ 688 — «재화 잔량 헤더» 텍스트 부품(CSS `.cur-hd` 의 짝 · 주인 지시 2026-09-02 01:25).
+   찍는 것은 **아이콘 한 장 + 수** 뿐이다 — 한글 재화명(«단련석»·«룬강화석»)은 안 적는다.
+   613(단련)·687(룬) 두 헤더가 이 한 줄에서 파생하므로 크기·표기가 갈릴 자리가 없다.
+   ⚠ 위 584 주석의 «헤더는 못 올린다(577 [충전] 라벨 2행)» 는 **대상이 사라진 제약**이다 —
+     613 이 [충전] 버튼과 그 두 줄 라벨을 기능째 걷어내 헤더는 한 줄뿐이고, 687 이 같은
+     88 띠에서 53 을 이미 쓰고 있다(잉크 40 < 88). 그래서 헤더도 584 기준선을 그대로 읽는다. */
+const curHeadTxt = (k, n) => curIc(k, TR_CUR_PX) + '<b>' + fmt(n) + '</b>';
 /* 686 2회차 — **단련 버튼만** 화폐 아이콘을 키운다. 위 상수를 못 올리는 이유가 주석에 그대로 있다:
    `TR_CUR_PX` 는 룬 [강화] 버튼과 **공유**인데 그 버튼은 아직 74px 이라 96 이 안 들어간다.
    단련 버튼만 686 으로 173px 이 됐으므로 이 자리에만 제 상수를 준다(수치 근거는 `.tr-tp>.tb` 주석 ⓒ). */
@@ -35177,7 +35192,7 @@ const runeSumTxt = () => '룬 총효과 — '
    보강(01:25) — 한글 «룬강화석» 라벨 금지: 아이콘 + 수량뿐. 룬강화석은 등급 공용 재화 하나라
    (S.rstone — 등급별 재화가 아니다. 위임 규약: 표시값도 하나) 탭 전환과 무관하게 같은 값이다. */
 function runeHeadTxt(){
-  return { stone: curIc('rstone', TR_CUR_PX) + '<b>' + fmt(Math.floor(S.rstone)) + '</b>' };   /* 584 기준선 53 — 버튼과 같은 스케일(비평 3회차) */
+  return { stone: curHeadTxt('rstone', Math.floor(S.rstone)) };   /* 688 — 공용 부품(584 기준선 53) */
 }
 function runeHeadPut(){
   const n = document.querySelector('#rnHd .pv i'); if(!n) return;
@@ -35346,9 +35361,11 @@ function temperRowTxt(t){
 }
 /* 613 — 헤더는 «현재 단련석 개수» 한 줄이다(주인 보강 «단련석 포인트 보여주는 부분 없애고
    그부분에 현재 단련석 개수나 보여주게하셈»). [충전] 버튼(.cg)과 그 두 줄 라벨(577)은
-   전환 단계와 함께 통째로 사라졌다 — 자릿수 접힘 결함(577)도 대상이 없어져 같이 닫힌다. */
+   전환 단계와 함께 통째로 사라졌다 — 자릿수 접힘 결함(577)도 대상이 없어져 같이 닫힌다.
+   ⚑ 688 — 표기는 이제 룬 헤더와 **같은 부품**이다(주인 지시 «단련석이라고 한글로 표시 하지말기»):
+   한글 라벨을 걷고 `curHeadTxt` 하나에서 파생한다. «무엇을 세는가» 는 아이콘이 말한다(125 규약). */
 function temperHeadTxt(){
-  return { stone: curIc('tstone', 36) + ' 단련석 <b>' + fmt(tstoneHave()) + '</b>' };
+  return { stone: curHeadTxt('tstone', tstoneHave()) };
 }
 function renderTemper(){
   const w = $('trTemper'); if(!w) return;
@@ -35365,7 +35382,7 @@ function renderTemper(){
   if(w.dataset.sig === sig) return;
   w.dataset.sig = sig;
   const hd = temperHeadTxt();
-  let h = '<div class="tp-hd">'
+  let h = '<div class="tp-hd cur-hd">'   /* 688 — 룬 헤더(#rnHd)와 같은 공용 껍데기 */
     + '<span class="pv"><i>' + hd.stone + '</i></span></div>';
   TEMPERS.forEach((t, i) => {
     const x = temperRowTxt(t);

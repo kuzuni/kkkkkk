@@ -84,8 +84,14 @@ async function open(browser, seed) {
       hdKids: w.querySelectorAll('.tp-hd > *').length
     };
   });
-  ok(/cur-tstone\.svg/.test(disp.pvHtml) && /단련석/.test(disp.pvTxt) && /1,?234,?567/.test(disp.pvTxt),
-    '[2-a] ★ 헤더가 «단련석 1,234,567» — 아이콘 + 현재 보유 개수', disp.pvTxt.trim());
+  /* ⚑ 688 이관(2026-09-02, 주인 지시 «단련석이라고 한글로 표시 하지말기») — 333 처방대로
+     **자리를 비우지 않고 방향만 뒤집었다**. 613 의 뜻(«아이콘 + 지금 보유 개수»)은 한 글자도
+     안 죽는다: 아이콘 항·수 항은 그대로고, 라벨 항만 «있어야 한다» → «수(콤마)뿐이어야 한다»
+     로 바뀌었다. 라벨이 되살아나면 이 항이 다시 빨개진다(옛 문구를 지키는 짝은 §R 이 겸한다). */
+  ok(/cur-tstone\.svg/.test(disp.pvHtml) && /1,?234,?567/.test(disp.pvTxt)
+     && /^[\d,]+$/.test(disp.pvTxt.trim()),
+    '[2-a] ★ 헤더가 «(아이콘) 1,234,567» — 아이콘 + 현재 보유 개수뿐(688 — 한글 재화명 0자)',
+    disp.pvTxt.trim());
   ok(!/포인트/.test(disp.allTxt) && !/\bpt\b/.test(disp.allTxt),
     '[2-b] ★ «포인트»·«pt» 라는 말이 단련 탭 어디에도 없다');
   ok(disp.tbIc, '[2-c] 버튼이 단련석 아이콘으로 화폐를 말한다(125 · 686 이후 유일한 자리)');

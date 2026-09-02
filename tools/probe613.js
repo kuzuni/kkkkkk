@@ -31,7 +31,8 @@ function launchOpts(){
     S.tstone = 1234; openTrain(); setTrSub('temper'); renderTrain();
     const w = document.getElementById('trTemper');
     out.headTxt = (w.querySelector('.tp-hd .pv i')||{}).innerHTML || '';
-    out.headHasCount = /단련석/.test(out.headTxt) && /1,?234/.test(out.headTxt);
+    /* 688 — 헤더에서 한글 «단련석» 라벨이 사라졌다(주인 지시). 화폐는 아이콘이 말한다(125) */
+    out.headHasCount = /cur-tstone/.test(out.headTxt) && /1,?234/.test(out.headTxt);
     out.noChargeBtn = !w.querySelector('.cg') && !w.querySelector('[data-tpchg]');
     out.noResetRow = !w.querySelector('.tp-ft') && !w.querySelector('[data-tpreset]');
     out.btnTxt = (w.querySelector('.tr-tp .tb i')||{}).innerHTML || '';

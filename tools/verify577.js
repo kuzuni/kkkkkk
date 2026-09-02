@@ -147,8 +147,11 @@ const SCAN = ([url, x0, y0, w, h, band]) => new Promise(res => {
     return { html: i ? i.innerHTML : '', txt: i ? i.textContent : '' };
   });
   ok(/cur-tstone\.svg/.test(disp.html), '[3-a] 단련석 아이콘(.cic)으로 화폐를 말한다(125)');
-  ok(/단련석/.test(disp.txt) && /987,?654/.test(disp.txt),
-    '[3-b] «단련석 987,654» — 보유 개수가 그대로 찍힌다', disp.txt.trim());
+  /* ⚑ 688 이관(2026-09-02, 주인 지시) — 333 처방: 자리를 비우지 않고 **방향만** 뒤집었다.
+     이 항이 지키던 뜻은 «보유 개수가 그대로 찍힌다» 이고 그건 그대로다. 한글 라벨은 이제
+     금지이므로 «있어야 한다» 를 «수(콤마)뿐이어야 한다» 로 갈아 끼운다(라벨이 돌아오면 빨강). */
+  ok(/987,?654/.test(disp.txt) && /^[\d,]+$/.test(disp.txt.trim()),
+    '[3-b] «(아이콘) 987,654» — 보유 개수가 그대로 찍힌다(688 — 한글 재화명 0자)', disp.txt.trim());
   ok(!/포인트|pt\b/.test(disp.txt), '[3-c] «포인트» 라는 말이 헤더에서 사라졌다', disp.txt.trim());
 
   console.log('\n=== §4 두 벌 — 통짜 렌더 ≡ liveTemper() (262 교훈 2ⓑ) ===');
