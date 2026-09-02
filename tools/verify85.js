@@ -259,9 +259,16 @@ const ok = (b, name, detail) => {
                     || typeof wpnPages === 'function');
     closeWeapon();
     return { cells, lastBottom, scrollable, dead,
+             /* 740 이관 — 기대값은 «8등급 × 5칸» 이 아니라 **그 부위의 실제 종 수**다.
+                85 가 세운 «1~7등급 부위당 5종 · 8(불멸)등급만 1종» 이 곧 그 수이고,
+                740 이 그 표를 화면에 그대로 비추게 만든 것이다(종전에는 불멸 행에
+                잠금 더미 4칸이 서서 «불멸이 5종» 으로 보였다). */
+             want: EQUIPS.filter(e => e.slot === 'weapon').length,
+             perGrade: GRADE.map((_, gi) => EQUIPS.filter(e => e.slot === 'weapon' && e.g === gi).length).join(','),
              hasG7: h.includes('♾️'), hasG6: h.includes('🌀'), bad: /NaN|undefined/.test(h) };
   });
-  ok(H.cells === 40, 'H1 격자가 8등급 × 5칸 = 40칸을 한 번에 렌더', String(H.cells) + '칸');
+  ok(H.cells === H.want, 'H1 격자가 8등급 전 종(' + H.want + '칸 = 등급별 ' + H.perGrade + ')을 한 번에 렌더',
+    String(H.cells) + '칸');
   ok(H.hasG6 && H.hasG7 && !H.bad, 'H2 페이지 넘김 없이 초월·불멸 행 렌더 · NaN 없음');
   ok(!H.dead, 'H3 ◀▶ 페이지 화살표·wpnPages() 잔존 0건(186 되돌림 감지)');
   ok(H.scrollable && H.lastBottom > 1400,

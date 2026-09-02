@@ -13,7 +13,8 @@
  *                 배너는 **뒤의 06 시트가 이미 100% 덮는다**(등재문 셋째 항의 기각 — 아래 참조)
  *   [2] Δ0     — 2280·1920·1842 는 수리 전과 **같은 좌표**여야 한다(레퍼런스 보존)
  *   [3] 간격   — 격자 아래 세 간격(30/29/32)이 프레임과 무관하게 보존된다
- *   [4] 도달   — 1600 에서도 격자 40칸 마지막 칸에 스크롤로 닿는다(`verify186` [D] 의 짧은 프레임 짝)
+ *   [4] 도달   — 1600 에서도 격자 마지막 칸(= 그 부위 종 수번째)에 스크롤로 닿는다
+ *                 (`verify186` [D] 의 짧은 프레임 짝 · 740 이관: 칸 수는 «8×5=40» 이 아니라 종 수다)
  *   [R] 되돌림 — 선언을 하나씩 뺀 사본에서 결함이 **되살아난다**(무르게 푼 수리가 아님)
  *
  * ⚠ 되돌림 사본은 저장소 루트에 둔다(`.v467-neg.html`) — /tmp 에 두면 `assets/**` 가 통째로
@@ -175,7 +176,10 @@ const visPct = (b) => (b.h ? R(b.vis / b.h * 100) : 0);
       const lr = last.getBoundingClientRect(), gr = g.getBoundingClientRect();
       return { n: g.children.length, inside: lr.bottom <= gr.bottom + 1 && lr.top >= gr.top - 1 };
     });
-    ok(m.cells === 40, '[4-a] 격자 40칸', String(m.cells));
+    /* 740 이관 — 「40」은 1종뿐인 불멸 행에 잠금 더미 4칸을 세던 값이었다.
+       이 절이 보는 것은 «마지막 칸에 닿는가» 이므로 칸 수 기대값만 데이터로 갈아 끼운다. */
+    const want4a = await page.evaluate(() => EQUIPS.filter(e => e.slot === 'weapon').length);
+    ok(m.cells === want4a, '[4-a] 격자 ' + want4a + '칸(= 그 부위 종 수)', String(m.cells));
     ok(D.inside, '[4-b] 마지막 칸이 스크롤 끝에서 격자 안에 온전히 들어온다');
     await ctx.close();
   }

@@ -197,9 +197,13 @@ const ok = (b, name, detail) => {
 
   /* ── [E] 나열 순서 ──────────────────────────────────────── */
   const E = await page.evaluate(() => {
-    /* 격자는 «행 = 등급 · 칸 = 그 등급의 항목»이고 8등급 행은 1종 + 잠금 더미 4칸이라
-       칸 수는 항상 8×5 = 40 이다. 대조 대상은 «실제 항목이 박힌 칸»의 순서다.
-       미보유 칸에는 `data-wpn` 이 안 붙으므로 전 종을 보유로 만들어 놓고 읽는다. */
+    /* 격자는 «행 = 등급 · 칸 = 그 등급의 항목»이다. 대조 대상은 «실제 항목이 박힌 칸»의 순서다.
+       ⚑ **740 이관(2026-09-02)** — 여기 있던 «8등급 행은 1종 + 잠금 더미 4칸이라 칸 수는
+         항상 8×5 = 40» 은 740 이 폐지한 세계다(그 더미 4칸이 주인 눈에 «불멸 아이템 5개» 로
+         읽힌 것이 740 의 등재 사유). 이제 **그려진 칸 = 그 부위의 종 수**이고, 더미가 없으므로
+         칸 수와 실항목 수가 같아야 한다 — 260 이 보는 «순서» 축은 그대로다.
+       ⚠ 미보유 칸에도 `data-wpn` 은 붙는다(664) — 그래도 전 종을 보유로 만들어 놓고 읽는 것은
+         이 자가 664 이전부터 쓰던 방식이라 그대로 둔다(읽는 값이 같다). */
     const bak = JSON.stringify(S.own);
     EQUIPS.forEach(e => { if (!S.own[e.id]) S.own[e.id] = { n: 0, l: 1 }; });
     openWeapon(null, 'weapon');
@@ -215,8 +219,8 @@ const ok = (b, name, detail) => {
     return { cells: cells.length, got: got.length, want: want.length, bad,
              badTxt: /NaN|undefined/.test(html) };
   });
-  ok(E.cells === 40 && E.got === E.want, 'E1 05 무기 격자 8행 40칸 · 실항목 칸 = 무기 종 수',
-    E.cells + '칸 / 실항목 ' + E.got + '=' + E.want);
+  ok(E.cells === E.want && E.got === E.want, 'E1 05 무기 격자 — 칸 수 = 실항목 = 무기 종 수(더미 0)',
+    E.cells + '칸 / 실항목 ' + E.got + ' / 종 ' + E.want);
   ok(E.bad.length === 0, 'E2 격자 DOM 순서 = 배열(약→강) 순서', E.bad.slice(0, 4).join(' / ') || '전 칸 일치');
   ok(!E.badTxt, 'E3 격자 NaN/undefined 0건');
 

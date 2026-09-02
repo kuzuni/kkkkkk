@@ -170,10 +170,12 @@ const ok = (b, act, expect, got) => {
       rows = document.getElementById('wpnGrid').children.length;
       closeWeapon();
     } catch (e) { err = String(e); }
-    return { err, rows, imm: /불멸/.test(h), bad: /NaN|undefined/.test(h) };
+    /* 740 이관 — 기대 칸 수는 «8×5 = 40» 이 아니라 그 부위의 실제 종 수다(불멸 행은 1칸). */
+    return { err, rows, want: EQUIPS.filter(e => e.slot === 'weapon').length,
+             imm: /불멸/.test(h), bad: /NaN|undefined/.test(h) };
   });
-  ok(!f9.err && f9.imm && !f9.bad && f9.rows === 40, '05 무기 팝업 8등급 일괄 렌더(불멸 무기 선택)',
-     '«불멸» 표기 유지 · 40칸 · NaN 0건 (85·186 경로 무회귀)',
+  ok(!f9.err && f9.imm && !f9.bad && f9.rows === f9.want, '05 무기 팝업 8등급 일괄 렌더(불멸 무기 선택)',
+     '«불멸» 표기 유지 · ' + f9.want + '칸(= 종 수) · NaN 0건 (85·186·740 경로 무회귀)',
      '에러=' + (f9.err || '없음') + ' 불멸표기=' + f9.imm + ' 칸=' + f9.rows + ' NaN=' + f9.bad);
 
   /* 10 — 세이브 왕복.
