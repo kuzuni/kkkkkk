@@ -51,13 +51,25 @@ async function load(page, slot, b64) {
   }, { slot, b64 });
 }
 
-/* 요소를 숨겼다 보이며 차분으로 잉크 bbox 를 잡는다 */
-async function inkOf(page, sel) {
+/* 차분으로 잉크 bbox 를 잡는다.
+ * mode 'el'   — 요소를 통째로 숨긴다(요소가 «칠하는 모든 것» = 테두리·배경·그림자 포함).
+ * mode 'text' — **글자만** 지운다(테두리·배경·그림자는 양쪽 장에 그대로 남아 차분에서 상쇄된다).
+ * ⚠ 둘을 섞어 쓰지 마라 — `visibility:hidden` 으로 «글리프 넘침» 을 재면 `box-shadow`(여기서는
+ *   `0 3px 8px`)가 통째로 잉크로 딸려와 «아래로 2px 넘친다» 는 **가짜 결함**이 나온다(1회차에 실제로 그랬다). */
+async function inkOf(page, sel, mode = 'el') {
   await load(page, 'A', await shot(page));
-  await page.evaluate((s) => { const e = document.querySelector(s); if (e) e.style.visibility = 'hidden'; }, sel);
+  await page.evaluate(({ s, m }) => {
+    const e = document.querySelector(s); if (!e) return;
+    if (m === 'text') { e.dataset.p787 = e.textContent; e.textContent = ''; }
+    else e.style.visibility = 'hidden';
+  }, { s: sel, m: mode });
   await page.waitForTimeout(120);
   await load(page, 'B', await shot(page));
-  await page.evaluate((s) => { const e = document.querySelector(s); if (e) e.style.visibility = ''; }, sel);
+  await page.evaluate(({ s, m }) => {
+    const e = document.querySelector(s); if (!e) return;
+    if (m === 'text') { e.textContent = e.dataset.p787 || ''; delete e.dataset.p787; }
+    else e.style.visibility = '';
+  }, { s: sel, m: mode });
   return page.evaluate(({ s }) => {
     const A = window.__p787.A, B = window.__p787.B;
     const el = document.querySelector(s);
@@ -138,7 +150,8 @@ const box = (page, sel) => page.evaluate((s) => {
     });
     F.f20.tabs = await box(page, '.spc-tabs');
     F.f20.editBox = await box(page, '#spcEdit');
-    F.f20.editInk = await inkOf(page, '#spcEdit');
+    F.f20.editInk = await inkOf(page, '#spcEdit', 'text');   /* 글리프만 */
+    F.f20.editPaint = await inkOf(page, '#spcEdit', 'el');     /* 요소가 칠하는 전부(그림자 포함) */
 
     await ctx.close();
   }
@@ -162,6 +175,8 @@ const box = (page, sel) => page.evaluate((s) => {
     if (E) console.log(`ⓐ 20 ✎ 상자     ${E.w}×${E.h} (ref ${REF.editBox.w}×${REF.editBox.h})`);
     if (EI && EI.px) console.log(`   ✎ 글리프 잉크 ${EI.w}×${EI.h} @(${EI.x},${EI.y})  넘침 좌${EI.over.left} 우${EI.over.right} 상${EI.over.top} 하${EI.over.bottom}  ← +면 상자 밖`);
     else console.log('   ✎ 글리프 잉크 — 차분 0px(못 잡음)');
+    const EP = F.f20.editPaint;
+    if (EP && EP.px) console.log(`   ✎ 칠 전체(그림자 포함) ${EP.w}×${EP.h}  넘침 좌${EP.over.left} 우${EP.over.right} 상${EP.over.top} 하${EP.over.bottom}`);
   }
   if (JSON_AT) require('fs').writeFileSync(JSON_AT, JSON.stringify(out, null, 1));
 })().catch(e => { console.error(e); process.exit(1); });
