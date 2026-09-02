@@ -312,7 +312,12 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
       const half = (q.w || q.fs) / 2;
       const d0 = Math.hypot(q.x - cx, q.y - cy);
       const d1 = Math.hypot(q.x + q.dx - cx, q.y + q.dy - cy);
-      const env = Math.max(d0 + half, d0 + 0.78 * (d1 - d0) + half, d1 + 0.62 * half);
+      /* ⚑ 753 7회차 — 이 알은 공용 `fxSpark` 가 아니라 **전용 `fxRlic`** 을 탄다
+         (0% t0·s1 · 35% t.55·s.72 · 100% t1·s.45). 세 지점이 다 선형 구간의 끝이라 최댓값은 그중 하나다.
+         아래 세 계수는 [C8] 이 CSS 에서 **같은 값인지 매 실행 확인한다**(두 벌로 안 적는다). */
+      const env = Math.max(d0 + half,
+                           d0 + 0.55 * (d1 - d0) + 0.72 * half,
+                           d1 + 0.45 * half);
       envMax = Math.max(envMax, env);
       if (env > NEIGH) farBad2++;
     }
@@ -328,10 +333,19 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   /* ⚑ 753 신설 [C8] — 이동이 작아진 대신 «퍼짐» 을 **봉투의 스케일**이 맡는다.
      공용 곡선(`@keyframes fxSpark`)이 100% 에서 `scale(.62)` 인지를 못박는다(681 이 그 곡선을
      따로 등재해 두었으므로 이 자는 «지금 값» 을 지키는 래칫이다). */
-  const mSpark = code.match(/@keyframes fxSpark\{[\s\S]{0,400}?100%\{transform:translate\(var\(--dx\), ?var\(--dy\)\) scale\(([\d.]+)\);opacity:0\}/);
-  ok(!!mSpark && parseFloat(mSpark[1]) < 1,
-     'C8 ★ 봉투가 **스케일로도 변한다**(100% scale < 1) — 753 로 이동이 작아진 뒤 «정지 데칼» 을 막는 축',
-     mSpark ? 'scale(' + mSpark[1] + ')' : '곡선을 못 찾았다');
+  /* ⚑⚑ 753 7회차 — [C8] 이 묻는 곡선이 **공용 `fxSpark` 에서 전용 `fxRlic` 으로** 옮겨 갔다.
+     공용 곡선은 0~52% 가 `scale(1)·opacity:1` 고원이라 아이콘 크기의 알에게는 «가림» 이 된다
+     (비평가 2인 공통: «터짐이 한 프레임도 없다 · Lv.n 이 36~49% 지워진다»).
+     ⇒ **불투명 구간 안에서 이미 줄어드는가**를 묻는다. 계수 셋은 [C6] 의 봉투 산수와 **같은 값**이어야 한다. */
+  const mRlic = code.match(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:1\}\s*35%\{transform:translate\(calc\(var\(--dx\)\*\.55\),calc\(var\(--dy\)\*\.55\)\) scale\(\.72\);opacity:\.78\}\s*100%\{transform:translate\(var\(--dx\), ?var\(--dy\)\) scale\(\.45\);opacity:0\}\}/);
+  ok(!!mRlic && /\.fx-spark\.fx-rlic\{[\s\S]{0,400}?animation-name:fxRlic/.test(code)
+     && /@keyframes fxSpark\{0%\{transform:translate\(0,0\) scale\(1\);opacity:1\}/.test(code),
+     'C8 ★ 획득 알이 **전용 봉투(`fxRlic`)** 를 탄다 — 불투명 구간 안에서 이미 줄어들고, **공용 `fxSpark` 는 불변**',
+     mRlic ? '0%s1 · 35%t.55/s.72/α.78 · 100%t1/s.45/α0' : '전용 곡선을 못 찾았다');
+  /* ⚑ 753 7회차 — 취소선. `fxBurst` 가 알을 `<s>` 로 낳으므로 기본값 `line-through` 가 살아 있으면
+     아이콘 크기에서 **폭 156 · 두께 12px 검정 막대**가 글리프를 가로지른다(비평가 2인 독립 관측). */
+  ok(/\.fx-spark\.fx-rlic\{[\s\S]{0,400}?text-decoration:none/.test(code),
+     'C9 ★ 획득 알에 **취소선이 없다**(`<s>` 기본값 `line-through` — 126px 에서 156×12px 막대로 찍힌다)');
 
   /* ── [D] 그림·연속 ───────────────────────────────────────────────── */
   blk('D] 그림 — 알이 «그 유물» 의 문양이다 · 연속 소환이 같은 그림이 아니다');
@@ -401,15 +415,27 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      'D7 ★ **탄생 자리 = 그 유물 아이콘의 글리프 중심 ±2px**(753 ③ — 옛 링 `R0` 38 이 빨개지는 자리)',
      '어긋난 알 ' + ctrBad + ' · 최대 편차 ' + ctrDev.toFixed(2) + 'px');
   /* 682 규약 — 연속 두 버스트가 «같은 방향 시퀀스» 면 안 된다(황금비 위상이 돌고 있는가) */
-  let sameN = 0, pairs = 0;
+  /* ⚑⚑ 753 7회차 — **[D4] 를 «한 쌍» 에서 «세 버스트 연속» 으로 옮겼다.**
+     683 시절에는 한 버스트에 각이 4~6개라 «두 버스트의 시퀀스가 ±3° 안에서 전부 같다» 는 것이
+     우연히는 사실상 불가능했다. 753 이 알을 **하나**로 줄이자 그 물음이 «각 하나가 우연히 ±3° 안인가»
+     가 되어 **쌍마다 1.7%**(6/360) 로 떨어졌다 — 9쌍이면 14% 확률로 빨개진다(실제로 1/9 로 빨갰다).
+     ⚠ 문턱(3°)을 넓히는 것은 반대 방향이다(더 헐거워진다). ⇒ **세 버스트가 연달아 같은 각**이면
+     빨갛다 — 우연은 0.03% 이고 «위상이 굳었다» 는 여전히 반드시 걸린다(황금비 수열이 멈추면
+     연속 전부가 같은 각이 된다). 흩어짐의 축은 `verify753` [F1][F2] 가 따로 센다. */
+  let run3 = 0, pairs = 0, sameP = 0;
+  for (let i = 2; i < BS.length; i++) {
+    const a = degs(BS[i - 2]), b2 = degs(BS[i - 1]), c = degs(BS[i]);
+    if (!a.length || !b2.length || !c.length) continue;
+    if (sameSeq(a, b2, 3) && sameSeq(b2, c, 3)) run3++;
+  }
   for (let i = 1; i < BS.length; i++) {
     const a = degs(BS[i - 1]), c = degs(BS[i]);
     if (!a.length || !c.length) continue;
-    pairs++;
-    if (sameSeq(a, c, 3)) sameN++;
+    pairs++; if (sameSeq(a, c, 3)) sameP++;
   }
-  ok(pairs > 0 && sameN === 0, 'D4 ★ 연속 두 버스트의 방향 시퀀스가 같은 쌍 0 — 682 규약(버스트마다 위상이 돈다)',
-     sameN + '/' + pairs + '쌍');
+  ok(pairs > 0 && run3 === 0,
+     'D4 ★ **세 버스트가 연달아 같은 방향인 경우 0** — 682 규약(버스트마다 위상이 돈다 · 753 로 «쌍» → «3연속»)',
+     '3연속 ' + run3 + ' · 참고: 인접 쌍 우연 일치 ' + sameP + '/' + pairs + '쌍(n=1 이라 쌍당 1.7% 는 기댓값)');
 
   /* ── [E] 화면 밖 가드 ────────────────────────────────────────────── */
   blk('E] 화면 밖 — 페이지가 닫혀 있으면 한 알도 안 쏜다(518 재발 방지)');
@@ -540,6 +566,13 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
       if (LONG && !window.__v683ff) { window.__v683ff = window.fxFlash;
         window.fxFlash = function (el) { return window.__v683ff.call(this, el); }; }
       if (!LONG && window.__v683ff) { window.fxFlash = window.__v683ff; window.__v683ff = null; }
+      /* ⚠⚠ 753 7회차 관측(**여기는 안 고쳤다 — 곁다리 788 로 등재**): 이 절은 마스크(채움·테 화소
+         자리)를 «정착» 프레임 하나에서 떠서 **같은 상자 좌표**로 표본 프레임에 적용하는데,
+         `summonRelic(true)` 는 매번 **다른 유물**을 돌려준다 ⇒ 정착과 표본이 서로 다른 칸이면
+         «라벨이 아닌 곳» 을 재게 되고, 그것이 [H2] 가 실행마다 20~100% 로 흔들리는 뿌리다.
+         ⇒ 대상 칸을 고정하고 보유시켜 재 보면 **[H1] 이 2.08~2.53:1 로 실제로 빨갛다**(정착 10.6~11.2:1)
+         — 즉 지금의 초록은 «다른 카드를 재서» 나온 **헛초록**일 때가 있다. 플래시 길이·세기는 683·681
+         의 축이라 이 행(753 = 파티클)에서 고치지 않고 **788 로 넘긴다.** 되돌리는 법은 그 행에 있다. */
       const it = summonRelic(true); if (!it) return null;
       if (T >= 0) rwSummonFx(it, true, null);
       try { document.getAnimations().forEach(a => {

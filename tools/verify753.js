@@ -118,9 +118,14 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
      알 상자 = round(fs × RW_GAIN_BOX) 이고 fs 는 그 칸 아이콘 값(126)이다. */
   const mBox = src.match(/const RW_GAIN_BOX = ([\d.]+);/);
   const boxHalf = mBox ? 126 * parseFloat(mBox[1]) / 2 : 0;
-  const envPeak = mR && boxHalf ? 0.78 * Number(mR[2]) + boxHalf : 1e9;
+  /* ⚑ 753 7회차 — 봉투가 공용 `fxSpark`(52% 고원)에서 **전용 `fxRlic`** 으로 바뀌면서 최댓값의 자리도
+     옮겨 갔다: 세 지점(0% t0·s1 · 35% t.55·s.72 · 100% t1·s.45) 중 **탄생 프레임**이 가장 넓다
+     (= 아이콘 자기 발자국). 런타임 축은 [G4] 가 살아 있는 애니에게 직접 묻는다. */
+  const d1 = mR ? Number(mR[2]) : 0;
+  const envPeak = (mR && boxHalf)
+    ? Math.max(boxHalf, 0.55 * d1 + 0.72 * boxHalf, d1 + 0.45 * boxHalf) : 1e9;
   ok(!!mR && !!mBox && envPeak <= 100.5,
-     'A3 ★ `RW_GAIN_R1` 이 **이웃 칸 산수 안**이다 — 0.78·R1 + 상자반폭 ≤ 100.5(봉투 52% 지점이 최댓값)',
+     'A3 ★ `RW_GAIN_R1` 이 **이웃 칸 산수 안**이다 — `fxRlic` 세 지점의 최대 뻗음 ≤ 100.5',
      '봉투 최대 ' + (envPeak === 1e9 ? '—' : envPeak.toFixed(1)) + 'px ≤ 100.5');
   ok(/fxBurst\(el, col, n, true, null, PAY_CUR\.relic\)/.test(src)
      && !/rwGainFx\([^)]*iv[^)]*\)/.test(src),
@@ -233,6 +238,62 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
   ok(D0 <= 0 || inDown === 0,
      'F3 아래쪽 배제 섹터(' + lo.toFixed(0) + '°~' + hi.toFixed(0) + '°)가 실제로 비어 있다 — 라벨 훑기 방지',
      '들어온 알 ' + inDown + '/' + angs.length);
+
+  /* ── [G] 봉투 — 전용 곡선이 «불투명 구간 안에서 이미 줄어든다» + 취소선 0 ──────────── */
+  blk('G] 봉투 — 전용 곡선(`fxRlic`) · 취소선 0(753 7회차 · 비평가 2인 공통)');
+  /* ⚑ 계수를 자에 적지 않고 **살아 있는 애니에게 직접 물어본다** — 한 발을 쏘고 `currentTime` 을
+     0~수명으로 걸어 그때그때의 `getBoundingClientRect`(변환이 반영된다)를 읽는다. 곡선을 바꿔도
+     이 절은 따라오고, 값을 두 벌로 적지 않는다(402 규약). */
+  const env = await ev(p, () => {
+    const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+    window.__oldBye2 = window.fxBye; window.fxBye = () => null;
+    const el = document.querySelector('#rwGrid [data-rw]');
+    rwGainFx(RELICS[0], el, true);
+    const nd = document.querySelector('#fxl .fx-rlic');
+    if (!nd) { window.fxBye = window.__oldBye2; return null; }
+    /* ⚠ `getComputedStyle` 은 **살아 있는 객체**다 — 아래에서 노드를 걷어 낸 뒤 읽으면 빈 문자열이 온다.
+       그래서 문자열로 **지금 뽑아 둔다**(1회차에 [G1][G2] 가 그것 때문에 빨갰다). */
+    const cs0 = getComputedStyle(nd);
+    const cs = { textDecorationLine: cs0.textDecorationLine + '', animationName: cs0.animationName + '' };
+    const anims = nd.getAnimations();
+    const dur = anims.length ? (anims[0].effect.getComputedTiming().activeDuration || 0) : 0;
+    const cb = el.getBoundingClientRect();
+    const cx = cb.left + cb.width / 2, cy = cb.top + cb.height / 2;
+    const sc = cb.width / 151;
+    const out = [];
+    for (let i = 0; i <= 10; i++) {
+      const T = dur * i / 10;
+      for (const a of anims) { try { a.pause(); a.currentTime = T; } catch (_) {} }
+      const b = nd.getBoundingClientRect();
+      const far = Math.max(Math.hypot(b.left - cx, b.top - cy), Math.hypot(b.right - cx, b.top - cy),
+                           Math.hypot(b.left - cx, b.bottom - cy), Math.hypot(b.right - cx, b.bottom - cy));
+      out.push({ T: Math.round(T), w: b.width / sc, far: far / sc, op: parseFloat(getComputedStyle(nd).opacity) });
+    }
+    for (const nd2 of L.querySelectorAll('.fx-rlic')) nd2.remove();
+    window.fxBye = window.__oldBye2;
+    return { dur, td: cs.textDecorationLine, name: cs.animationName, rows: out };
+  });
+  ok(!!env && env.name === 'fxRlic', 'G1 ★ 획득 알이 **전용 봉투(`fxRlic`)** 를 탄다(공용 `fxSpark` 는 안 건드린다)',
+     env ? env.name : '—');
+  ok(!!env && /none/.test(env.td),
+     'G2 ★ 취소선 0 — `<s>` 기본값 `line-through` 가 126px 에서 **156×12px 검정 막대**로 찍히던 자리',
+     env ? env.td : '—');
+  if (env && env.rows.length) {
+    const r0 = env.rows[0], half = env.rows.length >> 1;
+    info('봉투', env.rows.map(r => r.T + 'ms w' + r.w.toFixed(0) + '/α' + r.op.toFixed(2)).join(' · '));
+    /* «불투명 구간 안에서 이미 줄어든다» — α ≥ 0.5 인 마지막 시각의 폭이 탄생 폭보다 뚜렷이 작아야 한다 */
+    const opq = env.rows.filter(r => r.op >= 0.5);
+    const last = opq.length ? opq[opq.length - 1] : r0;
+    const shrink = 1 - last.w / r0.w;
+    ok(shrink >= 0.15,
+       'G3 ★ **불투명(α≥0.5) 구간 안에서 이미 15% 이상 줄어든다** — 공용 곡선의 «198ms 정지 고원» 이 빨개지는 자리',
+       'α≥0.5 마지막 t=' + last.T + 'ms · 폭 ' + r0.w.toFixed(0) + ' → ' + last.w.toFixed(0)
+       + 'px (−' + (shrink * 100).toFixed(0) + '%)');
+    const far = Math.max(...env.rows.map(r => r.far));
+    ok(far <= 100.5 * Math.SQRT2 + 1,
+       'G4 봉투 어느 순간에도 알 상자 모서리가 이웃 칸 대각(142.1px) 밖으로 안 나간다',
+       '최대 모서리 반경 ' + far.toFixed(1) + 'px');
+  }
 
   /* ── [B] 자리 — 찍힌 픽셀 ─────────────────────────────────────────── */
   blk('B] 자리 — **찍힌 잉크**로 «알 중심 = 아이콘 중심»(350 규칙)');

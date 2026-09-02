@@ -4056,8 +4056,28 @@
          · 컬러 아이콘(140~200) 위 → 둘 다 선다
        ⚠ 테를 4·8방향으로 겹친 것은 비평가의 «2px 은 실기기 스케일에서 앨리어싱으로 날아간다» 지적
          때문이다(대각 4방향을 1.4px 로 더해 유효 두께를 올린다 — 상자는 한 픽셀도 안 키운다). */
+  /* ⚑⚑ 753 7회차 — **비평가 둘이 «156×12px 검정 가로 막대» 를 독립으로 잡았고 뿌리는 취소선이었다.**
+       `fxBurst` 는 알을 `document.createElement('s')` 로 낳는데 `<s>` 의 기본값이 `text-decoration:line-through`
+       다. 683 시절 글리프 21px 에서는 선이 2px 이라 구슬 그라디언트 아래 묻혀 안 보였는데, 753 이 알을
+       **아이콘 크기(126px)** 로 키우자 선도 같이 커져 **폭 156 · 두께 12px** 로 글리프 한복판을 가로지른다
+       (`brightness(0)` 이 그것까지 검게 칠한다). 세 글리프(🌪️·🌳·👁️)에서 **폭·두께가 완전히 동일**한 것이
+       «문양이 아니다» 의 증거였다. ⚠ **범위는 이 알만이다** — `.fx-spark` 는 09·12·17·훈련·단련·룬·퀘스트·
+       우편이 같이 쓰므로 전역 스윕은 곁다리 **786** 으로 등재했다.
+     ⚑⚑ 753 7회차 — **봉투를 이 알 전용으로 가른다(`fxRlic`).** 공용 `fxSpark` 는 0~52% 가
+       `scale(1)·opacity:1` 고원이라 **198ms 동안 아이콘 크기의 불투명 검정 사본이 정지**한다 —
+       비평가 둘이 «터짐이 한 프레임도 없다 · 그 사이 Lv.n 이 36~49% 지워진다» 로 같이 짚은 자리다.
+       21px 짜리 구슬에게는 그 고원이 «날아가는 시간» 이었지만 아이콘 크기에서는 «가림» 이 된다.
+       ⚠ **공용 곡선은 한 글자도 안 건드린다**(09·12·17·코스튬·장비가 같이 쓴다 — LESSONS 666-⑨ ·
+         681 이 그 곡선을 따로 등재해 두었다). `animation-name` 만 갈아 끼워 **이 알만** 다른 봉투를 탄다
+         (길이 .38s · ease-out · forwards 는 `.fx-spark` 것을 그대로 물려받는다).
+       ⚠ 뻗음은 오히려 **줄어든다** — 최댓값이 탄생 프레임(= 아이콘 자기 발자국 79px)으로 옮겨 가고
+         35% 지점 69.0 · 100% 지점 57.6 이라 이웃 칸(100.5)에서 더 멀어진다(`verify683` [C6] 이 매 실행 센다). */
+  @keyframes fxRlic{0%{transform:translate(0,0) scale(1);opacity:1}
+    35%{transform:translate(calc(var(--dx)*.55),calc(var(--dy)*.55)) scale(.72);opacity:.78}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.45);opacity:0}}
   .fx-spark.fx-rlic{background:none;box-shadow:none;border-radius:0;
     display:flex;align-items:center;justify-content:center;line-height:1;
+    text-decoration:none;animation-name:fxRlic;
     filter:brightness(0)
            drop-shadow(0 2px 0 #FFF) drop-shadow(0 -2px 0 #FFF)
            drop-shadow(2px 0 0 #FFF) drop-shadow(-2px 0 0 #FFF)
