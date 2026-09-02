@@ -212,5 +212,40 @@ const nearSep = (rows, id) => {
            ratio: topMean > 0 ? me.near / topMean : Infinity };
 };
 
+/* ── 흔들림 분리 `shakeSep` (784, 2026-09-02) ──────────────────────────────
+   «이 이탈은 흔들림이 아니다 = 재실행으로 안 닫힌다» 를 재는 눈금. `probe680` [2] 가 부른다.
+
+   ⚑ **옛 꼴이 왜 동전이었나.** [2] 는 `spread < 0.25 && (off − tol) > 0.02` 였다. 두 겹으로 틀렸다:
+   ⓐ 첫 항의 축(`spread` = K회 폭)은 **선언을 아예 안 본다.** 같은 표본에서 선언만 구름 한복판으로
+      옮겨도 값이 Δ0 이므로 «재실행으로 안 닫힌다» 를 지고 있을 수 없고, 실제로 지고 있던 말은
+      **«판이 조용한 실행에서만 초록»** 이라는 정반대다 — 실측 폭 **5~28%** 에 손 문턱 0.25 라
+      낮은 표본 하나가 섞이는 실행마다 빨갰다(783 §7 이 그 한 실행을 값째 남겼다).
+   ⓑ 둘째 항은 [1](`off > tol`)에 손 상수 0.02 를 얹은 **사본**이라 새로 지는 뜻이 없다.
+
+   ⇒ 문턱을 다시 뽑는 길은 759-① 이 이미 기각했다(«흔들리는 값에서 뽑은 문턱은 같이 흔들린다»).
+   바꾼 것은 **판정의 모양**이다(775-① · 779-①) — 선언과 표본 구름의 관계를 직접 묻는다:
+     **부호** = 선언이 K회 표본 구름 **밖**에 있는가(표본 하나도 선언 쪽으로 안 넘어온다)
+     **크기** = 그 거리가 **그 실행이 스스로 잰 구름의 폭**보다 먼가(778-② — 손 상수 대신 그 실행의 널)
+   폭 한 벌(`SHAKE_UNIT` = 1)이 단위인 이유는 그것이 이 물음의 뜻 자체이기 때문이다 —
+   «지금까지 본 흩어짐만큼 한 번 더 흔들려도 선언에 못 닿는다». 실측 41회 **×3.0~14.2**.
+
+   ⚠ **783 §7 이 권한 «`nearOff` > 밴드» 는 안 썼다** — 밴드(0.40)까지 여유가 **0.4~2.9p** 인데
+   실행 간 갈림이 **2.5~3.4p** 라(실측 16회 중 1회 **39.5% < 40%**) 같은 자리에 동전을 다시 심는다.
+   `probe784` [3] 이 그 기각을 매 실행 값으로 찍는다. `nearOff` 자신은 [3-c] 의 눈금으로 그대로 산다. */
+const SHAKE_UNIT = 1;
+const shakeSep = (x) => {
+  const each = (x && x.each) || [];
+  if (!each.length) return { lo: 0, hi: 0, range: 0, gap: 0, outside: false, ratio: 0 };
+  const lo = Math.min(...each), hi = Math.max(...each);
+  const range = hi - lo;
+  const gap = x.decl > hi ? x.decl - hi : (x.decl < lo ? lo - x.decl : 0);
+  const outside = x.decl > hi || x.decl < lo;
+  /* 폭 0(표본이 완전히 재현된다)인데 선언이 밖이면 «무한히 멀다» 가 맞다 — 0 나눗셈을 NaN 으로
+     흘리면 비교가 전부 거짓이 되어 조용히 빨개진다(`probe784` [5-d] 가 이 칸을 못박는다). */
+  return { lo, hi, range, gap, outside,
+           ratio: range > 0 ? gap / range : (gap > 0 ? Infinity : 0) };
+};
+
 module.exports = { K, SEC, POP, TOL_FLOOR, tolOf, offOf, measure,
-                   HOLD199, held199, HOLD695, held695, c2Split, nearOff, nearSep };
+                   HOLD199, held199, HOLD695, held695, c2Split, nearOff, nearSep,
+                   SHAKE_UNIT, shakeSep };
