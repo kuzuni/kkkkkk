@@ -69,7 +69,7 @@ const clearFx = page => page.waitForFunction(() => {
 
 async function holdTrain(page, keep) {
   await page.evaluate(v => {
-    for (const c of document.querySelectorAll('#trCards [data-tr]'))
+    for (const c of document.querySelectorAll('#trCards [data-tr] .cb'))
       if (v === null) c.style.removeProperty('--burst-keep'); else c.style.setProperty('--burst-keep', v);
   }, keep);
   await clearFx(page);
@@ -113,13 +113,18 @@ async function holdTrain(page, keep) {
      'A3 **호스트 자신을 안 담는다** — 담으면 배경 그라디언트가 «그림 잉크» 로 걸려 상자 통째가 구멍이 된다(660 의 벽)');
   ok(/if\(IC && r\) kh\.push\(\.\.\.fxbKeepHoles\(t, Math\.round\(FXB_KOS \* hsc \* FX_CIC_SC\)\)\);/.test(code),
      'A4 아이콘 버스트가 그 구멍을 탄다 · 여유가 **아이콘 배율(`FX_CIC_SC`)을 같이 탄다**(619 4회차 «여유는 입자 크기에서»)');
-  ok(/\.tr-card\{[^}]*--burst-keep:i[;}]/.test(code),
-     'A5 훈련 카드가 `--burst-keep:i`(가격 숫자)를 신고한다');
+  /* ⚠ 신고는 **`.cb` 자신**이 한다 — 카드에 적으면 `--burst-to` 를 지운 사본에서 카드 안 `<i>` 넷이
+     통째로 구멍이 되어 `verify619` [E3](되돌림 시험)이 0.06 으로 빨개진다(1회차에 실제로 그랬다). */
+  ok(/\.tr-card>\.cb\{--burst-keep:i;/.test(code),
+     'A5 훈련 **강화 버튼 자신**(`.tr-card>.cb`)이 `--burst-keep:i`(가격 숫자)를 신고한다');
+  ok(!/\.tr-card\{[^}]*--burst-keep/.test(code),
+     'A5b 카드(`.tr-card`)에는 안 적었다 — 적으면 호스트가 카드가 되는 사본에서 `<i>` 넷이 구멍이 된다(`verify619` [E3])');
   /* 660 의 원형이 그대로 살아 있어야 한다 — 이 작업은 «예외 한 줄» 이지 되돌리기가 아니다 */
   ok(/const kh = \(r && !IC\) \? fxbTextHoles\(t, strict \? Math\.round\(FXB_KOS \* hsc\) : undefined\) : \[\];/.test(code),
      'A6 660 의 원형(«아이콘 버스트는 자손 글자 구멍을 안 판다»)은 한 글자도 안 바뀌었다');
-  ok(!/\.tr-tp\{[^}]*--burst-keep/.test(code) && !/\.tr-rn\{[^}]*--burst-keep/.test(code),
-     'A7 단련·룬은 **아직 신고하지 않는다** — 같은 결손이지만 버튼이 좁아 밀도 예산이 다르다(818 로 등재)');
+  ok((code.match(/--burst-keep:/g) || []).length === 1,
+     'A7 신고는 저장소에 **한 자리뿐**이다 — 단련·룬은 아직 안 신고했다(같은 결손이지만 버튼이 좁아 밀도 예산이 다르다 · 818 로 등재)',
+     (code.match(/--burst-keep:/g) || []).length + '자리');
 
   const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });

@@ -151,7 +151,7 @@ function digest(rows, key) {
   /* 세 상태를 같은 자로 잰다. 주입은 **선언 한 줄**(`--burst-keep`)뿐이고 제품 코드는 안 건드린다 —
      `none` 은 «아무 요소에도 안 걸리는 타입 셀렉터» 라 구멍이 0개 = 정확히 816 이전 상태다. */
   const setKeep = v => page.evaluate(v => {
-    for (const c of document.querySelectorAll('#trCards [data-tr]')) c.style.setProperty('--burst-keep', v);
+    for (const c of document.querySelectorAll('#trCards [data-tr] .cb')) c.style.setProperty('--burst-keep', v);
   }, v);
   const runState = async (label, keep) => {
     await setKeep(keep);
@@ -214,8 +214,12 @@ function digest(rows, key) {
     const v = lab[k];
     info(k, v ? (v.sel + ' «' + v.txt + '» — 숫자를 이고 있는가: ' + (v.num ? '예' : '아니오')) : '(이 탭에서 안 보임)');
   }
-  ok(lab.cb && lab.cb.num, 'C1 훈련 버튼만 «누르는 순간의 가격» 을 이고 있다(660 근거 ① 가 훈련에서 거짓)',
-     lab.cb ? '«' + lab.cb.txt + '»' : '-');
+  /* ⚑ 등재문의 «단련·룬은 라벨뿐이라 660 전제가 참이다» 는 **이 재현이 뒤집었다** —
+     670(단련 «(단련석) 수량»)·687 이후 세 버튼이 전부 «(아이콘) 수량» 을 이고 있다.
+     816 의 범위는 훈련 한 자리이고(지시서 [1]), 나머지 둘은 **818** 로 등재했다. */
+  ok(lab.cb && lab.cb.num && lab.tb && lab.tb.num && lab.rbt && lab.rbt.num,
+     'C1 ⚑ 등재문 정정 — 세 버튼이 **전부** 수치를 이고 있다(660 근거 ① 은 이제 세 탭 다 거짓 · 818 등재)',
+     [lab.cb, lab.tb, lab.rbt].map(v => v ? '«' + v.txt + '»' : '-').join(' · '));
 
   ok(errs.length === 0, 'C2 콘솔 에러 0건', errs.slice(0, 2).join(' | ') || '0');
 
