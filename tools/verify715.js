@@ -6,7 +6,7 @@
  *
  * 지키는 성질 — 주인이 못박은 것이 «값» 이 아니라 **구조**로 굳었는가:
  *   [A] 부품이 **하나** — 교환 세 자리(§9 재화 2종 · §10 입장권 8종 · §8 마일리지)가 모두 같은
- *       진입점 `exOpen()` 을 지나고 같은 마크업(`.ex715 .ex-tr`)을 그린다. 490 의 수량 탭
+ *       진입점 `exOpen()` 을 지나고 같은 마크업(`.ex715 .ex-sl > .ex-bar`)을 그린다. 490 의 수량 탭
  *       (`EX_QTYS`/`exQty`/`exQtyN`/`.cn-qty`/`[data-exq]`)은 **제품 줄에 0건**(333·399 —
  *       죽는 분기를 남겨 두면 «두 벌» 이 된다) · 소환/강화의 배수 토글(`SUM_MULS`)을 재사용하지 않는다.
  *   [B] 상한 = **실제로 지불 가능한 최대** — `cost(max) ≤ have < cost(max+1)` · 1 미만·max 초과는
@@ -86,7 +86,7 @@ const openCoin = page => ev(page, () => {
       const seen = [];
       const shot = () => {
         const w = document.querySelector('#modal .ex715');
-        return { open: !!w, tr: !!(w && w.querySelector('.ex-tr')),
+        return { open: !!w, tr: !!(w && w.querySelector('.ex-sl .ex-bar')),
           adj: w ? w.querySelectorAll('[data-exadj]').length : 0,
           title: (document.getElementById('mtitle') || {}).textContent || '' };
       };
@@ -370,12 +370,22 @@ const openCoin = page => ev(page, () => {
       const app = document.getElementById('app').getBoundingClientRect();
       const m = document.querySelector('#modal .mbox').getBoundingClientRect();
       const w = document.querySelector('#modal .ex715');
-      const tr = w.querySelector('.ex-tr').getBoundingClientRect();
+      const tr = document.getElementById('exTrack').getBoundingClientRect();
+      const bar = w.querySelector('.ex-bar').getBoundingClientRect();
+      const adj = w.querySelector('.ex-adj').getBoundingClientRect();
+      const inf = w.querySelector('.ex-inf').getBoundingClientRect();
       const go = document.getElementById('exGo').getBoundingClientRect();
       const body = document.querySelector('#modal .mbody');
       return {
         in: m.top >= app.top - 0.6 && m.bottom <= app.bottom + 0.6,
-        trW: Math.round(tr.width), trH: Math.round(tr.height),
+        trW: Math.round(tr.width), trH: Math.round(bar.height),
+        /* 1회차 채점 ④ — 좌측 기준선이 셋이었다. 트랙·스테퍼·비용상자·버튼이 **한 컬럼**인가 */
+        /* ⚠ 버튼 줄은 [취소]·[교환] 두 칸이라 **줄 자체**(`.mrow`)를 봐야 컬럼이 읽힌다 */
+        col: [tr.left, adj.left, inf.left, document.querySelector('#modal .mrow').getBoundingClientRect().left]
+          .map(v => Math.round(v)).join(','),
+        colR: [tr.right, adj.right, inf.right, document.querySelector('#modal .mrow').getBoundingClientRect().right]
+          .map(v => Math.round(v)).join(','),
+        knobW: Math.round(document.getElementById('exKnob').getBoundingClientRect().width),
         goIn: go.top >= app.top && go.bottom <= app.bottom + 0.6,
         clip: body.scrollHeight - body.clientHeight,
         knob: (() => { const k = document.getElementById('exKnob').getBoundingClientRect();
@@ -386,9 +396,16 @@ const openCoin = page => ev(page, () => {
     ok(box && box.in, '[F' + (H === 2280 ? 1 : 2) + '-a] ' + H + ' — 팝업 상자가 프레임 안에 든다');
     ok(box && box.goIn, '[F' + (H === 2280 ? 1 : 2) + '-b] ' + H + ' — [교환] 버튼이 프레임 안이다(스크롤 없이 보인다)');
     ok(box && box.trH === 50 && box.trW > 600,
-      '[F' + (H === 2280 ? 1 : 2) + '-c] ' + H + ' — 트랙 높이 50(55 볼륨 트랙 비례) · 폭 '
+      '[F' + (H === 2280 ? 1 : 2) + '-c] ' + H + ' — 띠 높이 50(55 볼륨 트랙 비례) · 그릇 폭 '
       + (box ? box.trW : '?') + ' · 배율 ' + (box ? box.scale : '?'));
     ok(box && box.knob, '[F' + (H === 2280 ? 1 : 2) + '-d] ' + H + ' — 노브가 트랙 밖으로 안 나간다');
+    const one = box && new Set(box.col.split(',')).size === 1 && new Set(box.colR.split(',')).size === 1;
+    ok(one, '★ [F' + (H === 2280 ? 1 : 2) + '-e] ' + H
+      + ' — 트랙·스테퍼·비용상자·[교환] 이 **한 컬럼**이다(1회차 채점 ④ — 좌변이 셋이었다)',
+      box ? '좌 ' + box.col + ' · 우 ' + box.colR : '');
+    ok(box && box.knobW === 84,
+      '[F' + (H === 2280 ? 1 : 2) + '-f] ' + H + ' — 노브 84 폭(±버튼 132 의 64% · 1회차엔 45% 였다)',
+      box ? String(box.knobW) : '');
     await bb.ctx.close();
   }
 

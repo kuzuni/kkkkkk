@@ -2168,23 +2168,37 @@
      검정 테 6/5 · 반경 18/16 이 그 값이고, 폭만 모달 본문 폭(826)에 맞춰 늘린다.
      ⚠ `.mbody p`(24px)는 A5 공용이라 못 건드린다 ⇒ 179·269·478 과 같은 처방으로
        전용 래퍼 `.ex715` 안에서만 값을 적는다(특이도 0-2-1 이 0-1-1 을 이긴다). */
-  .mbody .ex715{padding:6px 0 4px}
-  .ex715 .ex-gn{display:flex;align-items:center;justify-content:center;gap:16px;height:104px}
-  .ex715 .ex-gn>em{display:block;width:96px;height:96px;font-size:82px;line-height:96px;font-style:normal}
+  /* ⚑ 1회차 채점 이관(비평가 A ①7②5③4④4 · B ①6②6③5④6) — **둘이 독립으로 일치한 넷**을 고쳤다:
+     ⓐ 좌측 기준선이 셋(카드 118 · 콘텐츠 130 · 트랙 154)이었다 → 트랙의 좌우 여백 24 를 걷어
+        **한 컬럼(130..949 · 820px)** 으로 통일 · ⓑ 카드 하단 여백 4px(좌우 12 · 상 43) → 12 로 ·
+     ⓒ 노브 60×50 이 ±버튼(132×74)보다 69% 작았다 → **84×64** 로 키우고 트랙 위아래로 7px 돌출 ·
+     ⓓ «(아이콘) ×N» 을 통짜로 가운데 두어 자릿수가 늘면 아이콘이 **146px 움직였다** → 두 칸 격자로
+        갈라 아이콘은 항상 같은 자리(우측 정렬), 숫자만 오른쪽으로 자란다.
+     ⚠ 반려 둘(둘 다 **A5 공용 규격**이라 이 작업 구간이 아니다): 모달 좌우 패딩 8 ↔ 상단 65(A ②) ·
+       하단 버튼 404×81 종횡비(B ⑥) — 손대면 16·22·69·70·87·103 … 팝업 전부가 같이 움직인다. */
+  .mbody .ex715{padding:0 0 12px}
+  /* ⓓ 아이콘 칸 · 숫자 칸을 반씩 — 아이콘 오른변이 늘 같은 자리다(자릿수와 무관) */
+  .ex715 .ex-gn{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:center;height:104px}
+  .ex715 .ex-gn>em{justify-self:end;display:block;width:96px;height:96px;font-size:82px;line-height:96px;font-style:normal}
   .ex715 .ex-gn>em>.cic{width:96px;height:96px}
-  .ex715 .ex-gn>b{font-size:58px;font-weight:900;color:#3A2C20;
+  .ex715 .ex-gn>b{justify-self:start;text-align:left;font-size:58px;font-weight:900;color:#3A2C20;
     -webkit-text-stroke:2px #F7ECDA;paint-order:stroke fill}
-  .ex715 .ex-tr{position:relative;margin:22px 24px 0;height:50px;box-sizing:border-box;
-    border:6px solid #000;border-radius:18px;overflow:hidden;background:#8A7355;
-    cursor:pointer;touch-action:none}
+  /* ⓒ 트랙은 «띠(50) + 그 위를 달리는 노브(84×64)» 두 겹이다. 포인터를 받는 것은 **바깥 그릇**
+     (`#exTrack` · 높이 64)이라 손가락 표적이 띠보다 14px 크고, 띠(`.ex-bar`)는 채움을 자르기 위해
+     `overflow:hidden` 을 그대로 쓴다 — 노브를 띠 안에 두면 돌출이 그 자리에서 잘린다. */
+  .ex715 .ex-sl{position:relative;margin:22px 0 0;height:64px;cursor:pointer;touch-action:none}
+  .ex715 .ex-bar{position:absolute;left:0;right:0;top:7px;height:50px;box-sizing:border-box;
+    border:6px solid #000;border-radius:18px;overflow:hidden;background:#8A7355}
   .ex715 .ex-fill{position:absolute;left:0;top:0;bottom:0;width:0;
     background:linear-gradient(#F3C744 0 5%,#FEB612 5% 97%,#F2B833 97% 100%)}
-  /* 노브는 트랙 «안» 을 달린다 — 좌우 끝에서 60px 이 삐져나오지 않게 진행률에 노브 폭을 뺀다
+  /* 노브는 트랙 «안» 을 달린다 — 좌우 끝에서 삐져나오지 않게 진행률에 노브 폭을 뺀다
      (55 트랙이 «트랙 왼끝 + 진행률 × (679 − 60)» 으로 푼 것과 같은 산수다). */
-  .ex715 .ex-knob{position:absolute;top:0;width:60px;height:50px;box-sizing:border-box;
-    border:5px solid #000;border-radius:16px;background:#F6F5FA;z-index:2;pointer-events:none}
-  .ex715 .ex-mm{display:flex;justify-content:space-between;margin:8px 26px 0}
-  .ex715 .ex-mm>i{font-size:24px;font-weight:700;font-style:normal;color:#7A6550}
+  .ex715 .ex-knob{position:absolute;top:0;width:84px;height:64px;box-sizing:border-box;
+    border:5px solid #000;border-radius:18px;background:#F6F5FA;z-index:2;pointer-events:none}
+  /* 눈금은 **노브 중심이 실제로 닿는 두 끝**에 세운다 — 트랙 외곽에 붙이면 노브 폭의 절반(42px)만큼
+     늘 어긋난다(1회차 A ④ 지적6 이 30.0/32.5px 로 실측한 그 값이다). 칸 폭 = 노브 폭. */
+  .ex715 .ex-mm{display:flex;justify-content:space-between;margin:6px 0 0}
+  .ex715 .ex-mm>i{width:84px;text-align:center;font-size:24px;font-weight:700;font-style:normal;color:#7A6550}
   .ex715 .ex-adj{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:18px}
   .ex715 .ex-b{width:132px;height:74px;line-height:74px;border-radius:20px;cursor:pointer;
     font-size:34px;font-weight:800;color:#F0D9AE;background:linear-gradient(180deg,#4A5570 0,#39415A 100%);
@@ -20733,7 +20747,8 @@ function exSync(){
   if(!exSel || !$('exTrack')) return;
   const { d, n, max } = exSel, cost = exCost(d, n), t = exTAt(n, max);
   $('exFill').style.width = (t * 100) + '%';
-  $('exKnob').style.left  = 'calc(' + (t * 100) + '% - ' + (t * 60) + 'px)';
+  /* 노브 폭 84 — 진행률에서 그만큼을 빼야 양 끝에서 트랙 밖으로 안 나간다(1회차 ⓒ 이후 값) */
+  $('exKnob').style.left  = 'calc(' + (t * 100) + '% - ' + (t * 84) + 'px)';
   $('exQn').textContent   = fmt(n);
   $('exGn').innerHTML     = '×' + fmt(d.gain(n));
   $('exCost').innerHTML   = d.ic() + ' <b>' + fmt(cost) + '</b>';
@@ -20763,7 +20778,8 @@ function exOpen(d, src){
   showModal('<h2>' + d.t + '</h2>'
     + '<div class="ex715">'
     +   '<div class="ex-gn"><em>' + d.gic() + '</em><b id="exGn">×' + fmt(d.gain(1)) + '</b></div>'
-    +   '<div class="ex-tr" id="exTrack"><s class="ex-fill" id="exFill"></s><b class="ex-knob" id="exKnob"></b></div>'
+    +   '<div class="ex-sl" id="exTrack"><s class="ex-bar"><s class="ex-fill" id="exFill"></s></s>'
+    +     '<b class="ex-knob" id="exKnob"></b></div>'
     +   '<div class="ex-mm"><i>1</i><i>' + fmt(max) + '</i></div>'
     +   '<div class="ex-adj">'
     +     '<b class="ex-b" data-exadj="-10">−10</b><b class="ex-b" data-exadj="-1">−1</b>'
