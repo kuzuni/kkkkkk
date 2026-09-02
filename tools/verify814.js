@@ -110,6 +110,14 @@ async function run(file, h) {
       /* 카드 글자 두 줄의 잉크 상자 — [B7] 이 «입자가 그 위에 앉는가» 를 잰다 */
       glyphRows: inksOf(sel).map((k) => ({ txt: k.txt, x: k.x, y: k.y, r: k.r, b: k.b })),
       /* 스파크가 «누른 카드» 를 가리키는가 — 개수만 세면 «아무 데서나 터져도 초록» 이다(702·verify93 [7-c2]) */
+      /* ⚑ 4회차 — «카드 본체가 반응하지 않는다»(3회차 CR6)를 **제품 쪽에서** 못박는 재료다.
+         그 지적은 죽은 프레임을 잰 것이었고(`probe814b` [3-c]) 실제로는 플래시가 카드 상자를
+         통째로 덮는다. 픽셀 증거는 `probe814b` 가 들고, 여기서는 **상자가 호스트와 같은가**를
+         묻는다 — 누군가 플래시 앵커를 다른 노드로 옮기면 픽셀 자를 안 돌려도 여기가 빨개진다. */
+      flashAt: L ? [...L.querySelectorAll('.fx-flash')].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height, an: getComputedStyle(e).animationName };
+      }) : [],
       sparkAt: L ? [...L.querySelectorAll('.fx-spark')].map((e) => {
         const r = e.getBoundingClientRect();
         return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, s: Math.max(r.width, r.height) };
@@ -229,6 +237,24 @@ function inter(plus, inks) {
     console.log('  · 값 줄(' + valRows.map((k) => '«' + k.txt + '»').join(' · ') + ') 위에 앉은 알 '
       + onVal.length + '/' + D.sparkAt.length + ' · 상태 라벨 «착용 중» 포함 ' + onAll.length + '알');
     ok(onVal.length === 0, '[B7] ★ 입자가 **값 줄 두 곳** 위에 안 앉는다 — ' + onVal.length + '알 (링 세로 눌림 `--burst-ry`)');
+  }
+  {
+    /* 4회차 — 3회차 CR6 «테두리·내부 Δ ≤ 0.2/255 = 카드 본체가 0px 반응한다» 의 자리.
+       `probe814b` 가 픽셀로 갈랐다(그 지적은 **수거된 뒤의 프레임**을 잰 것이고, 봉우리에서
+       테두리 띠 +182/255 · 속 +46.6/255 다). 여기서는 그 반응의 **주어**를 지킨다 —
+       플래시 상자가 누른 카드와 같은 자리인가. 상자가 남의 노드로 옮겨 가면 픽셀 자를 안 돌려도
+       이 항이 먼저 빨개진다. ⚠ 상자는 호스트 rect 그대로다(`inset` 인자를 안 주는 호출이라
+       `pin` = 0 · 훈련 홀드 자리만 안으로 들인다). */
+    const f = D.flashAt[0];
+    const dc = f ? Math.max(Math.abs((f.x + f.w / 2) - (D.sel.x + D.sel.w / 2)),
+                            Math.abs((f.y + f.h / 2) - (D.sel.y + D.sel.h / 2))) : Infinity;
+    const ds = f ? Math.max(Math.abs(f.w - D.sel.w), Math.abs(f.h - D.sel.h)) : Infinity;
+    console.log('  · 플래시 상자 ' + (f ? r0(f.w) + '×' + r0(f.h) + ' (' + f.an + ') · 중심 Δ' + dc.toFixed(1)
+      + 'px · 크기 Δ' + ds.toFixed(1) + 'px' : '없음') + ' / 카드 ' + r0(D.sel.w) + '×' + r0(D.sel.h));
+    ok(!!f && dc <= 2 && ds <= 2 && /fxFlash/.test(f.an),
+      '[B11] ★ 그 플래시가 **누른 카드 본체**를 덮는다 — 중심 Δ' + (f ? dc.toFixed(1) : '—')
+      + 'px · 크기 Δ' + (f ? ds.toFixed(1) : '—') + 'px (≤ 2). 3회차 CR6 «카드가 0px 반응한다» 는 '
+      + '**수거된 뒤의 프레임**을 잰 것이다 — 픽셀 증거는 `node tools/probe814b.js`');
   }
 
   console.log('\n[B-K] 선언한 키프레임이 실제로 렌더되는가(추론 말고 계산값으로)');

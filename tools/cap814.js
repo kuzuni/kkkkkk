@@ -11,6 +11,20 @@
        **시간축이 정확**하다. ⚠ 파티클은 CSS 가 아니라 JS 틱이 움직이므로 이 벌에서는 **정지**다.
      · `-live-1..6` — 실시간(실측 시각을 같이 적는다). 입자가 실제로 어디로 흩어지는지는 이쪽이 답한다.
 
+   ⚠⚠ **3회차 캡처도 절반이 무효였다 — 4회차에 `probe814b` 가 자로 갈랐다.**
+     연출 노드의 **수거는 `fxBye()` 의 `setTimeout`**(index.html ~40821)이라 `getAnimations()` 를
+     정지시켜도 **실시간 시계는 계속 간다.** 스크린샷 한 장이 300~500ms 라 2번째 프레임을 찍을
+     즈음이면 플래시·스파크가 이미 걷힌 뒤고, `step` 8장 중 **살아 있는 프레임이 0~1장**이었다
+     (`probe814b` [3-c] — 첫 장이 사는지조차 실행마다 다른 «운» 이다).
+     그래서 3회차 비평 2인이 «0% 의 `.84` 트로프가 어디에도 없다»·«카드 본체가 0px 반응한다» 를
+     냈다 — **둘 다 죽은 프레임을 잰 것**이고 제품은 그 시각에 실제로 테두리 띠 **+182/255** ·
+     속 **+46.6/255** 로 반응하고 있었다. `live` 벌도 판정에는 못 쓴다(수명 620ms 안에 드는
+     프레임이 0~1장 · 3회 실행에서 속 봉우리가 12.64 · 6.26 · 0.01 로 널뛴다 — CR4 의 «+49.7%» 와
+     CR6 의 «0px» 는 같은 제품의 **두 운**이다).
+   ⇒ **`step` 벌에서는 «걷지 않는다»**(`fxl` 레이어 안 노드에 한해 `remove` 무력화). 그러면 8장이
+     한 곡선을 그린다 — `probe814b` [3-f] 실측 테 Δ휘도 **182 → 159 → 149 → 127 → 3 → 0 → 0 → 0**.
+     ⚠ 이 무력화는 **채점 캡처 전용**이다(제품 0줄). 회귀는 `node tools/probe814b.js`.
+
    ⚠ 캡처는 커밋하지 않는다(ROUTINE 서두 — `docs/review/*.png` 는 .gitignore).
 
    실행: node tools/cap814.js [--tag r2] */
@@ -68,6 +82,15 @@ async function select(p) {
 
 const clipOf = (sel) => ({ x: Math.max(0, Math.round(sel.x - 226)), y: Math.max(0, Math.round(sel.y - 150)), width: 620, height: 480 });
 
+/* 4회차 — `step` 벌 전용 «수거 정지»(위 머리말 ⚠⚠). `fxl` 레이어 **안** 노드의 `remove` 만 무력화한다 —
+   격자 재렌더·팝업 등 나머지 DOM 은 한 줄도 안 건드린다. */
+const FREEZE = () => {
+  const inFx = (n) => { try { return !!(n && n.parentNode && n.parentNode.id === 'fxl'); } catch (_) { return false; } };
+  const R = Element.prototype.remove, RC = Node.prototype.removeChild;
+  Element.prototype.remove = function () { if (inFx(this)) return; return R.call(this); };
+  Node.prototype.removeChild = function (c) { if (this && this.id === 'fxl') return c; return RC.call(this, c); };
+};
+
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const log = [];
@@ -102,6 +125,7 @@ const clipOf = (sel) => ({ x: Math.max(0, Math.round(sel.x - 226)), y: Math.max(
       const { b, p } = await boot(src);
       const sel = await select(p);
       const clip = clipOf(sel);
+      await p.evaluate(FREEZE);                    /* 4회차 — 안 하면 2~8번이 «연출이 끝난 카드» 다 */
       await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
       for (let i = 0; i < STEPS.length; i++) {
         await p.evaluate((t) => {
