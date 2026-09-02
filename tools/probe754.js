@@ -54,6 +54,14 @@ const EXEMPT = [
   { sel: '.upr-close', why: '«터치하여 닫기» — 탭바 상단 기준(09·17·18 공용 부품, index.html .upr-close 주석)' },
   { sel: '.sm-close',  why: '«터치하여 닫기» — 12 소환 결과의 같은 부품' },
   { sel: '#psBar',     why: '35 패스 하단 고정 바 — 탭바 자리를 대신하는 바' },
+  /* 3회차 등재(위임 규약 채택) — 56 절전은 **잠금화면**이고 이 줄은 그 화면의 «밀어서 잠금 해제»
+     안내다. 바닥에 매달리는 것이 곧 뜻이라 규약 ① 의 «바닥 시트» 예외와 같은 자리이고,
+     **351 6회차가 이미 클램프를 씌워 놓았다** — `bottom:min(195px, calc(100% − 1561px))` 이라
+     통계 패널 하변 + 여백 30 위로는 올라오지 못한다. 그래서 간극이 1600 에서 30 으로 멈추고
+     **겹침은 어떤 프레임에서도 0** 이다(1600:30 · 1841:115 · 1920:194 · 2280:554 · 2600:874).
+     ⚠ 자의 ⓑ 축(«최댓값의 1/4 미만이면 붕괴»)은 **하한이 상수로 박힌 쌍**을 붕괴로 읽는다 —
+     30 은 무너진 값이 아니라 351 이 고른 여백이다. 되돌리는 법: 이 줄을 빼면 [❌] 로 돌아온다. */
+  { sel: '.sv-hint',   why: '56 절전(잠금화면) «밀어서 잠금 해제» — 바닥 매달림이 곧 뜻 · 351 클램프가 여백 30 을 바닥으로 보장(겹침 0)' },
 ];
 const isExempt = (key) => EXEMPT.some((e) => key === e.sel || key.startsWith(e.sel + '['));
 
@@ -84,7 +92,12 @@ const HOSTS = [
   { id: '11',  name: '소환확률정보',      sel: '#prbw',  open: `openProbInfo('weapon',1)` },
   { id: '05',  name: '무기팝업',          sel: '#wpnw',  open: `openWeapon(null,'weapon')` },
   { id: '103', name: '채팅',              sel: '#chw',   open: `document.querySelector('#botleft .ubtn[data-util="chat"]').click()` },
-  { id: '55',  name: '설정',              sel: '#svw',   open: `openSave&&openSave()` },
+  /* ⚑ 3회차 정정 — 1·2회차의 이 줄은 **두 군데가 틀렸다**(21종 중 유일한 MISSING 이었다):
+     `#svw` 는 55 설정이 아니라 **56 절전 모드**이고, 그 오프너 이름은 `openSave` 가 아니라
+     `openSaver()` 다(index.html ~38123). 55 설정 팝업의 호스트는 `#cfw`·`openConf()`(~35072)다.
+     ⇒ 55 를 제 호스트로 돌리고, 잘못 적힌 김에 표본 밖이던 56 도 같이 세웠다. */
+  { id: '55',  name: '설정',              sel: '#cfw',   open: `openConf()` },
+  { id: '56',  name: '절전 모드',          sel: '#svw',   open: `openSaver()` },
 ];
 
 /* 한 호스트의 «떠 있는 자식» 기하를 프레임 좌표로 훑는다.

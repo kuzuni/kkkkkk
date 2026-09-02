@@ -239,14 +239,31 @@ const REVERT_BOX = `
 
   /* ── [R] 되돌림 시험 ───────────────────────────────────────────── */
   console.log('\n=== [R] 되돌림 — 수리 전으로 되돌리면 실제로 빨개지는가 ===');
+  /* ⚑ **이관(2026-09-02, 작업 754 3회차 · 333 처방 — 지우지 않고 «어느 프레임에서 갈리는가» 를 옮겼다)**
+     이 항은 1920 에서 «Δ > 100» 을 물었다. 그 문턱은 705 당시 **19 가 상단 앵커**(`top:clamp(…,431px,…)`)
+     라서 성립했다 — 되돌린 20(flex 중앙)과 상단에 못 박힌 19 가 1920 에서 180px 갈렸던 것이다.
+     754 가 그 공유 축을 **중앙**으로 옮기자(`.pf, .spc{top:calc(50% − 709px + --pfsh/2)}`) 두 모델이
+     1920 에서 **같은 자리로 수렴한다**(실측 Δ 1.0px) — 되돌려도 안 빨개지는 자, 즉 헛초록이 된다.
+     ⚠ 705 의 주장이 틀렸던 게 아니다. 되레 [C] 는 더 세게 참이 됐다 — 수리 뒤 19·20 은 프레임
+       5종 전부에서 **Δ 0.0px** 다(옛 축에서는 2280 에서만 0 급이었다).
+     ⇒ 갈리는 자리는 **1600** 으로 옮겼다. 옛 껍데기는 패딩으로 프레임에서 360px 을 먹어
+       `max-height:100%` 가 **56px 먼저** 물린다(되돌림 h1240 ↔ 현행 h1296). 실측 —
+         1600 Δ **56.0** · 1841 1.0 · 1920 1.0 · 2280 1.0 · 2600 1.0
+       그래서 문턱은 «> 20»(되돌림 56 ↔ 현행 0 사이, 양쪽에 여유). 짝으로 **음성항**을 같이 세워
+       «되돌림 없이는 0» 을 못박는다 — 문턱만 낮추면 무르게 푼 수리가 되기 때문이다. */
   {
-    const P = await newPage(browser, 1920, REVERT_BOX);
+    const dOf = (r) => Math.max(Math.abs(r.spc.x - r.pf.x), Math.abs(r.spc.y - r.pf.y),
+                                Math.abs(r.spc.w - r.pf.w), Math.abs(r.spc.h - r.pf.h));
+    const P = await newPage(browser, 1600, REVERT_BOX);
     const r = await openBoth(P.page);
-    const d = Math.max(Math.abs(r.spc.x - r.pf.x), Math.abs(r.spc.y - r.pf.y),
-                       Math.abs(r.spc.w - r.pf.w), Math.abs(r.spc.h - r.pf.h));
-    ok(d > 100, '[R1] `#specw` 를 flex+패딩으로 되돌리면 1920 에서 상자가 크게 튄다(= [C] 가 빨개진다)',
-       `Δ ${d.toFixed(1)}px (19 ${r.pf.y} ↔ 20 ${r.spc.y})`);
+    ok(dOf(r) > 20, '[R1] `#specw` 를 flex+패딩으로 되돌리면 **1600** 에서 상자가 튄다(= [C] 가 빨개진다)',
+       `Δ ${dOf(r).toFixed(1)}px (19 h${r.pf.h} ↔ 20 h${r.spc.h} — 패딩 360 이 max-height 를 먼저 문다)`);
     await P.ctx.close();
+    const Q = await newPage(browser, 1600);           /* 음성항 — 되돌림 없이 같은 자리에서 재면 0 이어야 한다 */
+    const q = await openBoth(Q.page);
+    ok(dOf(q) <= 1, '[R1b 음성항] 되돌림을 안 심으면 같은 1600 에서 Δ 0 (문턱을 낮춰 통과시킨 게 아니다)',
+       `Δ ${dOf(q).toFixed(1)}px`);
+    await Q.ctx.close();
   }
   {
     const P = await newPage(browser, 2280);

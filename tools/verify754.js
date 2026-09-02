@@ -190,13 +190,111 @@ async function open1(browser, F, css, kase) {
     blk('§5 예외 목록 — 바닥에 매달린 것은 목록에 적힌 부품뿐');
     ok(/\.upr-close\{position:absolute;left:0;right:0;bottom:175px/.test(RAW),
       '§5 «터치하여 닫기» 는 탭바 기준 하단 앵커 그대로 (예외 ① — 09·17·18 공용)', 'bottom:175px');
-    const exempt = ['.upr-close', '.sm-close', '#psBar'];
-    ok(/const EXEMPT = \[/.test(fs.readFileSync(path.join(ROOT, 'tools', 'probe754.js'), 'utf8')),
+    const PRB = fs.readFileSync(path.join(ROOT, 'tools', 'probe754.js'), 'utf8');
+    const EXBLK = (PRB.match(/const EXEMPT = \[([\s\S]*?)\n\];/) || ['', ''])[1];
+    const exempt = [...EXBLK.matchAll(/\{ sel: '([^']+)'/g)].map((m) => m[1]);
+    ok(/const EXEMPT = \[/.test(PRB) && exempt.length > 0,
       '§5 예외 목록이 재현기 안에 **글로 적혀** 있다 (늘릴 때 사유를 같이 적는 자리)', exempt.join(' · '));
+    /* ⚑ 3회차 — 목록은 **자라는 자리**다. 그래서 «몇 개인가» 가 아니라 «전부 사유가 붙어 있나» 를 묻는다.
+       재현기 머리말이 «적을 말이 없으면 그것은 예외가 아니라 아직 안 고친 자리다» 라고 못박고 있는데
+       그 문장을 지키는 자가 없었다 — 사유 없는 한 줄이 조용히 늘면 이 게이트는 «전부 예외» 로 초록이 된다. */
+    const whys = [...EXBLK.matchAll(/\{ sel: '[^']+',\s*why: '([^']{10,})'/g)].map((m) => m[1]);
+    ok(whys.length === exempt.length,
+      '§5 예외 항 전부에 **사유(why)** 가 붙어 있다 (사유 없는 예외 = 아직 안 고친 자리)',
+      `${whys.length}/${exempt.length} 항`);
     /* 이번 회차가 묶은 두 화면에는 목록 밖 하단 앵커가 없어야 한다 */
     const stBlk = (RAW.match(/#statw\{[\s\S]*?\n  #defw\{/) || [''])[0];
     const botsInStat = (stBlk.match(/\.(st|upr)-[a-z-]+\{[^}]*bottom:/g) || []).filter((s) => !/upr-close/.test(s));
     ok(botsInStat.length === 0, '§5 17 묶음 안에 목록 밖 하단 앵커 0건', botsInStat.join(' ') || '0건');
+
+    /* ⚑ 3회차 신설 — 이번 회차가 목록에 **더한** `.sv-hint`(56 절전 «밀어서 잠금 해제») 의
+       근거를 자가 직접 잰다. 예외를 «목록에 적었으니 통과» 로 두면 그 근거를 누가 지워도 초록이다.
+       근거는 두 겹이고 둘 다 351 6회차가 심은 것이다 —
+         ⓐ 클램프가 CSS 에 살아 있는가(`bottom:min(195px, 100% − 1561px)`)
+         ⓑ 그 덕에 **가장 넓은 화면(1600)** 에서도 통계 패널과 안 겹치는가.
+       ⚠ 재현기는 이 쌍을 «간극붕괴» 로 읽었었다(1600:30 ↔ 2600:874 = 최댓값의 3.4%). 30 은
+         무너진 값이 아니라 351 이 고른 여백이고, 그 차이를 가르는 것이 바로 아래 두 항이다. */
+    ok(/#svw \.sv-hint\{position:absolute;left:0;right:0;bottom:min\(var\(--hnb,195px\), ?calc\(100% - 1561px\)\)/.test(RAW),
+      '§5 `.sv-hint` 예외 근거 ⓐ — 351 클램프가 살아 있다', 'bottom:min(195px, 100%−1561px)');
+    {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 1600 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(650);
+      await page.evaluate(`try{ openSaver() }catch(e){}`);
+      await page.waitForTimeout(380);
+      const sv = await page.evaluate(() => {
+        const q = (s) => document.querySelector(s);
+        const P = q('#svw .sv-p'), H = q('#svw .sv-hint');
+        if (!P || !H) return null;
+        const pb = P.getBoundingClientRect().bottom, ht = H.getBoundingClientRect().top;
+        return { gap: Math.round((ht - pb) * 100) / 100 };
+      });
+      ok(sv && sv.gap > 0, '§5 `.sv-hint` 예외 근거 ⓑ — 1600 에서 통계 패널과 겹침 0 (클램프가 만든 바닥 여백)',
+        sv ? `간극 ${sv.gap}px` : '측정 실패');
+      await ctx.close();
+    }
+
+    /* ── §6 19 프로필 · 20 종합스탯 (3회차 신설) ───────────────────────────
+       ⚑ **자가 «무해» 로 읽던 자리다.** 재현기는 «담는 상자 «안»의 자식들» 을 재는데 19·20 은
+       자식은 상자에 잘 매달려 있고 **상자 자신이 프레임 상단에 못 박혀** 있었다 —
+       즉 자의 구멍은 «그릇 자체의 앵커를 아무도 안 묻는다» 였다(비평가 CB·CC 2인 독립 일치).
+       수리 전 실측: 상자 중심 − 프레임 중심 = +71 / +141.5 / +169 / −11 / −171 ⇒ **340px 스윙**.
+       (2280 에서만 −11 이라 기준 프레임만 보면 «중앙» 으로 보였다 — 705 가 두 탭을 통일한 자리라
+        더 그럴듯했다.) 이 절은 그래서 **그릇의 중심**을 프레임 5종에서 직접 잰다. */
+    blk('§6 19 프로필 · 20 종합스탯 — 그릇 **자신**이 중앙 앵커 (3회차 신설)');
+    {
+      const REF_OFF = -11;            /* 측정표 — 상자 중심은 프레임 중심에서 11px 위 */
+      const seen = [];
+      for (const K of [{ id: '19', open: 'openProfile()', sel: '.pf' },
+                       { id: '20', open: 'openSpec()',    sel: '.spc' }]) {
+        const offs = [];
+        for (const F of FRAMES) {
+          const ctx = await browser.newContext({ viewport: { width: 1080, height: F.h }, deviceScaleFactor: 1 });
+          const page = await ctx.newPage();
+          await page.goto(URL, { waitUntil: 'load' });
+          await page.waitForTimeout(650);
+          await page.evaluate(`try{ ${K.open} }catch(e){}`);
+          /* ⚠ **고정 대기 뒤 rect 를 재지 마라**(291 규약 · LESSONS 30-②). 20 은 열릴 때 60 쥬시의
+             `jzBoxIn` 이 돌아서 350ms 에 재면 2600 에서 top 590.1 이 나오고 700ms 면 591 로 앉는다 —
+             그 3.65px 때문에 «19 와 20 이 다른 자리» 라는 유령이 이 자에 한 번 잡혔다. 연출이 끝날
+             때까지 기다린 뒤에 잰다(상한 2.5초 — 안 끝나면 그대로 재고 값으로 말하게 둔다). */
+          await page.waitForFunction((s) => {
+            const e = document.querySelector(s);
+            return !!e && getComputedStyle(e).animationName === 'none';
+          }, K.sel, { timeout: 2500 }).catch(() => {});
+          await page.waitForTimeout(120);
+          const m = await page.evaluate((s) => {
+            const a = document.getElementById('app').getBoundingClientRect();
+            const e = document.querySelector(s);
+            if (!e) return null;
+            const q = e.getBoundingClientRect();
+            return { off: Math.round(((q.top + q.bottom) / 2 - a.top - a.height / 2) * 100) / 100,
+                     top: Math.round((q.top - a.top) * 100) / 100 };
+          }, K.sel);
+          offs.push({ F, m });
+          await ctx.close();
+        }
+        const bad = offs.filter((o) => !o.m || Math.abs(o.m.off - REF_OFF) > TOL);
+        ok(bad.length === 0, `§6 ${K.id} \`${K.sel}\` 중심이 프레임 5종 전부 중심 −11px (수리 전 +169 … −171 = 340px 스윙)`,
+          offs.map((o) => `${o.F.h}:${o.m ? o.m.off : 'x'}`).join(' '));
+        const at2280 = offs.find((o) => o.F.h === 2280);
+        ok(at2280 && Math.abs(at2280.m.top - 431) <= TOL,
+          `§6 ${K.id} 기준 프레임(2280)은 **Δ0px** — 레퍼런스 자리를 안 옮겼다`, at2280 ? `top ${at2280.m.top}` : 'x');
+        seen.push(offs.map((o) => o.m && o.m.top).join(','));
+      }
+      /* 705 규약 — 두 탭은 «선언 한 벌» 을 읽는다. 갈라지면 «프로필로 자꾸 클릭하면 위치가 바뀜» 이 돌아온다. */
+      ok(seen[0] === seen[1], '§6 19·20 이 프레임 5종에서 **같은 자리** (705 «선언 한 벌» 규약)',
+        seen[0] === seen[1] ? seen[0] : `19[${seen[0]}] ≠ 20[${seen[1]}]`);
+      ok(/\.pf, \.spc\{[^}]*top:calc\(50% - 709px \+ var\(--pfsh\) \/ 2\)/.test(RAW),
+        '§6 선언이 **한 줄**이다 (값을 어느 한쪽에 다시 적으면 상수 두 벌이 갈린다 — 705 ⚠)', 'top:calc(50% − 709px + --pfsh/2)');
+      /* ⚠ 이 항은 **RAW 전체로 물으면 안 된다** — 바로 위 주석이 옛 값을 «무엇이 틀렸었나» 로
+         인용하고 있어서 파일 전체를 훑으면 제 주석에 걸려 영영 빨갛다(지시서 [4] §4 가 «기록에
+         표시 문자열을 적을 때» 로 경고하는 자리와 같은 함정이다). 물어야 하는 것은 **규칙 안**이다. */
+      const PFRULE = (RAW.match(/\.pf, \.spc\{[^}]*\}/) || [''])[0];
+      ok(PFRULE.length > 0 && !/top:clamp\(223px, ?431px/.test(PFRULE),
+        '§6 옛 상단 앵커(`clamp(223px, 431px, frameh − 1477px)`) 가 **규칙 안에** 없다', '0건');
+    }
 
     /* ── §R 되돌림 ───────────────────────────────────────────────────────── */
     blk('§R 되돌림 — 옛 절대 배치를 도로 심으면 §2·§3 이 빨개진다');
@@ -212,6 +310,30 @@ async function open1(browser, F, css, kase) {
         `[R] ${K.id} 그 사본은 1600 에서 간극이 수리 전 값으로 돌아간다`,
         gap == null ? '측정 실패' : `간극 ${r2(gap)}px (수리 전 ${K.was.gap1600}px)`);
       await ctx.close();
+    }
+    /* §6 의 되돌림 — 옛 상단 앵커를 도로 심으면 «340px 스윙» 이 그대로 돌아온다.
+       무르게 푼 수리가 아님을 이 두 항이 못박는다(1920 은 위로, 2600 은 아래로 갈린다). */
+    {
+      const revert = `.pf, .spc{top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px))!important}`;
+      const got = [];
+      for (const F of [FRAMES[2], FRAMES[4]]) {          /* 1920 · 2600 — 스윙의 양 끝 */
+        const ctx = await browser.newContext({ viewport: { width: 1080, height: F.h }, deviceScaleFactor: 1 });
+        const page = await ctx.newPage();
+        await page.goto(URL, { waitUntil: 'load' });
+        await page.waitForTimeout(650);
+        await page.addStyleTag({ content: revert });
+        await page.evaluate(`try{ openProfile() }catch(e){}`);
+        await page.waitForTimeout(350);
+        got.push(await page.evaluate(() => {
+          const a = document.getElementById('app').getBoundingClientRect();
+          const q = document.querySelector('.pf').getBoundingClientRect();
+          return Math.round(((q.top + q.bottom) / 2 - a.top - a.height / 2) * 100) / 100;
+        }));
+        await ctx.close();
+      }
+      ok(got[0] > 150 && got[1] < -150,
+        '[R] §6 옛 상단 앵커 사본은 1920 에서 아래로·2600 에서 위로 갈린다 (수리 전 +169 / −171)',
+        `1920:${got[0]} · 2600:${got[1]} (Δ ${r2(got[0] - got[1])}px 스윙)`);
     }
   } finally { await browser.close(); }
 
