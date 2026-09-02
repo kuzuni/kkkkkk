@@ -29,7 +29,9 @@ const SRC = fs.readFileSync(FILE, 'utf8');
 
 const REV = [   /* 415 선언 → 391 시절 선언 (사본 되돌림 — 여섯 자리를 **전부** 되돌려야 한다:
                    `.pf` 상자만 되돌리면 자식은 올라간 채라 «없던 세 번째 상태»(내부 하단 패딩 74)가 나온다) */
-  ['top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px))', 'top:clamp(104px, 431px, calc(100% - 1427px))'],
+  /* 754 이관(2026-09-02, 작업 830) — 치환 원본이 415 상한 clamp 에서 중앙 앵커로 바뀌었다.
+     되돌린 뒤 재현하는 391 상태(31/31)는 그대로다. */
+  ['top:calc(50% - 709px + var(--pfsh) / 2)', 'top:clamp(104px, 431px, calc(100% - 1427px))'],
   ['height:calc(1396px - var(--pfsh))', 'height:1396px'],
   ['height:calc(544px - var(--pfsh))', 'height:544px'],
   ['top:calc(1026px - var(--pfsh))', 'top:1026px'],
@@ -150,10 +152,20 @@ async function read(browser, file, H) {
   ok(A[1600].spill.length === 0 && B[1600].spill.length === 0,
     `[ⓓ 1600] 자식이 크림 판(.pf-fill) 밖으로 안 나간다 (전 ${B[1600].spill.length}건 · 후 ${A[1600].spill.length}건)`);
 
-  /* ⓔ 검산 — 얼려 둔 세 프레임 Δ0 */
-  for (const H of [1920, 2280, 2600])
-    ok(A[H].top === B[H].top && A[H].h === B[H].h && A[H].tgl.ly === B[H].tgl.ly && A[H].grid.h === B[H].grid.h,
-      `[ⓔ ${H}] 241 이 얼려 둔 프레임 Δ0px (top ${A[H].top} · h ${A[H].h} · tgl local ${A[H].tgl.ly} · grid h ${A[H].grid.h})`);
+  /* ⓔ 검산 — 얼려 둔 세 프레임 Δ0
+     754 이관(2026-09-02, 작업 830) — 이 대조(A = 현행 · B = 391 시절 사본)는 **415 의 몫만 재던 자**인데,
+     현행 트리에는 754(중앙 앵커)의 몫이 같이 들어 있어 `top` 한 칸이 A ≠ B 가 된다(1920 431→251 · 2600 431→591).
+     ⚠ 그렇다고 이 항을 풀면 «415 가 얼려 둔 프레임의 **속**을 건드려도 초록» 이 된다. ⇒ 축을 둘로 가른다:
+       · **속**(패널 높이 · 토글 local y · 그릇 높이)은 여전히 **Δ0px** — 415 도 754 도 안 건드렸다.
+       · **자리**(top)는 754 가 옮긴 값이 맞는지 **중앙 앵커 식으로** 되묻는다(기준 프레임 2280 은 Δ0 그대로). */
+  for (const H of [1920, 2280, 2600]) {
+    ok(A[H].h === B[H].h && A[H].tgl.ly === B[H].tgl.ly && A[H].grid.h === B[H].grid.h,
+      `[ⓔ ${H}] 얼려 둔 프레임의 **속**이 Δ0px (h ${A[H].h} · tgl local ${A[H].tgl.ly} · grid h ${A[H].grid.h})`);
+    ok(Math.round((A[H].top + A[H].h / 2 - H / 2) * 10) / 10 === -11,
+      `[ⓔ ${H}] 자리는 754 중앙 앵커 — 중심 오프셋 −11 (top ${B[H].top} → ${A[H].top})`);
+  }
+  ok(A[2280].top === B[2280].top && A[2280].top === 431,
+    `[ⓔ 2280] 기준 프레임은 자리까지 Δ0px — 레퍼런스 그대로 (${A[2280].top})`);
   ok(HS.every(H => A[H].errs === 0 && A[H].tgl.out <= 1),
     '[ⓔ] 프레임 8종에서 콘솔 에러 0 · 토글이 프레임 안');
 
