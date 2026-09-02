@@ -745,7 +745,20 @@ const BOT_SRC = function (cfg) {
       B.diaIn['우편(월)'] = (B.diaIn['우편(월)'] || 0) + moved;
     }
   });
-  R.quest  = () => T('퀘스트', () => { claimAllQuests(); ledger('퀘스트'); });
+  /* ⚑ 801 — «퀘스트» 한 축이 **성질이 다른 둘**을 접고 있었다: 799 뒤의 **업적**(누적 플레이량
+     × 단가 — 소환·강화·처치가 늘수록 자란다)과 **일일**(하루 정액 8,500 · 리텐션 축). 접힌 채로는
+     [E] 에서 «어느 쪽이 움직였는가» 가 안 보여, 801 의 재정박(×0.1427)이 축 하나를 절반만
+     설명하는 것처럼 읽혔다. ⇒ 두 이름으로 가른다.
+     ⚠ **제품 함수는 그대로 쓴다** — 일일을 먼저 받아 두면 이어지는 `claimAllQuests()` 의
+     `DQUESTS.filter(dqReady)` 가 빈 목록이 되어 그 호출은 업적만 지급한다(경로 대체 0건).
+     ⚠ 이 표부터 축 이름이 둘이다. 801 **이전** 표(r24·r801-pre)는 합본 «퀘스트» 한 축이고,
+     `verify758`·`verify801` 은 축 이름이 아니라 **합계**로 판정하므로 비교는 그대로 선다. */
+  R.quest  = () => T('퀘스트', () => {
+    DQUESTS.filter(dqReady).forEach(claimDQuest);
+    ledger('퀘스트(일일)');
+    claimAllQuests();
+    ledger('퀘스트(업적)');
+  });
   R.guide  = () => T('가이드미션', () => { for (let i = 0; i < 12; i++) { const b = S.dia; claimGuide(); if (S.dia === b) break; } ledger('가이드미션'); });
   R.pass   = () => T('패스', () => { for (const k of Object.keys(PASS_TABS || {})) { T('패스:' + k, () => passClaimAll(k)); } ledger('패스'); });
 
@@ -1093,6 +1106,11 @@ const BOT_SRC = function (cfg) {
          누적 평균뿐이었다. 스냅마다 축별 누적을 실으면 D23↔D30 차분 한 번으로 갈린다.
          (표 두 벌 금지 — `inAll` 은 이 사전의 합이라 항등식으로 검산된다: §14-1 [E2].) */
       inBy: Object.assign({}, B.diaIn),
+      /* ⚑ 801 — 799 뒤로 «퀘스트» 축은 **누적 플레이량 × 단가**다(처치 1마리 = dia/100 ·
+         강화 1회 = dia/10 …). 그 축의 크기를 사후에 설명하려면 플레이량 셋이 스냅에 있어야
+         한다 — 표를 두 벌 만들지 않고 이 셋 + `QUESTS[].dia` 만으로 [E] 의 퀘스트 축이
+         재구성된다(`verify801` [B] 가 그 항등식을 잰다. best·own 은 이미 위에 있다). */
+      qv: { kills: S.totalKills | 0, summons: S.summons | 0, upgrades: S.upgrades | 0 },
     };
   };
 
