@@ -175,6 +175,16 @@ function maxAxis(axes, total) {
      살아 있는지만 여기서 확인한다(값 판정은 24회차 안건 · 23-6). */
   yes('[A6] 결3 ⓑ 보정 손잡이 `PASS_OFF_MUL` 선언이 살아 있다 (23-6 안건이 가리키는 자리)',
       /const\s+PASS_OFF_MUL\s*=\s*[\d.]+\s*;/.test(SRC));
+  /* ⚑ **199 25회차 신설(비평 AAS 정정6)** — 마크업의 **정적 기본값**이 예산 세대를 따라가야 한다.
+     `#ofrMax` 는 팝업이 열릴 때 `showOfflineReward()` 가 덮어쓰지만, 그 전에 화면에 있는 것은
+     마크업의 문자열이다. 25회차가 예산을 660 으로 내렸을 때 그 자리는 «하루 24시간» 인 채였고
+     `verify151` C3 은 **팝업을 띄운 뒤**를 재서 이 자리를 못 본다(자가 둘인데 아무도 안 짖었다). */
+  const mCapA = SRC.match(/const\s+OFF_DAY_CAP_MIN\s*=\s*(\d+)\s*;/);
+  const capH = mCapA ? Math.floor(Number(mCapA[1]) / 60) : NaN;
+  const mStatic = SRC.match(/<i id="ofrMax">([^<]*)<\/i>/);
+  yes('[A7] 마크업의 정적 기본값 `#ofrMax` 가 현 하루 예산과 같은 세대다 (덮어쓰기 전 화면)',
+      !!mStatic && new RegExp('하루 ' + capH + '시간').test(mStatic[1]),
+      mStatic ? '«' + mStatic[1] + '» ↔ 예산 ' + (mCapA && mCapA[1]) + '분(' + capH + '시간)' : '(노드 없음)');
 
   /* ── [B] 제품 실지급 ──────────────────────────────────────────────────── */
   console.log('\n[B] 제품 실지급 — 페이지에서 잰다');
@@ -353,12 +363,17 @@ function maxAxis(axes, total) {
     yes('[T1] **④ 교차일 비(대충/부지런)가 §0 창(' + RATIO_LO + '~' + RATIO_HI + ') 안이다**',
         !!crC && crC.ratio >= RATIO_LO && crC.ratio <= RATIO_HI,
         crC ? crC.ratio.toFixed(3) : '(행 없음)');
-    /* 진짜 음성항 — 손으로 만든 표본이 아니라 **커밋된 직전 세대 표**다. r801-post 는 calib sha 가
-       base-k 와 같아(6a013a86ea41) [S1] 이 금지한 «해시 다른 두 표» 문제도 없다. 이 항이 빨개지면
-       [T1] 은 아무 표나 통과시키는 것이다(24정정8 이 [R3] 에서 지적한 결함을 여기서는 안 만든다). */
+    /* 표본은 손으로 만든 것이 아니라 **커밋된 직전 세대 표**이고 calib sha 도 base-k 와 같다
+       (6a013a86ea41 — [S1] 이 금지한 «해시 다른 두 표» 문제는 없다).
+       ⚠ **25회차 비평(AAS) 접수 — 이름표를 [전제]로 고친다.** 이 항은 커밋된 파일만 읽으므로
+       **제품 변경으로는 못 빨개진다**(24정정8 이 [R3] 에 대해 내린 판정과 **같은 구조**다).
+       초판이 «[음성항]» 이라 부르고 «24정정8 의 두 결함 중 뒤엣것만 없다» 고 적은 것은 반쯤만
+       정직했다 — 앞엣것(영구 초록)은 그대로 있다. 항을 지우지 않는 이유는 [R3] 과 같다:
+       재는 것이 «창이 다른 세대를 실제로 밀어내는가» 이고 그 여유(2.528 ↔ 상한 2.0 = 26.4%)가
+       κ 효과(4.34%)의 6배라 결론이 안 뒤집힌다. 제품 되돌림을 잡는 것은 [E1]·[E1b] 다. */
     const preMd = fs.existsSync(PRE_M) ? fs.readFileSync(PRE_M, 'utf8') : null;
     const crP = preMd ? crossOfMd(preMd) : null;
-    yes('[T2] [음성항] **직전 세대 표**(r801-post · 같은 κ sha)를 이 자에 대면 창을 **넘는다**',
+    yes('[T2] [전제] **직전 세대 표**(r801-post · 같은 κ sha)를 이 자에 대면 창을 **넘는다** (⚠ 커밋된 표만 읽는다 = 제품 변경으로는 안 빨개진다)',
         !!crP && crP.ratio > RATIO_HI,
         crP ? crP.ratio.toFixed(3) + ' (' + calShaOf(preMd) + ')' : '(직전 표 없음)');
     /* 이 회차 손잡이의 주장 자체 — «하루 예산은 대충에 Δ0» (대충은 1회 상한 10.5h=630분에
@@ -369,6 +384,17 @@ function maxAxis(axes, total) {
     near('[T3] 대충 오프라인/일은 직전 세대와 **같다** (하루 예산 손잡이는 대충에 Δ0 · 1회 상한이 먼저 자른다)',
          casCur, casPre, 0.02, fmt(casCur) + ' ↔ ' + fmt(casPre));
     /* 그리고 부지런은 실제로 내려왔는가 — 예산 상수로 설명되는가([E1] 의 정책 쌍) */
+    /* ⚑ **25회차 비평 3인 일치 접수(AAR·AAS·AAT)** — [T1] 은 **말미 창 W7 하나**에 걸려 있다.
+       같은 표의 W 민감도로 다시 나누면 W3 3.080 · W7 1.960 · W14 1.265 · W29 1.266 으로 4개 창 중
+       하나만 창 안이다. 지금 그 넷을 **판정**으로 세우면 이 회차를 포함해 **어느 세대도 못 지나므로**
+       («자를 결과에 맞춘다» 의 반대 방향 잘못 — 지날 수 없는 자는 다음 회차를 통째로 막는다),
+       26회차가 손잡이로 다룰 때까지 **관측 항**으로 찍어만 둔다(§0 «관측» 지위 = [C3]·[D4] 와 같다).
+       ⇒ 26회차의 몫: W 축을 어떻게 판정으로 세울지(창을 넓히거나 W 를 규약으로 하나 고정하거나). */
+    /* 정책별 [E2] 표에도 같은 머리글이 있으므로 **칸이 넷인 [G] 행**만 고른다(crossOfMd 와 같은 규칙) */
+    const wLine = (cmd.split('\n').filter(l => /④ 교차일 —/.test(l) && /소환 예산 장부/.test(l) && l.split('|').length >= 6)[0]) || null;
+    R.push({ n: '[T5] ④ 판정 줄의 **말미 창 W 민감도** — **관측**(판정 아님 · 25회차 비평 3인 일치)',
+             got: wLine ? wLine.split('|').slice(2, 4).map(s => s.trim()).join(' ‖ ') : '(표에 줄 없음)',
+             want: '(기록)', pass: !!wLine });
     yes('[T4] 부지런 오프라인/일은 **내려왔다** (같은 두 표 · 하루 예산이 실제로 자른 축)',
         Number.isFinite(offDayCur) && Number.isFinite(casPre) && offDayCur < (preMd ? incOfMd(preMd, 'diligent').axes['오프라인'] / days : Infinity),
         fmt(offDayCur) + ' ↔ 직전 ' + fmt(preMd ? incOfMd(preMd, 'diligent').axes['오프라인'] / days : NaN));
