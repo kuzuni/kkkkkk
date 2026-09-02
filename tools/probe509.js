@@ -20,6 +20,11 @@
  * 좌우(x축)만 쓰는 이유는 `.updot` 의 광택(`inset 0 6px …`)이 **위쪽**에만 얹혀 세로축을
  * 오염시키기 때문이다 — 세로도 같이 찍어 표에 남기되 판정은 가로로 한다.
  *
+ * ⚑ 823(2026-09-02) — 자리 축(`inX`/`inY`) 옆에 **제품이 선언한 규약값**(`dotInX`/`dotInY` ·
+ *   폴백 `--dot-in`)을 같이 찍는다. `verify509` [C] 가 좌표 상수를 굳혀 두고 있었는데
+ *   471 7회차가 `.ibtn .bdg{--dot-in-x}` 를 20 → 17.4 로 옮기자 자만 뒤처져 빨갰다(작업 823).
+ *   재는 값과 선언한 값을 나란히 두면 «자리가 어긋났다» 와 «규약값이 바뀌었다» 가 갈린다.
+ *
  * ⚠ 471 5회차의 사고를 그대로 피한다 — `jzDotPulse`(scale 1.14 봉우리)가 켜져 있으면
  *   닷이 12.5% 부푼 채로 찍힌다. 자는 닷의 애니를 **끄고** 잰다(`animation:none`).
  *
@@ -101,12 +106,21 @@ const near = (p, c, t) => Math.abs(p[0]-c[0]) <= t && Math.abs(p[1]-c[1]) <= t &
         });
         const h = hostSel ? el.closest(hostSel) : el.parentElement;
         const hr = h ? h.getBoundingClientRect() : null;
+        /* 823 — 471 규약식의 **재료**를 살아 있는 값으로 읽는다(822 가 `probe325` 에서 쓴 꼴).
+           규약은 «중심 = 호스트 코너 안쪽 `--dot-in-x`(없으면 `--dot-in`)» 이라 자리를 묻는 항이
+           좌표 상수를 새로 적을 필요가 없다 — 제품이 그 값을 바꾸면 자도 같이 따라온다.
+           정의 안 된 var 를 물면 빈 문자열이 오고, 그것이 CSS 식의 폴백과 같은 뜻이다. */
+        const cv = n => parseFloat(cs.getPropertyValue(n));
+        const dotIn = cv('--dot-in');
+        const orIn = v => (Number.isFinite(v) ? v : dotIn);
         return { x: r.x, y: r.y, w: r.width, h: r.height,
                  bw: parseFloat(cs.borderTopWidth) || 0,
                  ring: +(r.width + 2 * sp).toFixed(2),
                  inX: hr ? +(hr.right - (r.x + r.width / 2)).toFixed(2) : null,
                  inY: hr ? +((r.y + r.height / 2) - hr.top).toFixed(2) : null,
                  shadow: sh,
+                 dotIn: Number.isFinite(dotIn) ? dotIn : null,
+                 dotInX: orIn(cv('--dot-in-x')), dotInY: orIn(cv('--dot-in-y')),
                  dotR: (cs.getPropertyValue('--dot-r') || '').trim() };
       }, { sel: it.dot, hostSel: it.host || null });
       if (!geo) { rows.push({ ...it, missing: true }); continue; }
@@ -167,6 +181,7 @@ const near = (p, c, t) => Math.abs(p[0]-c[0]) <= t && Math.abs(p[1]-c[1]) <= t &
         label: it.label, kind: it.kind,
         box: +geo.w.toFixed(2), bw: +geo.bw.toFixed(2), dotR: geo.dotR,
         ring: geo.ring, inX: geo.inX, inY: geo.inY,
+        dotIn: geo.dotIn, dotInX: geo.dotInX, dotInY: geo.dotInY,
         coreR: +avg(bx.map(b => b.coreR)).toFixed(1),
         rimR:  +avg(bx.map(b => b.rimR)).toFixed(1),
         outR:  +avg(bx.map(b => b.outR)).toFixed(1),
@@ -192,7 +207,8 @@ const near = (p, c, t) => Math.abs(p[0]-c[0]) <= t && Math.abs(p[1]-c[1]) <= t &
       String(r.coreR).padStart(5) + String(r.rimR).padStart(7) + String(r.outR).padStart(7) +
       String(r.rim).padStart(8) + String(r.blk).padStart(8) + String(r.box).padStart(8) +
       '   링' + String(r.ring).padStart(6) +
-      (r.inX === null ? '' : '   코너안쪽 ' + r.inX + '/' + r.inY));
+      (r.inX === null ? '' : '   코너안쪽 ' + r.inX + '/' + r.inY +
+        ' (선언 ' + r.dotInX + '/' + r.dotInY + ')'));
   }
   const std = rows.filter(r => !r.missing && r.kind !== '글로벌');
   const glb = rows.filter(r => !r.missing && r.kind === '글로벌');
