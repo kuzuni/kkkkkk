@@ -5,7 +5,7 @@
  *
  * 묻는 것은 여섯이다.
  *   [A] 부품   — 668·713 과 **같은 공용 셸**(`.stabs.sp4`)이고 칸 목록이 `SUM_MULS` 한 곳에서 온다
- *   [B] 자리   — «격자 ↔ 수반» 빈 띠 · 폭 724 · 중심 540(수반 중심과 같은 축) · 하변이 수반 상변 −20
+ *   [B] 자리   — 상인방 ↔ 격자 사이 «죽은 벽» · 폭 724 · 중심 540 · 하변이 격자 상변 −20 · 바닥 접합선 위
  *   [C] Δ0px   — 바를 얹어도 **89 의 어떤 요소도 안 움직인다**(수리 전 트리와 네 프레임 대조)
  *   [D] 라벨·가격 — 배수를 켜면 라벨·수량·가격이 **한 배수**를 따른다(주인 원문 «필요재화도 마찬가지»)
  *   [E]~[G] 동작 — 실제 클릭으로 뽑히는 장수·차감·부족 반려·닫으면 ×1 복귀
@@ -28,7 +28,7 @@ const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.resolve(ROOT, 'index.html').replace(/\\/g, '/');
 const FRAMES = [1600, 1920, 2280, 2600];
 const MULS = [1, 10, 100, 1000];
-const SHELL_H = 98, BAR_W = 724, BAR_L = 178, BASIN_GAP = 20, COST1 = 100;
+const SHELL_H = 98, BAR_W = 724, BAR_L = 178, GRID_GAP = 20, COST1 = 100;
 
 let pass = 0, fail = 0, hold = 0;
 const ok = (b, name, detail) => {
@@ -117,8 +117,10 @@ function preTree() {
         const R = s => { const q = document.querySelector(s).getBoundingClientRect();
           return { l: +q.left.toFixed(2), r: +q.right.toFixed(2), t: +q.top.toFixed(2),
             b: +q.bottom.toFixed(2), w: +q.width.toFixed(2), h: +q.height.toFixed(2) }; };
-        const bar = R('#rwMulBar'), mid = R('.rw-mid'), grid = R('.rw-grid');
-        return { H, bar, gapBasin: +(mid.t - bar.b).toFixed(2), clearGrid: +(bar.t - grid.b).toFixed(2),
+        const bar = R('#rwMulBar'), mid = R('.rw-mid'), grid = R('.rw-grid'),
+          lin = R('.rw-lintel'), gnd = R('.rw-ground');
+        return { H, bar, gapGrid: +(grid.t - bar.b).toFixed(2), clearLintel: +(bar.t - lin.b).toFixed(2),
+          overSeam: +(gnd.t - bar.b).toFixed(2),
           cxBar: +((bar.l + bar.r) / 2).toFixed(2), cxMid: +((mid.l + mid.r) / 2).toFixed(2) };
       }, H));
       await ctx.close();
@@ -133,12 +135,20 @@ function preTree() {
     ok(rows.every(r => eq(r.cxBar, 540) && eq(r.cxMid, 540)),
       '[B3] 바 중심 = 수반 중심 = 화면 중심 540 (둘이 한 덩어리로 읽힌다)',
       rows.map(r => r.H + ':' + r.cxBar + '↔' + r.cxMid).join(' · '));
-    ok(rows.every(r => eq(r.gapBasin, BASIN_GAP)),
-      '[B4] 바 하변 ↔ 수반 상변 = 20px (네 프레임 고정)',
-      rows.map(r => r.H + ':' + r.gapBasin).join(' · '));
-    ok(rows.every(r => r.clearGrid > 0),
-      '[B5] 바 상변이 격자 하변보다 아래 — 격자를 한 픽셀도 안 밟는다',
-      rows.map(r => r.H + ':' + r.clearGrid).join(' · '));
+    ok(rows.every(r => eq(r.gapGrid, GRID_GAP)),
+      '[B4] 바 하변 ↔ 격자 상변 = 20px (네 프레임 고정 — 바는 격자에 «붙어» 산다)',
+      rows.map(r => r.H + ':' + r.gapGrid).join(' · '));
+    ok(rows.every(r => r.clearLintel > 0),
+      '[B5] 바 상변이 상인방 하변보다 아래 — 상인방(120 ② «66px 온전»)을 한 픽셀도 안 밟는다',
+      rows.map(r => r.H + ':' + r.clearLintel).join(' · '));
+    /* ⚑ 이 항이 «자리» 결정의 본체다 — 아래 절 §1 의 표를 그대로 자로 옮긴 것이다.
+       수반 옆 띠에 두면 1600 에서 바가 **접합선 그림자대(gy+4..gy+16)를 통째로 덮어**
+       `verify120` [1600] ①-2 가 빨개진다(1회차에 실제로 그랬다: 그림자 52.6 vs 아래 47.5 = Δ−5.1).
+       바닥·계단은 120 이 20회차에 걸쳐 세운 «그림» 이고, 그것을 가리는 것은 게이트 문제가
+       아니라 **주인이 보는 화면에서 그 폴리시가 사라지는** 문제다. */
+    ok(rows.every(r => r.overSeam > 0),
+      '[B6] ★ 바가 바닥 접합선보다 **위**에 있다 — 120 이 20회차에 걸쳐 세운 바닥 그림을 한 픽셀도 안 덮는다',
+      rows.map(r => r.H + ':' + r.overSeam).join(' · '));
   }
 
   /* ── [C] 레이아웃 Δ0px (수리 전 트리 대조) ────────────────────────────── */

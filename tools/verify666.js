@@ -58,9 +58,15 @@ const ARM = () => {
     if (/fx-toast/.test(c)) return 'toast';
     return 'etc';
   };
-  { const f = window.summonRelic;
-    window.summonRelic = function (...a) { const r = f.apply(this, a);
-      if (r) P.buys.push({ t: performance.now() }); return r; }; }
+  /* ⚑ 700 이관 — 소환 경로가 **배치 하나**로 접혔다(`summonRelicBatch`, ×1 은 n = 1 인 배치다).
+     그래서 «몇 번 소환했는가» 를 세는 자리도 그 함수다. 종전처럼 `summonRelic` 을 감으면
+     배수 토글이 붙은 뒤로는 **한 건도 안 세어져** [B1]·[E1]·[R3] 이 «0회» 로 빨개진다.
+     ⚠ 세는 단위가 «장» 이 아니라 **«실행»** 인 것이 700 의 규약이다 — 666 의 «소환마다 버스트»
+       는 이제 «실행마다 버스트» 이고, 그것을 [E3] 이 ×100 으로 직접 못박는다(항을 눌러
+       초록으로 되돌리기만 하면 «×100 이 100발 터져도 초록» 이 된다 — 328~330 교훈). */
+  { const f = window.summonRelicBatch;
+    window.summonRelicBatch = function (...a) { const r = f.apply(this, a);
+      if (r) P.buys.push({ t: performance.now(), n: a[0] }); return r; }; }
   const stamp = nd => {
     if (nd.nodeType !== 1) return;
     const t = performance.now();
@@ -250,6 +256,34 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   const ratio = H.buys.length ? p2(hit / H.buys.length) : 0;
   ok(H.buys.length >= 4 && ratio >= 0.95, 'E1 ★ 소환마다 버스트가 터진다(≥0.95)',
      hit + '/' + H.buys.length + ' = ' + ratio);
+  ok(H.buys.every(b => b.n === 1),
+     'E2 배수를 안 켰으면 실행 단위는 «1장» 이다(700 이 켠 축이 기본값으로 새지 않는다)',
+     '실행별 장수 ' + [...new Set(H.buys.map(b => b.n))].join(','));
+  /* ⚑ 700 이관 — 666 의 «소환마다 1회» 는 배수가 붙은 뒤 «**실행**마다 1회» 다.
+     이 항이 없으면 ×100 이 **100발**을 터뜨려도 [E1] 은 초록이다(실행 1건에 버스트가
+     있기만 하면 되니까). 328~330 이 남긴 교훈 그대로 — 누른 항을 묻는 항을 한 줄 더 넣는다. */
+  {
+    await page.evaluate(() => { const P = window.__v666; P.add.length = 0; P.buys.length = 0;
+      S.relic = 1e12; openRelw();
+      document.querySelector('#rwMulBar [data-mul="100"]').click(); });
+    const b = await page.evaluate(() => {
+      const e = document.getElementById('rwBasin');
+      e.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      e.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      return true;
+    });
+    await page.waitForTimeout(520);
+    /* 상한은 손으로 안 적는다 — 제품의 «첫 발» 상수를 그대로 읽는다(값이 바뀌면 따라온다) */
+    const m = await page.evaluate(() => { const P = window.__v666;
+      return { buys: P.buys.slice(), icons: P.add.filter(a => a.k === 'icon').length,
+               lim: typeof RW_FX_N0 === 'number' ? RW_FX_N0 : 10 }; });
+    const RW_FX_N0_LIM = m.lim;
+    await page.evaluate(() => { document.querySelector('#rwMulBar [data-mul="1"]').click(); });
+    ok(b && m.buys.length === 1 && m.buys[0].n === 100 && m.icons > 0 && m.icons <= RW_FX_N0_LIM,
+       'E3 ★ 700 — ×100 을 한 번 눌러도 발화는 **한 벌**이다(1 실행 = 1 버스트 · 100발이 아니다)',
+       '실행 ' + m.buys.length + '건(장수 ' + (m.buys[0] ? m.buys[0].n : '-') + ') · 아이콘 '
+       + m.icons + '알(상한 ' + RW_FX_N0_LIM + ')');
+  }
 
   /* ── [F] 불변 ─────────────────────────────────────────────────────── */
   /* 주인이 뺀 것은 «텍스트» 다 — 10종 중 무엇이 올랐는지 말하는 칸 신호는 남아야 한다. */
@@ -306,8 +340,10 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   }
   {
     /* R2 — **수리 전 그 한 줄을 되살린다**: 격자 칸에서 터지는 크림 스파크 + «이름 Lv.n» 텍스트 델타 */
-    await reboot(() => { const f = window.summonRelic;
-      window.summonRelic = function (...a) { const it = f.apply(this, a);
+    /* 700 이관 — 되살리는 자리도 배치다(수리 전 한 줄은 «뽑은 그 유물의 칸» 에 걸렸고,
+       배치가 돌려주는 것이 바로 그 «마지막 한 장» 이라 물음이 그대로 산다). */
+    await reboot(() => { const f = window.summonRelicBatch;
+      window.summonRelicBatch = function (...a) { const it = f.apply(this, a);
         if (it) { const el = document.querySelector('#rwGrid [data-rw="' + it.id + '"]');
           if (el) fxUpOk(el, el, it.n + ' Lv.' + oLv(it.id)); }
         return it; }; });
