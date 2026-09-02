@@ -24,8 +24,20 @@
  *      얼린 뒤에는 상자 높이가 «타일을 어디서 자르는가» 만 정한다. 그 동결이 «장식» 이 아니라
  *      **하중을 받는 부품**임은 §R2 가 못박는다.
  *
+ * ⚑ **789(2026-09-02) — 재는 «창» 을 패널 상변부터로 좁혔다(문턱·기대값은 한 칸도 안 건드렸다).**
+ *   이 자는 상태마다 페이지를 **새로 띄워** 전 프레임 스크린샷을 차분한다(432-④ — 한 페이지에서
+ *   스타일만 갈아 끼우면 캔버스·배너·토스트가 섞인다). 그런데 프레임 **0~108** 을 덮는
+ *   41 팝업 내장 재화 바(`.pcb{top:-104px}` · `#relw{top:104px}`)의 **골드가 방치 전투로 흐른다** —
+ *   두 로드의 진입 시각이 몇십 ms 만 어긋나도 자릿수가 갈리고, 그 잉크가 «클립이 지운 잉크»(§2)·
+ *   «글로우가 그린 잉크»(§3·§R2)로 읽혔다(`probe789` [1]~[3] — 지문 bbox 57×35 · 최대Δ255).
+ *   ⇒ 차분을 **`probe789.roi()`(패널 상변 ~ 프레임 바닥)** 안에서만 센다.
+ *   ⚠ **아래는 한 픽셀도 안 자른다** — §2 가 묻는 «클립이 지우는 잉크» 는 정의상 패널 **밖**
+ *      (하변 아래)이라 아래를 자르면 그 항이 «무조건 0» 이 되어 통째로 무의미해진다.
+ *      창이 축을 통째로 담는다는 것은 §0 `[0-f]` 가, 좁혀서 감춘 게 아니라는 것은 §R2·`[0-d]` 가 못박는다.
+ *
  * 본다:
- *   §0 [전제] — 표본이 실재한다(그릇은 hidden · 글로우는 그려진다 · `--rwc` 는 1)
+ *   §0 [전제] — 표본이 실재한다(그릇은 hidden · 글로우는 그려진다 · `--rwc` 는 1 ·
+ *              **같은 상태 두 로드가 창 안에서 정확히 같다**(A/A) · 창이 축을 통째로 담는다)
  *   §1 넘침 0 — D2 의 판정식 그대로, 여섯 프레임 전부 `scrollH ≤ clientH + 2`
  *   §2 그림 Δ0 — 클립이 지우는 잉크가 **0개**(hidden ↔ visible 차분)
  *   §3 글로우가 프레임과 무관하다 — 그려진 잉크 bbox 가 여섯 프레임에서 **같고** 패널 안에 있다
@@ -36,6 +48,8 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { fresh, settle, drive } = require('./probe351lib');
+/* 재는 창은 재현 자(789)에 **한 번만** 적힌다 — 두 곳에 적으면 두 자가 서로 다른 것을 잰다(385) */
+const { roi } = require('./probe789');
 
 const FRAMES = [1600, 1700, 1842, 1920, 2280, 2600];
 const OPENER = { label: 'tab:box', sel: '.tab[data-t="box"]' };
@@ -65,6 +79,9 @@ const MEASURE = function () {
     midTop: +(mr.top - pr.top).toFixed(2),
     rwc: getComputedStyle(pn).getPropertyValue('--rwc').trim(),
     g3, bt,
+    /* 789 — 재는 창이 글로우 상자를 담는지 물으려면 그 상자의 **프레임 절대 상변**이 필요하다.
+       `::before` 는 rect 가 없으므로 계산값으로 센다(LESSONS 432-①). */
+    glowTopAbs: +(mr.top + parseFloat(bs.top)).toFixed(1),
     glow: { top: bs.top, height: bs.height, width: bs.width, size: bs.backgroundSize, repeat: bs.backgroundRepeat, ptr: bs.pointerEvents },
     /* ⚠ `.pcb` 의 **자식 전부**를 세면 안 된다 — 429 가 같은 띠에 `[?]` 도움말(`.rl-help`)을
        얹으면서 자식이 4개가 됐다. 이 항이 지키려는 것은 «41 재화 **알약** 3개» 이므로
@@ -76,25 +93,32 @@ const MEASURE = function () {
   };
 };
 
-/* 두 PNG 의 «다른 픽셀» 과 그 bbox — 차분이 곧 «그 층이 그린 잉크» 다 */
-async function diffBox(dpage, a, b) {
-  return dpage.evaluate(async ([x, y]) => {
+/* 두 PNG 의 «다른 픽셀» 과 그 bbox — 차분이 곧 «그 층이 그린 잉크» 다.
+   `r`(789 의 재는 창)를 주면 그 안만 센다 — **좌표는 페이지 절대값 그대로** 돌려주므로
+   §3 의 «잉크 하변 ≤ 패널 하변» 같은 항이 창을 몰라도 된다. */
+async function diffBox(dpage, a, b, r) {
+  return dpage.evaluate(async ([x, y, rr]) => {
     const load = (d) => new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.src = 'data:image/png;base64,' + d; });
     const [ia, ib] = await Promise.all([load(x), load(y)]);
     const px = (im) => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.drawImage(im, 0, 0); return g.getImageData(0, 0, im.width, im.height).data; };
-    const A = px(ia), B = px(ib);
+    const A = px(ia), B = px(ib), W = ia.width, H = ia.height;
+    const cx1 = rr ? Math.max(0, rr.x) : 0, cy1 = rr ? Math.max(0, rr.y) : 0;
+    const cx2 = rr ? Math.min(W, rr.x + rr.width) : W, cy2 = rr ? Math.min(H, rr.y + rr.height) : H;
     let n = 0, x1 = 1e9, y1 = 1e9, x2 = -1, y2 = -1, worst = 0;
-    for (let i = 0; i < A.length; i += 4) {
-      const d = Math.max(Math.abs(A[i] - B[i]), Math.abs(A[i + 1] - B[i + 1]), Math.abs(A[i + 2] - B[i + 2]));
-      if (d > 0) {
-        n++; const p = i / 4, yy = Math.floor(p / ia.width), xx = p % ia.width;
-        if (xx < x1) x1 = xx; if (xx > x2) x2 = xx;
-        if (yy < y1) y1 = yy; if (yy > y2) y2 = yy;
-        if (d > worst) worst = d;
+    for (let yy = cy1; yy < cy2; yy++) {
+      for (let xx = cx1; xx < cx2; xx++) {
+        const i = (yy * W + xx) * 4;
+        const d = Math.max(Math.abs(A[i] - B[i]), Math.abs(A[i + 1] - B[i + 1]), Math.abs(A[i + 2] - B[i + 2]));
+        if (d > 0) {
+          n++;
+          if (xx < x1) x1 = xx; if (xx > x2) x2 = xx;
+          if (yy < y1) y1 = yy; if (yy > y2) y2 = yy;
+          if (d > worst) worst = d;
+        }
       }
     }
-    return n ? { n, x1, y1, x2, y2, w: x2 - x1 + 1, h: y2 - y1 + 1, worst } : { n: 0, w: 0, h: 0, worst: 0 };
-  }, [a.toString('base64'), b.toString('base64')]);
+    return n ? { n, x1, y1, x2, y2, w: x2 - x1 + 1, h: y2 - y1 + 1, worst } : { n: 0, w: 0, h: 0, worst: 0, y1: -1, y2: -1 };
+  }, [a.toString('base64'), b.toString('base64'), r || null]);
 }
 
 /* ⚠ 상태마다 **새로 띄운다.** 한 페이지에서 스타일만 갈아 끼우고 연달아 찍으면
@@ -119,15 +143,20 @@ async function shotState(browser, h, css) {
     const dpage = await dctx.newPage();
     for (const h of FRAMES) {
       const A = await shotState(browser, h, null);                                       /* 지금 판 */
+      const A2 = await shotState(browser, h, null);                                      /* 789 — A/A 대조판 */
       const V = await shotState(browser, h, '#relw>.rw-panel{overflow:visible !important}');
       const N = await shotState(browser, h, '#relw .rw-mid::before{display:none !important}');
       const L = await shotState(browser, h, '#relw .rw-mid::before{background-size:auto !important}');
+      /* 789 — 재는 창(패널 상변 ~ 프레임 바닥). 네 판의 패널 기하는 같으므로 A 것 하나로 못박는다 */
+      const R = roi(A.m, h);
+      /* §0 [0-e] — A/B 를 묻기 전에 A/A 부터(432-④). 창 안이 0 이 아니면 아래 세 차분은 못 읽는다 */
+      const aaInk = await diffBox(dpage, A.b, A2.b, R);
       /* §2 — 클립을 풀면 달라지는 픽셀이 있는가(= 클립이 지우는 잉크) */
-      const clipInk = await diffBox(dpage, A.b, V.b);
+      const clipInk = await diffBox(dpage, A.b, V.b, R);
       /* §3 — 글로우를 끄면 달라지는 픽셀 = 글로우가 그린 잉크 */
-      const glowInk = await diffBox(dpage, A.b, N.b);
+      const glowInk = await diffBox(dpage, A.b, N.b, R);
       /* §R2 — 높이만 490 이고 background-size 를 풀면 글로우가 작아지는가 */
-      const looseInk = await diffBox(dpage, L.b, N.b);
+      const looseInk = await diffBox(dpage, L.b, N.b, R);
       /* §R — 옛 선언으로 되돌린 판의 넘침(레이아웃 값이라 같은 페이지에서 재도 안전하다) */
       const rev = await A.page.evaluate(async () => {
         const s = document.createElement('style');
@@ -139,8 +168,8 @@ async function shotState(browser, h, css) {
         s.remove();
         return v;
       });
-      rows.push({ h, m: A.m, clipInk, glowInk, rev, looseInk });
-      for (const s of [A, V, N, L]) await s.ctx.close();
+      rows.push({ h, m: A.m, R, aaInk, clipInk, glowInk, rev, looseInk });
+      for (const s of [A, A2, V, N, L]) await s.ctx.close();
     }
     await dctx.close();
   } finally { await browser.close(); }
@@ -157,6 +186,14 @@ async function shotState(browser, h, css) {
     `[0-c] **등재문의 뿌리 후보 기각** — \`--rwc\` 는 지원 범위 전체에서 정확히 1 이다(스케일은 아무것도 안 줄인다): ${uniq(rows.map((r) => r.m.rwc)).join(',')}`);
   ok(rows.every((r) => r.glowInk.n > 0),
     `[0-d] 글로우가 실제로 그려진다 — 끄면 달라지는 픽셀 ${rows.map((r) => r.glowInk.n).join('·')}개 (0 이면 «없는 것을 지키는 게이트» 다)`);
+  /* 789 — **A/B 대조 전에 A/A 대조**(432-④). 이 항이 빨가면 아래 §2·§3·§R2 는 «내 잉크» 가
+     아니라 «그 사이에 흐른 무언가» 를 읽고 있는 것이다 — 그때 이 자는 조용히 흔들리는 대신
+     **여기서 이름을 대고 멈춘다**(그것이 789 가 고친 결함이다). */
+  ok(rows.every((r) => r.aaInk.n === 0),
+    `[0-e] **A/A** — 같은 상태 두 로드가 재는 창 안에서 정확히 같다: ${rows.map((r) => `${r.h}:${r.aaInk.n}`).join(' · ')}` +
+    (rows.some((r) => r.aaInk.n) ? ` ⚠ 비영 bbox ${rows.filter((r) => r.aaInk.n).map((r) => `${r.aaInk.w}×${r.aaInk.h}@y${r.aaInk.y1}`).join('·')}` : ''));
+  ok(rows.every((r) => r.m.glowTopAbs >= r.R.y && r.R.y + r.R.height >= r.m.panelBot + 104),
+    `[0-f] 그 창이 축을 **통째로** 담는다 — 글로우 상변 ${rows.map((r) => r.m.glowTopAbs).join('·')} ≥ 창 상변 ${rows.map((r) => r.R.y).join('·')} · 창 하변은 패널 하변 + 104(넘침 최댓값)보다 아래다`);
 
   console.log('\n§1 넘침 0 — D2 판정식 그대로 ─────────────────────────────────');
   for (const r of rows) {
