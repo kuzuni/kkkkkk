@@ -184,6 +184,13 @@ async function scene(sc) {
 
 const pct = (a, b) => (b === 0 ? 0 : (b - a) / a * 100);
 const f1 = v => (v >= 0 ? '+' : '') + v.toFixed(1);
+/* ⚑ 7회차 — **주 눈금은 «면적 등가 지름»(√잉크화소)이다.** bbox 의 긴 변으로 재면 두 곳에서 거짓이 난다:
+   ⓐ 이웃 알의 잉크가 상자 모서리에 한 화소만 걸쳐도 변이 통째로 늘어난다(relic 대표 알이 70ms 에
+      39×44 로 종횡이 뒤집힌 자리 — 45ms 35×36 · 110ms 34×34 인데 그 한 장만 세로가 5px 튄다),
+   ⓑ 변마다 ±1px 반올림이 걸려 26~44px 스프라이트에서 눈금 자체가 ±2.3~3.8% 다.
+   면적은 수백 화소를 평균하므로 둘 다 구조적으로 약해진다 — 같은 표에서 bbox 가 −5.9% 로 읽은 쌍을
+   면적 등가는 −13.8% 로 읽고, 그 값이 선언(−12.5%)과 맞는다. bbox 는 참고 열로 남긴다. */
+const dEq = x => Math.sqrt(Math.max(0, x.n));
 
 (async () => {
   console.log('# 681 잉크 자 — 그려진 알파 마스크로 잰 봉투 (격자 ' + STOPS.join('·') + 'ms · 시드 ' + SEED + ')\n');
@@ -192,34 +199,33 @@ const f1 = v => (v >= 0 ? '+' : '') + v.toFixed(1);
     const r = await scene(sc);
     if (!r) { console.log('씬 ' + sc.id + ' — 알이 안 태어났다(건너뜀)'); continue; }
     all.push(r);
+    const eqMax = Math.max(...r.rows.map(x => dEq(x.ink)));
     const inkMax = Math.max(...r.rows.map(x => Math.max(x.ink.w, x.ink.h)));
     const boxMax = Math.max(...r.rows.map(x => x.box));
     console.log('\n## 씬 ' + sc.id + ' — ' + sc.n + '  (알 ' + r.n + ' · 대표 알 #' + (r.solo + 1) + ')\n');
-    console.log('| # | t(ms) | 잉크 w×h | 잉크 지름(제 최대 %) | 상자 폭(제 최대 %) | 잉크 화소 | 총 잉크 화소(14알) |');
-    console.log('|---|---|---|---|---|---|---|');
+    console.log('| # | t(ms) | 면적등가 지름(px) | 제 최대 % | 잉크 bbox w×h(참고) | 상자 폭 % | 잉크 화소 | 총 잉크 화소 |');
+    console.log('|---|---|---|---|---|---|---|---|');
     r.rows.forEach((x, i) => {
-      const d = Math.max(x.ink.w, x.ink.h);
-      console.log('| ' + (i + 1) + ' | ' + x.T + ' | ' + x.ink.w + '×' + x.ink.h
-        + ' | ' + (d / inkMax * 100).toFixed(1) + '% | ' + (x.box / boxMax * 100).toFixed(1) + '%'
+      console.log('| ' + (i + 1) + ' | ' + x.T + ' | ' + dEq(x.ink).toFixed(1)
+        + ' | ' + (dEq(x.ink) / eqMax * 100).toFixed(1) + '% | ' + x.ink.w + '×' + x.ink.h
+        + ' | ' + (x.box / boxMax * 100).toFixed(1) + '%'
         + ' | ' + x.ink.n + ' | ' + (x.tot ? x.tot.n : '—') + ' |');
     });
     /* 이 자의 본체 — **이웃 표본 델타**. 비평가가 «구분 가능한가» 로 읽는 그 수다. */
-    console.log('\n**이웃 델타(잉크 지름 · 상자 폭 · 총 잉크 면적)** — 지각 임계는 7~8%(28~30px 스프라이트)\n');
-    console.log('| 구간 | 잉크 지름 Δ | 상자 폭 Δ | 총 잉크 면적 Δ |');
-    console.log('|---|---|---|---|');
-    for (let i = 1; i < r.rows.length; i++) {
-      const a = r.rows[i - 1], c = r.rows[i];
-      const da = Math.max(a.ink.w, a.ink.h), dc = Math.max(c.ink.w, c.ink.h);
-      console.log('| ' + a.T + '→' + c.T + 'ms | ' + f1(pct(da, dc)) + '% | ' + f1(pct(a.box, c.box)) + '%'
-        + ' | ' + (a.tot && c.tot ? f1(pct(a.tot.n, c.tot.n)) + '%' : '—') + ' |');
-    }
+    console.log('\n**이웃 델타(면적등가 지름 · bbox 긴 변 · 상자 폭 · 총 잉크 면적)** — 지각 임계는 7~8%(28~44px 스프라이트)\n');
+    console.log('| 구간 | 면적등가 Δ | bbox Δ(참고) | 상자 폭 Δ | 총 잉크 면적 Δ |');
+    console.log('|---|---|---|---|---|');
     const worst = [];
     for (let i = 1; i < r.rows.length; i++) {
       const a = r.rows[i - 1], c = r.rows[i];
-      const da = Math.max(a.ink.w, a.ink.h), dc = Math.max(c.ink.w, c.ink.h);
-      if (Math.abs(pct(da, dc)) < 6) worst.push(a.T + '→' + c.T + 'ms ' + f1(pct(da, dc)) + '%');
+      const ea = dEq(a.ink), ec = dEq(c.ink);
+      const ba = Math.max(a.ink.w, a.ink.h), bc = Math.max(c.ink.w, c.ink.h);
+      console.log('| ' + a.T + '→' + c.T + 'ms | ' + f1(pct(ea, ec)) + '% | ' + f1(pct(ba, bc)) + '%'
+        + ' | ' + f1(pct(a.box, c.box)) + '%'
+        + ' | ' + (a.tot && c.tot ? f1(pct(a.tot.n, c.tot.n)) + '%' : '—') + ' |');
+      if (i > 1 && Math.abs(pct(ea, ec)) < 10) worst.push(a.T + '→' + c.T + 'ms ' + f1(pct(ea, ec)) + '%');
     }
-    console.log('\n· 잉크 지름 델타가 6% 미만인 이웃 쌍: ' + (worst.length ? worst.join(' · ') : '**없음**'));
+    console.log('\n· 봉우리 언저리 뒤로 면적등가 델타가 10% 미만인 이웃 쌍: ' + (worst.length ? worst.join(' · ') : '**없음**'));
   }
   console.log('\n(자는 상자가 아니라 잉크를 잰다 — 재배분은 이 표 위에서 한다. LESSONS 681-⑥)');
 })();

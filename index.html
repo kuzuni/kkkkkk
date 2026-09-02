@@ -4191,14 +4191,14 @@
      ⚠ 이동 계수는 4회차와 같은 감속 곡선(1−(1−t)^1.7)에서 다시 뽑았다 — 구간속도 .00442 → .00417 →
        .00399 → .00371 → .00322 → .00251 → .00170 → .00072 = **단조 감속**(재가속 비 1.00 유지).
      ⚠ 불변: 수명 380ms · scale ≤1 · 끝 scale .5 · 알파 고원 끝 ≤52% (퇴장 폭 323ms ≥180 · 42회차). */
-  @keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity:.6;animation-timing-function:linear}
-    5%{transform:translate(calc(var(--dx)*.084),calc(var(--dy)*.084)) scale(.55);opacity:.79;animation-timing-function:linear}
-    12%{transform:translate(calc(var(--dx)*.195),calc(var(--dy)*.195)) scale(.89);opacity:.97;animation-timing-function:linear}
+  @keyframes fxSpark{0%{transform:translate(0,0) scale(.26);opacity:.38;animation-timing-function:linear}
+    5%{transform:translate(calc(var(--dx)*.084),calc(var(--dy)*.084)) scale(.55);opacity:.74;animation-timing-function:linear}
+    12%{transform:translate(calc(var(--dx)*.195),calc(var(--dy)*.195)) scale(.89);opacity:.96;animation-timing-function:linear}
     18%{transform:translate(calc(var(--dx)*.286),calc(var(--dy)*.286)) scale(1);opacity:1;animation-timing-function:linear}
-    29%{transform:translate(calc(var(--dx)*.441),calc(var(--dy)*.441)) scale(.895);opacity:.965;animation-timing-function:linear}
-    46%{transform:translate(calc(var(--dx)*.649),calc(var(--dy)*.649)) scale(.801);opacity:.915;animation-timing-function:linear}
-    66%{transform:translate(calc(var(--dx)*.84),calc(var(--dy)*.84)) scale(.713);opacity:.83;animation-timing-function:linear}
-    84%{transform:translate(calc(var(--dx)*.956),calc(var(--dy)*.956)) scale(.631);opacity:.42;animation-timing-function:linear}
+    29%{transform:translate(calc(var(--dx)*.441),calc(var(--dy)*.441)) scale(.875);opacity:.95;animation-timing-function:linear}
+    46%{transform:translate(calc(var(--dx)*.649),calc(var(--dy)*.649)) scale(.766);opacity:.87;animation-timing-function:linear}
+    66%{transform:translate(calc(var(--dx)*.84),calc(var(--dy)*.84)) scale(.67);opacity:.74;animation-timing-function:linear}
+    84%{transform:translate(calc(var(--dx)*.956),calc(var(--dy)*.956)) scale(.586);opacity:.42;animation-timing-function:linear}
     100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
 
   /* ⚑⚑ 660 — **강화 버스트의 알갱이를 «그 탭이 내는 재화 아이콘» 으로 갈아 끼운다**
