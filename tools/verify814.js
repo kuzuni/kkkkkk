@@ -107,6 +107,8 @@ async function run(file, h) {
       spark: L ? L.querySelectorAll('.fx-spark').length : 0,
       pop: !!(clv && clv.classList.contains('fx-cvswap')),
       popAnim: clv ? getComputedStyle(clv).animationName : '—',
+      /* 카드 글자 두 줄의 잉크 상자 — [B7] 이 «입자가 그 위에 앉는가» 를 잰다 */
+      glyphRows: inksOf(sel).map((k) => ({ txt: k.txt, x: k.x, y: k.y, r: k.r, b: k.b })),
       /* 스파크가 «누른 카드» 를 가리키는가 — 개수만 세면 «아무 데서나 터져도 초록» 이다(702·verify93 [7-c2]) */
       sparkAt: L ? [...L.querySelectorAll('.fx-spark')].map((e) => {
         const r = e.getBoundingClientRect();
@@ -181,7 +183,9 @@ function inter(plus, inks) {
   ok(D.flash >= 1, '[B1] 흰 플래시가 남아 있다 (' + D.flash + '장)');
   ok(D.spark >= 1, '[B2] 크림 스파크가 남아 있다 (' + D.spark + '알)');
   ok(D.pop, '[B3] ★ 값이 바뀐 줄(.sk-clv)이 22회차 팝으로 «방금 갱신됐다» 를 말한다');
-  ok(/fxCvSwap/.test(D.popAnim), '[B4] 팝은 58 22회차의 그 부품이다 (' + D.popAnim + ')');
+  /* 3회차 — 이름이 `fxCvSwapS`(작은 호스트 판)로 갈렸다. 이름 문자열이 아니라 **둘 다 걸렸는가**를 묻는다. */
+  ok(/fxCvSwap/.test(D.popAnim) && /fxCvLit/.test(D.popAnim),
+    '[B4] 팝과 앰버가 **한 선언으로 같이** 걸린다 (' + D.popAnim + ') — 단축 속성이 앞을 덮으면 여기가 빨개진다');
   ok(/fxCvLit/.test(D.popAnim), '[B5] ★ 그 줄이 58 20회차의 앰버로 물든다 — «방금 갱신됐다» 를 두 축으로 말한다');
   {
     const m = D.sparkAt.map((a) => a.s / 2);
@@ -190,6 +194,20 @@ function inter(plus, inks) {
       + r0(D.sel.w) + '×' + r0(D.sel.h) + ')');
     ok(D.sparkAt.length >= 3 && out.length === 0,
       '[B6] ★ 그 버스트가 **누른 카드 상자 안**에서 뜬다 — 밖 ' + out.length + '알 / 잰 ' + D.sparkAt.length + '알 (verify93 [7-c2] 와 같은 축)');
+    /* ⚑ 2회차 — 비평가 CR4 가 «6/10 알이 글자 띠에 착지해 «13/500» 글리프의 28.1% 를 지운다» 를
+       실측했다. 814 가 문구를 치운 바로 그 줄이라 이 자의 축이다 — 619 4회차 `strict` 로 막는다. */
+    const hits = (rows) => D.sparkAt.filter((a) => rows.some((k) =>
+      a.cx + a.s / 2 > k.x && a.cx - a.s / 2 < k.r && a.cy + a.s / 2 > k.y && a.cy - a.s / 2 < k.b));
+    /* ⚑ 지키는 것은 **값 줄 둘**(«Lv. n» · «n/500»)이다. 세 번째 줄 «착용 중» 은 값이 아니라
+       상태 라벨이고, 세 줄이 카드 높이의 45% 를 먹어 셋을 다 비우는 링은 기하적으로 없다
+       (자유 띠가 26px·37px 뿐 — 711 §3 이 적어 둔 그 수치다). 58 의 축도 «새 **값**을 읽을 수
+       있는가» 이고, 두 비평가(CR3·CR4)가 실측한 것도 그 두 줄이다. 셋째 줄은 아래에 «몇 알이
+       걸치는가» 를 **찍어만** 둔다 — 숨기지 않는다. */
+    const valRows = D.glyphRows.filter((k) => /^Lv\.|\/\d+$/.test(k.txt));
+    const onVal = hits(valRows), onAll = hits(D.glyphRows);
+    console.log('  · 값 줄(' + valRows.map((k) => '«' + k.txt + '»').join(' · ') + ') 위에 앉은 알 '
+      + onVal.length + '/' + D.sparkAt.length + ' · 상태 라벨 «착용 중» 포함 ' + onAll.length + '알');
+    ok(onVal.length === 0, '[B7] ★ 입자가 **값 줄 두 곳** 위에 안 앉는다 — ' + onVal.length + '알 (링 세로 눌림 `--burst-ry`)');
   }
 
   console.log('\n[C] 연출이 «정보» 를 잃지 않았는가 — 값 자체');
