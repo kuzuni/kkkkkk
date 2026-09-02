@@ -363,6 +363,71 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     pv.filter(r => !r.ban).every(r => near(r.d, 5.5, 0.6)),
     pv.filter(r => !r.ban).map(r => r.d).join(' / '));
 
+  /* ── 10회차 — «검정 외곽 두께» 축 (자: tools/scan667c.py — 밝은 host 위 검정 질량)
+     ref(환산): 리본 검정 테 불릿 8.45~8.65 · 배너 7.11~7.21 / 속 60.0·59.7 · 53.9·53.8
+                크림 캡은 **카드 바깥선에서 곧바로** 시작하고 빨강은 카드선 +23.7 에서 시작한다.
+     ⚠ 9회차 가설과 부호가 반대다(우리가 **얇았다**) — 그래서 [G7] 은 «속이 ref 보다 크지 않은가» 가
+     아니라 **보이는 검정 두께 그 자체**를 묻는다. 손잡이가 border 가 아니라 inset 그림자이므로
+     둘을 더한 값을 잰다(그림자를 지우면 R9 가 빨개진다). */
+  const g10 = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.pvc').forEach((c) => {
+      const cb = c.getBoundingClientRect();
+      ['rb1', 'rb2'].forEach((k) => {
+        const rb = c.querySelector('.' + k); if (!rb) return;
+        const s = getComputedStyle(rb), r = rb.getBoundingClientRect();
+        const bd = parseFloat(s.borderTopWidth);
+        /* Chromium 은 «rgb(0, 0, 0) 0px 0px 0px 2px inset» 로 돌려준다 — 네 번째 길이가 spread 다 */
+        const m = /inset/.test(s.boxShadow)
+          ? s.boxShadow.match(/(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px/) : null;
+        const ins = m ? parseFloat(m[4]) : 0;
+        const cap = getComputedStyle(rb, '::before');
+        out.push({ ban: c.classList.contains('ban1'), h: +r.height.toFixed(1),
+          ink: +(bd + ins).toFixed(2), inner: +(r.height - 2 * (bd + ins)).toFixed(2),
+          /* 캡은 절대배치라 «패딩 상자 + left» 가 그 화면 x 다 (테 두께가 한 번 들어간다) */
+          capL: +(r.left + bd + parseFloat(cap.left) - cb.left).toFixed(2),
+          redL: +(r.left + bd + parseFloat(cap.left) + parseFloat(cap.width) - cb.left).toFixed(2) });
+      });
+    });
+    return out;
+  });
+  ok('[G7] 리본 검정 테(보이는 두께 = 테 + inset)가 불릿 8 · 배너 7 — ref 8.45~8.65 / 7.11~7.21',
+    g10.every((r) => near(r.ink, r.ban ? 7 : 8, 0.6)), g10.map((r) => r.ink).join(' / '));
+  ok('[G7b] 그래서 리본 «속»(빨강)이 불릿 60 · 배너 53 — ref 59.7~60.2 / 53.8~53.9',
+    g10.every((r) => near(r.inner, r.ban ? 53 : 60, 1)), g10.map((r) => r.inner).join(' / '));
+  ok('[G8] 크림 캡이 카드 바깥선에서 시작한다 (ref: 리본 왼끝에 검정 0 — 캡이 테 위를 덮는다)',
+    g10.every((r) => near(r.capL, 0, 0.6)), g10.map((r) => r.capL).join(' / '));
+  ok('[G8b] 그래서 빨강이 카드선 +24 에서 시작한다 (ref +23.7 · 9회차까지 +33 이었다)',
+    g10.every((r) => near(r.redL, 24, 1)), g10.map((r) => r.redL).join(' / '));
+
+  /* R9·R10 — 10회차의 두 수리를 되돌린다 */
+  const after10 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    /* 10회차 전: inset 그림자 없음 · 캡이 테 안쪽에서 27px */
+    st.textContent = '.pvc>.rb{box-shadow:none}.pvc.ban1>.rb{box-shadow:none}'
+      + '.pvc>.rb::before{left:0;top:0;bottom:auto;width:27px;height:64px}'
+      + '.pvc.ban1>.rb::before{height:56px}';
+    document.head.appendChild(st);
+    const out = [];
+    document.querySelectorAll('.pvc').forEach((c) => {
+      const cb = c.getBoundingClientRect();
+      ['rb1', 'rb2'].forEach((k) => {
+        const rb = c.querySelector('.' + k); if (!rb) return;
+        const s = getComputedStyle(rb), r = rb.getBoundingClientRect();
+        const cap = getComputedStyle(rb, '::before');
+        const bd = parseFloat(s.borderTopWidth);
+        out.push({ ban: c.classList.contains('ban1'),
+          inner: +(r.height - 2 * bd).toFixed(2),
+          redL: +(r.left + bd + parseFloat(cap.left) + parseFloat(cap.width) - cb.left).toFixed(2) });
+      });
+    });
+    return out;
+  });
+  ok('R9 inset 그림자를 지우면 [G7b] 이 빨개진다 (속이 64/55 = ref 보다 +6.7% 로 돌아간다)',
+    after10.every((r) => near(r.inner, r.ban ? 55 : 64, 0.6)), after10.map((r) => r.inner).join(' / '));
+  ok('R10 캡을 «left:0 · 27px» 로 되돌리면 [G8b] 이 빨개진다 (빨강 시작이 +33 으로 돌아간다)',
+    after10.every((r) => near(r.redL, 33, 0.6)), after10.map((r) => r.redL).join(' / '));
+
   /* R7·R8 — 9회차의 두 수리를 되돌린다 */
   const after9 = await page.evaluate(() => {
     const st = document.createElement('style');
