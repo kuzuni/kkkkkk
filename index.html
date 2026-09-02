@@ -7424,7 +7424,7 @@
      상자 중심 317.5 ↔ 잉크 중심 321.5). 그 4 를 빼고 적는다 ⇒ left = 2×(317.7−4.0) − 450 = **177**.
      ⚠ 우리 글자 잉크가 ref 환산보다 **7px 넓다**(271 ↔ 264 = +2.6%, ⑥ 서체 축)라 양끝을 동시에 맞출 수
      없다 — 그래서 **중심**을 맞춘다(양쪽 오차 3.5px씩). */
-  .pvc>.ban>i{position:absolute;left:177px;right:12px;top:36px;text-align:center;color:#fff;
+  .pvc>.ban>i{position:absolute;left:181px;right:12px;top:36px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;white-space:nowrap;-webkit-text-stroke:8px #000;
     paint-order:stroke fill}
   /* ⑤-2 ★ 불릿(2·3장) — ref 는 반투명 어두운 행 4개(높이 72 · pitch 82) */
@@ -7500,7 +7500,14 @@
   .pvc>.rb1{bottom:196px}
   .pvc>.rb2{bottom:62px}
   /* 리본2 오른끝 «제비꼬리» — 자식을 자르지 않도록 clip-path 대신 몸통색 삼각형을 덧댄다 */
-  .pvc>.rb2::after{content:'';position:absolute;right:-6px;top:-6px;width:26px;height:76px;
+  /* ⚑ 667 8회차 — **깊이가 3.3배였다**(비평 BB [2] · BC [3][4] 2인 일치, 둘 다 신뢰도 «높음»).
+     자(빨강 채움의 행별 우단 프로파일 · ref·캡처 같은 마스크): **ref 는 파랑·초록 둘 다 깊이 3 ref px**
+     (253 → 250 → 253)인데 우리는 **10 ref px**(249 → 239 → 249 = 20.6 우리 px)이었다.
+     `right:-6` 은 **패딩 상자** 기준이라 삼각형 우변이 띠 바깥선과 같은 자리(카드-로컬 521)에 오고,
+     꼭짓점은 거기서 width 만큼 왼쪽이다 ⇒ 빨강에 파고드는 깊이 = width − 테 6.
+     ref 3 ref px = 6.2 우리 px 를 넣으면 **width = 12**. 부수 효과로 띠 우단 최대값도
+     249.2 → ref 252.6 으로 돌아온다(BC [1][2] «리본 우단이 −5~12px 안쪽» 의 뿌리가 이것이다). */
+  .pvc>.rb2::after{content:'';position:absolute;right:-6px;top:-6px;width:12px;height:76px;
     background:var(--c);clip-path:polygon(100% 0,100% 100%,0 50%)}
   .pvc.ban1>.rb2::after{height:67px}
   .pvc.ban1>.rb1{bottom:172px}

@@ -200,8 +200,8 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
      잉크 좌단이 분할선을 2px 넘었다. */
   ok('F1 배너 글자 상자 좌단이 크림/골드 «분할선» 오른쪽에 있다 (ref 는 분할선 +9 ref px 에서 시작한다)',
     fban.banI.l > fban.split, '좌단 ' + fban.banI.l + ' ↔ 분할선 ' + fban.split);
-  ok('F2 배너 글자 상자 중심 363.5 — ref 잉크 중심 154 ref px(= 카드-로컬 367.7)에서 잉크 쏠림 4.0 을 뺀 값(8회차)',
-    near(fban.banI.cx, 363.5, 1.5), fban.banI.cx);
+  ok('F2 배너 글자 상자 중심 365.5 — 노랑 칸 여유 19.7 을 ref 비(좌 18.6 : 우 4.1)로 나눈 자리 (8회차 · 비평 BB·BC 2인 일치)',
+    near(fban.banI.cx, 365.5, 1.5), fban.banI.cx);
 
   /* F3·F4 — 금색 판 «--gx». 자 = 금색 채움 #D47D14(±14) bbox 중심, ref·캡처 같은 방법.
      ref 파랑 170.57 / 213.57 ref px ⇒ 카드-로컬 351.9 / 440.6 (8회차가 g1 17→26 · g2 24→34 로 맞췄다)
@@ -211,6 +211,24 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
   ok('F4 불릿형 금색 판 중심 = 395.5 / 451.5  (ref 환산 394.1 / 451.0 — 8회차가 **안 건드린** 자리)',
     fbls.every(c => near(c.rb[0], 395.5, 2) && near(c.rb[1], 451.5, 2)),
     fbls.map(c => c.rb.join('/')).join(' · '));
+
+  /* F8·F9 — 리본2 «제비꼬리». `right:-6` 이 패딩 상자 기준이라 삼각형 우변이 띠 바깥선과 같은 자리에 오고,
+     빨강에 파고드는 **깊이 = width − 테 6** 이다. ref 는 파랑·초록 둘 다 **3 ref px**(= 6.2)이고
+     **리본1 에는 제비꼬리가 없다**(ref 도 라운드 코너뿐 · 측정표 §7-1). */
+  const F89 = await page.evaluate(() => {
+    const c = document.querySelector('.pvc.ban1');
+    const g = (sel, el) => getComputedStyle(el, sel);
+    return {
+      rb2W: g('::after', c.querySelector('.rb2')).width,
+      rb2Bd: g(null, c.querySelector('.rb2')).borderRightWidth,
+      rb1Ct: g('::after', c.querySelector('.rb1')).content
+    };
+  });
+  const rb2w = parseFloat(F89.rb2W), rb2bd = parseFloat(F89.rb2Bd);
+  ok('F8 리본2 제비꼬리 깊이 = 폭 − 테 = 6  (ref 3 ref px = 6.2 · 8회차 · 26 → 12)',
+    near(rb2w - rb2bd, 6, 1), `폭 ${F89.rb2W} − 테 ${F89.rb2Bd} = ${(rb2w - rb2bd).toFixed(1)}`);
+  ok('F9 리본**1** 에는 제비꼬리가 없다 — ref 도 리본1 은 라운드 코너뿐이다(측정표 §7-1)',
+    F89.rb1Ct === 'none' || F89.rb1Ct === 'normal', F89.rb1Ct);
 
   /* F5~F7 — 일러스트 «자리». 6·7회차 비평 세 사람이 «판 좌단이 82~99px 어긋난다 / ref 에는 그 판이 없다»
      로 세 번 갈렸다. 자로 재면 **상자는 ref 환산과 0.4px 안**이고, 어긋나 보인 것은
@@ -269,6 +287,17 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     after8.banI.l < after8.split, '좌단 ' + after8.banI.l + ' ↔ 분할선 ' + after8.split);
   ok('R5 «--gx» 를 17/24 로 되돌리면 [F3] 이 빨개진다 (판 중심이 ref 에서 9~10px 밀린다)',
     !near(after8.rb[0], 352.5, 2) && !near(after8.rb[1], 441.5, 2), after8.rb.join(' / '));
+  const after8b = await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.textContent = '.pvc>.rb2::after{width:26px}';   /* 8회차 전 */
+    document.head.appendChild(st);
+    const c = document.querySelector('.pvc.ban1');
+    return { w: getComputedStyle(c.querySelector('.rb2'), '::after').width,
+      bd: getComputedStyle(c.querySelector('.rb2')).borderRightWidth };
+  });
+  ok('R6 제비꼬리 폭을 26 으로 되돌리면 [F8] 이 빨개진다 (깊이 20 = ref 3 ref px 의 3.3배)',
+    !near(parseFloat(after8b.w) - parseFloat(after8b.bd), 6, 1),
+    (parseFloat(after8b.w) - parseFloat(after8b.bd)).toFixed(1));
 
   ok('[전제] 콘솔 에러 0건', errs.length === 0, errs.slice(0, 3).join(' / '));
   console.log('\nVERIFY667 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
