@@ -7391,7 +7391,15 @@
   .pvc>.ban>em{position:absolute;left:57px;top:27px;width:89px;height:68px;font-size:62px;
     line-height:68px;text-align:center;color:#fff;-webkit-text-stroke:6px #000;
     paint-order:stroke fill}
-  .pvc>.ban>i{position:absolute;left:150px;right:12px;top:36px;text-align:center;color:#fff;
+  /* ⚑ 667 8회차 — 배너 글자 상자가 **크림 칸까지 물고 있었다**(left 150 < 분할선 166.3) ⇒ 잉크 좌단이
+     분할선을 2px 넘어 크림 칸을 밟았다(자: 우리 164 ↔ 분할선 166 · ref 는 분할선 **+9 ref px**).
+     ref 잉크 중심은 배너-로컬 154 ref px = **317.7**(= 분할선 81 + (9+137)/2). `right:12` 를 붙박고
+     그 중심이 나오는 좌단을 적는다. ⚠ **상자 중심 ≠ 잉크 중심**이다 — `text-align:center` 는 advance 를
+     가운데 두는데 이 문자열의 검정 외곽 잉크는 상자 중심보다 **4.0px 오른쪽**에 앉는다(left:185 로 재서 확인:
+     상자 중심 317.5 ↔ 잉크 중심 321.5). 그 4 를 빼고 적는다 ⇒ left = 2×(317.7−4.0) − 450 = **177**.
+     ⚠ 우리 글자 잉크가 ref 환산보다 **7px 넓다**(271 ↔ 264 = +2.6%, ⑥ 서체 축)라 양끝을 동시에 맞출 수
+     없다 — 그래서 **중심**을 맞춘다(양쪽 오차 3.5px씩). */
+  .pvc>.ban>i{position:absolute;left:177px;right:12px;top:36px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;white-space:nowrap;-webkit-text-stroke:8px #000;
     paint-order:stroke fill}
   /* ⑤-2 ★ 불릿(2·3장) — ref 는 반투명 어두운 행 4개(높이 72 · pitch 82) */
@@ -34191,7 +34199,15 @@ function renderPassPage(list){
     /* 리본 한 줄 — 빨강 바(라벨) + 오른끝 금색 판(보석) + 판 아래 수량. ref 구조 그대로다 */
     /* 리본 폭·금색 판 위치는 ref 가 카드 종류마다 다르다(측정표 §7-1):
        배너형은 두 줄 다 «판이 띠 안 + 오른쪽에 빨강 꼬리», 불릿형은 리본1 만 «판이 띠 끝 밖» 이다. */
-    const RB = p.ban ? { w1:427, g1:17, w2:524, g2:24 } : { w1:353, g1:-97, w2:529, g2:23 };
+    /* ⚑ 667 8회차 — 배너형 두 줄의 금색 판(`--gx`)이 ref 보다 **오른쪽으로 밀려 있었다.**
+       자(금색 채움 #D47D14 ±14 의 bbox, 두 장 같은 방법): ref 파랑 판1 중심 170.57 ↔ 우리 175.00
+       (+4.43 ref = **+9.1**), 판2 중심 213.57 ↔ 218.63 (+5.06 ref = **+10.4**). 폭은 33.0 ↔ 32.5 로
+       같으므로 **순수 평행이동**이다. ⇒ g1 17→26 · g2 24→34.
+       ⚑ 6회차 비평 BA 가 «판이 +11.3/+11.5 오른쪽» 과 «리본 꼬리 −54%/−45%» 를 **한 뿌리**로 짚었고
+       그 말이 맞았다 — 판이 왼쪽으로 가면 그만큼 오른쪽 빨강 꼬리가 길어진다(자: 꼬리 6.3 ref →
+       10.7 ≈ ref 10.0). 손잡이도 하나(`--gx`)다. 불릿형(g1 −97 · g2 23)은 판 중심이 ref 와
+       0.5 ref px 안이라 **안 건드렸다**. */
+    const RB = p.ban ? { w1:427, g1:26, w2:524, g2:34 } : { w1:353, g1:-97, w2:529, g2:23 };
     const rib = (cls, lab, n, w, gx) => '<div class="rb ' + cls + '" style="width:' + w
       + 'px;--gx:' + gx + 'px"><i>' + lab + '</i><b>' + curIc('dia') + '</b><u>' + fmt(n) + '</u></div>';
     const cardH = pvCardH(p), ntc = pvNotches(p, cardH);

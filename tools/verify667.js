@@ -168,6 +168,65 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
   ok('E1 카드 문구에 «4시간»·«+4h» 계열이 0건 (등재문: 옛 «+4h» 로 되그리면 199 와 충돌한다)',
     !/4시간|\+ ?4h|4h 증가/i.test(all), (all.match(/4시간|\+ ?4h/gi) || []).join(',') || '0건');
 
+  /* ── [F] 8회차 — 배너 칸 안 자리 · 금색 판 «--gx» · 일러스트 자리 ─────
+     세 자리 다 «비평 두 사람이 서로 다른 것을 재서 갈렸던» 자리다(6·7회차). 8회차가 자로 닫았고
+     ref 값은 전부 **같은 방법을 ref 와 우리 캡처에 한 번씩** 돌려서 얻었다(k = 978/474.12 = 2.0628). */
+  console.log('\n[F] 8회차 — 배너 글자 칸 · 금색 판 자리 · 일러스트 자리');
+  const F = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.pvc').forEach(c => {
+      const cb = c.getBoundingClientRect();
+      const rel = e => { const r = e.getBoundingClientRect();
+        return { l: +(r.left - cb.left).toFixed(1), t: +(r.top - cb.top).toFixed(1),
+          w: +r.width.toFixed(1), h: +r.height.toFixed(1), cx: +(r.left + r.width / 2 - cb.left).toFixed(1) }; };
+      const o = { id: c.dataset.pv, ban: c.classList.contains('ban1') };
+      const ban = c.querySelector('.ban');
+      if (ban) { const bb = rel(ban); o.banBox = bb; o.banI = rel(ban.querySelector('i'));
+        o.split = +(bb.l + bb.w * 0.36).toFixed(1); }
+      o.rb = [...c.querySelectorAll('.rb')].map(r => rel(r.querySelector('b')).cx);
+      o.art = rel(c.querySelector('.art'));
+      const pvl = c.querySelector('.pvl');
+      o.pvl = pvl ? Object.assign(rel(pvl), { z: getComputedStyle(pvl).zIndex }) : null;
+      o.artZ = getComputedStyle(c.querySelector('.art')).zIndex;
+      out.push(o);
+    });
+    return out;
+  });
+  const fban = F.find(c => c.ban), fbls = F.filter(c => !c.ban);
+
+  /* F1·F2 — 배너 글자는 «노랑 칸» 의 것이다.
+     ref(파랑 배너 224 ref px · 분할선 81): 글자 잉크 90..218 ⇒ 좌 여백 9 · 잉크 중심 154.
+     우리(462 · 분할선 166.3 = 카드-로컬 216.3): 8회차 전 상자 좌단 199 로 **크림 칸을 17px 물고** 있었고
+     잉크 좌단이 분할선을 2px 넘었다. */
+  ok('F1 배너 글자 상자 좌단이 크림/골드 «분할선» 오른쪽에 있다 (ref 는 분할선 +9 ref px 에서 시작한다)',
+    fban.banI.l > fban.split, '좌단 ' + fban.banI.l + ' ↔ 분할선 ' + fban.split);
+  ok('F2 배너 글자 상자 중심 363.5 — ref 잉크 중심 154 ref px(= 카드-로컬 367.7)에서 잉크 쏠림 4.0 을 뺀 값(8회차)',
+    near(fban.banI.cx, 363.5, 1.5), fban.banI.cx);
+
+  /* F3·F4 — 금색 판 «--gx». 자 = 금색 채움 #D47D14(±14) bbox 중심, ref·캡처 같은 방법.
+     ref 파랑 170.57 / 213.57 ref px ⇒ 카드-로컬 351.9 / 440.6 (8회차가 g1 17→26 · g2 24→34 로 맞췄다)
+     ref 초록 191.07 / 218.6 ⇒ 394.1 / 451.0 (8회차 무변경 — 이미 1.4px 안이었다) */
+  ok('F3 배너형 금색 판 중심 = 352.5 / 441.5  (ref 환산 351.9 / 440.6 · 8회차 --gx 26 / 34)',
+    near(fban.rb[0], 352.5, 2) && near(fban.rb[1], 441.5, 2), fban.rb.join(' / '));
+  ok('F4 불릿형 금색 판 중심 = 395.5 / 451.5  (ref 환산 394.1 / 451.0 — 8회차가 **안 건드린** 자리)',
+    fbls.every(c => near(c.rb[0], 395.5, 2) && near(c.rb[1], 451.5, 2)),
+    fbls.map(c => c.rb.join('/')).join(' · '));
+
+  /* F5~F7 — 일러스트 «자리». 6·7회차 비평 세 사람이 «판 좌단이 82~99px 어긋난다 / ref 에는 그 판이 없다»
+     로 세 번 갈렸다. 자로 재면 **상자는 ref 환산과 0.4px 안**이고, 어긋나 보인 것은
+     ref 쪽에서 «보이는 잉크»(= ★판이 끝나는 자리부터)를 재고 우리 쪽에서 «상자» 를 잰 탓이다 —
+     ref 도 우리도 ★판이 일러스트 **위**에 그려지고(측정표 §5-2 «판이 티켓 위에 그려진다»)
+     겹침 폭도 같다(ref 41.5 ref px = 85.6 ↔ 우리 86). */
+  ok('F5 불릿형 일러스트 자리 = ref 환산 (500,135) 462×303  (측정표 §9 · 재면 ref 242.6/65.2/224/147)',
+    fbls.every(c => near(c.art.l, 500, 1) && near(c.art.t, 135, 1) && near(c.art.w, 462, 1) && near(c.art.h, 303, 1)),
+    fbls.map(c => `${c.art.l},${c.art.t} ${c.art.w}x${c.art.h}`).join(' · '));
+  ok('F6 ★판(.pvl)이 일러스트(.art) **위**에 그려진다 — ref §5-2 와 같은 순서 (z 1 ↔ auto)',
+    fbls.every(c => c.pvl && c.pvl.z === '1' && fban.artZ === 'auto'),
+    fbls.map(c => c.pvl && c.pvl.z).join('/') + ' ↔ art ' + fbls[0].artZ);
+  ok('F7 ★판 ↔ 일러스트 겹침 = 86  (ref 41.5 ref px = 85.6 — «판이 일러스트를 왼쪽에서 덮는» 폭)',
+    fbls.every(c => near(c.pvl.l + c.pvl.w - c.art.l, 86, 1.5)),
+    fbls.map(c => (c.pvl.l + c.pvl.w - c.art.l).toFixed(1)).join('/'));
+
   /* ── [R] 되돌림 시험 ───────────────────────────────────────────────── */
   console.log('\n[R] 되돌림 시험 — 위 셋을 되돌리면 정말 빨개지는가');
   const after = await page.evaluate(() => {
@@ -192,6 +251,24 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     !near(after.sH, EXP.ban.sH, 1) && !near(after.ntcH, EXP.ban.sH + 2 * RIM, 1), after.sH + '/' + after.ntcH);
   ok('R2 «.art» 의 마스크를 떼면 [B3] 이 빨개진다', !isNtcMask(after.artMask), after.artMask);
   ok('R3 배너 몸통에 격자를 되살리면 [C1] 이 빨개진다', /conic-gradient/.test(after.bgImg));
+
+  /* R4·R5 — 8회차의 두 수리를 되돌린다 */
+  const after8 = await page.evaluate(() => {
+    const c1 = document.querySelector('.pvc.ban1');
+    const cb = c1.getBoundingClientRect();
+    const rel = e => { const r = e.getBoundingClientRect();
+      return { l: +(r.left - cb.left).toFixed(1), cx: +(r.left + r.width / 2 - cb.left).toFixed(1) }; };
+    c1.querySelector('.ban>i').style.left = '150px';            /* 8회차 전 */
+    c1.querySelectorAll('.rb').forEach((r, i) => r.style.setProperty('--gx', (i ? 24 : 17) + 'px'));
+    const ban = c1.querySelector('.ban');
+    return { banI: rel(ban.querySelector('i')),
+      split: +(rel(ban).l + ban.getBoundingClientRect().width * 0.36).toFixed(1),
+      rb: [...c1.querySelectorAll('.rb')].map(r => rel(r.querySelector('b')).cx) };
+  });
+  ok('R4 배너 글자 상자를 left:150 으로 되돌리면 [F1] 이 빨개진다 (좌단이 분할선 왼쪽 = 크림 칸을 문다)',
+    after8.banI.l < after8.split, '좌단 ' + after8.banI.l + ' ↔ 분할선 ' + after8.split);
+  ok('R5 «--gx» 를 17/24 로 되돌리면 [F3] 이 빨개진다 (판 중심이 ref 에서 9~10px 밀린다)',
+    !near(after8.rb[0], 352.5, 2) && !near(after8.rb[1], 441.5, 2), after8.rb.join(' / '));
 
   ok('[전제] 콘솔 에러 0건', errs.length === 0, errs.slice(0, 3).join(' / '));
   console.log('\nVERIFY667 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
