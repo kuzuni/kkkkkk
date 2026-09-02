@@ -88,8 +88,21 @@ const SCENES = [
          자르는 비용이 홀드 «밖» 이라 간격에 안 들어간다. */
     const cdp = await page.context().newCDPSession(page);
     const raw = [];
+    /* ⚑⚑ 20회차 — **프레임의 시각은 «브라우저가 합성한 때» 다(`metadata.timestamp`).**
+       19회차 채점의 2인 공통 ⑶(«단련 f1(353ms)이 f0 과 픽셀 단위로 동일 — 542,160px 중 0px»)의
+       범인이 이 한 줄이었다. `Date.now()` 는 **노드가 프레임을 받은 때**라 17회차가 없애려던
+       바로 그 왕복(CDP 전송 + base64)이 시각에 도로 얹힌다 — 합성 t≈0ms 의 장(= 누르기 직전
+       그림)이 353ms 로 적히면 아래 «가장 가까운 남은 장» 고르기가 그 장을 첫 칸에 앉히고,
+       비평가는 «이 틱에는 아무것도 안 터졌다» 를 **자가 만든 유령**으로 읽는다.
+       제품 쪽 재현(`probe619i` [3])은 같은 홀드에서 «보이는 fx 0 · 홀드 링 0» 인 프레임이
+       **0장**임을 찍었다(35 샘플 · 25~900ms 내내 flash + 코인 10알 + `.fx-holding` 1).
+       ⚠ `metadata.timestamp` 는 **초 단위 epoch** 다(Network.TimeSinceEpoch) — ×1000 해서
+         `t0`(노드의 `Date.now()`)와 같은 자로 만든다. 없는 빌드면 종전대로 수신 시각을 쓴다. */
+    let noMeta = 0;
     cdp.on('Page.screencastFrame', async ev => {
-      raw.push({ t: Date.now(), data: ev.data });
+      const ts = ev.metadata && Number(ev.metadata.timestamp);
+      if (!Number.isFinite(ts)) noMeta++;
+      raw.push({ t: Number.isFinite(ts) ? ts * 1000 : Date.now(), data: ev.data });
       try { await cdp.send('Page.screencastFrameAck', { sessionId: ev.sessionId }); } catch (_) {}
     });
     await cdp.send('Page.startScreencast', { format: 'png', everyNthFrame: 1,
@@ -122,7 +135,9 @@ const SCENES = [
     const span = raw.length > 1 ? (raw[raw.length - 1].t - raw[0].t) : 0;
     const rate = span ? Math.round(raw.length / (span / 1000)) : 0;
     console.log('    · 스크린캐스트 ' + raw.length + '장 / ' + span + 'ms ≈ ' + rate + 'fps'
-              + ' · 고른 칸 ' + picks.length + '/' + N);
+              + ' · 고른 칸 ' + picks.length + '/' + N
+              + (noMeta ? ' · ⚠ 합성 시각 없는 장 ' + noMeta + '개(수신 시각으로 대체)' : '')
+              + ' · 첫 칸 ' + (picks.length ? picks[0].at + 'ms' : '—'));
     /* 잘라내기 — 페이지 안 캔버스(홀드 밖이라 간격에 영향 없음) */
     const cropped = await page.evaluate(async ([items, clip]) => {
       const out = [];

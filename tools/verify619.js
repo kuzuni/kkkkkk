@@ -290,7 +290,13 @@ async function hold(page, sp, opt) {
      E.ov + '/' + E.n + ' = ' + p2(E.n ? E.ov / E.n : 0));
   /* 되돌림 — `--burst-to` 를 지우면 버스트가 카드 전체로 흩어져 겹침이 되살아난다
      (위 항이 «이미 참인 것» 이 아님을 못박는다 · 660 이관 전에는 «`strict` 무시» 가 이 자리였다) */
-  await page.addStyleTag({ content: '.tr-card{--burst-to:initial}' });
+  /* ⚑ 20회차 이관 — **`--burst-keep` 도 같이 끈다.** 이 되돌림이 묻는 것은 «스폰이 카드 전체로
+     흩어지면 겹침이 되살아나는가» 하나인데, 816 이 `.tr-card` 에 건 `--burst-keep:i` 가 켜진
+     채로는 그 사본에서 셀렉터가 **카드의 모든 `i`** 에 걸려(호스트가 카드이므로) 파티클이 글자를
+     피해 **0.09** 로 내려간다 — 항이 «스폰 자리» 가 아니라 «816 의 구멍» 을 재게 된다(축이 둘 섞인다).
+     ⇒ 항을 지우지 않고 **사본을 이 항의 주장 그대로** 만든다(333 처방). 816 구멍 자신의 되돌림은
+        `tools/verify816.js` 가 이미 따로 묻는다 — 축 하나에 자 하나. */
+  await page.addStyleTag({ content: '.tr-card{--burst-to:initial;--burst-keep:initial}' });
   const E0 = await overlapRun();
   ok(E0.n > 0 && E0.ov / E0.n >= 0.15,
      'E3 ★ 되돌림 — `--burst-to` 를 지우면(= 스폰이 카드 전체로) 겹침이 되살아난다(≥0.15)',
@@ -669,6 +675,117 @@ async function hold(page, sp, opt) {
     const T1 = await trackRun('train', '#trCards [data-tr]', '#trCards [data-tr]');
     ok(!!T1 && T1.n2 > 0 && T1.max2 <= 2, 'L7 원복하면 같은 자로 다시 초록',
        T1 ? '최악 ' + r2v(T1.max2) + 'px · 표본 ' + T1.n2 : '—');
+  }
+
+  /* ── [M] 20회차 — 19회차 채점의 «2인 공통» 셋 ───────────────────────────
+     ⑴ 훈련: 파티클이 **비용 숫자**를 덮는다(ET 42.2/37.4/33.8/33.9% · EU «글자 채움 = 배경 Δ0»)
+     ⑵ 룬: 회당 플래시의 흰 테가 자기가 강조하는 **글자를 먹는다**(ET·EU 둘 다 f6·f9)
+     ⑷ 분출 코인이 **호스트 비용 배지**와 같은 자리에 앉아 «진짜 배지» 를 못 고른다(⑴ 과 한 뿌리)
+     ⚠ ⑶(«단련 f1 이 f0 과 픽셀 동일»)은 **제품이 아니라 자**였다 — 아래 M3 이 제품 쪽을 못박고
+       (홀드 내내 «보이는 fx 0 · 홀드 링 0» 인 프레임이 0장), 자 쪽 수리는 `tools/cap619.js` 다. */
+  {
+    console.log('\n[M] 20회차 — 룬 글자 절단(⑵) · 훈련 비용 잉크 keep-out(⑴⑷) · «빈 프레임» 없음(⑶)');
+    const r2v = v => Math.round(v * 100) / 100;
+    await page.reload();
+    await page.waitForFunction(() => typeof S !== 'undefined' && typeof openTrain === 'function');
+    await page.waitForTimeout(700);
+    await page.evaluate(() => {
+      const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
+      S.gold = 1e18; S.dia = 1e9; S.rstone = 1e9; S.tstone = 1e9;
+      if (S.temper) S.temper.pts = 1e6;
+      openTrain();
+    });
+    await page.waitForTimeout(400);
+
+    /* M1 — 룬 효과 행: 글줄 잉크가 플래시의 «안쪽 띠»(흰 테 9 + 하드 림 4) 밖에 있는가.
+       ⚠ 상수 13 을 손으로 적지 않는다 — `.fx-flash` 의 `border-width` 와 `box-shadow` 에서 읽는다. */
+    const rdRun = async () => {
+      await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, 'rune');
+      await page.waitForTimeout(420);
+      return page.evaluate(() => {
+        const rd = document.querySelector('#trRunes .tr-rn > .rd');
+        if (!rd) return null;
+        const R = rd.getBoundingClientRect();
+        /* 플래시가 안쪽에 까는 띠 — 실제 CSS 에서 읽는다(자가 값을 두 벌로 안 적는다) */
+        const probe = document.createElement('s'); probe.className = 'fx-flash';
+        probe.style.cssText = 'position:absolute;left:-9999px;top:0;width:40px;height:40px;animation:none';
+        (document.getElementById('fxl') || document.body).appendChild(probe);
+        const cs = getComputedStyle(probe);
+        const bw = parseFloat(cs.borderLeftWidth) || 0;
+        /* 하드 림 = 첫 `inset` 그림자의 **네 번째 길이(spread)**. 손 상수를 안 적는다 —
+           `.fx-flash` 가 그 값을 바꾸면 이 문턱이 같이 따라와야 한다(자가 값을 두 벌로 안 든다). */
+        const sh0 = String(cs.boxShadow).split(/,(?![^(]*\))/)[0] || '';
+        const lens = (sh0.match(/-?\d+(?:\.\d+)?px/g) || []).map(parseFloat);
+        const rim = lens.length >= 4 ? Math.abs(lens[3]) : 4;
+        probe.remove();
+        let l = Infinity, r2x = -Infinity;
+        for (const nd of rd.querySelectorAll('.rw > i, .rw > s')) {
+          if (!nd.firstChild) continue;
+          const rg = document.createRange(); rg.selectNodeContents(nd);
+          for (const b of rg.getClientRects()) { if (!b.width) continue; l = Math.min(l, b.left); r2x = Math.max(r2x, b.right); }
+        }
+        if (!Number.isFinite(l)) return null;
+        return { boxL: R.left, boxR: R.right, inkL: l, inkR: r2x, band: bw + rim,
+                 clearL: l - (R.left + bw + rim), clearR: (R.right - bw - rim) - r2x };
+      });
+    };
+    const M = await rdRun();
+    ok(!!M, 'M0 표본이 있다 — 룬 효과 행과 그 글줄이 실제로 있다');
+    if (M) {
+      ok(M.clearL >= 0 && M.clearR >= 0,
+         'M1 ★ 룬 글줄 잉크가 플래시 안쪽 띠(흰 테+하드 림 ' + r2v(M.band) + 'px) **밖**에 있다 — 절단 0',
+         '좌 ' + r2v(M.clearL) + 'px · 우 ' + r2v(M.clearR) + 'px (19회차: 좌 −6 · 우 −7)');
+      ok(Math.abs(M.inkL - 85) <= 1 && Math.abs(M.inkR - 995) <= 1,
+         'M1b ★ 그릇만 넓혔다 — 글줄 잉크 자리는 **Δ0px**(19회차 판과 같은 85 / 995)',
+         '잉크 ' + r2v(M.inkL) + '..' + r2v(M.inkR));
+      /* ★ 되돌림 — `--rd-fx:0` 이면 19회차 판이 되살아나 M1 이 빨개진다(헛초록 방지) */
+      await page.addStyleTag({ content: '.tr-rn>.rd{--rd-fx:0px}' });
+      const M0 = await rdRun();
+      ok(!!M0 && (M0.clearL < 0 || M0.clearR < 0),
+         'M1c ★ 되돌림 — `--rd-fx:0` 사본에서는 흰 테가 글자를 먹는다',
+         M0 ? '좌 ' + r2v(M0.clearL) + 'px · 우 ' + r2v(M0.clearR) + 'px' : '—');
+      await page.reload();
+      await page.waitForFunction(() => typeof S !== 'undefined' && typeof openTrain === 'function');
+      await page.waitForTimeout(700);
+      await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
+        S.gold = 1e18; S.dia = 1e9; S.rstone = 1e9; S.tstone = 1e9; if (S.temper) S.temper.pts = 1e6; openTrain(); });
+      await page.waitForTimeout(400);
+      const M1 = await rdRun();
+      ok(!!M1 && M1.clearL >= 0 && M1.clearR >= 0, 'M1d 원복하면 같은 자로 다시 초록',
+         M1 ? '좌 ' + r2v(M1.clearL) + 'px · 우 ' + r2v(M1.clearR) + 'px' : '—');
+    }
+
+    /* ⚑⚑ **M2(훈련 비용 잉크 keep-out)는 이 자에 없다** — 같은 회차에 다른 워커가 **816** 으로
+       먼저 올렸고(`--burst-keep` · `fxbKeepHoles`), 그 축의 자는 `tools/verify816.js` 다.
+       한 축을 두 자가 재면 문턱이 갈리는 날 어느 쪽이 옳은지 아무도 못 고른다(286·308 과 같은 꼴).
+       20회차는 그 자리를 **재현으로 확인만** 하고(review §20 A/B 표) 자는 816 것을 쓴다. */
+    /* M3 — ⑶ 의 제품 쪽 답: 홀드 내내 «보이는 fx 0 · 홀드 링 0» 인 프레임이 **0장**이다. */
+    const gapRun = async (tab, sel) => {
+      await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, tab);
+      await page.waitForTimeout(420);
+      return page.evaluate(s => new Promise(res => {
+        const btn = document.querySelector(s); const L = document.getElementById('fxl');
+        if (!btn || !L) return res(null);
+        btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, isPrimary: true, buttons: 1 }));
+        const t0 = performance.now(); let n = 0, blank = 0;
+        const tick = () => { const t = performance.now() - t0;
+          const vis = Array.from(L.children).filter(k => +(getComputedStyle(k).opacity || 0) > 0.02).length;
+          const hold = document.querySelectorAll('.fx-holding').length;
+          n++; if (!vis && !hold) blank++;
+          if (t < 1100) requestAnimationFrame(tick);
+          else { btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })); res({ n, blank }); } };
+        requestAnimationFrame(tick);
+      }), sel);
+    };
+    for (const [tab, sel, nm] of [['train', '#trCards [data-tr]', '훈련'],
+                                  ['rune', '#trRunes .rbt.b1', '룬'],
+                                  ['temper', '#trTemper .tr-tp.k0 .tb', '단련']]) {
+      const G = await gapRun(tab, sel);
+      ok(!!G && G.n > 20 && G.blank === 0,
+         'M3 ★ ' + nm + ' — 홀드 내내 «보이는 fx 0 · 홀드 링 0» 인 프레임 **0장**(⑶ 은 자 결함이었다)',
+         G ? '빈 프레임 ' + G.blank + '/' + G.n : '—');
+      await page.waitForTimeout(400);
+    }
   }
 
   console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
