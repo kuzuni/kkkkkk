@@ -37,8 +37,12 @@ const ev = async (page, fn, arg) => {
   catch (e) { console.log('  ⚠ evaluate 예외: ' + e.message.split('\n')[0]); return null; }
 };
 
-/* 한 칸에 연출을 걸고 그 순간의 fx 레이어를 들여다본다.
-   ⚠ `rwSummonFx` 는 제품 경로 그대로 부른다 — 스텁으로 연출을 흉내 내면 «자가 자기 사본을 재는» 자가 된다. */
+/* 한 칸에 연출을 건다. ⚠ `rwSummonFx` 는 제품 경로 그대로 부른다 —
+   스텁으로 연출을 흉내 내면 «자가 자기 사본을 재는» 자가 된다.
+   ⚑ **애니메이션을 한 시각에 세운다**(probe788·verify683 과 같은 처리). 안 세우면 `fxHitEl` 의
+     `.fx-hit`(scale 1.05)가 호스트를 흔드는 **한복판**에서 재게 된다 — 그러면 [C1] 이 «패치가
+     어긋났다» 가 아니라 «읽는 순간이 달랐다» 를 재서 Δ가 0.09 ↔ 2.41px 로 실행마다 갈린다
+     (자를 처음 짤 때 실제로 그랬다 · 344 «플레이키는 제품이 아니라 자의 것일 수 있다»). */
 const FIRE = ({ ID, KEEP }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   const it = RELICS.filter(r => r.id === ID)[0]; if (!it) return null;
@@ -47,7 +51,13 @@ const FIRE = ({ ID, KEEP }) => {
       window.fxFlash = function (el, iv, inset) { return window.__v795ff.call(this, el, iv, inset); }; }
   } else if (window.__v795ff) { window.fxFlash = window.__v795ff; window.__v795ff = null; }
   rwSummonFx(it, true, null);
-  const el = document.querySelector('[data-rw="' + it.id + '"]');
+  try { document.getAnimations().forEach(a => { a.pause(); try { a.currentTime = 20; } catch (_) {} }); } catch (_) {}
+  return { id: it.id };
+};
+/* 세운 뒤 rAF 한 바퀴를 돌리고 나서 읽는다(패치의 추적 한 번 = 제품이 실제로 그리는 자리). */
+const READ = ID => {
+  const L = document.getElementById('fxl');
+  const el = document.querySelector('[data-rw="' + ID + '"]');
   const u = el && el.querySelector('u');
   const kids = Array.prototype.slice.call(L.children);
   const keeps = kids.filter(n => n.classList && n.classList.contains('fx-keep'));
@@ -61,7 +71,7 @@ const FIRE = ({ ID, KEEP }) => {
              transform: c.transform, textAlign: c.textAlign, zIndex: c.zIndex, text: n.textContent }; };
   const host = R(el), lab = R(u);
   return {
-    id: it.id, nKeep: keeps.length, nLab: kLab.length, nFlash: flash.length,
+    id: ID, nKeep: keeps.length, nLab: kLab.length, nFlash: flash.length,
     flashIdx: flash.length ? kids.indexOf(flash[0]) : -1,
     keepIdx: kLab.length ? kids.indexOf(kLab[0]) : -1,
     host, lab, patch: R(kLab.length ? kLab[0].querySelector('u') : null),
@@ -92,7 +102,9 @@ const FIRE = ({ ID, KEEP }) => {
 
   blk('A] 전제 — 뿌리는 «세기» 가 아니라 «자리» 다 (라벨이 카드 밖으로 걸쳐 있다)');
   ok(!!own && own.a && own.b, 'A1 전제 — 대상 두 칸을 `summonRelic()` 실경로로 보유시켰다', own ? ('rl0 Lv.' + own.lv) : '실패');
-  const K = await ev(p, FIRE, { ID: 'rl0', KEEP: true });
+  await ev(p, FIRE, { ID: 'rl0', KEEP: true });
+  await p.waitForTimeout(80);                 /* rAF 한 바퀴 — 패치의 추적이 한 번 돈 뒤에 읽는다 */
+  const K = await ev(p, READ, 'rl0');
   ok(!!K && K.over > 0,
      'A2 ★ «Lv.n» 이 카드 하변 **밖**으로 걸친다 — 카드 rect 로 뜨는 플래시의 흰 테가 그 띠를 지난다',
      K ? (r2(K.over) + 'px 밖 (카드 하변 ' + r2(K.host.y + K.host.h) + ' ↔ 라벨 하변 ' + r2(K.lab.y + K.lab.h) + ')') : '측정 실패');
@@ -167,11 +179,15 @@ const FIRE = ({ ID, KEEP }) => {
      F ? ('플래시 ' + F.flash + ' · 패치 ' + F.keep) : '측정 실패');
 
   blk('R] 되돌림 — 넷째 인자를 떨구면 이 자가 통째로 빨개진다');
-  const R = await ev(p, FIRE, { ID: 'rl0', KEEP: false });
+  await ev(p, FIRE, { ID: 'rl0', KEEP: false });
+  await p.waitForTimeout(80);
+  const R = await ev(p, READ, 'rl0');
   ok(!!R && R.nLab === 0 && R.nFlash === 1,
      'R1 ★ `keep` 을 떨군 사본에서는 라벨 패치가 0장이다(플래시는 그대로 뜬다)',
      R ? ('패치 ' + R.nLab + '장 · 플래시 ' + R.nFlash + '장') : '측정 실패');
-  const R2 = await ev(p, FIRE, { ID: 'rl0', KEEP: true });
+  await ev(p, FIRE, { ID: 'rl0', KEEP: true });
+  await p.waitForTimeout(80);
+  const R2 = await ev(p, READ, 'rl0');
   ok(!!R2 && R2.nLab === 1,
      'R2 ★ 원복하면 다시 선다 — [B1] 이 «항상 1장» 을 재는 헛초록이 아니다',
      R2 ? (R2.nLab + '장') : '측정 실패');
