@@ -405,7 +405,7 @@ async function sweep(browser, inject) {
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP, seenQ };
+  return { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP, seenQ, seenR };
 }
 
 (async () => {
@@ -422,7 +422,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP, seenQ } = await sweep(browser, null);
+  const { rows, rowsF, rowsP, seenF, seenG, rowsM, rowsMF, seenO, seenP, seenQ, seenR } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -1404,6 +1404,24 @@ async function sweep(browser, inject) {
         why: '750 — 03 카드 알약의 다이아 인스턴스(잉크 104×103 · +0.97% · 3화면). ' +
              '601 이 같은 부품의 `bgm-rel`(cap 1.8)·`bgm-gold` 를 이미 등재해 둔 그 자리이고, ' +
              '`em` 의 `transform:scale(1.0732)` 로 47.52 에 래스터한 뒤 확대라 **잉크가 커진다**(102 → 104). ' +
+             '실측 0.97% + 래스터 반 px 0.49% ⇒ 1.5' },
+      /* ⚑ **356 34회차 — 667(이용권 UI 재작업 · 4회차)이 판정 안으로 데려온 자리.**
+         착수 기준선(08:03~08:35 전수 실행)은 «자리 15개 · 이름표 전부 등재» 로 **초록**이었고,
+         그 뒤 상류로 들어온 `wip(667)` 4회차(124 이용권 탭 카드 리본 개편)가 리본 안에 재화 아이콘을
+         하나 더 놓았다 ⇒ 자리 16개(래칫 16 안 · 칸 45 → 46, 래칫 48 안).
+         11·12·15·16회차·601·750 규약대로 **수를 올리지 않고 자리별 귀속을 찍어** 이름표로만 등재한다:
+         `node tools/probe418.js --screen "124 이용권 탭"` 이 **잉크 104×103 · +0.97% · 상자 정수 52.0000**
+         을 찍는데, 그 값이 바로 위 `bgm-dia`(750 · cap 1.5)와 **소수점까지 같다** — 같은 아트(`cur-dia`)를
+         같은 크기로 그린 **추가 목격**이지 새 결함이 아니다.
+         ⚑ **고칠 자리가 아니라는 근거는 DSF 수렴이다**(356 9회차 규칙) — 같은 화면·같은 트리에서
+           **DSF2 +0.97% → DSF3 문턱 아래 → DSF4 문턱 아래**. 상자는 이미 정수 52 이고 남은 것은
+           **좌표가 .5**(386.5, 876.5)라 래스터가 한 축을 1px 더 먹는 그 1px 이다(한 device px 이 0.96%).
+         ⚠ 눈금은 601 과 같은 산수 — 실측 0.97% + 래스터 반 px 0.49% ⇒ **1.5**. 줄이는 쪽으로만 고쳐라. */
+      { sel: 'div#shopList>div.cn-wrap.pv>div.pvc.pb.ban1>div.rb.rb1>b>img.cic', cap: 1.5,
+        why: '356 34회차 — 667 4회차(124 이용권 탭 리본 개편)가 리본 안에 놓은 재화 아이콘. ' +
+             '위 `bgm-dia`(750 · cap 1.5)와 잉크 104×103 · +0.97% 가 소수점까지 같다(같은 아트·같은 크기의 추가 목격). ' +
+             '상자는 이미 정수 52.0000 이고 좌표가 .5(386.5, 876.5)라 상자로는 못 닫는다 — ' +
+             'DSF2 +0.97% → DSF3 문턱 아래 → DSF4 문턱 아래로 수렴 = 자의 바닥. ' +
              '실측 0.97% + 래스터 반 px 0.49% ⇒ 1.5' },
     ];
 
