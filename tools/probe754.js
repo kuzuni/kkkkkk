@@ -24,10 +24,18 @@
  * 줄어들고 그 **하변**에 매달린 자식이 따라 올라오는 것은 **맞게 매달린** 것이다.
  * 그래서 두 겹으로 판정한다:
  *   ⓐ 요소가 그릇의 상변·하변·중앙 **어느 하나에도** 안 붙었나 (= 아무 데도 안 매달림)
- *   ⓑ 한 그릇 안에서 기준이 갈린 형제 쌍의 **간극이 지원 범위 안에서 무너지나**
- *      (`overlap` = 0 이하로 겹침 · `collapse` = 최댓값의 1/4 미만으로 붕괴 · 아니면 `관찰`)
+ *   ⓑ 한 그릇 안에서 기준이 갈린 형제 **쌍**의 간극이 지원 범위 안에서 무너지나
  * 17 이 −35px(겹침), 18 이 703 → 23px(붕괴)로 잡힌 것이 이 축이다. 420-③ 대로 최악을
- * 1600 으로 가정하지 않고 프레임 5종을 다 재서 최솟값을 쓴다.
+ * 1600 으로 가정하지 않고 프레임 5종을 다 잰다.
+ *
+ * ⚑ **ⓑ 는 6회차에 다시 짰다(자의 네 번째 수리) — 판정 단위가 «상자» 가 아니라 «쌍» 이다.**
+ * 5회차까지는 상자 안 모든 쌍의 간극 중 **최솟값 하나**를 프레임마다 뽑았는데, 그 최솟값은
+ * 프레임마다 **다른 쌍**을 가리킬 수 있어 «없는 비단조»를 만든다(89 유물이 그랬다).
+ * 또 옛 코드는 이미 겹친 쌍을 프레임마다 통째로 건너뛰어 **음수 간극을 잴 수가 없었다** —
+ * 주인이 지목한 증상(«문구끼리 겹친다»)을 자가 구조적으로 못 보고 있었다.
+ * 지금은 쌍을 기준 프레임에서 고정하고, 그 한 쌍의 부호 있는 간극 5종으로 판정한다:
+ *   상수(진폭 ≤1.5 = 설계상 맞닿음) · 겹침(기준은 양수인데 −1.5 밑으로) ·
+ *   간극붕괴(**기준 프레임 간극**의 1/4 미만) · 관찰. 자세한 근거는 아래 [N] 주석.
  *
  * 프레임 5종은 화면비 5종과 같은 말이다 — `fit()` 이 frameH 를 1600..2600 으로
  * clamp 하므로(9:13.3 보다 넓은 화면은 전부 1600 으로 눌린다) **레이아웃이 갈리는 축은
@@ -183,6 +191,28 @@ async function open1(page, h) {
   return page.evaluate(() => window.__p754 || null);
 }
 
+/* ── 6회차 [N] — 한 «쌍» 의 간극 수열을 판정하는 순수 함수 ────────────────────
+ * gaps = [{fh, g}]  (g = null 이면 그 프레임에 그 쌍이 없다 — 한쪽이 안 그려진다)
+ * 브라우저가 필요 없으므로 `tools/verify754.js` §6 이 이 함수를 **표로 되돌림 시험**한다
+ * (17 의 −35 겹침 · 18 의 703→23 붕괴가 새 규칙에서도 잡히는지 · 89·54·06 의 상수 0 이
+ *  결함이 아닌지 · 12 의 «2600 에서 벌어짐» 이 붕괴로 안 읽히는지).
+ * 기준은 **최댓값이 아니라 기준 프레임(2280)** 이다 — 이유는 아래 [N] 주석 ⚠. */
+const GTOL = 1.5;               /* calc() 반올림 한 겹 */
+function judgeGaps(gaps, base) {
+  const B = base === undefined ? BASE : base;
+  const seenArr = gaps.filter((x) => x.g != null).map((x) => x.g);
+  const bRow = gaps.find((x) => x.fh === B);
+  const gb = bRow ? bRow.g : null;
+  const out = { seen: seenArr.length, base: gb, min: null, max: null, harm: 'none', why: '관찰' };
+  if (seenArr.length < 2) { out.why = '표본부족'; return out; }
+  out.min = Math.min(...seenArr); out.max = Math.max(...seenArr);
+  if (out.max - out.min <= GTOL) { out.why = '상수'; return out; }
+  if (gb != null && gb >= -GTOL && out.min < -GTOL) { out.harm = 'overlap'; out.why = '겹침'; return out; }
+  if (gb != null && gb > GTOL && out.min < gb * 0.25) { out.harm = 'collapse'; out.why = '간극붕괴'; return out; }
+  return out;
+}
+module.exports = { judgeGaps };
+
 /* 앵커 계수 k 를 «종류» 로 접는다 — 0/0.5/1 에서 ±0.06 안이면 그 이름표, 아니면 실수 그대로 */
 function kName(k) {
   if (k == null) return '?';
@@ -192,7 +222,9 @@ function kName(k) {
   return 'k' + k.toFixed(2);
 }
 
-(async () => {
+/* 6회차 — `verify754` §6 이 위 `judgeGaps` 만 require 해서 표로 시험하므로,
+   require 로 불릴 때는 스윕을 돌리지 않는다(브라우저를 띄우면 게이트가 2분 늘어난다). */
+if (require.main === module) (async () => {
   const browser = await launch(chromium);
   const rows = [];
   for (const h of HOSTS) {
@@ -271,27 +303,52 @@ function kName(k) {
            결함은 그 둘이 **지원 범위 안에서 마주 보고 다가와 겹치거나 간극이 무너질 때**다
            (17 이 −35px 로 겹쳤고, 18 은 703 → 23px 로 97% 무너졌다. 420-③ — 최악을 1600 으로
            가정하지 말고 5종을 다 재서 최솟값을 쓴다). */
+        /* ── 6회차 [N] — **판정을 «상자» 가 아니라 «쌍» 으로 내린다(자를 네 번째로 고쳤다).** ──
+           5회차까지는 상자 안 형제 쌍 전부의 간극 중 **최솟값 하나**를 프레임마다 뽑아 그 수열로
+           판정했다. 그 수열은 **프레임마다 다른 쌍**을 가리킬 수 있다 — 89 유물이 정확히 그랬다:
+           1920~2600 의 0 은 `.rw-steps ↓ .rw-mid`(계단 밑동이 수반 윗면에 **닿는** 설계 —
+           `--rw-sh = bt − fl` 이라 항등적으로 0)인데, 1600·1841 은 계단 구간이 0 이라 그 쌍이
+           아예 없어 **다른 쌍**(7.9 · 31.7)이 최솟값이 됐다. 그래서 «비단조 7.9 → 31.7 → 0» 이라는
+           **없는 그림**이 나왔고 5회차가 그것을 «이 작업이 찾던 결함의 교과서 표본» 으로 등재했다
+           (이 회차에 기각 — 세 [❌] 89·54·06 이 전부 «상수 맞닿음» 이었다).
+           ⇒ 쌍을 **먼저 고정**하고(기준 프레임에서 위·아래가 갈리고 세로 띠가 겹치는 쌍),
+             그 **한 쌍**의 간극을 5종에서 재서 판정한다. 5회차 §③ ⚠ 가 요구한
+             «간극이 프레임에 따라 변하는가» 가 이 축이다.
+           ⚑ **그리고 부호를 살렸다.** 옛 코드는 프레임마다 `A.b > B.y`(= 이미 겹쳤다)면 그 쌍을
+             통째로 건너뛰어, 주인이 스크린샷으로 지목한 바로 그 증상(«문구끼리 겹친다»)을
+             자가 **구조적으로 못 봤다** — 간극은 0 밑으로 내려갈 수가 없었고 «겹침» 판정은
+             사실상 «정확히 0» 만 잡고 있었다(54·06 의 [❌] 가 그것이다). 이제 음수로 적힌다.
+           판정:
+             · 상수     진폭 ≤1.5px — 설계상 «맞닿음»(89 계단↔수반 · 54 · 06)이지 프레임 결함이 아니다
+             · 겹침     기준 프레임에서는 떨어져 있는데 다른 프레임에서 −1.5px 넘게 파고든다
+             · 간극붕괴 기준 간극의 1/4 미만으로 주저앉는다
+             · 관찰     변하긴 하는데 위 둘에 안 걸린다(길어지는 쪽은 결함이 아니다 — 12 의 2600 237px)
+           ⚠ 옛 규칙의 `min < max * .25` 는 **길어지는 쪽도 붕괴로 읽었다** — 12 소환결과가 20·20·20·20·**237**
+             로 [❌] 였는데 20 은 네 프레임에서 상수이고 2600 에서만 벌어진 것이다. 기준은 «최댓값» 이
+             아니라 **기준 프레임(2280)** 이어야 한다. */
         const names = [...kk.keys()];
-        const gaps = FRAMES.map((fh) => {
-          const m = mapAt(fh);
-          let g = Infinity;
-          for (const a of names) for (const b of names) {
-            if (a === b) continue;
-            for (const ka of kk.get(a)) for (const kb of kk.get(b)) {
-              const A2 = m.get(ka), B2 = m.get(kb);
-              if (!A2 || !B2 || A2.b > B2.y) continue;            /* A 가 위, B 가 아래인 쌍만 */
-              const xo = Math.min(A2.x + A2.w, B2.x + B2.w) - Math.max(A2.x, B2.x);
-              if (xo <= 1.5) continue;                             /* 같은 세로 띠가 아니면 안 만난다 */
-              g = Math.min(g, B2.y - A2.b);
-            }
-          }
-          return { fh, g: g === Infinity ? null : Math.round(g * 10) / 10 };
-        });
-        const seen = gaps.filter((x) => x.g != null);
-        const min = seen.length ? Math.min(...seen.map((x) => x.g)) : null;
-        const at = seen.length ? Math.max(...seen.map((x) => x.g)) : null;
-        const harm = min == null ? 'none' : min <= 0 ? 'overlap' : (at && min < at * 0.25) ? 'collapse' : 'none';
-        mixedBoxes.push({ cb, harm, minGap: min, maxGap: at, gaps,
+        const keys = [];
+        for (const a of names) for (const key of kk.get(a)) keys.push({ key, kind: a });
+        const pairs = [];
+        for (const A of keys) for (const B of keys) {
+          if (A.kind === B.kind) continue;                       /* 같은 앵커끼리는 안 벌어진다 */
+          const A0 = mBase.get(A.key), B0 = mBase.get(B.key);
+          if (!A0 || !B0 || A0.b > B0.y) continue;                /* 기준 프레임에서 A 가 위 */
+          const xo = Math.min(A0.x + A0.w, B0.x + B0.w) - Math.max(A0.x, B0.x);
+          if (xo <= 1.5) continue;                                /* 같은 세로 띠가 아니면 안 만난다 */
+          const gaps = FRAMES.map((fh) => {
+            const m = mapAt(fh); const a2 = m.get(A.key), b2 = m.get(B.key);
+            return { fh, g: (a2 && b2) ? Math.round((b2.y - a2.b) * 10) / 10 : null };
+          });
+          const j = judgeGaps(gaps);
+          if (j.seen < 2) continue;
+          pairs.push({ a: A.key, b: B.key, gaps, ...j });
+        }
+        const worst = pairs.find((p) => p.harm === 'overlap') || pairs.find((p) => p.harm === 'collapse');
+        /* 상자를 대표하는 쌍 — 해가 있으면 그것, 없으면 기준 간극이 가장 좁은 쌍 */
+        const tight = pairs.slice().sort((p, q) => (p.base == null ? 1e9 : p.base) - (q.base == null ? 1e9 : q.base))[0];
+        mixedBoxes.push({ cb, harm: worst ? worst.harm : 'none', pairs,
+                          lead: worst || tight || null,
                           kinds: [...kk.entries()].map(([k, v]) => ({ k, n: v.length, els: v.slice(0, 6) })) });
       }
       for (const [k, v] of kk) kinds.set(k, (kinds.get(k) || []).concat(v));
@@ -333,8 +390,12 @@ function kName(k) {
       const mark = mixed ? '❌' : watch.length ? '⚠' : '✅';
       console.log(`  [${mark}] ${r.id} ${r.name.padEnd(14)} ${String(r.host).padEnd(8)} 요소 ${String(r.n).padStart(3)} · 앵커 ${r.kinds.map((k) => `${k.k}×${k.n}`).join(' + ')}${r.exempted.length ? ' · 예외 ' + r.exempted.join(',') : ''}`);
       for (const b of r.mixedBoxes) {
-        console.log(`        └ ${b.harm === 'overlap' ? '겹침' : b.harm === 'collapse' ? '간극붕괴' : '관찰'} · 그릇 ${b.cb} · 간극 ${b.gaps.map((g) => `${g.fh}:${g.g == null ? '-' : g.g}`).join(' ')}`);
+        const L = b.lead;
+        console.log(`        └ ${L ? L.why : '쌍없음'} · 그릇 ${b.cb}${L ? ` · 쌍 ${L.a} ↓ ${L.b} · 간극 ${L.gaps.map((g) => `${g.fh}:${g.g == null ? '-' : g.g}`).join(' ')}` : ''}`);
         for (const k of b.kinds) console.log(`            ${k.k.padEnd(7)} ${k.els.join(' ')}${k.n > k.els.length ? ` …+${k.n - k.els.length}` : ''}`);
+        /* 해가 있는 쌍은 대표 말고도 전부 적는다 — 처방이 쌍 단위이기 때문이다 */
+        for (const p of b.pairs) if (p.harm !== 'none' && p !== L)
+          console.log(`            ↳ ${p.why} · ${p.a} ↓ ${p.b} · ${p.gaps.map((g) => `${g.fh}:${g.g == null ? '-' : g.g}`).join(' ')}`);
       }
     }
     console.log(`\n  요약 — 성한 화면 ${ok} · 해가 있는 자리 ${bad} · 미측정 ${skipped}`);

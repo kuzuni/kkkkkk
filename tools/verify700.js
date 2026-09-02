@@ -135,9 +135,23 @@ function preTree() {
     ok(rows.every(r => eq(r.cxBar, 540) && eq(r.cxMid, 540)),
       '[B3] 바 중심 = 수반 중심 = 화면 중심 540 (둘이 한 덩어리로 읽힌다)',
       rows.map(r => r.H + ':' + r.cxBar + '↔' + r.cxMid).join(' · '));
-    ok(rows.every(r => eq(r.gapGrid, GRID_GAP)),
-      '[B4] 바 하변 ↔ 격자 상변 = 20px (네 프레임 고정 — 바는 격자에 «붙어» 산다)',
-      rows.map(r => r.H + ':' + r.gapGrid).join(' · '));
+    /* ── 754 6회차 이관 — **«네 프레임 고정 20» 은 1600 에서 대가를 숨기고 있었다.** ──
+       옛 [B4] 는 아래 여유만 물었다. 그래서 700 이 스스로 적어 둔 «상인방과의 여유 8(1600)»
+       — 위 8 / 아래 20 의 **비대칭** — 을 게이트가 한 번도 안 봤다(754 의 자가 찾아냈다).
+       1600 의 벽은 상인방 하변 86 ↔ 격자 상변 212 = **126px** 뿐이고 셸이 98 이라 여유는
+       통틀어 28px 이다. 그 28 을 8/20 이 아니라 **14/14** 로 나누는 것이 이번 수리다.
+       ⇒ 항을 둘로 가른다. 지우지 않고 **조건을 좁혀** 옛 약속(넉넉한 프레임의 20 고정)은
+         그대로 지키고, 좁은 벽에서의 새 약속(대칭)을 한 줄 더 세운다(328-330 교훈 —
+         «누른 항을 묻는 항» 이 없으면 수리가 통째로 사라져도 초록이다). */
+    const wide = rows.filter(r => r.clearLintel + r.gapGrid >= 40);
+    const tight = rows.filter(r => r.clearLintel + r.gapGrid < 40);
+    ok(wide.length >= 3 && wide.every(r => eq(r.gapGrid, GRID_GAP)),
+      '[B4] 벽이 넉넉한 프레임(여유 ≥ 40)은 바 하변 ↔ 격자 상변 = 20px 고정 — 바는 격자에 «붙어» 산다',
+      wide.map(r => r.H + ':' + r.gapGrid).join(' · ') + (wide.length ? '' : ' — 넓은 프레임 0'));
+    ok(tight.length >= 1 && tight.every(r => Math.abs(r.clearLintel - r.gapGrid) <= 1.5),
+      '[B4b] 벽이 좁은 프레임(여유 < 40)은 위·아래를 **고르게** 나눈다 — 754 가 잡은 8/20 비대칭이 없다',
+      tight.map(r => `${r.H}: 위 ${r.clearLintel} / 아래 ${r.gapGrid}`).join(' · ')
+        + (tight.length ? '' : ' — 좁은 프레임 0(1600 이 표본에 없다)'));
     ok(rows.every(r => r.clearLintel > 0),
       '[B5] 바 상변이 상인방 하변보다 아래 — 상인방(120 ② «66px 온전»)을 한 픽셀도 안 밟는다',
       rows.map(r => r.H + ':' + r.clearLintel).join(' · '));

@@ -66,6 +66,15 @@ const HOSTS = [
      MISSING 이었다 — `#svw` 는 **56 절전 모드**이고 그 오프너 이름은 `openSaver()` 다(review §11-2). */
   { id: '55',  set: 'all', name: '설정',             sel: '#cfw',   open: `openConf()` },
   { id: '56',  set: 'all', name: '절전 모드',        sel: '#svw',   open: `openSaver()` },
+  /* ⚑ 6회차 편입 — 5회차가 «표본이 주인 문면보다 좁았다» 로 자(probe754)에는 여섯을 넣었지만
+     **눈(이 하네스)에는 안 넣었다.** 자만 넓히고 비평을 안 하면 주인 문면(«스샷들 스스로들이
+     다 찍어서 비평해서») 의 절반만 지킨 것이다. 오프너 문자열은 probe754 와 같은 값이다. */
+  { id: '03',  set: 'r6', name: '던전 페이지',       sel: '#dunw',  open: `openDungeon()` },
+  { id: '10',  set: 'r6', name: '상점 페이지',       sel: '#shopw', open: `openShopPage()` },
+  { id: '89',  set: 'r6', name: '유물 소환',         sel: '#relw',  open: `openRelw()` },
+  { id: '52',  set: 'r6', name: '▦ 메뉴',            sel: '#mnw',   open: `openMenu()` },
+  { id: '54',  set: 'r6', name: '랭킹',              sel: '#rkw',   open: `openRank()` },
+  { id: '06',  set: 'r6', name: '장비 시트',         sel: '#eqw',   open: `panelOpen = true; curTab = 'hero'; heroTab = 'eq'; syncPanel()` },
 ];
 
 const pick = () => HOSTS.filter((h) => (ONLY ? (h.id === ONLY) : (SET === 'all' || h.set === SET)));
