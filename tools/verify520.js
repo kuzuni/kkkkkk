@@ -61,17 +61,32 @@ const READ = () => {
   renderCos();
   const sheet = txt('#bCos');
   const tot = txt('#bCos .sk-tot em');
-  /* 기대값은 «화면이 쓴 함수» 가 아니라 근거 데이터에서 다시 만든다(LESSONS 212-①) */
+  /* 기대값은 «화면이 쓴 함수» 가 아니라 근거 데이터에서 다시 만든다(LESSONS 212-①).
+     ⚠ 835 — «값» 은 계속 근거 데이터에서 만들지만 «표기» 는 제품의 표기 부품에서 파생한다.
+     725 가 표기 한 벌을 `pct` → `fmtEff` 로 갈았는데 이 자가 옛 문자열(«39%»)을 손으로 들고
+     있어 [A3]·[B3] 이 부패했다(LESSONS 831 — «표기 한 벌을 갈면 기대 문자열을 든 자가 남는다»).
+     `fmtEff` 를 부르는 것은 «화면이 쓴 함수를 그대로 베끼는 것» 이 아니다 — 값(m·cosLvVal)은
+     여전히 상수표에서 독립으로 다시 만들고, 부르는 것은 «수 → 글자» 한 겹뿐이다.
+     소환가 표기가 또 바뀌어도 이 자는 따라오고, 값이 틀어지면 그대로 빨개진다. */
   const n = AVATARS.filter(a => S.avatars[a.id]).length;
-  let m = 1;
-  for (let i = 1; i <= n; i++) m *= 1 + COS_OWN.atk * COS_STEP[Math.min(COS_STEP.length - 1, Math.floor((i - 1) / COS_STEP_EVERY))];
-  const totWant = pct(m * (1 + cosLvVal('atk')) - 1);
+  /* ⚠ 835 — 여기에는 부패가 **한 겹 더** 있었다. 이 식은 «계단을 전부 곱하고 강화를 한 번 더 곱한다»
+     (`Π(1+step) × (1+lv) − 1`) 는 194·197 시절 모델인데, **724**(주인 확정 «카테고리 안은 합»)가
+     제품을 «계단을 더하고 강화를 더해 한 번만 곱한다» 로 바꿨다(`cosOwnSum` 선언 · `bonus()` ⑤절 ·
+     `renderCos` 의 `tot`). 표본 4종·46Lv 에서 옛 모델 0.38512 vs 제품 0.344 라 [A3] 은 725 를
+     고쳐도 값에서 다시 빨갰다. 여기서도 **값은 상수표에서 독립으로** 다시 만든다 —
+     `cosOwnSum`·`cosLvVal` 를 부르면 제품 식을 베끼는 것이라 «식이 갈려도 초록» 이 된다. */
+  const lvSum = AVATARS.reduce((s, a) => s + (S.avatars[a.id] ? (S.cosLv[a.id] || 0) : 0), 0);
+  let step = 0;
+  for (let i = 1; i <= n; i++) step += COS_OWN.atk * COS_STEP[Math.min(COS_STEP.length - 1, Math.floor((i - 1) / COS_STEP_EVERY))];
+  const totVal  = step + lvSum * COS_LV.atk;
+  const totWant = fmtEff(totVal);
 
   closeModal(); showCosDetail(ownId);
   const det = txt('#mbox');
   const db = txt('#mbox .sk-db p');
   const lv = cosLvOf(ownId), idx = cosOwnIdx(ownId);
-  const dbWant = ['atk', 'hp', 'gold'].map(k => pct(cosOwnStep(k, idx) + lv * COS_LV[k]));
+  const dbVal  = ['atk', 'hp', 'gold'].map(k => cosOwnStep(k, idx) + lv * COS_LV[k]);
+  const dbWant = dbVal.map(v => fmtEff(v));                      /* 835 — 표기만 제품 부품 파생 */
 
   closeModal(); showCosDetail(offId);
   const off = txt('#mbox');
@@ -80,7 +95,7 @@ const READ = () => {
   closeModal(); cosHelp();
   const help = txt('.mwell .cos269') || txt('.mbody') || txt('.mwell');
   closeModal();
-  return { ownId, offId, sheet, tot, totWant, det, db, dbWant, off, offDb, help, lv, idx };
+  return { ownId, offId, sheet, tot, totWant, totVal, fmtEffOne: fmtEff(0), det, db, dbWant, dbVal, off, offDb, help, lv, idx };
 };
 
 async function boot(url) {
@@ -113,8 +128,15 @@ async function boot(url) {
   if (R) {
     ok(!SIGN.test(R.sheet), 'A1 시트 글자 전체에 «+»·«−» 가 0건이다', '남은 부호 «' + signs(R.sheet) + '»');
     ok(!DASH.test(R.sheet), 'A2 시트 글자 전체에 「가로 막대」가 0건이다', '남은 막대 «' + dashes(R.sheet) + '»');
+    /* 835 [전제] — 기대 문자열이 «무른 통과» 가 될 수 없음을 먼저 못박는다.
+       `fmtEff` 는 값이 0 이면 «×1배» 를 낸다: 그 상태로 [A3]·[B3] 을 통과시키면
+       «효과가 통째로 사라져도 초록» 인 자가 된다(334 가 고른 처방 ①과 같은 이유). */
+    ok(R.totVal > 0 && R.totWant !== R.fmtEffOne && R.dbVal.every(v => v > 0)
+       && R.dbWant.every(v => v !== R.fmtEffOne),
+       'A0 [전제] 기대값 네 개가 전부 0 이 아니다 — «×1배면 통과» 가 아니다',
+       '총효과 ' + R.totWant + ' · 세 축 ' + R.dbWant.join('/') + ' (중립 표기 ' + R.fmtEffOne + ')');
     ok(R.tot === '공격력 ' + R.totWant,
-       'A3 «총효과» 알약 = «공격력 n%»(부호 없음) · 값은 COS_OWN·COS_STEP 에서 그대로',
+       'A3 «총효과» 알약 = «공격력 ×N배»(부호 없음) · 값은 COS_OWN·COS_STEP 에서 그대로',
        R.tot + ' / 기대 공격력 ' + R.totWant);
     ok(/총효과/.test(R.sheet) && /보유 \d+\/\d+/.test(R.sheet) && /강화 \d+Lv/.test(R.sheet),
        'A4 «총효과» 줄이 통째로 사라진 게 아니다(부호만 뺐다)', (R.sheet.match(/보유 [^·]+· 강화 [^·]+· 총효과: *[^ ]+/) || [''])[0]);
@@ -222,10 +244,13 @@ async function boot(url) {
   {
     const src = fs.readFileSync(SRC, 'utf8');
     const SUBS = [
-      ["+  '<em class=\"ol3\">공격력 ' + pct(tot) + '</em></div>';",
-       "+  '<em class=\"ol3\">공격력 +' + pct(tot) + '</em></div>';"],
-      ["  const cosEffTxt = () => '공격 <em>' + pct(cosEffNow('atk')) + '</em> · 체력 <em>'\n        + pct(cosEffNow('hp')) + '</em> · 골드 <em>' + pct(cosEffNow('gold')) + '</em>';",
-       "  const cosEffTxt = () => '공격 <em>+' + pct(cosEffNow('atk')) + '</em> · 체력 <em>+'\n        + pct(cosEffNow('hp')) + '</em> · 골드 <em>+' + pct(cosEffNow('gold')) + '</em>';"],
+      /* 835 — 앵커 둘을 **725 뒤 문자열**로 갈았다(`pct` → `fmtEff`). 표기 한 벌이 갈리면
+         제품 grep 은 통과해도 «기대 문자열을 든 자» 가 남는다는 것이 831·835 의 교훈이고,
+         §R 의 앵커도 그 문자열이다 — 못 찾으면 [R0] 이 «2/4» 로 즉시 말한다(무언의 헛초록 아님). */
+      ["+  '<em class=\"ol3\">공격력 ' + fmtEff(tot) + '</em></div>';",
+       "+  '<em class=\"ol3\">공격력 +' + fmtEff(tot) + '</em></div>';"],
+      ["  const cosEffTxt = () => '공격 <em>' + fmtEff(cosEffNow('atk')) + '</em> · 체력 <em>'   /* 725 */\n        + fmtEff(cosEffNow('hp')) + '</em> · 골드 <em>' + fmtEff(cosEffNow('gold')) + '</em>';",
+       "  const cosEffTxt = () => '공격 <em>+' + fmtEff(cosEffNow('atk')) + '</em> · 체력 <em>+'   /* 725 */\n        + fmtEff(cosEffNow('hp')) + '</em> · 골드 <em>+' + fmtEff(cosEffNow('gold')) + '</em>';"],
       ["      : cosOff(id) ? '아직 지급되는 곳이 없는 <em>추후 공개</em> 외형입니다.'",
        "      : cosOff(id) ? '<em>추후 공개</em> — 아직 지급되는 곳이 없는 외형입니다.'"],
       ["    beat: '#mbox .sk-gr',\n    txt:  '',\n", ""],
