@@ -5824,13 +5824,11 @@
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000}   /* 126 ② — 5.5px = r .212 */
   .shp-card .cbtn.lack>.sub{color:#EB6D68}   /* 외곽선 두께는 .b1>.sub 의 6px 를 그대로 둔다 */
 
-  /* 잠금 상자(최대치 달성 — 전 종 보유 + 전 종 만렙) — 딤 + 안내.
-     ⚠ 720 이전 주석은 이 자리를 «도감 완성» 이라 불렀는데 판정은 그때도 만렙까지 봤다(probe720). */
-  /* 328 — z 5 → 7. 레드닷이 카드 코너(바깥)에서 **버튼 코너(카드 안)** 로 들어오면서 이 딤 위에
-     떠 버렸다. «최대치 달성» 칸의 무료 버튼은 유료 소환으로 떨어지므로(25121) 닷이 딤 위에 남으면
-     321 이 남긴 «레드닷 = 지금 누를 수 있다» 약속이 깨진다 — 딤을 닷(z6) 위로 올려 같이 덮는다. */
-  .shp-card .clk{inset:7px;border-radius:20px;background:rgba(0,0,0,.6);text-align:center;
-    line-height:436px;font-size:40px;color:#e9c98a;-webkit-text-stroke:0;pointer-events:none;z-index:7}
+  /* ⚑ 800(주인 지시 2026-09-02) — «잠금 상자» 딤 `.shp-card .clk` 은 **선언째 삭제**했다.
+     757 조각 환급이 «만렙 뒤 조각은 쓸 데가 없다» 는 전제를 없애면서 소환 차단이 폐지됐고
+     (`allMaxed` 곁의 800 주석), 잠금이 없는데 딤만 남으면 321 «레드닷 = 지금 누를 수 있다» 약속을
+     정반대로 어긴다. 328 이 이 딤을 닷 위(z7)로 올려 두었던 것도 같이 사라진다 —
+     이제 상점 카드에는 «덮을 딤» 자체가 없다(게이트 verify328 [G] 가 그 부재를 단언한다). */
 
   /* 96 (2026-08-26 주인 지시 ⓑ «소환/재화 탭 선택 상태도 나쁘다») — 10 전용 탭 부품
      (검정 7 + 림 6 짜리 별도 바 껍데기 · 활성 칸으로 **노드째 옮겨 다니던** 노랑 화살촉 알약
@@ -20410,12 +20408,39 @@ const bossCleared = () => Math.max(0, Math.floor((S.best - 1) / 10));
    따른다). 일일 퀘스트(DQUESTS)는 원래부터 다이아 전용이라 손댈 것이 없었다.
    → `rw` 에서 `g` 를 없앴다. 되살릴 일이 있으면 **행 표기(qrow)에 골드 배지를 같이 그리는 것까지**가
    한 벌이다 — 한쪽만 되돌리면 같은 버그가 그대로 재발한다. */
+/* ---- 799 (2026-09-02, 저장소 주인 지시) — 22 «반복» 퀘스트를 **업적 퀘스트**로 -------------
+   주인 원문: «퀘스트에 지금 스테이지 554 인데 스테이지 35도달 퀘스트 아직 못받음. 적처치
+   1999마리도 안됨. 아무거나 소환 5555회 했는데 아무거나 소환 344 퀘스트 안됨. 아무 강화 600
+   넘게 했는데 아무강화 537회 퀘스트 보상 못받음. … 반복퀘스트로 두면 안되고 업적 퀘스트로
+   둬야함. 아무거나 소환은 15회 → 30회 → 45회, 아무 강화도 10 → 20, 적처치도 100 → 200 → 300,
+   스테이지 도달도 1 → 2 → 3 이런식으로.»
+   ⚑ **버그의 뿌리는 «기준선»(`S.quest[].base`) 이었다.** 옛 판정은 `q.get() − base` 였고 수령할
+     때마다 `base = q.get()` 로 다시 찍혔다 — 즉 «스테이지 35 도달» 은 실제로는 «수령 시점보다
+     35 **더**» 였고, «적 1999마리 처치» 는 «1999마리 **더**» 였다. 표는 절대값을 적고 판정은
+     델타로 하고 있었으니 «554 인데 35 가 안 열린다» 는 **표기 ≠ 판정**의 정확한 결과다
+     (156 이 «표기 ≠ 지급» 을 닫은 것과 같은 종류의 결함이다).
+   ⇒ 축이 둘 바뀐다:
+     ① **진행 = 누적 절대값**(`q.get()` 그대로 · 기준선 없음). 표에 적힌 숫자가 곧 조건이다.
+     ② **목표 = 등차**(`step × (s+1)`) — 주인이 준 수열 그대로다(소환 15·강화 10·처치 100·
+        스테이지 1). 옛 등비(`base × mul^s`)는 **선언째 사라졌다**.
+   ⚠ `S.quest[].base` 는 **더 이상 아무도 안 읽는다.** 키를 지우지 않는 이유는 구 세이브가
+     그 키를 갖고 있어도 무해하기 때문이다(`load()` 의 Object.assign 병합) — 되살리지 마라.
+     되살리면 위 버그가 그대로 재발한다.
+   ⚑ **한 번 누르면 밀린 칸을 전부 받는다**(`questSteps`). 등차라 스테이지 554 인 세이브는 밀린
+     칸이 554 개다 — 한 칸씩 눌러야 하면 «업적» 이 아니라 노동이 된다. `claimAllQuests` 의
+     300 회 가드도 이 구조에서는 «퀘스트 5종 × 1회» 로 끝난다.
+   ⚑ **보상은 칸당 정액**이다(`dia`). 등비 시절의 «칸이 오를수록 큰 보상»(`c0 + s·d`)은 칸의
+     난도가 지수로 커지는 것에 대한 대가였는데, 등차에서는 **모든 칸의 난도 증분이 같으므로**
+     보상도 같아야 한다(그대로 두면 s 에 비례한 보상 × 수백 칸 = 다이아 폭발. 스테이지 축
+     554칸이면 정액 77,560 ↔ 옛 식 ≈ 9,275,000 으로 120배다).
+     정액값은 옛 0 번째 칸의 값을 그대로 썼다 — 신규 플레이어가 보는 첫 보상이 한 자리도 안 바뀐다.
+     ⚠ **수치 확정은 199 몫**이다(758 «무료 다이아 유입 1/2» 과녁 아래에서 재역산 · PROGRESS 801). */
 const QUESTS = [
-  { id:'kill',   n:'적 처치',       base:60, mul:1.55, get:() => S.totalKills, rw:s => ({ c:90 + s*40 }),  t:g => '적 <em>' + g + '</em>마리 처치' },
-  { id:'stage',  n:'스테이지 도달', base:3,  mul:1.5,  get:() => S.best,       rw:s => ({ c:140 + s*60 }), t:g => '스테이지 <em>' + g + '</em> 도달' },
-  { id:'summon', n:'소환하기',      base:5,  mul:1.6,  get:() => S.summons,    rw:s => ({ c:100 + s*45 }), t:g => '아무거나 소환 <em>' + g + '</em>회' },
-  { id:'upg',    n:'강화하기',      base:20, mul:1.6,  get:() => S.upgrades,   rw:s => ({ c:80 + s*36 }),  t:g => '아무 강화 <em>' + g + '</em>회' },
-  { id:'coll',   n:'도감 수집',     base:4,  mul:1.45, get:() => ownedTotal(), rw:s => ({ c:180 + s*80 }), t:g => '도감 <em>' + g + '</em>종 수집' }
+  { id:'kill',   n:'적 처치',       step:100, dia:90,  get:() => S.totalKills, t:g => '적 <em>' + g + '</em>마리 처치' },
+  { id:'stage',  n:'스테이지 도달', step:1,   dia:140, get:() => S.best,       t:g => '스테이지 <em>' + g + '</em> 도달' },
+  { id:'summon', n:'소환하기',      step:15,  dia:100, get:() => S.summons,    t:g => '아무거나 소환 <em>' + g + '</em>회' },
+  { id:'upg',    n:'강화하기',      step:10,  dia:80,  get:() => S.upgrades,   t:g => '아무 강화 <em>' + g + '</em>회' },
+  { id:'coll',   n:'도감 수집',     step:5,   dia:180, get:() => ownedTotal(), t:g => '도감 <em>' + g + '</em>종 수집' }
 ];
 /* 일일 퀘스트 (22번 «일일» 탭) — 자정 리셋. 진행 = 누적 카운터 − 자정 스냅샷(S.daily.qb).
    보상은 레퍼런스처럼 전부 다이아. 수령 여부는 S.daily.q (날짜 바뀌면 통째로 초기화) */
@@ -21501,7 +21526,10 @@ const DEF = () => ({
   sumVer: SUM_VER,
   sum: BKEYS.reduce((o, b) => (o[b] = { lv:1, exp:0 }, o), {}),
   coll:{},                                    /* 91 — 도감 «세트 키 → 받은 단계 수» (구 카테고리 카운터 폐기) */
-  quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
+  /* 799 — `base`(기준선)는 **선언째 사라졌다**. 업적 퀘스트의 진행은 누적 절대값이라 기준선이
+     없다(있으면 «표기 ≠ 판정» 이 재발한다). 구 세이브가 들고 있는 `base` 키는 병합돼 남지만
+     읽는 코드가 없어 무해하다 — KEY 를 안 올리는 이유가 그것이다. */
+  quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0 }, o), {}),
   mail:{},
   /* 153 — 상점 구매분은 «동적 우편» 으로 지급된다(주인 지시 2026-08-27). 고정 `MAILS` 와 달리
      세이브에 들어간다. 보관 기간은 없다 — 수령 전에는 어떤 경로로도 지워지지 않는다. */
@@ -27156,18 +27184,23 @@ function craftAll(list){
   if(n){ markDirty(); uiDirty = true; save(); }
   return { n, made: [...by.values()] };
 }
+/* ⚑ 800(2026-09-02, 저장소 주인 지시) — 제품에서 이 술어를 읽는 곳은 이제 **없다**.
+   주인 원문: «스킬 환급 만들었으니까 뽑는거 막지마봐 도감완성으로» ⇒ 소환 «Lock» 자체가 폐지됐다.
+   선언을 남기는 이유는 게이트가 «배너가 전부 만렙인가» 를 물을 때 쓰기 때문이다. */
 const allMaxed = list => list.every(it => atMax(it));
-/* ── 720 (2026-09-02, 저장소 주인 지시) 소환 Lock 의 이름 ─────────────────────────
-   주인 원문: «스킬팝업-> 도감완성 으로 해서 Lock돼지말고 최대치 달성으로 하고 Lock되게 하기».
-   ⚑ **재현(`probe720`)이 등재문을 절반만 확인했다** — 판정은 처음부터 «최대치» 였다
-     (`allMaxed` = 전 종 보유 **+ 전 종 만렙**. 전 종 보유·Lv1 = 도감만 완성한 표본에서
-     딤 0건 · 소환 10회 실행 = probe720 [1]). 어긋난 것은 **이름 하나**였고, 그 이름이
-     두 자리(카드 딤 · 소환 차단 안내)에 **따로 적혀** 있어 판정과 표기가 갈릴 수 있었다.
-   ⇒ 이름을 상수 하나로 모아 두 자리가 같은 것을 읽게 한다(402 «표가 아니라 파생» ·
-     757 «손 상수 금지» 와 같은 처방). 판정식은 한 줄도 안 바꾼다 — 이미 옳았다.
-   ⚠ 장비 3배너는 최상위 등급의 `maxLv` 가 Infinity(무한 강화)라 **구조적으로** 이 상태에
-     닿지 않는다(probe720 [5]). 그것은 720 이 만든 것이 아니라 85·719 의 등급 설계다. */
-const MAXED_TXT = '최대치 달성';
+/* ── 720 → 800 (2026-09-02, 저장소 주인 지시) 소환 Lock 은 **없어졌다** ────────────────
+   720 은 그 Lock 의 **이름**을 «도감 완성» → «최대치 달성» 으로 모으는 작업이었고(판정은
+   처음부터 만렙까지 봤다 — `probe720` [1]), 그 상수 `MAXED_TXT` 를 세워 카드 딤과 차단 안내
+   두 자리가 같은 것을 읽게 했다. 800 은 **그 Lock 을 통째로 걷어낸다**:
+     · 차단이 서 있던 전제(«만렙 뒤의 조각은 쓸 데가 없다»)를 757 조각 환급이 이미 무너뜨렸다.
+     · 그래서 주인 지시가 «막지 마라» 다 — 720 의 이름 통일은 **덮인다**(기준을 바꾸는 것이
+       아니라 잠금이 없다). 720 이 만든 `MAXED_TXT` 는 읽는 자리가 둘 다 사라져 선언째 지웠다
+       (LESSONS «죽은 축은 자리째 걷어낸다» — 402·757 처방의 대상 자체가 없어졌다).
+   ⚠ 되살리지 마라. 만렙에서도 계속 뽑는 것이 **정상 동작**이고, 넘치는 조각은 757 이
+     다이아로 돌려준다. 게이트 `verify800` [C][D][E] 가 그 부재를 지킨다.
+   ⚠ 720 이 적어 둔 사실 하나는 그대로 살아 있다 — 장비 3배너는 최상위 등급의 `maxLv` 가
+     Infinity(무한 강화)라 `allMaxed` 가 **구조적으로** 참이 될 수 없다(probe720 [5]). 옛 Lock 이
+     실제로 걸린 곳은 스킬·펫뿐이었다(`verify800` [A] 가 무대 확인 항으로 적어 둔다). */
 /* ── 757 (2026-09-02, 저장소 주인 지시) 조각 환급 ──────────────────────────────
    주인 원문: «강화를 해도 스킬들이 100 레벨 다 되고 나머지 스킬들이 조각이 500 막 이런식으로
    남게 되는데, 그렇게 되면 환급 버튼 뜨게 해서 클릭시 그 스킬들 환급해서 다이아로 도로 받게 하기.
@@ -27378,10 +27411,8 @@ function summonBatch(b, times){
 function doSummon(b, times){
   const B = BANNERS[b];
   if(gmBlocked(b)) return;                       /* 73 ③ 가이드 소환 미션 진행 중 — 다른 상자는 못 뽑는다 */
-  if(allMaxed(B.list)){
-    notify('🏆 ' + B.n + ' ' + MAXED_TXT + ' — 재료를 환불하세요');   /* 720 — 이름은 한 곳(MAXED_TXT) */
-    return;
-  }
+  /* 800 — 여기 있던 «최대치 달성 — 재료를 환불하세요» 조기 반환(소환 차단)을 걷어냈다.
+     근거는 위 `allMaxed` 곁의 800 주석. */
   const cost = summonCost(b, times);
   if(!payFor(b, cost)){
     notify((B.cur === 'rel' ? curIc('relic') : curIc('dia')) + ' <b>'
@@ -27403,7 +27434,7 @@ function doSummonFree(b, times, viaReward){
   /* 73 ③ — 룰렛 «펫 소환권» 처럼 **보상으로 지급되는** 무료 소환(viaReward)은 막지 않는다.
      막으면 이미 소모된 보상이 통째로 사라진다. 플레이어가 직접 누르는 경로만 검사한다. */
   if(!viaReward && gmBlocked(b)) return;
-  if(allMaxed(B.list)){ doSummon(b, times); return; }
+  /* 800 — «만렙이면 무료분을 유료 소환으로 떨어뜨린다» 던 우회도 같이 사라졌다(무료는 무료다) */
   S.summons += times;
   const ck = b === 'skill' ? 'sumSkill' : b === 'pet' ? 'sumPet' : b === 'relic' ? 'sumRelic' : 'sumEquip';
   S.cnt[ck] += times;
@@ -27610,7 +27641,7 @@ $('sumSkip').addEventListener('click', e => {
 $('sumBF').onclick = () => {
   const b = sumCtx; if(!b) return;
   if(gmBlocked(b)) return;                       /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
-  if(allMaxed(BANNERS[b].list)){ doSummon(b, 10); return; }
+  /* 800 — «최대치 달성 → 유료로» 우회 삭제(무료는 무료다) */
   if(freeLeft(b) <= 0) return;
   useFreeSum(b);                                 /* 190 — 무광고분 먼저 차감 */
   doSummonFree(b, 10);
@@ -27711,15 +27742,23 @@ function collUpAll(){
   notify('🏆 ' + collTabName(collTab) + ' 도감 <b>' + steps + '단계</b> 강화!');
   return { sets, steps };
 }
-const questGoal  = q => Math.ceil(q.base * Math.pow(q.mul, S.quest[q.id].s));
-const questProg  = q => Math.max(0, q.get() - (S.quest[q.id].base || 0));
-const questReady = q => questProg(q) >= questGoal(q);
+/* ---- 799 업적 퀘스트 — 진행은 누적 절대값 · 목표는 등차 · 밀린 칸은 한 번에 ----
+   `s` = 이미 받은 칸 수. 다음 목표는 `step × (s+1)` 이고 진행은 기준선 없이 `q.get()` 그대로다.
+   ⚠ `questProg` 가 `q.get()` 을 **그대로** 돌려주는 것이 799 의 전부다 — 여기에 기준선을 다시
+     빼는 항을 넣으면 «554 인데 35 가 안 열린다» 가 그 자리에서 되살아난다(게이트 verify799 §C). */
+const questGoal  = q => q.step * (S.quest[q.id].s + 1);
+const questProg  = q => Math.max(0, q.get());
+/* 지금 한 번에 받을 수 있는 칸 수(0 이면 못 받는다) — 등차라 나눗셈 한 번이면 끝난다 */
+const questSteps = q => Math.max(0, Math.floor(questProg(q) / q.step) - S.quest[q.id].s);
+const questReady = q => questSteps(q) > 0;
+/* 행에 적히는 보상 = 정액 × 지금 받을 칸 수(못 받는 상태면 한 칸치를 적는다 — 다음 칸의 값) */
+const questRw    = q => q.dia * Math.max(1, questSteps(q));
 function claimQuest(q){
-  if(!questReady(q)) return;
+  const n = questSteps(q);
+  if(!n) return;
   sfx('claim');                                         /* 78 — 퀘스트 보상 수령 */
-  const st = S.quest[q.id], rw = q.rw(st.s);
-  S.dia += rw.c;                                        /* 156 — 다이아 전용(행 표기와 일치) */
-  st.base = q.get(); st.s++;
+  S.dia += q.dia * n;                                   /* 156 — 다이아 전용(행 표기와 일치) */
+  S.quest[q.id].s += n;                                 /* 799 — 밀린 칸을 한 번에(기준선 없음) */
   uiDirty = true; save();
   /* 58(11회차): 재렌더를 연출이 끝난 뒤로 미룬다 — 즉시 갱신하면 체크가 붙은 행의 진행바가
      0/93 으로 리셋돼 «완료 표시와 진행도가 모순» 인 화면이 남았다. fxHoldList 를 안 부른 경로는
@@ -27738,9 +27777,10 @@ function claimAllQuests(){
   while(guard++ < 300){
     const q = QUESTS.find(questReady);
     if(!q) break;
-    const st = S.quest[q.id], rw = q.rw(st.s);
-    S.dia += rw.c;                                      /* 156 — 다이아 전용(행 표기와 일치) */
-    st.base = q.get(); st.s++; n++;
+    /* 799 — 한 종을 «밀린 칸 전부» 받으므로 이 루프는 퀘스트 종 수(5)만큼만 돈다 */
+    const k = questSteps(q);
+    S.dia += q.dia * k;                                 /* 156 — 다이아 전용(행 표기와 일치) */
+    S.quest[q.id].s += k; n += k;
   }
   DQUESTS.filter(dqReady).forEach(q => { S.dia += q.dia; S.daily.q[q.id] = 1; n++; });
   if(!n) return;
@@ -30787,8 +30827,11 @@ function openMail(){
   });
 }
 /* ---- 22 퀘스트 팝업 — 측정표 docs/measure/22-퀘스트팝업.md ----
-   A5 공용 다이얼로그 껍데기 + .q22 절대배치 본문. 레퍼런스 기본 선택 탭은 «반복».
-   보상 프레임은 다이아만 표시하지만 반복 퀘스트 수령 시 골드도 함께 지급된다(로직 유지). */
+   A5 공용 다이얼로그 껍데기 + .q22 절대배치 본문. 기본 선택 탭은 오른쪽 칸이다.
+   ⚑ 799(주인 지시 2026-09-02) — 오른쪽 탭의 이름이 «반복» → **«업적»** 이다(내부 키 `rep` 는
+     그대로 둔다 — `data-t="rep"` 를 잡는 하네스가 여럿이고 «두 글자» 라 기하도 불변이다).
+   ⚠ 보상은 **다이아 전용**이다(156) — 행 표기(`qrow`)와 실지급(`claimQuest`)이 같은 값이다.
+     골드를 되살릴 일이 있으면 «행 표기에 골드 배지를 같이 그리는 것까지» 가 한 벌이다. */
 let qTab = 'rep';
 function openQuest(tab){
   if(tab) qTab = tab;
@@ -30809,7 +30852,7 @@ function openQuest(tab){
     ? DQUESTS.map(q => qrow(q.n.replace(/(\d[\d,]*)/, '<em>$1</em>'), q.dia,
         dqDone(q) ? q.goal : Math.min(dqProg(q), q.goal), q.goal, dqReady(q), 'd:' + q.id))
     : ['summon','upg','kill','stage','coll'].map(id => QUESTS.find(x => x.id === id)).map(q => { const goal = questGoal(q);
-        return qrow(q.t(fmt(goal)), Math.round(q.rw(S.quest[q.id].s).c),
+        return qrow(q.t(fmt(goal)), Math.round(questRw(q)),
           Math.min(questProg(q), goal), goal, questReady(q), q.id); })).join('');
   const any = QUESTS.some(questReady) || DQUESTS.some(dqReady);
   $('mtitle').textContent = '퀘스트';
@@ -30819,7 +30862,7 @@ function openQuest(tab){
     + '<div class="qs-tg">'
     + '<span class="sel" style="left:' + (qTab === 'daily' ? -5 : 366) + 'px"></span>'
     + '<b data-t="daily" style="left:87px"' + (qTab === 'daily' ? ' class="on"' : '') + '><i>일일</i></b>'
-    + '<b data-t="rep" style="left:478px"' + (qTab === 'rep' ? ' class="on"' : '') + '><i>반복</i></b></div>';
+    + '<b data-t="rep" style="left:478px"' + (qTab === 'rep' ? ' class="on"' : '') + '><i>업적</i></b></div>';
   const m = modalShell('q22');   /* 465 — 껍데기는 한 번에 하나(MODAL_SHELLS) */
   m.classList.add('on');
   /* 58 — 퀘스트 완료 연출. 수령하면 팝업이 openQuest() 로 통째로 재렌더되므로
@@ -32245,7 +32288,7 @@ function renderShopPage(){
        2026-09-02). 496 이 «다섯 칸이 같은 값» 이 되면서 «알약을 탭 상단 한 곳으로 올릴까» 를
        남겨 뒀는데, 그 물음은 이 지시로 **닫혔다** — 카드마다 값이 다르므로 알약은 카드에 있어야 한다.
        마크업·좌표는 496 이전과 한 픽셀도 안 다르다(`sumLv(x.b)` 가 인자를 다시 읽을 뿐이다). */
-    const s = { lv: sumLv(x.b), exp: sumExp(x.b) }, need = sumNeedExp(s.lv), maxed = allMaxed(BANNERS[x.b].list);
+    const s = { lv: sumLv(x.b), exp: sumExp(x.b) }, need = sumNeedExp(s.lv);
     const pctFill = s.lv >= SUM_MAXLV ? 100 : Math.round(s.exp / need * 100);
     /* 713 — 상점 카드는 **배수를 안 탄다**(토글이 12 결과 팝업으로 갔다 — 주인 정정 2026-09-02).
        668 이 여기에 넣었던 `× sumMul` 을 걷어내 668 이전 라벨·가격으로 원복한다. */
@@ -32295,8 +32338,9 @@ function renderShopPage(){
          12 결과 팝업의 [무료] 등 렌더 밖에서도 재고가 변해서, 껐다 켜는 주체를 매 틱 도는
          syncShopSumBtns() 한 곳으로 모으는 편이 «켜진 채 굳는» 사고가 없다(도감 탭 `.cltab` 과 같은 꼴). */
       +  '<s class="updot"></s>'
-      /* 720 — 딤 문구도 판정과 같은 출처(MAXED_TXT)에서 나온다. 판정(`maxed` = allMaxed)은 불변 */
-      +  (maxed ? '<div class="clk">' + MAXED_TXT + ' 🏆</div>' : '')
+      /* 800(주인 지시 2026-09-02) — 720 이 이름을 모아 둔 잠금 딤(`.clk`)을 **자리째 걷어냈다.**
+         757 조각 환급 이후 만렙 상자도 계속 뽑을 수 있으므로(`allMaxed` 곁 800 주석) 딤은
+         «못 누른다» 는 **거짓 신호**가 된다. 부품(`.shp-card .clk` CSS)도 남겨 두지 않는다. */
       +  '</div>';
   });
   list.innerHTML = h;
@@ -32408,7 +32452,7 @@ $('shopList').addEventListener('click', e => {
   const b = btn.dataset.shsum, n = +btn.dataset.shn;
   if(btn.dataset.shfree){
     if(gmBlocked(b)) return;                     /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
-    if(allMaxed(BANNERS[b].list)){ doSummon(b, n); renderShopPage(); return; }
+    /* 800 — «최대치 달성이면 유료 소환으로 떨어뜨린다» 우회 삭제(무료는 무료다) */
     if(freeLeft(b) <= 0){ notify('<b>' + BANNERS[b].n + '</b> 무료 소환 소진 — 내일 충전'); return; }
     useFreeSum(b);                               /* 190 — 무광고분 먼저 차감 */
     doSummonFree(b, n);

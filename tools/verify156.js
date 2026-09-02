@@ -51,19 +51,20 @@ async function open(browser) {
 
     /* ---- [A] 보상표가 다이아 전용인가 ---- */
     console.log('[A] QUESTS 보상표 — 다이아 전용');
-    const tbl = await page.evaluate(() => QUESTS.map(q => {
-      const keys = new Set();
-      for (const s of [0, 1, 3, 7]) Object.keys(q.rw(s)).forEach(k => keys.add(k));
-      return { id: q.id, keys: [...keys].sort(), c0: q.rw(0).c };
-    }));
+    /* ⚑ 799 이관 — 보상이 «단계 함수 `rw(s)`» 에서 **정액 `dia`** 로 바뀌었다(등차 목표에서는
+       칸마다 난도 증분이 같으니 보상도 같다). 156 이 지키는 성질은 그대로다 — «표에 골드 키가
+       없다 · 행 배지가 읽는 값이 수다». 재는 자리만 옮긴다(333 처방). */
+    const tbl = await page.evaluate(() => QUESTS.map(q => ({
+      id: q.id, keys: Object.keys(q).filter(k => /^(g|gold|goldMul|rw)$/.test(k)).sort(),
+      c0: questRw(q) })));
     tbl.forEach(q => {
       const gold = q.keys.filter(k => /^(g|gold|goldMul)$/.test(k));
-      if (gold.length) fail(`QUESTS.${q.id}.rw 에 골드 키 ${JSON.stringify(gold)} 가 남아 있다`);
-      else ok(`QUESTS.${q.id}.rw 키 = ${JSON.stringify(q.keys)} (다이아 ${q.c0})`);
+      if (gold.length) fail(`QUESTS.${q.id} 에 골드 키 ${JSON.stringify(gold)} 가 남아 있다`);
+      else ok(`QUESTS.${q.id} 보상 키에 골드가 없다 (다이아 ${q.c0})`);
     });
     /* 행 표기(qrow)가 읽는 것은 rw().c 다 — 값이 유한하지 않으면 배지가 NaN 이 된다 */
     tbl.forEach(q => Number.isFinite(q.c0) ? pass++
-      : fail(`QUESTS.${q.id}.rw(0).c 가 수가 아니다: ${q.c0}`));
+      : fail(`QUESTS.${q.id} 의 행 배지 값(questRw)이 수가 아니다: ${q.c0}`));
 
     /* ---- [B] 지급 — 같은 tick 안에서 Δ 를 잰다 ---- */
     console.log('[B] 수령 지급 — ΔS.gold 가 0 인가 (동기 측정)');
@@ -77,7 +78,10 @@ async function open(browser) {
         return { dg: S.gold - g0, dd: S.dia - d0 };
       };
       const q = QUESTS.find(x => x.id === 'summon');
-      out.want1 = Math.round(q.rw(S.quest[q.id].s).c);
+      /* 799 이관 — 보상이 «단계 함수 rw(s)» 에서 «정액 × 밀린 칸» 으로 바뀌었다. 행 배지가 읽는
+         것과 **같은 함수**(`questRw`)를 쓴다 — 156 이 지키는 성질이 «표기 = 지급» 이라 여기서
+         다른 식을 손으로 적으면 그 성질을 재는 것이 아니라 내가 적은 식을 재게 된다. */
+      out.want1 = Math.round(questRw(q));
       out.one   = shot(() => claimQuest(q));
       out.all   = shot(() => claimAllQuests());                 /* 남은 반복 + 일일 전부 */
       const dq = DQUESTS.find(x => !S.daily.q[x.id]);

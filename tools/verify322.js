@@ -69,8 +69,12 @@ const consist = (tag, s) => {
 
   /* ── [A] 아무것도 못 받는 상태 — 닷 0 · [모두 받기] 소등 ─────────────────── */
   console.log('\n[A] 전부 미달');
+  /* ⚑ 799 이관 — 업적 퀘스트에는 «기준선»(`S.quest[].base`)이 없다. «아무것도 못 받는 상태» 를
+     만드는 길이 «기준선을 지금 값으로 올린다» 에서 **«누적 카운터를 0 으로 두고 받은 칸도 0»**
+     으로 바뀌었다(도감은 신규 세이브의 보유 1종 < 첫 목표 5종이라 자연히 미달이다). */
   await page.evaluate(() => {
-    QUESTS.forEach(q => { S.quest[q.id].base = q.get(); S.quest[q.id].s = 0; });
+    QUESTS.forEach(q => { S.quest[q.id] = { s: 0 }; });
+    S.totalKills = 0; S.best = 0; S.summons = 0; S.upgrades = 0;
     S.daily.qb = null; S.daily.q = {}; dqProg(DQUESTS[0]);       /* 스냅샷을 현재로 */
     qTab = 'rep'; openQuest('rep');
   });
@@ -82,8 +86,9 @@ const consist = (tag, s) => {
   /* ── [B] 반복 5행 중 3행만 ready ────────────────────────────────────────── */
   console.log('\n[B] 반복 탭 — 5행 중 3행 ready');
   await page.evaluate(() => {
-    ['kill', 'stage', 'summon'].forEach(id => { S.quest[id].base = 0; });
-    S.totalKills = 1e9; S.best = 9999; S.summons = 1e9;
+    /* 799 — 받은 칸을 0 으로 되돌리고 카운터만 올린다(옛 «기준선 0» 과 같은 뜻) */
+    QUESTS.forEach(q => { S.quest[q.id] = { s: 0 }; });
+    S.totalKills = 1e9; S.best = 9999; S.summons = 1e9; S.upgrades = 0;
     openQuest('rep');
   });
   await page.waitForTimeout(300);
@@ -164,7 +169,8 @@ const consist = (tag, s) => {
   /* ── [E] [모두 받기] → 다섯 행 전부 즉시 소등 ───────────────────────────── */
   console.log('\n[E] [모두 받기] 즉시 소등');
   await page.evaluate(() => {
-    QUESTS.forEach(q => { S.quest[q.id].base = 0; });
+    /* 799 — 앞 절들이 이미 칸을 받아 `s` 가 커져 있다. 0 으로 되돌려야 다시 «받을 수 있다» */
+    QUESTS.forEach(q => { S.quest[q.id] = { s: 0 }; });
     S.totalKills = 1e9; S.best = 9999; S.summons = 1e9; S.upgrades = 1e9;
     openQuest('rep');
   });

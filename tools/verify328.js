@@ -17,7 +17,10 @@
  *   [F] 166 규약 — 부품은 `<s class="updot">` 하나 · 점등은 호스트 `.alert` 로만.
  *       ⚠ `#shopw s{display:inline-block}`(ID 급) 스코프 짝이 없으면 상시 점등이 된다.
  *   [G] «도감 완성» 칸 — 무료 버튼이 유료 소환으로 떨어지는 국면(index.html 25121)이라
- *       딤(`.clk`)이 닷을 **덮어야** 한다(321 «레드닷 = 지금 누를 수 있다» 약속).
+ *       ⚑ **800 이관** — 그 잠금 국면 자체가 사라졌다(주인 지시 2026-09-02). 757 조각 환급이
+ *       «만렙 뒤 조각은 쓸 데가 없다» 는 전제를 없애 소환 차단이 폐지됐고, 딤(`.clk`)도 노드·CSS
+ *       째 사라졌다. 이 절은 «덮는가» 대신 **«덮을 딤이 없는가»** 를 잰다 — 321 약속은 이제
+ *       «항상 누를 수 있다» 로 지켜진다.
  *   [H] 102·136 회귀 — 배지를 옮겨도 `.cbtn` 3종의 rect 가 한 픽셀도 안 움직인다.
  *
  * [3]-(가) 기계적 검증: 레퍼런스 대조가 아니라 «상태 → DOM» 판정이라 비평가를 띄우지 않는다.
@@ -25,7 +28,9 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
+const fs = require('fs');
+const SRC = path.resolve(__dirname, '..', 'index.html');   /* 800 [G] — 소스 단언용 */
+const URL = 'file://' + SRC;
 const KEY = 'idle_hunter_save_v4';
 const W = 1080, H = 2280;
 
@@ -201,31 +206,34 @@ const gap = (c, b) => {
   ok(audit.n > 0 && audit.offBad === 0 && audit.onBad === 0,
     '[F] 호스트 전수 — `.alert` 없으면 꺼짐 / 있으면 켜짐', audit.n + '칸 · 위반 ' + audit.offBad + '/' + audit.onBad);
 
-  /* ══ [G] «최대치 달성» 칸 — 딤이 닷을 덮는다 ══════════════════════════════ */
-  /* 720 이관 — 이 칸의 이름이 «도감 완성» 에서 «최대치 달성» 으로 바뀌었다(주인 지시 2026-09-02).
-     [G] 가 재는 성질(«잠기면 딤이 닷을 덮는가» = z 관계)은 이름과 무관하지만, 주입 표본은
-     제품이 실제로 찍는 문자열이어야 «죽은 표본» 이 안 된다(334 처방). */
-  /* ⚠ 잠금 국면을 «상태로» 만들 수는 없다 — `maxLv()` 가 최고 등급 장비에 Infinity 를 주므로
-     `allMaxed()` 가 그 상자에서는 영원히 거짓이다(20889). 그래서 renderShopPage 가 찍는 것과
-     **같은 노드**(`<div class="clk">`)를 그 자리에 직접 넣고 z 겨루기만 잰다 — 이 게이트가 지키려는
-     성질은 «잠기면 딤이 닷을 덮는가» 하나이고, 그 성질은 노드 두 개의 z 관계가 전부다. */
+  /* ══ [G] 800 — 덮을 딤이 없다 ══════════════════════════════════════════ */
+  /* ⚠ 방향을 뒤집었을 뿐 자리는 그대로다(333 처방). 720 이 «이름» 을 갈아 끼웠던 이 칸을
+     800 이 «잠금 자체» 째 걷어냈다. 여기서 재는 것은 셋이다:
+     ① 배너를 전부 만렙으로 만들어도 렌더가 `.clk` 를 안 찍는다 ② CSS 선언도 없다
+     ③ 그래서 닷이 무엇에도 안 가린다 — 328 이 원래 지키려던 «닷 위에 아무것도 없다» 의 다른 쪽 면.
+     ⚠ ①의 무대는 **스킬·펫 배너**다 — 장비는 `maxLv()` 가 Infinity 라 `allMaxed()` 가 영원히
+       거짓이고(20889 · 740 · probe720 [5]), 그래서 옛 딤은 애초에 장비 칸에 뜬 적이 없다. */
   const locked = await page.evaluate(() => {
     S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 2, o), {});
+    Object.keys(BANNERS).forEach(bk => BANNERS[bk].list.forEach(it => {
+      S.own[it.id] = { n: 0, l: maxLv(it) === Infinity ? MAX_LEVEL : maxLv(it) }; }));
     uiDirty = true; renderShopPage(); syncShopSumBtns();
     const c = document.querySelector('#shopList .shp-card');
-    c.insertAdjacentHTML('beforeend', '<div class="clk">' + MAXED_TXT + ' 🏆</div>');
     const d = c.querySelector(':scope > .updot'), clk = c.querySelector('.clk');
-    const dr = d.getBoundingClientRect(), kr = clk.getBoundingClientRect();
-    /* 닷이 딤 상자 안에 있어야 «덮인다» 가 성립한다(딤은 inset:7px) */
-    const inside = dr.left >= kr.left && dr.top >= kr.top
-      && dr.left + dr.width <= kr.left + kr.width && dr.top + dr.height <= kr.top + kr.height;
-    return { locked: !!clk, inside, dz: +getComputedStyle(d).zIndex, cz: clk ? +getComputedStyle(clk).zIndex : null };
+    const dr = d.getBoundingClientRect(), kr = clk && clk.getBoundingClientRect();
+    /* 닷의 한가운데를 실제로 히트테스트한다 — 무엇이 위에 있으면 그 노드가 잡힌다 */
+    const hit = document.elementFromPoint(dr.left + dr.width / 2, dr.top + dr.height / 2);
+    return { locked: !!clk, all: document.querySelectorAll('#shopList .clk').length,
+             maxed: Object.keys(BANNERS).filter(bk => allMaxed(BANNERS[bk].list)).length,
+             hitClk: !!(hit && hit.classList.contains('clk')),
+             dz: +getComputedStyle(d).zIndex, cz: clk ? +getComputedStyle(clk).zIndex : null };
   });
-  ok(locked.locked === true && locked.inside === true,
-    '[G] 잠금 딤(`.clk`, inset 7px)의 상자 안에 닷이 들어온다 (294 의 카드 바깥 코너였다면 안 덮인다)',
-    'inside=' + locked.inside);
-  ok(locked.cz > locked.dz, '[G] 잠금 딤(`.clk`)이 닷 위에 온다 — 못 누르는 버튼에 «누를 수 있다» 를 안 남긴다',
-    'clk z' + locked.cz + ' > updot z' + locked.dz);
+  ok(locked.maxed > 0, '[G] 무대 확인 — 만렙(최대치 달성) 배너가 실제로 있다', locked.maxed + '개');
+  ok(locked.locked === false && locked.all === 0,
+    '[G] 그래도 잠금 딤(`.clk`)이 한 장도 안 찍힌다 — 800 으로 잠금 국면이 없다', '.clk ' + locked.all + '개');
+  ok(!locked.hitClk, '[G] 닷 한가운데를 딤이 안 가린다 (321 «레드닷 = 지금 누를 수 있다»)');
+  ok(!/\.shp-card\s+\.clk\{/.test(fs.readFileSync(SRC, 'utf8')),
+    '[G] `.shp-card .clk` CSS 선언도 없다 — 되살아나면 여기가 빨개진다');
 
   /* ══ [H] 102·136 회귀 — 버튼 rect 불변 ══════════════════════════════════ */
   const EXP = { b1: [770, 312, 200, 98], b2: [526, 428, 208, 127], b3: [767, 428, 206, 127] };
