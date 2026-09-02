@@ -18,8 +18,16 @@
  *
  * 한 오버레이 **안**의 요소가 서로 다른 k 를 가지면 프레임 높이가 바뀔 때
  * 요소끼리의 상대 거리가 벌어진다 = 등재문이 말한 «요소별로 앵커 기준이 다르다».
- * 그래서 판정은 **k 의 종류 수**다 — 1종이면 «한 그릇», 2종 이상이면 결함이다.
- * (겹침은 그 결과이지 원인이 아니므로 같이 찍되 판정은 k 로 한다.)
+ *
+ * ⚑ **판정은 «k 의 종류 수» 가 아니다(1회차에 세 번 고쳤다).** 종류 수만 세면
+ * 351·403·404 가 «잘림을 막으려고» 넣어 둔 설계가 전부 ❌ 로 찍힌다 — 그릇이 짧은 프레임에서
+ * 줄어들고 그 **하변**에 매달린 자식이 따라 올라오는 것은 **맞게 매달린** 것이다.
+ * 그래서 두 겹으로 판정한다:
+ *   ⓐ 요소가 그릇의 상변·하변·중앙 **어느 하나에도** 안 붙었나 (= 아무 데도 안 매달림)
+ *   ⓑ 한 그릇 안에서 기준이 갈린 형제 쌍의 **간극이 지원 범위 안에서 무너지나**
+ *      (`overlap` = 0 이하로 겹침 · `collapse` = 최댓값의 1/4 미만으로 붕괴 · 아니면 `관찰`)
+ * 17 이 −35px(겹침), 18 이 703 → 23px(붕괴)로 잡힌 것이 이 축이다. 420-③ 대로 최악을
+ * 1600 으로 가정하지 않고 프레임 5종을 다 재서 최솟값을 쓴다.
  *
  * 프레임 5종은 화면비 5종과 같은 말이다 — `fit()` 이 frameH 를 1600..2600 으로
  * clamp 하므로(9:13.3 보다 넓은 화면은 전부 1600 으로 눌린다) **레이아웃이 갈리는 축은
@@ -132,6 +140,10 @@ const PROBE = (SEL) => `(() => {
     const cbr = cb.getBoundingClientRect();
     items.push({ k: t + (n ? '[' + n + ']' : ''), y: fy(r.top), b: fy(r.bottom),
                  rel: Math.round((r.top - cbr.top) * 100) / 100,
+                 /* 세 기준을 다 남긴다 — 자식이 그릇의 상변·하변·중앙 **어느 하나**에라도
+                    붙어 있으면 그것은 «제대로 매달린» 것이다(아래 ⓓ). */
+                 relB: Math.round((cbr.bottom - r.top) * 100) / 100,
+                 relC: Math.round((r.top - (cbr.top + cbr.height / 2)) * 100) / 100,
                  cb: cb === host ? '(host)' : tag(cb),
                  x: Math.round(r.left - A.left), w: Math.round(r.width), h: Math.round(r.height),
                  txt: (e.textContent || '').trim().slice(0, 12) });
@@ -193,16 +205,26 @@ function kName(k) {
     const anchors = new Map();      /* 요소 → k 이름표 */
     for (const [key, it] of mBase) {
       const ks = [];
+      const inv = { rel: true, relB: true, relC: true };
       for (const fh of FRAMES) {
         if (fh === BASE) continue;
         const o = mapAt(fh).get(key);
         if (!o || o.cb !== it.cb) continue;      /* 담는 상자가 바뀌면 비교 불가 */
         ks.push((o.rel - it.rel) / (fh - BASE));
+        for (const b of ['rel', 'relB', 'relC']) if (Math.abs(o[b] - it[b]) > 1.5) inv[b] = false;
       }
       if (!ks.length) continue;
-      /* 프레임 5종의 k 가 서로 다르면(비선형) 최대·최소를 같이 남긴다 */
+      /* ⓓ **세 기준 중 하나에라도 불변이면 «제대로 매달린» 것이다.**
+         그릇 자체가 짧은 프레임에서 줄어드는 것(`max-height:100%`·`clamp()`·`.shortf` 가드)은
+         351·403·404 가 «잘림을 막으려고» 넣은 설계다. 그때 그릇 **하변**에 매달린 자식(21 깃발탭
+         `.cl-tabs{bottom:-154px}` 처럼)은 그릇을 따라 올라오는 것이 **맞다** — 그것을 «상변 기준»
+         하나로만 재면 전부 ❌ 가 되고, 고치라는 처방은 351 이 막아 둔 잘림을 도로 여는 길이다.
+         결함은 «그릇의 어느 변에도 안 붙은 것» 과 «형제끼리 서로 다른 변에 붙어 사이가 벌어지는 것»
+         이며, 앞의 것이 이 이름표로 갈린다(1회차에 21·22·19·20 넷이 이 유령이었다). */
+      const anchoredTo = inv.rel ? 'top' : inv.relB ? 'bottom' : inv.relC ? 'center' : null;
       const kmin = Math.min(...ks), kmax = Math.max(...ks);
-      anchors.set(key, { k: (kmin + kmax) / 2, spread: kmax - kmin, name: kName((kmin + kmax) / 2), cb: it.cb, it });
+      anchors.set(key, { k: (kmin + kmax) / 2, spread: kmax - kmin,
+                         name: anchoredTo || kName((kmin + kmax) / 2), loose: !anchoredTo, cb: it.cb, it });
     }
     /* 판정 단위 = «담는 상자». 한 상자 안에서 k 가 두 종류 이상이면 그 상자가 섞였다. */
     const boxes = new Map();
@@ -217,7 +239,35 @@ function kName(k) {
     const kinds = new Map();        /* 화면 단위 요약 — 섞인 상자만 모은다 */
     const mixedBoxes = [];
     for (const [cb, kk] of boxes) {
-      if (kk.size > 1) mixedBoxes.push({ cb, kinds: [...kk.entries()].map(([k, v]) => ({ k, n: v.length, els: v.slice(0, 6) })) });
+      if (kk.size > 1) {
+        /* ⓔ **섞였다고 다 결함은 아니다 — 해를 같이 재라.**
+           그릇이 줄어드는 설계에서 상변 자식과 하변 자식이 공존하는 것 자체는 정상이고,
+           결함은 그 둘이 **지원 범위 안에서 마주 보고 다가와 겹치거나 간극이 무너질 때**다
+           (17 이 −35px 로 겹쳤고, 18 은 703 → 23px 로 97% 무너졌다. 420-③ — 최악을 1600 으로
+           가정하지 말고 5종을 다 재서 최솟값을 쓴다). */
+        const names = [...kk.keys()];
+        const gaps = FRAMES.map((fh) => {
+          const m = mapAt(fh);
+          let g = Infinity;
+          for (const a of names) for (const b of names) {
+            if (a === b) continue;
+            for (const ka of kk.get(a)) for (const kb of kk.get(b)) {
+              const A2 = m.get(ka), B2 = m.get(kb);
+              if (!A2 || !B2 || A2.b > B2.y) continue;            /* A 가 위, B 가 아래인 쌍만 */
+              const xo = Math.min(A2.x + A2.w, B2.x + B2.w) - Math.max(A2.x, B2.x);
+              if (xo <= 1.5) continue;                             /* 같은 세로 띠가 아니면 안 만난다 */
+              g = Math.min(g, B2.y - A2.b);
+            }
+          }
+          return { fh, g: g === Infinity ? null : Math.round(g * 10) / 10 };
+        });
+        const seen = gaps.filter((x) => x.g != null);
+        const min = seen.length ? Math.min(...seen.map((x) => x.g)) : null;
+        const at = seen.length ? Math.max(...seen.map((x) => x.g)) : null;
+        const harm = min == null ? 'none' : min <= 0 ? 'overlap' : (at && min < at * 0.25) ? 'collapse' : 'none';
+        mixedBoxes.push({ cb, harm, minGap: min, maxGap: at, gaps,
+                          kinds: [...kk.entries()].map(([k, v]) => ({ k, n: v.length, els: v.slice(0, 6) })) });
+      }
       for (const [k, v] of kk) kinds.set(k, (kinds.get(k) || []).concat(v));
     }
     /* 겹침 — 프레임별로 «상자 y 구간이 겹치는 형제 쌍» 을 센다(같은 x 띠에서만). */
@@ -250,16 +300,18 @@ function kName(k) {
     let bad = 0, ok = 0, skipped = 0;
     for (const r of report) {
       if (r.skip) { skipped++; console.log(`  [--] ${r.id} ${r.name.padEnd(14)} — ${r.skip}`); continue; }
-      const mixed = r.mixedBoxes.length > 0;
+      const harmed = r.mixedBoxes.filter((b) => b.harm !== 'none');
+      const watch = r.mixedBoxes.filter((b) => b.harm === 'none');
+      const mixed = harmed.length > 0;
       if (mixed) bad++; else ok++;
-      const ovl = FRAMES.map((f) => `${f}:${r.overlaps[f].n}`).join(' ');
-      console.log(`  [${mixed ? '❌' : '✅'}] ${r.id} ${r.name.padEnd(14)} ${String(r.host).padEnd(8)} 요소 ${String(r.n).padStart(3)} · 앵커 ${r.kinds.map((k) => `${k.k}×${k.n}`).join(' + ')}${r.exempted.length ? ' · 예외 ' + r.exempted.join(',') : ''} · 겹침 ${ovl}`);
+      const mark = mixed ? '❌' : watch.length ? '⚠' : '✅';
+      console.log(`  [${mark}] ${r.id} ${r.name.padEnd(14)} ${String(r.host).padEnd(8)} 요소 ${String(r.n).padStart(3)} · 앵커 ${r.kinds.map((k) => `${k.k}×${k.n}`).join(' + ')}${r.exempted.length ? ' · 예외 ' + r.exempted.join(',') : ''}`);
       for (const b of r.mixedBoxes) {
-        console.log(`        └ 섞인 그릇 ${b.cb}`);
+        console.log(`        └ ${b.harm === 'overlap' ? '겹침' : b.harm === 'collapse' ? '간극붕괴' : '관찰'} · 그릇 ${b.cb} · 간극 ${b.gaps.map((g) => `${g.fh}:${g.g == null ? '-' : g.g}`).join(' ')}`);
         for (const k of b.kinds) console.log(`            ${k.k.padEnd(7)} ${k.els.join(' ')}${k.n > k.els.length ? ` …+${k.n - k.els.length}` : ''}`);
       }
     }
-    console.log(`\n  요약 — 한 그릇(앵커 1종) ${ok} · 섞임(앵커 2종 이상) ${bad} · 미측정 ${skipped}`);
+    console.log(`\n  요약 — 성한 화면 ${ok} · 해가 있는 자리 ${bad} · 미측정 ${skipped}`);
   }
   await browser.close();
 })();
