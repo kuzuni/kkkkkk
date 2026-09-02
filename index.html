@@ -4113,11 +4113,26 @@
      ⚠ 끝 scale 은 .5 아래로 안 내린다 — 16회차가 «.38 은 중간 프레임이 12px 로 읽힌다» 로
        올려 둔 값이고, 이 곡선은 26px 구슬과 44~47px 아이콘이 **같이** 탄다.
      ⚠ 전용 봉투 `fxRlic`(753 유물 획득 알)은 `animation-name` 을 갈아 끼워 이 곡선을 안 탄다 — 불변. */
+  /* ⚑ 681 2회차 — 비평 2인이 1회차 곡선에서 같은 두 자리를 짚었다(CF ①·③ · CG — 상세는 review §4-2):
+       ⓐ **45~150ms 가 정지로 읽힌다** — 뿌리는 계수가 아니라 **`ease-out` 이 한 구간을 앞으로 몬다**는
+          것이다. 11 → 52% 는 156ms 짜리 한 구간이라 이동의 대부분이 42~90ms 에 끝나고 그 뒤 100ms 는
+          «크기도 알파도 자리도 안 변하는» 프레임이 된다. ⇒ **30% 에 중간 지점(.50d)을 세워** 그 구간을
+          둘로 가른다(계수·끝점은 그대로 — 바뀌는 것은 «언제 그 자리에 있는가» 뿐이다).
+       ⓑ **마지막 40ms 에 알파의 절반이 몰린다 — «소멸» 이 아니라 «컷» 으로 읽힌다.** 2인 공통이고
+          수치까지 같다(CF «마지막 구간 기울기가 직전의 2.6배» · CG «2.7배 — 340ms 에 아직 α.55 ·
+          지름 66% 인 완전한 실체인데 남은 40ms 에 0»). ⇒ 퇴장 구간을 **72%/86% 두 마디**로 갈라
+          알파와 크기를 **같이** 내린다(340ms 에서 α≈.21 · s≈.59 — CG 처방 «α.20 · 크기 56%»).
+       ⚑ **꼬리를 «시간» 으로만 재면 이 둘이 서로를 지운다** — 등재문 ⓑ 는 «α≤0.35 가 96.9ms» 였고,
+          그 구간을 짧게 하면 이번엔 컷이 된다. 실제 결함은 **«큰 채로 흐린»** 것이다(660 이 아이콘을
+          26 → 44~47px 로 키운 뒤 «흐린 얼룩» 이 된 그 자리). ⇒ 자를 **α 와 크기의 곱**으로 옮겼다:
+          `verify681` [B3] 은 이제 «α≤0.35 **이면서** 크기 ≥60% 인 구간» 을 재고(수리 전 96.9ms),
+          알파가 낮은 프레임에서는 알이 이미 작아 얼룩이 안 된다. */
   @keyframes fxSpark{0%{transform:translate(0,0) scale(.34);opacity:1}
     11%{transform:translate(calc(var(--dx)*.13),calc(var(--dy)*.13)) scale(1);opacity:1}
+    30%{transform:translate(calc(var(--dx)*.50),calc(var(--dy)*.50)) scale(1);opacity:1}
     52%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(1);opacity:1}
-    76%{transform:translate(calc(var(--dx)*.89),calc(var(--dy)*.89)) scale(.82);opacity:.86}
-    90%{transform:translate(calc(var(--dx)*.95),calc(var(--dy)*.95)) scale(.66);opacity:.55}
+    72%{transform:translate(calc(var(--dx)*.87),calc(var(--dy)*.87)) scale(.86);opacity:.76}
+    86%{transform:translate(calc(var(--dx)*.93),calc(var(--dy)*.93)) scale(.68);opacity:.38}
     100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
 
   /* ⚑⚑ 660 — **강화 버스트의 알갱이를 «그 탭이 내는 재화 아이콘» 으로 갈아 끼운다**
