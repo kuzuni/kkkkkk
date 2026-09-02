@@ -44,6 +44,13 @@ const ok = (b, name, detail) => {
 };
 const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
 const sd = a => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)); };
+/* 778 — 표본이 늘수록 좁아지는 통계. 전칭·점추정에 문턱을 물리던 자리를 이것으로 바꾼다(775 §3). */
+const med = a => { if (!a.length) return 0; const s = a.slice().sort((p, q) => p - q); const h = s.length >> 1;
+                   return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+/* n 개에서 k 개를 고르는 조합 — [5-r]·[8-br] 의 «하네스 끈 짝» 을 새 실행 0개로 만든다. */
+const combos = (n, k) => { const out = []; const go = (s, cur) => {
+  if (cur.length === k) { out.push(cur.slice()); return; }
+  for (let i = s; i < n; i++) { cur.push(i); go(i + 1, cur); cur.pop(); } }; go(0, []); return out; };
 const f2 = n => Number.isFinite(n) ? n.toFixed(2) : '∞';
 const pc = n => Number.isFinite(n) ? (n * 100).toFixed(0) + '%' : '∞';
 
@@ -307,11 +314,50 @@ const IMM_SEC = 40, REAL_SEC = 60;
   })();
   /* ⚑ 부호를 단언하지 않는다 — 그것이 [C1] 이 한 짓이다(721 «잡음 폭 안에서 부호를 물었다»).
      mStd 는 **그 실행이 뜬 PIN 장면 하나**에 통째로 달려 있어 프로브 실행 사이에 36~82% 로 갈리고,
-     mImm 은 ⏸접촉 한 종의 분모에 달려 있다. 둘 다 30% 넘게 멀다는 것만 남는다. */
-  ok(mStdAvg > 0.2 && mImmAvg > 0.2,
-     '5-a K회 평균을 내도 ⓐ·ⓑ 는 **둘 다** ⓒ에서 멀다 — «누가 더 먼가» 는 그 실행이 뜬 장면이 정한다',
-     'mStd ' + pc(mStdAvg) + ' vs mImm ' + pc(mImmAvg) + ' (프로브 실행 사이 mStd 36~82% · mImm 26~77% 로 갈렸다)');
-  console.log('      ⇒ 처방 후보의 값: mStd ' + pc(mStdAvg) + ' · mImm ' + pc(mImmAvg));
+     mImm 은 ⏸접촉 한 종의 분모에 달려 있다.
+
+     ⚑⚑ **778 정오표 — 옛 판정 `mStd > 0.2 && mImm > 0.2` 는 그 «갈린다» 를 자기가 적어 두고
+     그 한복판에 절대 문턱을 박은 것이었다.** 실측 mImm 은 프로브 실행 사이 **19~38%**(등재문의
+     빨간 실행이 19%)라 문턱 20% 는 분포 **안**에 앉는다 = 그 항은 자가 아니라 동전이다
+     (721-② · 775 §2-ⓒ «중심값 자체가 문턱 언저리면 표본으로는 못 넘긴다»).
+     ⚠ **문턱을 다시 뽑는 길은 695-④·759·766·775 가 네 번 기각했다** — 20%를 15%로 내리는 것도
+     같은 길이다(min 19% 이라 여유가 4%p 밖에 안 남고, 다음 실행이 그 아래로 내려가면 끝이다).
+     ⇒ 775 §3 처방대로 **자리를 비우지 않고 «크기» 의 기준점을 바꿨다** — 절대 문턱이 아니라
+     **분모 ⓒ 자신의 잔여 흔들림**(같은 R회 표본을 반씩 갈라 평균낸 짝 = 하네스도 장면 교체도
+     없는 짝)에 대어 잰다. 이탈이 «평균 뒤에도 남는 치우침» 이면 그 널보다 몇 배 크고,
+     «회차 잡음» 이면 널과 같은 자리에 앉는다. 널은 **새 실행을 0개도 안 쓴다**(775 [C2r] 방식).
+     되돌림은 [5-r] 이 진다. */
+  const judged5 = CIDS.filter(id => held.indexOf(id) < 0);
+  const halfK = Math.max(1, Math.floor(REPS / 2));
+  const splitDev = (pick) => {                       /* pick: 조합 인덱스를 고르는 술어 */
+    const out = [];
+    for (const id of judged5) {
+      const v = R.map(row => val(row, id, 'real'));
+      combos(REPS, halfK).forEach((c, ci) => {
+        if (!pick(ci)) return;
+        const a = mean(c.map(i => v[i])), b = mean(v.filter((_, i) => c.indexOf(i) < 0));
+        if (a && b) out.push(Math.abs(a / b - 1));
+      });
+    }
+    return out;
+  };
+  const nullA = splitDev(ci => ci % 2 === 0), nullB = splitDev(ci => ci % 2 === 1);
+  const nullMed = med(nullA), nullMedB = med(nullB);
+  console.log('      널(하네스 0 · 새 실행 0) — ⓒ실제를 ' + halfK + ':' + (REPS - halfK)
+    + ' 로 갈라 평균낸 짝의 이탈 중앙값 ' + pc(nullMed) + ' (표본 ' + nullA.length + '쌍 · 짝 추정 ' + pc(nullMedB) + ')');
+  ok(Math.min(mStdAvg, mImmAvg) >= 3 * nullMed,
+     '5-a K회 평균을 내도 ⓐ·ⓑ 의 이탈은 **분모 자신의 잔여 흔들림보다 몇 배 크다** — 평균이 지우는 것은 잡음이고 이 이탈은 남는다(«누가 더 먼가» 는 그 실행이 뜬 장면이 정한다 — [3-c])',
+     'mStd ' + pc(mStdAvg) + ' vs mImm ' + pc(mImmAvg) + ' · 널 ' + pc(nullMed)
+     + ' ⇒ 배수 ' + (nullMed ? (Math.min(mStdAvg, mImmAvg) / nullMed).toFixed(1) : '∞') + '× (바 3×)');
+  /* [5-r] — **되돌림(새 상수·새 실행 0).** [5-a] 의 바가 «널이 우연히 작아서» 넘어간 것이
+     아님을 못박는다: 같은 표본을 서로 겹치지 않는 두 묶음으로 갈라 만든 **두 널 추정치**가
+     서로 3배 안에 있어야 한다. 널이 그렇게 안정한데도 이탈이 3배 위라면 그 이탈은 회차
+     잡음이 아니다. 반대로 [5-a] 자리에 널을 넣으면 배수는 1× 라 **바로 빨개진다** —
+     759-② «면제를 얹으면 통째로 사라져도 초록인지 세어 보라» 의 짝. */
+  const nullSpread = Math.max(nullMed, nullMedB) / Math.max(1e-9, Math.min(nullMed, nullMedB));
+  ok(nullSpread <= 3 && nullMedB < 3 * nullMed,
+     '5-r 되돌림 — 널은 두 독립 추정치가 서로 3배 안이다(= [5-a] 가 «널이 우연히 작아서» 초록인 게 아니다) · [5-a] 자리에 널을 넣으면 배수 1× 로 빨강',
+     '널A ' + pc(nullMed) + ' · 널B ' + pc(nullMedB) + ' · 폭 ×' + nullSpread.toFixed(2) + '(≤3)');
 
   /* ── [6] 처방 후보 ⓐ — 채택 눈금(POP 고정) 위에서 **불사만** 토글 ──────
      [1]·[2] 가 보인 것: ⓑ불사와 ⓒ실제는 «불사» 말고도 **판 위 개체수**가 같이 달랐다.
@@ -450,11 +496,62 @@ const IMM_SEC = 40, REAL_SEC = 60;
     const dy = Math.sqrt(valRatio.reduce((a, x) => a + (x - my) ** 2, 0));
     return (dx && dy) ? num / (dx * dy) : 0;
   })();
-  const upAll = CIDS.filter((id, i) => valRatio[i] > 1.2);
-  ok(upAll.length === CIDS.length,
-     '8-b 개체수가 안 갇힌 자유 판에서는 **표본 전 종이** 위로 간다 — [6](POP 고정)에서 부호가 갈리던 것과 정반대다',
+  /* ⚑⚑ **778 정오표 — 옛 [8-b] 는 `valRatio.every(x => x > 1.2)` 였고, 775 가 `probe504` [C2] 에서
+     걷어낸 것과 **글자 그대로 같은 모양**이다**(전칭 + 문턱). 빨강을 정하는 것은 언제나 표본의
+     최솟값 하나이고, 그 최솟값은 늘 같은 짝(`nova`·`gale`)이다 — 실측 nova ×1.11~1.60 으로
+     문턱 1.2 에 **붙어 산다**(다른 종의 여유는 0.7~1.8, nova 는 −0.09~0.40).
+     ⚠ 이것은 잡음이 아니라 **그 종의 성질**이다(775 §2-ⓑ): `값 배수 = 개체수 배수 × 도달 몫 비`
+     라는 항등식에서 `nova`(t:'area' · r250)는 개체수가 ×2.4 로 늘어도 늘어난 적이 반경 **밖**에
+     쌓여 한 발의 도달 몫이 반토막 난다(**포화**). 그래서 «전 종» 은 애초에 참일 수 없는 모양이었고,
+     바로 위 [6-a] 가 같은 실행에서 «부호가 종마다 갈린다» 를 PASS 로 찍어 **자가 스스로를
+     뒤집고** 있었다(775 §7 «자 안에서 서로를 부정하는 두 항이 있으면 플레이키는 그 사이에서 난다»).
+     ⚠ 문턱 1.2 를 내리는 길은 695-④·759·766·775 가 네 번 기각했다.
+     ⇒ 775 §3 처방을 그대로 옮겨 셋으로 갈랐다 — **크기**는 [8-b] 가 중앙값·평균으로,
+     **왜 종마다 다른가**는 [8-b2] 가 도달 몫으로, **잡음만으로는 못 넘는다**는 [8-br] 이 진다.
+     문턱은 내린 게 아니라 **올랐다**(전칭 1.2 → 중앙값 1.5). */
+  const valMed = med(valRatio), valAvg = mean(valRatio);
+  ok(valMed >= 1.5 && valAvg >= 1.3,
+     '8-b 개체수가 안 갇힌 자유 판에서는 값이 위로 간다 — 표본의 **중앙값·평균**이 위로 간다(종별 크기는 [8-b2] 몫)',
      '배수 ' + CIDS.map((id, i) => id + ' ×' + valRatio[i].toFixed(2)).join(' · ')
-     + '   ⇒ 부풀림의 뿌리는 «뭉침» 이 아니라 **개체수**다 (상관 참고 ' + corr.toFixed(2) + ')');
+     + ' · 중앙값 ×' + valMed.toFixed(2) + '(≥1.5) · 평균 ×' + valAvg.toFixed(2) + '(≥1.3)'
+     + '   ⇒ 부풀림의 뿌리는 «뭉침» 이 아니라 **개체수**다 (개체수↔값 상관 참고 ' + corr.toFixed(2) + ')');
+
+  /* [8-b2] — 옛 전칭이 거짓인 **이유**를 자가 직접 잰다(775 [C2b] 의 같은 자리).
+     `값 배수 = 개체수 배수 × rx` 는 항등식이므로 물을 것은 항등식이 아니라 **`rx` 가 종마다
+     갈린다는 사실**과 **값 배수의 순위를 정하는 것이 개체수가 아니라 그 `rx` 라는 것**이다.
+     ⚠ 이름도, «꼴찌 한 종» 도 적지 않는다(775 §4 — 값 배수의 최솟값은 `nova` 와 `gale` 사이를
+     오간다. 한 종만 묻는 자는 그 자체로 또 동전이다). 순위 상관 하나로 묻는다.
+     ⚑ 바로 위 `corr`(개체수 배수 ↔ 값 배수, 피어슨)이 실측 **음수**라는 것이 이 항의 근거다 —
+     «개체수가 많이 늘어난 종이 값도 많이 오른다» 가 **거짓**이고 순위를 정하는 것은 `rx` 다. */
+  const rxs = CIDS.map((id, i) => ({ id, rx: valRatio[i] / Math.max(1e-9, popRatio[i]), infl: valRatio[i] }));
+  const rank = (arr, key) => { const s = arr.slice().sort((a, b) => a[key] - b[key]);
+                               return new Map(s.map((x, i) => [x.id, i + 1])); };
+  const rRx = rank(rxs, 'rx'), rIn = rank(rxs, 'infl'), nRx = rxs.length;
+  const d2 = rxs.reduce((a, x) => a + Math.pow(rRx.get(x.id) - rIn.get(x.id), 2), 0);
+  const rho = 1 - 6 * d2 / (nRx * (nRx * nRx - 1));
+  const rxSpread = Math.max(...rxs.map(x => x.rx)) / Math.min(...rxs.map(x => x.rx));
+  console.log('      도달 몫 비 rx(= 한 발이 판의 몇 %를 때리는가, 불사÷실제) — '
+    + rxs.map(x => x.id + ' ' + x.rx.toFixed(2)).join(' · '));
+  ok(rxSpread >= 1.5 && rho >= 0.7,
+     '8-b2 값 배수가 종마다 다른 뿌리는 **도달 몫**이다 — `rx` 가 종마다 갈리고(포화), 값 배수의 순위를 정하는 것이 개체수가 아니라 그 `rx` 다',
+     'rx 최대÷최소 ×' + rxSpread.toFixed(2) + '(≥1.5) · 순위상관 ρ(rx, 값 배수) ' + rho.toFixed(2) + '(≥0.7)'
+     + ' · rx 아래 둘 ' + rxs.slice().sort((a, b) => a.rx - b.rx).slice(0, 2).map(x => x.id).join(',')
+     + ' · 값 배수 아래 둘 ' + rxs.slice().sort((a, b) => a.infl - b.infl).slice(0, 2).map(x => x.id).join(','));
+
+  /* [8-br] — **되돌림 시험(새 상수·새 실행 0).** [8-b] 의 바(중앙값 1.5)가 «하네스 덕» 인지
+     «회차 잡음 덕» 인지 가른다: 이미 도는 `P8` 안의 **실제 판** 값끼리 서로 나눠 하네스가 없는
+     짝을 만들면 그 중앙값은 1 근처에 앉아 바를 못 넘어야 한다. 넘으면 [8-b] 는 하네스가 아니라
+     회차 흔들림을 재고 있는 것이다(775 [C2r] 의 같은 자리 · 759-②). */
+  const nullX = [];
+  CIDS.forEach(id => {
+    const v = P8.map(p => p[id].real.v);
+    for (let i = 0; i < v.length; i++) for (let j = 0; j < v.length; j++) if (i !== j && v[j]) nullX.push(v[i] / v[j]);
+  });
+  const nullXMed = med(nullX);
+  ok(nullXMed < 1.5 && nullXMed > 1 / 1.5,
+     '8-br 되돌림 — 하네스를 끈 짝(실제↔실제)은 같은 바를 못 넘는다 ⇒ [8-b] 가 잰 것은 회차 흔들림이 아니라 하네스다',
+     '무하네스 중앙값 ×' + nullXMed.toFixed(2) + ' (바 1.5 · 표본 ' + nullX.length + '쌍 · 폭 ×'
+     + Math.min(...nullX).toFixed(2) + '~×' + Math.max(...nullX).toFixed(2) + ')');
 
   ok(errs.length === 0, 'Z 콘솔 에러 0건', errs.slice(0, 3).join(' | ') || '없음');
 
