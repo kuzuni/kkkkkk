@@ -39,7 +39,24 @@ const SCENES = [
     host: '#rwBasin', btn: '#rwBasin' },
 ];
 
-async function shot(sc, T, idx) {
+/* ⚑⚑ 817 — 클립 규칙 **한 곳**. `verify817` 이 이 함수를 그대로 require 해서 잰다 —
+   자와 하네스가 규칙의 **사본을 따로 적지 않게** 하기 위해서다(402 «사본을 지운다»).
+     clip = (호스트 상자 ∪ 이번 버스트의 궤적 합집합) + 알 한 개 폭, 프레임 안으로 클램프.
+   `reach` 가 없으면(버스트가 안 났으면) 호스트 상자만 남는다. */
+function clipFor(base, reach) {
+  if (!base) return null;
+  const pad = reach ? reach.pad : 0;               /* 여유 = 알 한 개 폭(제품이 낸 값) */
+  const x0 = Math.min(base.x, reach ? reach.x : base.x) - pad;
+  const y0 = Math.min(base.y, reach ? reach.y : base.y) - pad;
+  const x1 = Math.max(base.x + base.w, reach ? reach.x + reach.w : -Infinity) + pad;
+  const y1 = Math.max(base.y + base.h, reach ? reach.y + reach.h : -Infinity) + pad;
+  const cx = Math.max(0, Math.round(x0)), cy = Math.max(0, Math.round(y0));
+  return { x: cx, y: cy,
+           width: Math.min(1080 - cx, Math.round(x1) - cx),
+           height: Math.min(2280 - cy, Math.round(y1) - cy) };
+}
+
+async function shot(sc, T, idx, fixed) {
   const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
@@ -121,7 +138,43 @@ async function shot(sc, T, idx) {
       x.x + x.width / 2 - (r.x + r.width / 2), x.y + x.height / 2 - (r.y + r.height / 2))))) : 0;
     const op = ops.length ? Math.round(ops.reduce((a, b2) => a + b2, 0) / ops.length * 100) / 100 : 0;
     const hidden = all.length - L.length;
-    return { at: Math.round(at), cnt, spark: sp.length, hidden, size, spread, op,
+    /* ⚑⚑ 817 — **클립 여유를 손 상수에서 빼고 제품에게 묻는다**(368 «자리를 상수에서 빼고
+       제품에게 묻는다» 의 클립판). 여기서 돌려주는 `reach` 는 이번 버스트의 **궤적 합집합**이다 —
+       알마다 시작 상자(`left/top` ± sz/2)와 끝 상자(`+--dx/--dy` ± sz/2)를 합친다.
+       ⚠ 이 값은 **`currentTime` 과 무관**하다(궤적은 스폰 때 인라인으로 박히고 봉투는 그 사이를
+         보간할 뿐이다 — `@keyframes fxSpark` 의 어느 지점도 `--dx/--dy` 를 넘지 않는다).
+         그래서 여덟 장이 **같은 상자**를 낸다 = 5회차의 «클립 고정» 규약이 그대로 지켜진다.
+       ⚠ 획득 알(`fx-rlic` · 683/753)도 같이 담는다 — 비평가가 보는 것은 «한 화면» 이다. */
+    const reach = (() => {
+      const num = v => { const n2 = parseFloat(v); return Number.isFinite(n2) ? n2 : null; };
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, mx = 0;
+      for (const n of all) {
+        const bb2 = n.getBoundingClientRect();
+        const sx = num(n.style.left), sy = num(n.style.top);
+        const dx = num(n.style.getPropertyValue('--dx')) || 0;
+        const dy = num(n.style.getPropertyValue('--dy')) || 0;
+        /* 인라인 궤적이 없는 층(플래시·토스트)은 지금 상자 그대로 담는다 */
+        if (sx === null || sy === null) {
+          if (bb2.width && bb2.height) { x0 = Math.min(x0, bb2.left); y0 = Math.min(y0, bb2.top);
+            x1 = Math.max(x1, bb2.right); y1 = Math.max(y1, bb2.bottom); }
+          continue;
+        }
+        /* 인라인 좌표는 프레임 px 라 화면 px 로 되돌린다(`fxRect` 의 역변환 — 자를 새로 안 만든다) */
+        const f2 = (typeof fxSc === 'function') ? fxSc() : null;
+        const s2 = f2 ? f2.s : 1, ox = f2 ? f2.x : 0, oy = f2 ? f2.y : 0;
+        const half = (bb2.width || 26) / 2;
+        mx = Math.max(mx, bb2.width || 26);
+        for (const q of [[sx, sy], [sx + dx, sy + dy]]) {
+          const cx2 = ox + q[0] * s2, cy2 = oy + q[1] * s2;
+          x0 = Math.min(x0, cx2 - half); y0 = Math.min(y0, cy2 - half);
+          x1 = Math.max(x1, cx2 + half); y1 = Math.max(y1, cy2 + half);
+        }
+      }
+      if (!Number.isFinite(x0)) return null;
+      return { x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0),
+               pad: Math.round(mx) };
+    })();
+    return { at: Math.round(at), cnt, spark: sp.length, hidden, size, spread, op, reach,
              clip: { x: Math.round(hb.x), y: Math.round(hb.y), w: Math.round(hb.width), h: Math.round(hb.height) } };
   }, { T, sd: SEED, btnSel: sc.btn, hostSel: sc.host });
 
@@ -134,23 +187,43 @@ async function shot(sc, T, idx) {
      비교하게 되고 «−5.6% 크기 변화» 같은 것은 그 격자에서 **애초에 판독 불가**가 된다(CN ④-c).
      ⇒ 클립은 **트리거 전에 한 번** 잰 상자로 고정한다(58 36회차 «하네스가 시각을 흐리면 정답표가
      거짓» 의 공간판). ⚠ 정답표의 수치는 원래 스크린 좌표에서 재므로 이 변경에 안 흔들린다. */
-  const M = 160;                                    /* 여유 — 버스트는 호스트 «테두리 바깥» 에서도 산다 */
+  /* ⚑⚑ 817 — **클립이 버스트를 잘랐다. 잘린 것은 화면이 아니라 캡처였다.**
+     8회차 비평 셋(CF «5번(150ms)부터 8번까지 상단 y=0 에 잘린다 · 10개 중 약 2개» ·
+     CK «검출 f4 12 → f6 10 → f7 8 → f8 0» · CN «11 → 9 → 8»)이 **씬 B 상단 이탈**로 읽고
+     817 로 등재됐던 그림의 출처가 여기다 — 그 «y=0» 은 프레임의 위끝이 아니라 **이 크롭의 위끝**이다.
+     재현(`probe817`)이 갈랐다: 지원 프레임 5종(1600·1780·1920·2280·2600) × 알 120개에서
+     **프레임 밖 0건**이고, 같은 표본이 종전 크롭(M=160)에서는 **3알이 상변 밖**이다.
+     뿌리는 손 상수다 — 유물 버스트의 실제 상향 도달은 **약 342px**(반경 22×지터 1.18 + 산포 150 ×
+     `RW_FX_FLY` 2.0 + 알 반지름)인데 M 은 그 절반도 안 되는 160 이었다. 씬 A(훈련)가 0건이던 것은
+     프레임 덕이 아니라 **619 28회차의 bbox 가둠**이 알을 카드 안에 묶어 160 이 넉넉했기 때문이다.
+     ⇒ **여유를 손으로 적지 않고 제품에게 묻는다**(368 «자리를 상수에서 빼고 제품에게 묻는다»):
+       클립 = 호스트 상자 ∪ **이번 버스트의 궤적 합집합**(`info.reach`) + 알 한 개 폭.
+       `RW_FX_FLY`·산포·크기가 바뀌면 클립이 저절로 따라오고, **새 손 상수는 0개**다.
+     ⚠ **5회차의 «클립 고정» 규약은 그대로다** — `reach` 는 인라인 궤적에서 나와 `currentTime` 과
+       무관하고, 시드가 같아 여덟 장이 같은 상자를 낸다. 그 위에 첫 장의 클립을 **뒤 장에 물려**
+       구조적으로도 못 흔들리게 한다(`fixed`). 621 눌림 애니가 호스트를 흔들던 그 사고의 재발 방지. */
   const base = pre || (info && info.clip);
-  const clip = base ? {
-    x: Math.max(0, base.x - M), y: Math.max(0, base.y - M),
-    width: Math.min(1080 - Math.max(0, base.x - M), base.w + 2 * M),
-    height: Math.min(2280 - Math.max(0, base.y - M), base.h + 2 * M),
-  } : null;
+  const clip = fixed || (base ? clipFor(base, info && info.reach) : null);
   await p.screenshot({ path: file, clip: clip || undefined });
   await b.close();
-  return { T, file, info, errs: errs.length };
+  return { T, file, info, clip, errs: errs.length };
 }
+
+module.exports = { clipFor, SCENES, STOPS, SEED };
+
+if (require.main !== module) return;
 
 (async () => {
   const table = [];
   for (const sc of SCENES) {
     const rows = [];
-    for (let i = 0; i < STOPS.length; i++) rows.push(await shot(sc, STOPS[i], i + 1));
+    /* 817 — 첫 장이 낸 클립을 나머지 일곱 장에 **물린다**(위 클립 머리말 · 5회차 «클립 고정») */
+    let fixed = null;
+    for (let i = 0; i < STOPS.length; i++) {
+      const r = await shot(sc, STOPS[i], i + 1, fixed);
+      if (!fixed && r.clip) fixed = r.clip;
+      rows.push(r);
+    }
     table.push({ sc, rows });
   }
   for (const { sc, rows } of table) {
