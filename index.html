@@ -41961,6 +41961,23 @@ const FXKEEP_PAD = 4;                               /* 두 비평가가 같이 �
      rect 에는 이미 `scaleX(1.1)` 이 들어 있어서 좌표로 앉히면 **transform 을 두 번 먹는다** —
      이 길에는 그 사고가 없다(A3-ⓓ 계열). */
 const FXKEEP_TXT = '.rw-c>u';                       /* 795 — 호스트 밖으로 걸친 «글자» 라벨(89 유물 카드 «Lv.n») */
+/* ⚑⚑ 840 — **호스트가 재렌더로 갈려도 살아 있는 패치**(«정지 패치»). 목록은 위 복제 경로를 그대로 타고
+   다른 것은 수명 판정 한 줄뿐이다: 원본 노드가 사라져도 **플래시가 살아 있는 동안은 안 걷는다**.
+   ⚠ 왜 갈래가 필요한가 — 50 코스튬 [강화]는 `fxUpOk(card, card)` 뒤에 **곧바로 `renderUI()`** 가 오고
+     `renderCos()` 는 격자를 `innerHTML` 로 통째로 갈아 끼운다(`probe840` [e]). 795 의 수명 규약
+     («원본이 사라지면 패치도 죽는다» — 그래야 «없는 것을 그리는 유령» 이 안 남는다)을 그대로 쓰면
+     패치는 **첫 rAF 에 죽어** 한 프레임도 못 지킨다. 그 규약이 막으려던 사고(«새 배지가 다른 좌표로
+     서서 원반이 둘») 는 여기서 구조적으로 없다 — 재렌더는 **같은 자리에 같은 뱃지**를 다시 세우고
+     (`probe840` [e]), 이 경로의 플래시는 `inset` 이 없어 **스폰 rect 에 고정**이라 패치도 같이 고정이다.
+   ⚠ **`#bCos` 로 가둔 이유** — `.sk-eq` 는 07 스킬·26 펫 카드에도 있는 공용 부품이라 이름만 더하면
+     그 두 화면 플래시에도 판때기가 생긴다(등재문 경고). 선택자를 화면에 가두면 그쪽은 0줄이다.
+   ⚠ 자리는 **패딩 상자 그릇**이 잡는다(`FXKEEP_TXT` 머리말) — `FXKEEP_PAD` 를 안 쓰므로 패치 우변이
+     뱃지 우변(카드+45)과 같고, 팝 상한에서도 «Lv. n» 잉크 좌단 47 과 **겹침 0** 이다. */
+const FXKEEP_STILL = '#bCos .sk-card>.sk-eq';       /* 840 — 50 코스튬 카드 좌상단 [+]/[─] 착용 뱃지 */
+/* 호스트가 «정지 패치» 를 품고 있는가 — `fxFlash` 가 이 한 줄로 패치 경로를 스스로 켠다(호출부 0줄). */
+function fxKeepStill(el){
+  try { return !!(el && el.querySelector && el.querySelector(FXKEEP_STILL)); } catch(_){ return false; }
+}
 /* 배지 원반을 플래시 «위에» 다시 그린다 — 되살린 노드 목록을 돌려준다(앞 장과 같이 걷히게). */
 function fxFlashKeep(el, host, owner){
   const L = fxL(), out = [];
@@ -42021,7 +42038,9 @@ function fxFlashKeep(el, host, owner){
      한 속성으로는 안 그려진다) ② 자리를 좌표로 앉히지 않고 **그릇을 재현**한다(rect 에 이미 든
      `scaleX(1.1)` 을 두 번 먹지 않게). 따라가기·수명·원본 소멸 판정은 배지와 **같은 규약**이다. */
   const hcs = (() => { try { return getComputedStyle(el); } catch(_){ return null; } })();
-  for(const k of (hcs ? el.querySelectorAll(FXKEEP_TXT) : [])){
+  for(const k of (hcs ? el.querySelectorAll(FXKEEP_TXT + ',' + FXKEEP_STILL) : [])){
+    /* 840 — «정지 패치» 인가(위 `FXKEEP_STILL` 머리말). 갈리는 것은 아래 수명 판정 한 줄뿐이다. */
+    let still = false; try { still = k.matches(FXKEEP_STILL); } catch(_){}
     if(L.childElementCount >= FXMAX) break;
     let cs; try { cs = getComputedStyle(k); } catch(_){ continue; }
     if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
@@ -42054,9 +42073,17 @@ function fxFlashKeep(el, host, owner){
       b.style.transformOrigin = '0 0';
       b.style.transform = (Math.abs(sc - 1) < 1e-4) ? 'none' : ('scale(' + sc + ')'); };
     put();
+    /* ⚑ 840 — 정지 패치는 «원본이 살아 있는가» 를 안 묻는다(재렌더가 곧 오는 자리라 그러면 첫 rAF 에
+       죽는다). 수명은 **플래시의 수명**뿐이고(`owner`), 자리는 호스트가 살아 있는 동안만 다시 읽어
+       마지막 값에 굳는다 — 재렌더가 같은 자리에 같은 뱃지를 세우므로 굳은 자리가 곧 정답이다.
+       ⚠ 남는 걷기도 플래시와 한 몸이다 — `fxFlash` 가 `fxBye(kp, 500)` 로 같이 걷고,
+         같은 자리의 다음 발화도 `__fxKeep` 을 통째로 걷는다(625 «한 자리에 한 장»). */
     const follow = () => { if(!b.isConnected) return;
-      if(!k.isConnected || !el.isConnected || (owner && !owner.isConnected)){ try { b.remove(); } catch(_){} return; }
-      put(); requestAnimationFrame(follow); };
+      if(owner && !owner.isConnected){ try { b.remove(); } catch(_){} return; }
+      if(still){ if(el.isConnected) put(); }
+      else if(!k.isConnected || !el.isConnected){ try { b.remove(); } catch(_){} return; }
+      else put();
+      requestAnimationFrame(follow); };
     requestAnimationFrame(follow);
     L.appendChild(b); out.push(b);
   }
@@ -42151,7 +42178,11 @@ function fxFlash(el, iv, inset, keep){
     requestAnimationFrame(follow);
   }
   /* ⚑ 619 16회차 — 배지 keep-out(위 `fxFlashKeep` 머리말). 플래시 **뒤에** 붙어야 그 위에 그려진다. */
-  if(inset || keep){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
+  /* ⚑ 840 — 세 번째 문(`fxKeepStill`)은 **호스트가 정지 패치를 품고 있으면 스스로 켠다**.
+     호출부에 인자를 하나 더 다는 길(=`fxUpOk` 에 여섯째 인자)을 안 고른 이유는 «어느 화면이
+     되그릴 것을 가졌는가» 가 선택자 한 줄에 이미 적혀 있기 때문이다 — 호출부는 0줄이고,
+     `#bCos` 밖(07 스킬·26 펫·09·12·17·장비)은 이 문이 열리지 않아 한 프레임도 안 바뀐다. */
+  if(inset || keep || fxKeepStill(el)){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
   /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
      500 고정은 그래서 138ms 를 투명한 채 남긴다(p58au 실측 — 40차 «upg-5 플래시 1 → 0»). */
   fxBye(d, 500);                                      /* 애니메이션이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
