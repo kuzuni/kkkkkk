@@ -95,8 +95,20 @@ const FREEZE = () => {
   fs.mkdirSync(OUT, { recursive: true });
   const log = [];
 
-  for (const kind of ['now', 'pre']) {
+  /* ⚑ 6회차 — 판이 **셋**이다. 5회차 채점은 «판 P(4회차) ↔ 판 A(5회차)» 를 나란히 놓아
+     회수량을 두 비평가가 각자 잴 수 있었다(그 표가 5회차 절의 회수 표다). 이번 회차가 바꾼 것도
+     한 줄(`--burst-rx`)이므로 **직전 판(p5)** 을 같이 찍는다 — 안 찍으면 «가로가 열렸다» 를
+     비평가가 눈으로만 말하게 된다. `pre` 는 814 이전(원 결함)이라 계속 바닥 대조로 둔다. */
+  for (const kind of ['now', 'p5', 'pre']) {
     let src = 'index.html';
+    if (kind === 'p5') {
+      const s = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+      const A = '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}';
+      const B = '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}';
+      if (s.indexOf(A) < 0) throw new Error('5회차 판 주입 앵커를 못 찾았다 — ' + A.slice(0, 40));
+      src = '.cap814-p5.html';
+      fs.writeFileSync(path.join(ROOT, src), s.split(A).join(B));
+    }
     if (kind === 'pre') {
       const s = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
       /* ⚠⚠ 3회차 사고 — «수리 전» 사본이 **호출 한 줄만** 되돌리고 있었다. 그래서 판 B 에도
@@ -109,7 +121,7 @@ const FREEZE = () => {
          "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));"],
         ['      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n', ''],
         ['  .sk-clv.fx-cvswap{animation:fxCvSwapS .34s cubic-bezier(.34,1.56,.64,1) both, fxCvLit .34s linear}', ''],
-        ['#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}', '']
+        ['#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}', '']
       ];
       let rev = s;
       for (const [a, b2] of REV) {
@@ -154,7 +166,7 @@ const FREEZE = () => {
       await b.close();
     }
 
-    if (kind === 'pre') { try { fs.unlinkSync(path.join(ROOT, src)); } catch (_) {} }
+    if (kind !== 'now') { try { fs.unlinkSync(path.join(ROOT, src)); } catch (_) {} }
   }
 
   console.log('CAP814 (' + TAG + ')');
