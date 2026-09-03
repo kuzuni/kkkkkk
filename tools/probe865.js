@@ -175,13 +175,14 @@ async function measure(browser, url) {
     }
 
     /* 층 미배정 = 잉크인데 ②도 ③도 아니고, ①(링)이 닿는 띠 밖 */
-    let nInk = 0, nBody = 0, nSoft = 0;
+    let nInk = 0, nBody = 0, nSoft = 0, nNear = 0;
     let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, cnt = 0, minMax = 0;
     const hist = new Int32Array(20);
     const cols = [];
     for (let p = 0; p < n; p++) {
       if (!ink[p]) continue;
       nInk++;
+      if (near[p]) nNear++;
       if (body[p]) { nBody++; continue; }
       nSoft++;
       if (near[p] || dt[p] <= K.CBAND) continue;
@@ -203,7 +204,7 @@ async function measure(browser, url) {
     return {
       SC, HALO_SS: (typeof HALO_SS === 'undefined' ? null : HALO_SS),
       AURA_W: (typeof AURA_W === 'undefined' ? null : AURA_W),
-      ink: nInk, body: nBody, soft: nSoft,
+      ink: nInk, body: nBody, soft: nSoft, near: nNear,
       slab: cnt,
       tail: tcnt, tw: tx1 < 0 ? 0 : (tx1 - tx0 + 1), th: ty1 < 0 ? 0 : (ty1 - ty0 + 1),
       w: x1 < 0 ? 0 : (x1 - x0 + 1), h: y1 < 0 ? 0 : (y1 - y0 + 1),
@@ -227,26 +228,36 @@ const show = (tag, out) => {
               ' · 대표색 (' + out.col.join(',') + ') · 후광 중 몫 ' + out.fFar);
 };
 
+/* ⚑ 자·재현기가 **같은 자**를 쓰게 내보낸다(같은 것을 두 벌 적으면 그것이 곧 다음 어긋남이다 — 402).
+   `verify865.js` 가 `measure`·`mkOld`·문턱 셋을 그대로 물어다 쓴다. */
+const ANCHOR = `ctx.moveTo(23.4,0); ctx.lineTo(4.7,2.65);`;
+const OLDGLOW = `ctx.strokeStyle = 'rgba(255,208,255,.42)'; ctx.lineWidth = 7; ctx.lineCap = 'round';` +
+                ` ctx.beginPath(); ctx.moveTo(-23.4,0); ctx.lineTo(6.2,0); ctx.stroke();\n      ` +
+                `ctx.beginPath(); `;
+/* 되돌림 사본을 짓는다 — 865 **이전의 세계**(«`halo()` 뒤 · 본체 앞에서 제 손으로 깐 줄»).
+   ⚠ 줄을 통째로 글자로 적지 않는다(792 [R] 주석 — 다음 회차의 한 글자 수정에 자가 먼저 죽는다).
+     창날 경로의 첫 두 점만 붙잡고 **그 앞에** 옛 잔광 줄을 끼운다. 닻이 딱 하나가 아니면 `null`. */
+const mkOld = (dst) => {
+  const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  if (src.split(ANCHOR).length !== 2) return null;
+  fs.writeFileSync(dst, src.replace(ANCHOR, OLDGLOW + ANCHOR), 'utf8');
+  return dst;
+};
+module.exports = { measure, mkOld, ANCHOR, OLDGLOW, A_BODY, CBAND, NEARW, ROOT };
+if (require.main !== module) return;
+
 (async () => {
   console.log('=== PROBE 865 — `lance` 밑동이 어느 층에도 안 든다 ===\n');
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   /* ⚑ **수리 전 세계를 사본으로 짓는다 — 재현기가 «이미 지나간 상태» 를 제품에게 요구하지 않게.**
      803·819 가 정확히 그 병으로 등재됐다(«이미 고쳐진 트리에 대고 옛 재현을 요구한다»). 이 자는
-     대신 사본에서 옛 그림을 재고, 제품 트리에는 **판이 없다**를 묻는다 — 두 세계를 한 실행에서 본다.
-     ⚠ 되돌림은 **줄을 통째로 글자로 적지 않는다**(792 [R] 주석 — 다음 회차의 한 글자 수정에
-       자가 먼저 죽는다). 창날 경로의 첫 두 점만 붙잡고 **그 앞에** 옛 잔광 줄을 끼워 넣는다:
-       865 이전의 세계는 «`halo()` 뒤 · 본체 앞에서 제 손으로 깐 줄» 이었으므로 자리가 이것이다. */
-  const ANCHOR = `ctx.moveTo(23.4,0); ctx.lineTo(4.7,2.65);`;
-  const OLDGLOW = `ctx.strokeStyle = 'rgba(255,208,255,.42)'; ctx.lineWidth = 7; ctx.lineCap = 'round';` +
-                  ` ctx.beginPath(); ctx.moveTo(-23.4,0); ctx.lineTo(6.2,0); ctx.stroke();\n      ` +
-                  `ctx.beginPath(); `;
-  if (src.split(ANCHOR).length !== 2) {
+     대신 사본에서 옛 그림을 재고, 제품 트리에는 **판이 없다**를 묻는다 — 두 세계를 한 실행에서 본다. */
+  if (!mkOld(OLD)) {
     ok(false, '[0] 되돌림 닻(창날 경로 첫 두 점)이 소스에 딱 한 번 있다 — 실측 ' +
               (src.split(ANCHOR).length - 1) + '회');
     console.log('\nPROBE865 ' + pass + '/' + (pass + fail) + ' FAIL');
     process.exit(1);
   }
-  fs.writeFileSync(OLD, src.replace(ANCHOR, OLDGLOW + ANCHOR), 'utf8');
 
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   let old, now;

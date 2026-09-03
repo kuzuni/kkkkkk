@@ -686,9 +686,17 @@ async function measure(browser, url) {
       const hasAura = new Set(out.aura || []);
       const own = ids.filter(i => out.rows[i].fFar > FAR_MAX);
       const th = ids.filter(i => hasAura.has(out.rows[i].sh) && out.rows[i].fFar <= FAR_MAX);
-      /* 범위가 조용히 자라지 못하게 **개수에 못을 박는다** — «기록만» 은 예외지 문이 아니다. */
-      ok(own.length <= 4, '[B8s] 자가 링을 못 가리는 종(제 손으로 깐 반투명 부품 · 먼몫 > ' + FAR_MAX +
-         ') ' + own.length + '종 ≤ 4 — ' + (own.map(i => i + ':' + out.rows[i].fFar).join(' · ') || '없음'));
+      /* 범위가 조용히 자라지 못하게 **개수에 못을 박는다** — «기록만» 은 예외지 문이 아니다.
+         ⚑ **865 이관 — 래칫을 4 → 3 으로 내렸다.** 이 목록의 넷 중 셋(`boom`·`meteor`·`flask`)은
+           위 주석이 말하는 **불 계열**이라 설계상 링이 없는 자리이고, 넷째 `lance`(먼몫 0.175)만
+           «규격을 안 지킨 종» 이었다 — 잔광 줄이 `halo()` 밖에서 제 손으로 깔려 세 층 어디에도
+           안 들었다. 865 가 그 줄을 ①층으로 들여보내 먼몫이 **0.175 → 0** 이 됐다.
+           래칫을 안 내리면 «규격 밖 종이 하나 새로 생겨도 초록» 인 자가 된다(328~330 교훈의 반대편
+           자리 — 거기서는 «항을 눌러 초록으로 되돌리지 마라» 였고, 여기서는 «재고가 줄면 문을
+           그만큼 좁혀라» 다). 자리는 `verify865` 가 이어서 지킨다([A4] 가 창 하나를 따로 못박는다). */
+      ok(own.length <= 3, '[B8s] 자가 링을 못 가리는 종(제 손으로 깐 반투명 부품 · 먼몫 > ' + FAR_MAX +
+         ') ' + own.length + '종 ≤ 3 (불 계열뿐 — 865 가 `lance` 를 뺐다) — ' +
+         (own.map(i => i + ':' + out.rows[i].fFar).join(' · ') || '없음'));
       /* [B8]·[B8b] 는 **구운 링 자산**을 잰다(위 `rings` 주석 — 장면 자는 방향마다 바탕이 달라
          ±5px 로 흔들린다). 자산 화소 = 화면 화소이므로 «찍힌 픽셀» 을 안 놓는다. */
       const rg = out.rings || {};
