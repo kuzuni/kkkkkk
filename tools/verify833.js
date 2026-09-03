@@ -221,9 +221,14 @@ const DUMP = `(() => {
     ok(Math.abs((r2.rb.x + r2.rb.w - c.card.x) - 530) < 0.6,
       `[7-a] ${c.id} 리본2 우단 = 530 (보이는 529 ≈ ref 529.2)`,
       `${p2(r2.rb.x + r2.rb.w - c.card.x)}`);
+    /* ⚑ 이관(833 9회차 · 333 처방 — 방향을 뒤집었다). 3회차는 «리본1 은 ref 도 430.2 ↔ 446.7 로
+       갈리니 안 건드린다» 로 넘겼는데, **갈린다는 것은 «형마다 값이 다르다» 는 뜻**이지
+       «맞춰 놓았다» 는 뜻이 아니었다 — `scan833b.py` 로 재면 불릿형은 ref 446.7 ↔ 우리 445.0(맞다)이고
+       **배너형만 ref 430.2 ↔ 우리 424.0 = −6.2** 였다(8회차 채점 DF·DG 가 각자 −5.9 로 2인 일치).
+       ⇒ 배너형 w1 을 430 으로(불릿형 350 은 무변경). 이제 이 항이 지키는 것은 **형마다 두 값**이다. */
     const r1 = c.rbs[0];
-    ok(Math.abs((r1.rb.x + r1.rb.w - c.card.x) - (c.ban ? 424 : 350)) < 0.6,
-      `[7-b] ${c.id} 리본1 우단은 **안 건드렸다** (${c.ban ? 424 : 350})`,
+    ok(Math.abs((r1.rb.x + r1.rb.w - c.card.x) - (c.ban ? 430 : 350)) < 0.6,
+      `[7-b] ${c.id} 리본1 우단 = ${c.ban ? '430 (ref 430.2 · 9회차 이관 · 옛 424)' : '350 (ref 446.7 · 무변경)'}`,
       `${p2(r1.rb.x + r1.rb.w - c.card.x)}`);
     /* ⚑ `--gx` 는 리본 오른끝 기준이라 w2 만 늘리면 판·수량이 같이 밀린다 —
        g2 를 같은 Δ 만큼 키워 붙박은 것을 여기서 못박는다(667 [F3]·[F4] 와 같은 값). */
@@ -319,20 +324,30 @@ const DUMP = `(() => {
        ⇒ 여기서 물을 것은 «안 넘치는가» 가 아니라 **«넘침이 그대로인가»** 다 — fs 를 올리면 넘침이
        커지고 그만큼 잉크 중심이 오른쪽으로 밀려 667 의 보정이 어긋난다. 6회차가 세로를 안 건드린
        진짜 이유가 이것이고, [10-h] 가 그 결과(잉크 중심)를 직접 잰다. */
-    ok(adv0 - B10.boxW >= 8 && adv0 - B10.boxW <= 11,
-      `[10-d] 넘침 = advance − 상자폭 이 9.6px 그대로 (667 이 그 절반을 left 로 갚아 놓은 값)`,
-      `${p2(adv0)} − ${p2(B10.boxW)} = ${p2(adv0 - B10.boxW)}`);
+    /* ⚑ 이관(833 9회차 · 333 처방 — **방향을 뒤집었다. 지우지 않았다**).
+       8회차 채점에서 DF·DG 가 «잉크가 노란 칸 안에서 +11.6/+11.7 오른쪽» 을 2인 일치로 냈고,
+       9회차의 셋째 자(`tools/scan833c.py` · 문턱 235/246/250 불변)가 **+10.1** 로 확인했다.
+       그 10.1 의 정체가 바로 이 «넘침» 이다 — 667 이 갚아 둔 «넘침의 절반» 이 ref 자리가 아니었다.
+       ⇒ 9회차는 갚는 대신 **넘침을 없앴다**(상자 실폭 255 → 283 > advance 264.7).
+       이제 이 항이 지키는 것은 «넘침이 그대로인가» 가 아니라 **«넘침이 0 인가»** 다 —
+       fs 를 올려 다시 넘치면 `text-align:center` 가 죽어 잉크가 오른쪽으로 튄다(667 [G3] 과 같은 사고). */
+    ok(adv0 <= B10.boxW,
+      `[10-d] 넘침 0 — advance ≤ 상자폭 (9회차: 갚지 않고 없앴다 · 여유 ${p2(B10.boxW - adv0)}px)`,
+      `${p2(adv0)} ≤ ${p2(B10.boxW)}`);
     ok(Math.abs(B10.advScaled - 235.2) <= 8,
       '[10-e] 변환 뒤 advance ≈ ref 환산 잉크 235.2 (±8 = side bearing 몫)', `${p2(B10.advScaled)}`);
-    /* 넘치는 줄은 상자 왼끝에서 시작하므로 레이아웃 잉크 중심 = 상자 좌단 + advance/2 이고,
-       배율은 **상자 중심** 기준이라 변환 뒤 중심 = 상자중심 + (레이아웃중심 − 상자중심)×0.9 다.
-       ref 목표는 배너-로컬 317.7 = 카드-로컬 367.7(배너 좌단 50). 캡처 실측(흰 채움)도 369.0 이다. */
+    /* ⚑ 이관(833 9회차) — 넘침이 0 이 된 뒤로는 **레이아웃 잉크 중심 = 상자 중심**이고,
+       배율 원점도 상자 중심이라 변환이 중심을 안 옮긴다 ⇒ 잉크 중심 = 상자 중심 한 줄로 선다.
+       새 목표는 **359.5**(카드-로컬) = 노랑 칸 중심 361.5 + ref 편차 −2.1.
+       ⚠ 옛 목표 367.7 은 667 8회차가 자기 자로 낸 값이고, 9회차의 화소 자는 같은 정의로
+       ref·우리를 같이 재서 «칸 중심 − 잉크 중심» 을 ref −2.1 ↔ 우리(수리 전) +8.0 으로 갈랐다. */
     const boxL = 50 + 7 + B10.left, boxC = boxL + B10.boxW / 2;
-    const inkC = boxC + (boxL + adv0 / 2 - boxC) * parseFloat(sx || 1);
-    ok(Math.abs(inkC - 367.7) <= 3,
-      '[10-h] 변환 뒤 잉크 중심이 ref 367.7(카드-로컬) ±3 — 배율이 중심을 안 옮겼다', `${p2(inkC)}`);
-    ok(B10.left === 181 && B10.right === 12 && B10.align === 'center',
-      '[10-f] 상자(181/12)와 가운데 정렬은 **안 건드렸다**',
+    const inkC = boxC + (boxL + Math.max(adv0, B10.boxW) / 2 - boxC) * parseFloat(sx || 1);
+    ok(Math.abs(inkC - 359.5) <= 1.5,
+      '[10-h] 변환 뒤 잉크 중심 359.5(카드-로컬) ±1.5 — ref 는 노랑 칸 중심 −2.1 (9회차 이관 · 옛 값 367.7)',
+      `${p2(inkC)}`);
+    ok(B10.left === 161 && B10.right === 4 && B10.align === 'center',
+      '[10-f] 상자(161/4 — 9회차가 넘침을 없앤 값)와 가운데 정렬',
       `${B10.left}/${B10.right}/${B10.align}`);
     ok(B10.stroke === 8, '[10-g] 검정 획 8px 불변 (배율은 획도 같이 누른다 — ⑤ 기록)', `${B10.stroke}`);
   }
@@ -345,14 +360,21 @@ const DUMP = `(() => {
        우리 수리 후            «1,500» 88 (무변경) · «10,000» **88** · «16,000** 88
      ⇒ 다섯 자리는 배율 1(무변경) · 여섯 자리만 등방 축소. 목표 `PV_QTY_ADV = 90` 은 ref 네 표본의
      중앙값(87.65)에 side bearing 몫을 더한 값이고, 손으로 «여섯 자리면 0.8» 을 적지 않았다 —
-     `pvFitQty()` 가 **그린 뒤 재서** 넘는 만큼만 줄인다(문자열은 199 가 언제든 바꾼다). */
-  const QADV = 90;
+     `pvFitQty()` 가 **그린 뒤 재서** 넘는 만큼만 줄인다(문자열은 199 가 언제든 바꾼다).
+     ⚑ **이관(833 9회차 · 333 처방) — 목표가 «한 값» 에서 «형마다 두 값» 이 됐다.**
+     8회차 채점 2인 일치 2번(DF «ref 16,000 은 −12%» · DG «네 표본 부호 전부 음수, 최악 −15.9%»)을
+     `scan667b.py` 로 다시 재니 **빨간 것은 불릿형 여섯 자리 하나뿐**이고 배너형 둘은 Δ−1.7~+1.4 로
+     맞아 있었다(ref 88.7 / 86.6 / 86.6 / **96.9** ↔ 우리 87 / 88 / 87 / **88**).
+     상한을 통째로 ref 최대(97)로 올리면 맞아 있던 배너형 «10,000» 이 +12% 틀어지므로,
+     이 화면이 다섯 번 증명한 «형마다 두 값» 법칙대로 **배너 90(무변경) · 불릿 99** 로 갈랐다. */
+  const QADVT = { ban: 90, bl: 99 };
   for (const c of cards) {
+    const QADV = QADVT[c.ban ? 'ban' : 'bl'];
     for (const r of c.rbs) {
       if (!r) continue;
       const k = parseFloat(r.uq);
       ok(r.uAdv <= QADV + 0.6,
-        `[11-a] ${c.id} «${r.uTxt}» 변환 뒤 advance ≤ ${QADV}`, `${p2(r.uAdv)}`);
+        `[11-a] ${c.id}(${c.ban ? '배너' : '불릿'}형) «${r.uTxt}» 변환 뒤 advance ≤ ${QADV}`, `${p2(r.uAdv)}`);
       /* ⚠ 가르는 자는 **자릿수가 아니라 advance** 다 — 「5,000」 은 네 자리인데도 97.14 로 넘고
          「750」 은 64.59 로 안 넘는다(글리프 폭이 자마다 다르다). 자릿수로 갈랐다가 이 자리에서
          빨개졌고, 그것이 «손 상수로 여섯 자리면 0.8» 이 왜 오답인지의 실물 증거다. */
@@ -373,19 +395,27 @@ const DUMP = `(() => {
   }
   /* ⚑ [11-f] 가 «손 상수가 아니다» 를 못박는다 — 문자열을 최장으로 갈아 끼우고 자를 다시 부르면
      배율이 **그 문자열에 맞게 다시** 나온다(적어 둔 수를 읽는 게 아니라 재는 것이다). */
+  /* 833 9회차 — 형마다 상한이 다르므로 **두 형에서 각각** 갈아 끼워 본다(한 형만 보면
+     «형별» 이 실제로 서는지 못 본다 — 그 항이 [11-g] 다). */
   const fit = await page.evaluate(() => {
-    const u = document.querySelector('.pvc>.rb2>u'), old = u.textContent;
-    u.textContent = '999,999';
-    pvFitQty(document.getElementById('shopList'));
-    const rg = document.createRange(); rg.selectNodeContents(u);
-    const out = { uq: getComputedStyle(u).getPropertyValue('--uq').trim(),
-      adv: +rg.getBoundingClientRect().width.toFixed(2) };
-    u.textContent = old; pvFitQty(document.getElementById('shopList'));
-    return out;
+    const one = (sel) => {
+      const u = document.querySelector(sel), old = u.textContent;
+      u.textContent = '999,999';
+      pvFitQty(document.getElementById('shopList'));
+      const rg = document.createRange(); rg.selectNodeContents(u);
+      const out = { uq: getComputedStyle(u).getPropertyValue('--uq').trim(),
+        adv: +rg.getBoundingClientRect().width.toFixed(2) };
+      u.textContent = old; pvFitQty(document.getElementById('shopList'));
+      return out;
+    };
+    return { ban: one('.pvc.ban1>.rb2>u'), bl: one('.pvc:not(.ban1)>.rb2>u') };
   });
-  ok(Math.abs(fit.adv - QADV) < 0.6,
-    '[11-f] «999,999» 로 갈아도 자가 다시 재서 맞춘다 (배율이 손 상수가 아니라는 증거)',
-    `배율 ${fit.uq} · advance ${p2(fit.adv)}`);
+  ok(Math.abs(fit.ban.adv - QADVT.ban) < 0.6,
+    '[11-f] 배너형은 «999,999» 로 갈아도 자가 다시 재서 90 에 맞춘다 (손 상수가 아니라는 증거)',
+    `배율 ${fit.ban.uq} · advance ${p2(fit.ban.adv)}`);
+  ok(Math.abs(fit.bl.adv - QADVT.bl) < 0.6,
+    '[11-g] 같은 문자열이 불릿형에서는 99 에 맞는다 — **상한이 형마다 두 값**이라는 증거 (9회차 신설)',
+    `배율 ${fit.bl.uq} · advance ${p2(fit.bl.adv)}`);
 
   blk('§5 9:13.3(1600) — 카드 안 기하가 같다');
   const { page: p16, errs: e16 } = await open(browser, 1600);
@@ -584,8 +614,12 @@ const DUMP = `(() => {
     '[R10] 수량 배율을 1 로 되돌리면 §11 [11-a] 가 빨개진다 (여섯 자리가 다시 97~114 로 나간다)',
     long7.map(q => q.t + ' ' + p2(q.adv)).join(' / '));
   await page.evaluate(() => pvFitQty(document.getElementById('shopList')));
-  ok(back6.adv / 235.2 - 1 > 0.1 && Math.abs((back6.adv - back6.boxW) - 9.64) < 1,
-    '[R9b] 되돌린 폭은 ref 보다 +12.5% 이고 **넘침은 같다** — 6회차가 고친 것이 «넘침» 이 아니라 «넓음» 이라는 증거',
+  /* ⚑ 이관(833 9회차) — 이 항의 뜻(«배율은 넘침을 안 바꾼다 — 변환은 레이아웃 advance 를 안 건드린다»)은
+     그대로고, 값만 상자 폭을 따라 바뀐다: 8회차까지는 상자 255 라 넘침 **+9.64** 였고,
+     9회차가 상자를 283 으로 연 뒤로는 **−18.4(넘침 0)** 다. 배율을 지워도 그 부호가 안 바뀌는 것이
+     여전히 «6회차가 고친 것은 넓음이지 넘침이 아니다» 의 증거다. */
+  ok(back6.adv / 235.2 - 1 > 0.1 && back6.adv - back6.boxW < 0,
+    '[R9b] 되돌린 폭은 ref 보다 +12.5% 인데 **넘침은 그대로 0** — 배율은 넘침을 안 바꾼다 (9회차 이관 · 옛 넘침 +9.64)',
     `+${p2((back6.adv / 235.2 - 1) * 100)}% · 넘침 ${p2(back6.adv - back6.boxW)}`);
   /* ⚑ [R7] 은 «값을 되돌리면 빨개진다» 가 아니라 **«스코프 짝을 빼면 조용히 진다»** 를 못박는다 —
      이번 수리에서 실제로 사람을 속인 것이 그것이다(선언은 남아 있는데 computed 만 바뀐다). */
@@ -660,6 +694,55 @@ const DUMP = `(() => {
     '[R12b] 그때 라벨 잉크가 실제로 **왼쪽으로 밀린다** — [13-b] 가 지키는 것이 그 3~4px 이다 (왼쪽 원점 = 44.0)',
     back12.map(o => o.inkL).join(' / '));
   await page.evaluate(() => { const e = document.getElementById('r12'); if (e) e.remove(); });
+
+  /* ── 9회차 수리 셋의 되돌림 시험 ─────────────────────────────────────────── */
+  const back13 = await page.evaluate(() => {
+    const st = document.createElement('style'); st.id = 'r13';
+    st.textContent = '.pvc>.ban>i{left:181px!important;right:12px!important}'; /* 833 9회차 전 */
+    document.head.appendChild(st);
+    const c = document.querySelector('.pvc.ban1'), cb = c.getBoundingClientRect();
+    const i = c.querySelector('.ban>i');
+    const rg = document.createRange(); rg.selectNodeContents(i);
+    const t = rg.getBoundingClientRect();
+    const sx = parseFloat((getComputedStyle(i).transform.match(/matrix\(([-\d.]+)/) || [0, 1])[1]);
+    return { boxW: +i.offsetWidth.toFixed(2), adv0: +(t.width / sx).toFixed(2),
+      inkC: +((t.left + t.right) / 2 - cb.left).toFixed(2) };
+  });
+  ok(back13.adv0 - back13.boxW > 8,
+    '[R13] 상자를 181/12 로 되돌리면 [10-d] 가 빨개진다 — 넘침이 9.6px 되살아난다',
+    `advance ${p2(back13.adv0)} − 상자 ${p2(back13.boxW)} = ${p2(back13.adv0 - back13.boxW)}`);
+  ok(Math.abs(back13.inkC - 359.5) > 6,
+    '[R13b] 그때 잉크 중심이 [10-h] 밖으로 나간다 — 넘침이 가운데 정렬을 죽여 오른쪽으로 튄다 (8회차 채점 2인 일치 1번의 그 10px)',
+    `${p2(back13.inkC)} ↔ 목표 359.5`);
+  await page.evaluate(() => { const e = document.getElementById('r13'); if (e) e.remove(); });
+
+  const back14 = await page.evaluate(() => {
+    const st = document.createElement('style'); st.id = 'r14';
+    st.textContent = '.pvc.ban1>.rb1{width:424px!important}';               /* 833 9회차 전 */
+    document.head.appendChild(st);
+    const c = document.querySelector('.pvc.ban1'), cb = c.getBoundingClientRect();
+    const r = c.querySelector('.rb1').getBoundingClientRect();
+    return +(r.right - cb.left).toFixed(2);
+  });
+  ok(Math.abs(back14 - 430) > 3,
+    '[R14] 배너 리본1 폭을 424 로 되돌리면 [7-b] 가 빨개진다 (우단이 ref 430.2 에서 −6.2 로 물러난다)',
+    `${p2(back14)} ↔ ref 430.2`);
+  await page.evaluate(() => { const e = document.getElementById('r14'); if (e) e.remove(); });
+
+  /* ⚑ [R15] 는 «상한 99 가 없어도 되는 값이 아니다» 를 못박는다 — 불릿형 여섯 자리의 **자연** advance 가
+     옛 상한 90 을 실제로 넘으므로, 90 으로 되돌리면 그 문자열이 다시 −7% 로 눌린다(ref 96.9). */
+  const back15 = await page.evaluate(() => {
+    const u = [...document.querySelectorAll('.pvc:not(.ban1)>.rb>u')]
+      .find(x => x.textContent.replace(/[^0-9]/g, '').length > 4);
+    if (!u) return null;
+    const k = parseFloat(getComputedStyle(u).getPropertyValue('--uq').trim());
+    const rg = document.createRange(); rg.selectNodeContents(u);
+    return { t: u.textContent, k, adv: +rg.getBoundingClientRect().width.toFixed(2),
+      nat: +(rg.getBoundingClientRect().width / k).toFixed(2) };
+  });
+  ok(!!back15 && back15.nat > 90 && Math.abs(back15.adv - 99) < 0.6,
+    '[R15] 불릿형 여섯 자리는 옛 상한 90 이면 실제로 눌린다 (자연 advance > 90) — 형별 상한이 «있으나 마나» 가 아니라는 증거',
+    back15 ? `«${back15.t}» 자연 ${p2(back15.nat)} → ${p2(back15.adv)}` : '표본 없음');
 
   blk('§Z 콘솔');
   ok(errs.length === 0, '[Z] 콘솔·페이지 에러 0건', String(errs.length));
