@@ -1180,6 +1180,20 @@ const BOSS_OVER_DOC = 4;
    월별분은 지속 수급이다. 레거시 키 «우편» 은 옛 --json 리플레이용으로 남긴다(옛 실행은
    전체 우편이 그 키 하나였고, 그때의 뜻(통째 일회성)을 그대로 보존해 읽는다). */
 const ONCE_KEYS = ['시작(신규 지급)', '가이드미션', '우편', '우편(1회성)', '출석(1일차 환영)'];
+/* ⚑⚑ 199 27회차 신설 — **유한 트랙**(26-8 · 26-10 1번 «배제 목록에 유한 트랙을 명시로 넣어라»).
+   `ONCE_KEYS` 는 «한 번 주고 끝» 이라 말미 창에서 이미 0 이지만, **패스**는 다르다:
+   트랙(493 — 스테이지 3,000 · 출석 100일 · 탑 100레벨)이 유한한데 **창 안에서 0 이 아닌
+   기울기로 잡힌다.** 그래서 말미 창이 «지속 수급» 이 아니라 «아직 트랙이 남았는가» 를 재게
+   되고, 진행이 빠른 정책일수록 그 몫을 일찍 태워 ④ 의 비를 **인공적으로** 벌린다.
+   ⚠ 이 목록은 «작은 축» 을 지우는 자리가 아니다 — **유한한가**만 묻는다(크기는 [E4] 가 찍는다).
+   되돌림: 이 배열을 `[]` 로 두면 지속 장부 = 전체 장부가 되어 27회차 이전 그림으로 돌아간다
+   (`verify758` [U1]·[U5] 가 그 순간 빨개진다). */
+const FINITE_KEYS = ['패스'];
+/* ⚑ 27회차 — 말미 창 규약 ⓑ 의 문턱. 창 W 와 그 절반의 기울기 차가 이 값 이내면 «정상(定常)».
+   실측 근거는 `probe199r27` [E]: r26-base 지속 장부에서 W3 32.3% · W7 15.0% · W14 10.2% ·
+   W29 50.3% 로 **한 자릿수 골짜기가 W14 하나**다. 15% 는 그 골짜기와 봉우리 사이의 값이고,
+   채택 창(W14)은 문턱에 **붙지 않는다**(여유 4.8%p — 574·709·825 «문턱에 붙은 자» 의 반대). */
+const TAIL_STAT_MAX = 0.15;
 const WALL_MIN = 30;           /* 같은 스테이지 이 분 이상 정체 = 벽 1개 */
 /* 199 4회차 — 정체를 «벽» 과 «상승면 멈춤» 으로 가른다.
    ES_RAMP(밴드 내 상승면)가 생기면 벽 사이의 «오르막» 에서 하루 주기 성장 사이의 숨(수 시간
@@ -1748,6 +1762,60 @@ function writeReport(rep) {
     }).sort((a, b) => b.p50 - a.p50);
     return { rows, tot: rows.reduce((a, b) => a + b.p50, 0), W, span, n };
   };
+  /* ⚑⚑ 27회차(26-10 1번·2번 — AAV·AAU 공통 1순위) — **지속 장부와 말미 창 규약.**
+     26-8 이 «④ 의 통과를 패스 한 축이 떠받친다» 를 커밋된 네 표만으로 보였고, 26-10 이
+     그 배제를 규약으로 세우라고 넘겼다. 자리는 여기다 — `crossOf`/`tailRate` 와 **같은
+     창·같은 장부**를 쓰되 **기울기에서만** 일회성·유한 트랙을 뺀다(표 두 벌 금지).
+     ⚠ **누적은 안 뺀다.** 패스로 실제로 번 다이아는 실재하므로 v(30) 은 그대로 두고,
+     바뀌는 것은 «앞으로의 기울기» 뿐이다: cross = days + (목표 − v(days)) / 지속기울기. */
+  const tailSplit = (pol, mode, wOpt) => {
+    const runs = rep.policies[pol];
+    const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
+                   : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));
+    const span = rep.days - Math.max(1, rep.days - W);
+    if (span <= 0) return null;
+    const v = (s) => (mode === 'summon' ? s.inAll - s.outNS : s.inAll);
+    const sum = (s, keys) => keys.reduce((a, k) => a + ((s.inBy && s.inBy[k]) || 0), 0);
+    const F = [], O = [], C = [], A = [], X = [];
+    for (const r of runs) {
+      const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
+      const end = day(rep.days), w0 = day(Math.max(1, rep.days - W));
+      if (!end || end.inAll == null || !w0 || !end.inBy || !w0.inBy) continue;
+      const full = (v(end) - v(w0)) / span;
+      const fin = (sum(end, FINITE_KEYS) - sum(w0, FINITE_KEYS)) / span;
+      const once = (sum(end, ONCE_KEYS) - sum(w0, ONCE_KEYS)) / span;
+      const cont = full - fin - once;
+      A.push(full); F.push(fin); O.push(once); C.push(cont);
+      const rest = GOAL_DIA - v(end);
+      X.push(cont > 0 ? rep.days + rest / cont : Infinity);
+    }
+    if (!C.length) return null;
+    return { W, span, n: C.length, full: med(A), fin: med(F), once: med(O), cont: med(C), cross: med(X), crossI: medI(X) };
+  };
+  /* ⓑ 정상성 — 창 W 와 그 절반의 **지속** 기울기가 얼마나 어긋나는가(두 정책 중 나쁜 쪽). */
+  const WCAND = [3, 7, 14, 29];
+  const halfOf = (w) => { const c = WCAND.filter(x => x < w); return c.length ? c[c.length - 1] : 1; };
+  const statOf = (mode, w) => {
+    let worst = 0;
+    for (const pol of Object.keys(rep.policies)) {
+      const a = tailSplit(pol, mode, w), b = tailSplit(pol, mode, halfOf(w));
+      if (!a || !b || !(a.cont > 0)) return null;
+      worst = Math.max(worst, Math.abs(a.cont - b.cont) / a.cont);
+    }
+    return worst;
+  };
+  /* 규약: ⓐ W ≤ days−1(1일차 1회성 지급을 한 칸도 안 문다) ∧ ⓑ 정상성 ≤ 문턱 —
+     그중 **가장 큰 W**. 넓은 창일수록 «덩어리로 들어오는» 축의 창 위상 잡음이 평균된다
+     (probe199r27 [F]: 패스 기울기가 창마다 ×4.67 로 갈리고 어떤 창에서는 0 이다).
+     ⚠ 후보가 하나도 문턱을 못 넘으면 **고르지 않는다**(null) — 자를 결과에 맞추지 않기 위해
+     «규약이 창을 못 골랐다» 를 표가 그대로 말하게 한다. */
+  const wPick = (mode) => {
+    const cand = WCAND.filter(w => w < rep.days).map(w => ({ w, st: statOf(mode, w) }))
+                      .filter(x => x.st != null);
+    if (!cand.length) return null;
+    const ok = cand.filter(x => x.st <= TAIL_STAT_MAX);
+    return { cand, pick: ok.length ? ok[ok.length - 1] : null };
+  };
   /* ⚑ 20회차(19-10 정정1 — ZZ·AAA·AAB **3인 일치**) — [D] 가 잰 ① 판정 수를 [G] 가 그대로
      싣게 하는 자리. 재계산하지 않는다(표 두 벌 금지 · 18회차가 ④ 에 쓴 것과 같은 규약). */
   const JUDGE = {};
@@ -2199,6 +2267,35 @@ function writeReport(rep) {
         if (t2) L.push(`_⚠ 합 ${fmtN(tb.tot)} = **축별 p50 의 합**이고 [E2] ② 유입 장부 줄 ${fmtN(t2.p50)} 는 **합계의 p50** 이다`
           + ` — 시드가 다르면 med(합) ≠ Σ med(축)이라 어긋남 ${((tb.tot / (t2.p50 || 1) - 1) * 100).toFixed(2)}% 는 결함이 아니다.`
           + ` 판정에는 [E2] 줄을 쓰고, 이 표는 **구성비**를 읽어라._`);
+        L.push(`_⚑ 27회차 — 이 표의 축 중 **유한 트랙**(배제 목록 \`FINITE_KEYS\` = ${FINITE_KEYS.join(' · ')})은`
+          + ` 말미 창에서 «지속 수급» 이 아니다. 그 몫을 뺀 장부는 아래 [E4] 가 짓는다._`);
+        L.push('');
+      }
+    }
+    /* ⚑⚑ 27회차 신설 [E4] — 26-10 1번·2번. «④ 를 어느 창에서 어느 장부로 읽는가» 를
+       표가 스스로 말하게 한다. 26회차까지 이 둘은 본문에만 있었고([T5] 는 관측 행 하나),
+       그래서 25·26 두 회차가 «W7 하나에 걸린 판정» 위에서 지렛대를 골랐다. */
+    {
+      const rowsW = WCAND.filter(w => w < rep.days).map(w => ({ w, s: tailSplit(pol, 'summon', w), st: statOf('summon', w) }))
+                         .filter(x => x.s);
+      if (rowsW.length) {
+        const pk = wPick('summon');
+        L.push(`### [E4] ④ 말미 창 **규약** — 말미 정상 장부와 창 선택 — ${P} 〔27회차 신설 · 누적은 결2 ⓐ 그대로 · **기울기에서만** 일회성·유한 트랙을 뺀다〕`);
+        L.push('');
+        L.push('| 창 W | 전체 기울기 | 일회성 | **유한 트랙** | **정상 기울기** | **교차일(정상 장부)** | ⓑ 정상성(vs W⌊/2⌋) |');
+        L.push('|---|---|---|---|---|---|---|');
+        rowsW.forEach(x => {
+          const mark = pk && pk.pick && pk.pick.w === x.w ? ' ✅' : '';
+          L.push(`| **W${x.w}**${mark} | ${fmtN(x.s.full)} | ${fmtN(x.s.once)} | ${fmtN(x.s.fin)} | **${fmtN(x.s.cont)}** | ${Number.isFinite(x.s.cross) ? x.s.cross.toFixed(1) : '∞'} | ${x.st == null ? '—' : (100 * x.st).toFixed(1) + '%'} (vs W${halfOf(x.w)}) |`);
+        });
+        L.push('');
+        L.push(`_⚠ 네 칸은 **각각 시드별 p50** 이라 «전체 − 일회성 − 유한 = 정상» 은 항등식이 아니다`
+          + ` (med(a−b) ≠ med(a) − med(b) · [E3] 각주와 같은 병). 교차일은 **시드별 정상 기울기**로 밀므로`
+          + ` 판정에 쓰는 수는 «정상 기울기» 칸이다 — 세 칸의 뺄셈은 **구성비를 읽는 용도**다._`);
+        L.push('');
+        L.push(`_규약 ⓐ W ≤ ${rep.days - 1}(1일차 1회성 지급을 안 문다) ∧ ⓑ 정상성 ≤ ${(100 * TAIL_STAT_MAX).toFixed(0)}% — 그중 가장 큰 W._`
+          + (pk && pk.pick ? ` **채택 W${pk.pick.w}**(정상성 ${(100 * pk.pick.st).toFixed(1)}% · 문턱까지 여유 ${(100 * (TAIL_STAT_MAX - pk.pick.st)).toFixed(1)}%p).`
+                           : ' ⚠ **규약이 창을 못 골랐다** — 후보가 전부 문턱 밖이다(자를 결과에 맞추지 않기 위해 고르지 않는다).'));
         L.push('');
       }
     }
@@ -2421,6 +2518,23 @@ function writeReport(rep) {
         if (wsA[0]) {
           const W0 = wsA[0].WS;
           L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${nm} · p50〕 | ${wsA.map(x => x ? x.sp : '—').join(' | ')} | ${wsA[0].swing} (W${W0[0]}/W${W0[W0.length - 1]} · ${POLICIES[pols[0]].name}) |`);
+        }
+        /* ⚑⚑ 27회차 — 같은 줄을 **지속 장부**로 한 번 더. 26-8 이 «④ 의 통과를 패스 한 축이
+           떠받친다» 를 보였으므로, 그 축을 뺀 값이 판정 줄 **바로 아래** 서지 않으면 다음 회차는
+           또 전체 장부 하나만 보고 지렛대를 고른다. ⚠ 이름표에 «소환 예산 장부» 를 쓰지 않는다 —
+           `verify758.crossOfMd` 가 그 문자열로 판정 줄을 찾으므로 이 줄이 그것을 가리면 안 된다.
+           ⚠ 이 줄은 **관측**이다(§0 판정은 위 줄) — 25-7 이 못박은 «지날 수 없는 자는 다음
+           회차를 통째로 막는다» 를 되풀이하지 않기 위해서다. 판정으로 올릴지는 손잡이가 이 창을
+           지날 수 있게 된 뒤에 정한다. */
+        if (mode === 'summon') {
+          const pk = wPick('summon');
+          const wSel = pk && pk.pick ? pk.pick.w : null;
+          const s = pols.map(p => tailSplit(p, 'summon', wSel || undefined));
+          if (s[0]) {
+            const rr = !two ? NORATIO : (s[0] && s[1] && s[0].cross > 0 ? (s[1].cross / s[0].cross).toFixed(3) + ' (대충/부지런)' : '-');
+            L.push(`| ④ 교차일 — **관측** 〔**말미 정상 장부**(일회성 + 유한 트랙 \`${FINITE_KEYS.join('·')}\` 제외 기울기 · 누적은 결2 ⓐ 그대로) · 창 W${s[0].W}${wSel ? ' = 규약 채택' : ' (규약 미채택 — 기본 창)'}〕 | ${s.map(x => x ? (Number.isFinite(x.cross) ? x.cross.toFixed(1) + ' (보간 ' + x.crossI.toFixed(1) + ')' : '∞') : '—').join(' | ')} | ${rr} |`);
+            L.push(`| ② 말미 **정상(定常)** 기울기 — **관측** 〔같은 창 · 전체에서 일회성·유한 트랙을 뺀 값 · ⚠ [G] 위쪽 «지속 수급/일» 은 **일회성만** 뺀 30일 자라 다른 수다〕 | ${s.map(x => x ? `${fmtN(x.cont)} (전체 ${fmtN(x.full)} − 유한 ${fmtN(x.fin)} − 일회성 ${fmtN(x.once)})` : '—').join(' | ')} | ${!two ? NORATIO : (s[0] && s[1] && s[1].cont > 0 ? (s[0].cont / s[1].cont).toFixed(3) + ' (부지런/대충)' : '-')} |`);
+          }
         }
       }
       /* ⚑⚑ 20회차(19-10 정정2 · 16-3 «최고 회차 대조» 상설 규약) — «이 루프에서 처음» 이라는

@@ -55,7 +55,13 @@ const BASE_J = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-base-k.json')
    자가 그것을 재려면 **이 회차 트리로 찍은 표**를 봐야 한다), 표를 안 옮기면 [E1]·[E1b] 가
    «지금 제품» 이 아닌 사진을 재게 된다(25회차가 r24 표를 두고 겪을 뻔한 자리 · 같은 이유). */
 const CUR_J  = path.join(ROOT, 'docs/review/199-bot-2026-09-03-r26.json');
-const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-03-r26.md');
+/* ⚑ **199 27회차** — 이 회차는 **제품 계수를 한 줄도 안 건드렸다**(자·규약 회차). 그래서 표는
+   새로 굴리지 않고 같은 스냅(`r26.json`)을 **리플레이**해 [E4]·[G] 의 신설 행만 얹었다 —
+   26-10 1번의 «새 실행이 필요 없다 — 표는 이미 있다» 를 글자 그대로 따른 것이다.
+   ⇒ `CUR_J` 는 그대로 두고 `CUR_M` 만 옮긴다(두 파일은 **같은 런**이다 · md 머리글이 리플레이
+   출처를 스스로 적는다). 판정 줄의 수는 자릿수까지 r26 과 같아야 하고, 그것을 [U0] 이 지킨다. */
+const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-03-r27.md');
+const R26_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-03-r26.md');
 /* 23회차 표 — [S4] 가 «이 자가 그 결함을 실제로 잡는가» 를 되돌림 표본으로 쓴다(PM=15 세대) */
 const R23_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r23-both.md');
 /* 801 직후 표(= 25회차 직전 세대 · calib sha 가 base-k 와 **같다**) — [T2] 의 빨강 표본 */
@@ -464,6 +470,74 @@ function maxAxis(axes, total) {
     yes('[T4] 부지런 오프라인/일은 **내려왔다** (같은 두 표 · 하루 예산이 실제로 자른 축)',
         Number.isFinite(offDayCur) && Number.isFinite(casPre) && offDayCur < (preMd ? incOfMd(preMd, 'diligent').axes['오프라인'] / days : Infinity),
         fmt(offDayCur) + ' ↔ 직전 ' + fmt(preMd ? incOfMd(preMd, 'diligent').axes['오프라인'] / days : NaN));
+    /* ── [U] ④ 말미 창 **규약** — 27회차 신설 ────────────────────────────────
+       26-10 1번·2번 · [T5] 가 26회차에 «관측» 으로만 찍어 두고 넘긴 자리다. 26-8 이
+       «④ 의 통과(1.960)를 **패스 한 축**이 떠받친다» 를 커밋된 네 표만으로 보였으므로,
+       이 절이 지키는 것은 값이 아니라 **장부와 창의 규약**이다:
+         ⓐ 배제 목록이 코드에 선언돼 있고 «유한 트랙» 을 담는다        → [U1]
+         ⓑ 표가 그 목록으로 지은 «말미 정상 장부» 를 스스로 싣는다     → [U2]·[U3]
+         ⓒ 창은 규약(정상성)으로 고르고 문턱에 붙지 않는다             → [U4]
+         ⓓ 그 장부의 ④ 비는 **관측**으로 찍는다                        → [U5]
+       ⚠ [U5] 를 판정으로 올리지 않는 이유는 25-7 이 못박았다 — 지금 세대는 어느 후보도
+       이 창을 못 지나므로, 판정으로 세우면 «지날 수 없는 자» 가 다음 회차를 통째로 막는다.
+       판정 줄은 [T1] 그대로다. 이 절은 그 [T1] 이 **어느 장부의 수인지**를 표에 붙인다. */
+    console.log('\n[U] ④ 말미 창 규약 — 말미 정상 장부(일회성 + 유한 트랙 제외 기울기) · 27회차');
+    /* [U0] 이 회차 표는 r26 과 **같은 런의 리플레이**다 — 판정 줄이 자릿수까지 같아야 한다.
+       (같지 않으면 «자·규약만 고쳤다» 는 이 회차의 주장이 거짓이다.) */
+    const r26md = fs.existsSync(R26_M) ? fs.readFileSync(R26_M, 'utf8') : null;
+    const cr26 = r26md ? crossOfMd(r26md) : null;
+    yes('[U0] [전제] 이 회차 표는 r26 과 **같은 런**이다 — 판정 줄(교차일 비)이 자릿수까지 같다 (제품 계수 0줄의 증거)',
+        !!crC && !!cr26 && crC.dil === cr26.dil && crC.cas === cr26.cas,
+        crC && cr26 ? crC.dil + '/' + crC.cas + ' ↔ r26 ' + cr26.dil + '/' + cr26.cas : '(표 없음)');
+    const botSrc = fs.readFileSync(path.join(ROOT, 'tools/bot199.js'), 'utf8');
+    const mFin = botSrc.match(/const\s+FINITE_KEYS\s*=\s*\[([^\]]*)\]/);
+    yes('[U1] 자에 **배제 목록 `FINITE_KEYS`** 선언이 있고 «패스» 를 담는다 (되돌림: 목록을 비우면 정상 장부 = 전체 장부)',
+        !!mFin && /패스/.test(mFin[1]), mFin ? mFin[1].trim() : '(선언 없음)');
+    /* [E4] 표 — 채택 행(✅)을 두 정책에서 다 읽는다. 표가 스스로 적은 네 수로 산술을 검산한다. */
+    const e4Of = (md, pol) => {
+      const head = '### [E4] ④ 말미 창 **규약**';
+      const seg = md.split(head).filter(s => s.slice(0, 120).includes(POLNAME[pol]))[0];
+      if (!seg) return null;
+      const line = seg.split('\n').filter(l => /^\|\s*\*\*W\d+\*\*\s*✅/.test(l))[0];
+      if (!line) return null;
+      const c = line.split('|').map(s => s.trim());
+      const num = s => Number(String(s).replace(/[^\d.]/g, ''));
+      return { W: num(c[1]), full: num(c[2]), once: num(c[3]), fin: num(c[4]), cont: num(c[5]), cross: num(c[6]), stat: parseFloat(c[7]) };
+    };
+    const e4D = e4Of(cmd, 'diligent'), e4C = e4Of(cmd, 'casual');
+    yes('[U2] 표 [E4] 가 **두 정책 다** 창을 규약으로 골랐다(✅ 채택 행이 있다)',
+        !!e4D && !!e4C, e4D && e4C ? 'W' + e4D.W + ' · W' + e4C.W : '(채택 행 없음)');
+    /* ⚠ **초판이 이 항을 «항등식» 으로 세웠다가 대충에서 빨개졌다**(24,738−3,794=20,944 ✅ ·
+       21,307−5,804=15,503 ↔ 표 15,613 = +0.70%). 결함이 아니라 **네 칸이 각각 시드별 p50** 이라
+       그렇다 — med(a−b) ≠ med(a) − med(b). [E3] 이 이미 같은 어긋남을 각주로 적어 둔 자리이고
+       («med(합) ≠ Σ med(축)»), 교차일은 **시드별 정상 기울기**로 밀므로 판정에 쓰는 수는
+       `cont` 칸이 맞다. ⇒ 항등식이 아니라 **정합 밴드**로 세운다(±2% — 이 세대 실측 0.70% 의
+       세 배 미만이라 «맞춰 놓은 문턱» 이 아니다). 표도 그 사실을 각주로 스스로 적는다. */
+    const identOff = (x) => Math.abs((x.full - x.once - x.fin) - x.cont) / Math.max(1, x.cont);
+    yes('[U3] 채택 행의 **정합** — 정상 ≈ 전체 − 일회성 − 유한 (±2% · 네 칸이 각각 시드별 p50 이라 항등식이 아니다)',
+        !!e4D && !!e4C && identOff(e4D) <= 0.02 && identOff(e4C) <= 0.02,
+        e4D && e4C ? `부지런 ${fmt(e4D.full)}−${fmt(e4D.once)}−${fmt(e4D.fin)}=${fmt(e4D.full - e4D.once - e4D.fin)} ↔ ${fmt(e4D.cont)} (${(100 * identOff(e4D)).toFixed(2)}%) · 대충 ${fmt(e4C.full - e4C.once - e4C.fin)} ↔ ${fmt(e4C.cont)} (${(100 * identOff(e4C)).toFixed(2)}%)` : '(행 없음)');
+    /* 문턱에 **붙지 않는다** — 574·709·825 가 겪은 «문턱 플레이키» 를 규약 자신이 되풀이하지
+       않게 하는 항이다. 여유 2%p 는 이 세대 실측(10.0% vs 15%)의 절반보다 작은 값이다. */
+    yes('[U4] 채택 창의 ⓑ 정상성이 문턱(15%)에 **붙지 않는다** — 여유 ≥ 2%p (문턱 플레이키 예방 · 574·709·825 계보)',
+        !!e4D && !!e4C && e4D.stat <= 13 && e4C.stat <= 13,
+        e4D && e4C ? e4D.stat + '% · ' + e4C.stat + '%' : '(행 없음)');
+    /* [U5] 관측 — 정상 장부의 ④ 비. [G] 의 신설 행에서 읽는다(라벨에 «소환 예산 장부» 를
+       안 쓰므로 crossOfMd 의 판정 줄과 섞이지 않는다). */
+    const uLine = (cmd.split('\n').filter(l => /④ 교차일 — \*\*관측\*\*/.test(l) && /말미 정상 장부/.test(l) && l.split('|').length >= 6)[0]) || null;
+    const uNum = s => { const m = String(s).match(/([\d,]+(?:\.\d+)?)/); return m ? Number(m[1].replace(/,/g, '')) : NaN; };
+    const uD = uLine ? uNum(uLine.split('|')[2]) : NaN, uC = uLine ? uNum(uLine.split('|')[3]) : NaN;
+    const uRatio = uD > 0 ? uC / uD : NaN;
+    R.push({ n: '[U5] ④ 비 — **말미 정상 장부** 〔관측 · 판정은 [T1]〕 · §0 창 ' + RATIO_LO + '~' + RATIO_HI,
+             got: Number.isFinite(uRatio) ? uRatio.toFixed(3) + (uRatio < RATIO_LO ? ` (창 밖 ${((uRatio / RATIO_LO - 1) * 100).toFixed(1)}%)` : '') : '(행 없음)',
+             want: '(기록)', pass: !!uLine });
+    /* [전제] — 이 회차의 발견 자체가 실재하는가. 전체 장부와 정상 장부의 ④ 비가 거의 같다면
+       26-8 의 «패스가 떠받친다» 도, 이 절의 규약도 잴 것이 없다는 뜻이다. */
+    yes('[U6] [전제] **장부를 바꾸면 ④ 비가 실제로 달라진다** — 전체 ↔ 정상 차 ≥ 10% (이 회차의 발견이 실재한다)',
+        !!crC && Number.isFinite(uRatio) && Math.abs(crC.ratio - uRatio) / crC.ratio >= 0.10,
+        crC && Number.isFinite(uRatio) ? crC.ratio.toFixed(3) + ' ↔ ' + uRatio.toFixed(3)
+              + ' (' + (100 * (uRatio - crC.ratio) / crC.ratio).toFixed(1) + '%)' : '(행 없음)');
+
   }
 
   /* ── 결과 ─────────────────────────────────────────────────────────────── */
