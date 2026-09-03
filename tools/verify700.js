@@ -251,21 +251,22 @@ function preTree() {
      +33.77 · lintelt +8.08). 1600 은 캡이 안 걸린 프레임이라 값이 따로다.
      ⚠ `capl +40 · capw −80` 은 **안내문 상자 좁히기**(left/right 0 → 40)다 — 잉크는 가운데
        정렬이라 그려지는 자리는 Δ0px 이고, 바뀐 것은 상자뿐이다(`verify813` [2d]가 그 이유). */
+  /* ⚑ 813 6회차 — 표를 다시 적었다(5회차가 그랬던 이유 그대로). 이 자의 기준은
+     `merge-base origin/main HEAD` 라 main 에 들어간 앞 회차(859 r1~r3 · 813 r1~r5)의 이동은
+     이제 전부 Δ0 으로 읽힌다 — 옛 값을 남겨 두면 «등재된 이동을 기다리는데 실제는 0» 이 되고,
+     그 자리에 새 이동이 겹치면 두 번 세어진다. 아래는 `P813_DUMP=1` 출력 그대로다.
+     출처는 **하나**다 — 안내문 아래 블록의 분할 계수 `.375 → .468`(6회차 [3] 의 새 대역)이
+     안내문 상자를 **3.36px 올린다**. 잉크·수반·격자·바는 한 픽셀도 안 움직인다
+     (총량 36 은 불변이라 위·아래의 나눔만 바뀐다 — `verify813` [1a]).
+     옛 표(813 r2~r5 누적: basint/costt/labt/midt/stepst +57.69 · gridt/floort/groundt +33.77 ·
+     lintelt +8.08 · capt +21.64 · capl +40 · capw −80 · 1600 은 캡이 안 걸려 따로)는
+     이 주석에 남긴다 — 어디서 왔는지를 지우지 않는다(333). */
   const ALLOW813 = {
-    1600: { basint: 46, costt: 46, labt: 46, midt: 46, stepst: 46,
-            floort: 26, groundt: 26, floorh: -26, groundh: -26,
-            gridt: 3, capt: 18.5, capl: 40, capw: -80 },
-    1920: { basint: 57.69, costt: 57.69, labt: 57.69, midt: 57.69, stepst: 57.69,
-            floort: 33.77, groundt: 33.77, floorh: -33.77, groundh: -33.77,
-            gridt: 33.77, lintelt: 8.08, capt: 21.64, capl: 40, capw: -80 },
-    2280: { basint: 57.69, costt: 57.69, labt: 57.69, midt: 57.69, stepst: 57.69,
-            floort: 33.77, groundt: 33.77, floorh: -33.77, groundh: -33.77,
-            gridt: 33.77, lintelt: 8.08, capt: 21.64, capl: 40, capw: -80 },
-    2600: { basint: 57.69, costt: 57.69, labt: 57.69, midt: 57.69, stepst: 57.69,
-            floort: 33.77, groundt: 33.77, floorh: -33.77, groundh: -33.77,
-            gridt: 33.77, lintelt: 8.08, capt: 21.64, capl: 40, capw: -80 },
+    1600: { capt: -3.36 },
+    1920: { capt: -3.36 },
+    2280: { capt: -3.36 },
+    2600: { capt: -3.36 },
   };
-
   {
     const pre = preTree();
     if (!pre.ok) {

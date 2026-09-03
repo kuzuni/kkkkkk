@@ -85,9 +85,10 @@ const MEASURE = `(() => {
   const lines = [...document.querySelectorAll('#relw .rw-cap p')].map(el => {
     const rg = document.createRange(); rg.selectNodeContents(el);
     const b = rg.getBoundingClientRect();
-    return { x1: b.left, x2: b.right, y2: b.bottom };
+    return { x1: b.left, x2: b.right, y1: b.top, y2: b.bottom };
   });
   const last = lines[lines.length - 1];
+  const first = lines[0];
   const fcr = document.querySelector('#relw .rw-fc.bl').getBoundingClientRect();
   const ov = lines.reduce((m, L) =>
     Math.max(m, Math.min(L.x2, fcr.right) - Math.max(L.x1, fcr.left)), 0);
@@ -112,7 +113,11 @@ const MEASURE = `(() => {
     capBoxOverlap: +Math.max(0, Math.min(document.querySelector('#relw .rw-cap').getBoundingClientRect().right, fcr.right)
                               - Math.max(document.querySelector('#relw .rw-cap').getBoundingClientRect().left, fcr.left)).toFixed(2),
     visGap: +(p.b - last.y2).toFixed(2),         /* 눈에 보이는 여백 — 잉크 하변 → 패널 안쪽 하변 */
-    above: +(o.cap.t - o.mid.b).toFixed(2),      /* 안내문 위 여백 */
+    /* 6회차 신설 — 위쪽도 **잉크**로 잰다(scan813c 가 레퍼런스를 잰 것과 같은 축).
+       상자로만 재던 [3] 이 «상자 위 여유»(잉크 상변이 상자 상변보다 아래) 만큼 늘 위를
+       크게 봐서, 레퍼런스(잉크)와 우리(상자)를 서로 다른 자로 견주고 있었다. */
+    visAbove: +(first.y1 - (p.t + o.mid.b)).toFixed(2),   /* 수반 하변 → 첫 줄 잉크 상변 */
+    above: +(o.cap.t - o.mid.b).toFixed(2),      /* 안내문 위 여백 — 상자 기준(참고값) */
     av: +Math.min(186, (o.mid.t - 516 - 174) / 2).toFixed(2),
     arch: +(516 + 2 * Math.min(186, (o.mid.t - 516 - 174) / 2)).toFixed(2),
     /* 2회차 — 식을 옮겨 적지 않고 **그려진 것에서** 되잰다: --rw-fl (= gt + 516 + av)을 얹은
@@ -208,11 +213,26 @@ async function sweep(browser, url) {
      2회차 [E4] 가 그 값을 대역 안으로 끌어왔다. ⇒ 항의 방향을 뒤집는다(333 처방).
      ⚠ 1600 만 0.64 인 것은 코너 브래킷 하한 32 가 이기기 때문이라 대역을 0.65 까지 연다 —
        그 이유가 아닌 이탈은 [R1] 이 잡는다(옛 식은 1.16 이라 대역 밖으로 한참 나간다). */
+  /* ⚑⚑ 6회차 — **대역도 축도 갈아 끼웠다**(5회차 §22 «1. 세 번째 자를 세워 갈라라»).
+     5회차 채점 CP·CQ 가 각자 레퍼런스를 재 **0.75 / 0.82** 를 냈다 — 1회차 CF·CG 의
+     0.58~0.62 와 **2 대 2** 이고 세대가 다르다. `tools/scan813c.py`(세 번째 자 · 사람 눈이
+     아니라 화소)가 갈랐다:
+       · 받침 밑판은 **아래로 넓어지는 사다리꼴**이다 — 윗변 y617(연속 113px) · 아랫변 y629(127px).
+       · 그 **아랫변**에서 재면 위 10 ref px = 22.2 · 아래 9 ref px = 20.0 ⇒ 비 **0.90**.
+       · 밑판 **안쪽**(y622~625)에서 재면 위 14~17 ref px = **31~38 프레임 px** = CF·CG 의 값 그대로다.
+     ⇒ 두 세대는 다투고 있던 게 아니라 **다른 지형지물**을 쟀다. 정의(r5 브리핑 «받침 밑판
+     외곽선의 최하단»)를 따르는 것은 아랫변이므로 **5회차 쪽이 이긴다**. 아래 20.0 은 세 자
+     (CP·CQ·scan813c)가 **소수점까지 일치**해 이 자의 정합성을 스스로 증명한다.
+     ⚠ **축도 바꿨다** — 세 자 전부 **잉크**로 쟀는데 이 항만 **상자**로 재고 있었다(상자 위 여유
+     4~6px 만큼 위를 늘 크게 본다). `visAbove`/`visGap` 로 견준다 = 레퍼런스와 같은 자.
+     대역 0.72~0.95 = 세 값(0.75 · 0.82 · 0.90)을 담되 1회차 대역(0.58~0.62)과 겹치지 않는다. */
   {
-    const ratio = FRAMES.map(H => +(r[H].g3 / r[H].above).toFixed(3));
-    ok(ratio.every(v => v >= 0.57 && v <= 0.66),
-      '[3] 안내문 아래/위 비가 **레퍼런스 대역 0.58~0.65** 안 (1회차 1.16~2.74 에서 뒤집었다)',
-      FRAMES.map((H, i) => H + ':' + ratio[i]).join(' · ') + ' · ref 0.58~0.62(CF·CG 독립 일치)');
+    const ratio = FRAMES.map(H => +(r[H].visGap / r[H].visAbove).toFixed(3));
+    ok(ratio.every(v => v >= 0.72 && v <= 0.95),
+      '[3] 안내문 **잉크** 아래/위 비가 **레퍼런스 대역 0.72~0.95** 안 (1회차 1.16~2.74 에서 뒤집고, 6회차에 축을 상자 → 잉크로)',
+      FRAMES.map((H, i) => H + ':' + ratio[i]).join(' · ') +
+      ' · ref 0.75(CP) · 0.82(CQ) · 0.90(scan813c) · 상자 기준 참고 ' +
+      FRAMES.map(H => (r[H].g3 / r[H].above).toFixed(2)).join('/'));
   }
 
   /* ── [4] 대가 — **아치를 안 먹었다** ──────────────────────────────────
@@ -306,7 +326,8 @@ async function sweep(browser, url) {
       /* 5회차 — 선언의 `38px` 가 `12px` 로 바뀌어 잡는 문자열만 옮겼다(묻는 것은 그대로). */
       ['R1', '[E4] 안내문 ref 비 분할을 옛 «고정 여백» 으로 되돌린다 ⇒ [3] 이 대역 밖으로',
         '+ 12px * var(--rwc,1) + var(--rw-g3) - var(--rw-i));', '+ 38px);',
-        (rv) => { const v = rv[2280].g3 / rv[2280].above; return { bad: !(v >= 0.57 && v <= 0.66), got: '2280 아래/위 ' + v.toFixed(2) }; }],
+        (rv) => { const v = rv[2280].visGap / rv[2280].visAbove;
+                  return { bad: !(v >= 0.72 && v <= 0.95), got: '2280 잉크 아래/위 ' + v.toFixed(2) }; }],
       /* ── ⚑ 5회차 — R2 도 **죽은 지렛대가 됐다**(R3·R4 가 859 에서 겪은 것과 같은 꼴). ──
          [E2] 의 벽 하한 232 는 2회차에 gt 를 끌어올리던 자였는데, 5회차가 총량을 내려 tt 가
          자라자 `tt × .48`(312.5)이 232 를 한참 위에서 이긴다 ⇒ 232 를 0 으로 지워도 **한 픽셀도
@@ -364,6 +385,13 @@ async function sweep(browser, url) {
         '.rw-cap{left:40px;right:40px;', '.rw-cap{left:0;right:0;',
         (rv) => { const m = Math.max(...FRAMES.map(H => rv[H].capBoxOverlap));
                   return { bad: m > 0, got: '상자 × 브래킷 가로 겹침 ' + m.toFixed(1) + 'px' }; }],
+      /* ⚑ 6회차 신설 — 이 회차가 옮긴 것은 **분할 계수 하나**다. 그 한 자리를 5회차 값으로
+         되돌리면 [3] 이 실제로 빨개지는지 묻는다. 안 빨개지면 이 회차는 «아무것도 안 한
+         회차» 이고, [3] 의 새 대역이 그냥 넓어진 것(= 무른 수리)이라는 뜻이다. */
+      ['R7', '**6회차의 .468 분할**을 5회차 .375 로 되돌리면 [3] 이 대역 아래로 — 대역을 넓힌 게 아니라 값을 옮겼다',
+        'var(--rw-g3)) * .468));', 'var(--rw-g3)) * .375));',
+        (rv) => { const v = rv[2280].visGap / rv[2280].visAbove;
+                  return { bad: !(v >= 0.72 && v <= 0.95), got: '2280 잉크 아래/위 ' + v.toFixed(3) + ' (6회차 0.901)' }; }],
     ];
     for (const [id, why, from, to, judge] of REV) {
       if (src.indexOf(from) < 0) { ok(false, `[${id}] 되돌림 사본을 못 만들었다 — 선언 문자열이 안 잡힌다`, from); continue; }
