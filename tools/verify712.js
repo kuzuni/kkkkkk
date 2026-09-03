@@ -154,8 +154,15 @@ const p498 = fs.readFileSync(P498, 'utf8');
 console.log('[A] 정적 — 폐지된 축을 안 읽고 살아 있는 축을 읽는다');
 yes('[A1] 제품에 `OFF_MAX_H` 선언이 없다 (199 21회차가 선언째 걷어냈다)',
     !/const\s+OFF_MAX_H\s*=/.test(SRC));
-yes('[A2] 제품에 `OFF_DAY_CAP_MIN`·`OFF_DIA_PM` 선언이 있다',
-    /const\s+OFF_DAY_CAP_MIN\s*=\s*\d+/.test(SRC) && /const\s+OFF_DIA_PM\s*=\s*\d+/.test(SRC));
+/* ⚑ 199 30회차 이관 — 여기는 **조용한 초록**이었다: `\d+` 는 «2.7» 의 «2» 에 걸려
+   소수 상수를 «선언이 있다» 로 통과시키면서 **소수부를 한 번도 안 본다**. 30회차가 이 상수를
+   2.7 로 내리며 드러났다(같은 병의 `verify758` 쪽은 NaN 으로 **빨개져** 스스로를 알렸는데,
+   이쪽은 안 알렸다 — 더 나쁜 쪽이다). 선언 전체를 «정수 또는 소수» 로 받고 **값까지 읽는다**. */
+const mCapD = SRC.match(/const\s+OFF_DAY_CAP_MIN\s*=\s*(\d+(?:\.\d+)?)\s*;/);
+const mPmD  = SRC.match(/const\s+OFF_DIA_PM\s*=\s*(\d+(?:\.\d+)?)\s*;/);
+yes('[A2] 제품에 `OFF_DAY_CAP_MIN`·`OFF_DIA_PM` 선언이 있다 (소수 상수도 **끝까지** 읽는다 — 30회차 이관)',
+    !!mCapD && !!mPmD && Number(mCapD[1]) > 0 && Number(mPmD[1]) > 0,
+    mCapD && mPmD ? mCapD[1] + '분 · ' + mPmD[1] + '/분' : '(못 읽음)');
 yes('[A3] verify498 이 `OFF_MAX_H` 를 주석 밖에서 더는 안 읽는다', !/OFF_MAX_H/.test(bare(v498)));
 yes('[A4] probe498 이 `OFF_MAX_H` 를 주석 밖에서 더는 안 읽는다', !/OFF_MAX_H/.test(bare(p498)));
 yes('[A5] verify498 이 살아 있는 두 축을 **둘 다** 읽는다',
@@ -204,7 +211,13 @@ if (b) {
   eq('[B1] 1회 수령은 `OFF_CLAIM_CAP_H`(10.5h)가 먼저 자른다 — 잘린 초 (199 22회차 정정5)',
      b.sec1, (b.cph || 0) * 3600);
   eq('[B2] 이용권 배율은 기본 ×1 이다 (표본에 배율이 안 섞였다)', b.mul, 1);
-  eq('[B3] **게이트 식 = 제품 실지급** (OFF_DAY_CAP_MIN × OFF_DIA_PM ↔ 하루 여러 번 수령의 합)', b.gate, b.real);
+  /* ⚑ 199 30회차 이관 — `eq`(문자열 정확 일치)는 **정수 상수 세대**의 자다. 30회차가
+     `OFF_DIA_PM` 을 2.7 로 내리자 660 × 2.7 이 **1782.0000000000002** 로 떨어져
+     «게이트 식 ↔ 실지급» 이 같은 값인데도 빨개졌다(부동소수 표현 오차 · 제품·자 둘 다 옳다).
+     ⇒ 값을 바꾸지 않고 **비교만** 부동소수 허용치로 바꾼다(1e-6 — 상수 한 눈금 0.1 은 여전히 빨강). */
+  yes('[B3] **게이트 식 = 제품 실지급** (OFF_DAY_CAP_MIN × OFF_DIA_PM ↔ 하루 여러 번 수령의 합)',
+      Number.isFinite(b.gate) && Number.isFinite(b.real) && Math.abs(b.gate - b.real) < 1e-6,
+      b.gate + ' ↔ ' + b.real);
   eq('[B3b] 그 하루가 예산 분을 정확히 소진한다', b.spent, b.cap);
   /* 음성항 — 옛 식은 실지급과 다르다. 이 항이 빨개지면 «이름만 갈아도 같은 값» 이라는 뜻이라
      [B3] 이 아무것도 안 지키는 것이 된다(348 [전제] 규약 — 자가 무엇을 잴 수 있는지부터 잰다). */
