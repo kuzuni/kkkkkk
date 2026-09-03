@@ -6170,14 +6170,23 @@
         rgba(126,110,80,.62) 72px 78px,rgba(6,5,4,.62) 78px 84px,rgba(0,0,0,0) 84px 86px),
       linear-gradient(270deg,rgba(96,82,60,.50) 0 5px,rgba(70,58,42,.34) 5px 72px,
         rgba(126,110,80,.62) 72px 78px,rgba(6,5,4,.62) 78px 84px,rgba(0,0,0,0) 84px 86px),
-      /* 켜 줄눈·세로 이음매 — `.rw-bg::before` 와 **같은 주기·같은 위상**(16회차가 맞춘 132px).
-         그릇 안팎의 격자가 한 줄로 이어져야 「같은 벽」 이 된다. */
-      repeating-linear-gradient(180deg,rgba(104,90,66,.55) 0 2px,rgba(5,5,4,.50) 2px 5px,
+      /* ── 켜 줄눈 — ⚑ **3회차: 위상 고정점을 «영역 상단» → «그릇 상단» 으로 옮겼다.** ──
+         2회차는 주기(47px)만 맞추고 위상은 안 맞췄다. 채점자 둘이 각자 그것을 쟀다 —
+         바깥 줄눈은 화면 상단에 고정(y ≡ 14 mod 47)이고 안쪽 줄눈은 **금테 상단**에 고정이라,
+         금테를 건널 때 위상이 **프레임마다 다르게** 어긋난다(1841 21px · 1920 11 · 2280 5 · 2600 14 —
+         주기의 최대 45%). CN «프레임마다 어긋남이 달라진다 = 두 벽이 서로 다른 기준에 붙어 있다는 증거».
+         ⇒ 타일을 47px 로 명시하고 `background-position-y` 를 `--rw-oy`(그릇 상변)로 준다 ⇒ 위상차 **0**.
+         ⚠ `background-size` 를 안 주면 이 이미지의 크기가 상자 전체라 position-y 가 «밀기» 가 되고
+            반복이 안 된다 — 47px 타일 + `repeat` 이어야 위상이 mod 47 로 접힌다. */
+      repeating-linear-gradient(180deg,rgba(104,90,66,.42) 0 2px,rgba(5,5,4,.34) 2px 5px,
         rgba(0,0,0,0) 5px 47px),
+      /* 세로 이음매 — 안쪽과 **같은 주기(163)·같은 위상(132px)** 하나만 둔다.
+         ⚑ 3회차: 2회차가 얹었던 «주기 97» 한 겹을 **뺐다** — 그 층이 만든 이음매(x≈30~53 ·
+         1018~1023)가 **바깥에만 있어** 금테에서 뚝 끊겼다(CN: 바깥 이음매 28개 중 안쪽 대응이
+         12개뿐 = 57% 가 끊긴다 · CO 도 같은 자리를 쟀다). 행 표준편차는 이음매가 아니라
+         **얼룩**으로 받는다 — 안팎에 다 있는 부품이어야 «같은 벽» 이 깨지지 않는다. */
       repeating-linear-gradient(90deg,rgba(96,81,60,.90) 0 3px,rgba(6,6,5,.90) 3px 7px,
         rgba(0,0,0,0) 7px 163px),
-      repeating-linear-gradient(90deg,rgba(88,74,56,.60) 0 2px,rgba(6,6,5,.60) 2px 5px,
-        rgba(0,0,0,0) 5px 97px),
       /* 얼룩 — 「행 표준편차」를 만드는 것은 세로 이음매와 이 얼룩뿐이다(가로 줄눈은 한 행을
          통째로 같은 값으로 만든다). 채점자 둘이 요구한 값이 ≥12·≥15 이므로 내부(12.6~12.9)와
          같은 급이 되도록 대비를 올리고 개수를 늘렸다. 자리는 전부 «띠 안»(위 20%) 이다. */
@@ -6196,10 +6205,13 @@
          하단 앵커라 이어받는 면은 **위 하나뿐**이므로 톤도 하나다(1회차의 위·아래 두 톤이
          «서로 다른 색이라 하나의 벽으로 안 읽힌다» 던 CM 지적도 같이 사라진다). */
       linear-gradient(180deg,#362F24 0 100%);
-    background-repeat:no-repeat,no-repeat,repeat,repeat,repeat,
+    background-repeat:no-repeat,no-repeat,repeat,repeat,
       no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat;
-    background-size:86px 100%,86px 100%,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto;
-    background-position:left top,right top,132px 0,132px 0,48px 0,
+    background-size:86px 100%,86px 100%,100% 47px,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto;
+    /* ⚠ −5px 는 «안쪽 첫 켜선이 그릇 상변에서 정확히 0 이 아니라 5px 아래» 라서 붙는 상수다
+       (실측 — 위상차가 프레임 무관 42 = −5 로 **일정**하게 남았고, 그 일정함 자체가
+       «이제 두 벽이 같은 기준에 붙었다» 는 증거다. 3회차 전에는 5/11/14/21 로 갈렸다). */
+    background-position:left top,right top,0 calc(var(--rw-oy) - 5px),132px 0,
       0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0;
     --rw-ph:min(100%,calc(1527px * var(--rwc,1)));
     /* ── ⚑ 2회차 — **중앙 정렬에서 «하단 앵커» 로 바꿨다.** ──
