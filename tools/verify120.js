@@ -14,7 +14,9 @@
      ⑤ 잘림 0 — 모든 내용 요소가 패널 안에 들어온다(패널은 overflow:hidden 이라 넘치면 잘린다).
      ⑥ 여백은 «구획 사이» 에만 있고 전부 양수다 — 가용이 짧아질수록 네 여백이 **같은 비율로**
         줄어드는가(레퍼런스 320:337:23:27). 짧은 프레임에서 여백이 음수(=겹침)로 뒤집히지 않는지.
-     ⑦ 89 측정 규격 불변 — 슬롯 151² · 수반 400×216 · 코스트 278×53 · 가로 중심 540.
+     ⑦ 89 측정 규격 불변 — 슬롯 151² · 수반 400×**226** · 코스트 **260×57.8** · 가로 중심 540.
+        (866 이관 — 그린 수반이 ref 보다 세로로 −4.6% 눌리고 알약이 폭으로 +8.6% 부풀어 있었다.
+         상수는 «그때 그린 값» 이 아니라 **레퍼런스 환산값**을 적는다: `probe866.py` 참조.)
      ⑧ 탭바 5칸 히트테스트 25/25 회귀(100 이 잡은 «탭이 안 눌림» 이 되살아나지 않는지).
 
    실행: node tools/verify120.js       → 마지막 줄 VERIFY120 n/n PASS
@@ -263,7 +265,7 @@ const inter = (a, b) => {
       /* ⑥ 네 여백 전부 양수 + 레퍼런스 비율 */
       /* 859 — 예산은 패널이 아니라 **그릇** 위에서 돈다(CSS 의 `100%` 가 그릇 높이로 풀린다). */
       const gaps = [r.grid.t - W.t, r.mid.t - r.grid.b, r.cap.t - r.mid.b, W.b - r.cap.b];
-      const spare = W.h - 820;
+      const spare = W.h - 830;   /* 866 — 내용 3구획 516 + 226(수반) + 88 */
       ck(`[${H}] ⑥ 여백 4곳 전부 양수 (구획 겹침 0)`, gaps.every(g => g > 0.5),
         gaps.map(g => g.toFixed(1)).join(' / '));
       /* gap2(수반↔안내문)는 **고정 38px** 이다 — 비례로 키우면 프레임이 길어질수록
@@ -274,7 +276,7 @@ const inter = (a, b) => {
            gt = clamp(av + 82,  min(spare × .5075, 600),  T − av − 137) */
       /* 813 5회차 — clamp 이 아니라 상수 24 다(제품과 같은 값 · 위 GAP2_PX 주석). */
       const g3 = G3_CONST;
-      const bt = W.h - 88 - g3 - GAP2_PX - 216;    /* 수반 구획 상변(그릇 기준 — 859) */
+      const bt = W.h - 88 - g3 - GAP2_PX - 226;    /* 수반 구획 상변(그릇 기준 — 859 · 866 이 216 → 226) */
       const T = bt - 516;
       /* 16회차 — «아래 최소» 137 → 80 (받침 40 + 접합선 띠 13 + 바닥 27). 계단 최소 1단 84 를 뺐다.
          따라서 av 상한식의 231(=94+137) → 174(=94+80). 1600 만 이 상한에 걸리므로 1600 만 움직인다.
@@ -405,9 +407,9 @@ const inter = (a, b) => {
       const sizeBad = r.slots.find(s => Math.abs(s.w - 151) > 0.6 || Math.abs(s.h - 151) > 0.6);
       ck(`[${H}] ⑦ 슬롯 10칸 전부 151×151`, r.slots.length === 10 && !sizeBad,
         sizeBad ? `${sizeBad.w.toFixed(1)}×${sizeBad.h.toFixed(1)}` : `10칸 OK`);
-      ck(`[${H}] ⑦ 수반 400×216 · 코스트 278×53 · 가로 중심 540`,
-        Math.abs(r.basin.w - 400) < 0.6 && Math.abs(r.basin.h - 216) < 0.6 &&
-        Math.abs(r.cost.w - 278) < 0.6 && Math.abs(r.cost.h - 53) < 0.6 &&
+      ck(`[${H}] ⑦ 수반 400×226 · 코스트 260×57.8 · 가로 중심 540`,
+        Math.abs(r.basin.w - 400) < 0.6 && Math.abs(r.basin.h - 226) < 0.6 &&
+        Math.abs(r.cost.w - 260) < 0.6 && Math.abs(r.cost.h - 57.8) < 0.6 &&
         Math.abs((r.basin.l + r.basin.r) / 2 - 540) < 0.6,
         `수반 ${r.basin.w.toFixed(1)}×${r.basin.h.toFixed(1)} · 코스트 ${r.cost.w.toFixed(1)}×${r.cost.h.toFixed(1)}`);
 

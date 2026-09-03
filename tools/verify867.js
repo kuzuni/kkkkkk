@@ -50,7 +50,7 @@ const MEASURE = `(() => {
                           h: +o.h.toFixed(2), l: +o.l.toFixed(2), w: +(o.r - o.l).toFixed(2) };
   /* ⚠ getBoundingClientRect 는 transform:scale(--rwc) 가 **먹은 뒤**의 상자다
      (이 절은 통째로 템플릿 문자열이라 여기서는 백틱을 쓰지 마라) —
-     셸 규격(98 × 724 @ 178)은 CSS 값이므로 레이아웃 상자(offset*)로 물어야 한다.
+     셸 규격(98 × **646 @ 216** — 866 이관)은 CSS 값이므로 레이아웃 상자(offset*)로 물어야 한다.
      둘을 섞으면 «셸을 줄였다» 와 «그릇이 줄었다» 를 구분 못 한다(1회차에 밟았다). */
   const mulEl = document.getElementById('rwMulBar');
   const lay = mulEl ? { h: mulEl.offsetHeight, w: mulEl.offsetWidth, l: mulEl.offsetLeft } : null;
@@ -92,8 +92,12 @@ async function sweep(browser, url) {
   ok(FRAMES.every(H => Math.abs(r[H].gapDown - PED_GAP) <= 1),
     '[1] 바 하변 ↔ 받침 상변 = 12px — 다섯 프레임 전부 같은 값(`--rw-fl` 에서 거꾸로 올린다)',
     at('gapDown'));
-  ok(FRAMES.every(H => r[H].lay && r[H].lay.h === SHELL_H && r[H].lay.w === 724 && r[H].lay.l === 178),
-    '[1b] 셸 규격은 안 건드렸다 — 레이아웃 상자 98 × 724 @ 178 (96·437 규약 · 713 칸 폭)',
+  /* ⚑ 866 이관 — 폭·좌가 **724@178 → 646@216** 으로 옮겨졌다. 867 이 지킨 것은 «셸을
+     안 건드렸다» 가 아니라 «**세로 자리만** 옮겼다» 이므로, 이 항이 묻는 것은 그대로 두고
+     상수만 따라간다(높이 98 은 여전히 96·437 규약이다). 866 이 옮긴 이유는 가로가 격자
+     어느 모듈에도 안 맞았기 때문이고(813 5회차 CP·CQ), 새 값은 3열 행 216..862 의 span 이다. */
+  ok(FRAMES.every(H => r[H].lay && r[H].lay.h === SHELL_H && r[H].lay.w === 646 && r[H].lay.l === 216),
+    '[1b] 셸 높이는 안 건드렸다 — 레이아웃 상자 98 × 646 @ 216 (96·437 규약 · 866 이 격자 모듈로)',
     FRAMES.map(H => H + ':' + r[H].lay.h + '×' + r[H].lay.w + '@' + r[H].lay.l).join(' · '));
 
   /* ── [2] 읽힘 — CP·CQ 의 1순위를 새 이웃 기준으로 다시 묻는다 ──────────── */

@@ -28,7 +28,13 @@ const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.resolve(ROOT, 'index.html').replace(/\\/g, '/');
 const FRAMES = [1600, 1920, 2280, 2600];
 const MULS = [1, 10, 100, 1000];
-const SHELL_H = 98, BAR_W = 724, BAR_L = 178, GRID_GAP = 44, COST1 = 100;  /* GRID_GAP: 813 2회차 20 → 44 */
+/* [?] 866 이관 - 바 폭·좌가 **724@178 -> 646@216**. 724 = «4 x 181» 은 713 이 상점 소환
+   토글에서 쓴 칸 폭을 그대로 옮겨 적은 값이지 이 화면의 모듈이 아니었다(813 5회차 CP·CQ 가
+   «좌변이 4열 행보다 87 안쪽 · 3열 행보다 38 바깥 · 폭이 열 피치의 2.9배로 정수 아님» 을
+   독립으로 냈다). 새 값은 **바로 위 3열 행(RW_POS 216·462·711 · 슬롯 151)의 span 216..862** 다.
+   `.stabs` 는 이미 호스트마다 다른 폭으로 쓴다(07 950 · 03 794 · 10 990) - 공유하는 것은
+   **부품**이지 폭이 아니므로 668/700/701 «한 부품» 규약은 그대로 지켜진다. */
+const SHELL_H = 98, BAR_W = 646, BAR_L = 216, GRID_GAP = 44, COST1 = 100;  /* GRID_GAP: 813 2회차 20 → 44 */
 /* 867 — 바가 벽을 떠나 «받침 위» 로 내려오면서 «아래 이웃» 이 격자에서 받침으로 바뀌었다.
    GRID_GAP(44)은 **벽에 있던 시절의 값**이라 지우지 않고 계보로 남긴다(위 [B4] 주석). */
 const PED_GAP = 12;
@@ -139,10 +145,14 @@ function preTree() {
       '[B1] 셸 높이 98 — 96·437 규약(줄이면 `.stab.on` 정지점 표가 두 벌이 된다)',
       rows.map(r => r.H + ':' + r.bar.h).join(' · '));
     ok(rows.every(r => eq(r.bar.w, BAR_W) && eq(r.bar.l, BAR_L)),
-      '[B2] 폭 724 = 4 × 181 · 좌 178 (713 이 쓴 칸 폭 그대로)',
+      '[B2] 폭 646 · 좌 216 — 866 이 격자 3열 행 모듈(216..862)에 스냅했다',
       rows.map(r => r.H + ':' + r.bar.w + '@' + r.bar.l).join(' · '));
-    ok(rows.every(r => eq(r.cxBar, 540) && eq(r.cxMid, 540)),
-      '[B3] 바 중심 = 수반 중심 = 화면 중심 540 (둘이 한 덩어리로 읽힌다)',
+    /* [?] 866 이관 - 바 중심이 540 -> **539** 다. 격자 모듈에 스냅한 결과이고, 그 1px 은
+       격자 자신의 비대칭이다(RW_POS 열 피치 246/249 - 이미 **860** 에 등재돼 있다).
+       두 중심을 각각 묻는 쪽으로 뒤집는다: 바는 격자와, 수반은 화면과 붙어 있어야 하고
+       둘의 차는 1px 을 넘지 않는다(860 이 피치를 고르게 하면 저절로 0 이 된다). */
+    ok(rows.every(r => eq(r.cxBar, 539) && eq(r.cxMid, 540) && Math.abs(r.cxBar - r.cxMid) <= 1.2),
+      '[B3] 바 중심 = 격자 모듈 중심 539 · 수반 중심 = 화면 중심 540 (차 1px = 860 등재분)',
       rows.map(r => r.H + ':' + r.cxBar + '↔' + r.cxMid).join(' · '));
     /* ── 754 6회차 이관 — **«네 프레임 고정 20» 은 1600 에서 대가를 숨기고 있었다.** ──
        옛 [B4] 는 아래 여유만 물었다. 그래서 700 이 스스로 적어 둔 «상인방과의 여유 8(1600)»
@@ -262,11 +272,30 @@ function preTree() {
      옛 표(813 r2~r5 누적: basint/costt/labt/midt/stepst +57.69 · gridt/floort/groundt +33.77 ·
      lintelt +8.08 · capt +21.64 · capl +40 · capw −80 · 1600 은 캡이 안 걸려 따로)는
      이 주석에 남긴다 — 어디서 왔는지를 지우지 않는다(333). */
+  /* [?] 866 — 표를 다시 적었다(앞 회차들이 그랬던 이유 그대로: 기준이 `merge-base origin/main HEAD`
+     라 813 7회차의 `capt -1.14` 는 이제 main 안이라 D0 으로 읽힌다 - 남겨 두면 «등재된 이동을
+     기다리는데 실제는 0» 으로 이 항이 빨개진다). 아래는 `P813_DUMP=1` 출력 그대로이고
+     출처는 **866 하나**다 - 수반 구획 216 -> 226(그린 수반이 ref 보다 -4.6% 눌려 있었다)과
+     알약 278x53 -> 260x57.8(폭이 +8.6% 부풀어 있었다 · 중심 유지라 좌 +9):
+       · 상자가 10px 커져 `--rw-bt` 가 10 올라간다 => mid/basin/lab/steps 의 top -10 · 높이 +10
+       · 그 10px 은 **위**에서 나온다 => 격자·상인방·바닥이 조금씩 올라간다
+         (1600 gridt -3 / floor·ground -8 - 하한 232 가 이기는 프레임이라 값이 따로다)
+       · **안내문(cap)·패널·바(pcb)는 D0** - 813 이 1.00 으로 닫은 «수반 아래 안내문» 이 안
+         움직였다는 가장 짧은 증거다(움직였으면 `verify813` [3] 이 먼저 빨개진다).
+     옛 표(813 7회차 capt -1.14)는 이 주석에 남긴다 - 어디서 왔는지를 지우지 않는다(333). */
   const ALLOW813 = {
-    1600: { capt: -1.14 },
-    1920: { capt: -1.14 },
-    2280: { capt: -1.14 },
-    2600: { capt: -1.14 },
+    1600: { gridt: -3, floort: -8, floorh: 8, groundt: -8, groundh: 8,
+            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
+            costl: 9, costt: -10, costw: -18, costh: 4.8, },
+    1920: { gridt: -4.81, lintelt: -4.81, floort: -4.81, floorh: 4.81, groundt: -4.81, groundh: 4.81,
+            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
+            costl: 9, costt: -10, costw: -18, costh: 4.8, },
+    2280: { gridt: -4.81, lintelt: -4.81, floort: -4.81, floorh: 4.81, groundt: -4.81, groundh: 4.81,
+            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
+            costl: 9, costt: -10, costw: -18, costh: 4.8, },
+    2600: { gridt: -4.81, lintelt: -4.81, floort: -4.81, floorh: 4.81, groundt: -4.81, groundh: 4.81,
+            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
+            costl: 9, costt: -10, costw: -18, costh: 4.8, },
   };
   {
     const pre = preTree();
