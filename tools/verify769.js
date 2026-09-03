@@ -16,8 +16,11 @@
  *   [C] 예약이 과하지 않다 — 최악 잉크 대비 남는 폭이 40px 이하다(예약 = 최악 + 여유 한 자락).
  *       이 항이 «392 로 되돌리면» 곧바로 빨개진다(과예약 163.6px).
  *   [D] 버튼 자릿수 예산(ⓑ) — 자연 폭으로 잰 예산이 **11자리 이상**이고, 701 배수가 실제로
- *       만드는 라벨(Lv 99,999 ×1000 = 9자리 · Lv 999,999 ×1 = 8자리)이 상자 안에서
- *       **한 줄로** 산다(인라인 줄바꿈 0 — 접히면 line-height 173 짜리 두 줄이 된다).
+ *       만드는 라벨(Lv 99,999 ×1000 = 9자리 · Lv 999,999 ×1 = 8자리)이 **제 크기로** 상자에 든다.
+ *       ⚑ 828 이관 — 원래는 «한 줄로 사는가»(`<i>` 높이)를 물었다. 828 이 `white-space:nowrap`
+ *         (안 접힌다)과 150 폭 클램프(넘치면 눌러 넣는다)를 놓으면서 그 물음이 **어떤 폭에서도
+ *         초록**이 됐다 — 340 으로 되돌려도 안 짖는 헛초록이다. 그래서 769 의 주장 자체로 옮겼다:
+ *         «클램프의 도움 없이 드는가»(인라인 fs 0 + 요구 폭 ≤ 안쪽). [R3] 이 그 되돌림을 잰다.
  *   [E] 본체 — 잉크 우변 ↔ 버튼 좌변 빈 띠가 100px 이하다(등재문 실측 190~227px 의 자리).
  *   [F] 안 건드린 것 — 버튼 세로(top 22 · h 173 · right 26) · `.td` left/top/height ·
  *       아이콘 액자(26 · 22 · 178) · 행 998×222. 686·612 가 푼 값은 한 픽셀도 안 움직인다.
@@ -172,22 +175,37 @@ async function openAt(browser, H) {
       const html = curIc('tstone', TP_CUR_PX) + '<b class="tbn">' + fmt(Number('9'.repeat(d))) + '</b>';
       nat.push({ d, w: window.__nat('.tr-tp.k0 .tb', html) });
     }
-    /* 701 배수가 실제로 만드는 라벨 — 상자 «안» 에서 한 줄로 사는가(인라인 줄바꿈 0) */
+    /* 701 배수가 실제로 만드는 라벨 — 상자가 그 라벨을 **제 크기로** 담는가.
+       ⚑ 828 이관 — 이 자리는 원래 «접혔는가»(`<i>` 높이)로 물었다. 828 이 두 가지를 놓으면서
+         그 물음이 헛초록이 됐다: ① `white-space:nowrap` 이라 이제 **어떤 폭에서도 안 접힌다**
+         ② 150 폭 클램프가 넘치는 라벨을 눌러 넣어 «상자를 넘었는가» 도 항상 거짓이 된다.
+         둘 다 초록이면 상자를 340 으로 되돌려도 이 항이 안 짖는다(769 가 통째로 사라져도 초록).
+       ⇒ 물음을 769 의 **주장 자체**로 옮긴다: «이 라벨들이 클램프의 도움 없이 상자에 드는가».
+         증거는 둘 — ⓐ 인라인 fs 가 안 걸린다(클램프가 개입할 필요가 없었다)
+                     ⓑ 클램프를 지우고 잰 **요구 폭**이 상자 안쪽을 안 넘는다.
+         상자를 좁히면 ⓐⓑ 가 같이 빨개진다([R3] 이 그것을 실제로 잰다). */
     const o = temperObj(); const keep = { ...(o.alloc || {}) }, kmul = trMul;
     const real = [];
     [[999999, 1], [99999, 1000], [999999, 10]].forEach(([lv, mul]) => {
       TEMPERS.forEach(t => { o.alloc[t.k] = lv; });
       trMul = mul; renderTemper();
       const row = document.querySelector('.tr-tp.k0');
-      const ln = window.__lines('.tr-tp.k0 .tb i', '.tr-tp.k0');
       const tb = row.querySelector('.tb').getBoundingClientRect(), rb = row.getBoundingClientRect();
-      const inkX2 = Math.max(...ln.map(l => l.x2));
-      /* ⚠ «줄 수» 를 `getClientRects().length` 로 세면 안 된다 — 이 라벨은 한 줄이라도
-         `<img>`·`<b>` 가 **상자마다 하나씩** 준다(3개). 접혔는지는 `<i>` 의 **높이**가 말한다:
-         한 줄이면 line-height 173 짜리 한 칸, 접히면 그 두 배가 된다. */
       const ib = row.querySelector('.tb i').getBoundingClientRect();
+      const num = row.querySelector('.tbn'), ic = row.querySelector('.tb img,.tb .cic');
+      const clamped = num.style.fontSize || '';
+      /* 요구 폭 = 클램프를 지운 숫자 잉크 + 아이콘이 먹는 자리(828 과 같은 셈) */
+      const kfs = num.style.fontSize; num.style.fontSize = '';
+      const rg = document.createRange(); rg.selectNodeContents(num);
+      const natNum = rg.getBoundingClientRect().width;
+      num.style.fontSize = kfs;
+      const ics = ic ? getComputedStyle(ic) : null;
+      const icUsed = ic ? ic.offsetWidth + (parseFloat(ics.marginLeft) || 0)
+                                         + (parseFloat(ics.marginRight) || 0) : 0;
       real.push({ lv, mul, txt: row.querySelector('.tb').textContent,
-                  boxes: ln.length, ih: r1(ib.height), over: r1(inkX2 - (tb.right - rb.x)) });
+                  ih: r1(ib.height), clamped: clamped,
+                  need: r1(natNum + icUsed), inner: r1(tb.width - 16),
+                  over: r1(natNum + icUsed - (tb.width - 16)) });
     });
     o.alloc = keep; trMul = kmul; renderTemper();
     return { bw: r1(bw), inner: r1(inner), nat, real,
@@ -196,12 +214,14 @@ async function openAt(browser, H) {
   if (D.__err) ok(false, 'evaluate 실패: ' + D.__err);
   else {
     console.log('       상자 ' + D.bw + '(안쪽 ' + D.inner + ') · 예산 ' + D.budget + '자리');
-    D.real.forEach(r => console.log('       Lv' + r.lv + ' ×' + r.mul + '  <i> 높이 ' + r.ih
-      + ' · 상자 넘침 ' + r.over + '  «' + r.txt + '»'));
+    D.real.forEach(r => console.log('       Lv' + r.lv + ' ×' + r.mul + '  요구 ' + r.need
+      + ' / 안쪽 ' + r.inner + ' · 넘침 ' + r.over + ' · 클램프 «' + r.clamped + '»'
+      + ' · <i> 높이 ' + r.ih + '  «' + r.txt + '»'));
     ok(D.budget >= 11, '[D1] ★ 자릿수 예산 11자리 이상(340 짜리 그릇은 7자리였다)', D.budget + '자리');
-    ok(D.real.every(r => r.ih <= 200), '[D2] ★ 701 배수 라벨이 상자 안에서 **한 줄**로 산다(<i> 높이 ≤ 200 = 한 칸)',
-       D.real.map(r => r.ih).join(' · '));
-    ok(D.real.every(r => r.over <= 0), '[D3] 그 라벨들이 상자를 안 넘는다',
+    ok(D.real.every(r => r.clamped === ''),
+       '[D2] ★ 701 배수 라벨이 **클램프 없이** 상자에 든다(150 폭 클램프가 개입할 일이 없다 — 828 이관)',
+       D.real.map(r => '«' + r.clamped + '»').join(' · '));
+    ok(D.real.every(r => r.over <= 0), '[D3] 그 라벨들의 **요구 폭**이 상자 안쪽을 안 넘는다',
        D.real.map(r => r.over).join(' · '));
   }
 
@@ -285,11 +305,27 @@ async function openAt(browser, H) {
     const tb = window.__rel('.tr-tp.k0 .tb', '.tr-tp.k0');
     const band = r1(tb.x - Math.max(...ln.map(l => l.x2)));
     const inner = tb.w - 16;
-    /* 옛 폭에서 701 배수 라벨이 실제로 접혔는지 — 주석이 «접힌다» 고 적은 그 자리 */
+    /* 옛 폭에서 [D2] 도 빨개지는가.
+       ⚑ 828 이관 — 옛 자는 «접혔는가»(`<i>` 높이 176)를 봤다. 828 의 `white-space:nowrap` 이
+         그 모양을 없앴으므로(안 접히고 넘치거나 눌린다) [D2] 와 같은 축으로 옮긴다:
+         옛 340 상자에서 이 라벨은 **제 크기로 못 들어간다** — 클램프가 개입하고(인라인 fs),
+         지우고 재면 요구 폭이 안쪽을 넘는다. */
     const kmul = trMul;
     TEMPERS.forEach(t => { o.alloc[t.k] = 999999; });
     trMul = 1; renderTemper();
-    const ihOld = r1(document.querySelector('.tr-tp.k0 .tb i').getBoundingClientRect().height);
+    const rowOld = document.querySelector('.tr-tp.k0');
+    const numOld = rowOld.querySelector('.tbn');
+    const clampedOld = numOld.style.fontSize || '';
+    const kfs = numOld.style.fontSize; numOld.style.fontSize = '';
+    const rgO = document.createRange(); rgO.selectNodeContents(numOld);
+    const natOld = rgO.getBoundingClientRect().width;
+    numOld.style.fontSize = kfs;
+    const icO = rowOld.querySelector('.tb img,.tb .cic');
+    const icsO = icO ? getComputedStyle(icO) : null;
+    const icUsedO = icO ? icO.offsetWidth + (parseFloat(icsO.marginLeft) || 0)
+                                          + (parseFloat(icsO.marginRight) || 0) : 0;
+    const tbOld = rowOld.querySelector('.tb').getBoundingClientRect();
+    const overOld = r1(natOld + icUsedO - (tbOld.width - 16));
     trMul = kmul;
     let budget = 0;
     for (let d = 1; d <= 13; d++) {
@@ -298,14 +334,15 @@ async function openAt(browser, H) {
     }
     document.head.removeChild(st);
     o.alloc = keep; renderTemper();
-    return { band, budget, tbw: tb.w, ihOld };
+    return { band, budget, tbw: tb.w, clampedOld, overOld };
   }).catch(e => ({ __err: String(e) }));
   if (R.__err) ok(false, '되돌림 측정 실패: ' + R.__err);
   else {
     ok(R.band > 100, '[R1] 옛 폭에서 [E1] 이 빨개진다(빈 띠 > 100px)', R.band + 'px');
     ok(R.budget < 11, '[R2] 옛 폭에서 [D1] 이 빨개진다(예산 < 11자리)', R.budget + '자리 (상자 ' + R.tbw + ')');
-    ok(R.ihOld > 200, '[R3] 옛 폭에서 [D2] 도 빨개진다 — 8자리 라벨(«50,005,000»)이 두 줄로 접힌다',
-       '<i> 높이 ' + R.ihOld + ' (지금 173)');
+    ok(R.clampedOld !== '' && R.overOld > 0,
+       '[R3] 옛 폭에서 [D2]·[D3] 이 빨개진다 — 8자리 라벨(«50,005,000»)이 340 상자에 제 크기로 못 든다',
+       '요구 초과 +' + R.overOld + 'px · 클램프 «' + R.clampedOld + '» (지금 폭에서는 둘 다 0)');
   }
   await c2.close();
 

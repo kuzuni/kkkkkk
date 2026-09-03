@@ -11680,6 +11680,14 @@
        no-op 이었다(«1»·«3»·«6» 상자 폭 21.4/28.6/32.1). 흔들림을 실제로 없애는 것은 아래 `.tbn` 의
        한 자리 칸 고정이다. 서체가 바뀌면 이 줄이 살아나므로 남겨 둔다(둘은 같은 방향이다). */
     font-variant-numeric:tabular-nums;
+    /* 828 — 라벨(아이콘 + 숫자)은 **한 줄이다**. 이 줄이 없으면 잉크가 상자를 넘는 순간 브라우저가
+       둘 사이에서 줄을 접는데, `line-height:173` 이라 숫자가 통째로 **버튼 아래로 내려간다**
+       (`probe828` 실측: 12자리에서 숫자 상변이 버튼 기준 y176 — 높이 173 인 상자 **밖**이다.
+       769 가 «340 상자에서 아이콘/숫자 두 줄로 접힌다» 고 적어 둔 그 모양이 폭 496 에서도 그대로다).
+       ⚠ 이 한 줄은 «넘침» 을 **안** 고친다 — 넘치지 않게 만드는 것은 아래 `temperFitBtns()`(150 폭
+       클램프)이고, 이 줄은 그 클램프가 어떤 이유로 안 걸렸을 때 **실패의 모양을 «조금 넓다» 로**
+       묶어 두는 구조적 가드다(숫자가 버튼 밖으로 사라지는 것보다 낫다). 11자리 이하는 Δ0px. */
+    white-space:nowrap;
     background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 8px #141414,0 5px 0 #3F7412}
   /* 584 — 버튼 안 화폐. 세로 정렬은 «잉크 중심 = 버튼 중심» 으로 잡는다 — 값은 취향이 아니라
@@ -37817,6 +37825,56 @@ function renderTemper(){
   });
   /* 614 — 회수 줄(.tp-ft)은 기능째 사라졌다. 자리를 새 부품으로 메우지 않는다(빈 여백이 정답). */
   w.innerHTML = h;
+  temperFitBtns();                           /* 828 — 그린 직후 라벨을 버튼 안쪽으로 끊는다 */
+}
+/* ⚑ 828 — [단련] 버튼 라벨에 **150 «폭 클램프»**(`fitNum`)를 건다.
+   769 가 폭을 340 → 496 으로 넓히며 §7 에 적어 둔 대로 «넓히기» 는 끝나지 않는다 — 단련은 만렙이
+   없어(주인 지시 ⓑ) 비용 `(s+1)(s+2)/2`(s = ⌊lv/100⌋)가 무한히 자라므로 **자릿수에 상한이 없다**.
+   150 규약은 그 자리에서 «한 글자도 버리지 않고 폭에만 맞춘다» 이고, 부품은 213·452·487 이 쓴
+   `fitNum(el, maxW)` 그대로다 — 새 상수도 새 표기 규칙도 만들지 않는다.
+   ⚑ **방(room)은 상수가 아니라 버튼에게 묻는다**(368 처방). 그리고 그 방은 «숫자가 지금 어디 있는가»
+     로 재면 안 된다 — 이 라벨은 `text-align:center` 라 클램프가 성공한 직후 숫자가 가운데로
+     다시 모이면서 «남는 자리» 가 커지고, 다음 호출이 그것을 보고 클램프를 풀어 버린다
+     (235 래칫의 거울상. 235 주석의 «남는 자리가 제 폭과 같으면 그릇이 없다» 지레짐작과 같은 함정이다).
+     ⇒ 방은 **잉크와 무관한 값들로만** 만든다: 버튼 안쪽 폭 − 아이콘이 먹는 자리.
+   ⚠ 검정 링(`box-shadow: inset … 8px`)은 border 가 아니라 clientWidth 에 안 잡힌다 —
+     487 이 «카드 테두리를 좌우 거울로» 쓴 것과 같은 뜻으로 **그 링을 읽어서** 뺀다
+     (`.tb` 8px · `.tb.no` 5px 로 서로 다르므로 «지금 이 버튼» 것을 읽는다).
+   ⚠ 세로 보정(`.tbn{top:3px}` — 686 3회차가 캡하이트로 푼 값)은 **안 건드린다.** 그 값은 fs 52 에서
+     푼 것이라 클램프가 걸린 자릿수에서는 잉크 중심이 조금 내려온다(fs 49 에서 0.5px · FITMIN
+     바닥에서 7px). 11자리 이하는 클램프가 아예 안 걸려 **Δ0px** 이고, 걸리는 자리는 «숫자가 버튼
+     밖으로 사라지는» 지금보다 확실히 낫다 — 686 이 비평 2인과 푼 값을 여기서 되풀기보다
+     그 대가를 밝혀 두는 쪽을 골랐다(상세 `docs/review/828-단련버튼자릿수폭클램프.md` §5). */
+function tbInsetRing(el){
+  /* 계산된 box-shadow 에서 inset 조각의 spread(네 번째 길이)를 읽는다.
+     색 함수 안의 쉼표를 먼저 지워야 조각 나누기가 안 깨진다(`rgb(20, 20, 20) 0px 0px 0px 8px inset`). */
+  const bs = getComputedStyle(el).boxShadow.replace(/rgba?\([^)]*\)/g, '');
+  let r = 0;
+  for(const part of bs.split(',')){
+    if(part.indexOf('inset') < 0) continue;
+    const n = (part.match(/-?[\d.]+px/g) || []).map(parseFloat);
+    if(n.length >= 4) r = Math.max(r, n[3]);
+  }
+  return r;
+}
+function temperFitBtns(){
+  document.querySelectorAll('#trTemper .tr-tp').forEach(row => {
+    const btn = row.querySelector('.tb'), num = row.querySelector('.tbn');
+    if(!btn || !num || !btn.offsetWidth) return;
+    const br = btn.getBoundingClientRect();
+    if(!br.width) return;                                  /* 팝업이 안 떠 있으면 잴 것이 0 이다 */
+    const sc = br.width / btn.offsetWidth;                 /* 프레임 → 화면 배율(fit()) */
+    const ic = btn.querySelector('img,.cic');
+    let used = 0;
+    if(ic){
+      const ics = getComputedStyle(ic);
+      used = ic.offsetWidth + (parseFloat(ics.marginLeft) || 0) + (parseFloat(ics.marginRight) || 0);
+    }
+    const room = btn.clientWidth - tbInsetRing(btn) * 2 - used;
+    /* 양변을 «화면 px» 로 통일한다 — `fitNum` 이 재는 잉크는 Range rect(화면 px)다
+       (`raidFitNums`·`collFitEff` 와 같은 공간 맞춤). */
+    if(room > 0) fitNum(num, room * sc);
+  });
 }
 /* 297 — 홀드 중 «숫자만» 갱신. 단련은 만렙이 없어(주인 지시 ⓑ) 구조가 바뀌지 않는다. */
 function liveTemper(){
@@ -37840,6 +37898,9 @@ function liveTemper(){
     put(row, '.tb i', x.btn, true);
     jzNo(row.querySelector('.tb'), !x.ok);
   });
+  /* 828 — 홀드 경로도 같은 순간에 끊는다. 297 규약(«두 경로가 어긋나면 홀드 중에만 옛 그림이
+     되살아난다»)이 클램프에도 그대로 걸린다 — 여기서 빼면 꾹 누르는 동안에만 숫자가 버튼을 넘는다. */
+  temperFitBtns();
 }
 /* 단련 1회 — 확정 구매다(룬과 달리 확률이 없다). 그래서 실패 문구도 «부족» 하나뿐이다.
    613 — 재화가 단련석 직접 지불이 되면서 부족 문구도 재화 이름으로 말한다(수급처 안내는
@@ -37891,6 +37952,11 @@ function openTrain(){
   if(typeof closeDungeon === 'function') closeDungeon();
   renderTrain();
   $('trw').classList.add('on');
+  /* 828 — `renderTrain()` 은 팝업이 아직 숨어 있을 때 도는지라 그때는 잴 것이 0 이다(폭 0).
+     `.on` 을 붙여 자리가 생긴 **뒤**에 한 번 더 끊는다(`openColl21` 이 `collFitEff()` 를
+     같은 순서로 부르는 것과 같은 이유). 안 하면 팝업을 다시 열 때 서명 캐시가 재렌더를 건너뛰어
+     클램프가 통째로 빠진다. */
+  temperFitBtns();
   syncTrainNav(true);
 }
 function closeTrain(){
