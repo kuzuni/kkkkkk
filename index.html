@@ -8015,9 +8015,12 @@
      중심 +14.0(Δ+2.7) · 상변 +1.0(ref 0.0~4.1 **안**) · 하변 27(Δ+4~8) — 세 축이 다 좋아진다.
      되돌리려면 52 로 되돌리면 된다(다른 값과 안 엮여 있다). */
   .pvc.ban1>.rb>u{right:calc(var(--gx) - 30px);width:139px;top:49px}
+  /* ⚠ 833 7회차 — `--uq` 는 **`pvFitQty()` 가 그린 뒤 재서** 넣는 등방 배율이다(shrink-to-fit ·
+     ref 는 자릿수가 늘면 글자를 줄여 폭을 붙박는다 · 도출은 `pvFitQty` 옆 주석).
+     폴백 1 이라 자가 못 돌아도 «수리 전» 으로 얌전히 되돌아간다. */
   .pvc>.rb>u{position:absolute;right:calc(var(--gx) - 24px);top:58px;width:139px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;text-decoration:none;white-space:nowrap;
-    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+    -webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scale(var(--uq,1))}
   /* ⑦ 가격 버튼 — 우하단 초록(ref 외곽 307×98 · 우 여백 73 · 바닥 31).
      표기는 원화(주인 지시)이고, **588·589 이후 그 원화가 유일한 가격**이다 — 다이아 대체가는
      걷어냈고 클릭은 589 의 목업 결제(`payMock`)로 간다. 상자 기하는 한 픽셀도 안 움직였다. */
@@ -34364,6 +34367,11 @@ function openShopPage(focus, cat){
   setShopCatTabs(shopCat);
   renderShopPage();
   $('shopw').classList.add('on');
+  /* ⚠ 833 7회차 — 수량 shrink-to-fit 은 **글자를 재야** 하는데 `renderShopPage()` 는 창이 아직
+     `.on` 이 아닐 때(=`display:none`) 돌아 Range 폭이 **0** 으로 나온다. 그래서 «보인 뒤» 한 번 더
+     부른다(이용권 탭이 아니면 고를 노드가 0개라 공짜다). 열려 있는 동안의 재그리기는
+     `renderPass()` 안의 호출이 받는다. */
+  pvFitQty($('shopList'));
   const li = $('shopList');
   li.scrollTop = 0;
   /* 164 — `focus` 는 «소환» 탭의 상자 카드 순번이다. 다른 탭에서는 리스트 내용이 아예 달라
@@ -35878,6 +35886,32 @@ function renderPassPage(list){
     + '결제 시스템 준비 중 — 구매 시 효과·보상이 즉시 지급됩니다</div>';
   h += '</div>';
   list.innerHTML = h;
+  pvFitQty(list);
+}
+/* 833 7회차 — **ref 는 자릿수가 늘면 수량 글자를 줄여 «폭» 을 붙박는다.**
+   자 셋이 독립으로 같은 것을 봤다(비평가 DD «10,000 +19.6% · 16,000 +8.5%» · DE «+21.2% / +9.8%» ·
+   저장소 안의 `tools/scan667b.py` 흰 잉크 실측):
+     ref 잉크 폭(환산 px) — 카드1 «1,500» 88.7 · «10,000» **86.6** / 카드2 «1,500» 86.6 · «16,000» **96.9**
+     우리(수리 전)      — «1,500» 88 (맞다) · «10,000» 110 · «16,000» 111 (**+19~28%**)
+   ⇒ ref 는 다섯 자리든 여섯 자리든 폭이 **42~47 원시(86.6~96.9)** 로 붙박여 있고, 늘어난 자릿수만큼
+   **글자를 등방으로 줄인다**(같은 카드에서 «1,500» 43×12 ↔ «10,000» 42×8 — 폭은 같고 높이가 준다).
+   ⚠ 손 상수로 «여섯 자리면 0.8» 을 적지 않는다 — 문자열은 상품·밸런스(199)가 언제든 바꾼다.
+   대신 **그린 뒤 재서** 목표 폭을 넘는 만큼만 줄인다(=shrink-to-fit). 목표 `PV_QTY_ADV` 는
+   ref 네 표본의 **중앙값**(86.6·86.6·88.7·96.9 → 87.65)에 side bearing 몫을 더한 값이고,
+   우리 «1,500» 의 advance 89.91 이 그 안에 들어와 **다섯 자리는 배율 1 = 무변경**이다.
+   ⚠ 등방(scale)이지 scaleX 가 아니다 — ref 가 높이도 같이 줄인다(833 6회차 배너 라벨과 반대 축이다).
+   ⚠ 중심은 안 움직인다 — 상자(139)가 advance 보다 넓어 넘침이 없고(667 [G3]), 원점이 상자 중심이라
+   667 [G4]«수량 중심 = 판 중심» 이 그대로 선다. */
+const PV_QTY_ADV = 90;
+function pvFitQty(root){
+  root.querySelectorAll('.pvc>.rb>u').forEach((u) => {
+    u.style.setProperty('--uq', '1');
+    const rg = document.createRange();
+    rg.selectNodeContents(u);
+    const adv = rg.getBoundingClientRect().width;
+    if(!adv) return;
+    u.style.setProperty('--uq', String(Math.min(1, PV_QTY_ADV / adv).toFixed(4)));
+  });
 }
 /* 153(2026-08-27)은 «상점 구매품은 전부 우편함으로» 의 대상을 **지급품(재화·패키지)** 으로
    좁히고 이용권 권한만 즉시로 두었다. **697(2026-09-02)이 그 경계를 없앴다** — 권한이든

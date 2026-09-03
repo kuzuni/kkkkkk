@@ -331,7 +331,12 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
           rbR: +(r.right - cb.left).toFixed(1),
           bCx: +(b.left + b.width / 2 - cb.left).toFixed(1),
           uCx: +(ur.left + ur.width / 2 - cb.left).toFixed(1),
-          uW: +ur.width.toFixed(1), adv: +rg.getBoundingClientRect().width.toFixed(2)
+          /* ⚑ 이관(2026-09-03, 작업 833 7회차) — 상자 폭은 **offsetWidth**(레이아웃 값)로 잰다.
+             수량에 shrink-to-fit 등방 배율(--uq)이 걸리면서 getBoundingClientRect 는 «변환 뒤»
+             bbox 라 139 가 110.5 로 읽혔다 — 상자가 좁아진 것이 아니라 자가 다른 것을 본 것이다.
+             advance 는 반대로 **변환 뒤** 값이어야 [G3]«넘치는가» 가 눈에 보이는 것을 잰다. */
+          uW: u.offsetWidth, uWSeen: +ur.width.toFixed(1),
+          adv: +rg.getBoundingClientRect().width.toFixed(2)
         });
       });
     });
@@ -459,7 +464,8 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
         const u = rb.querySelector('u');
         const rg = document.createRange(); rg.selectNodeContents(u);
         out.push({ prot: +(cb.left - rb.getBoundingClientRect().left).toFixed(2),
-          uW: +u.getBoundingClientRect().width.toFixed(1),
+          /* [G5] 와 같은 이관(833 7회차) — 상자는 레이아웃 값으로 잰다(변환은 상자를 안 줄인다) */
+          uW: u.offsetWidth,
           adv: +rg.getBoundingClientRect().width.toFixed(2) });
       });
     });

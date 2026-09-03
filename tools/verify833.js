@@ -78,7 +78,14 @@ const DUMP = `(() => {
     const rbs = ['rb1', 'rb2'].map((k) => {
       const rb = c.querySelector('.' + k); if (!rb) return null;
       const u = rb.querySelector('u');
-      return { rb: B(rb), u: B(u), utop: num(getComputedStyle(u).top), b: B(rb.querySelector('b')) };
+      /* 833 7회차 — 수량 shrink-to-fit. advance 는 Range(667 [G3] 자와 같은 방법)이고
+         --uq 가 걸린 뒤 값이라 **변환 뒤 advance** 다. 상자 폭은 offsetWidth(레이아웃 값). */
+      const rg = document.createRange(); rg.selectNodeContents(u);
+      const ur = rg.getBoundingClientRect(), A2 = document.getElementById('app').getBoundingClientRect();
+      return { rb: B(rb), u: B(u), utop: num(getComputedStyle(u).top), b: B(rb.querySelector('b')),
+        uTxt: u.textContent, uq: getComputedStyle(u).getPropertyValue('--uq').trim(),
+        uAdv: +ur.width.toFixed(2), uBoxW: u.offsetWidth,
+        uInkCx: +(ur.left + ur.width / 2 - A2.left).toFixed(2) };
     });
     const ti = c.querySelector('.pvt>i'), tcs = ti && getComputedStyle(ti);
     const stt = c.querySelector('.stt'), sti = stt && stt.querySelector('i');
@@ -309,6 +316,56 @@ const DUMP = `(() => {
     ok(B10.stroke === 8, '[10-g] 검정 획 8px 불변 (배율은 획도 같이 누른다 — ⑤ 기록)', `${B10.stroke}`);
   }
 
+  blk('§11 수량 shrink-to-fit — ref 는 자릿수가 늘면 글자를 줄여 «폭» 을 붙박는다');
+  /* 자 셋이 독립으로 같은 것을 봤다 — 비평가 DD(«10,000» +19.6% · «16,000» +8.5%) ·
+     DE(+21.2% / +9.8%) · 저장소 안의 `tools/scan667b.py`(흰 잉크):
+       ref 잉크 폭(환산) 카드1 «1,500» 88.7 · «10,000» **86.6** / 카드2 «1,500» 86.6 · «16,000» **96.9**
+       우리 수리 전            «1,500» 88(맞다) · «10,000» **110** · «16,000» **111**
+       우리 수리 후            «1,500» 88 (무변경) · «10,000» **88** · «16,000** 88
+     ⇒ 다섯 자리는 배율 1(무변경) · 여섯 자리만 등방 축소. 목표 `PV_QTY_ADV = 90` 은 ref 네 표본의
+     중앙값(87.65)에 side bearing 몫을 더한 값이고, 손으로 «여섯 자리면 0.8» 을 적지 않았다 —
+     `pvFitQty()` 가 **그린 뒤 재서** 넘는 만큼만 줄인다(문자열은 199 가 언제든 바꾼다). */
+  const QADV = 90;
+  for (const c of cards) {
+    for (const r of c.rbs) {
+      if (!r) continue;
+      const k = parseFloat(r.uq);
+      ok(r.uAdv <= QADV + 0.6,
+        `[11-a] ${c.id} «${r.uTxt}» 변환 뒤 advance ≤ ${QADV}`, `${p2(r.uAdv)}`);
+      /* ⚠ 가르는 자는 **자릿수가 아니라 advance** 다 — 「5,000」 은 네 자리인데도 97.14 로 넘고
+         「750」 은 64.59 로 안 넘는다(글리프 폭이 자마다 다르다). 자릿수로 갈랐다가 이 자리에서
+         빨개졌고, 그것이 «손 상수로 여섯 자리면 0.8» 이 왜 오답인지의 실물 증거다. */
+      const adv0 = r.uAdv / k;
+      if (adv0 <= QADV + 0.6) {
+        ok(k === 1, `[11-b] ${c.id} «${r.uTxt}» 는 목표 폭 안(${p2(adv0)}) ⇒ 배율 1 = **무변경**`, r.uq);
+      } else {
+        ok(k < 1 && Math.abs(r.uAdv - QADV) < 0.6,
+          `[11-c] ${c.id} «${r.uTxt}» 는 목표를 넘어(${p2(adv0)}) 줄었다 — 배율 ${r.uq}`, `${p2(r.uAdv)}`);
+      }
+      ok(r.uAdv <= r.uBoxW,
+        `[11-d] ${c.id} «${r.uTxt}» 는 상자(139) 안 — 667 [G3] «넘치면 가운데 정렬이 죽는다» 유지`,
+        `${p2(r.uAdv)} ≤ ${r.uBoxW}`);
+      ok(Math.abs(r.uInkCx - (r.b.x + r.b.w / 2)) < 1.5,
+        `[11-e] ${c.id} «${r.uTxt}» 잉크 중심 = 금색 판 중심 (667 [G4] — 등방이라 중심이 안 움직인다)`,
+        `${p2(r.uInkCx - (r.b.x + r.b.w / 2))}`);
+    }
+  }
+  /* ⚑ [11-f] 가 «손 상수가 아니다» 를 못박는다 — 문자열을 최장으로 갈아 끼우고 자를 다시 부르면
+     배율이 **그 문자열에 맞게 다시** 나온다(적어 둔 수를 읽는 게 아니라 재는 것이다). */
+  const fit = await page.evaluate(() => {
+    const u = document.querySelector('.pvc>.rb2>u'), old = u.textContent;
+    u.textContent = '999,999';
+    pvFitQty(document.getElementById('shopList'));
+    const rg = document.createRange(); rg.selectNodeContents(u);
+    const out = { uq: getComputedStyle(u).getPropertyValue('--uq').trim(),
+      adv: +rg.getBoundingClientRect().width.toFixed(2) };
+    u.textContent = old; pvFitQty(document.getElementById('shopList'));
+    return out;
+  });
+  ok(Math.abs(fit.adv - QADV) < 0.6,
+    '[11-f] «999,999» 로 갈아도 자가 다시 재서 맞춘다 (배율이 손 상수가 아니라는 증거)',
+    `배율 ${fit.uq} · advance ${p2(fit.adv)}`);
+
   blk('§5 9:13.3(1600) — 카드 안 기하가 같다');
   const { page: p16, errs: e16 } = await open(browser, 1600);
   const c16 = await p16.evaluate(DUMP);
@@ -395,6 +452,20 @@ const DUMP = `(() => {
   ok(back6.tr === 'none' && Math.abs(back6.adv - 235.2) > 8,
     '[R9] 배너 라벨 배율을 지우면 §10 이 빨개진다 (advance 가 ref 235.2 밖으로 나간다)',
     `${back6.tr} · advance ${p2(back6.adv)}`);
+  const back7 = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.pvc>.rb>u').forEach((u) => {
+      u.style.setProperty('--uq', '1');                              /* 833 7회차 전 */
+      const rg = document.createRange(); rg.selectNodeContents(u);
+      out.push({ t: u.textContent, adv: +rg.getBoundingClientRect().width.toFixed(2) });
+    });
+    return out;
+  });
+  const long7 = back7.filter(q => q.t.replace(/[^0-9]/g, '').length > 4);
+  ok(long7.length >= 2 && long7.every(q => q.adv > 96),
+    '[R10] 수량 배율을 1 로 되돌리면 §11 [11-a] 가 빨개진다 (여섯 자리가 다시 97~114 로 나간다)',
+    long7.map(q => q.t + ' ' + p2(q.adv)).join(' / '));
+  await page.evaluate(() => pvFitQty(document.getElementById('shopList')));
   ok(back6.adv / 235.2 - 1 > 0.1 && Math.abs((back6.adv - back6.boxW) - 9.64) < 1,
     '[R9b] 되돌린 폭은 ref 보다 +12.5% 이고 **넘침은 같다** — 6회차가 고친 것이 «넘침» 이 아니라 «넓음» 이라는 증거',
     `+${p2((back6.adv / 235.2 - 1) * 100)}% · 넘침 ${p2(back6.adv - back6.boxW)}`);
