@@ -53,11 +53,42 @@ const R_MAX = 0.52;   /* 이보다 굵으면 ②와 ③이 안 갈린다 — 수
 const BAND  = 2.0;    /* 획 무리 — 비율의 max ÷ min. 수리 전 15.9배(CV) */
 const BAND_W = 1.4;   /* 덩어리 무리 — 코어 **폭**의 max ÷ min(상한이 정하므로 폭이 고와야 한다) */
 const SPREAD  = 1.5;  /* 목표(p90÷p50) — 2회차 CZ 가 ice 한 날에서 9% ↔ 67% 를 쟀다 */
+/* [B13] 획 폭 구간별 비 중앙값의 max÷min — 9회차 신설. **목표는 1.0**(«비는 획 폭에 무관»)이고
+   지금은 거기 못 닿는다 ⇒ [B12] 와 같은 **래칫**으로 건다(356 [B] 선례 · 9회차 실측 1.50~1.53).
+   ⚠ 목표에 닿기 전에 이 수를 올리지 마라 — 올리는 순간 두 비평가가 각자 손으로 잰 «획 8~12px
+     에서 45~50%» 가 자에서 다시 안 보이게 된다. */
+const BAND13  = 1.55;
 const RATCHET = 1.7;  /* 래칫(356 [B] 선례) — 8회차 실측 최악 1.68(stone · 3회차 2.21 · `ice` 2.00 → 1.14). 목표에 닿기 전에 올리지 마라 */   /* 한 종 안 «코어÷본체» p90÷p10 — 2회차 CZ 가 ice 에서 7.4배를 쟀다 */
 const COVER = 0.75;   /* 본체 마루 중 ③층이 덮은 몫 — «축에만 코어가 없다» 가 여기서 잡힌다 */
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); c ? pass++ : fail++; };
+
+/* [B13] 이 묶는 자리 — 획 폭 구간(로컬px). 되돌림 시험도 **같은 함수**로 묶는다(사본 금지 — 402). */
+const B13_LO = 6, B13_HI = 24, B13_W = 3;
+const B13_N  = 25;      /* 구간을 세려면 표본 이만큼 — 화소 몇 개짜리 구간은 안 센다 */
+const b13bands = (out, useIds) => {
+  const rowsOut = [];
+  for (let lo = B13_LO; lo < B13_HI; lo += B13_W) {
+    const hi = lo + B13_W, acc = [];
+    for (const i of useIds) for (const [wS, ra] of (out.rows[i].bank || []))
+      if (wS >= lo && wS < hi) acc.push(ra);
+    if (acc.length < B13_N) continue;
+    acc.sort((a, b) => a - b);
+    const md = acc[Math.floor(0.5 * (acc.length - 1))];
+    /* 구간마다 «누가 얼마나 넣었는가» — 한 종이 구간을 통째로 끌고 가는지 본다(진단 전용). */
+    const by = [];
+    for (const i of useIds) {
+      const v = (out.rows[i].bank || []).filter(e => e[0] >= lo && e[0] < hi).map(e => e[1]);
+      if (!v.length) continue;
+      v.sort((a, b) => a - b);
+      by.push([i, v.length, v[Math.floor(0.5 * (v.length - 1))]]);
+    }
+    by.sort((a, b) => b[1] - a[1]);
+    rowsOut.push({ lo, hi, n: acc.length, md, core: md * (lo + hi) / 2, by });
+  }
+  return rowsOut;
+};
 
 /* `--spread <종>` — 그 종의 **주 마루 화소마다** «본체 두께 · 코어 두께 · 비» 를 그대로 찍는다.
    판정에는 아무 영향이 없다(진단 전용 · 8회차가 [B12] `ice` 의 불균질이 **어느 자리**에서 오는지
@@ -275,7 +306,13 @@ async function measure(browser, url) {
     /* ⚑ 8회차 — `keep` 는 **진단 전용**이다(`--spread <종>` 일 때만 배열이 들어온다). 판정에는
        한 글자도 안 쓰이고, 재는 자리·순서는 아래 루프 그대로다(자를 따로 만들면 그것이 곧 사본이다).
        7회차가 «먼저 어느 자리가 p50 을 끌어내리는지 찍어라» 를 8회차 1순위로 남긴 그 자리다. */
-    const spread = (body, core, w, h, cap, keep) => {
+    /* ⚑ 9회차 — `bank` 는 [B13] 이 읽는 **같은 자리·같은 순서**의 표본이다(자를 따로 만들면 그것이
+       곧 사본이다 — 402). 재는 곳도 가중도 [B12] 와 한 벌이고, 다른 것은 **묶는 축**뿐이다:
+       [B12] 는 «한 종 안» 으로 묶고 [B13] 은 «획 폭 구간» 으로 묶는다. 8회차 채점 2인(DD·DE)이
+       각자 손으로 층화해 잰 것이 뒤엣것이다 — 자가 종을 **한 수**로 요약하는 동안 두 사람은
+       획 8~12px 구간만 따로 재서 «45~50%» 를 봤고, 그래서 [B10a] 가 초록인 채로 눈에는
+       `gale` 만 속심이 굵어 보였다. */
+    const spread = (body, core, w, h, cap, keep, bank) => {
       const db = cham(body, w, h), dc = cham(core, w, h);
       let mx = 0;
       for (let p = 0; p < db.length; p++) if (body[p] && db[p] > mx) mx = db[p];
@@ -294,6 +331,9 @@ async function measure(browser, url) {
            («코어가 없으면 0» 은 두 무리 모두 흩어짐으로 센다 — 그 자리에 층이 없다는 뜻이다.) */
         rs.push(dc[p] / v);              /* 코어가 없으면 0 — 그 자리에 층이 없다는 뜻이다 */
         if (keep) keep.push([x, y, +(v / 5).toFixed(2), +(dc[p] / 5).toFixed(2), +(dc[p] / v).toFixed(3)]);
+        /* [B13] — «그 자리 획 폭(로컬px)» 과 «그 자리 비» 한 쌍. 종 이름은 여기서 안 붙인다
+           (구간별로 묶는 축이라 종은 묻지 않는다 — 묶는 것은 node 쪽 [B13] 이 한다). */
+        if (bank) bank.push([+(2 * v / 5).toFixed(3), +(dc[p] / v).toFixed(4)]);
       }
       if (rs.length < 4) return { lo: 0, hi: 0, sp: 0, n: rs.length };
       rs.sort((a, b) => a - b);
@@ -345,23 +385,40 @@ async function measure(browser, url) {
       let inMain = 0;
       for (const p of big.cell) if (core[p]) inMain++;
       const keep = (id === (window.__SPREAD856 || '')) ? [] : null;
-      rows[id] = { sh: sp.sh || sp.k, nb, nc, dump: keep,
+      const bank = [];
+      rows[id] = { sh: sp.sh || sp.k, nb, nc, dump: keep, bank,
                    wb: +wb.toFixed(2), wc: +wc.toFixed(2), wbA: +wbA.toFixed(2),
                    ratio: wb > 0 ? +(wc / wb).toFixed(3) : 0,
                    main: big.n, mainSpec: inMain,
                    fMain: big.n ? +(inMain / big.n).toFixed(4) : 0,
                    cover: nb ? +ridgeCover(body, core, bw, bh).toFixed(3) : 0,
-                   spread: nb && nc ? spread(body, core, bw, bh, capMode, keep) : { lo: 0, hi: 0, sp: 99, n: 0 } };
+                   spread: nb && nc ? spread(body, core, bw, bh, capMode, keep, bank) : { lo: 0, hi: 0, sp: 99, n: 0 } };
       clearFx();
     }
     performance.now = _now;
+    /* ⚑ 9회차 진단(판정 밖) — **구운 스프라이트 자체**의 코어 폭. 화면에서 잰 폭은 «굽기 →
+       페이드 → 무릎 → 합성 → 근백색 문턱» 을 전부 지난 값이라, 바닥이 어느 단계에서 생기는지
+       가르려면 굽기 직후를 따로 재야 한다(K·페이드·minR 를 흔들어도 가는 구간이 안 움직였다). */
+    const sprites = [];
+    if (typeof SPEC_SPR !== 'undefined') for (const [k, v] of SPEC_SPR.entries()) {
+      if (!v || !v.c) continue;
+      try {
+        const cw = v.c.width, ch = v.c.height;
+        const g2 = v.c.getContext('2d'), im2 = g2.getImageData(0, 0, cw, ch).data;
+        const m2 = new Uint8Array(cw * ch);
+        let mxA = 0;
+        for (let i = 3; i < im2.length; i += 4) if (im2[i] > mxA) mxA = im2[i];
+        for (let p = 0, i = 3; p < m2.length; p++, i += 4) if (im2[i] >= mxA * 0.5) m2[p] = 1;
+        sprites.push([String(k).split('|')[0], +(ridgeW(m2, cw, ch) / HALO_SS).toFixed(2), cw, ch]);
+      } catch (_) {}
+    }
     /* 코어를 구운 종을 **제품에게 묻는다**(자에 목록을 손으로 적으면 그것이 곧 사본이다 — 402) */
     const baked = (typeof SPEC_SPR !== 'undefined')
       ? Array.from(SPEC_SPR.entries()).filter(e => e[1]).map(e => String(e[0]).split('|')[0]) : [];
     /* 규격 상수는 **제품에게 묻는다** — 자에 손으로 적으면 그것이 곧 사본이다(402). */
     const K = typeof SPEC_K !== 'undefined' ? SPEC_K : 0;
     const capW = (typeof SPEC_MAXR !== 'undefined' ? SPEC_MAXR : 0) * 2 * HALO_SS;
-    return { rows, baked, n: Object.keys(specs).length, K, capW };
+    return { rows, baked, sprites, n: Object.keys(specs).length, K, capW };
   });
 
   await ctx.close();
@@ -472,6 +529,37 @@ async function measure(browser, url) {
       ok(mn > 0 && mx / mn <= BAND,
          '[B10b] 획 무리는 **비율**이 한 밴드 — 최대 ' + mx.toFixed(3) + ' ÷ 최소 ' + mn.toFixed(3) +
          ' = ' + (mn > 0 ? (mx / mn).toFixed(2) : '∞') + '배 ≤ ' + BAND + ' (수리 전 CV 15.9배 · CW 12.7배)');
+      /* ⚑⚑ 9회차 신설 [B13] — **획 폭 구간별** 비의 중앙값이 한 밴드.
+         8회차 채점 2인이 **독립으로 같은 수**를 냈다: DD 적합 «코어 = 0.273·획 + 1.07px»(단면
+         1,593개 · 획 8–10 / 10–12 / 12–14px 세 구간의 코어 중앙값이 **셋 다 정확히 4.0px**) ·
+         DE «획 8–11px 555단면의 중앙 비율 50.0% · 코어 p10/중앙/p90 = 3.0/4.0/4.0px».
+         규격대로면 세 구간의 **코어**가 3.1/3.8/4.5 로 갈려야 하는데 한 값으로 붙어 있다 =
+         **바닥이 규격을 덮어쓴다**. [B10a]·[B10b] 는 종을 **한 수**로 요약하므로 이것을
+         원리적으로 못 본다 — `gale`(획 8.8px 세 줄뿐)은 종 전체가 바닥 위에 앉아 0.454 로
+         초록이고, `boomer`(13.7px)는 0.272 로 초록인데 **둘의 코어 폭이 똑같이 4.0px** 다.
+         ⇒ 묶는 축을 종이 아니라 **획 폭 구간**으로 바꾼다(재는 자리·가중은 [B12] 와 한 벌).
+         ⚠ 이 자는 «비가 획 폭에 무관» 이라는 규격 문장 자체를 묻는다 — 규격이 참이면 구간별
+           중앙값은 전부 K 근처로 같고, 바닥이 덮어쓰면 가는 구간만 위로 뜬다. */
+      const bandRows = b13bands(r.out, strokeIds);
+      console.log('  [B13] 획 폭 구간별 — 규격이 참이면 «비» 가 구간마다 같고, 바닥이 덮어쓰면 «코어» 가 같다');
+      for (const b of bandRows) {
+        console.log('    획 ' + String(b.lo).padStart(2) + '~' + String(b.hi).padEnd(3) +
+                    ' n=' + String(b.n).padStart(4) + '  비 중앙 ' + b.md.toFixed(3) +
+                    '  ⇒ 코어 ' + b.core.toFixed(2) + 'px');
+        console.log('        ' + b.by.slice(0, 6).map(e => e[0] + ' ' + e[1] + '개 ' + e[2].toFixed(2)).join(' · '));
+      }
+      const b13mx = bandRows.length ? Math.max.apply(null, bandRows.map(b => b.md)) : 0;
+      const b13mn = bandRows.length ? Math.min.apply(null, bandRows.map(b => b.md)) : 0;
+      const spr = (r.out.sprites || []).slice().sort((a, b) => a[1] - b[1]);
+      console.log('  [진단] 구운 스프라이트 자체의 코어 폭(로컬px · 합성/근백색 문턱 이전)');
+      console.log('    ' + spr.map(e => e[0] + ' ' + e[1]).join(' · '));
+      console.log('');
+      ok(bandRows.length >= 3 && b13mn > 0 && b13mx / b13mn <= BAND13,
+         '[B13] 획 폭 구간별 비의 중앙값이 한 밴드 — ' + bandRows.length + '구간 · 최대 ' +
+         b13mx.toFixed(3) + ' ÷ 최소 ' + b13mn.toFixed(3) + ' = ' +
+         (b13mn > 0 ? (b13mx / b13mn).toFixed(2) : '∞') + '배 ≤ ' + BAND13 +
+         ' (8회차 실측 = 바닥 4.0px 이 세 구간을 덮어썼다)');
+
       /* ⚑⚑ 8회차 **이관**(333 처방) — 이 항은 «덩어리에서는 **상한이** 폭을 정한다» 를 전제로
          «폭 자체가 한 밴드» 를 물었다. 그 전제는 **반쪽폭을 넓게 읽던 자** 위에서만 참이었다 —
          닿는 데까지 본 가장 굵은 곳이 곧 그 자리의 굵기였으므로 덩어리는 **어디서나** 상한에
@@ -525,8 +613,47 @@ async function measure(browser, url) {
       const mn = rs.length ? Math.min.apply(null, rs) : 0;
       const bad = ids.filter(i => rn.out.rows[i].ratio < R_MIN || rn.out.rows[i].ratio > R_MAX);
       const noMain = ids.filter(i => rn.out.rows[i].cover < COVER);
+      /* ⚑ 9회차 진단(판정 밖) — **같은 [B13] 자를 되돌림 사본에 댄다.** 9회차가 «바닥» 의 정체를
+         찾으며 K·페이드·minR 를 차례로 흔들어도 가는 구간이 **한 값도** 안 움직였기 때문에,
+         그 구간의 «근백색» 이 정말 ③층인지 아니면 **본체가 원래 희어서** 세지는 것인지를
+         이 대조가 가른다(코어를 끄면 우리 층은 0 이다). */
+      {
+        const cW0 = rn.out.capW || 0, cK0 = rn.out.K || 0;
+        const sIds = ids.filter(i => !(cW0 > 0 && cK0 * rn.out.rows[i].wb >= 0.8 * cW0));
+        const nb = b13bands(rn.out, sIds);
+        console.log('  [진단] 코어를 끈 사본 — 종별 «근백색»(0 이 정상 · 0 이 아니면 그 종의 본체가 원래 희다)');
+        for (const i of ids) {
+          const q = rn.out.rows[i];
+          if (!q.nc) continue;
+          console.log('    ' + (q.sh + ' (' + i + ')').padEnd(20) + '본체폭 ' + String(q.wb).padStart(6) +
+                      '  근백색 폭 ' + String(q.wc).padStart(6) + '  비 ' + String(q.ratio).padStart(6) +
+                      '  화소 ' + q.nc + '/' + q.nb);
+        }
+        console.log('  [진단] 코어를 끈 사본의 같은 구간 — 여기 남는 «근백색» 은 ③층이 아니라 본체다');
+        for (const b of nb)
+          console.log('    획 ' + String(b.lo).padStart(2) + '~' + String(b.hi).padEnd(3) +
+                      ' n=' + String(b.n).padStart(4) + '  비 중앙 ' + b.md.toFixed(3) +
+                      '  ⇒ 코어 ' + b.core.toFixed(2) + 'px');
+        console.log('');
+      }
       ok((rn.out.baked || []).length === 0,
          '[R1] 코어를 끄면 굽지 않는다 — 구운 종 ' + (rn.out.baked || []).length + '종(0)');
+      /* ⚑ 9회차 — **[B13] 의 되돌림 시험**(누른 항을 묻는 항을 한 줄 더 넣는다 — 328~330 교훈).
+         새 축을 세우면서 그 축이 «무엇을 켜도 초록» 이 아님을 같이 못박는다: 종별 손그림
+         하이라이트에서는 구간별 중앙값이 **한 밴드일 이유가 없고**, 실제로 가는 구간 하나만
+         값을 갖고 나머지는 0 이다(= 그 구간들의 마루에 층이 아예 없다) ⇒ 밴드가 ∞ 다. */
+      {
+        const cW1 = rn.out.capW || 0, cK1 = rn.out.K || 0;
+        const sI = ids.filter(i => !(cW1 > 0 && cK1 * rn.out.rows[i].wb >= 0.8 * cW1));
+        const nb2 = b13bands(rn.out, sI);
+        const ms = nb2.map(b => b.md);
+        const x2 = ms.length ? Math.max.apply(null, ms) : 0;
+        const n2 = ms.length ? Math.min.apply(null, ms) : 0;
+        ok(nb2.length >= 3 && !(n2 > 0 && x2 / n2 <= BAND13),
+           '[R5] 코어를 끄면 [B13](획 폭 구간별 밴드)이 빨개진다 — ' + nb2.length + '구간 · 밴드 ' +
+           (n2 > 0 ? (x2 / n2).toFixed(2) : '∞') + ' > ' + BAND13 +
+           ' (값이 0 인 구간 ' + ms.filter(v => v <= 0).length + ')');
+      }
       ok(bad.length >= 4 || (mn > 0 && mx / mn > BAND),
          '[R2] 코어를 끄면 [B10] 이 빨개진다 — 목표대 밖 ' + bad.length + '종 · 밴드 ' +
          (mn > 0 ? (mx / mn).toFixed(2) : '∞') + '배');
