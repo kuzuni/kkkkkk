@@ -283,19 +283,20 @@ function preTree() {
        · **안내문(cap)·패널·바(pcb)는 D0** - 813 이 1.00 으로 닫은 «수반 아래 안내문» 이 안
          움직였다는 가장 짧은 증거다(움직였으면 `verify813` [3] 이 먼저 빨개진다).
      옛 표(813 7회차 capt -1.14)는 이 주석에 남긴다 - 어디서 왔는지를 지우지 않는다(333). */
+  /* ⚑ 813 8회차 [H1] — 표를 다시 적었다(앞 회차들과 같은 이유: 기준이 `merge-base origin/main HEAD`
+     라 866 의 이동은 이제 main 안이라 Δ0 으로 읽힌다 — 남겨 두면 «등재된 이동을 기다리는데
+     실제는 0» 으로 이 항이 빨개진다). 아래는 `P813_DUMP=1` 출력 그대로이고 **출처는 하나**다 —
+     GTF 232 → 110(867 이 데려간 바의 몫 146 을 벽에서 걷어냈다) ⇒ 1600 의 gt 가 2px 내려간다.
+     · `gridt −2` 와 그것을 따라가는 `floort/groundt −2`(패널 바닥에서 역산하는 요소라 높이 +2)
+     · **긴 세 프레임은 빈 칸이 정답이다** — 1841↑ 에서는 이 하한이 애초에 안 이긴다(Δ0px 실측).
+     · 수반·알약·안내문·바는 Δ0 — 이 회차는 «벽» 한 칸만 건드렸다.
+     옛 표(866: 1600 gridt −3 · floor/ground −8 · mid/basin/lab/steps −10 · cost 4칸,
+     긴 프레임 gridt/lintelt/floort/groundt −4.81 …)는 이 주석에 남긴다(333 — 어디서 왔는지를 지우지 않는다). */
   const ALLOW813 = {
-    1600: { gridt: -3, floort: -8, floorh: 8, groundt: -8, groundh: 8,
-            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
-            costl: 9, costt: -10, costw: -18, costh: 4.8, },
-    1920: { gridt: -4.81, lintelt: -4.81, floort: -4.81, floorh: 4.81, groundt: -4.81, groundh: 4.81,
-            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
-            costl: 9, costt: -10, costw: -18, costh: 4.8, },
-    2280: { gridt: -4.81, lintelt: -4.81, floort: -4.81, floorh: 4.81, groundt: -4.81, groundh: 4.81,
-            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
-            costl: 9, costt: -10, costw: -18, costh: 4.8, },
-    2600: { gridt: -4.81, lintelt: -4.81, floort: -4.81, floorh: 4.81, groundt: -4.81, groundh: 4.81,
-            midt: -10, midh: 10, basint: -10, basinh: 10, labt: -10, stepst: -10,
-            costl: 9, costt: -10, costw: -18, costh: 4.8, },
+    1600: { gridt: -2, floort: -2, floorh: 2, groundt: -2, groundh: 2, },
+    1920: {},
+    2280: {},
+    2600: {},
   };
   {
     const pre = preTree();
