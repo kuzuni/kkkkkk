@@ -24,8 +24,17 @@
  *   부하에 따라 봉우리(크림 2,600~4,000)와 빈 창(430~540ms 구간, 크림 128)이 갈렸다(플레이키).
  *   이제 `__v512.holdScene()` 이 태어난 연출 노드의 제거·CSS 애니만 세워 두고 찍는다.
  *   재현·근거는 `node tools/probe808.js`(부하 옵션 포함), 기록은 `docs/review/808-verify512R1플레이키.md`.
+ *
+ * ⚑ 836 (2026-09-03) — 808 의 홀드가 **어느 프레임에** 서는지를 고쳤다. MutationObserver 의 손이
+ *   노드가 그려지기 전에 닿아 애니가 **0%(`scale(.26) opacity:.38` = 골짜기)** 에서 굳었고,
+ *   그래서 세워 놓고도 잉크가 거의 없어 [R1] 의 크림이 수십 개로 떨어져 문턱 500 을 **아래에서**
+ *   스치며 다시 흔들렸다(등재문 «되돌림 102 ↔ 정상 43»). ⇒ 홀드를 `tools/fxhold512.js` 한 벌로 모으고
+ *   음수 `animation-delay` 로 시계를 **봉우리(18%)** 에 맞춘 채 정지시킨다(요소마다 제 길이의 비율 —
+ *   러너 절대값 0개). 문턱은 한 칸도 안 내렸다 — 대신 [G0b]·[R0b] 가 «정말 봉우리인가» 를 실측으로 못박는다.
+ *   재현·지형은 `node tools/probe836.js`, 기록은 `docs/review/836-verify512R1봉우리홀드.md`.
  */
 const { pw, launch } = require('./pwlaunch');
+const fxhold = require('./fxhold512');
 const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
@@ -101,7 +110,9 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
 
   /* 씬 하네스를 페이지에 심는다 — [C]·[D]·[F]·[R] 이 같은 함수를 쓴다(자매 자 드리프트 예방 · 385).
      [G]·[R] 은 페이지를 다시 띄우고 이 함수를 다시 부른다(두 측정이 서로의 상태를 물려받지 않게). */
-  const setup = () => p.evaluate(() => {
+  const setup = async () => {
+    await fxhold.install(p);          /* 836 — 홀드 한 벌(`tools/fxhold512.js`)을 페이지에 심는다 */
+    await p.evaluate(() => {
     window.step = () => {};
     window.__v512 = {
       raf: () => new Promise(r => requestAnimationFrame(() => r())),
@@ -136,33 +147,18 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
          **빈 창**(스파크는 죽고 `+n` 은 아직 안 뜬 430~540ms 구간 = 크림 128) 사이를 오갔다.
          ⇒ 태어난 연출 노드를 **그 프레임에 세운다**: `el.remove`(= `fxBye` 의 손)와 CSS 애니만 멈춘다.
          색·개수·자리는 제품이 만든 그대로라 축(«되돌리면 수리 전 색이 화면에 찍힌다»)은 안 무뎌진다 —
-         연출이 아예 없으면 노드가 0 이고 [G0] 이 빨개진다. 문턱(500·5배)은 한 칸도 안 내렸다(796). */
-      async holdScene(fn) {
-        const hold = el => { try { el.remove = () => {}; el.style.animationPlayState = 'paused'; } catch (e) {} };
-        const mo = new MutationObserver(rs => {
-          for (const r of rs) for (const n of r.addedNodes) {
-            if (n.nodeType !== 1) continue;
-            hold(n); n.querySelectorAll && n.querySelectorAll('*').forEach(hold);
-          }
-        });
-        /* 관측자는 **끊지 않는다** — 캡처가 끝날 때까지(그 뒤에 태어나는 `+n` 까지) 같이 세운다.
-           측정마다 페이지를 다시 띄우므로 다음 측정에 새지 않는다. */
-        for (const id of ['fxl', 'fxlc']) { const L = document.getElementById(id); if (L) mo.observe(L, { childList: true, subtree: true }); }
-        fn();
-        /* 789 «두 프레임 연속 정적» — 스폰이 끝난 때를 **제품에게 묻는다**(고정 대기를 안 쓴다) */
-        const cnt = () => document.querySelectorAll('#fxl .fx-spark, #fxlc .fx-spark').length;
-        let prev = -1, still = 0, f = 0;
-        for (; f < 120 && still < 2; f++) { await this.raf(); const n = cnt(); still = (n > 0 && n === prev) ? still + 1 : 0; prev = n; }
-        const q = s => document.querySelectorAll(s).length;
-        return { spark: cnt(), fly: q('.fx-fly'), plus: q('.fx-plus'), frames: f };
-      },
+         연출이 아예 없으면 노드가 0 이고 [G0] 이 빨개진다. 문턱(500·5배)은 한 칸도 안 내렸다(796).
+         ⚑ 836 — 그 홀드가 **0%(골짜기)** 에 서 있던 것을 봉우리로 옮겼고, 구현은 자와 재현기가
+            같이 읽는 `tools/fxhold512.js` 한 벌로 모았다(사본 0). 여기서는 그 한 벌을 그대로 부른다. */
+      holdScene(fn) { return window.__fxhold.holdScene(fn); },
       rgb(hex) { const h = hex.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); },
       same(cssCol, hex) {   /* `rgb(a, b, c)` ↔ `#RRGGBB` */
         const m = String(cssCol).match(/(\d+)\D+(\d+)\D+(\d+)/); if (!m) return String(cssCol).toLowerCase() === hex.toLowerCase();
         const t = this.rgb(hex); return Math.abs(+m[1] - t[0]) < 3 && Math.abs(+m[2] - t[1]) < 3 && Math.abs(+m[3] - t[2]) < 3;
       }
     };
-  });
+    });
+  };
   await setup();
 
   const scene = js => p.evaluate(async (code) => {
@@ -241,7 +237,7 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
     }));
     const after = await p.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
     /* 350 처방 — 캡처를 페이지로 되돌려 «찍힌 픽셀» 을 읽는다 */
-    const px = await p.evaluate(async ([b64a, b64b, palette]) => {
+    const px = await p.evaluate(async ([b64a, b64b, palette, geo]) => {
       const load = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = src; });
       const [ia, ib] = await Promise.all([load(b64a), load(b64b)]);
       const cv = document.createElement('canvas');
@@ -250,35 +246,61 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
       cx.drawImage(ia, 0, 0); const A = cx.getImageData(0, 0, cv.width, cv.height).data;
       cx.clearRect(0, 0, cv.width, cv.height);
       cx.drawImage(ib, 0, 0); const B = cx.getImageData(0, 0, cv.width, cv.height).data;
-      const out = {}; for (const k in palette) out[k] = 0;
-      let changed = 0;
+      /* ⚑ 836 (811 처방) — «버스트의 **색 띠** 안» 마스크. 두 가지를 가른다:
+         ⓐ 화면 어딘가가 바뀐 것 ↔ 이 연출이 찍은 것(룰렛 당첨 하이라이트·비행 코인이 밖에서 섞인다)
+         ⓑ 알의 **흰 심**(배경 그라디언트 0~26% 는 --c 와 무관하게 #FFF) ↔ 재화 색을 입는 바깥 띠.
+         ⓑ 를 안 도려내면 색을 하나도 안 되돌려도 «크림» 이 수백 개 나온다(실측 648). */
+      const { disks, rIn, rOut } = geo;
+      const mask = new Uint8Array(cv.width * cv.height);
+      let maskPx = 0;
+      for (const [cxp, cyp, r] of (disks || [])) {
+        const ri = r * rIn, ro = r * rOut;
+        const y0 = Math.max(0, Math.floor(cyp - ro)), y1 = Math.min(cv.height - 1, Math.ceil(cyp + ro));
+        const x0 = Math.max(0, Math.floor(cxp - ro)), x1 = Math.min(cv.width - 1, Math.ceil(cxp + ro));
+        for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+          const d = Math.hypot(x + 0.5 - cxp, y + 0.5 - cyp);
+          if (d < ri || d > ro) continue;
+          const j = y * cv.width + x;
+          if (!mask[j]) { mask[j] = 1; maskPx++; }
+        }
+      }
+      const out = {}, inBox = {}; for (const k in palette) { out[k] = 0; inBox[k] = 0; }
+      let changed = 0, changedIn = 0;
       for (let i = 0; i < A.length; i += 4) {
         const dr = B[i] - A[i], dg = B[i + 1] - A[i + 1], db = B[i + 2] - A[i + 2];
         if (Math.abs(dr) + Math.abs(dg) + Math.abs(db) < 40) continue;
         changed++;
+        const on = mask[i >> 2] === 1;
+        if (on) changedIn++;
         let best = null, bd = 60;
         for (const k in palette) {
           const t = palette[k];
           const d = Math.hypot(B[i] - t[0], B[i + 1] - t[1], B[i + 2] - t[2]);
           if (d < bd) { bd = d; best = k; }
         }
-        if (best) out[best]++;
+        if (best) { out[best]++; if (on) inBox[best]++; }
       }
-      return { changed, hits: out };
+      return { changed, hits: out, changedIn, inBox, maskPx };
     }, [
       'data:image/png;base64,' + before.toString('base64'),
       'data:image/png;base64,' + after.toString('base64'),
       Object.fromEntries(Object.entries(Object.assign({ cream: '#FFE9A8' }, cols))
-        .map(([k, v]) => [k, [0, 2, 4].map(i => parseInt(v.replace('#', '').substr(i, 2), 16))]))
+        .map(([k, v]) => [k, [0, 2, 4].map(i => parseInt(v.replace('#', '').substr(i, 2), 16))])),
+      { disks: nodes.disks, rIn: nodes.rIn, rOut: nodes.rOut }
     ]);
     return Object.assign(px, { nodes });
   };
   const G = await pixel(false);
   console.log('  바뀐 픽셀 ' + G.changed + ' · 팔레트 적중 ' + JSON.stringify(G.hits)
-    + ' · 세운 연출 ' + JSON.stringify(G.nodes));
+    + '\n  (버스트 색 띠 안 ' + G.maskPx + 'px) 바뀐 ' + G.changedIn + ' · 적중 ' + JSON.stringify(G.inBox)
+    + '\n  세운 연출 ' + JSON.stringify(Object.assign({}, G.nodes, { disks: G.nodes.disks.length })));
   /* ⚑ 808 전제 — 홀드가 «없는 연출을 있는 것처럼» 만들지 않는다는 못.
      버스트가 사라지면 세울 것이 없어 여기가 먼저 빨개진다(자가 무르지 않다). */
-  ok(G.nodes.spark > 0, '[G0] (전제) 잡은 프레임에 버스트가 실제로 서 있다', JSON.stringify(G.nodes));
+  ok(G.nodes.spark > 0, '[G0] (전제) 잡은 프레임에 버스트가 실제로 서 있다', '버스트 ' + G.nodes.spark + '개');
+  /* ⚑ 836 전제 — 홀드가 «세웠다» 만으로는 모자란다. 0%(`scale(.26)`)에 서면 잉크가 거의 없어
+     [R1] 이 문턱을 **아래에서** 스친다(그게 836 이 잡은 결함이다). 봉우리에 섰는지를 실측으로 못박는다. */
+  ok(G.nodes.scale >= 0.9, '[G0b] (전제) 세운 프레임은 버스트의 **봉우리**다 — 스케일 ≥ .9 (0% 는 .26)',
+    '스케일 ' + G.nodes.scale.toFixed(3) + ' · 홀드 지점 ' + (G.nodes.peak * 100).toFixed(0) + '%');
   ok(G.hits.dia > 200, '[G1] 룰렛(전 칸 dia) 수령 프레임에 **dia 색 픽셀**이 실제로 찍힌다', 'dia ' + G.hits.dia);
   ok(G.hits.gold * 4 < G.hits.dia, '[G2] 그 프레임에 금색이 지배하지 않는다(주인이 본 «골드가 섞여 있다»)',
     'gold ' + G.hits.gold + ' vs dia ' + G.hits.dia);
@@ -287,14 +309,23 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   console.log('\n=== [R] 되돌림 시험 — 상수 한 색으로 되돌리면 빨개진다 ===');
   const R = await pixel(true);
   console.log('  (되돌림) 바뀐 픽셀 ' + R.changed + ' · 팔레트 적중 ' + JSON.stringify(R.hits)
-    + ' · 세운 연출 ' + JSON.stringify(R.nodes));
-  ok(R.nodes.spark > 0, '[R0] (전제) 되돌림 프레임에도 버스트가 실제로 서 있다', JSON.stringify(R.nodes));
+    + '\n  (버스트 색 띠 안 ' + R.maskPx + 'px) 바뀐 ' + R.changedIn + ' · 적중 ' + JSON.stringify(R.inBox)
+    + '\n  세운 연출 ' + JSON.stringify(Object.assign({}, R.nodes, { disks: R.nodes.disks.length })));
+  ok(R.nodes.spark > 0, '[R0] (전제) 되돌림 프레임에도 버스트가 실제로 서 있다', '버스트 ' + R.nodes.spark + '개');
+  ok(R.nodes.scale >= 0.9, '[R0b] (전제) 되돌림 프레임도 같은 **봉우리**에서 잡았다(두 값이 같은 자에서 나온다)',
+    '스케일 ' + R.nodes.scale.toFixed(3) + ' ↔ 정상 ' + G.nodes.scale.toFixed(3));
   /* ⚑ 되돌림의 자는 «dia 픽셀이 준다» 가 아니라 **«수리 전 색이 화면에 있다»** 여야 한다 —
      비행 코인 아이콘 자체가 다이아 스프라이트(시안)라 dia 화소는 색을 되돌려도 남는다.
      수리 전 상수 크림(#FFE9A8)은 그 프레임 어디에도 없어야 정상이다. */
-  ok(R.hits.cream > 500 && R.hits.cream > G.hits.cream * 5,
-    '[R1] 되돌리면 «수리 전 크림» 이 화면에 실제로 찍힌다 — 정상 프레임에는 거의 없다',
-    '되돌림 ' + R.hits.cream + ' ↔ 정상 ' + G.hits.cream);
+  /* ⚑ 836 — 세는 자리를 **버스트가 재화 색을 입는 띠**로 가둔다(811 처방 · 등재문 갈래 ⓐ).
+     프레임 전체로 세면 룰렛 당첨 하이라이트가, 알 전체로 세면 **색과 무관한 흰 심**이 크림 옆에 떨어져
+     «정상» 쪽에도 수백 개가 섞여 든다(실측 649 · 그중 648 이 알 안) — 축이 묻는 것은
+     «**버스트가** 수리 전 색을 입었는가» 다. ⚠ 문턱(500 · 5배)은 808 이 정한 값 그대로다(796).
+     ⚠ 이 마스크는 [R] 과 [G] 에 **같은 코드**로 걸린다 — 한쪽만 유리하게 자르지 않는다. */
+  ok(R.inBox.cream > 500 && R.inBox.cream > G.inBox.cream * 5,
+    '[R1] 되돌리면 «수리 전 크림» 이 버스트의 색 띠에 실제로 찍힌다 — 정상 프레임에는 거의 없다',
+    '되돌림 ' + R.inBox.cream + ' ↔ 정상 ' + G.inBox.cream
+    + ' (프레임 전체로 세면 ' + R.hits.cream + ' ↔ ' + G.hits.cream + ')');
   const rc = await p.evaluate(async () => {
     const r = await window.__v512.scene(() => giveReward({ dia: 500 }));
     for (const k in FXCUR) FXCUR[k].col = null;    /* 색을 아예 빼면 파티클 기본색으로 떨어진다 */
