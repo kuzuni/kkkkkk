@@ -114,6 +114,8 @@ async function run(file, h) {
          그 지적은 죽은 프레임을 잰 것이었고(`probe814b` [3-c]) 실제로는 플래시가 카드 상자를
          통째로 덮는다. 픽셀 증거는 `probe814b` 가 들고, 여기서는 **상자가 호스트와 같은가**를
          묻는다 — 누군가 플래시 앵커를 다른 노드로 옮기면 픽셀 자를 안 돌려도 여기가 빨개진다. */
+      /* 862 — 호스트가 그리는 액자 띠(테두리 + 안쪽 링). [B11] 의 크기 문턱이 여기서 파생된다. */
+      hostRing: (typeof fxRingIn === 'function') ? fxRingIn(sel) : 0,
       flashAt: L ? [...L.querySelectorAll('.fx-flash')].map((e) => {
         const r = e.getBoundingClientRect();
         return { x: r.left, y: r.top, w: r.width, h: r.height, an: getComputedStyle(e).animationName };
@@ -301,17 +303,27 @@ function inter(plus, inks) {
        `probe814b` 가 픽셀로 갈랐다(그 지적은 **수거된 뒤의 프레임**을 잰 것이고, 봉우리에서
        테두리 띠 +182/255 · 속 +46.6/255 다). 여기서는 그 반응의 **주어**를 지킨다 —
        플래시 상자가 누른 카드와 같은 자리인가. 상자가 남의 노드로 옮겨 가면 픽셀 자를 안 돌려도
-       이 항이 먼저 빨개진다. ⚠ 상자는 호스트 rect 그대로다(`inset` 인자를 안 주는 호출이라
-       `pin` = 0 · 훈련 홀드 자리만 안으로 들인다). */
+       이 항이 먼저 빨개진다.
+       ⚑⚑ **862 이관 — «상자 = 호스트 rect» 가 아니라 «상자 = 호스트 액자 띠 **안쪽**» 이다.**
+         종전 주석은 «`inset` 인자를 안 주는 호출이라 `pin` = 0» 이라고 적어 두었는데, 862 가
+         그 문을 «액자를 그리는 호스트인가» 로 바꿨다(흰 판이 액자선을 먹는 것은 `inset` 인자의
+         성질이 아니라 기하다 — 유물 카드에서 액자선 잔존 3.1%). 코스튬 카드는 액자 띠가 있으므로
+         상자가 네 변에서 그만큼 들어온다(실측 크기 Δ10.0 = 띠 5px × 2).
+       ⇒ **축은 그대로 «누른 카드를 덮는가»** 이고(중심 Δ 는 여전히 ≤ 2), 크기 문턱만 그 띠에서
+         **파생**시킨다(손 상수 0개 — `fxRingIn` 이 호스트에서 읽는다). 상자가 남의 노드로 옮겨
+         가면 중심 Δ 가 먼저 빨개지는 것도 그대로다. */
     const f = D.flashAt[0];
+    const ring = D.hostRing || 0;                     /* 862 — 호스트가 그리는 액자 띠(제품이 답한다) */
     const dc = f ? Math.max(Math.abs((f.x + f.w / 2) - (D.sel.x + D.sel.w / 2)),
                             Math.abs((f.y + f.h / 2) - (D.sel.y + D.sel.h / 2))) : Infinity;
     const ds = f ? Math.max(Math.abs(f.w - D.sel.w), Math.abs(f.h - D.sel.h)) : Infinity;
     console.log('  · 플래시 상자 ' + (f ? r0(f.w) + '×' + r0(f.h) + ' (' + f.an + ') · 중심 Δ' + dc.toFixed(1)
-      + 'px · 크기 Δ' + ds.toFixed(1) + 'px' : '없음') + ' / 카드 ' + r0(D.sel.w) + '×' + r0(D.sel.h));
-    ok(!!f && dc <= 2 && ds <= 2 && /fxFlash/.test(f.an),
+      + 'px · 크기 Δ' + ds.toFixed(1) + 'px' : '없음') + ' / 카드 ' + r0(D.sel.w) + '×' + r0(D.sel.h)
+      + ' · 액자 띠 ' + ring + 'px (862)');
+    ok(!!f && dc <= 2 && Math.abs(ds - 2 * ring) <= 2 && /fxFlash/.test(f.an),
       '[B11] ★ 그 플래시가 **누른 카드 본체**를 덮는다 — 중심 Δ' + (f ? dc.toFixed(1) : '—')
-      + 'px · 크기 Δ' + (f ? ds.toFixed(1) : '—') + 'px (≤ 2). 3회차 CR6 «카드가 0px 반응한다» 는 '
+      + 'px (≤ 2) · 크기 Δ' + (f ? ds.toFixed(1) : '—') + 'px ↔ 액자 띠 ×2 = ' + (2 * ring)
+      + 'px (862 이관 · 옛 문턱 «Δ ≤ 2»). 3회차 CR6 «카드가 0px 반응한다» 는 '
       + '**수거된 뒤의 프레임**을 잰 것이다 — 픽셀 증거는 `node tools/probe814b.js`');
   }
 
