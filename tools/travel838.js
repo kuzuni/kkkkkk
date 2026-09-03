@@ -100,6 +100,10 @@ function summarize(env, org) {
  *                        재시드가 있으면 burn 이 몇이든 값이 **한 자리도 안 바뀌고**, 없으면 갈린다
  *                        — 그 갈림이 873 의 뿌리다(`probe873`·`verify873` 이 그 짝을 단언한다).
  */
+/* ⚑ 883 — `opts.init`(선택) = 트리거 **전에** 페이지 안에서 한 번 실행할 JS 문자열.
+ *   882 의 `seed` 와 같은 «자 손잡이» 다(기본값 없음 = 종전과 한 자리도 안 다르다).
+ *   883 은 이것으로 «구멍 자를 옛 것(글꼴 상자)으로 되돌린 판» 을 **사본 파일 없이** 만든다 —
+ *   같은 트리·같은 시드에서 자 한 줄만 갈아 끼우므로 «사본이 다른 무엇을 같이 바꿨나» 가 안 생긴다. */
 async function runScene(scene, src, opts) {
   const o = opts || {};
   const reseed = o.reseed !== false;
@@ -138,6 +142,7 @@ async function runScene(scene, src, opts) {
     }, scene.open);
     await page.waitForTimeout(700);
     await page.waitForFunction(() => document.querySelectorAll('#fxl > *').length === 0, null, { timeout: 5000 }).catch(() => {});
+    if (o.init) await page.evaluate(src2 => { (new Function(src2))(); }, o.init);   /* 883 — 자 손잡이 */
 
     /* 발원 중심·호스트 상자는 **트리거 전**에 잡는다(621 눌림이 프레임마다 호스트를 키운다 — LESSONS 681-⑥) */
     const geo = await page.evaluate((sel) => {

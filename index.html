@@ -42800,11 +42800,49 @@ function fxbTextHoles(t, m){
 }
 /* ⚑⚑ 816 — **호스트가 «이건 가리지 마라» 고 신고한 잉크**(`--burst-keep`, 자식 셀렉터).
    660 이 아이콘 버스트에서 글자 구멍을 통째로 안 판 자리의 예외다(아래 `kh` 머리말).
-   ⚠ 위 `fxbTextHoles` 와 **자를 같이 쓴다** — 글자는 `Range` 의 잉크 bbox, 그림은 요소 bbox,
-     둘 다 사방 `m` 만큼 넓힌다(43회차 ⓑ 규약 그대로). 다른 것은 «무엇을 훑는가» 하나뿐이다:
+   ⚠ 위 `fxbTextHoles` 와 자가 **한 자리에서 갈린다(883)** — 글자를 저기는 `Range`(글꼴 상자),
+     여기는 **글리프 잉크**(`fxbInkRect`)로 잰다. 그림은 둘 다 요소 bbox이고 사방 `m` 확장도
+     같다(43회차 ⓑ 규약). 갈린 이유는 아래 `fxbInkRect` 머리말에 있다. 그 밖에 다른 것은
+     «무엇을 훑는가» 하나뿐이다:
      저기는 «대상의 모든 자손», 여기는 **신고된 셀렉터에 걸리는 자손뿐**이고 **호스트 자신은
      절대 안 담는다**(호스트를 담는 순간 빈자리가 0 이 되는 것이 660 이 만난 그 벽이다).
    ⚠ 신고가 없으면 **빈 배열**이다 — 안 신고한 호스트는 한 값도 안 바뀐다. */
+/* ⚑⚑ 883 — **글자 구멍의 자를 «글꼴 상자» 에서 «글리프 잉크» 로 좁힌다.**
+   `Range` 의 bbox 는 «잉크» 가 아니라 **글꼴 상자**(ascent+descent)다 — 훈련 「45」 실측:
+   Range h **46**(= fontAsc 37 + fontDesc 9) 인데 찍힌 잉크는 h **32**(actAsc 32 · actDesc 0 —
+   숫자는 내림이 없다) ⇒ **위 5px · 아래 9px 이 헛구멍**이다. 883 등재문은 이 헛구멍을
+   «line-height 62 ↔ 잉크 47» 로 적었는데 **한 겹 위였다**(제품은 이미 요소 rect 62 가 아니라
+   Range 46 을 담고 있었다 — 816 §3 «글자는 Range 잉크 bbox»). 실측이 그 전제를 정정한다.
+   ⚠ **자는 캔버스 `measureText` 의 `actualBoundingBox*`** — 같은 글꼴·같은 크기로 재고,
+     **Range 상자 높이 = fontAsc+fontDesc** 인지 먼저 대조해 어긋나면(글꼴 폴백·합자·여러 줄)
+     **옛 자로 되돌아간다**(무르게 푸는 길을 열지 않는다).
+   ⚠ 가로는 안 건드린다 — 「45」 실측 advance 55.44 ↔ 잉크 54.89 로 **0.55px** 차이라
+     좁혀도 얻는 것이 없고, 자간·커닝이 붙는 문자열에서 되레 잉크를 자를 위험만 남는다.
+   ⚠ `fxbTextHoles`(660·43회차)의 자는 **안 바꾼다** — 저기는 «호스트의 모든 자손을 피한다» 는
+     넓은 회피라 09·12·17·장비·코스튬이 그 값 위에 서 있다. 여기는 **호스트가 콕 집어 신고한
+     그 잉크** 하나라 «잉크가 아닌 여백까지 비워 둘» 이유가 없다(883 = 그 여백이 씬 A 산포의 지렛대). */
+function fxbInkRect(el, b){
+  try {
+    if(!el || !b || !b.width || !b.height) return null;
+    const tx = (el.textContent || '').trim(); if(!tx) return null;
+    const cs = getComputedStyle(el);
+    const fs = parseFloat(cs.fontSize); if(!(fs > 0)) return null;
+    const cv = fxbInkRect.cv || (fxbInkRect.cv = document.createElement('canvas').getContext('2d'));
+    if(!cv) return null;
+    cv.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + fs + 'px ' + cs.fontFamily;
+    const mt = cv.measureText(tx);
+    const fa = mt.fontBoundingBoxAscent, fd = mt.fontBoundingBoxDescent;
+    const aa = mt.actualBoundingBoxAscent, ad = mt.actualBoundingBoxDescent;
+    if(![fa, fd, aa, ad].every(v => Number.isFinite(v))) return null;
+    /* 대조 — 캔버스가 잰 글꼴 상자가 레이아웃의 Range 상자와 같아야 «같은 글꼴을 쟀다» 가 참이다 */
+    if(Math.abs((fa + fd) - b.height) > 1.5) return null;
+    const base = b.top + fa;                          /* 베이스라인 — Range 상자 위끝 + ascent */
+    const top = Math.min(base - aa, b.bottom), bot = Math.max(base + ad, b.top);
+    if(!(bot - top > 0)) return null;
+    return { left: b.left, top: Math.max(top, b.top), width: b.width,
+             height: Math.min(bot, b.bottom) - Math.max(top, b.top) };
+  } catch(_){ return null; }
+}
 function fxbKeepHoles(t, m){
   const f = fxSc(); if(!f || !t || t.nodeType !== 1) return [];
   let sel = '';
@@ -42819,7 +42857,7 @@ function fxbKeepHoles(t, m){
     let has = false;
     for(const n of el.childNodes) if(n.nodeType === 3 && n.textContent.trim()){ has = true; break; }
     let b;
-    if(has){ rg.selectNodeContents(el); b = rg.getBoundingClientRect(); }
+    if(has){ rg.selectNodeContents(el); b = rg.getBoundingClientRect(); b = fxbInkRect(el, b) || b; }
     else b = el.getBoundingClientRect();
     if(!b.width || !b.height) continue;
     out.push({ x:(b.left - f.x)/f.s - m, y:(b.top - f.y)/f.s - m,
