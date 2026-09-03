@@ -21,7 +21,14 @@
  *   §3 값   — 살려 둔 대가로 표시가 굳지 않는다(켜진 칸 = 현재 배수 · 잉크 ol4/ol3 · 말은 SUM_MULS 파생)
  *   §4 이관 — 488 [E1]·[E2] 의 관측점(`summonRelicBatch`)이 실제로 그 홀드가 지나는 이름이다
  *   §R 되돌림 — 옛 «매번 innerHTML» 사본에서는 §2 가 **빨개진다**(무르게 풀지 않았다는 증명)
+ *   §R2 되돌림(869) — 홀드의 «되풀이» 를 끊은 사본에서는 §4-a 가 **빨개진다**
  *   §Z 콘솔 에러 0
+ *
+ * ⚑ 869(2026-09-03) — §4 는 홀드를 **고정 2200ms** 로 누르고 «몇 번 지났나» 를 물었는데, 틱 간격을
+ *   정하는 것은 제품 상수가 아니라 **러너**다(`probe869` — 상수가 약속하는 29회 ↔ 이 기계 2회 ·
+ *   실측 간격 1,540ms ↔ 상수 137ms). 그래서 그 문턱은 574·709·825·855·857 과 같은 «절대 수를
+ *   러너에 댄다» 였다. ⇒ 누르는 길이를 **틱 수**(`HOLD_NEED`)로 바꾸고, 기다림의 끝은 절대 초가
+ *   아니라 **비**(마지막 틱 뒤 «잰 간격 × `STALL_K`» = 정체)로 잡는다. 문턱 4 는 그대로다.
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -30,6 +37,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 const NEG = path.join(ROOT, `.v797-neg-${process.pid}.html`);
+const NEG2 = path.join(ROOT, `.v797-neg2-${process.pid}.html`);   /* 869 §R2 — 홀드의 되풀이를 끊은 사본 */
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d ? '  [' + d + ']' : '')); };
@@ -127,6 +135,59 @@ async function pressThroughRender(page, s) {
   return r;
 }
 
+/* 869 — 유물 그릇을 «틱 n 회» 만큼 누른다(고정 ms 가 아니다).
+   자가 맥박을 세며 기다리고, **마지막 틱 뒤 «지금까지 잰 간격 × STALL_K»** 동안 아무 일도 없으면
+   «정체» 로 끊는다(절대 초가 아니라 비 — 857 ③). 아직 간격을 못 쟀으면 바닥값 `STALL_FLOOR`.
+   `CAP` 은 자가 영원히 안 끝나는 것만 막는 안전판이지 판정 문턱이 아니다. */
+const HOLD_NEED = 4;                 /* 488 [E1] 이 요구하는 수 — 그대로다 */
+const STALL_K = 6, STALL_FLOOR = 3000, CAP = 60000;
+async function holdCount(page, need) {
+  await reset(page);
+  await page.evaluate(() => {
+    openRelw();
+    window.__c797 = { summonRelic: 0, summonRelicBatch: 0, hb: 0, at: [], t0: 0 };
+    ['summonRelic', 'summonRelicBatch'].forEach(n => {
+      const o = window[n];
+      window[n] = function () {
+        const r = o.apply(this, arguments);
+        window.__c797[n]++;
+        if (n === 'summonRelicBatch') window.__c797.at.push(Math.round(performance.now() - window.__c797.t0));
+        return r;
+      };
+    });
+    const ohb = window.hbBeat;
+    window.hbBeat = function () { window.__c797.hb++; return ohb.apply(this, arguments); };
+  });
+  await page.waitForTimeout(300);
+  const b = await page.evaluate(() => {
+    const r = document.getElementById('rwBasin').getBoundingClientRect();
+    window.__c797.t0 = performance.now();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  await page.mouse.move(b.x, b.y);
+  await page.mouse.down();
+  const t0 = Date.now();
+  let last = 0, lastAt = t0, stalled = false;
+  for (;;) {
+    const n = await page.evaluate(() => window.__c797.summonRelicBatch);
+    const now = Date.now();
+    if (n > last) { last = n; lastAt = now; }
+    if (n >= need) break;
+    /* 정체 문턱 = 지금까지 잰 평균 간격 × STALL_K(간격을 못 쟀으면 바닥값) */
+    const at = await page.evaluate(() => window.__c797.at);
+    const iv = at.length > 1 ? (at[at.length - 1] - at[0]) / (at.length - 1) : 0;
+    if (now - lastAt > Math.max(STALL_FLOOR, iv * STALL_K)) { stalled = true; break; }
+    if (now - t0 > CAP) { stalled = true; break; }
+    await page.waitForTimeout(80);
+  }
+  const ms = Date.now() - t0;
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  const c = await page.evaluate(() => window.__c797);
+  const iv = c.at.length > 1 ? Math.round((c.at[c.at.length - 1] - c.at[0]) / (c.at.length - 1)) : 0;
+  return Object.assign({}, c, { ms, iv, stalled });
+}
+
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
   const browser = await launch(chromium);
@@ -209,31 +270,21 @@ async function pressThroughRender(page, s) {
 
   /* ══ §4 이관 — 488 [E1]·[E2] 의 관측점 ════════════════════════════ */
   console.log('§4 이관 — 유물 홀드가 지나는 «1 실행» 이름(verify488 [E1]·[E2])');
-  await reset(page);
-  await page.evaluate(() => {
-    openRelw();
-    window.__c797 = { summonRelic: 0, summonRelicBatch: 0, hb: 0 };
-    ['summonRelic', 'summonRelicBatch'].forEach(n => {
-      const o = window[n];
-      window[n] = function () { const r = o.apply(this, arguments); window.__c797[n]++; return r; };
-    });
-    const ohb = window.hbBeat;
-    window.hbBeat = function () { window.__c797.hb++; return ohb.apply(this, arguments); };
-  });
-  await page.waitForTimeout(300);
-  {
-    const b = await page.evaluate(() => { const r = document.getElementById('rwBasin').getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
-    await page.mouse.move(b.x, b.y);
-    await page.mouse.down();
-    await page.waitForTimeout(2200);      /* verify488 의 HOLD 와 같은 눈금 */
-    await page.mouse.up();
-    await page.waitForTimeout(200);
-  }
-  const c = await page.evaluate(() => window.__c797);
-  /* ⚠ 문턱은 «잰 값» 이다(504-④) — 홀드 간격이 가속하므로 2200ms 에서 4~9회로 흔들린다. */
-  ok(c.summonRelicBatch >= 4, '[4-a] ★ 홀드는 `summonRelicBatch` 를 여러 번 지난다(488 [E1] 의 전제)',
-     c.summonRelicBatch + '회');
+  const c = await holdCount(page, HOLD_NEED);
+  console.log('      틱 시각(ms): [' + c.at.join(', ') + '] · ' + c.ms + 'ms 눌렀다'
+            + (c.stalled ? ' · **정체로 끊었다**' : ''));
+  /* ⚠ 869 — 문턱 4 는 그대로고 **무엇을 재는가**가 바뀌었다. 옛 자는 «고정 2200ms 를 누른 뒤 몇 번
+     지났나» 를 물었는데, 틱 간격을 정하는 것은 제품 상수(TR_HOLD_*)가 아니라 **러너**다
+     (`probe869`: 약속 29회 ↔ 이 기계 2회 · 실측 간격 1,540ms ↔ 상수 137ms). 그래서 그 항은
+     «홀드가 되풀이하는가» 가 아니라 «이 기계가 지금 한가한가» 를 재고 있었다 —
+     574·709·825·855·857 이 걸린 «절대 수를 러너에 댄다» 와 같은 병이다.
+     ⇒ 누르는 길이를 **틱 수**로 바꿨다(자가 맥박을 세며 기다린다 · 등재문 ⓐ). 문턱을 2 로 내리는
+     길(ⓑ)은 무른 수리다 — [4-b] 가 «수 = 수» 를 재므로 되풀이 자체를 묻는 항이 하나는 있어야 한다.
+     ⚠ 기다림의 끝은 **절대 초가 아니라 비**로 잡는다(857 ③) — 마지막 틱 뒤 «지금까지 잰 간격의
+     STALL_K 배» 동안 아무 일도 없으면 «정체» 로 끊는다. 기계가 느려지면 분자·분모가 같이 커지므로
+     느린 러너는 그냥 오래 기다릴 뿐이고, **되풀이가 끊긴 트리는 곧바로 빨개진다**(§R-c 가 그 증명). */
+  ok(c.summonRelicBatch >= HOLD_NEED, '[4-a] ★ 홀드는 `summonRelicBatch` 를 여러 번 지난다(488 [E1] 의 전제)',
+     c.summonRelicBatch + '회 · ' + c.ms + 'ms · 평균 간격 ' + c.iv + 'ms');
   ok(c.hb === c.summonRelicBatch, '[4-b] ★ 맥박 수 = 그 수(488 [E2] 와 같은 축)',
      c.hb + ' / ' + c.summonRelicBatch);
   ok(/await countTries\('summonRelicBatch'\); await reset\(\);/.test(fs.readFileSync(path.join(__dirname, 'verify488.js'), 'utf8')),
@@ -271,6 +322,30 @@ async function pressThroughRender(page, s) {
     await n.ctx.close();
   } finally {
     try { fs.unlinkSync(NEG); } catch (_) {}
+  }
+
+  /* ══ §R2 되돌림(869) — 홀드의 «되풀이» 를 끊은 사본에서는 §4-a 가 빨개진다 ═════
+     새 [4-a] 가 «기다려 주는» 항이라 무르게 풀린 것 아니냐를 여기서 못박는다: 되풀이를 끊으면
+     맥박이 첫 발 + 한 틱에서 멈추고 **정체**로 끊겨 4 에 못 미친다(= 이 자는 아직 빨개진다).
+     ⚠ 끊는 자리는 «다시 거는 한 줄» 뿐이다 — 홀드 자체(첫 발·첫 타이머)는 그대로 두어야
+     «되풀이만» 을 묻는 사본이 된다. */
+  console.log('§R2 되돌림(869) — 홀드의 되풀이를 끊은 사본');
+  const neg2 = src.replace(/\n  h\.timer = setTimeout\(rwHoldTick, h\.iv\);\n/,
+                           '\n  /* 869 §R2 — 되풀이를 끊은 사본 */\n');
+  ok(neg2 !== src, '[R2-0] 되돌림 사본을 만들었다(홀드를 다시 거는 한 줄만 뺐다)');
+  fs.writeFileSync(NEG2, neg2);
+  try {
+    const n2 = await boot(browser, NEG2);
+    const c2 = await holdCount(n2.page, HOLD_NEED);
+    ok(c2.summonRelicBatch < HOLD_NEED && c2.stalled,
+       '[R2-a] ★ 되풀이를 끊은 사본에서는 «틱 n 회» 를 기다려도 안 온다(§4-a 가 빨개진다)',
+       c2.summonRelicBatch + '회 · 정체=' + c2.stalled + ' · ' + c2.ms + 'ms');
+    ok(c2.hb === c2.summonRelicBatch,
+       '[R2-b] 그 사본에서도 맥박 수 = 그 수다(끊긴 것은 «되풀이» 하나뿐이다)',
+       c2.hb + ' / ' + c2.summonRelicBatch);
+    await n2.ctx.close();
+  } finally {
+    try { fs.unlinkSync(NEG2); } catch (_) {}
   }
 
   await browser.close();
