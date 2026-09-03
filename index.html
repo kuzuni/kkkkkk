@@ -27685,10 +27685,25 @@ function draw(){
          그대로 쓰면 후광 몫 fSoft 가 0.759 → 0.789 로 올라 [B3] 문턱 0.80 에 1.4% 만 남는다
          (825·[A2] 처럼 «내가 만든 플레이키» 가 되는 자리다). ⇒ 후광 획만 2.11 → **1.93 배**
          (14.8 → 13.5)로 눌러 «후광 실효 굵기 ÷ 잔광 굵기» 를 축소 전 비(2.73)로 되돌린다. */
-      halo(() => { ctx.strokeStyle = 'rgba(255,208,255,.16)'; ctx.lineWidth = 13.5; ctx.lineCap = 'round';
-                   ctx.beginPath(); ctx.moveTo(-23.6,0); ctx.lineTo(8.8,0); ctx.stroke(); });
-      ctx.strokeStyle = 'rgba(255,208,255,.42)'; ctx.lineWidth = 7; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-23.4,0); ctx.lineTo(6.2,0); ctx.stroke();
+      /* ⚑⚑ 865 — **잔광 줄도 ①층이다.** 856 3회차 비평 DB·DC 2인 독립 1순위: 이 줄이 날 뒤로
+         나와 «밑동 43×28px 의 평평한 반투명 판»(α .42 · 판 안 min채널 최대 128 ≪ 근백색 233)으로
+         남아 «창» 이 아니라 **UI 조각**으로 읽혔다. 뿌리는 형상이 아니라 **층 배정**이다 —
+         이 줄만 `halo()` 밖에서 제 손으로 깔려 ①(링 · 실루엣 문턱 α ≥ .5 라 씨앗이 아니다)도
+         ②(본체 · α .42 < .5)도 ③(코어 · 근백색 아님)도 아닌 채로 남아 있었다(`probe865` 가 잰다).
+         ⇒ 792 4회차가 운석의 «달궈진 가장자리» 에, 856 이 이 종의 «날 끝 섬광» 에 한 처방과
+           **같은 자리·같은 처방**: 옛 그림을 지우지 않고 층 이름 안으로 들여보낸다.
+           살아 있는 세계(`AURA_ON`)에서는 본체 실루엣에서 구운 링이 ①을 맡으므로 판이 사라지고,
+           폴백(`AURA_ON = 0`)에서는 이 두 줄이 그대로 후광이 된다 — 그림은 한 획도 안 지웠다.
+         ⚠ 6회차가 버린 **타원 후광은 여전히 되살리면 안 된다**(얼음창과 «타원 + 앞쪽 촉» 으로
+           다시 붙는다 — `verify710` [D1]). 여기서 한 것은 «어느 층인가» 뿐이고 형상은 그대로다.
+         ⚠ `halo()` 는 한 종에 **한 번만** 그린다(`auraDone`) — 그래서 두 줄을 **한 closure 안**에
+           넣는다. 따로 두 번 부르면 폴백 세계에서 `haloSprite` 가 `sh` 로만 캐시하므로 같은 그림이
+           두 번 그려진다. */
+      halo(() => { ctx.lineCap = 'round';
+                   ctx.strokeStyle = 'rgba(255,208,255,.16)'; ctx.lineWidth = 13.5;
+                   ctx.beginPath(); ctx.moveTo(-23.6,0); ctx.lineTo(8.8,0); ctx.stroke();
+                   ctx.strokeStyle = 'rgba(255,208,255,.42)'; ctx.lineWidth = 7;
+                   ctx.beginPath(); ctx.moveTo(-23.4,0); ctx.lineTo(6.2,0); ctx.stroke(); });
       ctx.fillStyle = b.col;
       ctx.beginPath();
       ctx.moveTo(23.4,0); ctx.lineTo(4.7,2.65); ctx.lineTo(-12.5,1.7); ctx.lineTo(-15.6,0);
