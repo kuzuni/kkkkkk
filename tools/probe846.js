@@ -128,6 +128,10 @@ const ONE_GEN = (arg) => new Promise(res => {
     if (guarded && this.nodeType === 1 && /fx-spark/.test(this.className + '')) return;
     return origRemove.call(this);
   };
+  /* 옛 자는 문자열로 건너온다 — 함수로 되살려 쓴다(그대로 부르면 «string 은 함수가 아니다» 로
+     콜백이 죽고, `done` 이 이미 참이라 아래 타임아웃도 안 깨워 **자가 통째로 멎는다**) */
+  const naive = new Function('return ' + arg.naive)();
+  const bail = e => { guarded = false; Element.prototype.remove = origRemove; res({ err: String(e) }); };
   const mo = new MutationObserver(recs => {
     if (done) return;
     const born = [];
@@ -135,6 +139,7 @@ const ONE_GEN = (arg) => new Promise(res => {
       if (nd.nodeType === 1 && /fx-spark/.test(nd.className + '')) born.push(nd);
     if (!born.length) return;
     done = true; mo.disconnect();
+    try {
     const anims = [];
     for (const nd of born) for (const a of nd.getAnimations()) { a.pause(); anims.push(a); }
     const ink = inkOf(host && host.querySelector(sel.num));
@@ -144,13 +149,14 @@ const ONE_GEN = (arg) => new Promise(res => {
       const rs = born.map(nd => nd.getBoundingClientRect())
                      .filter(b => b.width && b.height)
                      .map(b => ({ left: b.left, right: b.right, top: b.top, bottom: b.bottom }));
-      const c = arg.naive(ink, rs);
+      const c = naive(ink, rs);
       if (c > max) max = c;
       n++;
     }
     guarded = false; Element.prototype.remove = origRemove;
     for (const nd of [...L.children]) if (/fx-spark/.test(nd.className + '')) { try { nd.remove(); } catch (_) {} }
     res({ eggs: born.length, steps: n, max });
+    } catch (e) { bail(e); }
   });
   mo.observe(L, { childList: true });
   setTimeout(() => { if (!done) { done = true; mo.disconnect(); guarded = false;
@@ -268,9 +274,10 @@ async function hold(page, t, keep, mode, rects) {
   /* ── [3] 뿌리가 둘 — 겹침이 있어야 5% 를 넘는다 ───────────────────── */
   console.log('\n[3] 한 세대만 끝까지 걸으면 봉우리가 얼마인가 — «덮임 = 세대 겹침» 인가');
   await throttle(lo);
-  const g1 = await hold(page, T.temper, 'none', 'gen1');
-  console.log('  단련 한 세대 → 알 ' + g1.eggs + ' · 스텝 ' + g1.steps + ' · 봉우리 ' + p1(g1.max * 100) + '%');
-  ok(g1 && g1.steps > 10 && g1.max < 0.05,
+  const g1 = (await hold(page, T.temper, 'none', 'gen1')) || {};
+  console.log('  단련 한 세대 → ' + (g1.err ? '오류 ' + g1.err
+    : '알 ' + g1.eggs + ' · 스텝 ' + g1.steps + ' · 봉우리 ' + p1(g1.max * 100) + '%'));
+  ok(!g1.err && g1.steps > 10 && g1.max < 0.05,
      '[3a] 한 세대의 봉우리는 **5% 문턱 아래**다 — 덮임은 세대가 겹칠 때 생긴다',
      '봉우리 ' + p1(g1.max * 100) + '% < 5%');
   ok(old.temper[lo].max >= 0.05,
