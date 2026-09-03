@@ -7853,10 +7853,13 @@
      (불릿 690 ↔ ref 809 · 배너 534 ↔ ref ≥582) 자연히 두 자리가 된다. 값은 `pvNotches()` 가 낸다.
      깊이 32 는 세 자리 모두 같고(ref 14~16 × k = 29~33), 길이는 맨 아래만 105(ref 51 — 가장 긴 자리)이고
      위쪽은 **70**(ref 최빈 34 × k). 아래 CSS 값은 인라인이 없을 때의 폴백(= 맨 아래 한 자리)이다. */
-  .pvc{--ntc-cy:calc(100% - 160px);                          /* 불릿형 폴백 — 중심이 하변에서 160 */
-    --ntc-fr:radial-gradient(40px 57px at 100% var(--ntc-cy),#0000 98%,#000 100%);
+  /* ⚑ 833 8회차 — `--ntc-d` = 링 `s` 의 가로 반지름(= 노치 깊이 + 링 두께 10). 형마다 두 값이라
+     `renderPassPage()` 가 카드에 인라인으로 싣고, 아래 폴백은 **불릿형** 값이다(JS 가 못 돌 때만 쓰인다). */
+  .pvc{--ntc-d:43px;--ntc-cy:calc(100% - 160px);             /* 불릿형 폴백 — 중심이 하변에서 160 */
+    --ntc-fr:radial-gradient(var(--ntc-d) 57px at 100% var(--ntc-cy),#0000 98%,#000 100%);
     /* `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10px · 하변에서 150.5» 다 */
-    --ntc-bg:radial-gradient(40px 57px at calc(100% + 10px) calc(100% - 150px),#0000 98%,#000 100%)}
+    --ntc-bg:radial-gradient(var(--ntc-d) 57px at calc(100% + 10px) calc(100% - 150px),#0000 98%,#000 100%)}
+  .pvc.ban1{--ntc-d:40px}                                    /* 배너형 폴백 — ref 파랑 30.2 는 이미 맞다 */
   /* ⚑ 667 4회차 ② — **안쪽 밝은 림이 노치를 따라 휜다**(비평가 AT ② · ref 화소로 확인: 노치 최심
      안쪽에 `--h` 밝은 띠가 **5~6 ref px = 12 우리 px** 으로, 곧은 변의 림(5~8 ref)과 같은 두께로 이어진다).
      지금까지는 마스크가 `.bg` 의 림을 **잘라내기만** 해서 곡선을 따라 도는 밝은 테가 없었다.
@@ -7866,10 +7869,12 @@
        · `s` 검정 외곽 = 반지름 32 × len/2 · 테 10 → local 12..22 (구멍 쪽으로 그린다)
        · `u` 밝은 림   = 반지름 44 × (len+24)/2 · 테 12 → local 0..12 (몸통 쪽으로 그린다)
      `overflow:hidden` 은 여전히 카드 우변에서 오른쪽 절반을 자른다. */
-  .pvc>.ntc{right:0;bottom:91px;width:52px;height:138px;overflow:hidden;z-index:2;pointer-events:none}
-  #shopw .pvc>.ntc>s{position:absolute;left:12px;top:12px;width:80px;height:114px;box-sizing:border-box;
+  /* 833 8회차 — 폭 셋이 전부 `--ntc-d` 에서 파생된다(상자 = d+12 · `s` 반지름 = d · `u` 반지름 = d+12).
+     상자 폭이 곧 `u` 의 반지름이라 두 링의 중심이 함께 카드 우변 위(local = d+12)에 선다. */
+  .pvc>.ntc{right:0;bottom:91px;width:calc(var(--ntc-d) + 12px);height:138px;overflow:hidden;z-index:2;pointer-events:none}
+  #shopw .pvc>.ntc>s{position:absolute;left:12px;top:12px;width:calc(var(--ntc-d) * 2);height:114px;box-sizing:border-box;
     border:10px solid #000;border-radius:50%}
-  #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:104px;box-sizing:border-box;
+  #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:calc((var(--ntc-d) + 12px) * 2);box-sizing:border-box;
     border:12px solid var(--h);border-radius:50%}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
   .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:30px 30px 0 0;
@@ -8149,8 +8154,28 @@
   .pvc.ban1>.rb2::after{height:67px}
   .pvc.ban1>.rb1{bottom:172px}
   .pvc.ban1>.rb2{bottom:54px}
+  /* ⚑ 833 8회차 — 라벨 잉크가 **가로로만** 3.5% 좁았다. 비평가 **넷**(DB·DC·DD·DE)이 독립으로
+     −3.5% 를 냈고 이번 회차에 그것을 재는 자를 세웠다(`scan833b.py riblabel()` — 연노랑 채움 마스크,
+     금색 판은 창에서 잘라 낸다). 문턱 (190,190,170)·(205,205,150) 에서 값이 **수렴**한다:
+       배너 리본1 ref 187.7 ↔ 우리 181.0(−3.6%) · 리본2 ref 251.7 ↔ 243.0(−3.4%) ·
+       불릿 리본2 ref 251.7 ↔ 243.0(−3.4%)  ⇒ 세 짝이 전부 −3.4~−3.6% = 넷의 값과 같다.
+     ⚠ **불릿 리본1 의 −18.0% 는 결함이 아니라 «다른 문자열» 이다** — ref 자신이 리본1 에서
+     187.7(파랑) ↔ 220.7(초록)로 갈리는데 리본2 는 두 장이 251.7 로 **같다**(3회차가 리본 우단에서
+     이미 «리본1 은 라벨이 달라 갈린다» 를 확인한 그 자리다). 우리 두 장은 같은 문자열이라 둘 다 181 이다.
+     ⇒ 비교가 성립하는 짝만 센다.
+     ⚑ **손잡이가 font-size 가 아니라 scaleX 인 이유는 자가 정했다** — 같은 자로 잰 잉크 **높이**는
+     ref 26.8 ↔ 우리 27.0 = **Δ+0.2(+0.7%)** 로 이미 맞다. font-size 를 올리면 맞아 있던 높이가 깨진다
+     (6회차 배너 라벨과 같은 꼴 · 부호만 반대). 검산: 181×1.035 = 187.3(ref 187.7) · 243×1.035 = 251.5(ref 251.7).
+     ⚠ 원점은 **왼쪽**이다 — `.rb` 가 `display:flex; padding-left:38` 로 라벨을 **왼쪽에 앉히는** 자리라
+     가운데 원점으로 늘리면 이미 맞아 있는 리본2 좌단(ref 44.5 ↔ 우리 45.0)이 −3.8 로 밀린다. */
   .pvc>.rb>i{color:#ECE975;font-size:34px;line-height:38px;white-space:nowrap;
-    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+    -webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scaleX(1.035)}
+  /* ⚠⚠ 스코프 짝 — 이 한 줄이 없으면 원점이 **조용히 가운데로** 간다(207 · 4회차 ⓙ · 325 재발).
+     `#shopw i{transform-origin:50% 50%}`(5873행 · ID 급 1,0,1)가 `.pvc>.rb>i`(0,3,1)를 이긴다.
+     8회차에 실제로 그렇게 졌고(선언은 `0 50%` 인데 computed 가 `122.438px 19px` = 가운데였다)
+     그 탓에 잉크가 좌우로 벌어져 **이미 맞아 있던 리본2 좌단**(ref 44.5 ↔ 우리 45.0)이 41.0 으로 −3.5 밀렸다.
+     선례는 바로 위 `#shopw .pvc>.pvt>i{transform-origin:0 50%}`(4회차) 와 같은 꼴이다. */
+  #shopw .pvc>.rb>i{transform-origin:0 50%}
   /* 금색 판 + 보석 — ref 는 리본 위로 19px 솟고 수량은 리본 아래로 내려간다 */
   /* ⚠ 207 — 선택자에 `#shopw` 를 붙여 두는 것이 이 규칙의 핵심이다.
      이 페이지에는 4356행 `#shopw i,#shopw em,#shopw b,#shopw u,#shopw s{display:inline-block}`
@@ -35943,7 +35968,17 @@ const pvCardH = p => p.ban ? PVC_H_BAN : PVC_H_BL4 - (4 - p.bl.length) * PVC_BL_
      4회차는 초록 값(108 = 중심 160.5)을 배너형에도 썼다 ⇒ 배너형 중심 **130**.
    ⚠ 위로 어디까지 찍는가도 정정됐다 — 헤더 밴드가 아니라 **상단 라운드 코너**가 한계다.
      ref 파랑의 셋째 노치는 밴드 자리로 9px 올라와 있다(막으면 세 자리가 두 자리로 준다). */
-const NTC_DEP = 40, NTC_TOPGAP = 56;              /* 56 = 카드 라운드 44 + 여유 12 */
+/* ⚑ 833 8회차 — **깊이도 형마다 두 값**이다(피치·앵커·길이에 이어 네 번째 «ref 자신이 둘» 인 축).
+   6회차 2인 일치(DD 31.0 · DE 30 ↔ ref 33.0 = −6.1%/−9.1%)를 `scan667.py` 로 재니
+   **틀린 것은 한 형뿐**이었다 — 같은 자가 내는 «바탕이 파고든 깊이»(바탕 아닌 최우측 화소)가
+   ref 파랑(배너형) 28.9 / 30.9 / 30.9(평균 30.2) · ref 초록(불릿형) **33.0 / 33.0 / 33.0** 인데
+   우리는 두 형 다 30 이다 ⇒ 배너형은 이미 Δ−0.2 로 맞았고 **불릿형만 −3.0(−9.1%)** 이었다.
+   ⚑ 근거는 새로 판 것이 아니라 **7회차 주석 안에 이미 있었다** — 거기서 «ref 배너 깊이 30.9 ↔
+   불릿 33.0» 이라고 적고도 그 회차는 **길이만** 갈랐다(«스캘럽 모양이 다르다» 의 나머지 절반).
+   보이는 깊이 = 링 `s` 반지름 − 링 두께 10 이므로 불릿 33 ⇒ 반지름 **43**. 배너는 40 그대로.
+   ⚠ 이 값은 **`--ntc-d` 로 카드에 인라인으로 실린다** — `.ntc` 상자·링 둘의 폭이 전부 여기서
+   파생되므로(폭 = d+12 · s = 2d · u = 2(d+12)) 손으로 세 곳에 다시 적지 마라(402 «사본을 지운다»). */
+const NTC_DEP = { ban: 40, bl: 43 }, NTC_TOPGAP = 56;   /* 56 = 카드 라운드 44 + 여유 12 */
 const NTC_PITCH = { ban: 139, bl: 227 };          /* 하단 간격 — ref 실측(파랑 140·141 · 초록 229·225) */
 const NTC_CEN0  = { ban: 130, bl: 160 };          /* 맨 아래 노치 **중심** ↔ 카드 하변 (ref 실측) */
 /* ⚑ 667 7회차 — **길이는 «피치의 절반» 이 아니다(배너형만).** 6회차가 넘긴 1인 지적(AY [1]
@@ -35970,7 +36005,7 @@ function pvNotches(p, H){
 }
 /* 마스크는 «구멍» 이므로 겹이 여럿이면 `mask-composite:intersect` 로 합친다(CSS 주석).
    `.fr` 은 카드 상자 그대로, `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10 · 하변에서 −10» 이다. */
-const pvNtcMask = (ns, inset) => ns.map(n => 'radial-gradient(' + NTC_DEP + 'px ' + (n.len / 2)
+const pvNtcMask = (ns, inset, dep) => ns.map(n => 'radial-gradient(' + dep + 'px ' + (n.len / 2)
   + 'px at ' + (inset ? 'calc(100% + 10px)' : '100%') + ' calc(100% - ' + (n.b - (inset ? 10 : 0)
   + n.len / 2) + 'px),#0000 98%,#000 100%)').join(',');
 /* 151 — 카드 3장. `won`(가격 · 588 이후 유일한 가격) · `cp`(마일리지 쿠폰) · `daily`/`once`(보석 지급) ·
@@ -36052,12 +36087,15 @@ function renderPassPage(list){
     const RB = p.ban ? { w1:424, g1:26, w2:530, g2:43 } : { w1:350, g1:-97, w2:530, g2:27 };
     const rib = (cls, lab, n, w, gx) => '<div class="rb ' + cls + '" style="width:' + w
       + 'px;--gx:' + gx + 'px"><i>' + lab + '</i><b>' + curIc('dia') + '</b><u>' + fmt(n) + '</u></div>';
-    const cardH = pvCardH(p), ntc = pvNotches(p, cardH);
+    /* 833 8회차 — 노치 깊이는 형마다 두 값이다(위 `NTC_DEP` 주석). 상자·링 폭이 전부 이 한 값에서
+       파생되므로 카드에 `--ntc-d` 로 실어 CSS 가 읽게 한다(값을 세 곳에 다시 적지 않는다). */
+    const cardH = pvCardH(p), ntc = pvNotches(p, cardH), ndep = NTC_DEP[p.ban ? 'ban' : 'bl'];
     h += '<div class="pvc p' + p.pal + (p.ban ? ' ban1' : '') + (own ? ' own' : '') + '"'
       /* `--pvc-h` = 카드 높이를 «값 하나» 로 둔다 — `height` 도 이 변수를 읽고, 일러스트 자리
          `.art` 의 `mask-size` 도 이 변수를 읽는다(667 6회차 · 높이를 두 번 적지 않는다). */
       +  ' data-pv="' + p.id + '" style="top:' + tops[i] + 'px;--pvc-h:' + cardH + 'px;height:var(--pvc-h)'
-      +  ';--ntc-fr:' + pvNtcMask(ntc, false) + ';--ntc-bg:' + pvNtcMask(ntc, true) + '">'
+      +  ';--ntc-d:' + ndep + 'px'
+      +  ';--ntc-fr:' + pvNtcMask(ntc, false, ndep) + ';--ntc-bg:' + pvNtcMask(ntc, true, ndep) + '">'
       +  '<div class="bg"></div><div class="hdb"></div>'
       +  '<div class="stt"><i>' + passStatusTxt(p) + '</i></div>'
       +  '<div class="pil"><em>' + curIc('mile') + '</em><i>마일리지 쿠폰 +' + p.cp + '</i></div>'

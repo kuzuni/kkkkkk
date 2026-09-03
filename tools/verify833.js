@@ -82,7 +82,13 @@ const DUMP = `(() => {
          --uq 가 걸린 뒤 값이라 **변환 뒤 advance** 다. 상자 폭은 offsetWidth(레이아웃 값). */
       const rg = document.createRange(); rg.selectNodeContents(u);
       const ur = rg.getBoundingClientRect(), A2 = document.getElementById('app').getBoundingClientRect();
-      return { rb: B(rb), u: B(u), utop: num(getComputedStyle(u).top), b: B(rb.querySelector('b')),
+      /* 833 8회차 — 리본 라벨. 원점은 «선언» 이 아니라 **computed** 로 낸다(207 함정은 선언이
+         남아 있는 채로 computed 만 가운데로 가는 얼굴이라 선언을 읽으면 못 잡는다). */
+      const li = rb.querySelector('i'), lcs = li ? getComputedStyle(li) : null;
+      const lab = li ? { txt: li.textContent, tr: lcs.transform, org: lcs.transformOrigin,
+        fs: num(lcs.fontSize), boxW: +li.getBoundingClientRect().width.toFixed(2),
+        l: +(li.getBoundingClientRect().left - c.getBoundingClientRect().left).toFixed(2) } : null;
+      return { rb: B(rb), u: B(u), lab, utop: num(getComputedStyle(u).top), b: B(rb.querySelector('b')),
         uTxt: u.textContent, uq: getComputedStyle(u).getPropertyValue('--uq').trim(),
         uAdv: +ur.width.toFixed(2), uBoxW: u.offsetWidth,
         uInkCx: +(ur.left + ur.width / 2 - A2.left).toFixed(2) };
@@ -103,7 +109,22 @@ const DUMP = `(() => {
         stroke: num(bcs.webkitTextStrokeWidth), align: bcs.textAlign,
         boxW: +bi.offsetWidth.toFixed(2), advScaled: +rg.getBoundingClientRect().width.toFixed(2) };
     }
-    return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb, pil,
+    /* 833 8회차 — 우변 물결 노치. «보이는 깊이» = 링 s 반지름 − 검정 테 두께이므로
+       상자·링 둘의 실측 폭과 --ntc-d 선언을 같이 낸다(셋이 한 값에서 파생되는지 §12 가 본다). */
+    const artE = c.querySelector('.art'), hdbE = c.querySelector('.hdb');
+    const art = artE ? { top: num(getComputedStyle(artE).getPropertyValue('--art-t')),
+      t: +(artE.getBoundingClientRect().top - c.getBoundingClientRect().top).toFixed(1),
+      h: +artE.getBoundingClientRect().height.toFixed(1) } : null;
+    const hdbBot = hdbE ? +(hdbE.getBoundingClientRect().bottom - c.getBoundingClientRect().top).toFixed(1) : null;
+    const ntcD = num(getComputedStyle(c).getPropertyValue('--ntc-d'));
+    const ntc = [...c.querySelectorAll('.ntc')].map((n) => {
+      const sq = n.querySelector('s'), uq = n.querySelector('u');
+      return { w: +n.getBoundingClientRect().width.toFixed(2),
+        sW: +sq.getBoundingClientRect().width.toFixed(2),
+        sBorder: num(getComputedStyle(sq).borderTopWidth),
+        uW: +uq.getBoundingClientRect().width.toFixed(2) };
+    });
+    return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb, pil, ntcD, ntc, art, hdbBot,
       frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs,
       ti: B(ti), tiFs: tcs ? num(tcs.fontSize) : null, tiLh: tcs ? num(tcs.lineHeight) : null,
       tiTr: tcs ? tcs.transform : null, tiOrg: tcs ? tcs.transformOrigin : null,
@@ -378,6 +399,103 @@ const DUMP = `(() => {
   ok(e16.length === 0, '[5-b] 1600 콘솔 에러 0건', String(e16.length));
   await p16.context().close();
 
+  blk('§12 우변 노치 «깊이» — ref 자신이 형마다 두 값이다 (6회차 2인 일치 2번)');
+  /* 6회차 DD «깊이 31.0 ↔ ref 33.0 = −6.1%» · DE «30 ↔ 33.0 = −9.1%». 두 사람의 마스크가
+     «배경색이 아닌 최우측 화소» 로 같았고, 저장소 안의 `tools/scan667.py` 가 **같은 정의**로 잰다:
+       ref 파랑(배너형) 28.9 / 30.9 / 30.9  (평균 30.2)
+       ref 초록(불릿형) 33.0 / 33.0 / 33.0
+       우리 수리 전     배너 30 · 불릿 **30**   ⇒ 틀린 것은 불릿형 한 형뿐이었다
+       우리 수리 후     배너 30 (무변경) · 불릿 **33**
+     ⚑ 7회차 주석이 이미 «ref 배너 30.9 ↔ 불릿 33.0» 을 적어 두고 **길이만** 갈랐다 —
+     이 절은 그 나머지 절반(«깊이도 두 값») 이 다시 한 값으로 접히면 빨개진다. */
+  const NDEP = { ban: 40, bl: 43 }, NRING = 10, NRIM = 12;
+  for (const c of cards) {
+    const k = c.ban ? 'ban' : 'bl', t = c.ban ? '배너' : '불릿';
+    const refDep = c.ban ? 30.2 : 33.0;
+    ok(Math.abs(c.ntcD - NDEP[k]) < 0.6,
+      `[12-a] ${t}(${c.id}) «--ntc-d» = ${NDEP[k]}  ⇒ 보이는 깊이 ${NDEP[k] - NRING} (ref ${refDep})`,
+      String(c.ntcD));
+    ok(c.ntc.length > 0 && c.ntc.every(n => Math.abs(n.sW - 2 * NDEP[k]) < 1),
+      `[12-b] ${t}(${c.id}) 링 «s» 실측 가로 = ${2 * NDEP[k]} (선언이 아니라 그려진 값)`,
+      c.ntc.map(n => n.sW).join('/'));
+    /* 짝 항 — 세 폭이 한 값에서 파생되지 않으면(손으로 따로 적으면) 여기가 빨개진다. */
+    ok(c.ntc.every(n => Math.abs(n.w - (c.ntcD + NRIM)) < 1
+      && Math.abs(n.uW - 2 * (c.ntcD + NRIM)) < 1 && Math.abs(n.sW - 2 * c.ntcD) < 1),
+      `[12-c] ${t}(${c.id}) 상자 = d+${NRIM} · «s» = 2d · «u» = 2(d+${NRIM}) — 셋이 «--ntc-d» 파생`,
+      c.ntc.map(n => `${n.w}/${n.sW}/${n.uW}`).join(' '));
+    ok(c.ntc.every(n => Math.abs(n.sBorder - NRING) < 0.6),
+      `[12-d] ${t}(${c.id}) 링 두께 ${NRING} 불변 — 보이는 깊이는 «반지름 − 이 두께» 다`,
+      c.ntc.map(n => n.sBorder).join('/'));
+  }
+  const banD = cards.filter(c => c.ban).map(c => c.ntcD);
+  const blD = cards.filter(c => !c.ban).map(c => c.ntcD);
+  ok(banD.length > 0 && blD.length > 0 && blD.every(v => v - banD[0] > 2),
+    '[12-e] 두 형의 깊이가 **다르다** — 한 값으로 접히면 빨강 (ref 30.2 ↔ 33.0 을 한 값으로 못 맞춘다)',
+    `배너 ${banD.join('/')} ↔ 불릿 ${blD.join('/')}`);
+  ok(blD.every((v, i) => v === blD[0]),
+    '[12-f] 같은 형끼리는 한 값 — 카드2·3 이 갈리면 빨강', blD.join('/'));
+
+  blk('§13 리본 라벨 «가로만» 넓힌다 — 높이는 이미 맞다 (비평가 넷 독립 −3.5%)');
+  /* `scan833b.py riblabel()` 이 이번 회차에 신설된 자다. 문턱 (190,190,170)·(205,205,150) 에서 수렴:
+       배너 리본1 ref 187.7 ↔ 수리 전 181.0(−3.6%) → 수리 후 **187.0**(−0.4%)
+       배너 리본2 ref 251.7 ↔ 수리 전 243.0(−3.4%) → 수리 후 **251.0**(−0.3%)
+       불릿 리본2 ref 251.7 ↔ 수리 전 243.0(−3.4%) → 수리 후 **251.0**(−0.3%)
+     잉크 **높이**는 ref 26.8 ↔ 우리 27.0 으로 수리 전후 **불변**(+0.7%) — 그래서 font-size 가 아니다.
+     ⚠ 불릿 리본1 은 **ref 자신의 문자열이 달라서**(ref 파랑 187.7 ↔ 초록 220.7) 비교가 안 선다 —
+     리본2 는 ref 두 장이 251.7 로 같다. 이 절은 «가로만·한 배율·스코프 짝» 셋을 지킨다. */
+  const LSX = 1.035;
+  for (const c of cards) {
+    for (const r of c.rbs) {
+      if (!r || !r.lab) continue;
+      const m = /matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/.exec(r.lab.tr) || [];
+      const sx = parseFloat(m[1]), sy = parseFloat(m[4]);
+      ok(Math.abs(sx - LSX) < 0.002 && Math.abs(sy - 1) < 0.002,
+        `[13-a] ${c.id} «${r.lab.txt}» 가로만 ${LSX} 배 — 세로는 1 (높이는 이미 ref 와 +0.7%)`,
+        r.lab.tr);
+      /* ⚑ 이 항이 8회차에 실제로 사람을 속인 자리다 — 선언은 «0 50%» 인데 computed 는 가운데였다. */
+      ok(/^0px /.test(r.lab.org),
+        `[13-b] ${c.id} 원점이 **왼쪽**이다 — «#shopw i» 스코프 짝이 살아 있는가 (computed)`,
+        r.lab.org);
+      ok(Math.abs(r.lab.fs - 34) < 0.6,
+        `[13-c] ${c.id} font-size 34 불변 — 크기를 올려 폭을 맞추면 맞아 있던 높이가 깨진다`,
+        String(r.lab.fs));
+    }
+  }
+  const sxs = cards.flatMap(c => c.rbs.filter(r => r && r.lab).map(r => r.lab.tr));
+  ok(sxs.length >= 4 && sxs.every(t => t === sxs[0]),
+    '[13-d] 네 리본이 **한 배율**을 쓴다 — 줄마다 손으로 다른 값을 적으면 빨강', String(sxs.length) + '줄');
+  /* 라벨 왼끝은 «안 건드린 것» 이 증거다 — 가운데 원점으로 늘리면 여기가 −3.5 밀린다(8회차 실측). */
+  const ls = cards.flatMap(c => c.rbs.filter(r => r && r.lab).map(r => r.lab.l));
+  ok(ls.every(v => Math.abs(v - ls[0]) < 1.6),
+    '[13-e] 라벨 상자 왼끝이 네 줄 같은 자리 — `.rb` 의 padding-left 가 정하는 앵커를 안 건드렸다',
+    ls.map(v => v.toFixed(1)).join('/'));
+
+  blk('§14 배너 카드 일러스트가 머리띠를 덮는 것은 «유령» 이다 — 667 6회차가 ref 로 정한 자리다');
+  /* 6회차 DE [A]«카드1 아트 패널이 헤더 밴드를 덮는다 — 카드2·3 은 패널 상변이 135 인데 카드1 만 10
+     ⇒ 제목 띠가 카드 폭의 55.8% 에서 끊긴다» (신뢰 중 · 1인). 근거는 «우리 카드끼리 안 맞는다» 였는데,
+     이 화면은 **ref 자신이 형마다 두 값인 축이 넷**이다(피치·앵커·길이·깊이 — §12). 일러스트도 그중 하나다:
+     667 6회차가 비평 AX·AY **2인 일치**로 «ref 파랑의 대응물은 가로 라운드 사각이 아니라 **45° 마름모
+     글로우**이고 헤더 밴드까지 덮고 올라간다» 를 확인했고, 세로 하변을 자 셋이 겹쳐 쟀다
+     (AX 369.5 · AY 367.2 · 자체 프로파일 366) ⇒ `--art-t 78 → 10` · `height 239 → 357`.
+     ⇒ 이 절은 그 값을 **굳혀서** 다음 회차가 «맞은 것을 고치는» 일을 막는다(§4 와 같은 꼴). */
+  for (const c of cards) {
+    if (c.ban) {
+      ok(Math.abs(c.art.top - 10) < 0.6 && Math.abs(c.art.h - 357) < 1,
+        `[14-a] 배너(${c.id}) 일러스트 자리는 --art-t 10 · 높이 357 (667 6회차 · 2인 일치 + 자 셋)`,
+        `${c.art.top} / ${c.art.h}`);
+      ok(c.art.t < c.hdbBot,
+        `[14-b] 그래서 배너 일러스트는 머리띠(하변 ${c.hdbBot})를 **덮는 것이 옳다** — 되돌리면 ref 세로의 60% 로 돌아간다`,
+        `상변 ${c.art.t}`);
+    } else {
+      ok(Math.abs(c.art.top - 135) < 0.6 && Math.abs(c.art.h - 303) < 1,
+        `[14-c] 불릿(${c.id}) 일러스트 자리는 --art-t 135 · 높이 303 — 배너와 **같은 값으로 접으면 빨강**`,
+        `${c.art.top} / ${c.art.h}`);
+      ok(c.art.t >= c.hdbBot,
+        `[14-d] 불릿 일러스트는 머리띠(하변 ${c.hdbBot}) **아래**다 — 두 형의 규칙이 서로 다르다`,
+        `상변 ${c.art.t}`);
+    }
+  }
+
   blk('§R 되돌림 시험 — 수리 전 값을 넣으면 빨개진다');
   await page.addStyleTag({ content:
     '.pvc>.bdg{width:178px!important;height:178px!important}'
@@ -488,6 +606,60 @@ const DUMP = `(() => {
   ok(back4.every(c => c.l > 78.5),
     '[R7b] 그때 제목 상자가 실제로 **오른쪽으로 밀린다** — [9-c] 가 지키는 것이 이 4px 이다',
     back4.map(c => c.l).join(' / '));
+
+  /* ⚑ [R11] — 깊이를 수리 전 «한 값 40» 으로 되돌리면 §12 가 빨개지는가.
+     `--ntc-d` 한 곳만 되돌려도 상자·링 셋이 **같이** 40 계열로 돌아가야 한다(파생이 진짜라는 증거).
+     되돌림은 CSS 로만 하고 제품은 안 건드린다 — 원복은 그 style 태그를 지우면 끝이다. */
+  const back11 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.id = 'r11';
+    st.textContent = '#shopw .pvc{--ntc-d:40px !important}';
+    document.head.appendChild(st);
+    return [...document.querySelectorAll('.pvc')].filter(c => !c.classList.contains('ban1')).map((c) => {
+      const n = c.querySelector('.ntc');
+      return { d: parseFloat(getComputedStyle(c).getPropertyValue('--ntc-d')),
+        w: +n.getBoundingClientRect().width.toFixed(2),
+        sW: +n.querySelector('s').getBoundingClientRect().width.toFixed(2),
+        uW: +n.querySelector('u').getBoundingClientRect().width.toFixed(2) };
+    });
+  });
+  ok(back11.length > 0 && back11.every(c => Math.abs(c.sW - 80) < 1),
+    '[R11] 불릿 깊이를 40 으로 되돌리면 §12 [12-b] 가 빨개진다 (보이는 깊이가 33 → 30 으로 얕아진다)',
+    back11.map(c => c.sW).join('/'));
+  ok(back11.every(c => Math.abs(c.w - 52) < 1 && Math.abs(c.uW - 104) < 1),
+    '[R11b] 그때 상자·밝은 림도 **같이** 되돌아간다 — 세 폭이 한 값 파생이라는 증거',
+    back11.map(c => `${c.w}/${c.uW}`).join(' '));
+  await page.evaluate(() => { const e = document.getElementById('r11'); if (e) e.remove(); });
+
+  /* ⚑ [R12] — 8회차가 실제로 진 그 함정을 못박는다. 값을 되돌리는 시험이 아니라
+     **스코프 짝을 빼면 조용히 원점이 가운데로 간다**([R7] 과 같은 꼴 · 207 · 325). */
+  const back12 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.id = 'r12';
+    st.textContent = '#shopw .pvc>.rb>i{transform-origin:50% 50%}';   /* 스코프 짝 무력화 */
+    document.head.appendChild(st);
+    const out = [];
+    document.querySelectorAll('.pvc').forEach((c) => {
+      const cb = c.getBoundingClientRect();
+      ['rb1', 'rb2'].forEach((k) => {
+        const i = c.querySelector('.' + k + '>i'); if (!i) return;
+        const rg = document.createRange(); rg.selectNodeContents(i);
+        out.push({ org: getComputedStyle(i).transformOrigin,
+          inkL: +(rg.getBoundingClientRect().left - cb.left).toFixed(2) });
+      });
+    });
+    return out;
+  });
+  ok(back12.length > 0 && back12.every(o => !/^0px /.test(o.org)),
+    '[R12] 스코프 짝을 빼면 §13 [13-b] 가 빨개진다 (원점이 가운데로 돌아간다)',
+    back12.map(o => o.org).join(' / '));
+  /* 왼쪽 원점일 때 이 자리는 44.0(§13 [13-e])이고 가운데로 돌리면 39.7~40.8 로 3.2~4.3px 밀린다.
+     ⚠ 문턱을 39.5 로 잡았다가 이 항이 빨개졌다 — «밀린다» 는 참인데 **얼마나** 를 틀리게 적은 것이라
+     자를 고쳤다(제품이 아니다). 8회차 화소 실측의 −3.5px 와 같은 크기다. */
+  ok(back12.every(o => o.inkL < 42),
+    '[R12b] 그때 라벨 잉크가 실제로 **왼쪽으로 밀린다** — [13-b] 가 지키는 것이 그 3~4px 이다 (왼쪽 원점 = 44.0)',
+    back12.map(o => o.inkL).join(' / '));
+  await page.evaluate(() => { const e = document.getElementById('r12'); if (e) e.remove(); });
 
   blk('§Z 콘솔');
   ok(errs.length === 0, '[Z] 콘솔·페이지 에러 0건', String(errs.length));

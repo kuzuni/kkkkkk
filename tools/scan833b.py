@@ -33,6 +33,7 @@ K = S833.K
 REF = S833.REF
 RIB = (255, 86, 93)          # 리본 채움 — ref·우리 같은 값
 BODY = {'배너형(파랑)': (67, 188, 245), '불릿형(초록)': (52, 178, 130)}   # 카드 몸통색(ref 실측 = 우리 --c)
+THR = (170, 170, 190)        # 833 8회차 — 라벨 잉크 마스크 문턱(R>,G>,B<). --thr 로 스윕한다
 CROP_DX, CROP_DY = 40, 80    # cap151 --crop 의 여백(카드 좌상단이 크롭 (40,80))
 
 
@@ -135,6 +136,54 @@ def ribbons(a, card, scale, tag, body):
     return out
 
 
+GOLD = (211, 124, 19)        # 금색 판 채움 (ref #D37C13 ↔ 우리 #D47D14 — 같은 마스크 · scan667b 와 같은 값)
+TOL_GOLD = 30
+
+
+def riblabel(a, card, scale, tag, rows, thr=(170, 170, 190)):
+    """⚑ 833 8회차 — 리본 **라벨 잉크**(연노랑 글자)의 가로 폭. 6회차까지 비평가 **넷**
+    (DB·DC·DD·DE)이 독립으로 «−3.5%» 를 냈는데 저장소 안에 그것을 재는 자가 없었다.
+
+    ⚠ **금색 판을 창에서 먼저 빼야 한다** — 판의 밝은 금 테(#FDC532 = 253,197,50)가
+    라벨과 같은 «밝고 노란» 마스크에 걸린다. 그래서 판 채움(GOLD)의 좌단을 찾아
+    창을 그 왼쪽으로 자른다(판이 안 잡히면 그 줄은 건너뛴다 — 헛값을 내지 않는다).
+
+    ⚠ 마스크는 **채움만**이다. 라벨은 7px 검정 외곽선(`-webkit-text-stroke`)을 두르고 있어
+    «잉크» 를 외곽선까지로 잡으면 획 두께 차이가 폭으로 새어 든다(A4-③ 함정).
+    문턱은 (R>170, G>170, B<190) 이고 `--thr` 로 흔들 수 있다 — 부호가 바뀌면 그 지적은 못 믿는다.
+    """
+    cx0 = card[0]
+    out = []
+    for i, r in enumerate(rows, 1):
+        y0 = int(cx0 * 0 + card[2] + r['y'] / scale)
+        y1 = int(y0 + r['h'] / scale)
+        x0 = int(cx0 + r['l'] / scale)
+        x1 = int(cx0 + r['r'] / scale)
+        y0, y1 = max(0, y0), min(a.shape[0], y1 + 1)
+        x0, x1 = max(0, x0), min(a.shape[1], x1 + 1)
+        sub = a[y0:y1, x0:x1]
+        if sub.size == 0:
+            continue
+        gm = np.abs(sub - np.array(GOLD)).sum(2) < TOL_GOLD * 3
+        gx = np.where(gm.any(0))[0]
+        if not len(gx):
+            print(f'  {tag} 리본{i} 라벨: 금색 판을 못 찾음 — 건너뜀')
+            continue
+        cut = int(gx.min())
+        win_ = sub[:, :max(1, cut - int(6 / scale))]
+        m = (win_[:, :, 0] > thr[0]) & (win_[:, :, 1] > thr[1]) & (win_[:, :, 2] < thr[2])
+        ys, xs = np.where(m)
+        if not len(xs):
+            print(f'  {tag} 리본{i} 라벨: 잉크 없음')
+            continue
+        w = (xs.max() - xs.min() + 1) * scale
+        h = (ys.max() - ys.min() + 1) * scale
+        left = (x0 + xs.min() - cx0) * scale
+        out.append(dict(w=w, h=h, l=left))
+        print(f'  {tag} 리본{i} 라벨잉크: 폭 **{w:.1f}** · 높이 {h:.1f} · 좌단 {left:.1f}')
+    return out
+
+
 def tab(a, card, scale, tag, bg):
     """상태 탭 — 카드 상변 위로 솟은 높이 · 글자 잉크 세로 자리(카드-로컬 환산 px)."""
     cx0, cx1, cy = card
@@ -232,6 +281,9 @@ def main():
     cap = os.environ.get('CAP833', 'docs/review/151-r20')
     if '--cap' in sys.argv:
         cap = sys.argv[sys.argv.index('--cap') + 1]
+    global THR
+    if '--thr' in sys.argv:
+        THR = tuple(int(v) for v in sys.argv[sys.argv.index('--thr') + 1].split(','))
 
     print(f'== ref {REF} · K={K}')
     ra = np.asarray(Image.open(REF).convert('RGB')).astype(int)
@@ -240,7 +292,8 @@ def main():
     R = {}
     for n, c in RC.items():
         print(f'  ref {n} 카드 {c[0]:.2f}..{c[1]:.2f} · 상변 {c[2]:.2f}')
-        R[n] = dict(rb=ribbons(ra, c, K, 'ref ' + n, BODY[n]),
+        _rb = ribbons(ra, c, K, 'ref ' + n, BODY[n])
+        R[n] = dict(rb=_rb, lab=riblabel(ra, c, K, 'ref ' + n, _rb, THR),
                     tab=tab(ra, c, K, 'ref ' + n, rbg),
                     ti=title(ra, c, K, 'ref ' + n, S833.HDR[n]))
 
@@ -257,8 +310,9 @@ def main():
         obg = float(np.median(lum(oa.astype(float))[:, :6]))
         card = (CROP_DX, CROP_DX + 978, CROP_DY)
         print(f'  카드{i} [{kind}]')
+        _orb = ribbons(oa, card, 1.0, f'  카드{i}', BODY[kind])
         O.setdefault(kind, []).append(
-            dict(rb=ribbons(oa, card, 1.0, f'  카드{i}', BODY[kind]),
+            dict(rb=_orb, lab=riblabel(oa, card, 1.0, f'  카드{i}', _orb, THR),
                  tab=tab(oa, card, 1.0, f'  카드{i}', obg),
                  ti=title(oa, card, 1.0, f'  카드{i}', S833.OURS_HDR[kind])))
 
@@ -273,6 +327,12 @@ def main():
             for key, lab in (('l', '좌단'), ('r', '우단'), ('h', '높이')):
                 print(f'| {kind} 리본{j + 1} {lab} | {rr[j][key]:.1f} | {oo[j][key]:.1f} | '
                       f'**{oo[j][key] - rr[j][key]:+.1f}** |')
+        rl, ol = R[kind].get('lab') or [], O[kind][0].get('lab') or []
+        for j in range(min(len(rl), len(ol))):
+            for key, lab in (('w', '라벨 잉크 폭'), ('h', '라벨 잉크 높이'), ('l', '라벨 잉크 좌단')):
+                d = ol[j][key] - rl[j][key]
+                print(f'| {kind} 리본{j + 1} {lab} | {rl[j][key]:.1f} | {ol[j][key]:.1f} | '
+                      f'**{d:+.1f}** ({d / rl[j][key] * 100:+.1f}%) |')
         rti, oti = R[kind].get('ti'), O[kind][0].get('ti')
         if rti and oti:
             for key, lab in (('w', '제목 잉크 폭'), ('h', '제목 잉크 높이'),

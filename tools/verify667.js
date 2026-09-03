@@ -32,7 +32,9 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
 
 /* ── 기대값 (회차별 근거) ─────────────────────────────────────────────────
    배너형 = 카드1(광고 제거) · 불릿형 = 카드2·3(불릿 4행)
-   · 노치 깊이 40 = 5회차 ⓐ (ref 실루엣 19.6 ref px × k)
+   · 노치 깊이 배너 40 / 불릿 **43** = 833 8회차 (5회차 ⓐ 의 «한 값 40» 은 ref 두 형의 **평균**이었다 —
+     `scan667.py` 로 «바탕이 파고든 깊이» 를 재면 ref 파랑 28.9/30.9/30.9 ↔ ref 초록 33.0×3 이고,
+     보이는 깊이 = 반지름 − 링 두께 10 이므로 반지름은 40 ↔ 43 이다. 배너형은 5회차 값 그대로다)
    · 노치 길이 배너 81 / 불릿 114 = 7회차 (문턱 2~20 스윕에서 부호가 안 뒤집히는 값) ·
      불릿 114 는 5회차 ⓑ 의 `pitch/2` 와 같은 값이다 — 그 규칙이 참인 자리는 안 건드렸다
    · 피치 배너 139 / 불릿 227 = 4회차 (ref 파랑 140·141 · 초록 229·225)
@@ -42,13 +44,15 @@ const EXP = {
   ban: { h: 534, ntcN: 3, sH: 81, pitch: 139, cen0: 130, hdb: 96, rb: 67, art: { w: 390, h: 357 } },
   bl:  { h: 690, ntcN: 2, sH: 114, pitch: 227, cen0: 160, hdb: 102, rb: 76, art: { w: 462, h: 303 } }
 };
-const NTC_DEP = 40;                 /* 링 `s` 가로 반지름 — 상자 폭 80 = 2×40 */
+/* 833 8회차 — 링 `s` 가로 반지름. **형마다 두 값**이다(상자 폭 = 2×반지름). */
+const NTC_DEP = { ban: 40, bl: 43 };
 const RING = 10, RIM = 12;          /* `s` 검정 테 · `u` 밝은 림 (4회차 ②) */
 
 /* 자가 재는 «스팬» 과 CSS 길이의 관계 — 7회차 검산식.
-   프로파일의 경계는 링 `s` 의 **안쪽** 타원(반지름 30 × (len/2 − 10))이라
-   문턱 τ 에서 span = 2·(len/2 − RING)·√(1 − (τ/(NTC_DEP − RING))²) 이다. */
-const spanAt = (len, tau) => 2 * (len / 2 - RING) * Math.sqrt(1 - Math.pow(tau / (NTC_DEP - RING), 2));
+   프로파일의 경계는 링 `s` 의 **안쪽** 타원(반지름 dep − RING × (len/2 − 10))이라
+   문턱 τ 에서 span = 2·(len/2 − RING)·√(1 − (τ/(dep − RING))²) 이다.
+   ⚠ 833 8회차 — `dep` 가 형마다 달라져 **인자로 받는다**(한 값으로 굳으면 두 형 중 하나가 틀린다). */
+const spanAt = (len, tau, dep) => 2 * (len / 2 - RING) * Math.sqrt(1 - Math.pow(tau / (dep - RING), 2));
 
 const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].map(c => {
   const cb = c.getBoundingClientRect();
@@ -103,8 +107,16 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
       c.ntc.length === E.ntcN, c.ntc.length + '자리');
     ok(`A3 ${t}(${c.id}) 링 «s» 세로 = ${E.sH}  (7회차 — 문턱 스윕에서 ref 와 부호가 안 갈리는 값)`,
       c.ntc.every(n => near(n.sH, E.sH, 1)), c.ntc.map(n => n.sH).join('/'));
-    ok(`A4 ${t}(${c.id}) 링 «s» 가로 = ${2 * NTC_DEP}  (깊이 ${NTC_DEP} 의 두 배 · 중심이 카드 우변 위)`,
-      c.ntc.every(n => near(n.sW, 2 * NTC_DEP, 1)), c.ntc.map(n => n.sW).join('/'));
+    /* ⚑ 833 8회차 이관 — 이 항은 «두 형이 같은 80» 을 못박고 있었다(방향만 뒤집는다 · 333 처방).
+       ref 자신이 두 값(파랑 30.2 ↔ 초록 33.0)이라 한 값으로 굳히면 불릿형이 −9.1% 로 얕아진다.
+       보이는 깊이 = 반지름 − 링 두께 10 이므로 배너 30 · 불릿 33 이 나온다. */
+    ok(`A4 ${t}(${c.id}) 링 «s» 가로 = ${2 * NTC_DEP[k]}  (반지름 ${NTC_DEP[k]} 의 두 배 · 중심이 카드 우변 위`
+      + ` ⇒ 보이는 깊이 ${NTC_DEP[k] - RING} = ref ${k === 'ban' ? '파랑 30.2' : '초록 33.0'})`,
+      c.ntc.every(n => near(n.sW, 2 * NTC_DEP[k], 1)), c.ntc.map(n => n.sW).join('/'));
+    /* 짝 항 — 상자·밝은 림도 같은 한 값에서 파생된다(값을 세 곳에 따로 적으면 여기가 빨개진다). */
+    ok(`A4b ${t}(${c.id}) 상자 폭 = 반지름 + ${RIM} · 밝은 림 «u» 가로 = 그 두 배 (셋이 «--ntc-d» 한 값 파생)`,
+      c.ntc.every(n => near(n.w, NTC_DEP[k] + RIM, 1) && near(n.uW, 2 * (NTC_DEP[k] + RIM), 1)),
+      c.ntc.map(n => n.w + '/' + n.uW).join(' '));
     ok(`A5 ${t}(${c.id}) 상자는 링보다 위·아래로 ${RIM} 씩 넓다 (밝은 림 «u» 의 호가 안 잘리게)`,
       c.ntc.every(n => near(n.h, E.sH + 2 * RIM, 1) && near(n.uH, E.sH + 2 * RIM, 1)),
       c.ntc.map(n => n.h + '/' + n.uH).join(' '));
@@ -121,11 +133,12 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
      불릿형에서만 참이었고, 그 규칙을 배너형에 그대로 쓴 것이 «깊고 좁다» 의 뿌리였다.
      ref 실측(문턱을 맞춘 뒤): 배너 깊이 30.9 ↔ 스팬 ≈60 = **1.94배(거의 반원)** ·
      불릿 33.0 ↔ 95 = **2.88배(납작한 호)**. 이 항이 빨개지면 둘이 다시 한 규칙으로 접힌 것이다. */
-  const ratio = len => spanAt(len, 6) / (NTC_DEP - RING);
-  ok('A8 배너형 스캘럽은 «거의 반원»(스팬 ÷ 깊이 ≈ 2)', near(ratio(EXP.ban.sH), 1.94, 0.18), ratio(EXP.ban.sH).toFixed(2));
+  /* 833 8회차 — 깊이가 형마다 갈렸으므로 분모도 그 형의 것을 쓴다(한 값으로 재면 불릿이 3.07 로 부푼다). */
+  const ratio = k => spanAt(EXP[k].sH, 6, NTC_DEP[k]) / (NTC_DEP[k] - RING);
+  ok('A8 배너형 스캘럽은 «거의 반원»(스팬 ÷ 깊이 ≈ 2)', near(ratio('ban'), 1.94, 0.18), ratio('ban').toFixed(2));
   ok('A9 불릿형 스캘럽은 «납작한 호»(≈ 2.9) — 두 형이 한 규칙으로 접히면 빨강',
-    near(ratio(EXP.bl.sH), 2.88, 0.22) && ratio(EXP.bl.sH) - ratio(EXP.ban.sH) > 0.6,
-    ratio(EXP.bl.sH).toFixed(2));
+    near(ratio('bl'), 2.88, 0.22) && ratio('bl') - ratio('ban') > 0.6,
+    ratio('bl').toFixed(2));
 
   /* ── [B] 마스크가 세 칠면에 다 걸린다 ───────────────────────────────── */
   console.log('\n[B] 노치 구멍 — «뚫은 두 면» 만의 것이 아니다 (6회차)');
