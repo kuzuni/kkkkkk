@@ -121,7 +121,7 @@ def art_ref(dg=(25, 15), dl=70, dbg=False):
         print('   행 합(위→아래 20칸):', rs[:20].tolist())
     return dict(w=(ax1 - ax0 + 1) * K, h=(ay1 - ay0 + 1) * K,
                 over=(ax1 - hi) * K, left=(ax0 - lo) * K, top=(ay0 - GREEN_TOP) * K,
-                bot=(GREEN_BOT - ay1) * K)
+                bot=(GREEN_BOT - ay1) * K, lo=lo, hi=hi, x0=ax0, x1=ax1, y0=ay0, y1=ay1)
 
 
 def art_cap(png, geo):
@@ -136,6 +136,88 @@ def art_cap(png, geo):
     return dict(w=b['w'], h=b['h'], over=b['x'] + b['w'] - (box['x'] + box['w']),
                 left=b['x'] - box['x'], top=b['y'] - box['y'],
                 bot=box['y'] + box['h'] - (b['y'] + b['h']))
+
+
+def edge_ref(verbose=True):
+    """① 폭·좌단 — **«티켓 좌단» 을 놓고 갈린 두 정의를 가르는 자**(885 2회차).
+
+    1회차가 «미판정» 으로 남긴 자리다. 비평 2인이 부호는 같고 **크기가 5배** 다른 값을 냈다:
+      DL «흰 테두리만 → ref 좌단 296 ref px · 우리 −86»  ↔  DM «회색 스텁 포함 → 우리 −15.8».
+    DL 은 구조 검산(«ref 는 티켓 좌단 296 이 불릿 알약 우단 295 와 +1 로 맞물린다»)까지 붙였다.
+
+    ⚑ **그 «맞물림» 이 곧 답이다 — 가림선은 언제나 가리는 것의 모서리에서 맞물린다.**
+    두 정의를 가르는 물음은 하나다: **알약 띠 «뒤» 로 일러스트가 이어지는가?**
+    ref 는 그 답을 스스로 보여 준다 — 알약 4줄 «사이의 틈»(띠가 없는 행)에서 같은 잉크가 보이면
+    이어지는 것이고, 안 보이면 296 이 진짜 좌단이다. 이 자는 그 틈만 읽는다.
+
+    실측(2026-09-03): 틈 세 곳(y 427~434 · 463~472 · 507~512)에서 **검정 외곽선 + 청백 잉크**가
+    x 256~282 에 있고 **띠 행에서는 사라진다** ⇒ 일러스트는 띠 «뒤» 로 이어진다 ⇒ **DM/덩이 자가 맞다.**
+    잉크색도 티켓 것이다(틈 (233,255,255)·(200,223,239) ↔ 티켓 속 (240,255,252) ↔ 띠 속 (58,97,70)).
+    """
+    a = np.array(Image.open(REF).convert('RGB')).astype(int)
+    L = 0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]
+    art = art_ref(dbg=False)                        # 카드 바깥선·덩이 자를 여기서 받는다(사본 0)
+    lo, hi = art['lo'], art['hi']
+    band = np.abs(a - np.array([58, 97, 70])).sum(2) < 45   # 알약 띠(어두운 초록 판)
+    rows = band[:, 20:300].sum(1)
+    edges, cur = [], None
+    for y in range(370, 570):                       # 마스크는 띠의 «위·아래 테» 만 문다
+        on = rows[y] > 120
+        if on and cur is None:
+            cur = y
+        if not on and cur is not None:
+            if y - cur >= 6:
+                edges.append((cur, y - 1))
+            cur = None
+    # ⚠ 위·아래 테가 한 run 으로 붙는 줄이 있다(맨 아래 줄) — 키 25 이상이면 그 자체가 한 줄이다.
+    bands, i = [], 0
+    while i < len(edges):
+        if edges[i][1] - edges[i][0] >= 25:
+            bands.append(edges[i]); i += 1
+        elif i + 1 < len(edges):
+            bands.append((edges[i][0], edges[i + 1][1])); i += 2
+        else:
+            break
+    gaps = [(bands[i][1] + 1, bands[i + 1][0] - 1) for i in range(len(bands) - 1)]
+    if verbose:
+        print(f'== ref 초록 카드 x {lo:.1f}..{hi:.1f}   알약 띠 {len(bands)}줄 {bands}')
+        print(f'   띠 «사이의 틈» {gaps}')
+
+    def ink_left(y0, y1):
+        """행 구간에서 «검정 외곽선 + 그 오른쪽 14px 안의 밝은 잉크» 의 최좌단."""
+        best = None
+        for y in range(y0, y1 + 1):
+            for x in range(240, 300):
+                if L[y, x] < 60 and any(L[y, xx] > 150 for xx in range(x + 1, min(x + 14, 320))):
+                    best = x if best is None else min(best, x)
+                    break
+        return best
+
+    ing = [ink_left(*g) for g in gaps]
+    inb = [ink_left(b[0] + 8, b[1] - 8) for b in bands]
+    if verbose:
+        print('   틈에서 본 잉크 최좌단   :', ing, '  ← 일러스트가 띠 «뒤» 로 이어지는가')
+        print('   띠 행에서 본 잉크 최좌단:', inb, '  ← 이어지면 여기서는 «가려져» 사라진다')
+        for g, x in zip(gaps, ing):
+            if x is not None:
+                y = (g[0] + g[1]) // 2
+                xs = [xx for xx in range(x, x + 26) if L[y, xx] > 150]
+                if xs:
+                    print(f'     틈 y{y} x{xs[0]} 색 {tuple(a[y, xs[0]])}'
+                          f'   (티켓 속 {tuple(a[445, 400])} · 띠 속 {tuple(a[440, 200])})')
+    # 알약 띠 우단(각 줄의 가운데 행에서) · 덩이 자의 일러스트 좌단
+    # 띠 우단 — **한 행으로 재지 마라.** 1·4번 줄은 오른쪽 끝이 티켓 잉크에 덮여(그 줄에서만 앞으로
+    #   나온다) 가운데 행으로 재면 261·267 이 나오고 2·3번 줄은 291·295 가 나온다(A3-ⓔ).
+    #   줄의 **20% 이상 행에 띠가 있는 열**까지로 읽으면 네 줄이 293~295 로 모인다.
+    brs = []
+    for b in bands:
+        sub = band[b[0]:b[1] + 1, 15:305]
+        frac = sub.mean(0)
+        xs = np.where(frac > 0.2)[0]
+        if len(xs):
+            brs.append(int(xs.max()) + 15)
+    return dict(lo=lo, hi=hi, bands=bands, gaps=gaps, gap_ink=ing, band_ink=inb,
+                band_r=brs, art=art)
 
 
 def notch_sweep(cap, geo):
@@ -186,7 +268,25 @@ if __name__ == '__main__':
             print(f'\n== Δ (우리 − ref×k)  폭 {o["w"] - r["w"]:+.1f}  높이 {o["h"] - r["h"]:+.1f}'
                   f'  돌출 {o["over"] - r["over"]:+.1f}  좌 {o["left"] - r["left"]:+.1f}'
                   f'  상 {o["top"] - r["top"]:+.1f}  하변까지 {o["bot"] - r["bot"]:+.1f}')
+    if '--edge' in sys.argv:
+        r = edge_ref()
+        K2 = K
+        print()
+        if os.path.exists(geo):
+            g = json.load(open(geo))
+            c = [x for x in g['cards'] if x['id'] == 'abless'][0]
+            pilR = max(l['x'] + l['w'] for l in c['lines']) - c['x']      # 알약 우단(카드-로컬)
+            artL = c['art']['x'] - c['x']
+            refArtL = (r['art']['left'])                                  # 덩이 자 · 이미 우리 px
+            refPilR = (float(np.median(r['band_r'])) - r['lo']) * K2
+            print('== 판정 (카드-로컬 우리 px)')
+            print(f'   알약 우단   ref {refPilR:6.1f}  ↔ 우리 {pilR:6.1f}   Δ {pilR - refPilR:+.1f}')
+            print(f'   일러스트 좌단 ref {refArtL:6.1f}  ↔ 우리 {artL:6.1f}   Δ {artL - refArtL:+.1f}')
+            print(f'   겹침(알약이 덮는 폭) ref {refPilR - refArtL:6.1f}  ↔ 우리 {pilR - artL:6.1f}'
+                  f'   Δ {(pilR - artL) - (refPilR - refArtL):+.1f}')
+            print(f'   ⚠ «흰 테두리» 정의로 읽으면 ref 좌단은 알약 우단과 같아진다({refPilR:.1f})'
+                  f' — 그것이 DL 의 −86 이다(가림선).')
     if '--notch' in sys.argv:
         notch_sweep(cap, geo)
-    if '--art' not in sys.argv and '--notch' not in sys.argv:
+    if not ({'--art', '--notch', '--edge'} & set(sys.argv)):
         print(__doc__)
