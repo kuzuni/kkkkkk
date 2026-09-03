@@ -150,13 +150,46 @@ async function freeze(page, fh) {
     '500ms 간격 두 장이 화소까지 같아야 [E] 의 잉크·잡음바닥이 뜻을 갖는다');
 }
 
+/* 854 — 루프를 끊어도 **오프너 자신의 일회성 연출**은 남는다(09 일괄 강화 결과가 그렇다:
+   느린 러너에서 `#slots` 자리의 잡음바닥이 446 으로 굳는다 — 값이 실행마다 안 변하는 «덜 기다렸다»
+   지 무작위 잡음이 아니다). 그래서 **재기 전에 화면이 멎을 때까지 기다린다** — 고정 대기를 늘리는
+   대신 «두 장이 화소까지 같아지면 통과» 로 조건을 직접 세운다(291 «고정 대기 뒤 rect» 함정과 같은 꼴).
+   못 멎으면 조용히 재지 말고 [E] 가 그 사실로 빨개진다. */
+async function settle(page, tries = 24) {
+  let prev = await shot(page);
+  for (let i = 0; i < tries; i++) {
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const now = await shot(page);
+    if (now === prev) return i;
+    prev = now;
+  }
+  return -1;
+}
+
 /* 854 — 딤 오버레이가 남아 있으면 다음 판의 표본이 앞 판 위에서 찍힌다. 누가 남았는지 이름을 댄다. */
 const onDims = (page, listed) => page.evaluate((ids) => ids.filter((k) => {
   const el = document.getElementById(k);
   return !!(el && el.classList.contains('on'));
 }), [...listed]);
 
-async function inkOf(page, sel) {
+/* 854 — 표본이 무효로 나오면 **다시 잰다**(문턱을 늘리지 않는다). 루프를 끊어도 setTimeout 으로
+   도는 토스트·안내가 남아 잡음바닥을 1,400 화소까지 밀 때가 있는데, 그것은 몇 초면 지나간다.
+   ⚠ «몇 번이고 재서 통과할 때까지» 가 아니다 — 상한 안에서 한 번도 안 멎으면 [E] 가 그대로 빨개진다.
+   이 재시도가 지키는 것은 «움직이는 프레임에 점수를 매기지 않는다» 이지 «초록을 만든다» 가 아니다. */
+async function inkOf(page, sel, tries = 4) {
+  let best = null;
+  for (let i = 0; i < tries; i++) {
+    const r = await sampleOnce(page, sel);
+    r.tries = i + 1;
+    if (!best || r.base < best.base) { best = r; best.tries = i + 1; }
+    if (best.stable) break;
+    await page.waitForTimeout(250);
+  }
+  return best;
+}
+
+async function sampleOnce(page, sel) {
+  const calm = await settle(page);                /* 854 — 멎은 뒤에 잰다 */
   const clip = await page.evaluate((s) => {
     const el = document.querySelector(s), app = document.getElementById('app');
     if (!el || !app) return null;
@@ -183,7 +216,7 @@ async function inkOf(page, sel) {
   const leak = a === b ? 0 : (await diffPx(page, a, b, clip));
   /* 854 — `stable` 이 거짓이면 **표본 자체가 무효**다. 전에는 바닥이 커지면 `leak > base*3+200`
      이 통째로 거짓이 되어 «안 읽힌다» 로 **조용히 통과**했다(잉크 X · 바닥 X 동수가 그 얼굴이다). */
-  return { leak, base, stable: base <= NOISE, read: leak > base * 3 + 200 };
+  return { leak, base, calm, stable: calm >= 0 && base <= NOISE, read: leak > base * 3 + 200 };
 }
 
 function diffPx(page, ba, bb, cl) {
@@ -286,8 +319,8 @@ const pillOf = (page) => page.evaluate(() => {
           if (!box) continue;                     /* 그 상태에 없는 부품은 물을 것이 없다 */
           const t = await inkOf(page, '#' + k);
           ok(t.stable && !t.read, `[E-${h.id}-${fh}-${k}] 딤 너머로 안 읽힌다`,
-            `잉크 ${t.leak} · 잡음바닥 ${t.base}`
-            + (t.stable ? '' : ` ⚠ 바닥이 ${NOISE} 초과 — 화면이 움직이는 중이라 표본이 무효다(854)`));
+            `잉크 ${t.leak} · 잡음바닥 ${t.base}${t.tries > 1 ? ` · 재측정 ${t.tries}회` : ''}`
+            + (t.stable ? '' : ` ⚠ 표본 무효(854) — ${t.calm < 0 ? '화면이 안 멎었다' : `바닥이 ${NOISE} 초과`}`));
         }
       }
 
@@ -326,8 +359,8 @@ const pillOf = (page) => page.evaluate(() => {
     /* 854 — 여기가 «잉크 113114 대 바닥 98928 = 1.15배» 로 흔들리던 자리다. 바닥이 컸던 것은
        문턱이 빡빡해서가 아니라 패배 화면이 **매 프레임 다시 그려지고 있었기** 때문이다. */
     ok(t.stable && t.read, '[R2] 규칙을 무효화하면 [E] 가 빨개진다',
-      `잉크 ${t.leak} · 잡음바닥 ${t.base}`
-      + (t.stable ? '' : ` ⚠ 바닥이 ${NOISE} 초과 — 표본 무효(854)`));
+      `잉크 ${t.leak} · 잡음바닥 ${t.base}${t.tries > 1 ? ` · 재측정 ${t.tries}회` : ''}`
+      + (t.stable ? '' : ` ⚠ 표본 무효(854) — ${t.calm < 0 ? '화면이 안 멎었다' : `바닥이 ${NOISE} 초과`}`));
     await ctx.close();
   }
 
