@@ -96,6 +96,12 @@ const MEASURE = `(() => {
     gapB: +(o.fc.t - o.cap.b).toFixed(2),        /* 쌍ⓑ — 안내문 ↓ 코너 브래킷 */
     gapA: +(o.mul.t - o.lintel.b).toFixed(2),    /* 쌍ⓐ — 상인방 ↓ 배수 바 */
     capInkOverlap: +Math.max(0, ov).toFixed(2),  /* 안내문 잉크 × 코너 브래킷 가로 겹침 */
+    /* 813 5회차 — **상자**와 브래킷의 가로 겹침. 잉크(위)는 처음부터 0 이었고, 754 의 자를
+       빨갛게 만들던 것은 이 값이다(상자가 left:0;right:0 이라 브래킷 열까지 뻗었다).
+       5회차가 상자를 40 으로 좁혀 이 값도 0 이 됐고, 그래야 --rw-i 하한을 내리는 것이
+       «문턱 완화» 가 아니라 «겹칠 기하의 제거» 가 된다. */
+    capBoxOverlap: +Math.max(0, Math.min(document.querySelector('#relw .rw-cap').getBoundingClientRect().right, fcr.right)
+                              - Math.max(document.querySelector('#relw .rw-cap').getBoundingClientRect().left, fcr.left)).toFixed(2),
     visGap: +(p.b - last.y2).toFixed(2),         /* 눈에 보이는 여백 — 잉크 하변 → 패널 안쪽 하변 */
     above: +(o.cap.t - o.mid.b).toFixed(2),      /* 안내문 위 여백 */
     av: +Math.min(186, (o.mid.t - 516 - 174) / 2).toFixed(2),
@@ -134,18 +140,28 @@ async function sweep(browser, url) {
      안 된다** — 줄인 만큼이 곧장 수반을 위로 올려 E(격자↔수반)로 흘러 들어가고, E 독식은
      1회차 비평 2인이 각자 1순위로 지목한 결함이다(1회차 §3 스윕). 그래서 자는 이제
      «g3 의 하한» 이 아니라 **총량 = 38 + clamp(44, sp × .1325 − 38, 104)** 를 잰다. */
+  /* ⚑⚑ 813 5회차 — **[1] 의 방향을 뒤집었다(333 처방 — 자리를 비우지 않는다).**
+     2~4회차의 [1] 은 «총량(38 + g3)을 건드리지 마라» 는 래칫이었다. 그 근거는 1회차 §3 의
+     «총량을 줄이면 그 세로가 곧장 E 로 흘러 1순위 결함(E 독식)을 키운다» 인데,
+     **859 가 그릇을 캡하면서 그 전제가 없어졌다** — E 는 이제 프레임 무관 상수이고([6a]),
+     남는 세로는 `--rw-gt` 의 48:52 규칙이 상단과 E 로 **나눈다**. 그래서 5회차는 총량을
+     90.6 → 36 으로 내렸고(채점 2인 CN·CO 의 처방 · 859 §15), 이 항은 그 결과를 못박는다.
+     ⚠ 옛 판정식(GAP2 + clamp)은 지우지 않고 [R5] 의 사본 판정에 그대로 남겼다 — 계보다. */
   {
-    const want = (H) => {
-      const sp = r[H].panelH - 820;
-      return GAP2 + Math.min(Math.max(sp * 0.1325 - 38, G3_FLOOR), G3_CAP);
-    };
-    ok(FRAMES.every(H => Math.abs(r[H].above + r[H].g3 - want(H)) < 1.2),
-      '[1a] 아래 블록 총량(수반↓안내문 + 안내문↓패널하변)이 «38 + g3» 그대로 — 2회차는 나누기만 했다',
-      FRAMES.map(H => H + ':' + (r[H].above + r[H].g3).toFixed(1) + '/' + want(H).toFixed(1)).join(' · '));
-    ok(Math.abs(want(1600) - (GAP2 + G3_FLOOR)) < 0.6 &&
-       FRAMES.filter(H => H !== 1600).every(H => want(H) > GAP2 + G3_FLOOR + 3),
-      '[1b] 총량이 하한(38+44)을 보는 프레임은 1600 **하나뿐** — 나머지 넷은 clamp 가운데 항이 이긴다',
-      FRAMES.map(H => H + ':' + want(H).toFixed(1)).join(' · '));
+    const TOT = 36;                       /* = 12(고정) + 24(--rw-g3) · ref 푸터 여백 */
+    const tot = (H) => r[H].above + r[H].g3;
+    const spread = Math.max(...FRAMES.map(tot)) - Math.min(...FRAMES.map(tot));
+    ok(FRAMES.every(H => Math.abs(tot(H) - TOT) < 1.2) && spread < 1.2,
+      '[1a] 아래 블록 총량이 **프레임 무관 상수 36**(12 + g3 24) — 레퍼런스의 «푸터» 여백은 안 자란다',
+      FRAMES.map(H => H + ':' + tot(H).toFixed(1)).join(' · ') + ' · 진폭 ' + spread.toFixed(2) +
+      'px (4회차 82~93.7 = 갈림 11.7px)');
+    /* 5회차가 회수한 54.6px 이 **어디로 갔는지**를 자가 직접 말한다. 4회차 [G1] 이 세운
+       48:52 는 그때는 `--rw-gt` 의 min 항이 안 골라져 **한 번도 안 이겼다**(gt = av + 94 였다).
+       총량을 내려 tt 가 자라자 비로소 `tt × .48` 이 이기고, 그래서 이 비가 이제 실측으로 뜬다. */
+    const share = (H) => r[H].gt / (r[H].gt + r[H].gapMid);
+    ok(FRAMES.filter(H => H !== 1600).every(H => Math.abs(share(H) - 0.48) < 0.012),
+      '[1b] 회수분이 «상단 : E» = **48:52**(4회차 [G1] 의 비)로 갈렸다 — gt 가 처음으로 그 규칙에 붙었다',
+      FRAMES.map(H => H + ':' + share(H).toFixed(3)).join(' · ') + ' · 4회차 gt 는 av+94 가 이겨 0.45 였다');
   }
 
   /* ── [2] 쌍ⓑ 는 **유령이다** ──────────────────────────────────────────────
@@ -167,6 +183,13 @@ async function sweep(browser, url) {
     ok(FRAMES.every(H => Math.abs(r[H].visGap - r[H].gapB - (BRACKET + 4)) < 2.5),
       '[2c] 자가 잰 값은 보이는 여백보다 «브래킷 27 + 상자 여유 4» = 31 만큼 작다 — 어긋남의 출처',
       FRAMES.map(H => H + ':' + r[H].gapB + '+31≈' + r[H].visGap).join(' · '));
+    /* ⚑ 5회차 — [2a] 는 «잉크가 안 닿는다» 였고 이 항은 **«상자도 안 닿는다»** 다.
+       1~4회차 내내 잉크는 0 인데 상자는 30px 겹쳐 있었고, 그 겹침이 `--rw-i` 하한 32 를
+       붙잡아 아래 블록을 90.6 에 묶어 놓고 있었다. 상자를 좁힌 것이 5회차의 **선행 수리**다 —
+       이 항이 빨개지면 하한 12 는 근거를 잃는다(= 무른 수리가 된다). */
+    ok(FRAMES.every(H => r[H].capBoxOverlap === 0),
+      '[2d] 안내문 **상자**와 코너 브래킷의 가로 겹침도 0 — `--rw-i` 하한 12 를 정당화하는 선행 수리',
+      FRAMES.map(H => H + ':' + r[H].capBoxOverlap + 'px').join(' · ') + ' · 4회차는 30px 였다');
   }
 
   /* ── [3] 안내문 위:아래 비 — **1회차가 못박은 값을 뒤집었다** ─────────────
@@ -259,13 +282,19 @@ async function sweep(browser, url) {
     /* R4 가 «안 바뀐다» 를 재려면 현행 값이 필요하다 — 상수로 적지 않고 이번 실행에서 뜬다. */
     const R4_BASE = Object.fromEntries(FRAMES.map(H => [H, r[H].gapA]));
     const REV = [
-      ['R1', '[E4] 안내문 ref 비 분할을 옛 «38 고정» 으로 되돌린다 ⇒ [3] 이 대역 밖으로',
-        '+ 38px * var(--rwc,1) + var(--rw-g3) - var(--rw-i));', '+ 38px);',
+      /* 5회차 — 선언의 `38px` 가 `12px` 로 바뀌어 잡는 문자열만 옮겼다(묻는 것은 그대로). */
+      ['R1', '[E4] 안내문 ref 비 분할을 옛 «고정 여백» 으로 되돌린다 ⇒ [3] 이 대역 밖으로',
+        '+ 12px * var(--rwc,1) + var(--rw-g3) - var(--rw-i));', '+ 38px);',
         (rv) => { const v = rv[2280].g3 / rv[2280].above; return { bad: !(v >= 0.57 && v <= 0.66), got: '2280 아래/위 ' + v.toFixed(2) }; }],
-      ['R2', '[E2] 격자 상변 «벽 하한 232» 를 뺀다 ⇒ [5a] 쌍ⓐ 가 다시 판정선 아래로',
+      /* ── ⚑ 5회차 — R2 도 **죽은 지렛대가 됐다**(R3·R4 가 859 에서 겪은 것과 같은 꼴). ──
+         [E2] 의 벽 하한 232 는 2회차에 gt 를 끌어올리던 자였는데, 5회차가 총량을 내려 tt 가
+         자라자 `tt × .48`(312.5)이 232 를 한참 위에서 이긴다 ⇒ 232 를 0 으로 지워도 **한 픽셀도
+         안 변한다**. 자리를 비우지 않고 «죽었다» 를 묻는 쪽으로 뒤집는다 — 다음 회차가 이 난간을
+         «쓸모없다» 고 걷어내면, 총량이 다시 커지는 날 1600 에서 그 값이 되살아나야 한다. */
+      ['R2', '[E2] 벽 하한 232 는 5회차 이후 **죽은 난간**이다 — 0 으로 지워도 gt 가 안 변한다',
         'calc(232px * var(--rwc,1)),', 'calc(0px * var(--rwc,1)),',
-        (rv) => { const b = rv[BASE].gapA, m = Math.min(...FRAMES.map(H => rv[H].gapA));
-                  return { bad: m < b * COLLAPSE, got: '쌍ⓐ ' + (m / b * 100).toFixed(1) + '%' }; }],
+        (rv) => { const d = Math.max(...FRAMES.map(H => Math.abs(rv[H].gt - r[H].gt)));
+                  return { bad: d < 0.5, got: 'gt 최대 변화 ' + d.toFixed(2) + 'px' }; }],
       /* ⚑ R3 은 **다른 것을 묻는다.** 굴려 보니 [E3] 은 판정선을 넘기는 지렛대가 아니었다 —
          300 으로 되돌려도 26.1% 로 선 위에 남는다([E2] 와 [E5] 의 44 가 이미 넘긴다).
          [E3] 이 하는 일은 **여유**다: 27.9%(2.6px) → 26.1%(1.0px). 1px 짜리 여유는 다음 회차의
@@ -288,10 +317,32 @@ async function sweep(browser, url) {
                   const ratio = rv[2280].g3 / rv[2280].above;
                   return { bad: spread > 1.2,
                            got: 'E 진폭 ' + spread.toFixed(1) + 'px (안내문 비는 ' + ratio.toFixed(2) + ' 로 불변 — 눈금이 그릇을 따라간다)' }; }],
-      ['R4', '[E3] 벽 폭 294 → 300 사본이 859 이후 **아무것도 안 바꾼다** — 죽은 지렛대임을 못박는다',
+      /* ── ⚑⚑ 5회차 — R4 의 방향을 **되돌려 놓는다.** 859 가 죽였던 [E3] 이 이 회차에 되살아났다. ──
+         859 의 캡 아래에서는 `--rw-lt` 가 clamp 하한 20 에 눌려 «gt − 294» 항이 한 번도 안 골라졌고
+         (그래서 4회차가 R4 를 «죽은 지렛대» 로 뒤집었다), 5회차가 gt 를 284 → 322 로 올리자
+         **가운데 항이 다시 이긴다**(lt 19.7 → 27.7 · 실측 [B]). 지렛대가 살아 있으면 «안 바뀐다» 를
+         묻는 항은 그 자체로 빨강이므로, 2회차의 원래 뜻(«이 상수가 쌍ⓐ 의 여유를 만든다»)으로
+         되돌린다. ⚠ 죽었다→살았다가 **두 회차 만에 뒤집힌 자리**라, 다음 회차가 gt 를 다시 내리면
+         이 항이 먼저 말한다(그때는 4회차 판본으로 또 뒤집는 것이 아니라 gt 를 왜 내렸는지를 적어라). */
+      ['R4', '[E3] 벽 폭 294 는 5회차에 **되살아났다** — 300 으로 되돌리면 쌍ⓐ 가 실제로 움직인다',
         'calc(var(--rw-gt) - 294px * var(--rwc,1)),', 'calc(var(--rw-gt) - 300px * var(--rwc,1)),',
         (rv) => { const d = Math.max(...FRAMES.map(H => Math.abs(rv[H].gapA - R4_BASE[H])));
-                  return { bad: d < 0.5, got: '쌍ⓐ 최대 변화 ' + d.toFixed(2) + 'px' }; }],
+                  const s = (rv[BASE].gapA - R4_BASE[BASE]).toFixed(2);
+                  return { bad: d >= 0.5, got: '쌍ⓐ 최대 변화 ' + d.toFixed(2) + 'px (2280 ' + (s > 0 ? '+' : '') + s + ')' }; }],
+      /* ── ⚑⚑ 5회차의 **자기 되돌림 두 겹** — 이 회차가 한 일이 둘이라 시험도 둘이다. ──
+         R5 = 예산(총량 36) · R6 = 그 예산을 가능하게 한 선행 수리(상자 좁히기).
+         R5 는 총량만 4회차 값(12 + 78.6 = 90.6)으로 돌린다 — 다른 자리는 안 건드리므로
+         사본의 기하가 4회차와 **항등**이다(gt 284 · E 320). 그래서 «상단이 5회차 때문에
+         자랐다» 를 이 항 하나가 증명한다. */
+      ['R5', '**5회차 예산**을 4회차 총량(90.6)으로 되돌리면 상단 gt 가 다시 300 아래로 · E 가 ref 밖으로',
+        '--rw-g3:calc(24px * var(--rwc,1));', '--rw-g3:calc(78.6px * var(--rwc,1));',
+        (rv) => { const gt = rv[BASE].gt, e = rv[BASE].gapMid;
+                  return { bad: gt < 300 && e < 330, got: '2280 gt ' + gt.toFixed(1) + ' · E ' + e.toFixed(1) +
+                    ' (5회차 ' + r[BASE].gt.toFixed(1) + ' / ' + r[BASE].gapMid.toFixed(1) + ')' }; }],
+      ['R6', '**상자 좁히기**를 되돌리면 [2d] 가 빨개진다 — 하한 12 가 근거를 잃는 자리를 못박는다',
+        '.rw-cap{left:40px;right:40px;', '.rw-cap{left:0;right:0;',
+        (rv) => { const m = Math.max(...FRAMES.map(H => rv[H].capBoxOverlap));
+                  return { bad: m > 0, got: '상자 × 브래킷 가로 겹침 ' + m.toFixed(1) + 'px' }; }],
     ];
     for (const [id, why, from, to, judge] of REV) {
       if (src.indexOf(from) < 0) { ok(false, `[${id}] 되돌림 사본을 못 만들었다 — 선언 문자열이 안 잡힌다`, from); continue; }

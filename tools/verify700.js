@@ -221,14 +221,29 @@ function preTree() {
      ⚠ **1600 은 빈 칸이 정답이다.** 캡이 안 걸리는 프레임이라 859 는 그 프레임을 한 픽셀도 안 건드렸고,
        예약 139 도 1600 에서는 하한(av+94)이 이겨 안 닿는다.
      옛 표(813 2~4회차 누적)는 위 주석에 그대로 남아 있다 — 어디서 왔는지를 지우지 않는다. */
+  /* ⚑ 813 5회차 — 표를 **통째로** 다시 적었다. 이 자는 «커밋» 이 아니라
+     `merge-base origin/main HEAD` 를 기준으로 읽으므로, main 에 들어간 앞 회차(859 r1~r3 ·
+     813 r1~r4)의 이동은 이제 Δ0 이다 — 옛 값(2280 gridt 233 등)을 남겨 두면 «등재된 이동을
+     기다리는데 실제는 33.8» 이라 이 항이 빨개진다(4회차 §14 가 같은 것을 밟았다).
+     아래는 `P813_DUMP=1` 출력을 그대로 옮긴 것이고, 출처는 **하나**다 — 아래 블록 총량
+     90.6 → 36 이 수반·안내문·계단을 내리고(midt/basint/costt/labt/stepst +57.69),
+     그 절반이 `--rw-gt` 의 48:52 규칙으로 격자·바닥·상인방으로 간다(gridt/floort/groundt
+     +33.77 · lintelt +8.08). 1600 은 캡이 안 걸린 프레임이라 값이 따로다.
+     ⚠ `capl +40 · capw −80` 은 **안내문 상자 좁히기**(left/right 0 → 40)다 — 잉크는 가운데
+       정렬이라 그려지는 자리는 Δ0px 이고, 바뀐 것은 상자뿐이다(`verify813` [2d]가 그 이유). */
   const ALLOW813 = {
-    1600: {},
-    1920: { gridt: 53, midt: 53, basint: 53, costt: 53, labt: 53, capt: 53,
-            lintelt: 53, floort: 53, groundt: 53, stepst: 53 },
-    2280: { gridt: 233, midt: 233, basint: 233, costt: 233, labt: 233, capt: 233,
-            lintelt: 233, floort: 233, groundt: 233, stepst: 233 },
-    2600: { gridt: 393, midt: 393, basint: 393, costt: 393, labt: 393, capt: 393,
-            lintelt: 393, floort: 393, groundt: 393, stepst: 393 },
+    1600: { basint: 46, costt: 46, labt: 46, midt: 46, stepst: 46,
+            floort: 26, groundt: 26, floorh: -26, groundh: -26,
+            gridt: 3, capt: 18.5, capl: 40, capw: -80 },
+    1920: { basint: 57.69, costt: 57.69, labt: 57.69, midt: 57.69, stepst: 57.69,
+            floort: 33.77, groundt: 33.77, floorh: -33.77, groundh: -33.77,
+            gridt: 33.77, lintelt: 8.08, capt: 21.64, capl: 40, capw: -80 },
+    2280: { basint: 57.69, costt: 57.69, labt: 57.69, midt: 57.69, stepst: 57.69,
+            floort: 33.77, groundt: 33.77, floorh: -33.77, groundh: -33.77,
+            gridt: 33.77, lintelt: 8.08, capt: 21.64, capl: 40, capw: -80 },
+    2600: { basint: 57.69, costt: 57.69, labt: 57.69, midt: 57.69, stepst: 57.69,
+            floort: 33.77, groundt: 33.77, floorh: -33.77, groundh: -33.77,
+            gridt: 33.77, lintelt: 8.08, capt: 21.64, capl: 40, capw: -80 },
   };
 
   {
