@@ -7992,7 +7992,16 @@
   #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:calc((var(--ntc-d) + 12px) * 2);box-sizing:border-box;
     border:12px solid var(--h);border-radius:50%;clip-path:inset(0 calc(50% + 10px) 0 0)}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
-  .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:30px 30px 0 0;
+  /* ⚑ 885 2회차 — **윗모서리 반경이 ref 의 2/3 였다**(채점 2인 DP·DQ **독립 일치** · 둘 다 신뢰 상 ·
+     둘 다 임계 3단 스윕에서 부호 불변). 자는 «탭 상변에서 깊이 d 마다 좌·우단을 재고 평탄부를 뺀 들어감» —
+     DP: d8 ref 19.2/16.0 ↔ 우리 9.1 · d16 13.9/11.6 ↔ 4.5 · d22 10.9/8.0 ↔ 2.2(ref 의 0.20~0.47배 ·
+     r_ref 40~44 ↔ r_our 29) · DQ: d50 폭 ref 196~208 ↔ 우리 226~228(+35px · r ref≈40 ↔ 우리 ≈25).
+     ⚑ **이 한 값이 1회차의 «탭↔쿠폰칩 틈» 상충도 같이 설명한다** — DQ 가 깊이별 표로 갈랐다:
+     탭 최대폭 구간(d≤26)을 잰 자는 «우리가 넓다», 상단 호 구간(d 42~50)을 잰 자는 «좁다» 를 얻는다.
+     둘 다 참이고 뿌리는 칩이 아니라 **이 반경**이다(칩 좌단·상하변은 ref 와 ±2 — 옮기지 마라).
+     ⚠ 탭 **폭·자리는 이미 맞다**(좌단 28.7↔28.8 · 폭 251.5↔249.8 · 솟음 55.1↔55.9) — 반경만 옮긴다.
+     ⇒ `border-radius 30 → 40`(2인 공통값 · DP 40~44 의 하한 = DQ 점추정). */
+  .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:40px 40px 0 0;
     border:7px solid #000;border-bottom:0;background:var(--d);z-index:2}
   /* ⚑ 833 3회차 — 라벨 잉크가 **판 안에서 6.8px 위**에 있었다(1회차 CY [1] «7.7px 위» 확인).
      ⚠ 같은 자리의 CX [7]«탭이 카드 위로 +3.8~5.7 솟았다» 는 **기각**이다 — 자로 재면

@@ -132,7 +132,9 @@ const DUMP = `(() => {
       sttITop: sti ? num(getComputedStyle(sti).top) : null,
       sttITr: sti ? getComputedStyle(sti).transform : null,
       sttIFs: sti ? num(getComputedStyle(sti).fontSize) : null,
-      sttILh: sti ? num(getComputedStyle(sti).lineHeight) : null, banI };
+      sttILh: sti ? num(getComputedStyle(sti).lineHeight) : null,
+      sttR: stt ? getComputedStyle(stt).borderTopLeftRadius : null,
+      sttR2: stt ? getComputedStyle(stt).borderTopRightRadius : null, banI };
   });
 })()`;
 
@@ -260,6 +262,13 @@ const DUMP = `(() => {
     ok(Math.abs((c.card.y - c.stt.y) - 56) < 0.6 && Math.abs(c.stt.h - 68) < 0.6,
       `[8-d] ${c.id} 탭 판은 **안 건드렸다** (솟음 56 · 높이 68)`,
       `${p2(c.card.y - c.stt.y)} / ${p2(c.stt.h)}`);
+    /* ⚑ 885 2회차 — 채점 2인(DP·DQ)이 **독립으로** «윗모서리 반경이 ref 의 2/3» 를 냈다(둘 다 신뢰 상 ·
+       임계 3단 스윕 부호 불변 · r_ref 40~44 ↔ 우리 29). 그 한 값이 1회차의 «탭↔쿠폰칩 틈» 상충도 설명한다 —
+       탭 최대폭 구간을 잰 자와 상단 호 구간을 잰 자가 반대 부호를 얻는다(DQ 깊이별 표). ⇒ 30 → 40.
+       ⚠ 반경만 옮겼다 — 폭·솟음은 [8-d] 가 그대로 지킨다(둘 다 «자리는 맞다» 를 같이 적었다). */
+    ok(c.sttR === '40px' && c.sttR2 === '40px',
+      `[8-e] ${c.id} 탭 윗모서리 반경 = 40 (ref 40~44 · 2인 일치 · 아래 두 모서리는 0)`,
+      `${c.sttR} / ${c.sttR2}`);
   }
   ok(new Set(cards.map(c => c.sttITop)).size === 1,
     '[8-e] 세 카드가 한 부품 — 라벨 자리가 한 값', cards.map(c => c.sttITop).join(' / '));
