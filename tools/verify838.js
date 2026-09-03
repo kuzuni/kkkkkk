@@ -32,16 +32,23 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
   else {
     console.log('  · 씬 A ' + Math.round(A.geo.bw) + '×' + Math.round(A.geo.bh) + ' · 알 ' + A.n
       + ' · 이동 ' + p2(A.net) + 'px ÷ 지름 ' + p2(A.maxD) + 'px');
-    ok(A.body >= 0.72, 'A1 씬 A 사거리 ≥ 0.72 몸길이 — ' + p2(A.body), '수리 전 0.41 · 등재문 0.59');
-    ok(A.bodyMin >= 0.30, 'A2 가장 안 움직인 알도 ≥ 0.30 몸길이 — ' + p2(A.bodyMin), '수리 전 0.21');
-    ok(A.net >= 30, 'A3 총 이동 평균 ≥ 30px — ' + p2(A.net) + 'px', '수리 전 18.5px · CV 24.0 · CW 21.4');
+    ok(A.body >= 1.15, 'A1 씬 A 사거리 ≥ 1.15 몸길이 — ' + p2(A.body),
+       '수리 전 0.41 · 1회차 0.83 · 등재문 0.59');
+    /* 비평 2인(CX·CY)이 **중앙값**으로 적었다 — 평균만 지키면 «긴 알 둘이 표를 만든다» */
+    ok(A.bodyMed >= 1.00, 'A2 중앙값도 ≥ 1.00 몸길이 — ' + p2(A.bodyMed),
+       '1회차 채점 CX 0.77 · CY 0.61(수리 전 자와 같은 눈금)');
+    ok(A.net >= 40, 'A3 총 이동 평균 ≥ 40px — ' + p2(A.net) + 'px', '수리 전 18.5px · CV 24.0 · CW 21.4');
     /* [B] 스필 — 619 13·14회차가 지키는 값을 **이 자에서 직접** 잰다(끝점·가둠 상자를 안 건드렸다는 증거).
        그린 상자(중심 ± w/2)가 호스트 상자를 넘으면 양수다. */
     ok(A.spill <= 1, 'B1 씬 A — 알 잉크가 호스트 상자 밖으로 안 나간다 · 최대 ' + p2(A.spill) + 'px',
        '619 28·13·14회차 · 여유 FXB_INPAD 4px 안쪽에서 끝나야 한다');
     ok(A.spill <= -3, 'B2 그 여유가 실제로 남아 있다(잉크가 액자에 «닿지» 않는다) — ' + p2(-A.spill) + 'px 안쪽',
        '619 14회차 «잉크와 액자 사이에 늘 4px»');
-    ok(A.growth >= 1.45, 'C1 끝 반경 ÷ t=0 반경 ≥ 1.45 — ×' + p2(A.growth), '수리 전 ×1.24(등재문 +15~34%)');
+    ok(A.growth >= 2.60, 'C1 끝 반경 ÷ t=0 반경 ≥ 2.60 — ×' + p2(A.growth),
+       '수리 전 ×1.24(등재문 +15~34%) · 1회차 ×1.53 · CX 처방 «3.5× 이상»');
+    /* 두 비평가가 «같은 그림 두 장» 으로 읽은 그 쌍 — 자에도 축을 세운다 */
+    ok(A.iouPeak <= 0.70, 'C2 이웃 장 최대 IoU ≤ 0.70 — ' + p2(A.iouPeak),
+       '수리 전 0.78 · CX 0.69 · CY 0.718(같은 자리)');
     ok(B.body >= 3, 'D1 대조군(점 대상)은 종전대로 여러 몸길이 — ' + p2(B.body) + ' 몸길이', '수리 전 4.8');
     ok(A.errs.length === 0 && B.errs.length === 0, 'D2 콘솔 에러 0',
        [...A.errs, ...B.errs].slice(0, 2).join(' | '));
@@ -54,10 +61,13 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
     const m = /const FXB_KMAX = [\d.]+, FXB_BODY = [\d.]+, FXB_KLAD = \d+;/.exec(code);
     ok(!!m, 'R0 되돌릴 선언을 찾았다', m ? m[0] : '못 찾음');
     if (m) {
-      fs.writeFileSync(TMP, code.replace(m[0], 'const FXB_KMAX = FXB_K, FXB_BODY = 0, FXB_KLAD = 3;'));
+      /* 되돌림은 **두 회차를 다 되돌린다** — 1회차(당김 사다리)는 상수로, 2회차(발원 분리)는
+         신고 이름을 죽여서(`--burst-from` → 아무도 안 읽는 이름). 제품 파일은 안 건드린다. */
+      fs.writeFileSync(TMP, code.replace(m[0], 'const FXB_KMAX = FXB_K, FXB_BODY = 0, FXB_KLAD = 3;')
+                                .replace(/--burst-from:/g, '--burst-x838:'));
       rev = await runScene(SCENES[0], TMP);
       ok(!rev.err && rev.body < 0.6,
-         'R1 종전 값으로 되돌린 사본에서 사거리가 다시 짧다 — ' + (rev.err || p2(rev.body) + ' 몸길이'),
+         'R1 두 회차를 되돌린 사본에서 사거리가 다시 짧다 — ' + (rev.err || p2(rev.body) + ' 몸길이'),
          '수리 전 0.41 재현');
       ok(!rev.err && rev.growth < 1.35,
          'R2 그 사본은 출생 반경도 종전 — ×' + (rev.err || p2(rev.growth)), '수리 전 ×1.24');

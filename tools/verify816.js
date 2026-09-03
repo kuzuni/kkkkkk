@@ -55,6 +55,7 @@ const SAMPLE = () => {
   return {
     n: eggs.length,
     num: cov(inkOf(cb, 'i'), eggs),
+    coin: cov(inkOf(cb, 's'), eggs),                 /* 838 이관 — 「신고 안 한 잉크」 쪽 표본(아래 [R2a·b]) */
     out: b ? eggs.filter(e => {
       const cx = (e.left + e.right) / 2, cy = (e.top + e.bottom) / 2;
       return cx < b.left || cx > b.right || cy < b.top || cy > b.bottom;
@@ -93,6 +94,7 @@ async function holdTrain(page, keep) {
     max: live.length ? Math.max(...live.map(r => r.num)) : 0,
     n25: live.filter(r => r.num >= 0.25).length,
     n05: live.filter(r => r.num >= 0.05).length,
+    c05: live.filter(r => r.coin >= 0.05).length,
     eggs: rows.reduce((a, r) => a + r.n, 0) / Math.max(1, rows.length),
     peak: Math.max(0, ...rows.map(r => r.n)),
     out: Math.max(0, ...rows.map(r => r.out))
@@ -200,8 +202,21 @@ async function holdTrain(page, keep) {
   ok(r1 && r1.n25 > 0, 'R1 신고를 지우면(816 이전) 숫자가 다시 «읽을 수 없다» 급으로 덮인다 — [B3] 이 빨개지는 자리',
      '≥25% 표본 ' + (r1 ? r1.n25 : '?') + '개 · 최대 ' + p1((r1 ? r1.max : 0) * 100) + '%');
   const r2 = await holdTrain(page, 's');
-  ok(r2 && r2.n05 > 0, 'R2 엉뚱한 잉크(코인)를 신고하면 숫자는 그대로 덮인다 — 자가 «신고한 그 잉크» 를 본다',
-     '≥5% 표본 ' + (r2 ? r2.n05 : '?') + '개');
+  const r3b = await holdTrain(page, null);
+  /* ⚑⚑ **838 이관(333 처방)** — 종전 항은 «코인을 신고하면 **숫자**가 그대로 덮인다» 였다.
+     838 이 발원을 코인(`--burst-from:s`)으로 옮기면서 그 전제가 죽었다: 코인을 신고하는 순간
+     구멍이 **발원 자신**을 덮어 궤적이 통째로 걸러지고, 그러면 숫자도 안 덮인다(실측 ≥5% 0개).
+     ⇒ 묻는 것(«자가 신고를 따라가는가»)은 그대로, **재는 잉크를 코인으로 옮긴다.**
+     ⚠ 문턱이 0 이 아닌 이유 — 코인은 발원이라 알이 그 위에서 «태어난다». 구멍은 «지나가지 마라»
+       라서 태어나는 자리를 0 으로 못 만든다. 그래서 «줄어드는가» 로 묻고 R2b 가 짝을 이룬다. */
+  ok(r2 && r3b && r3b.eggs > 0 && r2.eggs <= r3b.eggs * 0.6,
+     'R2a **발원 잉크를 신고하면 그 버스트가 죽는다** — 자가 신고를 따라간다는 가장 굵은 증거',
+     '알 평균 ' + (r2 ? r2.eggs.toFixed(1) : '?') + ' ↔ 안 신고 ' + (r3b ? r3b.eggs.toFixed(1) : '?')
+     + ' · 봉우리 ' + (r2 ? r2.peak : '?') + ' ↔ ' + (r3b ? r3b.peak : '?')
+     + ' · 코인 ≥5% 표본 ' + (r2 ? r2.c05 : '?') + ' ↔ ' + (r3b ? r3b.c05 : '?')
+     + ' (덮임 쪽은 기록만 — 실행마다 0.48~0.74 배로 흔들린다)');
+  ok(r3b && r3b.c05 > 0, 'R2b 제품 선언(숫자만)에서는 **코인은 덮인다** — R2a 가 헛초록이 아니다',
+     '≥5% 표본 ' + (r3b ? r3b.c05 : '?') + '개 · 816 «코인(`s`)은 안 신고한다»');
   const r3 = await holdTrain(page, null);
   ok(r3 && r3.n05 === 0 && r3.frames > 0, 'R3 원복하면 다시 0 이다', '≥5% 표본 ' + (r3 ? r3.n05 : '?') + '개');
 

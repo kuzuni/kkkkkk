@@ -13,7 +13,23 @@
  *   ok/FAIL 은 «등재문이 이 트리에서 재현되는가» 를 묻는 것이라, 수리 뒤에는 [P] 절이 뒤집히는 게 정상이다.
  */
 'use strict';
+const fs = require('fs');
+const path = require('path');
 const { runScene, SCENES } = require('./travel838');
+
+const SRC = path.resolve(__dirname, '../index.html');
+const TMP = path.resolve(__dirname, '../.tmp838-probe.html');
+/* ⚑ 재현은 **수리 전 사본**에서 한다(probe681 선례 · 803 «옛 재현이 굳는» 함정 회피).
+   사본은 838 의 두 회차를 다 되돌린다 — 1회차(당김 사다리)는 상수로, 2회차(발원 분리)는 신고 이름으로.
+   ⚠ 임시 파일은 크래시에도 지운다(810). */
+function revertCopy() {
+  const code = fs.readFileSync(SRC, 'utf8');
+  const m = /const FXB_KMAX = [\d.]+, FXB_BODY = [\d.]+, FXB_KLAD = \d+;/.exec(code);
+  if (!m) return null;
+  fs.writeFileSync(TMP, code.replace(m[0], 'const FXB_KMAX = FXB_K, FXB_BODY = 0, FXB_KLAD = 3;')
+                            .replace(/--burst-from:/g, '--burst-x838:'));
+  return TMP;
+}
 
 const p2 = n => Math.round(n * 100) / 100;
 const argSrc = (() => { const i = process.argv.indexOf('--src'); return i > 0 ? process.argv[i + 1] : null; })();
@@ -41,8 +57,24 @@ const info = (k, v) => console.log('       · ' + k + ': ' + v);
       + p2(e.body) + ' | ' + p2(e.pth) + ' | ' + p2(e.iouMax) + ' |'));
   }
 
-  const A = out.train, B = out.relic;
-  console.log('\n[P] 재현 — 등재문의 세 얼굴');
+  /* ── [P] 재현은 수리 전 사본에서 ─────────────────────────────────── */
+  let A = out.train, B = out.relic;
+  if (!argSrc) {
+    const tmp = revertCopy();
+    try {
+      if (tmp) {
+        A = await runScene(SCENES[0], tmp);
+        B = await runScene(SCENES[1], tmp);
+        console.log('\n## 수리 전 사본(838 두 회차 되돌림) — [P] 는 이 값을 묻는다');
+        console.log('       · 씬 A ' + p2(A.body) + ' 몸길이 · 반경 ×' + p2(A.growth) + ' · 이웃 장 최대 IoU ' + p2(A.iouPeak));
+        console.log('       · 씬 B ' + p2(B.body) + ' 몸길이 · 반경 ×' + p2(B.growth));
+        console.log('       · 지금 트리 ↔ 사본: 사거리 ' + p2(out.train.body) + ' ↔ ' + p2(A.body)
+          + ' · 반경 ×' + p2(out.train.growth) + ' ↔ ×' + p2(A.growth)
+          + ' · IoU ' + p2(out.train.iouPeak) + ' ↔ ' + p2(A.iouPeak));
+      }
+    } finally { try { fs.unlinkSync(TMP); } catch (_) {} }
+  }
+  console.log('\n[P] 재현 — 등재문의 세 얼굴(수리 전 사본)');
   if (A && !A.err && B && !B.err) {
     ok(A.body < 1.0, 'P1 ⓐ 씬 A 사거리가 제 몸길이보다 짧다 — ' + p2(A.body) + ' 몸길이',
        '등재문 «0.59 몸길이(24.0px / 41px)»');

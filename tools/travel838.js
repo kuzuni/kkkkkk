@@ -62,10 +62,13 @@ function summarize(env, org) {
     return { maxD, net, pth, r0, rE, over, pts, body: maxD > 0 ? net / maxD : 0, ious, iouMax: Math.max(...ious) };
   });
   const pairIoU = per[0].ious.map((_, k) => mean(per.map(p => p.ious[k])));
+  const med = a => { const b = [...a].sort((x, y) => x - y); const h = b.length >> 1;
+    return b.length % 2 ? b[h] : (b[h - 1] + b[h]) / 2; };
   return {
     n: per.length, per, dur: env.dur,
     body: mean(per.map(p => p.body)),
     bodyMin: Math.min(...per.map(p => p.body)),
+    bodyMed: med(per.map(p => p.body)),            /* 비평 2인이 적은 눈금 — 평균이 아니라 중앙값이다 */
     net: mean(per.map(p => p.net)),
     maxD: mean(per.map(p => p.maxD)),
     r0: mean(per.map(p => p.r0)),
@@ -115,7 +118,16 @@ async function runScene(scene, src) {
       const r = el.getBoundingClientRect();
       const a = document.getElementById('app'), ar = a ? a.getBoundingClientRect() : null;
       const sc = ar ? (ar.width / (a.offsetWidth || ar.width)) || 1 : 1;
-      return { x: (r.x + r.width / 2) / sc, y: (r.y + r.height / 2) / sc,
+      /* ⚑ 발원은 호스트 중심이 아니라 **제품이 쓰는 그 점**이다 — 호스트가 `--burst-from`(838)으로
+         발원을 신고했으면 그 자식의 중심에서 잰다(안 그러면 «출생 반경» 이 아이콘↔중심 거리를
+         같이 세어 자가 유령을 만든다 · 2회차에 실제로 그랬다: 22px 링을 49px 로 읽었다). */
+      let ox = r.x + r.width / 2, oy = r.y + r.height / 2;
+      try {
+        const s2 = getComputedStyle(el).getPropertyValue('--burst-from').trim().replace(/^['"]|['"]$/g, '');
+        const nd = s2 ? el.querySelector(s2) : null;
+        if (nd) { const rb = nd.getBoundingClientRect(); ox = rb.x + rb.width / 2; oy = rb.y + rb.height / 2; }
+      } catch (e) {}
+      return { x: ox / sc, y: oy / sc,
                bx: r.x / sc, by: r.y / sc, bw: r.width / sc, bh: r.height / sc };
     }, scene.btn);
     if (!geo) return { err: '호스트 없음: ' + scene.btn, errs };

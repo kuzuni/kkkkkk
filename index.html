@@ -11422,7 +11422,7 @@
      ⚠ 단련(`.tb` 340×173 — 686 이 키웠다)·룬(`.rbt.b1` 420×112)도 670·687 이후 버튼에 «(아이콘)
        수량» 을 이고 있어 같은 결손이었고 **818 이 같은 신고로 닫았다**(각 선언 옆 머리말).
        세 자리의 답이 «수량 하나만 신고» 로 같고 **대가만 달랐다**: 훈련 −3% · 룬 −0% · 단련 −28%. */
-  .tr-card>.cb{--burst-keep:i;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
+  .tr-card>.cb{--burst-keep:i;--burst-from:s;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
     justify-content:center;gap:8px;padding-right:11px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
@@ -11632,7 +11632,7 @@
      최대 **75.9%** · ≥25% 표본 57.1% · ≥5% 표본 77.1%). 그런데 **대가는 0** 이다 — 버튼이
      420×112 로 셋 중 가장 넓어 구멍(잉크 58.8×38 + 사방 30 = 119×98)을 파고도 동시 알 수가
      9.7 ↔ 9.7 로 **한 알도 안 줄었다**. 신고 자리는 816 §4 규약대로 **행이 아니라 버튼 자신**이다. */
-  .tr-rn>.rbt.b1{--burst-keep:.rbn;left:289px}
+  .tr-rn>.rbt.b1{--burst-keep:.rbn;--burst-from:.cic;left:289px}
   /* ── 349 — «꾹 누르기» 버튼은 브라우저에 제스처를 뺏기면 안 된다 ────────────────────────
      실기기 보고(«꾹 눌러도 연속이 안 된다»)의 **둘째 원인**이다. `tools/probe349.js`·§드리프트
      실측: 손가락이 버튼 «안» 에서 ±30px 만 굴러도 크로미움이 그 터치를 스크롤 제스처로 채가
@@ -11820,7 +11820,7 @@
      ⚠ 대가는 알고 치른다: 짧은 라벨에서 초록 면이 더 빈다(Lv 0 «🪨1» 잉크 123.3 ⇒ 좌우 각 108.4 → 186.4px).
        686 §9 가 «아이콘+숫자 크기의 집 규칙이 없다» 며 라벨 크기 축을 얼려 둔 상태라 **라벨은 안 건드린다** —
        되돌림은 이 폭 한 값(496 → 340)과 위 `.td` 한 값(236 → 392)뿐이다. */
-  .tr-tp>.tb{--burst-keep:.tbn;right:26px;top:22px;width:496px;height:173px;border-radius:20px;cursor:pointer;
+  .tr-tp>.tb{--burst-keep:.tbn;--burst-from:.cic;right:26px;top:22px;width:496px;height:173px;border-radius:20px;cursor:pointer;
     text-align:center;line-height:173px;font-size:52px;color:#fff;
     /* ⚠ 이 줄은 **혼자서는 아무 일도 안 한다** — 이 서체(GameKR)에 등폭 숫자 기능이 없어 4회차 실측에서
        no-op 이었다(«1»·«3»·«6» 상자 폭 21.4/28.6/32.1). 흔들림을 실제로 없애는 것은 아래 `.tbn` 의
@@ -41797,6 +41797,14 @@ const FXB_KTRY = 9, FXB_KSTEP = 0.26;
    ⚠ `FXB_KMAX` 0.55 = 시작 반경이 끝 반경의 45%. 0.72 까지 열어 보는 길은 봉우리(70ms)가 아직
      출발 언저리라 14알이 한 덩이로 읽히는 쪽으로 기운다 — 열려면 알 수·크기(다른 축)와 한 벌이어야 한다. */
 const FXB_KMAX = 0.55, FXB_BODY = 1.35, FXB_KLAD = 3;
+/* ⚑ 838 2회차 — 발원 신고(`--burst-from`)를 한 호스트에서만 도는 두 값.
+   `FXB_FITS` = 알 지름을 **호스트 짧은 변의 몇 배**까지 허용하는가. 660 이 아이콘을 키우며 적어 둔
+   «**버튼이 허용하는 만큼** 키우는 것이 두 지시를 다 지키는 자리다» 의 산수판이다 — 훈련 버튼
+   310×106 에서 알이 46px 면 지름이 버튼 높이의 **43%** 라 «날아갈 방» 이 남지 않는다(1회차 실측:
+   봉우리에서 최근접 중심거리 ÷ 지름 = 0.97 로 알끼리 겹쳐 «판때기 두 장» — CX ④ 3점).
+   0.34 ⇒ 훈련 36px(−22%) · 단련 `.tb`(340×173) 58px·룬 `.rbt.b1`(420×112) 38px 로 **셋 다 상한에 안 닿거나
+   조금만 닿는다**. 신고 안 한 호스트는 이 줄을 아예 안 지난다(583 «알갱이 크기 더 크게» 는 그대로다). */
+const FXB_FITS = 0.34, FXB_SZMIN = 18, FXB_KSTEPF = 0.70;
 /* ⚑ 619 12회차 — **스파크 크기의 눈금을 «절대» 로 정한다**(394 선례: «무엇을 눈금으로 삼는가» 를 먼저 적는다).
    11회차까지의 눈금은 «호스트 짧은 변 대비 %»(6회차 hsc)였고, 그 축에서 룬은 상한 1.6 에 붙어
    단일 62px · 3알 융합 97×64 «아메바» 로 읽혔다(비평가 EC ① · EB ⑥⑦ — 10·11회차 **네 명 연속**).
@@ -41971,8 +41979,31 @@ function fxBurst(t, col, n, strict, iv, ic){
       if(w > 0 && w <= 1) szs = w;
     } catch(_){}
   }
-  const rx = r ? clamp(r.w/2 + FXB_M, FXB_RMIN, FXB_RMAX) : FXB_RMIN;
-  const ry = r ? clamp((r.h/2 + FXB_M) * rys, FXB_RMIN * rys, FXB_RMAX) : FXB_RMIN;
+  /* ⚑⚑ 838 2회차 — **발원과 «날아갈 방» 을 분리한다**(`--burst-from`, 자식 셀렉터 ·
+     `--burst-to`(660)·`--burst-keep`(816)·`--burst-ry`/`--burst-sz`(814)와 **같은 꼴** — 새 기계를 안 만든다).
+     1회차 채점에서 비평 2인(CX·CY)이 **독립으로 같은 산수**를 냈다: 씬 A 는 알이 t=0 에 이미
+     최종 반경의 **72%** 자리(발원에서 평균 76.7px)에서 태어나 평생 **0.61~0.77 몸길이**만 가고,
+     무리 반경비 **1.37~1.39×** · 3↔4장 IoU **0.69~0.72** 다(점 대상 씬 B 는 9.1 몸길이 · 11.3× · 0.24).
+     둘의 1순위 처방도 한 낱말이었다 — «태생 반경을 **상자**에서 떼라».
+     뿌리는 21회차의 **탄생 타원**이다: 요소 대상은 알이 «bbox 반축 + FXB_M» 에서 태어나므로
+     좁은 버튼에서는 **태어나는 순간 이미 벽**이고, 41회차의 당김(1회차의 사다리 포함)은 그 벽에서
+     안쪽으로 얼마나 물러날지만 정한다. ⇒ 신고한 호스트에서는 **점 대상과 같은 기계**를 쓴다:
+       · 발원 = 신고한 자식(훈련이면 코인 `s`)의 중심 — 알이 «그 아이콘에서» 나온다
+       · 탄생 링 = `FXB_RMIN`(22px) 작은 원 · 이동 = 상자 대각의 60~100%를 **바깥으로**
+       · 끝점은 여전히 **가둠 상자 안**이라 28·13·14회차의 «호스트 밖 잉크 0» 은 한 픽셀도 안 바뀐다
+       · 스폰도 버튼 «안» 이라 660 [C1](«버튼 상자 밖 스폰 0건»)도 그대로다
+     ⚠ 신고가 없으면 종전 그대로다(09·12·17·장비·코스튬·우편·퀘스트는 한 값도 안 바뀐다). */
+  let fo = null;
+  if(r && t && t.nodeType === 1){
+    try {
+      const s2 = getComputedStyle(t).getPropertyValue('--burst-from').trim().replace(/^['"]|['"]$/g, '');
+      const nd2 = s2 ? t.querySelector(s2) : null, rf = nd2 ? fxRect(nd2) : null;
+      if(rf) fo = { x: rf.x + rf.w/2, y: rf.y + rf.h/2 };
+    } catch(_){}
+  }
+  if(fo){ p.x = fo.x; p.y = fo.y; }
+  const rx = r && !fo ? clamp(r.w/2 + FXB_M, FXB_RMIN, FXB_RMAX) : FXB_RMIN;
+  const ry = r && !fo ? clamp((r.h/2 + FXB_M) * rys, FXB_RMIN * rys, FXB_RMAX) : FXB_RMIN * (fo ? rys : 1);
   /* 32회차 — **2인 공통**(BC ③-2 · BD ③-2): 점(좌표) 버스트가 프레임 가장자리에서 **링이 아니라
      반원**이 된다. 적이 우변 근처에서 죽으면 원점이 x≈1060 이 되고, 아래 `bx1 = FRAME_W − 20`
      클램프가 오른쪽 절반을 **x=1060 한 열에 몰아붙인다**(BD 실측 «스파크 5개가 90°~270° 좌반원에만 ·
@@ -42108,7 +42139,9 @@ function fxBurst(t, col, n, strict, iv, ic){
        위상은 한 칸(2π/cnt) 안에서만 돌리므로 **링의 등간격은 그대로**다(15회차 «판때기» 방지 규칙 불변). */
     const a = (i/cnt)*Math.PI*2 + phase + rnd(-0.18, 0.18);
     const jt = rnd(0.82, 1.18);                        /* 개체차 — 완전 균일 링은 «판때기» 로 읽힌다(15회차 X ②) */
-    const d = r ? 0 : rnd(80, 150);
+    /* 838 2회차 — 신고한 호스트(`fo`)의 이동은 **상자 대각의 60~100%**다. 끝점은 아래에서 가둠 상자로
+       물리므로 이 값은 «상자 끝까지 가라» 는 뜻이고, 짧은 축은 상자가 알아서 잘라 준다. */
+    const d = r ? (fo ? rnd(0.60, 1.00) * Math.hypot(r.w/2, r.h/2) : 0) : rnd(80, 150);
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
@@ -42135,6 +42168,15 @@ function fxBurst(t, col, n, strict, iv, ic){
       el.style.width = sz2 + 'px'; el.style.height = sz2 + 'px';
       el.style.margin = (-sz2/2) + 'px 0 0 ' + (-sz2/2) + 'px';
       sz = sz2;                                      /* 아래 가둠(inM)·융합(ks)이 같은 값을 읽는다 */
+    }
+    /* ⚑ 838 2회차 — 발원을 신고한 호스트에서는 **날아갈 방이 남을 만큼만** 커진다(위 `FXB_FITS` 머리말).
+       아래 가둠(`inM = sz/2 + FXB_INPAD`)이 이 값에서 파생되므로, 알이 작아지면 **상자가 저절로 열려**
+       이동이 그만큼 늘어난다(814 5회차가 코스튬에서 손으로 한 산수를 여기서는 기하가 낸다). */
+    if(fo && r){
+      const cap = Math.max(FXB_SZMIN, Math.round(FXB_FITS * Math.min(r.w, r.h)));
+      if(sz > cap){ sz = cap;
+        el.style.width = sz + 'px'; el.style.height = sz + 'px';
+        el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px'; }
     }
     /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로(위 인자 머리말). 제거는 `fxBye` 가
        실제 애니 끝에서 재므로 따라온다(41회차 규약 — 여기서 상수를 새로 적지 않는다). */
@@ -42216,20 +42258,31 @@ function fxBurst(t, col, n, strict, iv, ic){
     let fb = null;
     for(let k = 0; k <= ((kh.length || ks.length) ? FXB_KTRY : 0); k++){
       /* 0, +step, −step, +2step, −2step … 원래 각에서 가장 가까운 쪽부터 본다 */
-      ang = a + (k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k/2) * FXB_KSTEP);
-      sx0 = clamp(p.x + Math.cos(ang)*rx*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
-      sy0 = clamp(p.y + Math.sin(ang)*ry*jt*rr, by0, by1);
-      ex = r ? sx0 : clamp(sx0 + Math.cos(ang)*d, bx0, bx1);
-      ey = r ? sy0 : clamp(sy0 + Math.sin(ang)*d, by0, by1);
+      /* ⚑ 838 2회차 — 신고 호스트(`fo`)는 굴리는 각을 **크게** 잡는다. 발원이 아이콘(한쪽 끝)이라
+         숫자(`--burst-keep`)가 그 옆에 붙어 있어, ±0.26rad 9칸(±67°)으로는 **반대편으로 못 넘어간다**
+         — 룬에서 `verify818` [R3](«수량 덮임 0») 이 실제로 빨개진 자리다(≥5% 표본 6개).
+         0.70rad 9칸이면 원을 한 바퀴 덮으므로 «숫자가 없는 쪽» 이 후보에 반드시 들어온다.
+         ⚠ 신고 안 한 호스트는 종전 0.26 그대로 — 링의 등간격(15회차)을 지키는 값이다. */
+      ang = a + (k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k/2) * (fo ? FXB_KSTEPF : FXB_KSTEP));
+      /* ⚑ 838 2회차 — 신고 호스트의 **방향은 «호스트 종횡비» 를 탄다**(21회차 «링이 대상의 종횡비를
+         유지한다» 를 방향 분포로 옮긴 것). 균등 각으로 쏘면 절반이 짧은 축을 향하는데 그 축은
+         상자가 9~31px 밖에 안 내주므로(훈련 버튼 310×106) 그 알들이 «안 움직이는 알» 이 된다 —
+         2회차 1차 시도가 실제로 그랬다(평균 이동 43px 중 세로 알이 9px). */
+      let ux = Math.cos(ang), uy = Math.sin(ang);
+      if(fo){ const vx = ux * r.w, vy = uy * r.h * rys, vm = Math.hypot(vx, vy) || 1; ux = vx/vm; uy = vy/vm; }
+      sx0 = clamp(p.x + (fo ? ux*FXB_RMIN : Math.cos(ang)*rx)*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
+      sy0 = clamp(p.y + (fo ? uy*FXB_RMIN : Math.sin(ang)*ry)*jt*rr, by0, by1);
+      ex = (r && !fo) ? sx0 : clamp(sx0 + ux*d, bx0, bx1);
+      ey = (r && !fo) ? sy0 : clamp(sy0 + uy*d, by0, by1);
       /* ⚑ 838 — 당김 사다리(위 `FXB_KMAX` 머리말). 큰 칸부터 넣고 걸리면 내려간다 ·
          마지막 칸이 종전 값(FXB_K)이라 **걸리는 자리에서는 종전과 동일**하다. 점 대상은 칸이 하나다. */
-      const dd = r ? Math.hypot(ex - p.x, ey - p.y) : 0;
-      const kw = r ? clamp(FXB_BODY * sz / Math.max(1, dd), FXB_K, FXB_KMAX) : FXB_K;
+      const dd = (r && !fo) ? Math.hypot(ex - p.x, ey - p.y) : 0;
+      const kw = (r && !fo) ? clamp(FXB_BODY * sz / Math.max(1, dd), FXB_K, FXB_KMAX) : FXB_K;
       let took = false, anyOk = false;
-      for(let q = 0; q < (r ? FXB_KLAD : 1); q++){
-        const kk = r ? kw - (kw - FXB_K) * q / (FXB_KLAD - 1) : FXB_K;
-        sx = r ? p.x + (ex - p.x)*(1 - kk) : sx0;
-        sy = r ? p.y + (ey - p.y)*(1 - kk) : sy0;
+      for(let q = 0; q < ((r && !fo) ? FXB_KLAD : 1); q++){
+        const kk = kw - (kw - FXB_K) * q / (FXB_KLAD - 1);
+        sx = (r && !fo) ? p.x + (ex - p.x)*(1 - kk) : sx0;
+        sy = (r && !fo) ? p.y + (ey - p.y)*(1 - kk) : sy0;
         if(!kh.length && !ks.length){ took = true; break; }
         /* 시작·중간·끝 세 점으로 본다 — 이동이 짧아 세 점이면 선분 전체를 대표한다 */
         const okKh = !kh.length
