@@ -378,7 +378,15 @@ function inter(plus, inks) {
       /* ⚑ 6회차 — 5회차 판(«알은 줄였지만 가로 링은 벽 밖 그대로»)으로 되돌린다. 그 판이 5회차
          2인 공통 지적의 원본이므로 [B14] 가 그 판에서 **실제로 빨개져야** 이 회차가 무른 수리가 아니다. */
       ['R-d', '5회차 판으로 되돌린다 (가로 신고를 빼고 세로·알만 누른 상태)',
-        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}', '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}']
+        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}', '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}'],
+      /* ⚑⚑ 874 — **862 이관이 «문턱을 넓힌 것» 이 아님을 못박는다.** [B11] 은 862 전에 «크기 Δ ≤ 2»
+         였고 862 의 들이기(`inset` 문 → «액자를 그리는가»)가 코스튬 카드에서 Δ 를 10.0 으로 밀어
+         빨개졌다(874 등재문). 넓히는 수리였다면 이 항은 **어떤 상자에도 안 짖는 헛초록**이 된다.
+         ⇒ 862 이전 한 줄로 되돌리면 상자가 호스트 rect 그대로라 크기 Δ 가 0 으로 돌아오는데,
+           [B11] 은 «Δ ↔ 띠 ×2» 를 묻으므로 **그 판에서 빨개져야** 한다. 빨개지지 않으면
+           874 의 갈래 ⓑ(862 가 과잉)가 옳았다는 뜻이다. */
+      ['R-e', '862 이전 판으로 되돌린다 (들이기를 `inset` 인자 뒤로 되돌린 상태)',
+        '  const ring = fxRingIn(el);', '  const ring = inset ? fxRingIn(el) : 0;']
     ];
     for (const [tag, why, from, to] of INJ) {
       if (src.indexOf(from) < 0) { ok(false, '[' + tag + '] 주입 앵커를 못 찾았다 — 조용한 통과 금지'); continue; }
@@ -410,6 +418,21 @@ function inter(plus, inks) {
           ok(nTip > nWall, '[R-d] 주입하면 [B14] 가 빨개진다 — 최악 끝점 ' + nTip.toFixed(1)
             + 'px > 벽 ' + nWall.toFixed(1) + 'px (= 5회차 판이 실제로 벽 밖이었다 · 초과 '
             + (nTip - nWall).toFixed(1) + 'px)');
+        }
+        else if (tag === 'R-e') {
+          /* [B11] 과 **같은 식**으로 잰다(자를 두 벌 만들지 않는다). `hostRing` 은 제품이 아니라
+             호스트 기하에서 읽으므로 주입해도 5px 그대로다 — 움직이는 것은 상자뿐이다. */
+          const nf = N.D.flashAt[0];
+          const nRing = N.D.hostRing || 0;
+          const nds = nf ? Math.max(Math.abs(nf.w - N.D.sel.w), Math.abs(nf.h - N.D.sel.h)) : Infinity;
+          const ndc = nf ? Math.max(Math.abs((nf.x + nf.w / 2) - (N.D.sel.x + N.D.sel.w / 2)),
+                                    Math.abs((nf.y + nf.h / 2) - (N.D.sel.y + N.D.sel.h / 2))) : Infinity;
+          console.log('    · 862 이전 판 — 플래시 상자 크기 Δ' + nds.toFixed(1) + 'px · 중심 Δ'
+            + ndc.toFixed(1) + 'px · 액자 띠 ' + nRing + 'px (띠 ×2 = ' + (2 * nRing) + 'px)');
+          ok(nRing > 0 && Math.abs(nds - 2 * nRing) > 2,
+            '[R-e] 주입하면 [B11] 이 빨개진다 — 크기 Δ' + nds.toFixed(1) + 'px ↔ 띠 ×2 = '
+            + (2 * nRing) + 'px (어긋남 ' + Math.abs(nds - 2 * nRing).toFixed(1) + 'px > 2). '
+            + '= 862 이관은 문턱을 «넓힌» 것이 아니라 띠에서 **파생**시킨 것이다(874)');
         }
         else ok(!N.D.pop, '[R-b] 주입하면 [B3] 이 빨개진다 (팝 ' + (N.D.pop ? '걸림' : '없음') + ') — 이 수리는 «지운 것» 이 아니라 «옮긴 것» 이다');
       } finally { try { fs.unlinkSync(path.join(ROOT, tmp)); } catch (_) {} }
