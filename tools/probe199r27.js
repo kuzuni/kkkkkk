@@ -30,7 +30,11 @@ const ONCE_KEYS = ['시작(신규 지급)', '가이드미션', '우편', '우편
    «지속 수급» 이 아니라 «아직 안 끝났음» 을 재게 만드는 유일한 축이다(26-8). */
 const FINITE_KEYS = ['패스'];
 
-const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor((s.length - 1) / 2)] : 0; };
+/* ⚠ **`bot199.js` 와 같은 정의를 써야 한다**(표 두 벌 금지). 초판은 `floor((n−1)/2)`(아래쪽
+   가운데)를 썼는데 자는 `floor(n/2)`(위쪽 가운데)라, 시드 12개에서 **한 순서통계량**이 어긋나
+   같은 표를 읽고도 부지런 교차일이 903.0 ↔ 공표 906.7 로 갈렸다(−0.41%). 결론은 안 바뀌지만
+   «같은 자로 잰 비교» 가 아니게 된다(정정9 계보). */
+const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 const medI = a => { const s = a.slice().sort((x, y) => x - y); if (!s.length) return 0; const m = (s.length - 1) / 2; return (s[Math.floor(m)] + s[Math.ceil(m)]) / 2; };
 const fmt = n => Math.round(n).toLocaleString('en-US');
 const f2 = n => n.toFixed(2);
