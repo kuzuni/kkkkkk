@@ -67,9 +67,23 @@ function profileOf(sum) {
   const eBody = mke ? mke[1] : '';
   const scaleOf = s => (s.match(/scale\([^)]*\)/g) || []).join(' ');
   const opOf = s => (s.match(/opacity:[^;]*/g) || []).join(' ');
-  ok(!!mke && scaleOf(eBody) === scaleOf(shared) && opOf(eBody) === opOf(shared),
-     'S6 `fxSparkE` 의 크기·알파 채널이 `fxSpark` 와 한 값도 안 다르다(이동 분수만 갈렸다)');
-  ok(/100%\{transform:translate\(var\(--dx\),var\(--dy\)\) scale\(\.5\)/.test(eBody),
+  /* ⚑ 881 이관 — 이 항은 원래 «크기·알파 채널이 `fxSpark` 와 한 값도 안 다르다» 였다(877 이 연
+     것은 이동 분수뿐이라는 뜻). **881 이 그 절반을 뒤집었다** — 요소 대상 알이 사는 동안 절반으로
+     줄어 판독 하한 아래로 내려가는 것을 고치려고 **크기 채널을 일부러 갈랐다**(838 9회차 DJ·DK).
+     자리를 비우지 않고 **둘로 가른다**(333 처방): 877 이 여전히 안 건드리는 **알파**는 «같다» 로,
+     881 이 연 **크기**는 «다르다 + 공용 곡선은 그대로» 로 묻는다. 그냥 크기 항을 지웠으면
+     «`fxSparkE` 가 통째로 공용 곡선과 갈라져도 초록인 게이트» 가 된다(328·330 교훈). */
+  ok(!!mke && opOf(eBody) === opOf(shared),
+     'S6 ★ `fxSparkE` 의 **알파 채널**이 `fxSpark` 와 한 값도 안 다르다(877 이 연 것은 이동 분수다)');
+  ok(!!mke && scaleOf(eBody) !== scaleOf(shared) && scaleOf(shared) ===
+     'scale(.26) scale(.55) scale(.89) scale(1) scale(.875) scale(.766) scale(.67) scale(.586) scale(.5)',
+     'S6b ★ 크기 채널은 **881 이 갈랐고**(요소 대상 판독 하한) **공용 `fxSpark` 는 681 값 그대로**다 — 소유권은 `verify881`',
+     scaleOf(eBody));
+  /* ⚑ 881 이관 — 이 항이 재는 것은 **끝점(translate)**인데 정규식이 그 뒤의 `scale(.5)` 까지 물고
+     있었다. 881 이 요소 대상 알의 끝 scale 을 .5 → .955 로 올리자(판독 하한) 이 항이 «사거리가
+     깨졌다» 고 빨개졌다 — **재는 것과 적은 것이 달랐던 자리**다. 끝점만 묻도록 고치고, 크기 쪽은
+     같은 절의 [S6b] 와 `verify881` [S5]·[S6] 이 각자 제 축으로 잡는다. */
+  ok(/100%\{transform:translate\(var\(--dx\),var\(--dy\)\)/.test(eBody),
      'S7 `fxSparkE` 100% 끝점이 `fxSpark` 와 같다(translate = 최종 --dx/--dy) — 사거리 불변');
 
   /* ── [A] 측정 — 프런트로딩(고친 것) ──────────────────────────────── */

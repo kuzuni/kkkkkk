@@ -4270,15 +4270,34 @@
          바뀌는 것은 **언제 그 거리를 가는가** 뿐이다: 앞을 당겨(τ=0.32 지수 감속) 첫 프레임들이 «쏘아 나가고»
          뒤가 «가라앉는다» — 씬 B(점 대상 265px)는 사거리가 커서 이미 이 곡선이 보이므로 스코프 밖이다.
        · **신고 없으면 fxSpark 그대로다** — 09·12·17·장비·코스튬·우편·퀘스트는 한 값도 안 바뀐다. */
+  /* ⚑⚑ 881 — **요소 대상 버스트 알은 «축소» 가 아니라 «알파» 로 꺼진다.**
+     838 9회차 채점 2인이 각자 다른 자로 ② 에 같은 것을 적었다 — DJ «프레임 3~8 검출 알 27개 중
+     22개가 Ø5~11px = 발원 코인 지름의 10~22% · 판독 최소선 14~16px 미달» · DK «#4 ≈12px → #8 ≈6px
+     = 50% 축소». 838 10회차가 이 행 안의 유일한 지렛대(`--burst-fit`)를 **범위 끝(.22)까지 열어 보고
+     자로 기각**했다 — 꼬리가 24% 로 하한(28%)에 여전히 못 닿고, 대신 «빈 각» 이 +14.7° 나빠진다.
+     ⇒ 뿌리는 크기가 아니라 **감쇠 채널**이다. 봉우리(scale 1 = 발원의 30.6%)는 이미 하한 안이고
+       꺼지는 길이 1.0 → **0.5** 라 320ms 에 18.0% 가 된다.
+     ⚠ **이동·알파 채널은 877 것 그대로다** — 한 값도 안 바뀐다(0%→0 · 100%→1 끝점 · opacity 8칸).
+       바뀌는 것은 **scale 여덟 칸뿐**이고, 꺼짐은 알파 4칸 `fxSparkX`(681 9회차)가 통째로 맡는다.
+     ⚠ **공용 `@keyframes fxSpark` 는 한 글자도 안 바뀐다** — 09·12·17·장비·코스튬·우편·퀘스트는
+       이 줄을 아예 안 지난다(신고 호스트 = 훈련 `.tr-card>.cb` · 단련 `.tr-tp>.tb` · 룬 `.tr-rn>.rbt.b1` 셋뿐).
+     ⚠ **681 봉투와 정면으로 부딪히는 자리가 하나 있고 그것이 이 작업의 본체다** — [B12]
+       («봉우리 뒤 이웃 쌍이 전부 ≤−12%»)와 [B10](«90→210ms 크기 ≥8% 하강»)은 «이웃 두 장이
+       같은 그림이 아니다» 를 **크기 채널로** 물었다. 두 요구는 산술적으로 같이 참일 수 없다 —
+       0.88⁵ = 0.53 이 곧 «1.0 → 0.5» 다. 위임 규약(2026-09-01)대로 최선안을 채택한다:
+       **공용 곡선은 그 사다리를 그대로 지고**(verify681 [B10]·[B12] 는 공용 곡선을 타는 판에서 잰다),
+       요소 대상 갈래에서는 그 «구분» 을 **이동(877 이즈아웃)과 알파(681 4칸)**가 낸다.
+       되돌리는 법: 아래 scale 여덟 칸을 `fxSpark` 것(.26/.55/.89/1/.875/.766/.67/.586/.5)으로 되쓰면
+       881 이전과 한 값도 안 다르다(`verify881` [R] 이 그 사본으로 하한이 다시 깨지는지를 잰다). */
   @keyframes fxSparkE{0%{transform:translate(0,0) scale(.26);opacity:.38;animation-timing-function:linear}
-    5%{transform:translate(calc(var(--dx)*.151),calc(var(--dy)*.151)) scale(.55);opacity:.74;animation-timing-function:linear}
-    12%{transform:translate(calc(var(--dx)*.327),calc(var(--dy)*.327)) scale(.89);opacity:.96;animation-timing-function:linear}
+    5%{transform:translate(calc(var(--dx)*.151),calc(var(--dy)*.151)) scale(.66);opacity:.74;animation-timing-function:linear}
+    12%{transform:translate(calc(var(--dx)*.327),calc(var(--dy)*.327)) scale(.97);opacity:.96;animation-timing-function:linear}
     18%{transform:translate(calc(var(--dx)*.450),calc(var(--dy)*.450)) scale(1);opacity:1;animation-timing-function:linear}
-    29%{transform:translate(calc(var(--dx)*.623),calc(var(--dy)*.623)) scale(.875);opacity:.95;animation-timing-function:linear}
-    46%{transform:translate(calc(var(--dx)*.798),calc(var(--dy)*.798)) scale(.766);opacity:.87;animation-timing-function:linear}
-    66%{transform:translate(calc(var(--dx)*.913),calc(var(--dy)*.913)) scale(.67);opacity:.74;animation-timing-function:linear}
-    84%{transform:translate(calc(var(--dx)*.970),calc(var(--dy)*.970)) scale(.586);opacity:.42;animation-timing-function:linear}
-    100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
+    29%{transform:translate(calc(var(--dx)*.623),calc(var(--dy)*.623)) scale(.992);opacity:.95;animation-timing-function:linear}
+    46%{transform:translate(calc(var(--dx)*.798),calc(var(--dy)*.798)) scale(.982);opacity:.87;animation-timing-function:linear}
+    66%{transform:translate(calc(var(--dx)*.913),calc(var(--dy)*.913)) scale(.972);opacity:.74;animation-timing-function:linear}
+    84%{transform:translate(calc(var(--dx)*.970),calc(var(--dy)*.970)) scale(.962);opacity:.42;animation-timing-function:linear}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.955);opacity:0}}
   .fx-spark.fx-ease{animation-name:fxSparkE,fxSparkX}   /* 877 — 신고 호스트만. 나머지 longhand(길이·이징·fill)는 `.fx-spark` 것을 그대로 물려받는다 */
 
   /* ⚑⚑ 681 9회차 — **알마다 다른 «생명 시계» — 크기는 한 프레임도 안 흩고 알파만 흩는다.**

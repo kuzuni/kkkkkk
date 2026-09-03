@@ -153,14 +153,21 @@ async function runScene(scene, src, opts) {
       /* ⚑ 발원은 호스트 중심이 아니라 **제품이 쓰는 그 점**이다 — 호스트가 `--burst-from`(838)으로
          발원을 신고했으면 그 자식의 중심에서 잰다(안 그러면 «출생 반경» 이 아이콘↔중심 거리를
          같이 세어 자가 유령을 만든다 · 2회차에 실제로 그랬다: 22px 링을 49px 로 읽었다). */
-      let ox = r.x + r.width / 2, oy = r.y + r.height / 2, fr = 0;
+      let ox = r.x + r.width / 2, oy = r.y + r.height / 2, fr = 0, fi = 0;
       try {
         const s2 = getComputedStyle(el).getPropertyValue('--burst-from').trim().replace(/^['"]|['"]$/g, '');
         const nd = s2 ? el.querySelector(s2) : null;
         if (nd) { const rb = nd.getBoundingClientRect(); ox = rb.x + rb.width / 2; oy = rb.y + rb.height / 2;
-                  fr = Math.max(rb.width, rb.height) / 2; }
+                  fr = Math.max(rb.width, rb.height) / 2;
+                  /* ⚑ 881 — `fr` 은 «남은 방» 을 재려고 **긴 변**을 집는다(838 이 쓰는 그 값 · 안 건드린다).
+                     881 이 쓰는 분모는 그것이 아니라 **그려진 아이콘의 정사각**이다 — 훈련의 발원 `<s>` 는
+                     줄상자라 긴 변이 71.31 인데 그 안의 `img.cic` 는 52.97 정사각(= DJ 의 «코인 Ø50»)이다.
+                     `.cic` 자식이 있으면 그것을, 없으면 짧은 변을 쓴다. **덧붙이는 값이라 기존 수는 불변.** */
+                  const ic = nd.querySelector('.cic') || (nd.classList && nd.classList.contains('cic') ? nd : null);
+                  const ri = ic ? ic.getBoundingClientRect() : rb;
+                  fi = Math.min(ri.width, ri.height); }
       } catch (e) {}
-      return { x: ox / sc, y: oy / sc, fr: fr / sc,
+      return { x: ox / sc, y: oy / sc, fr: fr / sc, fi: fi / sc,
                bx: r.x / sc, by: r.y / sc, bw: r.width / sc, bh: r.height / sc };
     }, scene.btn);
     if (!geo) return { err: '호스트 없음: ' + scene.btn, errs };
