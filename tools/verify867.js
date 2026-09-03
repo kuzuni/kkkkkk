@@ -8,10 +8,12 @@
  *   벽 146.8 − 셸 98 = 여유 48.8  vs  두 요구(들보↓바 ≥ 21.5 · 바↓격자 ≥ 45~52)의 합 66.5~73.5
  * 867 은 그 벽에서 바를 빼 **아치 안쪽 «받침 위 12px»** 로 내린다. 자가 지키는 약속은 다섯:
  *
- *   [1] 자리     — 바 하변 ↔ 받침 상변(`--rw-fl`) = **12px**, 다섯 프레임 전부 같다
+ *   [1] 자리     — 바 하변 ↔ **지면선**(`--rw-fl`) = **12px**, 다섯 프레임 전부 같다
+ *   [1c] 얹힘    — 바 하변 ↔ **받침 상변**(지면선 −16) = **+4px**(886 — 867 이 «12 위» 라 부른 것의 실제 도면)
  *   [2] 읽힘     — 위 간극(격자 하변↓바) > 격자 행 간 25.6 **이고** 아래 간극보다 크다
  *                  ⇒ 바가 «격자의 마지막 줄» 이 아니라 «수반·소환 버튼의 컨트롤» 로 읽힌다
- *   [3] 안 덮는다 — 바 하변이 **받침 상변보다 위** ⇒ 받침·접합선·계단·바닥을 한 픽셀도 안 덮는다
+ *   [3] 안 덮는다 — 바 하변이 **지면선보다 위** ⇒ 접합선·계단·바닥을 한 픽셀도 안 덮는다
+ *                  (886 정정 — 옛 문구의 «받침» 은 헛초록이었다: 받침 상면은 4px 덮여 있고 [1c] 가 그것을 묻는다)
  *                  (700 이 ⓑ 를 기각한 근거 그대로 · `verify700` [B6] 의 강화판)
  *   [4] 벽       — 벽에는 이제 바가 **없다**(벽 기하 자체는 Δ0px — 867 은 예산을 안 건드렸다)
  *   [5] 89 Δ0px  — 바를 옮기느라 89 의 다른 요소가 한 픽셀도 안 움직였다
@@ -33,7 +35,8 @@ const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
 const FRAMES = [1600, 1841, 1920, 2280, 2600];
 const SHELL_H = 98;        /* 공용 셸 높이(96·437 규약) */
-const PED_GAP = 12;        /* 867 — 바 하변 ↔ 받침 상변 */
+const PED_GAP = 12;        /* 867 — 바 하변 ↔ **지면선**(886 정정: 867 은 이것을 «받침 상변» 이라 불렀다) */
+const SEAT = 4;            /* 886 — 바 하변이 받침 상면을 파고든 «얹힘» 깊이(제품 `--rw-mb-seat` 과 한 벌) */
 const ROW_PITCH = 25.6;    /* 격자 행 간 — 813 1회차 CF·CG 실측(둘이 25~26 으로 독립 일치) */
 
 let pass = 0, fail = 0;
@@ -58,9 +61,34 @@ const MEASURE = `(() => {
               floor: rel(R('#relw .rw-floor')), ground: rel(R('#relw .rw-ground')),
               mid: rel(R('#relw .rw-mid')), cap: rel(R('#relw .rw-cap')),
               steps: rel(R('#relw .rw-steps')), basin: rel(R('#rwBasin')) };
-  return { panelH: +p.h.toFixed(2), o, lay,
+  /* 886 이관 — **받침 상변은 .rw-fl 이 아니다.** 받침은 의사요소(.rw-floor::before)라
+     상자를 못 잡으므로 같은 선언을 문 클론을 잠깐 넣어 브라우저가 푼 상자를 되잰다.
+     이 자가 «받침» 이라 부르던 gapDown 은 실은 **지면선**까지의 값이었다(probe886 [1]). */
+  const flEl = document.querySelector('#relw .rw-floor');
+  let pedT = null;
+  if (flEl) {
+    const pedRule = (() => {
+      for (const ss of document.styleSheets) {
+        let rules; try { rules = ss.cssRules; } catch (e) { continue; }
+        for (const rr of rules || []) if (rr.selectorText
+          && rr.selectorText.replace(/\s+/g, '') === '.rw-floor::before')
+          return { top: rr.style.top, height: rr.style.height, width: rr.style.width };
+      }
+      return null;
+    })();
+    const pe = document.createElement('div');
+    pe.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%)';
+    pe.style.top = (pedRule && pedRule.top) || '-16px';
+    pe.style.height = (pedRule && pedRule.height) || '56px';
+    pe.style.width = (pedRule && pedRule.width) || '617px';
+    flEl.appendChild(pe);
+    pedT = +(pe.getBoundingClientRect().top - p.t).toFixed(2);
+    pe.remove();
+  }
+  return { panelH: +p.h.toFixed(2), o, lay, pedT,
+    seat:    pedT === null ? null : +(o.mul.b - pedT).toFixed(2), /* ★ 886 — 얹힘 깊이(양수 = 받침을 파고든다) */
     gapUp:   +(o.mul.t - (o.grid.t + o.grid.h)).toFixed(2),   /* 격자 하변 ↓ 바 */
-    gapDown: +(o.floor.t - o.mul.b).toFixed(2),               /* 바 ↓ 받침 상변 */
+    gapDown: +(o.floor.t - o.mul.b).toFixed(2),               /* 바 ↓ **지면선**(886 정정) */
     overSeam:+(o.ground.t - o.mul.b).toFixed(2),              /* 바 ↓ 접합선(지면) 상변 */
     gapGridTop: +(o.grid.t - o.mul.b).toFixed(2),             /* 옛 자리의 쌍 — 바 ↓ 격자 «상변» */
     wall:    +(o.grid.t - o.lintel.b).toFixed(2),
@@ -90,8 +118,15 @@ async function sweep(browser, url) {
 
   /* ── [1] 자리 ──────────────────────────────────────────────────────────── */
   ok(FRAMES.every(H => Math.abs(r[H].gapDown - PED_GAP) <= 1),
-    '[1] 바 하변 ↔ 받침 상변 = 12px — 다섯 프레임 전부 같은 값(`--rw-fl` 에서 거꾸로 올린다)',
+    '[1] 바 하변 ↔ **지면선**(`--rw-fl`) = 12px — 다섯 프레임 전부 같은 값 (886 정정: 이 값이 «받침» 까지가 아니다)',
     at('gapDown'));
+  /* ⚑ 886 이관 — 자리를 비우지 않고 **묻는 것을 하나 늘린다**(333 처방). 867 은 «받침 상변에서
+     12 위» 라고 적었는데 받침(`.rw-floor::before`)의 상변은 지면선보다 16px 위라, 도면에서는
+     바가 그 상면을 **4px 파고들고** 있다. 그 4 를 이제 제품이 `--rw-mb-seat` 으로 밝혀 적고
+     이 항이 그것을 지킨다 — 받침이 움직이면 바가 따라가야 한다(437 결속). */
+  ok(FRAMES.every(H => r[H].seat !== null && Math.abs(r[H].seat - SEAT) <= 0.6),
+    '[1c] ★ 바 하변 ↔ **받침 상변** = 얹힘 ' + SEAT + 'px — 867 이 «12 위» 라 적은 자리의 실제 도면(886)',
+    at('seat'));
   /* ⚑ 866 이관 — 폭·좌가 **724@178 → 646@216** 으로 옮겨졌다. 867 이 지킨 것은 «셸을
      안 건드렸다» 가 아니라 «**세로 자리만** 옮겼다» 이므로, 이 항이 묻는 것은 그대로 두고
      상수만 따라간다(높이 98 은 여전히 96·437 규약이다). 866 이 옮긴 이유는 가로가 격자
@@ -105,12 +140,16 @@ async function sweep(browser, url) {
     '[2] 위 간극(격자 하변↓바)이 격자 행 간 25.6 보다 넓다 — «격자의 한 줄» 로 안 읽힌다',
     at('gapUp') + ' · 행 간 대비 ' + FRAMES.map(H => (r[H].gapUp / ROW_PITCH).toFixed(2)).join('/') + '배');
   ok(FRAMES.every(H => r[H].gapUp > r[H].gapDown * 1.5),
-    '[2b] 위 간극 > 아래 간극 × 1.5 — 바가 **아래(수반·소환 버튼) 블록**에 붙어 읽힌다(CQ 의 기능 축)',
+    '[2b] 위 간극 > 아래 간극(**지면선**까지) × 1.5 — 바가 **아래(수반·소환 버튼) 블록**에 붙어 읽힌다(CQ 의 기능 축)',
     FRAMES.map(H => H + ':' + (r[H].gapUp / r[H].gapDown).toFixed(2) + ':1').join(' · '));
 
   /* ── [3] 안 덮는다 — 700 이 ⓑ 를 기각한 그 근거 ────────────────────────── */
+  /* ⚑ 886 이관 — 옛 문구(«받침·접합선·계단·바닥을 한 픽셀도 안 덮는다»)는 **헛초록**이었다.
+     이 항이 재는 `gapDown` 은 지면선까지의 값이고, 받침 상면은 그 위 16px 에 있어 실제로는
+     4px 이 덮여 있다(probe886 [2] «상면 띠 가림 85~98%»). 실질(접합선·계단·바닥)은 그대로
+     지켜지므로 **자리를 비우지 않고 약속을 도면에 맞춘다** — 받침은 [1c] 가 따로 묻는다. */
   ok(FRAMES.every(H => r[H].gapDown > 0),
-    '[3] ★ 바 하변이 **받침 상변보다 위** — 받침·접합선·계단·바닥을 한 픽셀도 안 덮는다(700 [B6] 강화판)',
+    '[3] ★ 바 하변이 **지면선보다 위** — 접합선·계단·바닥을 한 픽셀도 안 덮는다(700 [B6] 강화판 · 886 정정)',
     at('gapDown'));
   ok(FRAMES.every(H => r[H].overSeam > 40),
     '[3b] 접합선(지면 상변)까지 여유가 40px 위 — 700 이 1600 에서 −5.1px 로 기각한 자리와 반대편이다',
@@ -131,7 +170,9 @@ async function sweep(browser, url) {
      이 작업이 다른 것을 안 밀었다는 뜻이다(700 [C] 와 같은 축, 기준만 사본으로). */
   {
     const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    const FROM = 'top:calc(var(--rw-fl) - 98px - 12px * var(--rwc,1));z-index:5;';
+    /* 886 이관 — 앵커가 «지면선 − 12» 리터럴에서 «받침 상변 − 얹힘»(`--rw-ped`/`--rw-mb-seat`)
+       파생으로 바뀌었다. 그리는 값은 항등(16 − 4 = 12)이라 [5]·§R 이 묻는 것은 그대로다. */
+    const FROM = 'top:calc(var(--rw-fl) - 98px - (var(--rw-ped) - var(--rw-mb-seat)) * var(--rwc,1));z-index:5;';
     const TO = 'top:calc(var(--rw-gt) - 98px * var(--rwc,1)' +
                ' - min(44px * var(--rwc,1),' +
                ' calc((var(--rw-gt) - var(--rw-lt) - 164px * var(--rwc,1)) / 2)));z-index:5;';
