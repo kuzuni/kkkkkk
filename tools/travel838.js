@@ -104,6 +104,10 @@ async function runScene(scene, src, opts) {
   const o = opts || {};
   const reseed = o.reseed !== false;
   const burn = o.burn | 0;
+  /* ⚑ 882 — `opts.seed`(기본 `SEED`)는 **표본을 여러 장 뽑기 위한** 손잡이다. 기본값이 종전과
+     같아 838·873 의 기준값은 한 자리도 안 움직인다. 882 가 «버튼 세로 ↔ 산포» 를 잴 때
+     한 시드의 제비뽑기를 구조로 읽지 않으려고 세 시드로 같은 스윕을 돌린다(872 교훈). */
+  const seed = (o.seed === undefined ? SEED : o.seed) >>> 0;
   const URL = 'file://' + path.resolve(src || path.join(__dirname, '../index.html')).replace(/\\/g, '/');
   const b = await launch(chromium);
   const errs = [];
@@ -120,7 +124,7 @@ async function runScene(scene, src, opts) {
         let t = Math.imul(s ^ (s >>> 15), 1 | s);
         t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    }, SEED);
+    }, seed);
     await page.goto(URL);
     await page.waitForFunction(() => typeof S !== 'undefined' && typeof openTrain === 'function');
     await page.waitForTimeout(900);
@@ -175,7 +179,7 @@ async function runScene(scene, src, opts) {
       const el = document.querySelector(sel);
       el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
       el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    }, { sel: scene.btn, sd: SEED, rs: reseed, bn: burn });
+    }, { sel: scene.btn, sd: seed, rs: reseed, bn: burn });
     await page.waitForTimeout(60);
     const env = await page.evaluate(SAMPLE, STOPS);
     if (!env || !env.rows) return { err: '알이 안 태어났다', errs, geo };
