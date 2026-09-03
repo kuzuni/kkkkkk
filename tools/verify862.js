@@ -39,13 +39,25 @@ const r2 = v => Math.round(v * 100) / 100;
 /* 한 프레임 — 팝을 끝낸 뒤 같은 자리에 다시 띄운다(`probe862` 와 같은 전제: 팝이 상자를 흔들면
    판마다 다른 상자가 나온다 — 실측 139.8 ↔ 151). RINGFN 이 수면 `fxRingIn` 을, NOCAP 이 수면
    흰 테 상한을 되돌린 사본이 된다(§R). */
-const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK }) => {
+const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__v862to) { window.__v862to = window.setTimeout; window.__v862ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
+  /* ⚑ 876 — **위상 고정(deterministic phase-pin).** t0 프레임은 `@keyframes fxFlash`(340ms)의
+     0% 여야 한다(opacity:1·scale(1) — 흰 판이 떠 있고 상자가 안 커진 자리). 그런데 캡처는
+     `evaluate` 가 끝난 **뒤** 별도 CDP 호출로 찍혀 그 사이 컴포지터가 계속 돈다. 부하가 실리면
+     갓 만든 CSS 애니가 `document.getAnimations()` 에 아직 안 올라와 아래 일시정지 루프가 놓치고
+     (그 순간 «running» 이던 것이 «paused» 로 안 바뀐다), 남은 애니는 그 340ms 안에서 **임의 위상**에
+     걸린다 — 52% 봉우리(scale 1.06)면 흰 판이 띠 6px 을 4px 씩 밟아 액자선 잔존이 100%→1% 로 뒤집힌다.
+     ⇒ `#fxl` 의 모든 애니를 **선언으로** 정지(`animation-play-state:paused`)해 «지금 생기든 나중에
+     생기든» 첫 프레임(0%)에서 멈춘 채로 태어나게 한다. getAnimations 타이밍과 무관해진다.
+     여기에 실제 위상은 아래 WAAPI 루프가 `currentTime = T` 로 못박아 이중으로 고정한다(§C4).
+     ⚑ `.fx-toast`(cp 알림)는 스폰이 **비동기**라 gap 에서 떠오른다 — 측정 구획(카드 띠·라벨) 밖이지만
+        전체 스크린샷의 잡음이라 캡처에서만 숨긴다(제품 불변 · 09·12·17 축과 무관). */
   { let s = document.getElementById('__v862nogain');
     if (!s) { s = document.createElement('style'); s.id = '__v862nogain';
-      s.textContent = '.fx-spark.fx-rlic{display:none !important}'; document.head.appendChild(s); } }
+      s.textContent = '.fx-spark.fx-rlic{display:none !important}.fx-toast{display:none !important}'
+        + '#fxl,#fxl *{animation-play-state:paused !important}'; document.head.appendChild(s); } }
   { const o = document.getElementById('__v862nocap'); if (o) o.remove(); }
   if (NOCAP) { const s = document.createElement('style'); s.id = '__v862nocap';
     s.textContent = '.fx-flash{border-width:' + NOCAP + 'px !important}'; document.head.appendChild(s); }
@@ -68,6 +80,11 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK }) => {
   const u = el.querySelector('u'), b = u.getBoundingClientRect(), c = el.getBoundingClientRect();
   if (BLANK) { window.__v862lab = u.textContent; u.textContent = ''; }
   let box = null, rim = null; const fl = L && L.querySelector('.fx-flash');
+  /* ⚑ 876 §C4 — 위상 고정이 «일부러 고른 자리» 임을 못박는 되돌림 손잡이: PHASE(ms)를 주면
+     흰 판 애니를 그 시각으로 돌려(선언 정지 위에서도 WAAPI currentTime 은 그 프레임을 그린다)
+     캡처가 봉우리(52%)에 걸렸을 때의 값을 재현한다 — 그 값이 0% 와 다르면 «어느 프레임을 재는가»
+     가 실제로 결과를 바꾼다는 뜻이고, 그래서 위상을 0 으로 못박은 것이 무른 수리가 아니다. */
+  if (PHASE != null && fl) { try { for (const a of fl.getAnimations()) a.currentTime = PHASE; } catch (_) {} }
   if (fl) { const q = fl.getBoundingClientRect();
     box = { x: +q.x.toFixed(2), y: +q.y.toFixed(2), w: +q.width.toFixed(2), h: +q.height.toFixed(2) };
     try { rim = parseFloat(getComputedStyle(fl).borderTopWidth); } catch (_) {} }
@@ -233,6 +250,19 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK }) => {
   ok(!!baseCL && !!liveCL && baseCL.under45 != null && liveCL.under45 <= baseCL.under45,
      'C3 연출이 도는 프레임이 **정착보다 나쁘지 않다**',
      baseCL && liveCL ? ('t0 ' + u45(liveCL.under45) + ' ↔ 정착 ' + u45(baseCL.under45)) : '측정 실패');
+  /* ⚑ 876 §C4 — **위상 고정 회귀 게이트.** t0 를 여러 번 다시 찍어 [C1] 값이 실행마다 흔들리지
+     않음을 못박는다. 등재문의 사고(같은 트리·같은 명령이 1%↔16.5%↔100% 로 튀어 14/17↔17/17)가
+     되살아나면 **바로 이 항이 빨개진다** — [C1] 문턱(90%)을 넓히지 않고 «어느 프레임을 재는가» 를
+     고정한 것이 수리의 본체임을 굳힌다(872 처방의 골자 — 다만 여기서는 중앙값이 아니라 **분산 0**
+     을 요구할 수 있다: 위상이 선언으로 정지돼 판마다 같은 0% 프레임이 나오기 때문이다). */
+  const reC1 = [];
+  for (let g = 0; g < 4 && now; g++) { const s = await shot({ T: 0 });
+    const q = s && settled ? await RINGPX(s.png, settled.png, CARD, band) : null; if (q) reC1.push(q.pct); }
+  const c1Min = reC1.length ? Math.min(...reC1) : null, c1Max = reC1.length ? Math.max(...reC1) : null;
+  info('t0 [C1] 5판(now 포함) 재현', now ? ([now.pct].concat(reC1).join('% · ') + '%') : '측정 실패');
+  ok(reC1.length === 4 && c1Max - c1Min === 0 && c1Min === now.pct,
+     'C4 ★ **위상 고정** — t0 [C1] 이 다섯 판 모두 같다(분산 0). 등재 사고(1↔16.5↔100)의 회귀 게이트',
+     reC1.length ? ('진폭 ' + r2(c1Max - c1Min) + '%p (' + c1Min + '~' + c1Max + ' ↔ now ' + now.pct + ')') : '측정 실패');
 
   /* ═══ [D] 불변 ═══════════════════════════════════════════════════════ */
   blk('D] 불변 — 액자가 없는 호스트는 상자도 흰 테도 그대로다(09·12·17·코스튬·장비 축)');
@@ -281,8 +311,19 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK }) => {
   ok(!!rBack && rBack.pct >= 90,
      'R4 원복하면 같은 자로 다시 초록',
      rBack ? rBack.pct + '%' : '측정 실패');
+  /* ⚑ 876 §R5 — **위상 민감도(«어느 프레임을 재는가» 가 실제로 결과를 바꾼다).** 흰 판을 봉우리
+     (52% = FXFLASH_MS 의 scale 1.06 자리)로 돌려 찍으면 상자가 띠를 4px 씩 밟아 액자선 잔존이
+     확 떨어진다 — 이 값이 0% 프레임(now)과 크게 다르다는 것이 곧 «위상이 안 고정되면 게이트가
+     흔들린다» 는 증거고, 그래서 §C4 의 위상 고정이 무른 수리가 아니라 **결함을 없앤 수리**임을 굳힌다.
+     ⚠ 이 항은 «봉우리에서 나빠야 한다» 를 단언할 뿐, 문턱(90%)을 봉우리 값으로 낮추지 않는다. */
+  const peakMs = await ev(p, () => (typeof FXFLASH_MS === 'number' ? FXFLASH_MS : 340)) || 340;
+  const peak = await shot({ T: 0, PHASE: Math.round(peakMs * 0.52) });
+  const rPeak = peak && settled ? await RINGPX(peak.png, settled.png, CARD, band) : null;
+  ok(!!rPeak && !!now && rPeak.pct < now.pct - 30,
+     'R5 ★ 봉우리(52%) 프레임은 액자선 잔존이 확 낮다 — 위상이 결과를 가른다(∴ 고정이 결함 수리다)',
+     rPeak && now ? (rPeak.pct + '% ↔ 0% 프레임 ' + now.pct + '%') : '측정 실패');
 
-  ok(errs.length === 0, 'R5 콘솔 에러 0건', errs.length + '건' + (errs.length ? ' — ' + errs.join(' / ') : ''));
+  ok(errs.length === 0, 'R6 콘솔 에러 0건', errs.length + '건' + (errs.length ? ' — ' + errs.join(' / ') : ''));
   console.log('\nVERIFY862 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   await browser.close();
   process.exit(fail ? 1 : 0);
