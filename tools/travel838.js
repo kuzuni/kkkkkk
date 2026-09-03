@@ -91,8 +91,19 @@ function summarize(env, org) {
   };
 }
 
-/* 한 씬을 **실제 사용자 경로**로 굴려 표본을 낸다. `src` 로 되돌림 사본(index.html)을 줄 수 있다. */
-async function runScene(scene, src) {
+/* 한 씬을 **실제 사용자 경로**로 굴려 표본을 낸다. `src` 로 되돌림 사본(index.html)을 줄 수 있다.
+ *
+ * ⚑ 873 — `opts` 둘은 **자 자신의 결함을 재는 손잡이**다(제품과 무관하다):
+ *   `reseed`(기본 true)  트리거 **직전**에 시드를 다시 심는다 — `cap681.js` 가 이미 지키는 규약
+ *                        («난수는 트리거 직전에 다시 심는다» · LESSONS 666-⑧). 이 파일만 안 지켰다.
+ *   `burn`(기본 0)       트리거 직전에 난수를 k 번 미리 뽑아 **러너가 느린 상황을 흉내 낸다**.
+ *                        재시드가 있으면 burn 이 몇이든 값이 **한 자리도 안 바뀌고**, 없으면 갈린다
+ *                        — 그 갈림이 873 의 뿌리다(`probe873`·`verify873` 이 그 짝을 단언한다).
+ */
+async function runScene(scene, src, opts) {
+  const o = opts || {};
+  const reseed = o.reseed !== false;
+  const burn = o.burn | 0;
   const URL = 'file://' + path.resolve(src || path.join(__dirname, '../index.html')).replace(/\\/g, '/');
   const b = await launch(chromium);
   const errs = [];
@@ -145,11 +156,26 @@ async function runScene(scene, src) {
     }, scene.btn);
     if (!geo) return { err: '호스트 없음: ' + scene.btn, errs };
 
-    await page.evaluate((sel) => {
+    /* ⚑ 873 — 시드를 **여기서 다시 심는다.** 페이지 머리에서 한 번만 심으면 «같은 순번의 draw» 는
+       같아도 버스트가 수열의 **어느 자리**에서 시작하는지가 러너 속도에 달린다(위 대기 900·700ms 는
+       «시간» 이지 «프레임 수» 가 아니다 — 게임 루프·파티클·적 스폰이 그 사이에 draw 를 쓴다).
+       재현: 무변경 트리를 **동시 4실행**으로 굴리면 C1 ×3.27~3.72 · A4 1.21~1.37 로 갈린다(조용히
+       한 줄로 돌리면 다섯 번이 한 자리까지 같다 — 그래서 «가끔» 빨갛다). */
+    await page.evaluate(({ sel, sd, rs, bn }) => {
+      /* burn 은 **재시드보다 먼저** 쓴다 — 흉내 내는 것이 «트리거 전에 게임 루프가 난수를 k 번 더 썼다»
+         이기 때문이다. 재시드가 있으면 그 소비가 수열 자리를 못 옮기고(값 동일), 없으면 옮긴다(값 갈림). */
+      for (let i = 0; i < bn; i++) Math.random();
+      if (rs) {
+        let s = sd >>> 0;
+        Math.random = function () { s |= 0; s = (s + 0x6D2B79F5) | 0;
+          let t = Math.imul(s ^ (s >>> 15), 1 | s);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+      }
       const el = document.querySelector(sel);
       el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
       el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    }, scene.btn);
+    }, { sel: scene.btn, sd: SEED, rs: reseed, bn: burn });
     await page.waitForTimeout(60);
     const env = await page.evaluate(SAMPLE, STOPS);
     if (!env || !env.rows) return { err: '알이 안 태어났다', errs, geo };
