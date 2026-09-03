@@ -41,7 +41,14 @@ const SRC = path.join(ROOT, 'index.html');
 const NEG_SPEC = path.join(ROOT, '.v792-neg-spec-' + process.pid + '.html');
 const NEG_HALO = path.join(ROOT, '.v792-neg-halo-' + process.pid + '.html');
 const TAG_SPEC = `    const spec = fn => { ctx.save(); fn(); ctx.restore(); };`;
-const TAG_HALO = `    const halo = fn => { const s = haloSprite(sh, fn); if(s){ ctx.drawImage(s.c, s.ox, s.oy, s.w, s.h); } else { ctx.save(); fn(); ctx.restore(); } };`;
+/* ⚠ 9회차에 이 줄이 길어졌다(후광이 «본체 실루엣에서 판 링» 이 됐다) — 줄 전체를 글자로
+   적어 두면 다음 회차의 한 글자 수정에 자가 먼저 죽는다. **머리만** 붙잡고 줄 끝까지 지운다. */
+const TAG_HALO = `    const halo = fn => { if(AURA_BAKE){`;
+/* 9회차 [R4] — 링을 끄면 5~8회차의 «종별 손그림» 후광(폴백)이 그대로 돌아온다. */
+const NEG_AURA = path.join(ROOT, '.v792-neg-aura-' + process.pid + '.html');
+const TAG_AURA = `const AURA_ON   = 1;`;
+const killLine = (src, tag, repl) =>
+  src.replace(new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*'), repl);
 /* 5회차 — 페이드 자체를 끄는 세 번째 사본. `HALO_FADE = 0` 이면 굽기는 그대로 돌되 탭이 한 개(중앙)라
    **평탄 판**이 나온다 = 4회차까지의 세계. [B6] 이 그것을 실제로 잡는지 [R3] 이 못박는다. */
 const NEG_FADE = path.join(ROOT, '.v792-neg-fade-' + process.pid + '.html');
@@ -68,6 +75,17 @@ const FLAT_MAX = 0.60;
    ⚠ 여기도 관측값을 그대로 박지 않는다 — 실측은 표에 찍히고, 문턱은 그 위 여유에 둔다.
    ⚠ 밴드는 **문턱이 아니라 기록**이다 — 이유는 [B7] 자리의 주석. */
 const RAMP_MIN = 0.12;
+
+/* [B8]·[B9] 문턱 — 9회차. **관측값이 아니라 8회차 비평가 CU 가 준 목표**를 그대로 박는다
+   (825 규칙의 반대편 자리다 — 관측값을 박으면 «지금 그대로» 가 규격이 되고, 목표를 박으면
+    그 자는 처방이 실제로 목표에 닿았는지를 묻는다): 두께 p90 **12±3px** · 비대칭 **±3px**.
+   [B9] 는 «후광이 몸통 색에서 나왔는가» — CT·CU 가 shuri 에서 각자 짚은 «난색 후광 ↔ 한색 몸통»
+   (R−B: 후광 +20 / 몸통 −39 = Δ 59)이 기준이다. 부호가 갈릴 만큼 벌어지지 않는 폭으로 둔다. */
+const TH_MIN = 9, TH_MAX = 15, ASYM_MAX = 3.0, DWARM_MAX = 30;
+/* «먼몫» 문턱 — 본체에서 띠 밖까지 뻗은 후광 화소의 몫. 실측이 **두 무리로 갈리고 사이가 비었다**:
+   링만 있는 종 0 ~ 0.001 ↔ 제 손으로 반투명 부품을 그리는 종 0.062(운석 꼬리) · 0.127(창 잔광) ·
+   0.158(화구) · 0.375(병 불빛). 빈 구간 한가운데를 잡는다(825 규칙). */
+const FAR_MAX = 0.03;
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
@@ -163,6 +181,9 @@ async function measure(browser, url) {
        ⚠ 이 풀이는 그리기가 **source-over** 일 때만 성립한다 — 투사체 경로에는 `globalCompositeOperation`
          이 한 곳도 없음을 확인했다(있는 자리는 전부 스프라이트 생성기 쪽 19358~19697). */
     const A_BODY = 0.55;              /* α ≥ 이 값이면 «본체», 아래면 «후광» */
+    /* [B9] 가 색을 재는 띠 폭(기기px) — 링 설계 두께(로컬 3px × HALO_SS 4 = 12)보다 조금 넓게.
+       한 곳에만 적고 자에게는 값째 돌려준다(자와 페이지에 따로 적으면 그것이 곧 사본이다 — 402). */
+    const CBAND = 18;
     const rows = {}, masks = {};
     for (const id in specs) {
       const sp = specs[id];
@@ -232,9 +253,133 @@ async function measure(browser, url) {
          잘 풀린 가장자리면 상당한 몫이 된다. [B6](한 칸에 뭉쳤나)이 «판인가» 를 묻는다면
          이것은 «푼 폭이 종끼리 고른가» 를 묻는다 — 6회차 비평 2인이 각자 짚은 축이 이것이다
          (CS: 후광두께÷본체폭 stone 9% ↔ boom 64% · CR: falloff 폭 boomer 2px ↔ boom 34px). */
-      const halfA = (hi + 0.5) * 0.05 * 0.5;
+      /* ⚑ 9회차 — 램프의 자를 «최빈칸의 절반 아래» 에서 **«봉우리의 절반 아래»** 로 옮겼다(333 처방:
+         지우지 말고 방향을 돌린다). 6회차의 정의는 «평탄한 판 + 짧은 페이드» 를 전제로 세운 것이라
+         **처음부터 끝까지 페이드인 링**에서는 뜻이 뒤집힌다 — 링은 최빈칸이 곧 띠의 몸통이고
+         그 절반 아래는 검출 바닥(α≈.055) 코앞이라, 가장 잘 풀린 가장자리가 «램프 0.008» 로 찍혔다.
+         봉우리 기준이면 판은 거의 0(전부가 봉우리 값), 링은 0.5 안팎이 되어 원래 묻던 것
+         («칼로 자른 판인가, 풀린 가장자리인가»)을 두 세계에서 같은 뜻으로 묻는다.
+         봉우리는 p95 로 잡는다 — 최댓값은 화소 한 개에 흔들린다. */
+      const av2 = [];
+      for (let p = 0; p < sf.length; p++) if (sf[p] && out[p]) av2.push(av[p]);
+      av2.sort((x, y) => x - y);
+      const aPeak = av2.length ? av2[Math.floor(0.95 * (av2.length - 1))] : 0;
+      const halfA = aPeak * 0.5;
       let ramp = 0;
       for (let p = 0; p < sf.length; p++) if (sf[p] && out[p] && av[p] < halfA) ramp++;
+      /* ⚑⚑ 9회차 [B8] — «방향별 후광 두께». 8회차 비평 2인(CT·CU)이 각자 **다른 종**을 짚었는데
+         증상이 한 문장으로 요약됐다: **후광이 본체 실루엣을 안 따라간다**
+         (CT 두께 whirl 5.8px ↔ slash 17.0px · CU bounce 146×96 = 좌우 +25 / 상하 **+0** ·
+          arrow 좌 +28 / 우·상·하 +1 · lance 132px 무기울기 평탄 캡슐).
+         ⚠ 8회차까지의 자는 이것을 **원리적으로 못 본다** — [A1]·[B1]·[B3]·[B6]·[B7] 이 전부
+           «면적의 몫» 이라 «좌 28 : 우 1» 도 «상 0 : 좌우 25» 도 초록으로 지나간다
+           (8회차 시점 `verify792` 19/19 PASS × 5회). 방향을 보는 축이 하나도 없었다.
+         ⇒ 본체 무게중심에서 **72방향 광선**을 쏴 «본체 끝 → 후광 끝» 을 잰다(CT 가 실제로 쓴 자).
+           종 안의 고름은 p90÷p10, 종끼리의 고름은 p90 밴드, 대칭은 4방향 평균의 최대−최소로 본다. */
+      const cx0 = hard ? hx / hard : bw / 2, cy0 = hard ? hy / hard : bh / 2;
+      /* ⚠ **광선으로 재면 오목한 종에서 거짓말을 한다** — 9회차 1차 자가 무게중심에서 72방향
+         광선을 쏴 «본체 끝 → 후광 끝» 을 쟀더니 갈퀴(3중 호)·천벌의 창처럼 팔이 벌어진 종에서
+         «한 광선 위의 마지막 본체» 와 «마지막 후광» 이 **서로 다른 부품**의 것이 되어
+         두께가 25px 로 찍혔다(링은 12px 인데). ⇒ 광선을 버리고 **거리 변환**으로 바꾼다:
+         후광 화소마다 «가장 가까운 본체 화소까지의 거리» 를 재면 형상의 오목·볼록과 무관하다.
+         두 번 훑는 체임퍼 거리라 값이 싸다(대각 √2). */
+      const INF = 1e9, dtm = new Float32Array(bw * bh);
+      for (let p = 0; p < dtm.length; p++) dtm[p] = hd[p] ? 0 : INF;
+      const D1 = 1, D2 = 1.41421356;
+      for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
+        const p = y * bw + x; let v = dtm[p];
+        if (x > 0 && dtm[p - 1] + D1 < v) v = dtm[p - 1] + D1;
+        if (y > 0 && dtm[p - bw] + D1 < v) v = dtm[p - bw] + D1;
+        if (x > 0 && y > 0 && dtm[p - bw - 1] + D2 < v) v = dtm[p - bw - 1] + D2;
+        if (x < bw - 1 && y > 0 && dtm[p - bw + 1] + D2 < v) v = dtm[p - bw + 1] + D2;
+        dtm[p] = v;
+      }
+      for (let y = bh - 1; y >= 0; y--) for (let x = bw - 1; x >= 0; x--) {
+        const p = y * bw + x; let v = dtm[p];
+        if (x < bw - 1 && dtm[p + 1] + D1 < v) v = dtm[p + 1] + D1;
+        if (y < bh - 1 && dtm[p + bw] + D1 < v) v = dtm[p + bw] + D1;
+        if (x < bw - 1 && y < bh - 1 && dtm[p + bw + 1] + D2 < v) v = dtm[p + bw + 1] + D2;
+        if (x > 0 && y < bh - 1 && dtm[p + bw - 1] + D2 < v) v = dtm[p + bw - 1] + D2;
+        dtm[p] = v;
+      }
+      const ths = [];
+      for (let p = 0; p < sf.length; p++) {
+        if (!(sf[p] && out[p])) continue;
+        if (dtm[p] < INF) ths.push(dtm[p]);
+      }
+      const pct = (a, q) => { if (!a.length) return 0; const t = a.slice().sort((x, y) => x - y);
+                              return t[Math.min(t.length - 1, Math.floor(q * (t.length - 1)))]; };
+      const th90 = +pct(ths, 0.9).toFixed(1), th10 = +pct(ths, 0.1).toFixed(1);
+      /* ⚑⚑ 대칭 축은 **본체 테두리에 앉혀서** 잰다 — 9회차에 두 번 고쳐 잡았다:
+         ① 무게중심에서 쏜 광선은 오목한 종에서 «다른 부품의 후광» 을 재고(갈퀴 25px),
+         ② 사분면 거리 중앙값은 **형상 자체에 편향**된다 — 뾰족한 끝을 두른 띠는 바깥으로 갈수록
+            면적이 늘어 중앙값이 커지고, 긴 변을 따라가는 띠는 고르다(같은 균일 링인데
+            slash 4.6 · arrow 4.0 이 찍혔다). 둘 다 «링이 고른가» 가 아니라 «몸이 길쭉한가» 였다.
+         ⇒ 테두리 화소마다 **바깥쪽으로 이어진 후광의 길이**(연속 런)를 재고 방향별 중앙값을 본다.
+           런이라 다른 부품의 띠가 안 섞이고, 테두리에 앉으므로 형상 편향이 없다.
+           CU 가 «상하좌우 여백 비대칭 ±3px» 로 적은 것이 바로 이 값이다. */
+      const qv = [[], [], [], []];
+      for (let p = 0; p < hd.length; p++) {
+        if (!hd[p]) continue;
+        const x = p % bw, y = (p - x) / bw;
+        if (x <= 0 || y <= 0 || x >= bw - 1 || y >= bh - 1) continue;
+        if (hd[p - 1] && hd[p + 1] && hd[p - bw] && hd[p + bw]) continue;   /* 속살은 건너뛴다 */
+        /* ⚠ **바깥쪽은 «무게중심에서 멀어지는 쪽» 이 아니다** — 오목한 종(폭풍의 칼날 깃 사이 ·
+           갈퀴 호 사이)에서는 그 방향이 **몸 안쪽**을 가리켜 띠가 0 으로 찍힌다(9회차 실측
+           gale 13 · ice 9 = 형상이 만든 유령). 테두리 화소의 **국소 법선**을 5×5 창에서 뽑는다:
+           «몸이 아닌 이웃» 쪽으로의 평균 방향이 곧 바깥이다. */
+        let nx = 0, ny = 0;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+          if (!dx && !dy) continue;
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= bw || yy >= bh) continue;
+          if (hd[yy * bw + xx]) continue;
+          const L = Math.hypot(dx, dy); nx += dx / L; ny += dy / L;
+        }
+        const nl = Math.hypot(nx, ny);
+        if (nl < 1e-6) continue;
+        const ca = nx / nl, sn = ny / nl, an = Math.atan2(sn, ca);
+        let run = 0;
+        for (let r = 1; r <= 40; r += 1) {
+          const xx = Math.round(x + ca * r), yy = Math.round(y + sn * r);
+          if (xx < 0 || yy < 0 || xx >= bw || yy >= bh) break;
+          const q = yy * bw + xx;
+          if (hd[q]) continue;                       /* 아직 몸 안이다 — 아직 안 셌다 */
+          if (sf[q] && out[q]) { run = r; continue; }
+          break;                                     /* 띠가 끊겼다 */
+        }
+        const qi = ((Math.round(an / (Math.PI / 2)) % 4) + 4) % 4;
+        qv[qi].push(run);
+      }
+      /* ⚠ **자에게는 보이지 않는 종이 있다** — 종이 «본체 재질» 로 제 손으로 깐 반투명 부품
+         (운석 불꼬리 · 천벌의 창 잔광 줄 α.42 · 화구·병 불빛)은 α < 0.55 라 이 자에게 **후광으로**
+         셈된다. 그 부품은 본체에서 멀리까지 뻗으므로 «본체에서 CBAND px 밖 후광 화소의 몫»
+         으로 잡아낸다 — 링만 있는 종은 구성상 거의 0 이다(링 두께가 CBAND 안이다).
+         이 값은 **문턱이 아니라 범위**다: 높은 종은 [B8]·[B9] 가 재는 것이 링이 아니라
+         그 부품이므로 «기록만» 으로 돌린다(541 [F]·[B7] 의 «자가 못 재는 종» 선례). */
+      let far = 0;
+      for (let p = 0; p < sf.length; p++) if (sf[p] && out[p] && dtm[p] > CBAND) far++;
+      const fFar = +(far / Math.max(1, soft)).toFixed(3);
+      const qp = qv.filter(a => a.length >= 8).map(a => pct(a, 0.5));
+      const asym = qp.length >= 2 ? +(Math.max.apply(null, qp) - Math.min.apply(null, qp)).toFixed(1) : 0;
+      /* ⚑ 9회차 [B9] — «후광 색 ↔ 본체 색». CT·CU 가 각자 shuri 에서 짚었다
+         (후광은 난색 R−B +20 인데 몸통은 한색 B−R +39 = 부호가 반대다).
+         후광은 저알파라 **합성색으로 재면 바탕이 섞인다** — 위 «두 겹» 풀이로 나온 α 로
+         원래 색을 되푼다: L = (r1 − (1−α)·b) / α. α 가 너무 작으면 나눗셈이 폭발하므로 0.12 이상만.
+         ⚠ **띠 안에서만 잰다**(본체에서 CBAND px 안). 밖까지 세면 «제 손으로 깐 발광» 을 가진 종
+           (운석 불꼬리)이 그 꼬리 색으로 판정된다 — 그것은 ②규격이 아니라 ③덩치·④의미 축이고
+           비평가가 색으로 짚은 적도 없다. 무르게 푼 자가 아님은 [R4] 가 못박는다:
+           옛 «종별 손그림» 후광으로 되돌리면 이 자는 **같은 띠 안에서** 빨개진다. */
+      let hR = 0, hB = 0, nHc = 0, bR = 0, bB = 0, nBc = 0;
+      for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
+        if (hd[p]) { bR += a0[i]; bB += a0[i + 2]; nBc++; continue; }
+        if (!(sf[p] && out[p]) || av[p] < 0.12 || dtm[p] > CBAND) continue;   /* CBAND — 아래 한 곳 선언 */
+        const un = (k) => { const v = (a0[i + k] - (1 - av[p]) * base[i + k]) / av[p];
+                            return v < 0 ? 0 : (v > 255 ? 255 : v); };
+        hR += un(0); hB += un(2); nHc++;
+      }
+      const hWarm = nHc ? +((hR - hB) / nHc).toFixed(1) : 0;
+      const bWarm = nBc ? +((bR - bB) / nBc).toFixed(1) : 0;
       const ink = soft + hard;
       /* 후광 ↔ 본체 **중심 어긋남** — 2회차에 비평가 CN·CO 가 2인 공통으로 짚은 축이다
          (곡선탄의 둥근 원반이 코어에서 떨어져 «한 발» 이 아니라 «두 물체» 로 읽혔다).
@@ -255,8 +400,10 @@ async function measure(browser, url) {
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
                    fSpec: +(sp2 / Math.max(1, ink)).toFixed(4),
                    flat: +(hmax / Math.max(1, soft)).toFixed(3),
-                   aMode: +((hi + 0.5) * 0.05).toFixed(3),
-                   fRamp: +(ramp / Math.max(1, soft)).toFixed(3) };
+                   aMode: +((hi + 0.5) * 0.05).toFixed(3), aPeak: +aPeak.toFixed(3),
+                   fRamp: +(ramp / Math.max(1, soft)).toFixed(3),
+                   th90, th10, asym, hWarm, bWarm, fFar, qm4: qv.map(a => a.length ? pct(a,0.5) + '(' + a.length + ')' : '-').join('/'),
+                   dWarm: +(hWarm - bWarm).toFixed(1) };
       clearFx();
     }
 
@@ -294,7 +441,127 @@ async function measure(browser, url) {
     const frame = +ts[Math.floor(ts.length / 2)].toFixed(3);
     clearFx();
 
-    return { rows, worst, n: ids.length, frame, bake: +bake.toFixed(1), nShot: 60 };
+    /* ⚑⚑ 9회차 — **링 자체를 잰다.** 위 장면 자는 «살아 있는 전투 장면과의 차이» 로 화소를
+       가리므로 **방향에 따라 바탕이 다르다** — 띠의 맨 바깥 1~2px 이 밝은 바탕 쪽에서만 문턱
+       아래로 잘려 사분면 두께가 9 ↔ 14 로 갈렸다(같은 균일 링인데). 그 자로 «±3px» 을 증명할 수는
+       없다. 링은 **구운 자산**이고 `drawImage` 가 1:1 로 얹으므로(HALO_SS = SC × SK_DRAW_SC),
+       스프라이트 화소가 곧 화면 화소다 ⇒ 자산을 직접 재면 바탕이 안 섞인다.
+       ⚠ 그래도 장면 자를 안 버린다 — 굵은 어긋남(옛 «좌 28 : 우 1»)은 장면에서도 보이고,
+         [R4] 가 그 자로 «옛 세계는 밴드 밖» 을 못박는다. 자산 자는 «가는 끝» 을 재는 몫이다. */
+    const ringM = {};   /* ⚠ 이름을 `rings` 로 두면 제품의 전역 `rings`(FX 배열)를 가려 위 FXMAP 이 TDZ 로 죽는다 */
+    if (typeof AURA_SPR !== 'undefined') for (const ent of Array.from(AURA_SPR.entries())) {
+      const sp = ent[1]; if (!sp || !sp.c) continue;
+      const w = sp.c.width, h = sp.c.height;
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const cg = cv.getContext('2d'); cg.drawImage(sp.c, 0, 0);
+      const dd = cg.getImageData(0, 0, w, h).data;
+      const FL = 14;                                  /* α 바닥(≈0.055) — 장면 자의 검출 바닥과 같은 자리 */
+      const ring = new Uint8Array(w * h), emp = new Uint8Array(w * h), ext = new Uint8Array(w * h);
+      for (let i = 3, p = 0; i < dd.length; i += 4, p++) { if (dd[i] >= FL) ring[p] = 1; else emp[p] = 1; }
+      const st = [];
+      for (let x = 0; x < w; x++) { st.push(x); st.push((h - 1) * w + x); }
+      for (let y = 0; y < h; y++) { st.push(y * w); st.push(y * w + w - 1); }
+      while (st.length) {
+        const p = st.pop();
+        if (p < 0 || p >= ext.length || ext[p] || !emp[p]) continue;
+        ext[p] = 1;
+        const x = p % w, y = (p - x) / w;
+        if (x > 0) st.push(p - 1);
+        if (x < w - 1) st.push(p + 1);
+        if (y > 0) st.push(p - w);
+        if (y < h - 1) st.push(p + w);
+      }
+      const hole = new Uint8Array(w * h);              /* 도려낸 속 = 본체 실루엣 */
+      let hx = 0, hy = 0, nh = 0;
+      for (let p = 0; p < hole.length; p++) if (emp[p] && !ext[p]) {
+        hole[p] = 1; const x = p % w; hx += x; hy += (p - x) / w; nh++;
+      }
+      if (!nh) continue;
+      hx /= nh; hy /= nh;
+      /* 링 안의 «가장 가까운 몸까지의 거리» — 아래 걸러내기에 쓴다(체임퍼 2패스). */
+      const INF2 = 1e9, rdt = new Float32Array(w * h);
+      for (let p = 0; p < rdt.length; p++) rdt[p] = hole[p] ? 0 : INF2;
+      const E1 = 1, E2 = 1.41421356;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const p = y * w + x; let v = rdt[p];
+        if (x > 0 && rdt[p - 1] + E1 < v) v = rdt[p - 1] + E1;
+        if (y > 0 && rdt[p - w] + E1 < v) v = rdt[p - w] + E1;
+        if (x > 0 && y > 0 && rdt[p - w - 1] + E2 < v) v = rdt[p - w - 1] + E2;
+        if (x < w - 1 && y > 0 && rdt[p - w + 1] + E2 < v) v = rdt[p - w + 1] + E2;
+        rdt[p] = v;
+      }
+      for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+        const p = y * w + x; let v = rdt[p];
+        if (x < w - 1 && rdt[p + 1] + E1 < v) v = rdt[p + 1] + E1;
+        if (y < h - 1 && rdt[p + w] + E1 < v) v = rdt[p + w] + E1;
+        if (x < w - 1 && y < h - 1 && rdt[p + w + 1] + E2 < v) v = rdt[p + w + 1] + E2;
+        if (x > 0 && y < h - 1 && rdt[p + w - 1] + E2 < v) v = rdt[p + w - 1] + E2;
+        rdt[p] = v;
+      }
+      const runs = [], qq = [[], [], [], []];
+      for (let p = 0; p < hole.length; p++) {
+        if (!hole[p]) continue;
+        const x = p % w, y = (p - x) / w;
+        if (x <= 0 || y <= 0 || x >= w - 1 || y >= h - 1) continue;
+        if (hole[p - 1] && hole[p + 1] && hole[p - w] && hole[p + w]) continue;
+        let nx = 0, ny = 0;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+          if (!dx && !dy) continue;
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          if (hole[yy * w + xx]) continue;
+          const L = Math.hypot(dx, dy); nx += dx / L; ny += dy / L;
+        }
+        const nl = Math.hypot(nx, ny); if (nl < 1e-6) continue;
+        const ca = nx / nl, sn = ny / nl;
+        let run = 0, merged = false;
+        for (let r = 1; r <= 60; r++) {
+          const xx = Math.round(x + ca * r), yy = Math.round(y + sn * r);
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) break;
+          const q = yy * w + xx;
+          /* ⚠ 오목한 자리에서는 두 부품의 띠가 **붙는다** — 건너간 것을 두께로 세면 40px 이 찍힌다
+             (폭풍의 칼날 깃 사이). 띠를 지나 **다시 몸을 만나면** 그 자리는 «건너감» 이므로 버린다. */
+          if (hole[q]) { if (run > 0) merged = true; if (run > 0) break; continue; }
+          if (ring[q]) { run = r; continue; }
+          break;
+        }
+        if (merged || !run) continue;
+        /* ⚠ **띠 두께는 «가장 가까운 몸까지» 여야 한다.** 부품이 가까이 모인 자리(폭풍의 칼날 깃 셋)
+           에서는 두 부품의 흐림이 겹쳐 알파가 더 높아지고, 그래서 그 방향으로만 띠가 1~4px 더
+           멀리까지 보인다. 그 런의 끝은 **내가 출발한 부품보다 다른 부품에 더 가깝다** — 거리
+           변환으로 그것을 가려내고 버린다(안 버리면 «몸이 오목하다» 가 «링이 안 고르다» 로 읽힌다). */
+        const ex = Math.round(x + ca * run), ey = Math.round(y + sn * run);
+        const dEnd = rdt[ey * w + ex];
+        if (Math.abs(dEnd - run) > 1.5) continue;
+        runs.push(run);
+        const an = Math.atan2(sn, ca);
+        qq[((Math.round(an / (Math.PI / 2)) % 4) + 4) % 4].push(run);
+      }
+      if (runs.length < 24) continue;
+      const q50 = (a) => { const t = a.slice().sort((x, y) => x - y); return t[Math.floor(0.5 * (t.length - 1))]; };
+      /* 링 자산의 α 분포 — 칼로 자른 판이면 한 칸에 뭉치고, 풀린 띠면 여러 칸에 퍼진다.
+         [R3](페이드를 끈 세계)이 이 값으로 «판» 을 잡는다 — 장면 자의 α 는 바탕 잡음이 섞여
+         판과 띠를 못 가른다(9회차 실측: 판 세계에서도 최빈칸 몫이 0.62 를 안 넘었다). */
+      const hb = new Int32Array(20);
+      let nr = 0;
+      for (let p = 0; p < ring.length; p++) if (ring[p]) { const a = dd[p * 4 + 3];
+        let bi = Math.floor(a / 13); if (bi > 19) bi = 19; hb[bi]++; nr++; }
+      let hm = 0; for (let i = 0; i < 20; i++) if (hb[i] > hm) hm = hb[i];
+      const qm = qq.filter(a => a.length >= 8).map(q50);
+      ringM[String(ent[0]).split('|')[0]] = {
+        n: runs.length,
+        th: +q50(runs).toFixed(1),
+        p90: +runs.slice().sort((a, b) => a - b)[Math.floor(0.9 * (runs.length - 1))].toFixed(1),
+        asym: qm.length >= 2 ? +(Math.max.apply(null, qm) - Math.min.apply(null, qm)).toFixed(1) : 0,
+        aFlat: +(hm / Math.max(1, nr)).toFixed(3) };
+    }
+
+    /* 9회차 — «링을 실제로 가진 종» 을 **제품에게 묻는다**(자에 목록을 손으로 적으면 그것이
+       곧 사본이고, 다음 회차가 종을 하나 옮기는 순간 자가 거짓말을 한다 — 402).
+       굽기가 실패해 `null` 이 캐시된 종은 링이 없는 것으로 센다. */
+    const aura = (typeof AURA_SPR !== 'undefined')
+      ? Array.from(AURA_SPR.entries()).filter(e => e[1]).map(e => String(e[0]).split('|')[0]) : [];
+    return { rows, worst, n: ids.length, frame, bake: +bake.toFixed(1), nShot: 60, aura, cband: CBAND, rings: ringM };
   });
 
   await ctx.close();
@@ -305,7 +572,7 @@ async function measure(browser, url) {
   console.log('=== VERIFY 792 — 스킬 이펙트 연출 규격(세 층) 통일 ===\n');
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const src = fs.readFileSync(SRC, 'utf8');
-  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE]) { try { fs.unlinkSync(f); } catch (_) {} } };
+  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE, NEG_AURA]) { try { fs.unlinkSync(f); } catch (_) {} } };
 
   try {
     /* ---- [C] 선언 ---- */
@@ -385,8 +652,8 @@ async function measure(browser, url) {
            그 종들은 [B6](한 칸에 뭉쳤나)이 계속 지킨다 — 실제로 lance 0.328 · boom 0.113 로 초록이다.
          ⚠ 빼는 기준은 «불편해서» 가 아니라 «자가 못 봐서» 다. 다음 회차가 이 바닥을 낮추려면
            검출 문턱(8)을 내리는 것이 아니라 **더 밝은 바탕에서 한 번 더 재는** 쪽이 맞다(인계). */
-      const ramps = ids.filter(i => out.rows[i].aMode >= 0.20);
-      const dim = ids.filter(i => out.rows[i].aMode < 0.20);
+      const ramps = ids.filter(i => out.rows[i].aPeak >= 0.20);
+      const dim = ids.filter(i => out.rows[i].aPeak < 0.20);
       const rv = ramps.map(i => out.rows[i].fRamp);
       const rMin = Math.min.apply(null, rv), rMax = Math.max.apply(null, rv);
       const rBand = +(rMax / Math.max(1e-6, rMin)).toFixed(2);
@@ -400,7 +667,53 @@ async function measure(browser, url) {
          '[B7] 잰 종이 전부 가장자리 램프를 갖는다 — 잰 종 ' + ramps.length + '(≥12) · 최소 몫 ' +
          rMin.toFixed(3) + ' ≥ ' + RAMP_MIN + ' (최대 ' + rMax.toFixed(3) + ' · 밴드 ' + rBand + ' — 기록만)');
       console.log('  (기록) 자가 못 재는 옅은 후광 ' + dim.length + '종 — ' +
-         dim.map(i => i + ':α' + out.rows[i].aMode + '/램프' + out.rows[i].fRamp).join(' · '));
+         dim.map(i => i + ':봉우리α' + out.rows[i].aPeak + '/램프' + out.rows[i].fRamp).join(' · '));
+      /* ⚑⚑ [B8] — 9회차가 세운 축(8회차 인계 1순위). **문턱은 관측값이 아니라 비평가가 준 목표**다
+         (825 규칙 — 관측값을 박으면 그 자는 «지금 그대로» 를 지킨다): CU 가 8회차 채점에서
+         «두께 p90 12±3px · 상하좌우 여백 비대칭 ±3px 이내» 를 적었다. 그것을 그대로 쓴다.
+         ⚠ 두께는 **잡힌 화소**로 재므로 후광이 옅은 종은 끝자락이 검출 문턱(|Δ색| > 8) 아래로
+           잘려 실제보다 얇게 나온다 — [B7] 이 뺀 종(최빈 α < 0.20)은 여기서도 값만 찍는다. */
+      /* ⚠ **잰다고 다 재는 것이 아니다** — 링을 가진 종만 이 규격의 대상이다.
+         불 계열 둘(`boom` 화구 · `flask` 병 뒤 불빛)은 후광을 `halo()` 층이 아니라 **본체 재질**
+         (방사 발광 — 412 «한 밴드» 가 인정한 문법)로 내므로 링이 없고, 그 둘의 두께는
+         곧 «덩치»(③) 축이지 «규격»(②) 축이 아니다(8회차 ⓕ 가 이미 별개로 등재돼 있다).
+         ⇒ 목록은 **제품에게 물어서** 만든다(위 `aura`) — 자에 손으로 적지 않는다. */
+      const hasAura = new Set(out.aura || []);
+      const own = ids.filter(i => out.rows[i].fFar > FAR_MAX);
+      const th = ids.filter(i => hasAura.has(out.rows[i].sh) && out.rows[i].fFar <= FAR_MAX);
+      /* 범위가 조용히 자라지 못하게 **개수에 못을 박는다** — «기록만» 은 예외지 문이 아니다. */
+      ok(own.length <= 4, '[B8s] 자가 링을 못 가리는 종(제 손으로 깐 반투명 부품 · 먼몫 > ' + FAR_MAX +
+         ') ' + own.length + '종 ≤ 4 — ' + (own.map(i => i + ':' + out.rows[i].fFar).join(' · ') || '없음'));
+      /* [B8]·[B8b] 는 **구운 링 자산**을 잰다(위 `rings` 주석 — 장면 자는 방향마다 바탕이 달라
+         ±5px 로 흔들린다). 자산 화소 = 화면 화소이므로 «찍힌 픽셀» 을 안 놓는다. */
+      const rg = out.rings || {};
+      const rk = Object.keys(rg);
+      ok(rk.length >= 12, '[B8a] 링을 구운 종 ' + rk.length + '종 ≥ 12 (자산을 직접 잰다 · 테두리 표본 ' +
+         (rk.length ? Math.min.apply(null, rk.map(k => rg[k].n)) : 0) + '+)');
+      /* ⚠ 밴드는 **중앙값**으로 건다 — p90 은 오목한 주머니(폭풍의 칼날 깃 사이 · 주변 참격 X 안쪽)
+         에서 두 부품의 띠가 붙은 자리를 보고 38~40px 을 찍는다. 그것은 «띠가 두껍다» 가 아니라
+         «몸이 오목하다» 이고, 붙은 자리는 [D1]·[B3] 이 따로 지킨다. p90 은 기록으로 남긴다. */
+      const thBad = rk.filter(k => rg[k].th < TH_MIN || rg[k].th > TH_MAX);
+      ok(thBad.length === 0,
+         '[B8] 후광 두께 p90 이 종끼리 한 밴드 (' + TH_MIN + '~' + TH_MAX + 'px · CU 목표 12±3) — 잰 종 ' +
+         rk.length + ' · 벗어난 종 ' + thBad.length +
+         (thBad.length ? ' (' + thBad.map(k => k + ':' + rg[k].th).join(' · ') + ')' : '') +
+         ' · 실측 ' + Math.min.apply(null, rk.map(k => rg[k].th)) + '~' + Math.max.apply(null, rk.map(k => rg[k].th)));
+      const asBad = rk.filter(k => rg[k].asym > ASYM_MAX);
+      ok(asBad.length === 0,
+         '[B8b] 후광이 본체를 **고르게** 두른다 — 테두리 법선에서 잰 4방향 띠 길이 중앙값의 최대−최소 ≤ ' +
+         ASYM_MAX + 'px (CU 목표 ±3) · 넘는 종 ' + asBad.length +
+         (asBad.length ? ' (' + asBad.map(k => k + ':' + rg[k].asym).join(' · ') + ')' : ''));
+      console.log('  (기록) 링 자산 — 종:중앙값/p90±비대칭 (α최빈칸몫) — ' +
+         rk.map(k => k + ':' + rg[k].th + '/' + rg[k].p90 + '±' + rg[k].asym + '(' + rg[k].aFlat + ')').join(' · '));
+      /* [B9] — 후광 색이 본체에서 파생되는가. 부호가 갈리면(난색 후광 ↔ 한색 몸통) 두 물체로 읽힌다. */
+      const wIds = th;
+      const wBad = wIds.filter(i => Math.abs(out.rows[i].dWarm) > DWARM_MAX);
+      ok(wBad.length === 0,
+         '[B9] 후광 색이 본체에서 파생된다 — |Δ(R−B)| ≤ ' + DWARM_MAX + ' (본체에서 ' + out.cband +
+         'px 띠 안) · 잰 종 ' + wIds.length +
+         ' · 넘는 종 ' + wBad.length +
+         (wBad.length ? ' (' + wBad.map(i => i + ':' + out.rows[i].dWarm).join(' · ') + ')' : ''));
       ok(out.worst.iou <= IOU_MAX,
          '[D1] 710 회귀 짝 — 종별 실루엣 IoU 최댓값 ' + out.worst.iou + ' ≤ ' + IOU_MAX +
          ' (최악 쌍 ' + out.worst.a + '↔' + out.worst.b + ' · 이 쌍은 흔들린다 — 위 주석)');
@@ -413,21 +726,25 @@ async function measure(browser, url) {
       console.log('  (기록) 후광을 굽는 첫 프레임 ' + out.bake + 'ms — 종당 한 번뿐(캐시)');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
-      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫');
+      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫' +
+                  ' · 두께p90/p10 · 비대칭 · 먼몫 · 후광R−B / 본체R−B');
       for (const id of ids) {
         const r = out.rows[id];
         console.log('        ' + id.padEnd(9) + r.sh.padEnd(10) +
                     String(r.ink).padStart(7) + '  ' +
                     r.fSoft.toFixed(3) + ' / ' + r.fSpec.toFixed(4) +
                     String(r.off).padStart(8) + String(r.dL).padStart(9) +
-                    String(r.flat).padStart(9) + String(r.fRamp).padStart(9));
+                    String(r.flat).padStart(9) + String(r.fRamp).padStart(9) +
+                    (' ' + r.th90 + '/' + r.th10).padStart(11) + String(r.asym).padStart(7) +
+                    String(r.fFar).padStart(8) + ('  ' + r.qm4).padEnd(28) +
+                    (' ' + r.hWarm + '/' + r.bWarm).padStart(15));
       }
       console.log('');
     }
 
     /* ---- [R] 되돌림 시험 ---- */
     fs.writeFileSync(NEG_SPEC, src.replace(TAG_SPEC, `    const spec = fn => {};`), 'utf8');
-    fs.writeFileSync(NEG_HALO, src.replace(TAG_HALO, `    const halo = fn => {};`), 'utf8');
+    fs.writeFileSync(NEG_HALO, killLine(src, TAG_HALO, `    const halo = fn => {};`), 'utf8');
 
     const rSpec = await measure(browser, 'file://' + NEG_SPEC);
     if (rSpec.out && rSpec.out.__err) ok(false, '[R1] 사본 측정 예외 — ' + rSpec.out.__err);
@@ -452,10 +769,32 @@ async function measure(browser, url) {
     if (rFade.out && rFade.out.__err) ok(false, '[R3] 사본 측정 예외 — ' + rFade.out.__err);
     else {
       const ks = Object.keys(rFade.out.rows);
-      const bad = ks.filter(i => rFade.out.rows[i].flat > FLAT_MAX);
-      const mx = Math.max.apply(null, ks.map(i => rFade.out.rows[i].flat));
-      ok(bad.length >= 8, '[R3] 페이드를 끄면 [B6] 이 빨개진다 — 평탄 판으로 읽힌 종 ' + bad.length +
-         '종 ≥ 8 (잰 종 ' + ks.length + ' · 최대 ' + mx.toFixed(3) + ')');
+      /* ⚑ 9회차 — 판정을 **[B6]·[B7] 짝**으로 넓혔다. 링 세계에서 «평탄한 판» 은 α 가 한 칸에
+         뭉치는 쪽([B6])으로도, **가장자리 램프가 사라지는 쪽**([B7])으로도 나타난다 —
+         굽는 경로가 달라졌으니 같은 병의 얼굴도 달라진다. 둘 중 하나라도 빨간 종을 센다. */
+      const fr = rFade.out.rings || {};
+      const fk = Object.keys(fr);
+      const bad = fk.filter(k => fr[k].aFlat > FLAT_MAX);
+      const mx = fk.length ? Math.max.apply(null, fk.map(k => fr[k].aFlat)) : 0;
+      ok(bad.length >= 8, '[R3] 페이드를 끄면 [B6] 축이 빨개진다 — 링 α 가 한 칸에 뭉친 종 ' + bad.length +
+         '종 ≥ 8 (잰 링 ' + fk.length + ' · 최대 몫 ' + mx.toFixed(3) + ' · 문턱 ' + FLAT_MAX + ')');
+    }
+
+    /* ⚑ [R4] — 9회차. 링을 끄면 각 종이 적어 둔 **옛 후광 도형**(폴백)이 그대로 돌아온다 =
+       5~8회차의 세계다. [B8] 이 «지금 그대로» 를 초록으로 지나가는 자가 아니라 **처방이
+       닿은 자리**를 재는 자임을 이 항이 못박는다(없으면 [B8] 문턱은 무르게 풀 수 있다).
+       ⚠ 옛 세계에는 링 자산이 아예 없으므로 **장면 자**로 잰다 — 그 자는 ±5px 로 흔들리지만
+         옛 어긋남(두께 11~54.5px · 비대칭 30px)은 그 잡음보다 한참 크다. */
+    fs.writeFileSync(NEG_AURA, killLine(src, TAG_AURA, `const AURA_ON   = 0;`), 'utf8');
+    const rAura = await measure(browser, 'file://' + NEG_AURA);
+    if (rAura.out && rAura.out.__err) ok(false, '[R4] 사본 측정 예외 — ' + rAura.out.__err);
+    else {
+      const ks2 = Object.keys(rAura.out.rows);
+      const bad2 = ks2.filter(i => rAura.out.rows[i].th90 < TH_MIN || rAura.out.rows[i].th90 > TH_MAX);
+      const as2 = ks2.filter(i => rAura.out.rows[i].asym > ASYM_MAX);
+      ok(Object.keys(rAura.out.rings || {}).length === 0 && bad2.length >= 8 && as2.length >= 5,
+         '[R4] 링을 끄면 두께·대칭이 흩어진다 — 링 자산 ' + Object.keys(rAura.out.rings || {}).length +
+         '종(0) · 장면 두께 밴드 밖 ' + bad2.length + '종 ≥ 8 · 비대칭 ' + as2.length + '종 ≥ 5 (잰 종 ' + ks2.length + ')');
     }
   } finally {
     clean();

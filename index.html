@@ -26301,37 +26301,155 @@ function haloSprite(key, fn){
     for(const [dx, dy, w] of (HALO_FADE ? HALO_TAPS : [[0, 0, 1]])){
       dg.globalAlpha = w; dg.drawImage(src, dx * HALO_SS, dy * HALO_SS);
     }
-    /* 잉크 bbox 로 자른다 — 프레임당 그리는 면적이 판 전체가 아니라 후광만큼으로 줄어든다. */
-    const im = dg.getImageData(0, 0, S, S), d = im.data;
-    /* ⚠ 페이드는 **바깥으로만 번진다** — 그대로 두면 옅은 치맛단이 잉크로 세어져 후광 면적이
-       31% 자라고, 그 몫이 곧 [B3]«후광이 실루엣을 삼키지 않는다» 의 여유를 먹는다
-       (실측 slash fSoft 0.731 → 0.793 · 문턱 0.80 코앞). 1회차가 표창 후광에서 겪은 병이다.
-       ⇒ **가장 옅은 끝자락만** 무릎을 걸어 0 으로 내린다 — 봉우리 알파의 26% 아래에서만
-         제곱으로 꺼뜨리므로 가운데 계단(= 눈이 보는 페이드)은 한 칸도 안 뭉갠다.
-       ⚠ 무릎은 **그 종의 봉우리에 대한 비율**이라야 한다 — 절대값이나 감마(α^k)로 누르면
-         후광이 옅은 종(천벌의 창 α .16 · 나선탄)이 통째로 최저 칸에 뭉쳐 [B6] 이 도로 빨개진다
-         (실측: 감마 1.6 에서 spiral 0.459 → 0.721). 5회차가 이 길을 한 번 걸어 보고 되돌렸다.
-       ⚠ ImageData 는 프리멀티플라이드가 아니다 — 알파 채널만 만지면 색은 한 채널도 안 변한다. */
-    let aMax = 0;
-    for(let i = 3; i < d.length; i += 4) if(d[i] > aMax) aMax = d[i];
-    const knee = aMax * 0.26;
-    if(knee > 0) for(let i = 3; i < d.length; i += 4){
-      const a = d[i];
-      if(a > 0 && a < knee){ const t = a / knee; d[i] = Math.round(a * t * t); }
-    }
-    dg.putImageData(im, 0, 0);
-    let x0 = S, y0 = S, x1 = -1, y1 = -1;
-    for(let y = 0; y < S; y++) for(let x = 0; x < S; x++){
-      if(d[(y * S + x) * 4 + 3] > 1){ if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y; }
-    }
-    if(x1 >= x0){
-      const w = x1 - x0 + 1, h = y1 - y0 + 1;
-      const c = document.createElement('canvas'); c.width = w; c.height = h;
-      c.getContext('2d').drawImage(dst, -x0, -y0);
-      out = { c, ox: (x0 - S / 2) / HALO_SS, oy: (y0 - S / 2) / HALO_SS, w: w / HALO_SS, h: h / HALO_SS };
-    }
+    out = haloKneeCrop(dst, dg, S, 0);
   }catch(e){ out = null; }
   HALO_SPR.set(key, out);
+  return out;
+}
+/* 굽기의 마지막 두 손질 — «옅은 끝자락 무릎» + «잉크 bbox 로 자르기».
+   ⚑ 9회차에 `auraSprite` 가 같은 두 손질을 필요로 해서 **함수로 뽑았다**(손으로 한 벌 더 적으면
+     그것이 곧 사본 2벌이고, 무릎 값이 갈리는 순간 [B6]·[B7] 이 종마다 다른 뜻이 된다 — 402).
+   `peak` 를 주면 굽기 전에 봉우리 알파를 그 값으로 **정규화**한다(0 이면 안 건드린다).
+   ⚠ 페이드는 **바깥으로만 번진다** — 그대로 두면 옅은 치맛단이 잉크로 세어져 후광 면적이
+     31% 자라고, 그 몫이 곧 [B3]«후광이 실루엣을 삼키지 않는다» 의 여유를 먹는다
+     (실측 slash fSoft 0.731 → 0.793 · 문턱 0.80 코앞). 1회차가 표창 후광에서 겪은 병이다.
+   ⇒ **가장 옅은 끝자락만** 무릎을 걸어 0 으로 내린다 — 봉우리 알파의 26% 아래에서만
+     제곱으로 꺼뜨리므로 가운데 계단(= 눈이 보는 페이드)은 한 칸도 안 뭉갠다.
+   ⚠ 무릎은 **그 종의 봉우리에 대한 비율**이라야 한다 — 절대값이나 감마(α^k)로 누르면
+     후광이 옅은 종(천벌의 창 α .16 · 나선탄)이 통째로 최저 칸에 뭉쳐 [B6] 이 도로 빨개진다
+     (실측: 감마 1.6 에서 spiral 0.459 → 0.721). 5회차가 이 길을 한 번 걸어 보고 되돌렸다.
+   ⚠ ImageData 는 프리멀티플라이드가 아니다 — 알파 채널만 만지면 색은 한 채널도 안 변한다. */
+function haloKneeCrop(dst, dg, S, peak, kneeF){
+  const im = dg.getImageData(0, 0, S, S), d = im.data;
+  let aMax = 0;
+  for(let i = 3; i < d.length; i += 4) if(d[i] > aMax) aMax = d[i];
+  if(!aMax) return null;
+  if(peak > 0){                       /* 봉우리를 한 값으로 — 세기가 종에 안 달리게 한다 */
+    const k = peak / aMax;
+    for(let i = 3; i < d.length; i += 4) d[i] = Math.round(d[i] * k);
+    aMax = peak;
+  }
+  /* ⚠ 무릎은 **그 층의 falloff 에 맞춘 값**이라야 한다 — 9회차에 링(0 까지 고르게 내려가는
+     프로필)에 옛 무릎 0.26 을 그대로 쓰자 **띠의 3/4 이 무릎 아래**로 들어가 α 최빈칸이 0.13 으로
+     내려앉고 램프 몫이 0.078 까지 떨어졌다([B7] 이 그것을 잡았다). 옛 후광은 «평탄한 판 + 짧은
+     페이드» 라 0.26 이 «끝자락만» 이었지만, 링은 처음부터 전부가 페이드다. */
+  const knee = aMax * (kneeF === undefined ? 0.26 : kneeF);
+  if(knee > 0) for(let i = 3; i < d.length; i += 4){
+    const a = d[i];
+    if(a > 0 && a < knee){ const t = a / knee; d[i] = Math.round(a * t * t); }
+  }
+  dg.putImageData(im, 0, 0);
+  let x0 = S, y0 = S, x1 = -1, y1 = -1;
+  for(let y = 0; y < S; y++) for(let x = 0; x < S; x++){
+    if(d[(y * S + x) * 4 + 3] > 1){ if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y; }
+  }
+  if(x1 < x0) return null;
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').drawImage(dst, -x0, -y0);
+  return { c, ox: (x0 - S / 2) / HALO_SS, oy: (y0 - S / 2) / HALO_SS, w: w / HALO_SS, h: h / HALO_SS };
+}
+
+/* ⚑⚑ 792 9회차 — 후광을 «종별 손그림» 에서 **«본체 실루엣을 균일 폭으로 부풀린 링»** 으로.
+   8회차 비평 2인(CT·CU)이 각자 **다른 종**을 짚었는데 증상이 한 문장으로 요약됐다:
+   **후광이 본체 실루엣을 안 따라간다**(CT 두께 whirl 5.8 ↔ slash 17.0 · CU bounce 좌우 +25 /
+   상하 **+0** · shuri 후광은 난색인데 몸통은 한색). 5회차가 후광을 한 함수(`haloSprite`)로
+   **모았지만** 그 함수가 굽는 것은 여전히 «각 종이 자기 손으로 적은 도형» 이라
+   **두께·대칭·색은 한 번도 규격이 된 적이 없었다** — 9회차에 세운 자가 그것을 처음 쟀다
+   (`verify792` [B8] 수리 전: 두께 p90 11 ~ 54.5px · 비대칭 최대 30px · [B9] 색거리 최대 112.8).
+   ⇒ **후광의 «형상» 을 종에서 없앤다.** 종이 그리는 것은 본체뿐이고, 후광은 그 본체를
+     **한 곳에서** 균일 폭으로 부풀린 링이다 ⇒ 두께·대칭·색이 구성상 종에 안 달린다.
+   ⚠ 비용은 **굽는 순간뿐**이다(종당 한 번 · 캐시 · 흐림은 네이티브 그림자 한 번).
+     4회차가 매 프레임 blur 로 ×1685, 3겹으로 ×20 을 맞고 되돌린 자리라 [P1] 이 그것을 지킨다.
+   ⚠ 색은 **본체 색에서 판다**(`b.col` → 파스텔). 손으로 적으면 그것이 곧 사본 15벌이다(402).
+   ⚠ 호출부 15자리는 **한 글자도 안 건드렸다** — 후광이 이미 `halo()` 한 곳을 지나므로
+     (4회차가 «값싼 수단이 생기면 여기 한 줄만» 이라고 남겨 둔 구조) 그 한 곳의 뜻만 바뀐다.
+     각 종이 적어 둔 옛 후광 도형은 **폴백**으로 남는다 — `AURA_ON = 0` 이 그 세계이고,
+     되돌림 시험 [R4] 가 그 사본을 그대로 되돌림 대조로 쓴다. */
+const AURA_ON   = 1;      /* 되돌림 시험 [R4] 가 여기를 끈다 — 0 이면 5~8회차의 «종별 손그림» 후광 */
+const AURA_W    = 3.9;    /* 링 두께(로컬px) — 기기 화소로는 ×HALO_SS. CU 목표 «두께 p90 12±3px» */
+const AURA_A    = 0.62;   /* 링 봉우리 알파 — 종에 안 달린 한 값(옛 값들은 .16~.44 로 갈려 있었다) */
+const AURA_PASS = 2;      /* 그림자를 몇 번 겹치나 — 겹칠수록 안쪽이 차서 «가우시안» 이 «띠» 가 된다 */
+const AURA_LIFT = 0.25;
+const AURA_KNEE = 0.10;   /* 링 전용 무릎 — 링은 처음부터 전부가 페이드라 옛 0.26 은 띠를 삼킨다 */   /* 본체 색 → 파스텔로 드는 몫 */
+const AURA_SPR  = new Map();
+let AURA_BAKE = 0, AURA_M = null;
+/* 2×3 아핀 — 굽는 프레임과 그리는 프레임을 잇는다(아래 ④). DOMMatrix 없이 6칸만 쓴다. */
+const afMul = (A, B) => ({ a: A.a*B.a + A.c*B.b, b: A.b*B.a + A.d*B.b,
+                           c: A.a*B.c + A.c*B.d, d: A.b*B.c + A.d*B.d,
+                           e: A.a*B.e + A.c*B.f + A.e, f: A.b*B.e + A.d*B.f + A.f });
+const afInv = (A) => { const dt = A.a*A.d - A.b*A.c; if(!dt) return null;
+                       return { a: A.d/dt, b: -A.b/dt, c: -A.c/dt, d: A.a/dt,
+                                e: (A.c*A.f - A.d*A.e)/dt, f: (A.b*A.e - A.a*A.f)/dt }; };
+function auraTint(col){
+  let r = 190, g = 220, b = 255;
+  const m = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(String(col || ''));
+  if(m){
+    const h = m[1].length === 3 ? m[1].replace(/./g, c => c + c) : m[1];
+    r = parseInt(h.slice(0,2),16); g = parseInt(h.slice(2,4),16); b = parseInt(h.slice(4,6),16);
+  }
+  const up = v => Math.round(v + (255 - v) * AURA_LIFT);
+  return 'rgb(' + up(r) + ',' + up(g) + ',' + up(b) + ')';
+}
+/* ⚠ `shotBody` 는 `draw()` 안에 사는 함수라 여기서 **이름으로 못 부른다** — 그리는 자를
+   인자로 받는다(9회차 1차 시도가 이것을 놓쳐 굽기가 조용히 실패하고 폴백으로 떨어졌다.
+   실패가 `null` 캐시 + 폴백이라 **그림도 게이트도 멀쩡했다** — 자가 «잰 종 0» 을 찍어 잡았다). */
+function auraSprite(key, b, render){
+  if(AURA_SPR.has(key)) return AURA_SPR.get(key);
+  let out = null;
+  try{
+    const S = Math.round(HALO_R * 2 * HALO_SS);
+    const mk = () => { const c = document.createElement('canvas'); c.width = c.height = S; return c; };
+    /* ① 본체 실루엣 — **같은 그리기 코드를 재귀로** 부른다(형상 사본 0). `AURA_BAKE` 가 도는
+       동안 `halo()` 는 아무것도 안 그리고 **그 순간의 변환만** `AURA_M` 에 받아 둔다(④). */
+    const base = { a: HALO_SS, b: 0, c: 0, d: HALO_SS, e: S / 2, f: S / 2 };
+    const src = mk(), sg = src.getContext('2d');
+    sg.setTransform(base.a, base.b, base.c, base.d, base.e, base.f);
+    const cb = Object.assign({}, b, { a: 0, mf: undefined });
+    if(cb.spin !== undefined) cb.spin = 0;
+    if(cb.sa !== undefined) cb.sa = 0;
+    const keep = ctx; ctx = sg; AURA_BAKE++; AURA_M = null;
+    try{ sg.save(); render(cb); sg.restore(); } finally { ctx = keep; AURA_BAKE--; }
+    const M = AURA_M; AURA_M = null;
+    /* ② 실루엣을 **문턱으로 굳힌다**(α ≥ .5). 안 굳히면 종이 제 손으로 깐 발광(화구·불꼬리)의
+       옅은 치맛단까지 씨앗이 되어 두께가 도로 종마다 달라진다 — 규격의 뜻이 사라진다. */
+    const sd = sg.getImageData(0, 0, S, S);
+    for(let i = 3; i < sd.data.length; i += 4) sd.data[i] = sd.data[i] >= 128 ? 255 : 0;
+    const sil = mk(); sil.getContext('2d').putImageData(sd, 0, 0);
+    /* ③ 링 — **네이티브 그림자 흐림**으로 한 번에 부풀린다(굽는 순간 한 번뿐이라 값이 싸다).
+       원본은 판 밖에 두고 그림자만 제자리에 떨어뜨린다(shadowOffset 로 밀어 넣는 고전 수법).
+       겹칠수록 안쪽이 차므로 «가우시안 꼬리» 가 아니라 «두께가 있는 띠» 로 읽힌다. */
+    const dst = mk(), dg = dst.getContext('2d');
+    dg.shadowColor = auraTint(b && b.col);
+    dg.shadowOffsetX = S;
+    if(HALO_FADE){
+      dg.shadowBlur = AURA_W * HALO_SS;
+      for(let i = 0; i < AURA_PASS; i++) dg.drawImage(sil, -S, 0);
+    }else{
+      /* 페이드를 끈 세계 = **평탄한 알파 판**(4회차까지의 그림). 같은 폭만큼 밀어 그린 합집합이라
+         두께는 같고 가장자리만 칼로 자른 것이다 — [R3] 이 [B6] 으로 그것을 잡는다. */
+      dg.shadowBlur = 0;
+      for(let r = 1; r <= 3; r++) for(let k = 0; k < 24; k++){
+        const an = k * Math.PI / 12, rr = AURA_W * HALO_SS * r / 3;
+        dg.shadowOffsetX = S + Math.cos(an) * rr;
+        dg.shadowOffsetY = Math.sin(an) * rr;
+        dg.drawImage(sil, -S, 0);
+      }
+    }
+    /* ⚑ **본체가 덮는 속은 도려낸다.** 안 도려내면 링의 봉우리가 «안 보이는 곳»(본체 밑)에 서고
+       정규화가 그 봉우리를 기준으로 도므로 **눈에 보이는 띠가 통째로 무릎 아래**로 내려간다
+       (9회차 2차 실측: α 최빈칸 0.125~0.185 · 램프 몫 0.006 — [B7] 이 그것을 잡았다).
+       도려내면 봉우리 = 본체 바로 바깥이라 «보이는 것» 이 곧 규격이 된다. */
+    dg.globalCompositeOperation = 'destination-out';
+    dg.drawImage(sil, 0, 0);
+    dg.globalCompositeOperation = 'source-over';
+    /* ④ 굽는 프레임(본체 진입) ↔ 그리는 프레임(`halo()` 자리)의 차이를 되돌린다.
+       종에 따라 그 사이에 고정 이동이 끼어 있다(곡선탄 `translate(-18,0)`) — 안 되돌리면
+       그 종만 후광이 두 번 밀린다. 회전은 **안 되돌린다**(그것이 따라와야 할 몫이다). */
+    out = haloKneeCrop(dst, dg, S, Math.round(AURA_A * 255), AURA_KNEE);
+    if(out) out.m = M ? afInv(afMul(afInv(base), M)) : null;
+  }catch(e){ out = null; }
+  AURA_SPR.set(key, out);
   return out;
 }
 
@@ -26748,7 +26866,8 @@ function draw(){
          (`verify792` [C4]) 값싼 페이드 수단이 생기면 **여기 한 줄만** 고치면 17종이 같이 따라온다.
          다음 회차가 볼 후보: 종별 그라디언트를 **미리 구운 오프스크린 스프라이트**로 캐시하는 길
          (매 프레임 만들지 않으므로 blur 를 한 번만 낸다). 상세는 review §4회차. */
-    const halo = fn => { const s = haloSprite(sh, fn); if(s){ ctx.drawImage(s.c, s.ox, s.oy, s.w, s.h); } else { ctx.save(); fn(); ctx.restore(); } };   /* ① 후광 — 본체 **앞에** 부른다(5회차부터 구운 스프라이트) */
+    let auraDone = 0;   /* 한 종이 `halo()` 를 두 번 부르는 자리가 있다 — 링은 한 장이다 */
+    const halo = fn => { if(AURA_BAKE){ if(!AURA_M) AURA_M = ctx.getTransform(); return; } if(AURA_ON){ if(auraDone) return; auraDone = 1; const a = auraSprite(sh + '|' + (b.col || ''), b, shotBody); if(a){ ctx.save(); if(a.m) ctx.transform(a.m.a, a.m.b, a.m.c, a.m.d, a.m.e, a.m.f); ctx.drawImage(a.c, a.ox, a.oy, a.w, a.h); ctx.restore(); return; } } const s = haloSprite(sh, fn); if(s){ ctx.drawImage(s.c, s.ox, s.oy, s.w, s.h); } else { ctx.save(); fn(); ctx.restore(); } };   /* ① 후광 — 본체 **앞에** 부른다(9회차부터 본체 실루엣에서 판 링 · 굽기 실패나 `AURA_ON=0` 이면 5회차 스프라이트로 폴백) */
     const spec = fn => { ctx.save(); fn(); ctx.restore(); };   /* ③ 하이라이트 — 본체 **뒤에** 부른다 */
     /* 불덩이 공용 몸 — 화염구·화염병이 «크기만 다른 같은 원» 이던 자리(193 ⑧)를 갈랐지만
        «불» 이라는 재질은 공유해야 한 세트로 읽힌다. 재질만 함수로 남기고 형상은 각자 그린다. */
