@@ -12589,7 +12589,18 @@
          = «Lv. n» 하단 43(겹침 0) · 하단 **128.0** ≤ «n/500» 상단 138(여유 10px)
        · 그림 띠 점유 **6.9%**(판 B 12.3% 의 절반 · 5회차 12.5~13.8% 에서도 내려간다)
      ⚠ 공용 상수는 여전히 0줄이다 — `FXB_K`(이동량)·수명·`@keyframes` 는 한 값도 안 건드렸다. */
-  #bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}
+  /* ⚑⚑ 8회차 — **바닥이 ③ 에서 ④(가독성)로 갈렸다.** 7회차 채점 2인(CX·CY)이 각자 픽셀을 재
+     ④ 최저 사유이자 1순위로 «플래시 워시가 두 값 줄 위에 얹힌다» 를 냈고 **처방까지 같은 낱말**로 냈다
+     (CX «Lv. 13» 2.78:1 · «13/500» 2.63:1 / CY 2.88:1 · 2.30:1 — 정지 대비 −70.8% · −48.9%).
+     여기 두 줄이 그 처방이고, 알갱이 손잡이 셋(위)은 **한 값도 안 건드렸다**:
+       · `--flash-keep` = «워시 위로 올릴 잉크» 신고(816 `--burst-keep` 과 같은 꼴) — 두 값 줄뿐이다.
+         ⚠ 목록에 «착용 중»(`.sk-on`)·아이콘은 **안 넣는다** — 그 셋은 «값이 바뀌는 줄» 이 아니라
+           워시가 덮어도 잃는 정보가 없고, 넣는 만큼 플래시가 카드에서 사라진다(12회차 «강조가 없다»).
+       · `--flash-k` = 워시 세기 배수. **글자 밑의 바**가 1.44배 들리는 것을 눌러 준다 —
+         라벨만 올리면 «n/500» 이 2.95:1 로 3.0 을 못 넘는다는 것을 CX 가 스윕으로 찍었다.
+     ⚠ **«n/500» 의 4.5:1 은 이 행 밖이다** — 무연출 바 색(122,126,157) 자체가 3.73~3.92:1 이라
+       워시를 0 으로 해도 못 넘는다(2인 각자 확인). 여기 목표는 «정지 상태와 같아지는 것» 이다. */
+  #bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}
   /* 87 — 코스튬 격자만 «상자 안» 세로 스크롤이 된다(50칸). 상자(1000x680)·카드·pitch 는
      07 규격 그대로이고, 스크롤러만 `.sk-gp` 로 옮겨 시트 바깥 배치는 1px 도 안 바뀐다. */
   #bCos .sk-gp{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -37930,6 +37941,12 @@ function cosLvPop(){
   void l.offsetWidth;                                  /* 꾹 누르기 반복분에서도 다시 걸리게 리플로우(58 21회차) */
   l.classList.add('fx-cvswap');                        /* `.sk-clv.fx-cvswap` 가 팝 + 앰버를 **한 선언**으로 준다 */
   setTimeout(() => l.classList && l.classList.remove('fx-cvswap'), 400);
+  /* ⚑⚑ 814 8회차 — 값 줄을 워시 «위» 로 올린 사본을 **여기서** 다시 뜬다(위 `fxFlashRekeep` 머리말).
+     ① 발화 시각(`fxUpOk`)의 사본은 `renderUI()` 앞이라 **옛 값**을 들고 있다 ② 팝(`fx-cvswap`)은
+     바로 윗줄에서 방금 걸렸다 — 이 순서라야 사본이 «새 값 + 도는 팝» 을 함께 들고 온다.
+     ⚠ 세 줄이 한 클릭 안에서 연달아 돌아 **그 사이에 그려지는 프레임이 없다** — 옛 값 사본은
+       화면에 한 번도 안 나온다(`verify814` [B16] 이 그 순서를 묻는다). */
+  const card = l.closest('.sk-card'); if(card) fxFlashRekeep(card);
 }
 $('bCos').addEventListener('click', e => {
   /* 269 — [?] 도움말이 가장 먼저다(헤더 위에 있어 다른 대상과 겹칠 일이 없지만, 순서로도 못박는다) */
@@ -42929,6 +42946,12 @@ const FXKEEP_TXT = '.rw-c>u';                       /* 795 — 호스트 밖으�
    ⚠ 자리는 **패딩 상자 그릇**이 잡는다(`FXKEEP_TXT` 머리말) — `FXKEEP_PAD` 를 안 쓰므로 패치 우변이
      뱃지 우변(카드+45)과 같고, 팝 상한에서도 «Lv. n» 잉크 좌단 47 과 **겹침 0** 이다. */
 const FXKEEP_STILL = '#bCos .sk-card>.sk-eq';       /* 840 — 50 코스튬 카드 좌상단 [+]/[─] 착용 뱃지 */
+/* ⚑⚑ 814 8회차 — 호스트가 신고한 «워시 위로 올릴 잉크»(`--flash-keep`). 816 `--burst-keep` 과 같은 꼴이고
+   신고가 없으면 빈 문자열이라 안 신고한 화면은 이 경로가 통째로 안 열린다. */
+function fxFlashKeepSel(el){
+  if(!el || el.nodeType !== 1) return '';
+  try { return getComputedStyle(el).getPropertyValue('--flash-keep').trim(); } catch(_){ return ''; }
+}
 /* 호스트가 «정지 패치» 를 품고 있는가 — `fxFlash` 가 이 한 줄로 패치 경로를 스스로 켠다(호출부 0줄). */
 function fxKeepStill(el){
   try { return !!(el && el.querySelector && el.querySelector(FXKEEP_STILL)); } catch(_){ return false; }
@@ -42993,9 +43016,27 @@ function fxFlashKeep(el, host, owner){
      한 속성으로는 안 그려진다) ② 자리를 좌표로 앉히지 않고 **그릇을 재현**한다(rect 에 이미 든
      `scaleX(1.1)` 을 두 번 먹지 않게). 따라가기·수명·원본 소멸 판정은 배지와 **같은 규약**이다. */
   const hcs = (() => { try { return getComputedStyle(el); } catch(_){ return null; } })();
-  for(const k of (hcs ? el.querySelectorAll(FXKEEP_TXT + ',' + FXKEEP_STILL) : [])){
+  /* ⚑⚑ 814 8회차 — **호스트가 «이 잉크는 워시 위로 올려라» 고 신고한다**(`--flash-keep`, 자식 셀렉터).
+     `--burst-keep`(816)·`--burst-ry`/`--burst-sz`/`--burst-rx`(814)와 **같은 «호스트 신고» 규약**이고
+     새 기계가 아니라 위 795 복제 경로에 **목록 한 줄을 더하는 것**이다(7회차 §4-8-1 처방 (a)).
+     ⚠ 신고가 없으면 빈 문자열이라 09·12·17·장비·07·26 은 **한 프레임도 안 바뀐다**(`verify619` [K6]). */
+  const kSel = fxFlashKeepSel(el);
+  let kList = [];
+  try { kList = hcs ? [...el.querySelectorAll(FXKEEP_TXT + ',' + FXKEEP_STILL + (kSel ? ',' + kSel : ''))] : []; }
+  catch(_){ try { kList = hcs ? [...el.querySelectorAll(FXKEEP_TXT + ',' + FXKEEP_STILL)] : []; } catch(__){ kList = []; } }
+  for(const k of kList){
     /* 840 — «정지 패치» 인가(위 `FXKEEP_STILL` 머리말). 갈리는 것은 아래 수명 판정 한 줄뿐이다. */
     let still = false; try { still = k.matches(FXKEEP_STILL); } catch(_){}
+    /* ⚑ 814 8회차 — 신고된 잉크는 «살아 있는 사본» 이다. 갈리는 것은 둘뿐:
+         ① `animation` 을 **안 지운다** — `.sk-clv` 의 팝(`fxCvSwap`+`fxCvLit`)이 사본에서 다시 돈다.
+            정지 사본을 얹으면 게이트([B3]~[B5])는 초록인 채 화면에서 팝이 **사본 밑에 가린다**
+            (7회차 §4-8-1 이 함정으로 적어 둔 자리 · 아래 [B15] 가 그것을 묻는다).
+         ② 수명은 «정지 패치» 규약을 탄다 — 이 호스트(50 코스튬 [강화])는 `renderUI()` 가 격자를
+            통째로 갈아 끼우므로(840 머리말) 원본 소멸로 죽으면 한 프레임도 못 지킨다.
+       ⚠ 값이 «바뀌는» 줄이라 정지만으로는 **옛 값을 굳히는 거짓말**이 된다 —
+         재렌더 뒤에 호스트가 `fxFlashRekeep()` 으로 다시 신고한다(아래 머리말). */
+    let live = false; if(kSel){ try { live = k.matches(kSel); } catch(_){} }
+    if(live) still = true;
     if(L.childElementCount >= FXMAX) break;
     let cs; try { cs = getComputedStyle(k); } catch(_){ continue; }
     if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
@@ -43010,21 +43051,31 @@ function fxFlashKeep(el, host, owner){
     /* 패치는 «되돌리는» 노드다 — 뜨고 지는 것이 보이면 그 자체가 새 연출이 된다(16회차 규약).
        ⚠ `z-index` 도 지운다 — 남기면 뒤따라 붙는 스파크(`.fx-spark`)가 이 밑으로 깔린다
          (위 `.fx-keep` CSS 머리말이 판때기에 z 를 금지한 것과 같은 이유). */
-    cl.style.setProperty('animation', 'none'); cl.style.setProperty('transition', 'none');
+    /* ⚑ 814 8회차 — 신고된 잉크만 자기 애니를 **그대로 들고 온다**(위 `live` 머리말 ①).
+       나머지(795 라벨·840 뱃지)는 종전대로 정지 사본이다 — 한 프레임도 안 바뀐다. */
+    if(!live) cl.style.setProperty('animation', 'none');
+    cl.style.setProperty('transition', 'none');
     cl.style.setProperty('z-index', 'auto');   cl.style.setProperty('pointer-events', 'none');
     b.appendChild(cl);
-    /* 그릇 = 호스트의 **패딩 상자**(= 원본 라벨의 `position:absolute` 가 풀리는 자리).
+    /* 그릇 = 원본의 **오프셋 부모의 패딩 상자**(= 원본의 `position:absolute` 가 실제로 풀리는 자리).
        테두리 폭을 그대로 두르면(투명) `box-sizing:border-box` 아래서 패딩 상자가 저절로 맞는다.
        ⚠ 조상 transform 배율은 «프레임 rect ÷ 레이아웃 폭» 으로 되읽는다 — 보통 1 이고,
-         1 이 아닌 화면(`.rw-mid` 계열 `scale(var(--rwc))`)에서도 그릇째 같이 스케일된다. */
-    const put = () => { const q = fxRect(el); if(!q || !q.w) return;
-      const ow = el.offsetWidth || 0, oh = el.offsetHeight || 0; if(!ow || !oh) return;
+         1 이 아닌 화면(`.rw-mid` 계열 `scale(var(--rwc))`)에서도 그릇째 같이 스케일된다.
+       ⚑ 814 8회차 — 종전에는 그릇이 **언제나 호스트**였다. 795 `.rw-c>u`·840 `.sk-eq`·814 `.sk-clv` 는
+         셋 다 호스트의 **직계 절대배치 자식**이라 오프셋 부모가 곧 호스트다(= 저 셋은 값이 Δ0).
+         갈리는 것은 «n/500»(`.sk-bar>b`) 하나뿐이다 — 그 노드의 `inset:0` 은 카드가 아니라
+         **`.sk-bar`** 에서 풀리므로, 호스트를 그릇으로 쓰면 사본이 카드 전면을 덮는다.
+       ⚠ 호스트 밖으로 나간 오프셋 부모는 안 쓴다(그 자리는 그릇이 될 수 없다) — 호스트로 되돌린다. */
+    let par = el; try { if(k.offsetParent && el.contains(k.offsetParent)) par = k.offsetParent; } catch(_){}
+    const pcs = (par === el) ? hcs : (() => { try { return getComputedStyle(par); } catch(_){ return hcs; } })();
+    const put = () => { const q = fxRect(par); if(!q || !q.w) return;
+      const ow = par.offsetWidth || 0, oh = par.offsetHeight || 0; if(!ow || !oh) return;
       const sc = q.w / ow;
       b.style.left = q.x + 'px'; b.style.top = q.y + 'px';
       b.style.width = ow + 'px'; b.style.height = oh + 'px';
       b.style.borderStyle = 'solid'; b.style.borderColor = 'transparent';
-      b.style.borderWidth = hcs.borderTopWidth + ' ' + hcs.borderRightWidth + ' '
-                          + hcs.borderBottomWidth + ' ' + hcs.borderLeftWidth;
+      b.style.borderWidth = pcs.borderTopWidth + ' ' + pcs.borderRightWidth + ' '
+                          + pcs.borderBottomWidth + ' ' + pcs.borderLeftWidth;
       b.style.transformOrigin = '0 0';
       b.style.transform = (Math.abs(sc - 1) < 1e-4) ? 'none' : ('scale(' + sc + ')'); };
     put();
@@ -43035,8 +43086,8 @@ function fxFlashKeep(el, host, owner){
          같은 자리의 다음 발화도 `__fxKeep` 을 통째로 걷는다(625 «한 자리에 한 장»). */
     const follow = () => { if(!b.isConnected) return;
       if(owner && !owner.isConnected){ try { b.remove(); } catch(_){} return; }
-      if(still){ if(el.isConnected) put(); }
-      else if(!k.isConnected || !el.isConnected){ try { b.remove(); } catch(_){} return; }
+      if(still){ if(par.isConnected) put(); }                 /* 814 8회차 — 자리를 주는 것은 «그릇»(par) 이다 */
+      else if(!k.isConnected || !par.isConnected){ try { b.remove(); } catch(_){} return; }
       else put();
       requestAnimationFrame(follow); };
     requestAnimationFrame(follow);
@@ -43110,6 +43161,22 @@ function fxFlash(el, iv, inset, keep){
   /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로. CSS 기본값(.34s)이 곧 `full` 이다. */
   { const ms = fxTickLife(iv, FXFLASH_MS); if(ms !== FXFLASH_MS) d.style.animationDuration = ms + 'ms'; }
   L.appendChild(d);
+  /* ⚑⚑ 814 8회차 — **워시 세기 호스트 신고**(`--flash-k`, 0<v<1). 7회차 채점 2인 공통 ⓐ 의 (b) 항이다.
+     라벨을 워시 «위» 로 올려도(위 `--flash-keep`) 글자 «밑» 의 바가 1.44배 들리면 비는 안 돌아온다 —
+     CX 가 k 를 스윕해 **0.70** 을 골랐다(0.80 은 3.09 로 걸치고 0.60 은 플래시가 눈에 띄게 죽는다).
+     ⚠ **흰 테(9px)·하드 림·안쪽 글로우는 한 칸도 안 건드린다** — 18·19회차가 «0 도 답이 아니다» 로
+       못박은 값이고(`FXFLASH_RIM` 은 손잡이가 아니다), 여기서 미는 것은 **채움 워시 알파 하나**다.
+     ⚠ **손 상수를 새로 안 적는다** — 기준값(.26)은 위 `.fx-flash` CSS 에 이미 있고 그것을 «읽어서»
+       곱한다. 아트가 워시를 바꾸면 이 손잡이가 저절로 따라온다(795 «그림은 자신에게서 읽는다»).
+     ⚠ 신고가 없으면 한 글자도 안 바뀐다 — 09·12·17·장비·훈련·단련·룬은 `verify619` [K6] 그대로. */
+  { let k = NaN; try { k = parseFloat(getComputedStyle(el).getPropertyValue('--flash-k')); } catch(_){}
+    if(k > 0 && k < 1){
+      let bg = ''; try { bg = getComputedStyle(d).backgroundColor; } catch(_){}
+      const m = /rgba?\(([^)]+)\)/.exec(bg || '');
+      if(m){ const p = m[1].split(',').map(s => parseFloat(s));
+        if(p.length >= 3 && p.every(v => v === v)){
+          const a = (p.length > 3 ? p[3] : 1) * k;
+          d.style.background = 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + a.toFixed(4) + ')'; } } } }
   /* ⚑⚑ 619 17회차 — **상자가 호스트를 따라간다.** 16회차까지는 스폰 시각의 rect 로 **한 번 찍고
      끝**이었다. 그런데 621(주인 지시 «틱마다 원래 크기 ↔ 눌린 크기 왕복»)이 호스트를 홀드 내내
      흔들므로 상자는 그 자리에 굳은 채 남는다 — `probe619g` 실측(수리 전): 중심이 훈련 **8.02px**
@@ -43137,10 +43204,37 @@ function fxFlash(el, iv, inset, keep){
      호출부에 인자를 하나 더 다는 길(=`fxUpOk` 에 여섯째 인자)을 안 고른 이유는 «어느 화면이
      되그릴 것을 가졌는가» 가 선택자 한 줄에 이미 적혀 있기 때문이다 — 호출부는 0줄이고,
      `#bCos` 밖(07 스킬·26 펫·09·12·17·장비)은 이 문이 열리지 않아 한 프레임도 안 바뀐다. */
-  if(inset || keep || fxKeepStill(el)){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
+  /* ⚑ 814 8회차 — 네 번째 문: 호스트가 `--flash-keep` 을 신고했으면 그것만으로도 켠다.
+     ⚠ `fxKeepStill` 로는 부족하다 — 그 문은 `.sk-eq`(착용 뱃지)가 **있을 때만** 열리는데
+       그 뱃지는 «보유 + 착용 중 아님» 칸에만 서므로, 착용 중인 코스튬을 강화하면 값 줄 패치가
+       통째로 안 열린다(신고는 카드 CSS 라 상태와 무관하다). */
+  if(inset || keep || fxKeepStill(el) || fxFlashKeepSel(el)){ d.__fxKeep = fxFlashKeep(el, r, d); for(const kp of d.__fxKeep) fxBye(kp, 500); }
   /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
      500 고정은 그래서 138ms 를 투명한 채 남긴다(p58au 실측 — 40차 «upg-5 플래시 1 → 0»). */
   fxBye(d, 500);                                      /* 애니메이션이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
+}
+/* ⚑⚑ 814 8회차 — **«호스트가 갈렸다» 신고**(`fxFlashRekeep`). 840 의 «정지 패치» 가 못 푸는 한 칸이다.
+   840 은 «재렌더가 같은 자리에 **같은** 뱃지를 세운다» 는 전제 위에서 자리를 굳혔다. 값 줄은 그
+   전제를 안 탄다 — [강화]는 `cosUpgrade()` 로 값을 올린 **뒤** `renderUI()` 를 부르므로, 발화 시각의
+   사본은 **옛 값**(«13/500»)이고 진짜 카드는 **새 값**(«14/500»)이다. 굳히면 340ms 동안 거짓말을 얹는다.
+   ⇒ 새 호스트를 받아 **같은 자리의 살아 있는 플래시**를 찾아 패치만 다시 뜬다. 상자·수명·세기는
+     한 값도 안 건드린다(«한 자리에 한 장» 625 규약도 그대로 — 앞 장을 먼저 걷는다).
+   ⚑ 이 자리를 고른 두 번째 이유 — 호출부가 `cosLvPop()`(팝을 거는 그 줄) 바로 뒤라 사본이
+     **팝이 걸린 뒤의 계산값**을 들고 온다. 그래서 사본에서 애니가 위상까지 맞게 다시 돈다.
+   ⚠ 신고한 호스트가 없으면 아무 일도 안 한다 — 이 함수를 안 부르는 화면은 0줄이다. */
+function fxFlashRekeep(el){
+  const L = fxL(), r = fxRect(el); if(!L || !r || !el) return;
+  const same = (a, b) => Math.abs(a - b) <= FXFLASH_SAME;
+  for(const nd of Array.prototype.slice.call(L.children)){
+    if(!nd.classList || !nd.classList.contains('fx-flash')) continue;
+    const q = nd.__fxr;
+    if(!(q && same(q.x, r.x) && same(q.y, r.y) && same(q.w, r.w) && same(q.h, r.h))) continue;
+    /* 앞 장(= 옛 호스트에서 뜬 사본)은 `__fxKeepHost` 가 달라 `fxFlashKeep` 의 걷기가 못 본다 — 여기서 걷는다 */
+    if(nd.__fxKeep) for(const kp of nd.__fxKeep){ try { kp.remove(); } catch(_){} }
+    nd.__fxHost = el;
+    nd.__fxKeep = fxFlashKeep(el, r, nd);
+    for(const kp of nd.__fxKeep) fxBye(kp, 500);
+  }
 }
 /* «보상 수령» 공통 꼬리 — 수령 지점에서 방사형 버스트. 이어지는 재화 획득 비행은
    fxWatch 가 자동으로 붙인다(58 «보상 아이템 팝 + 버스트, 이어서 재화 획득 연출로 연결»). */

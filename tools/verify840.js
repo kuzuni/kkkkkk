@@ -160,6 +160,19 @@ async function run(tag, file) {
     const kp = document.querySelector('#fxl .fx-keep .sk-eq');
     return { flash: document.querySelectorAll('#fxl .fx-flash').length - n0,
              keep: document.querySelectorAll('#fxl .fx-keep').length,
+             /* ⚑ 814 8회차 이관 — 이 자의 주제는 **뱃지 패치**다. 종전에는 «패치 총 장수 == 1» 로
+                물었는데 그 수가 1 이었던 것은 그때 이 화면의 패치가 뱃지 하나뿐이었기 때문이지
+                840 의 주장이 아니다. 814 8회차가 값 줄 둘을 같은 경로에 얹자 총 장수가 3 이 됐고,
+                수를 3 으로 올려 초록을 되찾으면 **«뱃지가 통째로 사라져도 초록»** 인 자가 된다
+                (333 처방). ⇒ 세는 대상을 «뱃지 패치» 로 좁힌다.
+                ⚠ **«살아 있는 호스트의» 것만 센다.** 이 자의 `FREEZE` 는 `#fxl` 안 노드의 `remove()`
+                  를 무력화하는데(스크린샷 8장이 한 프레임보다 오래 걸린다), 814 8회차가 재렌더 뒤
+                  패치를 다시 뜨면서 **걷은 앞 장이 안 걷혀** 2장으로 읽혔다. 실제 런타임은 1장이다
+                  (걷기가 도는지는 `probe814c` [P5]·비프리즈 실측이 따로 묻는다) — 그러니 여기서는
+                  «지워졌어야 할 장» 을 **떼어진 호스트**로 가려낸다. 수를 2 로 올려 맞추면
+                  «패치가 겹겹이 쌓여도 초록» 인 자가 된다(625 «한 자리에 한 장» 을 잃는다). */
+             keepEq: [...document.querySelectorAll('#fxl .fx-keep')].filter(
+                       (k) => k.querySelector('.sk-eq') && k.__fxKeepHost && k.__fxKeepHost.isConnected).length,
              patch: kp ? R(kp) : null };
   });
 
@@ -175,7 +188,9 @@ async function run(tag, file) {
   const after = await p.evaluate(() => {
     const s = document.querySelector('#bCos .sk-card.sel');
     return { sel: !!s, eq: !!(s && s.querySelector('.sk-eq')),
-             keep: document.querySelectorAll('#fxl .fx-keep').length };
+             keep: document.querySelectorAll('#fxl .fx-keep').length,
+             keepEq: [...document.querySelectorAll('#fxl .fx-keep')].filter(
+                       (k) => k.querySelector('.sk-eq') && k.__fxKeepHost && k.__fxKeepHost.isConnected).length };
   });
   await b.close();
   return { errs, sel: sel2, mask, scope, fired, rows, after };
@@ -191,8 +206,12 @@ const peakOf = (r) => Math.max(...r.rows.filter((x) => x.t <= 240).map((x) => x.
   ok(!!mStill, '[1-a] `FXKEEP_STILL` 선언이 있다');
   ok(!!mStill && /^#bCos\s/.test(mStill[1]) && /\.sk-eq/.test(mStill[1]),
      `[1-b] 그 목록이 **\`#bCos\` 로 갇혀** 있다 — 07 스킬·26 펫의 같은 부품을 안 넓힌다 [${mStill ? mStill[1] : '—'}]`);
-  ok(/if\(inset\s*\|\|\s*keep\s*\|\|\s*fxKeepStill\(el\)\)/.test(html),
-     '[1-c] `fxFlash` 의 패치 문이 «inset || keep || fxKeepStill(el)» 이다(호출부 0줄)');
+  /* ⚑ 814 8회차 이관 — 문이 **넷째**로 늘었다(`|| fxFlashKeepSel(el)` — 호스트가 `--flash-keep` 을
+     신고하면 그것만으로도 켠다). 840 이 지키려는 것은 «내 문이 열려 있다 · 호출부는 0줄» 이지
+     «문이 정확히 셋» 이 아니다 — 그래서 앞 세 문을 **그대로 요구하되** 뒤에 붙는 문은 허용한다.
+     ⚠ 문을 지우면 여기가 곧바로 빨개진다(§R-b 가 같은 것을 실행으로 한 번 더 묻는다). */
+  ok(/if\(inset\s*\|\|\s*keep\s*\|\|\s*fxKeepStill\(el\)/.test(html),
+     '[1-c] `fxFlash` 의 패치 문이 «inset || keep || fxKeepStill(el)» 로 시작한다 — 840 의 문은 그대로다(호출부 0줄)');
   ok(/const\s+FXKEEP_SEL\s*=\s*'\.dot,\.updot,\.bdg,\.nw'/.test(html),
      '[1-d] 619 16회차 배지 목록 `FXKEEP_SEL` 불변');
   ok(/const\s+FXKEEP_PAD\s*=\s*4;/.test(html), '[1-e] `FXKEEP_PAD` 4 불변(이 경로는 그 값을 안 쓴다)');
@@ -214,7 +233,8 @@ const peakOf = (r) => Math.max(...r.rows.filter((x) => x.t <= 240).map((x) => x.
   for (const x of now.rows) console.log(`    t=${String(x.t).padStart(3)}ms   가림률 ${x.cov.toFixed(1).padStart(5)}%`);
   ok(now.errs.length === 0, `[3-a] 콘솔 에러 0건 (${now.errs.length})`);
   ok(now.fired.flash === 1, `[3-b] 강화 한 번 = 플래시 한 장 (${now.fired.flash})`);
-  ok(now.fired.keep === 1, `[3-c] 그 자리에 keep 패치가 한 장 선다 (${now.fired.keep})`);
+  ok(now.fired.keepEq === 1,
+     `[3-c] 그 자리에 **뱃지** keep 패치가 한 장 선다 (${now.fired.keepEq}장 · 이 화면 패치 총 ${now.fired.keep}장)`);
   ok(peakOf(now) < COV_MAX, `[3-d] 0~240ms 봉우리 가림률 < ${COV_MAX}% (${peakOf(now).toFixed(1)}%)`);
   ok(now.rows[now.rows.length - 1].cov < 5, `[3-e] 320ms 는 종전 그대로 0% 다 (${now.rows[now.rows.length - 1].cov.toFixed(1)}%)`);
   ok(now.after.sel && now.after.eq && now.after.keep >= 1,
@@ -245,7 +265,8 @@ const peakOf = (r) => Math.max(...r.rows.filter((x) => x.t <= 240).map((x) => x.
   fs.writeFileSync(NEG, neg);
   const bad = await run('neg', NEG);
   for (const x of bad.rows) console.log(`    t=${String(x.t).padStart(3)}ms   가림률 ${x.cov.toFixed(1).padStart(5)}%`);
-  ok(bad.fired.keep === 0, `[R-b] 되돌리면 패치가 **0장**이다 (${bad.fired.keep})`);
+  ok(bad.fired.keepEq === 0,
+     `[R-b] 되돌리면 **뱃지** 패치가 0장이다 (${bad.fired.keepEq}장 · 총 ${bad.fired.keep}장 — 814 8회차의 값 줄 패치는 남는다)`);
   ok(peakOf(bad) > COV_PRE, `[R-c] 되돌리면 봉우리 가림률이 ${COV_PRE}% 를 넘는다 — 등재문 재현 (${peakOf(bad).toFixed(1)}%)`);
   ok(peakOf(bad) - peakOf(now) > 40, `[R-d] 두 판 차 ${(peakOf(bad) - peakOf(now)).toFixed(1)}%p — 이 자가 재는 것이 실제로 이 수리다`);
   ok(bad.errs.length === 0, `[R-e] 되돌림 사본도 콘솔 에러 0건 (${bad.errs.length})`);

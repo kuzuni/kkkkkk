@@ -362,11 +362,11 @@ function inter(plus, inks) {
       /* ⚑ 5회차 — 3회차 판(«알은 그대로 두고 링만 누른다»)으로 되돌린다. 그 판이 4회차 2인 공통
          지적의 원본이므로, [B12]·[B13] 이 그 판에서 **실제로 빨개져야** 이 회차가 무른 수리가 아니다. */
       ['R-c', '3회차 판으로 되돌린다 (알 크기 신고를 빼고 링만 .29 로 누른 상태)',
-        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}', '#bCos .sk-card{--burst-ry:.29}'],
+        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}', '#bCos .sk-card{--burst-ry:.29;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}'],
       /* ⚑ 6회차 — 5회차 판(«알은 줄였지만 가로 링은 벽 밖 그대로»)으로 되돌린다. 그 판이 5회차
          2인 공통 지적의 원본이므로 [B14] 가 그 판에서 **실제로 빨개져야** 이 회차가 무른 수리가 아니다. */
       ['R-d', '5회차 판으로 되돌린다 (가로 신고를 빼고 세로·알만 누른 상태)',
-        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}', '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}']
+        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}', '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}']
     ];
     for (const [tag, why, from, to] of INJ) {
       if (src.indexOf(from) < 0) { ok(false, '[' + tag + '] 주입 앵커를 못 찾았다 — 조용한 통과 금지'); continue; }

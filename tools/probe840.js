@@ -143,7 +143,10 @@ async function measure(tag, file) {
     const n0 = document.querySelectorAll('#fxl .fx-flash').length;
     document.querySelector('#bCos [data-cosup]').click();
     return { flash: document.querySelectorAll('#fxl .fx-flash').length - n0,
-             keep: document.querySelectorAll('#fxl .fx-keep').length };
+             keep: document.querySelectorAll('#fxl .fx-keep').length,
+             /* 814 8회차 이관 — 이 자의 주제는 «뱃지» 패치다(사유·`FREEZE` 함정은 verify840 [3-c] 머리말) */
+             keepEq: [...document.querySelectorAll('#fxl .fx-keep')].filter(
+                       (k) => k.querySelector('.sk-eq') && k.__fxKeepHost && k.__fxKeepHost.isConnected).length };
   });
 
   const rows = [];
@@ -159,7 +162,10 @@ async function measure(tag, file) {
   const after = await p.evaluate(() => {
     const s = document.querySelector('#bCos .sk-card.sel');
     return { sel: !!s, eq: !!(s && s.querySelector('.sk-eq')),
-             keep: document.querySelectorAll('#fxl .fx-keep').length };
+             keep: document.querySelectorAll('#fxl .fx-keep').length,
+             /* 814 8회차 이관 — 이 자의 주제는 «뱃지» 패치다(사유·`FREEZE` 함정은 verify840 [3-c] 머리말) */
+             keepEq: [...document.querySelectorAll('#fxl .fx-keep')].filter(
+                       (k) => k.querySelector('.sk-eq') && k.__fxKeepHost && k.__fxKeepHost.isConnected).length };
   });
   await b.close();
   return { errs, sel, mask, fired, rows, after };
@@ -200,7 +206,8 @@ const peakOf = (r) => Math.max(...r.rows.filter((x) => x.t <= 240).map((x) => x.
   report('now', now);
   ok(now.errs.length === 0, `[2-a] 콘솔 에러 0건 (${now.errs.length})`);
   ok(now.fired.flash === 1, `[2-b] 강화 한 번 = 플래시 한 장 (${now.fired.flash})`);
-  ok(now.fired.keep === 1, `[2-c] 수리 — 이 자리에 keep 패치가 **1장** 선다 (${now.fired.keep})`);
+  ok(now.fired.keepEq === 1,
+     `[2-c] 수리 — 이 자리에 **뱃지** keep 패치가 1장 선다 (${now.fired.keepEq}장 · 이 화면 패치 총 ${now.fired.keep}장 — 814 8회차가 값 줄 둘을 같은 경로에 얹었다)`);
   ok(peakOf(now) < 15, `[2-d] 수리 — 0~240ms 봉우리 가림률 < 15% (${peakOf(now).toFixed(1)}%)`);
 
   /* ── ⓒ 뿌리 ② — 재렌더가 원본 뱃지를 갈아 끼운다(패치가 «따라가면» 첫 rAF 에 죽는 자리) ── */
