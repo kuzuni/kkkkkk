@@ -196,14 +196,26 @@ function preTree() {
   /* 3회차 [F1] 이 격자를 아래로 내리면서 이동이 늘었다 — 긴 세 프레임에서 격자·상인방·받침·
      바닥·계단이 **같은 양**만큼 내려간다(gridt = lintelt = floort = groundt, 그리고 아래에서
      역산하는 요소는 높이가 그만큼 준다). 계단(steps)만 84 의 정수배로 끊기므로 값이 다르다. */
+  /* ── 813 4회차 [G1] — **표를 갈아 끼웠다.** 이 항의 기준은 커밋이 아니라
+     `merge-base origin/main HEAD` 라, 2·3회차의 이동은 **이미 main 에 있어 Δ0 으로 읽힌다**.
+     그래서 옛 값을 그대로 두면 «등재된 이동 67.95 를 기다리는데 실제는 10.3» 이라 빨개진다.
+     옛 표는 지우지 않고 아래에 남긴다(어디서 왔는지를 지우면 다음 회차가 못 읽는다):
+       2회차+3회차 누적 — 1600 {gridt 20, capt 12, floort 20, floorh −20, groundt 20, groundh −20}
+         1920 {capt 29.23, lintelt/gridt/floort/groundt −10.03, floorh/groundh +10.03, stepsh −0.02}
+         2280 {capt 50.75, lintelt/gridt/floort/groundt 67.95, floorh/groundh −67.95, stepst 84, stepsh −84}
+         2600 {capt 50.75, lintelt/gridt/floort/groundt 151.66, floorh/groundh −151.66, stepst 168, stepsh −168}
+     4회차의 이동은 **한 출처뿐**이다 — 비 47:53 → 48:52 ⇒ 격자·상인방·받침·바닥이 **같은 양**
+     (1920 +7.05 · 2280 +10.3 · 2600 +13.5)만큼 내려가고, 패널 바닥에서 역산하는 요소는 그만큼
+     짧아진다. **1600 은 Δ0**(하한 232 가 이기는 프레임이라 비 규칙이 안 닿는다) ·
+     안내문(`cap`)도 Δ0(아래 블록 총량은 이 회차가 안 건드렸다). */
   const ALLOW813 = {
-    1600: { gridt: 20, capt: 12, floort: 20, floorh: -20, groundt: 20, groundh: -20 },
-    1920: { capt: 29.23, lintelt: -10.03, gridt: -10.03, floort: -10.03, floorh: 10.03,
-            groundt: -10.03, groundh: 10.03, stepsh: -0.02 },
-    2280: { capt: 50.75, lintelt: 67.95, gridt: 67.95, floort: 67.95, floorh: -67.95,
-            groundt: 67.95, groundh: -67.95, stepst: 84, stepsh: -84 },
-    2600: { capt: 50.75, lintelt: 151.66, gridt: 151.66, floort: 151.66, floorh: -151.66,
-            groundt: 151.66, groundh: -151.66, stepst: 168, stepsh: -168 },
+    1600: {},
+    1920: { lintelt: 7.05, gridt: 7.05, floort: 7.05, floorh: -7.05,
+            groundt: 7.05, groundh: -7.05, stepsh: 0.02 },
+    2280: { lintelt: 10.3, gridt: 10.3, floort: 10.3, floorh: -10.3,
+            groundt: 10.3, groundh: -10.3, stepst: -0.02, stepsh: -0.02 },
+    2600: { lintelt: 13.5, gridt: 13.5, floort: 13.5, floorh: -13.5,
+            groundt: 13.5, groundh: -13.5 },
   };
   {
     const pre = preTree();
