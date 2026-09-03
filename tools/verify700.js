@@ -166,6 +166,24 @@ function preTree() {
   }
 
   /* ── [C] 레이아웃 Δ0px (수리 전 트리 대조) ────────────────────────────── */
+  /* ⚑ 813 1회차 이관 — **이 항은 «700 의 바» 가 아니라 «이번 작업 트리» 를 재고 있었다.**
+     `preTree()` 의 기준은 700 커밋이 아니라 `merge-base origin/main HEAD` 라, 89 의 여백 예산을
+     **정당하게** 다시 잡는 뒤 작업(= 813)도 예외 없이 빨갛게 만든다. 그렇다고 항을 무르게 풀면
+     («Δ ≤ 8 허용» 같은 식) 700 이 지키려던 것 — «바를 얹느라 다른 것을 밀지 않았다» — 이 통째로
+     사라진다(333 처방: 자리를 비우지 말고 방향을 다시 겨눈다).
+     ⇒ **등재된 이동만 이름과 값으로 통과시킨다.** 아래 표에 없는 이동은 크기 무관 빨강이다.
+
+     813 1회차가 낸 이동(`--rw-g3` 하한 44 → 50 — 1600 한 프레임만 clamp 하한을 본다):
+       · 안내문 아래 여백이 6px 넓어져 **아래 묶음이 통째로 6px 위로** (수반·받침·계단·안내문)
+       · `--rw-tt` 가 6 줄어 `--rw-av` 가 **3** 줄고, 그만큼 **격자가 3px 위로**
+       · 받침·지면은 위로 6 가면서 아래는 패널 바닥에 붙어 있으므로 **높이가 +6**
+     다른 네 프레임은 clamp 의 가운데 항이 이겨 하한 50 을 **한 번도 안 본다** ⇒ 표가 비어 있고,
+     그 «비어 있음» 자체가 813 의 «1600 한 프레임만 움직인다» 는 주장의 자다. */
+  const LTWH = ['l', 't', 'w', 'h'];
+  const ALLOW813 = {
+    1600: { gridt: -3, midt: -6, basint: -6, costt: -6, labt: -6, capt: -6,
+            floort: -6, floorh: +6, groundt: -6, groundh: +6, stepst: -6 },
+  };
   {
     const pre = preTree();
     if (!pre.ok) {
@@ -185,14 +203,17 @@ function preTree() {
         for (const k of Object.keys(before)) {
           if (!before[k] || !after[k]) { mx = 999; who = k + '(없음)'; continue; }
           for (let i = 0; i < 4; i++) {
-            const d = Math.abs(before[k][i] - after[k][i]);
-            if (d > mx) { mx = d; who = k + '[' + i + '] ' + before[k][i] + '→' + after[k][i]; }
+            const d = +(after[k][i] - before[k][i]).toFixed(2);
+            if (Math.abs(d) < 0.01) continue;
+            const allow = ALLOW813[H] && ALLOW813[H][k + LTWH[i]];
+            if (allow != null && Math.abs(d - allow) < 0.51) continue;   /* 등재된 이동은 통과 */
+            if (Math.abs(d) > mx) { mx = Math.abs(d); who = k + '[' + LTWH[i] + '] ' + before[k][i] + '→' + after[k][i]; }
           }
         }
         worst.push({ H, mx: +mx.toFixed(2), who });
       }
       ok(worst.every(w => w.mx < 0.01),
-        '[C] 레이아웃 Δ0px — 바를 얹어도 89 의 12개 요소가 네 프레임 전부 안 움직인다',
+        '[C] 레이아웃 Δ0px — 바를 얹어도 89 의 12개 요소가 네 프레임 전부 안 움직인다(813 등재분 제외)',
         worst.map(w => w.H + ':Δ' + w.mx + (w.mx ? '(' + w.who + ')' : '')).join(' · '));
     }
   }
