@@ -60,11 +60,16 @@ const MEASURE = () => {
     gt: els.grid ? els.grid.t : null,
     lt: els.lintel ? els.lintel.t : null,
     bt: els.mid ? els.mid.t : null,
-    g3: r1(panelH - (els.cap ? els.cap.b : 0)),
+    /* 2회차 [E4] — 이 값은 이제 `--rw-g3` 가 아니라 **`--rw-i`(안내문 ↓ 패널 하변)** 다.
+       아래 블록의 총량(38 + g3)은 그대로 두고 위·아래를 ref 비 0.625:0.375 로 나눈다. */
+    I: r1(panelH - (els.cap ? els.cap.b : 0)),
+    G: els.mid && els.cap ? r1(els.cap.t - els.mid.b) : null,
     /* 아치는 `.rw-bg::after` 라 **의사 요소**여서 getBoundingClientRect 로 못 잡는다.
-       120 의 식 그대로 역산한다: tt = bt − 516 · av = min(186, (tt − 174) / 2). */
+       2회차까지는 `min(186,(tt−174)/2)` 식을 그대로 옮겨 적었는데, [E1] 이 셋째 인자를
+       더하면서 **식을 옮겨 적는 방식 자체가 늙었다** — `--rw-fl`(= gt + 516 + av)을 얹은
+       `.rw-floor` 상변에서 되재면 식이 어떻게 바뀌어도 자가 안 늙는다. */
     tt: els.mid ? r1(els.mid.t - 516) : null,
-    av: els.mid ? r1(Math.min(186, (els.mid.t - 516 - 174) / 2)) : null,
+    av: els.floor && els.grid ? r1(els.floor.t - (els.grid.t + els.grid.h)) : null,
     wall: els.grid && els.lintel ? r1(els.grid.t - els.lintel.b) : null,
     gapMid: els.grid && els.mid ? r1(els.mid.t - (els.grid.t + els.grid.h)) : null,
   };
@@ -119,7 +124,7 @@ const MEASURE = () => {
 
   console.log('\n[B] 예산 변수 — 그려진 기하에서 역산 (패널 지역 좌표)');
   const keys = [['panelH', '패널 높이'], ['sp', '= 패널H − 820'], ['lt', '상인방 상변'], ['gt', '격자 상변'],
-                ['bt', '수반 상변'], ['tt', '= bt − 516'], ['av', '아치 뻗음'], ['g3', '안내문 아래 여백'],
+                ['bt', '수반 상변'], ['tt', '= bt − 516'], ['av', '아치 뻗음(격자 하변→받침 상변)'], ['G', '수반 ↓ 안내문'], ['I', '안내문 ↓ 패널 하변'],
                 ['wall', '벽 = 격자 상변 − 상인방 하변'], ['gapMid', '격자 하변 → 수반 상변']];
   console.log(`     ${'var'.padEnd(8)}${FRAMES.map((f) => String(f).padStart(9)).join('')}`);
   for (const [k, desc] of keys)
@@ -138,7 +143,12 @@ const MEASURE = () => {
   c.push(chk('상인방 온전(높이 = 66)', (m) => m.els.lintel.h, (v) => Math.abs(v - 66) <= 1.5));
   c.push(chk('바 ↔ 격자 여유 ≥ 8', (m) => m.els.grid.t - m.els.mul.b, (v) => v >= 7.5));
   c.push(chk('바가 벽 안 (상인방 하변 ↔ 바 상변 ≥0)', (m) => m.els.mul.t - m.els.lintel.b, (v) => v >= -0.5));
-  c.push(chk('안내문 아래 여백(--rw-g3)', (m) => m.vars.g3, (v) => v >= 43));
+  /* 2회차 [E4] — 하한의 근거가 «14회차의 44» 에서 **코너 브래킷 산수**로 바뀌었다:
+     브래킷은 bottom 3 · 높이 24 라 아래 여백이 27 미만이면 안내문 «상자» 와 겹친다.
+     같이 재는 것은 «위:아래 비가 레퍼런스 대역(0.58~0.62, 1600 만 0.64 까지) 안인가» 다 —
+     1회차 비평 2인이 독립으로 낸 값이고, 하한만 지키고 비를 안 재면 [E4] 가 조용히 풀린다. */
+  c.push(chk('안내문 ↓ 패널 하변 ≥ 32 (코너 브래킷 27 + 5)', (m) => m.vars.I, (v) => v >= 31.5));
+  c.push(chk('안내문 위:아래 비 = ref 0.58~0.65', (m) => m.vars.I / m.vars.G, (v) => v >= 0.57 && v <= 0.66));
   c.push(chk('패널 안 (안내문 하변 ≤ 패널H)', (m) => m.panelH - m.els.cap.b, (v) => v >= 0));
 
   const harm = pairs.filter((p) => p.harm !== 'none');

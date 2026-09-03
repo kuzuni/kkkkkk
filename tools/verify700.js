@@ -28,7 +28,7 @@ const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.resolve(ROOT, 'index.html').replace(/\\/g, '/');
 const FRAMES = [1600, 1920, 2280, 2600];
 const MULS = [1, 10, 100, 1000];
-const SHELL_H = 98, BAR_W = 724, BAR_L = 178, GRID_GAP = 20, COST1 = 100;
+const SHELL_H = 98, BAR_W = 724, BAR_L = 178, GRID_GAP = 44, COST1 = 100;  /* GRID_GAP: 813 2회차 20 → 44 */
 
 let pass = 0, fail = 0, hold = 0;
 const ok = (b, name, detail) => {
@@ -143,13 +143,22 @@ function preTree() {
        ⇒ 항을 둘로 가른다. 지우지 않고 **조건을 좁혀** 옛 약속(넉넉한 프레임의 20 고정)은
          그대로 지키고, 좁은 벽에서의 새 약속(대칭)을 한 줄 더 세운다(328-330 교훈 —
          «누른 항을 묻는 항» 이 없으면 수리가 통째로 사라져도 초록이다). */
-    const wide = rows.filter(r => r.clearLintel + r.gapGrid >= 40);
-    const tight = rows.filter(r => r.clearLintel + r.gapGrid < 40);
+    /* ── 813 2회차 이관 — **«아래 20 고정» → «아래 44 고정».** ──
+       813 1회차 비평 2인(CF·CG)이 각자 «바 하변 ↔ 격자 상변 19px 은 **격자 자신의 행 간
+       25~26px 보다 좁아** 바가 격자의 0번째 행처럼 읽힌다» 고 냈다(CF «비 6.5:1 → 목표 2:1» ·
+       CG «행 간의 1.5배 38px 고정»). 두 사람의 대역 [38,48] 안에서 **44** 를 골랐다 —
+       44 는 «바를 격자에서 떼는 값» 이면서 동시에 «쌍ⓐ 의 기준(2280 들보↔바)을 6px 낮추는 값»
+       이라, 813 2회차가 그 비를 25.8% → 28.0% 로 넘기는 데 같이 쓰인다.
+       ⚠ 갈림 문턱도 20 → 44 를 따라 **40 → 88** 로 옮긴다(여유 88 = 44 × 2). 안 옮기면
+         1600(여유 46)이 «넉넉» 으로 분류돼 [B4] 가 «44 고정» 을 요구하고, 그 프레임은
+         예산이 없어 영원히 빨갛다. */
+    const wide = rows.filter(r => r.clearLintel + r.gapGrid >= 88);
+    const tight = rows.filter(r => r.clearLintel + r.gapGrid < 88);
     ok(wide.length >= 3 && wide.every(r => eq(r.gapGrid, GRID_GAP)),
-      '[B4] 벽이 넉넉한 프레임(여유 ≥ 40)은 바 하변 ↔ 격자 상변 = 20px 고정 — 바는 격자에 «붙어» 산다',
+      '[B4] 벽이 넉넉한 프레임(여유 ≥ 88)은 바 하변 ↔ 격자 상변 = 44px 고정 — 격자 행 간(25.6)의 1.7배',
       wide.map(r => r.H + ':' + r.gapGrid).join(' · ') + (wide.length ? '' : ' — 넓은 프레임 0'));
     ok(tight.length >= 1 && tight.every(r => Math.abs(r.clearLintel - r.gapGrid) <= 1.5),
-      '[B4b] 벽이 좁은 프레임(여유 < 40)은 위·아래를 **고르게** 나눈다 — 754 가 잡은 8/20 비대칭이 없다',
+      '[B4b] 벽이 좁은 프레임(여유 < 88)은 위·아래를 **고르게** 나눈다 — 754 가 잡은 8/20 비대칭이 없다',
       tight.map(r => `${r.H}: 위 ${r.clearLintel} / 아래 ${r.gapGrid}`).join(' · ')
         + (tight.length ? '' : ' — 좁은 프레임 0(1600 이 표본에 없다)'));
     ok(rows.every(r => r.clearLintel > 0),
@@ -174,7 +183,22 @@ function preTree() {
      가 통째로 사라진다. 아래 `ALLOW813` 처럼 **등재된 이동만 이름과 값으로** 통과시켜라(333 처방).
      표가 비어 있는 지금은 «어떤 이동도 등재되지 않았다» 는 뜻이다. */
   const LTWH = ['l', 't', 'w', 'h'];
-  const ALLOW813 = {};
+  /* ── 813 2회차 — **등재된 이동 12건.** 위 주석이 예고한 자리다. «Δ ≤ n 허용» 으로 풀지 않고
+     이동 하나하나를 **이름과 값으로** 적는다(333 처방) — 여기 없는 이동이 1px 이라도 생기면
+     이 항은 그대로 빨개진다. 출처는 셋뿐이다:
+       [E2] 격자 상변 «벽 하한 232»       → 1600 만 grid/floor/ground 가 +20 (긴 프레임은 하한이 안 이긴다)
+       [E3] `--rw-lt` 벽 폭 300 → 294     → 긴 세 프레임의 상인방 +6 (1600 은 lt 가 하한 20 이라 0)
+       [E4] 안내문 아래 블록 ref 비 분할  → 안내문 top 이 아래로 (총량 불변 · 1600 +12 ~ 2600 +50.75)
+     ⚠ 1600 의 floor/ground 는 top 이 +20 이면 height 가 −20 이다(패널 바닥에서 역산하는 요소라
+       상변이 내려가면 그만큼 짧아진다). 값을 둘 다 적어야 «높이가 안 줄었다» 는 거짓이 안 통과한다.
+     ⚠ **바(#rwMulBar) 자신은 이 표에 없다** — [C] 는 «바를 얹느라 89 를 밀지 않았나» 를 묻는
+       항이라 바는 애초에 대상이 아니다. 그 약속은 위 [B1]~[B6] 이 따로 지킨다. */
+  const ALLOW813 = {
+    1600: { gridt: 20, capt: 12, floort: 20, floorh: -20, groundt: 20, groundh: -20 },
+    1920: { capt: 29.23, lintelt: 6 },
+    2280: { capt: 50.75, lintelt: 6 },
+    2600: { capt: 50.75, lintelt: 6 },
+  };
   {
     const pre = preTree();
     if (!pre.ok) {
@@ -196,6 +220,9 @@ function preTree() {
           for (let i = 0; i < 4; i++) {
             const d = +(after[k][i] - before[k][i]).toFixed(2);
             if (Math.abs(d) < 0.01) continue;
+            /* `P813_DUMP=1` 으로 돌리면 등재 전 이동을 전부 찍는다 — ALLOW813 을 손으로
+               추측하지 말고 **이 출력을 그대로 옮겨 적으라**는 뜻이다(다음 회차용). */
+            if (process.env.P813_DUMP) console.log('  DUMP ' + H + ' ' + k + LTWH[i] + ' ' + d);
             const allow = ALLOW813[H] && ALLOW813[H][k + LTWH[i]];
             if (allow != null && Math.abs(d - allow) < 0.51) continue;   /* 등재된 이동은 통과 */
             if (Math.abs(d) > mx) { mx = Math.abs(d); who = k + '[' + LTWH[i] + '] ' + before[k][i] + '→' + after[k][i]; }
