@@ -8,10 +8,17 @@
  *               **호스트 자신은 안 담는다**(660 이 «빈자리 0» 을 만난 그 벽을 다시 세우지 않는다)
  *   [B] 그림  — 홀드(연속 강화) 내내 **숫자 잉크 덮임 0**이고, 그 대가로 **밀도를 잃지 않았다**
  *   [C] 불변  — 660 의 «스폰은 버튼뿐» 과 **미신고 호스트(단련·룬·그 밖) 구멍 0개**
+ *               (⚑ 871 — «버튼» 은 **그 알이 태어난 순간의 상자**다. 홀드 중 621 눌림이 상자를
+ *                왕복시키므로 표본 시각 상자로 재면 판정이 제비뽑기가 된다 · 되돌림은 [C1r])
  *   [R] 되돌림 — 무르게 푼 수리가 아님을 못박는다(신고를 지우면·엉뚱한 데를 신고하면 빨개진다)
  *
  * ⚠ 338 규칙 — 판정은 «함수를 불렀는가» 가 아니라 **화면에 실제로 놓인 알과 잉크 상자**로 센다.
  * ⚠ 트리거는 실제 사용자 경로(버튼 pointerdown 홀드)다 — `fxBurst` 를 직접 부르지 않는다.
+ * ⚠ **871(870 계열) — «밖» 은 «지금 상자» 가 아니라 «태생 상자» 에 대고 묻는다.** 제품은 알을 낳는
+ *   순간의 `fxRect(t)` 상자에 가두는데(`inM = sz/2 + FXB_INPAD`), 이 자는 홀드 내내 벽시계로 표본을
+ *   뜨므로 «그때의 상자» 로 재면 눌림 위상이 판정을 뽑는다. `probe871` 실측 — 눌림 변당 변위 **12.4px**
+ *   ↔ 가장 작은 알의 가둠 여유 **12.0px** 이라, 제품이 **놓아도 되는** 클램프 자리(넓은 위상 상자 우변
+ *   −12.0)가 눌린 상자 우변보다 **0.39px 밖**이다 ⇒ 옛 자는 그 자리를 «밖» 이라 답한다.
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -26,6 +33,30 @@ const STEP_MS = Number(process.env.V816_STEP || 16);
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? '  [' + d + ']' : '')); };
 const p1 = n => Math.round(n * 10) / 10;
+
+/* ⚑ 871 — 계측기. 알이 `#fxl` 에 붙는 **그 순간**의 `.cb` 상자를 알에 적어 둔다(`nd.__hb816`).
+   MutationObserver 콜백은 발화가 알을 **동기로** 붙인 직후의 마이크로태스크에서 도므로 그 상자가 곧
+   제품이 가둠에 쓴 `fxRect(t)` 의 상자다(870 이 846 에서 세운 근거 그대로).
+   ⚠ 제품 코드는 한 글자도 안 건드린다 — 자의 관측 창을 여는 것뿐이다. */
+const INSTALL = () => {
+  const L = document.getElementById('fxl');
+  if (!L) return false;
+  const box = () => {
+    const e = document.querySelector('#trCards [data-tr] .cb'); if (!e) return null;
+    const b = e.getBoundingClientRect();
+    return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, w: b.width, h: b.height };
+  };
+  if (window.__V816) window.__V816.mo.disconnect();
+  const st = { mo: null, born: [] };
+  st.mo = new MutationObserver(recs => {
+    const b = box();
+    for (const r of recs) for (const nd of r.addedNodes)
+      if (nd.nodeType === 1 && /fx-spark/.test(nd.className + '')) { nd.__hb816 = b; if (b) st.born.push(b); }
+  });
+  st.mo.observe(L, { childList: true });
+  window.__V816 = st;
+  return true;
+};
 
 /* 한 표본 = «살아 있는 알들이 이 잉크 상자를 몇 % 덮는가» — 겹치는 알을 두 번 세지 않게 1px 격자로 훑는다 */
 const SAMPLE = () => {
@@ -47,19 +78,32 @@ const SAMPLE = () => {
     return n / (w * h);
   };
   const L = document.getElementById('fxl');
-  const eggs = L ? [...L.children].filter(nd => /fx-spark/.test(nd.className + ''))
-                     .map(nd => nd.getBoundingClientRect()) : [];
+  const nodes = L ? [...L.children].filter(nd => /fx-spark/.test(nd.className + '')) : [];
+  /* 밀도·덮임 축에는 [C1r] 이 손으로 낳은 알을 안 섞는다 — 되돌림은 «밖» 축 하나만 건드린다(870 규약) */
+  const eggs = nodes.filter(nd => !nd.__inj816).map(nd => nd.getBoundingClientRect());
   const card = document.querySelector('#trCards [data-tr]');
   const cb = card && card.querySelector('.cb');
   const b = cb && cb.getBoundingClientRect();
+  const isOut = (e, g) => {
+    const cx = (e.left + e.right) / 2, cy = (e.top + e.bottom) / 2;
+    return cx < g.left || cx > g.right || cy < g.top || cy > g.bottom;
+  };
+  /* ⚑ 871 — 판정 자는 **그 알의 태생 상자**(`nd.__hb816`)다. 표본 시각 상자(`b`)로 잰 값은
+     눌림 위상이 정하는 제비뽑기라 **기록으로만** 남긴다(LESSONS 239-①). */
+  let out = 0, outNow = 0;
+  for (const nd of nodes) {
+    const e = nd.getBoundingClientRect();
+    if (!e.width || !e.height) continue;
+    const g = nd.__hb816 || b;
+    if (g && isOut(e, g)) out++;
+    if (b && isOut(e, b)) outNow++;
+  }
   return {
     n: eggs.length,
     num: cov(inkOf(cb, 'i'), eggs),
     coin: cov(inkOf(cb, 's'), eggs),                 /* 838 이관 — 「신고 안 한 잉크」 쪽 표본(아래 [R2a·b]) */
-    out: b ? eggs.filter(e => {
-      const cx = (e.left + e.right) / 2, cy = (e.top + e.bottom) / 2;
-      return cx < b.left || cx > b.right || cy < b.top || cy > b.bottom;
-    }).length : 0
+    out, outNow,
+    hb: b ? { left: b.left, top: b.top, w: b.width, h: b.height } : null
   };
 };
 
@@ -68,13 +112,36 @@ const clearFx = page => page.waitForFunction(() => {
   return !L || ![...L.children].some(nd => /fx-spark/.test(nd.className + ''));
 }, null, { timeout: 5000 }).catch(() => {});
 
-async function holdTrain(page, keep) {
+/* ⚑ 871 [C1r] — **버튼 밖에 알 한 알을 우리 손으로 낳는다.** 태생 상자 자가 무르게 푼 것이 아님을
+   못박는 자리다: 이 알이 있으면 `out` 은 반드시 ≥1 이다. `position:fixed` 로 앉히고 한 번 재서 보정한다
+   (조상 transform 이 있어도 클라이언트 좌표에 정확히 앉는다). 애니메이션이 없어 표본마다 안 움직인다. */
+const INJECT = off => {
+  const L = document.getElementById('fxl');
+  const cb = document.querySelector('#trCards [data-tr] .cb');
+  if (!L || !cb) return null;
+  const b = cb.getBoundingClientRect();
+  const cx = b.right + off, cy = (b.top + b.bottom) / 2;
+  const nd = document.createElement('s');
+  nd.className = 'fx-spark';
+  nd.style.cssText = 'position:fixed;margin:0;width:10px;height:10px;animation:none;left:0;top:0';
+  nd.__inj816 = true;
+  nd.__hb816 = { left: b.left, right: b.right, top: b.top, bottom: b.bottom, w: b.width, h: b.height };
+  L.appendChild(nd);
+  const b0 = nd.getBoundingClientRect();
+  nd.style.left = (cx - 5 - b0.left) + 'px';
+  nd.style.top = (cy - 5 - b0.top) + 'px';
+  const r = nd.getBoundingClientRect();
+  return { cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, right: b.right };
+};
+
+async function holdTrain(page, keep, inject) {
   await page.evaluate(v => {
     for (const c of document.querySelectorAll('#trCards [data-tr] .cb'))
       if (v === null) c.style.removeProperty('--burst-keep'); else c.style.setProperty('--burst-keep', v);
   }, keep);
   await clearFx(page);
   await page.waitForTimeout(120);
+  await page.evaluate(INSTALL);            /* 871 — 알마다 «태생 상자» 를 적어 둔다(아래 [C1]) */
   const g = await page.evaluate(() => {
     const h = document.querySelector('#trCards [data-tr]'); if (!h) return null;
     const b = (h.querySelector('.cb') || h).getBoundingClientRect();
@@ -85,10 +152,23 @@ async function holdTrain(page, keep) {
   await page.mouse.down();
   const rows = [];
   const t0 = Date.now();
-  while (Date.now() - t0 < HOLD_MS) { rows.push(await page.evaluate(SAMPLE)); await page.waitForTimeout(STEP_MS); }
+  let inj = null;
+  while (Date.now() - t0 < HOLD_MS) {
+    rows.push(await page.evaluate(SAMPLE));
+    if (inject && !inj) inj = await page.evaluate(INJECT, inject);
+    await page.waitForTimeout(STEP_MS);
+  }
   await page.mouse.up();
   await page.waitForTimeout(60);
+  const born = await page.evaluate(() => {
+    const s = window.__V816; if (!s) return [];
+    s.mo.disconnect();
+    const L = document.getElementById('fxl');
+    if (L) for (const nd of [...L.children]) if (nd.__inj816) nd.remove();
+    return s.born;
+  });
   const live = rows.filter(r => r.n > 0);
+  const sw = k => { const v = born.map(b => b[k]); return v.length ? [Math.min.apply(null, v), Math.max.apply(null, v)] : [0, 0]; };
   return {
     frames: live.length,
     max: live.length ? Math.max(...live.map(r => r.num)) : 0,
@@ -97,7 +177,11 @@ async function holdTrain(page, keep) {
     c05: live.filter(r => r.coin >= 0.05).length,
     eggs: rows.reduce((a, r) => a + r.n, 0) / Math.max(1, rows.length),
     peak: Math.max(0, ...rows.map(r => r.n)),
-    out: Math.max(0, ...rows.map(r => r.out))
+    out: Math.max(0, ...rows.map(r => r.out)),
+    outNow: Math.max(0, ...rows.map(r => r.outNow)),   /* 871 — 기록 전용(표본 시각 상자) */
+    inj,
+    /* 871 — 621 눌림이 홀드 중 상자를 얼마나 흔들었는가(기록 전용). 이 진폭이 옛 자의 제비뽑기 크기다. */
+    swing: { top: sw('top'), w: sw('w') }
   };
 }
 
@@ -168,7 +252,21 @@ async function holdTrain(page, keep) {
 
   /* ── [C] 불변 ─────────────────────────────────────────────────────── */
   console.log('\n[C] 불변 — 660 의 스폰 규약 · 미신고 호스트는 구멍 0개');
-  ok(now && now.out === 0, 'C1 660 [C] — 알 중심이 강화 버튼(`.cb`) 밖으로 나간 표본 0개', (now ? now.out : '?') + '개');
+  /* ⚑⚑ 871 — **이 항의 기준 상자를 «그 알이 태어난 순간의 버튼» 으로 옮겼다**(870 이 `verify818` 에서
+     한 것과 같은 처방). 옛 자는 표본을 뜨는 그 순간의 상자로 열 세대를 전부 쟀는데, 홀드 중 버튼은
+     621 눌림으로 **쉼 ↔ 눌림 ↔ 되튐** 을 왕복한다(아래 «상자 진폭» 기록 — 폭 24.8px = 변당 12.4px).
+     `probe871` 실측: 제품은 자기 태생 상자를 **한 번도 안 어겼고**(6판 · 2,000여 알 · 밖 0개),
+     옛 자가 초록이던 것은 «옳아서» 가 아니라 문턱에서 **3~5px** 떨어져 돌고 있었기 때문이다 —
+     제품이 **놓아도 되는** 클램프 자리(가장 작은 알의 여유 `sz/2+4` = 12.0px)를 눌린 상자로 재면
+     **0.39px 밖**으로 읽힌다(`probe871` [3]). 838 이 훈련 손잡이를 더 조여 알이 작아지면 그 자리가
+     실제 궤적에 들어오고, 그때 이 자는 818 이 겪은 제비뽑기를 그대로 물려받는다.
+     ⚠ **눈금은 한 칸도 안 넓히지 않았다** — 묻는 문장도 문턱(0개)도 그대로이고, 바뀐 것은
+       «어느 순간의 버튼인가» 하나다. 무르게 푼 것이 아님은 [C1r] 이 못박는다. */
+  ok(now && now.out === 0, 'C1 660 [C] — 알 중심이 **제가 태어난 순간의** 강화 버튼(`.cb`) 상자 밖으로 나간 표본 0개',
+     (now ? now.out : '?') + '개'
+     + (now ? '  ── 기록(판정 안 함): 표본 시각 상자로 재면 ' + now.outNow
+        + '개 · 홀드 중 상자 진폭 top ' + p1(now.swing.top[1] - now.swing.top[0])
+        + 'px · 폭 ' + p1(now.swing.w[1] - now.swing.w[0]) + 'px(621 눌림)' : ''));
   const pre = await holdTrain(page, 'none');          /* 수리 전 사본 = 구멍 0개 */
   ok(now && pre && now.eggs >= pre.eggs * 0.85,
      'C2 밀도를 대가로 안 치렀다 — 동시 알 수가 수리 전의 85% 이상',
@@ -228,6 +326,18 @@ async function holdTrain(page, keep) {
      '≥5% 표본 ' + (r3b ? r3b.c05 : '?') + '개 · 816 «코인(`s`)은 안 신고한다»');
   const r3 = await holdTrain(page, null);
   ok(r3 && r3.n05 === 0 && r3.frames > 0, 'R3 원복하면 다시 0 이다', '≥5% 표본 ' + (r3 ? r3.n05 : '?') + '개');
+  /* ⚑⚑ 871 — [C1] 의 기준 상자를 «태생» 으로 옮긴 것이 **자를 무르게 푼 것이 아님**을 못박는다
+     (870 이 `verify818` [C1r] 로 세운 자리와 같은 꼴). 버튼 오른쪽 밖 30px 에 알 한 알을 우리 손으로
+     낳고, 그 판의 [C1] 값이 **≥1** 이어야 통과다. 이 항이 빨개지는 길은 «자가 밖을 아예 못 본다» 뿐이고,
+     그때가 [C1] 이 헛초록이 되는 자리다. ⚠ 이 알은 «밖» 축에만 섞인다(`__inj816` — 밀도·덮임 제외). */
+  const rc = await holdTrain(page, null, 30);
+  ok(rc && rc.inj && rc.out >= 1,
+     'C1r **버튼 밖에 알을 낳으면 [C1] 이 빨개진다** — 태생 상자 자가 «밖» 을 여전히 본다',
+     (rc ? rc.out : '?') + '개 · 심은 자리 x ' + (rc && rc.inj ? p1(rc.inj.cx) + ' (버튼 우변 ' + p1(rc.inj.right) + ')' : '?'));
+  ok(rc && rc.n05 === 0,
+     'C1r-b 그 판에서도 덮임 축은 안 흔들렸다 — 되돌림 알은 «밖» 축에만 섞인다',
+     '≥5% 표본 ' + (rc ? rc.n05 : '?') + '개');
+  await holdTrain(page, null);                        /* 원복 — 심은 알은 holdTrain 이 걷는다 */
 
   ok(errs.length === 0, 'F1 콘솔 에러 0건', errs.slice(0, 3).join(' | ') || '0');
 
