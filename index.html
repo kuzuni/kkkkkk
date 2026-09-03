@@ -26860,9 +26860,13 @@ function draw(){
          ⇒ 후광도 **같은 육각을 따라간다**(원반을 깔면 shuri 가 2회차에 먹은 «동전» 지적을 답습한다). */
       /* ⚠ 배수는 1.62 → **1.35**. 1.62 로는 후광이 잉크의 76.4% 를 먹어 [B1] 밴드가 3.32 로 깨지고
          (돌은 본체가 작아 같은 배수라도 후광 몫이 커진다) 하이라이트 비율까지 1% 아래로 희석됐다. */
+      /* 792 7회차 — 비평가 CR·CS 2인 공통 ⓑ: 이 종이 **세트에서 가장 얕다**(CS 후광 9% ↔ boom 64%).
+         1.35 → **1.45** 한 칸만 올린다 — 2회차가 1.62 에서 깨뜨린 [B1]·[B3] 는 그 뒤 밴드 바닥이
+         whirl 0.364 로 올라와 여유가 생겼지만, 올린 만큼 잉크 총량이 커져 **하이라이트 비율이 같이
+         희석되므로**(아래 코어를 그 몫까지 함께 키운다) 한 번에 두 칸을 올리지 않는다. */
       halo(() => { ctx.fillStyle = 'rgba(214,190,150,.30)';
                    ctx.beginPath();
-                   for(let i=0;i<6;i++){ const a = i*1.0472; ctx.lineTo(Math.cos(a)*rr[i]*1.35, Math.sin(a)*rr[i]*1.35); }
+                   for(let i=0;i<6;i++){ const a = i*1.0472; ctx.lineTo(Math.cos(a)*rr[i]*1.45, Math.sin(a)*rr[i]*1.45); }
                    ctx.closePath(); ctx.fill(); });
       ctx.fillStyle = b.col;
       ctx.beginPath();
@@ -26870,14 +26874,30 @@ function draw(){
       ctx.closePath(); ctx.fill();
       /* 비평가 C·K ② — 같은 줄의 표창·부메랑에는 외곽선이 없는데 돌만 있어 규격이 어긋났다.
          외곽선을 버리고 **안쪽 그림자 면**으로 «돌의 결» 을 낸다(형상·덩치는 그대로). */
-      ctx.fillStyle = 'rgba(52,38,24,.32)';
+      /* 792 7회차 — CR 이 잰 «능선 경계 0.24/px(하드)» 가 이 면의 **오른쪽 변**이다. 그림자 면과
+         빛 받는 면이 한 픽셀에서 부딪히니 결이 아니라 **금** 으로 읽힌다(하드 외곽선을 버린
+         이 문법에서 마지막 남은 하드 경계였다). 면·꼭짓점은 한 점도 안 옮기고 **채움만**
+         능선 방향(≈ +x)으로 푸는 선형 그라디언트로 바꾼다 — 왼쪽 깊은 곳은 종전 세기(.32)를
+         유지하고 능선 쪽에서 0 으로 사라진다. 잉크 bbox·실루엣 Δ0(같은 경로). */
+      {
+        const gsh = ctx.createLinearGradient(-8.5, 0, 2.5, 0);
+        gsh.addColorStop(0, 'rgba(52,38,24,.36)'); gsh.addColorStop(1, 'rgba(52,38,24,0)');
+        ctx.fillStyle = gsh;
+      }
       ctx.beginPath();
       for(let i=0;i<4;i++){ const a2 = i*1.0472 + 1.6; ctx.lineTo(Math.cos(a2)*rr[i]*0.82, Math.sin(a2)*rr[i]*0.82); }
       ctx.closePath(); ctx.fill();
       /* 792 ③ — 그림자 면의 **반대쪽**에 빛 받는 면을 준다(돌은 결이 아니라 면으로 읽힌다). */
+      /* 792 7회차 — CR «근백색 코어 화소 0개» · CS «코어 6.7% 로 세트 최저». 삼각 조각(면적 24
+         로컬px²)이라 대조 시트 배율에서 통째로 뭉개졌다. **같은 자리·같은 빛 방향**을 유지한 채
+         세 점 → **네 점**, 0.66r → **0.78r** 로 넓혀 «면» 으로 세운다(면적 46.7 = ×1.93).
+         ⚠ 색은 종별로 흐리지 말고 한 색(`SPEC`)이다 — 3회차가 `globalAlpha` 로 흐렸다가
+         어두운 바위 위에서 근백색(≥232) 판정을 못 넘어 spec 0 으로 세인 자리다.
+         ⚠ 0.86r 도 재 봤지만 그 배율은 빛 면이 본체 테두리까지 닿아 «흰 돌» 로 뒤집힌다 —
+         0.78r 은 lit 쪽 테두리에 b.col 림을 남긴다. */
       spec(() => { ctx.fillStyle = SPEC;
                    ctx.beginPath();
-                   for(let i=0;i<3;i++){ const a3 = i*1.0472 - 1.9; ctx.lineTo(Math.cos(a3)*rr[i]*0.66, Math.sin(a3)*rr[i]*0.66); }
+                   for(let i=0;i<4;i++){ const a3 = i*0.95 - 1.85; ctx.lineTo(Math.cos(a3)*rr[i]*0.78, Math.sin(a3)*rr[i]*0.78); }
                    ctx.closePath(); ctx.fill(); });
     }else if(sh === 'bmr' || sh === 'boomer'){   /* 부메랑 — 굽은 막대 */
       ctx.rotate(b.spin || 0);
@@ -26984,17 +27004,29 @@ function draw(){
       /* 792 ① — 후광이 잉크의 7.2% 뿐이라 이 종만 «단색 평면» 쪽으로 떨어져 있었다.
          ⚠ 6회차가 버린 **타원 후광을 되살리면 안 된다**(얼음창과 «타원 + 앞쪽 촉» 으로 다시 붙는다).
          그래서 후광도 «길고 가는» 구조 그대로 — 같은 축의 잔광 줄을 한 겹 더 넓고 흐리게 깐다. */
-      halo(() => { ctx.strokeStyle = 'rgba(255,208,255,.16)'; ctx.lineWidth = 19; ctx.lineCap = 'round';
-                   ctx.beginPath(); ctx.moveTo(-31,0); ctx.lineTo(12,0); ctx.stroke(); });
-      ctx.strokeStyle = 'rgba(255,208,255,.42)'; ctx.lineWidth = 9; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(-30,0); ctx.lineTo(8,0); ctx.stroke();
+      /* 792 7회차 — 비평가 CR·CS 2인 공통 ⓔ: 이 종이 **세트 최대**다(CR 잉크 폭 265px = 중앙값
+         +179% · CS 최장변 267px = 최소 69 의 3.9배). ⚠ 형상은 한 획도 안 바꾼다 — 6회차 인계가
+         «ⓐ(후광 폭이 종끼리 7~17배)와 같은 뿌리일 수 있다» 고 적어 둔 그 축이라, 고칠 것은
+         **덩치 하나**다. ⇒ 세 층(후광·잔광·날)과 획 굵기까지 **한 배율 0.78 로 같이** 줄인다
+         (한 층만 줄이면 [B1]·[B3] 의 후광 몫이 흔들리고, 굵기를 안 줄이면 «길고 가늘다» 라는
+         6회차의 갈림이 «짧고 굵다» 로 뒤집힌다). 균등 배율이라 정규화 실루엣은 불변 ⇒
+         `verify710` 의 얼음창 대조([D1])가 그대로 산다.
+         실측 예상: 잉크 최장변 62 → 48.4 로컬px(265 → 약 207px · 최소 대비 3.9 → 3.0배). */
+      /* ⚠ 균등 축소의 대가 하나 — **굽는 페이드는 절대 로컬px(2.8)이라 같이 안 줄어든다.** 0.78 을
+         그대로 쓰면 후광 몫 fSoft 가 0.759 → 0.789 로 올라 [B3] 문턱 0.80 에 1.4% 만 남는다
+         (825·[A2] 처럼 «내가 만든 플레이키» 가 되는 자리다). ⇒ 후광 획만 2.11 → **1.93 배**
+         (14.8 → 13.5)로 눌러 «후광 실효 굵기 ÷ 잔광 굵기» 를 축소 전 비(2.73)로 되돌린다. */
+      halo(() => { ctx.strokeStyle = 'rgba(255,208,255,.16)'; ctx.lineWidth = 13.5; ctx.lineCap = 'round';
+                   ctx.beginPath(); ctx.moveTo(-23.6,0); ctx.lineTo(8.8,0); ctx.stroke(); });
+      ctx.strokeStyle = 'rgba(255,208,255,.42)'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-23.4,0); ctx.lineTo(6.2,0); ctx.stroke();
       ctx.fillStyle = b.col;
       ctx.beginPath();
-      ctx.moveTo(30,0); ctx.lineTo(6,3.4); ctx.lineTo(-16,2.2); ctx.lineTo(-20,0);
-      ctx.lineTo(-16,-2.2); ctx.lineTo(6,-3.4);
+      ctx.moveTo(23.4,0); ctx.lineTo(4.7,2.65); ctx.lineTo(-12.5,1.7); ctx.lineTo(-15.6,0);
+      ctx.lineTo(-12.5,-1.7); ctx.lineTo(4.7,-2.65);
       ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,.9)';    /* 날 끝의 흰 섬광 — «꿰뚫는» 쪽을 가리킨다 */
-      ctx.beginPath(); ctx.moveTo(30,0); ctx.lineTo(15,2); ctx.lineTo(15,-2); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(23.4,0); ctx.lineTo(11.7,1.56); ctx.lineTo(11.7,-1.56); ctx.closePath(); ctx.fill();
     }else if(sh === 'fire' || sh === 'boom'){    /* 화염구 — 둥근 화구(기준형) */
       fireCore(11);
     }else if(sh === 'rockfall' || sh === 'meteor'){ /* 운석 — 바위 코어 + 불꼬리 */
