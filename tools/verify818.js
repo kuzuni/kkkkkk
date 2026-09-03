@@ -4,6 +4,13 @@
  *
  *   node tools/verify818.js
  *
+ * ⚑⚑ 846 — **덮임 축과 밀도 축을 갈라 각자 다른 홀드로 돈다.** 그 전에는 한 홀드에서 벽시계로 표본을
+ *   떴는데, 그 자는 러너 속도에 두 겹으로 흔들려 ×4·×6 에서 [R1]·[R2] 가 «≥5% 표본 0개» 로 뒤집혔다
+ *   (표본마다 CDP 왕복 + 세대 겹침이 홀드 틱 사슬에 매여 있다). 덮임은 이제 **벽시계로 안 잰다** —
+ *   제품이 낳은 알을 잡아 애니메이션을 멈추고 `currentTime` 을 우리가 밀며, 세대 겹침도 제품 상수
+ *   (`TR_HOLD_IV0` 160ms)로 다시 만든다(`tools/fxsample846.js`). 표본 수는 우리가 정한 스텝 수로 고정된다.
+ *   ⚠ **눈금·문턱은 한 칸도 안 바뀌었다**(1px 격자 · 5%·25% 그대로) — 바뀐 것은 «누가 언제 재는가» 다.
+ *
  *   [A] 선언  — 두 버튼이 **자기 수량**을 신고한다(행·카드가 아니라 버튼 자신 — 816 §4) ·
  *               룬 수량이 요소를 갖는다(`<b class="rbn">`) · 816·660 의 원형은 무수정
  *   [B] 그림  — **자릿수 최악**에서 홀드 내내 수량 잉크 덮임 0(전제 항 B1 이 헛초록을 막는다)
@@ -19,13 +26,13 @@
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+const { COV_RUN } = require('./fxsample846');       /* 846 — 애니메이션 시간으로 걷는 덮임 표본기 */
 const path = require('path');
 const fs = require('fs');
 
 const SRC = path.resolve(__dirname, '../index.html');
 const URL = 'file://' + SRC;
-const HOLD_MS = Number(process.env.V818_HOLD || 2600);
-const STEP_MS = Number(process.env.V818_STEP || 16);
+const HOLD_MS = Number(process.env.V818_HOLD || 2600);   /* 밀도 축 홀드 길이(실시간) */
 
 /* ⚑⚑ 825 — [C] 의 밀도 판정을 «러너가 정하는 값» 에서 «제품이 정하는 값» 으로 옮겼다.
    등재문의 가설(«화소 주사가 rAF 를 밀어 평균이 내려간다»)은 `probe825` 1차 재현에서 **기각**됐다
@@ -46,6 +53,15 @@ const LIFE_MIN  = 300;                                   /* 알 수명    — �
 /* 825 — «느린 러너» 손잡이. 기본 1 = 꺼짐이라 **눈금은 한 칸도 안 바뀐다**(695 `freeze` 선례).
    `V818_CPU=6 node tools/verify818.js` 로 이 자가 러너 속도에 안 흔들리는지 직접 볼 수 있다. */
 const CPU_RATE  = Number(process.env.V818_CPU || 1);
+/* 846 — 덮임 축의 표본 수 손잡이. 겹침은 `TICK_MS`·수명이 정하므로(380 ÷ 160 ⇒ 최대 3겹) 이 수는
+   **제비뽑기 횟수**다: 알 방향(`--dx/--dy`)이 발화마다 무작위라 3세대만 보면 «덮는 세대» 를 통째로
+   못 뽑는 판이 생긴다(단련 봉우리가 12.5% ↔ 4.0% 로 갈렸다 — 러너가 아니라 제비뽑기다).
+   12 는 옛 벽시계 홀드가 ×1 에서 얻던 발화 수(19~24)와 같은 자릿수이고, ×6 에서도 **같은 12** 다. */
+const GENS      = Number(process.env.V818_GENS  || 12);
+const CSTEP     = Number(process.env.V818_CSTEP || 16);  /* 애니메이션 시간 스텝(ms) */
+/* 발화 GENS 개를 «기다리는» 상한. 느린 러너에서는 발화 간격이 340ms 까지 벌어지므로 넉넉히 준다 —
+   모자라면 [B1a] 가 «세대를 다 못 잡았다» 로 **빨개진다**(조용히 적은 표본으로 초록이 되지 않는다). */
+const COV_TMO   = Number(process.env.V818_CTMO || 20000);
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? '  [' + d + ']' : '')); };
@@ -59,44 +75,12 @@ const T = {
             far: "S.rstone = 1e12; S.rune = S.rune || {}; S.rune.r1 = 400; renderRunes();" }
 };
 
-/* 한 표본 = «살아 있는 알들이 이 잉크 상자를 몇 % 덮는가» — 겹치는 알을 두 번 세지 않게 1px 격자로 훑는다
-   (816 의 자를 그대로 쓴다 — 두 작업의 수치가 같은 눈금 위에 있어야 비교가 된다) */
-const SAMPLE = (sel) => {
-  const host = document.querySelector(sel.host);
-  const inkOf = el => {
-    if (!el) return null;
-    let has = false; for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) has = true;
-    if (has) { const rg = document.createRange(); rg.selectNodeContents(el); return rg.getBoundingClientRect(); }
-    return el.getBoundingClientRect();
-  };
-  const cov = (ink, eggs) => {
-    if (!ink || !ink.width || !ink.height) return 0;
-    const x0 = Math.floor(ink.left), y0 = Math.floor(ink.top);
-    const w = Math.ceil(ink.width), h = Math.ceil(ink.height);
-    let n = 0;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const px = x0 + x + 0.5, py = y0 + y + 0.5;
-      for (const e of eggs) if (px > e.left && px < e.right && py > e.top && py < e.bottom) { n++; break; }
-    }
-    return n / (w * h);
-  };
-  const L = document.getElementById('fxl');
-  const eggs = L ? [...L.children].filter(nd => /fx-spark/.test(nd.className + ''))
-                     .map(nd => nd.getBoundingClientRect()) : [];
-  const b = host && host.getBoundingClientRect();
-  return {
-    n: eggs.length,
-    num: cov(inkOf(host && host.querySelector(sel.num)), eggs),
-    out: b ? eggs.filter(e => {
-      const cx = (e.left + e.right) / 2, cy = (e.top + e.bottom) / 2;
-      return cx < b.left || cx > b.right || cy < b.top || cy > b.bottom;
-    }).length : 0
-  };
-};
+/* ⚑ 846 — 덮임 표본기(1px 격자 자 · 세대 겹침 재구성)는 `tools/fxsample846.js` 의 `COV_RUN` 이다.
+   여기 있던 «홀드하며 벽시계로 표본을 뜨는» 자는 그 파일 머리말이 적은 두 이유로 걷어냈다. */
 
 /* ── 825 — 페이지 안 관측기. `#fxl` 변이를 직접 보므로 **CDP 왕복이 0회**이고, 재는 것은
-      «발화 한 번이 낳는 알 수» 와 «알 수명» 두 제품 값이다(위 머리말). 위 SAMPLE 과 같은 홀드에
-      얹히고 서로 간섭하지 않는다 — 하나는 잉크 덮임을, 하나는 노드 변이를 본다.
+      «발화 한 번이 낳는 알 수» 와 «알 수명» 두 제품 값이다(위 머리말).
+      ⚑ 846 — 이 관측기가 도는 홀드에는 이제 **다른 아무것도 안 얹힌다**(덮임 축이 제 홀드로 나갔다).
    ⚠ 338 — «함수를 불렀는가» 가 아니라 화면에 실제로 **놓이고 걷힌 노드**를 센다. */
 const OBS_START = () => {
   const L = document.getElementById('fxl');
@@ -126,8 +110,21 @@ const OBS_STOP = () => {
 };
 
 /* keep = null 이면 인라인 신고를 걷어 **제품 선언 그대로** 본다. 문자열이면 그 값을 주입한다
-   ('none' = 아무 요소에도 안 걸리는 타입 셀렉터 = 818 이전의 «구멍 0개»). */
-async function hold(page, t, keep) {
+   ('none' = 아무 요소에도 안 걸리는 타입 셀렉터 = 818 이전의 «구멍 0개»).
+   want = 'dens'(밀도 축) · 'cov'(덮임 축) · 'both'. **846 — 둘은 서로 다른 홀드다**:
+     · 밀도는 실시간이어야 뜻이 있다(«연속으로 터지는가») → 벽시계 홀드 + 페이지 안 관측기(825, 왕복 0회).
+     · 덮임은 실시간일 이유가 없다(«궤적이 잉크를 지나는가») → 발화를 잡아 애니메이션 시간으로 건다.
+   한 홀드에 얹으면 스텝이 메인 스레드를 붙잡아 밀도 쪽 수명·간격을 오염시킨다(등재문 처방 ⓐ). */
+async function hold(page, t, keep, want) {
+  want = want || 'both';
+  const out = {};
+  if (want === 'both' || want === 'dens') Object.assign(out, await holdDens(page, t, keep));
+  if (want === 'both' || want === 'cov')  Object.assign(out, await holdCov(page, t, keep));
+  return out;
+}
+
+/* 홀드 한 번을 위한 공통 채비 — 탭·신고 주입 · 앞 세대 배수 · 버튼 중심 좌표 */
+async function arm(page, t, keep) {
   await page.evaluate(s => { setTrSub(s); }, t.sub);
   await page.waitForTimeout(220);
   await page.evaluate(a => {
@@ -147,35 +144,48 @@ async function hold(page, t, keep) {
     const b = h.getBoundingClientRect();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   }, t);
-  if (!g) return null;
-  await page.evaluate(OBS_START);                        /* 825 — 같은 홀드에 얹는다(왕복 0회) */
+  return g;
+}
+
+/* ── 밀도 축(825) — 실시간 홀드. **846 부터 홀드 중 왕복이 0회다**(화소 주사가 여기서 빠졌다). */
+async function holdDens(page, t, keep) {
+  const g = await arm(page, t, keep);
+  if (!g) return { per: 0, life: 0, lifeN: 0, bursts: 0, spawned: 0, iv: 0, dens: 0 };
+  await page.evaluate(OBS_START);
   await page.mouse.move(g.x, g.y);
   await page.mouse.down();
-  const rows = [];
   const t0 = Date.now();
-  while (Date.now() - t0 < HOLD_MS) {
-    rows.push(await page.evaluate(SAMPLE, t));
-    await page.waitForTimeout(STEP_MS);
-  }
+  await page.waitForTimeout(HOLD_MS);
   await page.mouse.up();
   const wall = Date.now() - t0;
   await page.waitForTimeout(140);                        /* 마지막 세대의 «걷힘» 까지 봐야 수명이 닫힌다 */
   const o = (await page.evaluate(OBS_STOP)) || { bursts: 0, spawned: 0, per: 0, life: 0, lifeN: 0 };
-  const live = rows.filter(r => r.n > 0);
-  const base = { per: o.per, life: o.life, lifeN: o.lifeN, bursts: o.bursts, spawned: o.spawned,
-                 iv: o.bursts ? wall / o.bursts : 0,
-                 /* 660 의 «동시 ≥8알» 을 **제품의 가장 성긴 틱**에서 읽은 값 — 러너 간격을 안 쓴다 */
-                 dens: o.per * o.life / TICK_MS };
-  if (!live.length) return Object.assign(base, { frames: 0, max: 0, n25: 0, n05: 0, eggs: 0, peak: 0, out: 0 });
-  return Object.assign(base, {
-    frames: live.length,
-    max: Math.max(...live.map(r => r.num)),
-    n25: live.filter(r => r.num >= 0.25).length,
-    n05: live.filter(r => r.num >= 0.05).length,
-    eggs: live.reduce((a, r) => a + r.n, 0) / live.length,
-    peak: Math.max(...live.map(r => r.n)),
-    out:  Math.max(...rows.map(r => r.out))
-  });
+  return { per: o.per, life: o.life, lifeN: o.lifeN, bursts: o.bursts, spawned: o.spawned,
+           iv: o.bursts ? wall / o.bursts : 0,
+           /* 660 의 «동시 ≥8알» 을 **제품의 가장 성긴 틱**에서 읽은 값 — 러너 간격을 안 쓴다 */
+           dens: o.per * o.life / TICK_MS };
+}
+
+/* ── 덮임 축(846) — 발화 GENS 개를 잡아 **애니메이션 시간**으로 건다. 러너는 «얼마나 기다리는가» 만 정한다. */
+async function holdCov(page, t, keep) {
+  const g = await arm(page, t, keep);
+  const zero = { frames: 0, steps: 0, max: 0, n25: 0, n05: 0, eggs: 0, peak: 0, out: 0, gens: 0 };
+  if (!g) return zero;
+  const pr = page.evaluate(COV_RUN, { sel: { host: t.host, num: t.num },
+                                      gens: GENS, tick: TICK_MS, step: CSTEP, timeout: COV_TMO });
+  await page.mouse.move(g.x, g.y);
+  await page.mouse.down();
+  const r = await pr;
+  await page.mouse.up();
+  await page.waitForTimeout(120);
+  if (!r) return zero;
+  /* ⚠ 밀도 축과 **이름이 겹치는 값은 접두어를 붙여 돌려준다.** `life`·`per` 를 그대로 얹으면
+     [C2b]·[C2c] 가 «측정한 노드 수명·발화당 스폰» 대신 «선언된 애니 길이·세대당 알» 을 묻게 되어
+     상수를 상수와 비교하는 **헛초록**이 된다(한 홀드였을 때는 없던 함정이다). */
+  return { frames: r.frames, max: r.max, n25: r.n25, n05: r.n05, out: r.out, peak: r.peak,
+           eggs: r.eggs, gens: r.gens, covPer: r.per, covLife: r.life, covStep: r.step, covTick: r.tick,
+           /* 표본 수는 러너가 아니라 산수가 정한다 — [B1b] 가 이 등식을 직접 묻는다 */
+           steps: Math.floor(((r.gens - 1) * r.tick + r.life) / r.step) + 1 };
 }
 
 (async () => {
@@ -262,10 +272,17 @@ async function hold(page, t, keep) {
 
   const now = {};
   for (const k of Object.keys(T)) {
-    now[k] = await hold(page, T[k], null);                 /* 제품 선언 그대로 */
+    now[k] = await hold(page, T[k], null, 'both');          /* 제품 선언 그대로 */
     const r = now[k], n = T[k].name;
-    ok(r && r.frames > 0, 'B1 ' + n + ' 홀드 중 알이 실제로 태어난다(0 이면 아래 초록은 헛초록이다)',
-       r ? r.frames + '표본 · 동시 최대 ' + r.peak + '알' : '없음');
+    ok(r && r.frames > 0 && r.gens === GENS,
+       'B1 ' + n + ' 홀드 중 알이 실제로 태어난다 — 발화 ' + GENS + '세대를 다 잡았다(0 이면 아래 초록은 헛초록이다)',
+       r ? r.gens + '세대 · ' + r.frames + '표본 · 동시 최대 ' + r.peak + '알' : '없음');
+    /* 846 — 표본 수가 **러너가 아니라 산수**로 정해진다는 것을 직접 묻는다. 이 항이 빨개지는 길은
+       «덮임을 다시 벽시계로 재기 시작했다» 뿐이다(그때가 [R1]·[R2] 가 다시 뒤집히는 자리다). */
+    ok(r && r.frames === r.steps,
+       'B1b ' + n + ' 덮임 표본 수 = ((세대−1)×틱 + 수명) ÷ 스텝 + 1 — **러너가 정하지 않는다**',
+       r ? r.frames + ' = ((' + r.gens + '−1)×' + r.covTick + ' + ' + r.covLife + ') ÷ ' + r.covStep
+           + ' + 1 = ' + r.steps : '없음');
     ok(r && r.max < 0.05, 'B2 ' + n + ' 수량 잉크 덮임 **최대 5% 미만**', '최대 ' + p1((r ? r.max : 1) * 100) + '%');
     ok(r && r.n25 === 0, 'B3 ' + n + ' «읽을 수 없다» 급(≥25%) 표본 **0개**', (r ? r.n25 : '?') + '표본');
     ok(r && r.n05 === 0, 'B4 ' + n + ' «스친다» 급(≥5%) 표본도 **0개**', (r ? r.n05 : '?') + '표본');
@@ -275,7 +292,7 @@ async function hold(page, t, keep) {
   console.log('\n[C] 대가 — 660 의 «터진다» 눈금(동시 ≥8알)과 스폰 규약');
   const pre = {};
   for (const k of Object.keys(T)) {
-    pre[k] = await hold(page, T[k], 'none');                /* 818 이전 사본 = 구멍 0개 */
+    pre[k] = await hold(page, T[k], 'none', 'both');        /* 818 이전 사본 = 구멍 0개 */
     const n = T[k].name;
     ok(now[k] && now[k].out === 0, 'C1 ' + n + ' 660 [C] — 알 중심이 버튼 밖으로 나간 표본 0개',
        (now[k] ? now[k].out : '?') + '개');
@@ -306,11 +323,13 @@ async function hold(page, t, keep) {
   for (const k of Object.keys(T))
     console.log('       · ' + T[k].name + ' 밀도 대가: ' + p1(pre[k].dens) + ' → ' + p1(now[k].dens)
                 + '알 (' + p1((now[k].dens / pre[k].dens - 1) * 100) + '%)');
-  /* 825 — 러너가 정하는 값은 **기록으로만** 남긴다(LESSONS 239-①). 판정은 위 C2·C2b·C2c 가 한다. */
+  /* 825 — 러너가 정하는 값은 **기록으로만** 남긴다(LESSONS 239-①). 판정은 위 C2·C2b·C2c 가 한다.
+     846 — 동시 수는 이제 «재구성한 겹침» 의 값이라 러너와 무관하다(발화 간격만 러너 것이다). */
   console.log('       ── 러너 의존값(기록 전용 · 판정 안 함) ──');
   for (const k of Object.keys(T))
-    console.log('       · ' + T[k].name + ' 실측 동시: 평균 ' + p1(now[k].eggs) + '알 · 봉우리 ' + now[k].peak
-                + '알 · 발화 간격 ' + p1(now[k].iv) + 'ms(제품 최속 60 ~ 최성김 ' + TICK_MS + 'ms)');
+    console.log('       · ' + T[k].name + ' 실측 발화 간격 ' + p1(now[k].iv) + 'ms(제품 최속 60 ~ 최성김 '
+                + TICK_MS + 'ms) · 발화 ' + now[k].bursts + '회'
+                + '  ── 재구성 겹침(러너 무관): 평균 ' + p1(now[k].eggs) + '알 · 봉우리 ' + now[k].peak + '알');
 
   /* ── [R] 되돌림 ───────────────────────────────────────────────────── */
   console.log('\n[R] 되돌림 — 무르게 푼 수리가 아니다');
@@ -319,10 +338,10 @@ async function hold(page, t, keep) {
     ok(pre[k] && pre[k].n05 > 0, 'R1 ' + n + ' 신고를 지우면(818 이전) 수량이 다시 덮인다 — [B4] 가 빨개지는 자리',
        '≥5% 표본 ' + (pre[k] ? pre[k].n05 : '?') + '개 · 최대 ' + p1((pre[k] ? pre[k].max : 0) * 100) + '%');
     /* 자가 «신고한 그 잉크» 를 보는가 — 엉뚱한 데(아이콘)를 신고하면 수량은 그대로 덮여야 한다 */
-    const r2 = await hold(page, T[k], '.cic');
+    const r2 = await hold(page, T[k], '.cic', 'cov');
     ok(r2 && r2.n05 > 0, 'R2 ' + n + ' 엉뚱한 잉크(아이콘 `.cic`)를 신고하면 수량은 그대로 덮인다',
        '≥5% 표본 ' + (r2 ? r2.n05 : '?') + '개');
-    const r3 = await hold(page, T[k], null);
+    const r3 = await hold(page, T[k], null, 'cov');
     ok(r3 && r3.n05 === 0, 'R3 ' + n + ' 원복하면 다시 0 이다', '≥5% 표본 ' + (r3 ? r3.n05 : '?') + '개');
   }
   /* ── 825 — 새 밀도 축의 되돌림 시험. 제품 파일은 **0줄**, `upFx` 를 한 겹 감싸 두 인자를 각각 죽인다.
@@ -344,18 +363,18 @@ async function hold(page, t, keep) {
   {
     const t = T.temper;
     await page.evaluate(REG, 'cnt');
-    const rc = await hold(page, t, null);
+    const rc = await hold(page, t, null, 'dens');
     await page.evaluate(UNREG);
     ok(rc && rc.per < PER_MIN && rc.dens < 8,
        'R4 틱당 스폰을 1 로 묶으면 [C2]·[C2b] 가 **빨개진다** — 밀도 축이 무뎌진 게 아니다',
        p1(rc ? rc.per : 0) + '알/발화 · 동시 ' + p1(rc ? rc.dens : 0) + '알');
     await page.evaluate(REG, 'life');
-    const rl = await hold(page, t, null);
+    const rl = await hold(page, t, null, 'dens');
     await page.evaluate(UNREG);
     ok(rl && rl.life < LIFE_MIN && rl.dens < 8,
        'R5 알을 120ms 에 걷으면(619 14회차 시절) [C2]·[C2c] 가 **빨개진다** — 660 보강2 를 지키는 자다',
        p1(rl ? rl.life : 0) + 'ms · 동시 ' + p1(rl ? rl.dens : 0) + '알');
-    const rb = await hold(page, t, null);
+    const rb = await hold(page, t, null, 'dens');
     ok(rb && rb.dens >= 8 && rb.per >= PER_MIN && rb.life >= LIFE_MIN,
        'R6 두 주입을 걷으면 다시 초록이다(주입이 원인이었다)',
        p1(rb ? rb.dens : 0) + '알 · 발화당 ' + p1(rb ? rb.per : 0) + ' · 수명 ' + p1(rb ? rb.life : 0) + 'ms');
