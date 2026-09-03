@@ -1371,6 +1371,12 @@ if (require.main === module) (async () => {
      9회차(정정9) — 값이 «정책·시드와 무관» 이어야 하는데 실측이 실행마다 15% 갈렸다.
      캐시가 있으면 실측 자체를 생략한다(재현 가능성이 정확도보다 먼저다 — 잡음 바닥 ±11.7%
      가 ④ 의 창 ±10% 보다 넓으면 어떤 스윕도 판정 불가다). */
+  /* ⚑ 857 — **보정과 시뮬은 다른 축인데 한 수(`elapsedSec`)로만 찍혀 있었다.**
+     `verify494` [2] 「30일 1시드 ≤ 120초」 가 캐시 없이 부르는 바람에 그 문턱이 사실은
+     «이 기계에서 κ 앵커 CAL_LIST.length 개를 새로 세우는 데 얼마 걸리는가» 를 재고 있었다
+     (실측 234.4초 중 보정 몫이 대부분). 시간을 **이 실행이 스스로 갈라 찍게** 한다 —
+     자가 두 실행의 벽시계를 빼서 짐작하면 그 뺄셈이 또 기계 사정에 걸린다. */
+  const tCal0 = Date.now();
   if (CALIB && fs.existsSync(CALIB)) {
     report.cal = JSON.parse(fs.readFileSync(CALIB, 'utf8'));
     report.calFrom = '캐시 ' + path.relative(ROOT, CALIB);
@@ -1406,12 +1412,16 @@ if (require.main === module) (async () => {
       if (row.valid) { kGuess = row.kDps; prevForm = row.formDps; }   /* 다음 앵커의 목표·화력 기준에 되먹인다 */
       rows.push(row);
     }
+    /* 857 — 하한(`calibrateFloor`)은 **앵커 수와 무관한 고정비**다. 앵커 몫과 갈라 찍어야
+       «앵커 한 개» 실측에서 표 전체를 외삽할 수 있다(앵커당 × N + 고정비). */
+    const tFloor0 = Date.now();
     const fl = await (async () => {
       const { ctx, page } = await calPage();
       const f = await page.evaluate(() => { window.BOT.freeze(); return window.BOT.calibrateFloor(); });
       await ctx.close();
       return f;
     })();
+    report.calFloorSec = (Date.now() - tFloor0) / 1000;
     /* 11회차 — 참고 평균도 **유효 행만**(kAt 과 같은 표를 봐야 한다).
        16회차(정정5) — «같은 표» 가 축마다 다르다: kHp·kGold 는 `mobValid` · kBoss 는 `bossValid` ·
        kDps 는 `valid`. 평균이 kAt 과 다른 행을 읽으면 표 머리의 참고값이 자와 갈린다. */
@@ -1428,8 +1438,18 @@ if (require.main === module) (async () => {
        나타나는지를 게이트가 확인한다. 본 실행에서는 절대 쓰지 마라. */
     if (ARG.nofloor) { report.cal.tFloor = 0; report.nofloor = true; }
   }
+  /* 857 — 보정 몫(벽시계) · 그 몫이 실제로 센 앵커 수. 캐시에서 읽었으면 앵커 0 개다.
+     `calSec` 은 «κ 표를 세우는 데 든 시간» 이고, 나머지(`elapsedSec − calSec`)가 시뮬이다. */
+  report.calSec = (Date.now() - tCal0) / 1000;
+  report.calAnchors = /^캐시/.test(report.calFrom || '') ? 0 : CAL_LIST.length;
+  if (report.calFloorSec == null) report.calFloorSec = 0;
+  /* 앵커당 = (보정 전체 − 하한 고정비) ÷ 앵커 수 */
+  report.calSecPerAnchor = report.calAnchors ? (report.calSec - report.calFloorSec) / report.calAnchors : null;
   report.calHash = calHashOf(report.cal);
-  console.log('[A] 보정치(' + (report.calFrom || '실측') + ' · sha ' + report.calHash + ') — κ_dps ' + report.cal.kDps.toFixed(3) + ' · κ_hp ' + report.cal.kHp.toFixed(3) + ' · κ_gold ' + report.cal.kGold.toFixed(3));
+  console.log('[A] 보정치(' + (report.calFrom || '실측') + ' · sha ' + report.calHash + ') — κ_dps ' + report.cal.kDps.toFixed(3) + ' · κ_hp ' + report.cal.kHp.toFixed(3) + ' · κ_gold ' + report.cal.kGold.toFixed(3)
+              + ' · 보정 ' + report.calSec.toFixed(1) + '초'
+              + (report.calAnchors ? ' (앵커 ' + report.calAnchors + '개 · 개당 ' + report.calSecPerAnchor.toFixed(1)
+                                     + '초 + 하한 ' + report.calFloorSec.toFixed(1) + '초)' : ' (캐시 — 안 셌다)'));
 
   for (const pol of POLS) {
     const runs = [];
@@ -1461,11 +1481,13 @@ if (require.main === module) (async () => {
   }
   await browser.close();
   report.elapsedSec = (Date.now() - t0) / 1000;
+  /* 857 — 시뮬 몫 = 전체 − 보정. 두 축이 한 줄에 같이 찍혀야 «무엇이 예산을 먹었나» 가 보인다. */
+  report.simSec = Math.max(0, report.elapsedSec - (report.calSec || 0));
 
   writeReport(report);
   if (ARG.json) fs.writeFileSync(path.resolve(ROOT, String(ARG.json)), JSON.stringify(report, null, 1));
 
-  console.log(`\nBOT199 — ${report.elapsedSec.toFixed(1)}초 · 규칙 위반 ${report.viol.length}건 · 표 ${path.relative(ROOT, OUT)}`);
+  console.log(`\nBOT199 — ${report.elapsedSec.toFixed(1)}초 (보정 ${(report.calSec || 0).toFixed(1)}초 + 시뮬 ${report.simSec.toFixed(1)}초) · 규칙 위반 ${report.viol.length}건 · 표 ${path.relative(ROOT, OUT)}`);
   process.exit(report.viol.length === 0 ? 0 : 1);
 })();
 
@@ -1497,7 +1519,9 @@ function writeReport(rep) {
   /* ⚑ 18회차 정정D(비평 YY 불일치②) — 재현줄이 `--policy` 를 안 찍었다. 단일 정책 표를 그
      명령으로 재실행하면 **[G] 가 있는 다른 표**가 나온다 — 정정1 이 요구한 «원표만으로 재현»
      이 되돌림 시험의 증거물 자신에서 깨져 있었다. */
-  L.push(`> \`node tools/bot199.js --days=${rep.days} --seeds=${rep.seeds} --policy=${rep.policy || POLICY}\` · ${rep.replayFrom ? '리플레이 ' + rep.replayFrom : '실행 ' + rep.elapsedSec.toFixed(1) + '초'}`);
+  L.push(`> \`node tools/bot199.js --days=${rep.days} --seeds=${rep.seeds} --policy=${rep.policy || POLICY}\` · ${rep.replayFrom ? '리플레이 ' + rep.replayFrom
+           : '실행 ' + rep.elapsedSec.toFixed(1) + '초'
+             + (rep.calSec == null ? '' : ` (보정 ${rep.calSec.toFixed(1)}초${rep.calAnchors ? ` · 앵커 ${rep.calAnchors}개` : ' · 캐시'} + 시뮬 ${(rep.simSec != null ? rep.simSec : rep.elapsedSec - rep.calSec).toFixed(1)}초 — 857)`)}`);
   L.push('> **이 표는 계수를 안 건드린 «현재 값» 의 사진이다.** 조정은 199 몫(작업 494 등재문 마지막 줄).');
   L.push(`> [A] κ 표 ${rep.calFrom || '실측(캐시 없음)'} · **calib sha ${rep.calHash || calHashOf(rep.cal)}** — 해시가 같은 표끼리만 «같은 자로 잰 비교» 다(정정9).`);
   if (WALLBAND) L.push(`> ⚠ **벽 분류 주기 강제 ${WALLBAND}** (\`--wallband\` — 밴드 비교 전용. §0 판정에는 자연 정의 표를 써라).`);
