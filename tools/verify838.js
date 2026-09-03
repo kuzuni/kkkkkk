@@ -9,6 +9,13 @@
  * [B] 스필 0 — 그래도 알의 잉크가 호스트 상자 밖으로 안 나간다(619 28·13·14회차를 한 픽셀도 안 판다)
  * [C] 출생 반경 — 발원 중심에서 태어나 «퍼진다»(끝 반경 ÷ t=0 반경 · 수리 전 ×1.24)
  * [D] 대조군 — 점(좌표) 대상은 한 값도 안 바뀐다(같은 곡선·같은 사거리 — 이 수리는 요소 대상만 만진다)
+ * [E] 반경 예산(6회차 신설) — DG 가 5회차 채점에서 낸 **손익분기 산수**를 그대로 자로 세운다:
+ *     끝반경 R 에서 지름 d 인 알 하나가 먹는 각은 `2·asin(d/2R)` 라, 알 n 개가 요구하는 호는
+ *     `n · 2·asin(d/2R)` 이고 쓸 수 있는 호는 `360 − 빈 각` 이다. 요구가 공급을 넘으면
+ *     **뭉침과 내부 구멍이 «동시에» 난다**(5회차 실측: 14알 R41 ⇒ 324° 요구 ↔ 280° 공급).
+ *     ⚠ 이 자가 [C2](이웃 장 IoU)·[C3](빈 각)과 **다른 것을 묻는다** — 둘은 «지금 그림이 어떤가»
+ *       이고 이 항은 «지금 그림이 **산술적으로 가능한가**» 다. 앞 다섯 회차가 두 축을 번갈아
+ *       빨갛게 만든 이유가 이 예산이 늘 적자였기 때문이다.
  * [R] 되돌림 시험 — `FXB_KMAX` 를 종전 값(FXB_K)으로 되돌린 **사본**에서 [A] 가 빨갛다.
  *     (무르게 푼 수리가 아니라는 증거 — LESSONS 232-①)
  * ⚠ 사본은 임시 파일이고 크래시에도 지운다(810 — «남은 표본이 다음 자를 조용히 바꾼다»).
@@ -65,6 +72,15 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
        둘 중 비평 2인이 1순위로 적은 것은 A5 쪽이다(DD·DE 4회차) — 그래서 A5 를 지키고 이 값이 대가를 적는다. */
     ok(A.fanGap <= 135, 'C3 끝점이 온 원에 퍼진다 — 가장 큰 빈 각 ≤ 135° · ' + p2(A.fanGap) + '°',
        '2회차 채점 CZ «40.8° 부채»(= 빈 각 319°) · DA «65° 쐐기»(= 빈 각 295°) · 4회차 52~92°(A5 전) · 5회차 116~122°(A5 와 맞바꿈 · 문턱은 그 위로 띄웠다 — 574·709·825 «문턱 플레이키»)');
+    /* ── [E] 반경 예산(6회차) — 위 머리말의 DG 산수 ────────────────── */
+    const arcNeed = A.n * 2 * Math.asin(Math.min(1, (A.maxD / 2) / Math.max(1e-9, A.rE))) * 180 / Math.PI;
+    const arcHave = 360 - A.fanGap;
+    ok(A.n <= 10, 'E1 씬 A 의 알이 **10개 이하**다(`--burst-n` 신고가 실제로 걸린다) — ' + A.n + '개',
+       '5회차까지 14알(첫 발 `fxUpOk` 10 + 반복 `UPFX_NOW` 4) · DG «피치 15.4° → 21.6°»');
+    ok(arcNeed <= arcHave,
+       'E2 반경 예산이 **흑자**다 — 알들이 요구하는 호 ' + p2(arcNeed) + '° ≤ 쓸 수 있는 호 ' + p2(arcHave) + '°',
+       'DG 5회차 손익분기 «14알 R41 ⇒ 324° 요구 ↔ 280° 공급 = 44° 적자» · n ' + A.n
+       + ' · 지름 ' + p2(A.maxD) + ' · 끝반경 ' + p2(A.rE) + 'px');
     ok(B.body >= 3, 'D1 대조군(점 대상)은 종전대로 여러 몸길이 — ' + p2(B.body) + ' 몸길이', '수리 전 4.8');
     ok(A.errs.length === 0 && B.errs.length === 0, 'D2 콘솔 에러 0',
        [...A.errs, ...B.errs].slice(0, 2).join(' | '));
@@ -87,6 +103,23 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
          '수리 전 0.41 재현');
       ok(!rev.err && rev.growth < 1.35,
          'R2 그 사본은 출생 반경도 종전 — ×' + (rev.err || p2(rev.growth)), '수리 전 ×1.24');
+    }
+    /* ⚑ 6회차 되돌림 — 신고 **둘만** 걷는다(제품 상수는 그대로). 5회차의 그림으로 돌아가
+       [E2] 가 적자가 되는지 본다: «무르게 푼 수리가 아니다» 를 이 항이 못박는다(LESSONS 232-①). */
+    {
+      const code2 = fs.readFileSync(SRC, 'utf8');
+      const has = /--burst-n:\s*\d+/.test(code2) && /--burst-fit:\s*[\d.]+/.test(code2);
+      ok(has, 'R3a 6회차의 두 신고가 제품에 있다(`--burst-n` · `--burst-fit`)',
+         has ? '`.tr-card>.cb`' : '못 찾음');
+      if (has) {
+        fs.writeFileSync(TMP, code2.replace(/--burst-n:\s*\d+;/g, '').replace(/--burst-fit:\s*[\d.]+;/g, ''));
+        const r2 = await runScene(SCENES[0], TMP);
+        const need2 = r2.err ? 0 : r2.n * 2 * Math.asin(Math.min(1, (r2.maxD / 2) / Math.max(1e-9, r2.rE))) * 180 / Math.PI;
+        const have2 = r2.err ? 0 : 360 - r2.fanGap;
+        ok(!r2.err && need2 > have2,
+           'R3b 두 신고를 걷으면 [E2] 가 **적자**로 돌아간다 — 요구 ' + p2(need2) + '° > 공급 ' + p2(have2) + '°',
+           r2.err || ('n ' + r2.n + ' · 지름 ' + p2(r2.maxD) + ' · 끝반경 ' + p2(r2.rE) + 'px'));
+      }
     }
   } finally { try { fs.unlinkSync(TMP); } catch (_) {} }
 

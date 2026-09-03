@@ -11676,7 +11676,7 @@
      ⚠ 단련(`.tb` 340×173 — 686 이 키웠다)·룬(`.rbt.b1` 420×112)도 670·687 이후 버튼에 «(아이콘)
        수량» 을 이고 있어 같은 결손이었고 **818 이 같은 신고로 닫았다**(각 선언 옆 머리말).
        세 자리의 답이 «수량 하나만 신고» 로 같고 **대가만 달랐다**: 훈련 −3% · 룬 −0% · 단련 −28%. */
-  .tr-card>.cb{--burst-keep:i;--burst-from:s;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
+  .tr-card>.cb{--burst-keep:i;--burst-from:s;--burst-n:6;--burst-fit:.18;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
     justify-content:center;gap:8px;padding-right:11px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
@@ -42375,6 +42375,17 @@ const FXB_KMAX = 0.55, FXB_BODY = 1.35, FXB_KLAD = 3;
    0.34 ⇒ 훈련 36px(−22%) · 단련 `.tb`(340×173) 58px·룬 `.rbt.b1`(420×112) 38px 로 **셋 다 상한에 안 닿거나
    조금만 닿는다**. 신고 안 한 호스트는 이 줄을 아예 안 지난다(583 «알갱이 크기 더 크게» 는 그대로다). */
 const FXB_FITS = 0.22, FXB_SZMIN = 16, FXB_KSTEPF = 0.70, FXB_BR = 0.34, FXB_FOK = 0.72;   /* 838 3회차 — FITS 0.34→0.30 · FXB_BR = 탄생 반경이 «남은 방» 에서 갖는 몫 */
+/* ⚑ 838 6회차 — `FXB_FITS` 는 **호스트가 좁혀 신고할 수 있다**(`--burst-fit`, 0<v≤`FXB_FITS`).
+   5회차 채점 2인(DF·DG)의 남은 1순위가 «반경이 모자란다 — 알을 Ø11(DF)/Ø15.5(DG) 로» 였고, 그 자리는
+   씬 A(훈련 `.tr-card>.cb` 310×106) 다. 값을 **전역으로** 내리면 단련(496×173)·룬(420×112)에서
+   `verify818` [C1](= 660 [C] «알 중심이 버튼 밖 0») 이 빨개진다 — 알이 작아지면 가둠 상자가 그만큼
+   열리는데(아래 `inM` 머리말) 그 두 호스트는 열린 몫이 **자기 눌림**(621 `scale(.94) translate(0 8px)`
+   = 가로 몫만 14.9px)을 못 덮어, 쉬는 상자 «안» 에서 끝난 알이 눌린 상자 «밖» 으로 읽힌다.
+   ⚑ **실측(6회차, 전역으로 내려 본 값)**: 0.20 [C1] 2개 · 0.19 1개 · 0.18 1~2개 · **0.22 0개**.
+     눌림을 여유의 바닥으로 삼는 안(변마다 `0.03w` · `0.03h+8`)도 넣어 봤지만 [C1] 이 그대로 1개라
+     **원인이 눌림 하나가 아니다** — 그 갈래는 868 로 등재하고 여기서는 채점받은 호스트만 신고한다.
+   ⚠ 신고가 없으면 `FXB_FITS` 그대로다(단련·룬은 한 픽셀도 안 바뀐다 — 814·816·818 과 같은 규약).
+   ⚠ 상한을 `FXB_FITS` 로 묶는다 — 신고로 알을 **키우는** 길은 안 연다(660 «버튼이 허용하는 만큼»). */
 /* ⚑ 619 12회차 — **스파크 크기의 눈금을 «절대» 로 정한다**(394 선례: «무엇을 눈금으로 삼는가» 를 먼저 적는다).
    11회차까지의 눈금은 «호스트 짧은 변 대비 %»(6회차 hsc)였고, 그 축에서 룬은 상한 1.6 에 붙어
    단일 62px · 3알 융합 97×64 «아메바» 로 읽혔다(비평가 EC ① · EB ⑥⑦ — 10·11회차 **네 명 연속**).
@@ -42493,7 +42504,7 @@ function fxBurst(t, col, n, strict, iv, ic){
      쓰므로 실사용 경로는 없지만, 새 전투 발 호출이 생겨도 규칙이 자동 적용되게 맞춰 둔다) */
   const L = (t && t.combat) ? fxLC() : fxL(), p = fxPt(t); if(!L || !p) return;
   const IC = ic ? FXCUR[ic] : null;                  /* 660 — 없으면 종전 그대로 */
-  const cnt = n || 12;
+  let cnt = n || 12;
   if(L.childElementCount + cnt > FXMAX) return;
   /* 출발 반경 — 대상이 «요소» 면 그 bbox 테두리 근처에서 튀어나오게 한다(11회차).
      중심에서 22px 로 고정하면 훈련 카드(326×510)처럼 큰 대상에서는 파티클이 통째로
@@ -42550,7 +42561,19 @@ function fxBurst(t, col, n, strict, iv, ic){
      ⇒ 세로에 쓴 것과 **같은 축을 가로에도** 연다. 링을 벽 «안» 에서 끝내면 눌림이 사라지고
      `FXB_K`(이동량)·수명·알 개수는 한 값도 안 건드린다.
      ⚠ 신고가 없으면 1 이라 **종전 호출은 한 값도 안 바뀐다**(816·818·3·5회차와 같은 규약). */
-  let rxs = 1, rys = 1, szs = 1;
+  /* ⚑ 838 6회차 — 같은 꼴의 손잡이 **넷째**(`--burst-n`). 앞 셋과 달리 **배수가 아니라 «알 수 상한»**
+     이다(정수 · 1 이상). 5회차 채점에서 비평 2인(DF·DG)이 각자 «남은 1순위는 반경이 모자란다» 를
+     적었고 DG 가 손익분기를 산수로 냈다 — 끝반경 R 에서 지름 d 인 알 하나가 먹는 각은 `2·asin(d/2R)`
+     라 **14알 × R41 = 324° 가 필요한데 「53」 가드 뒤 활성 호는 280°** 다. 모자란 44° 가
+     뭉침(봉우리 0.30)과 내부 구멍(50.6°)으로 **동시에** 나온다. 손익분기는 «14알에 R ≥ 47.4px ·
+     10알에 R ≥ 33.9px» 인데, **R 은 못 올린다** — 가둠 상자(28회차)가 반높이 53px 이고 잉크가
+     `sz/2 + FXB_INPAD` 를 물러나야 하므로 세로 최대 반경이 40px 언저리다. ⇒ 여는 것은 «알 수» 쪽이다.
+     ⚠ **배수가 아니라 상한인 이유**: 배수로 누르면 반복분(`UPFX_NOW` 4)까지 같이 줄어 4 → 3 이 되고,
+       그 순간 `verify818` [C2](동시 생존 = 발화당 × 수명 ÷ 가장 성긴 틱 = 3×380÷160 = **7.1 < 8**)가
+       빨개진다 — 660 [E3] «터진다» 의 밀도 눈금이다. 상한이면 첫 발(`fxUpOk` 의 10)만 6 으로 눌리고
+       반복분 4 는 `min(4,6)` 이라 **한 값도 안 바뀐다**(첫 발 6 + 반복 4 = 14 → **10알**).
+     ⚠ 신고가 없으면 상한이 없어 **종전 호출은 한 값도 안 바뀐다**(814·816·818 과 같은 규약). */
+  let rxs = 1, rys = 1, szs = 1, ncap = 0, fits = FXB_FITS;
   if(r && t && t.nodeType === 1){
     try {
       const st = getComputedStyle(t);
@@ -42560,8 +42583,13 @@ function fxBurst(t, col, n, strict, iv, ic){
       if(w > 0 && w <= 1) szs = w;
       const u = parseFloat(st.getPropertyValue('--burst-rx'));
       if(u > 0 && u <= 1) rxs = u;
+      const c = parseFloat(st.getPropertyValue('--burst-n'));      /* 838 6회차 — 알 수 «상한»(위 머리말) */
+      if(c >= 1) ncap = Math.round(c);
+      const f = parseFloat(st.getPropertyValue('--burst-fit'));    /* 838 6회차 — 알 크기 몫(위 `FXB_FITS` 머리말) */
+      if(f > 0 && f <= FXB_FITS) fits = f;
     } catch(_){}
   }
+  if(ncap) cnt = Math.max(1, Math.min(cnt, ncap));                 /* 619 [B] «발화 N회» 는 그대로 — 줄어드는 것은 «개수» 다 */
   /* ⚑⚑ 838 2회차 — **발원과 «날아갈 방» 을 분리한다**(`--burst-from`, 자식 셀렉터 ·
      `--burst-to`(660)·`--burst-keep`(816)·`--burst-ry`/`--burst-sz`(814)와 **같은 꼴** — 새 기계를 안 만든다).
      1회차 채점에서 비평 2인(CX·CY)이 **독립으로 같은 산수**를 냈다: 씬 A 는 알이 t=0 에 이미
@@ -42620,7 +42648,7 @@ function fxBurst(t, col, n, strict, iv, ic){
        그 규칙이고, 2회차는 알만 줄이고 여유는 54px 짜리 값(30px)을 그대로 써서 **가격 숫자의 구멍이
        발원 오른쪽 3px 까지 밀고 들어와** 오른쪽으로 나가는 알이 통째로 각도째 굴려졌다(CZ·DA 공통
        «좌향 65° 쐐기»). 여유가 알을 따라 줄면 그만큼이 열린다. */
-  const fitK = (fo && r) ? Math.min(1, Math.max(FXB_SZMIN, FXB_FITS * Math.min(r.w, r.h))
+  const fitK = (fo && r) ? Math.min(1, Math.max(FXB_SZMIN, fits * Math.min(r.w, r.h))
                                        / Math.max(1, FXB_SZMAX * hsc * szs * (ic ? FX_CIC_SC : 1))) : 1;
   const sparkMs = fxTickLife(iv, FXSPARK_MS);      /* 619 14회차 — 한 세대가 다음 틱까지 안 산다 */
   /* ⚑⚑ 660 — **아이콘 버스트는 «호스트 자기 글자» keep-out 을 안 탄다.**
@@ -42823,6 +42851,9 @@ function fxBurst(t, col, n, strict, iv, ic){
        한 칸 더 들인다 = 잉크와 액자 사이에 늘 4px 이 남는다. 얇은 호스트에서 상자가 뒤집히지
        않게 반폭·반높이 물림은 그대로다. */
     const inM = r ? Math.max(0, Math.min(sz/2 + FXB_INPAD, r.w/2 - 1, r.h/2 - 1)) : 0;
+    /* 위 머리말의 «눌린 버튼» 몫 — 변마다 다르다(눌림이 배율 + 아래로 8px 이라 위/아래가 비대칭이다).
+       ⚠ 세 변 다 `FXB_INPAD` 한 칸을 더 얹는다: 619 14회차의 «잉크와 액자 사이에 늘 4px» 은
+         **눌린 액자** 에 대해서도 참이어야 한다(딱 맞추면 반올림 한 톨에 [C1] 이 흔들린다 — 574·709·825). */
     const bx0 = r ? Math.max(20, r.x + inM) : 20;
     const bx1 = r ? Math.min(FRAME_W - 20, r.x + r.w - inM) : FRAME_W - 20;
     /* 32회차 — 점 대상의 세로도 프레임 안으로(위 PB_M 주석의 비대칭 해소). 원점을 이미 들여
