@@ -30,10 +30,19 @@ const PNG = require('pngjs').PNG;
 
 const ROOT = path.resolve(__dirname, '..');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'probe814c-'));
-/* 봉우리 = `@keyframes fxFlash` 의 52%(opacity .92 · scale 1.06) — 워시가 가장 두꺼운 때다.
-   ⚠ 0% 가 아니라 52% 를 재는 이유: 0% 는 opacity 1 이지만 scale 1 이라 상자가 가장 작다.
-     «값 줄을 덮는 면적 × 알파» 가 최대인 자리를 재야 최악을 잰다. */
-const PEAK = 0.52;
+/* ⚑⚑ **봉우리가 둘이다 — 12회차 정정**(비평가 EC 가 각자 자로 잡았다).
+   `@keyframes fxFlash` 는 **0%{opacity:1;scale:1}** · **52%{opacity:.80;scale:1.06}** 이다.
+     · **크기 봉우리 = 52%** (상자가 가장 크다)
+     · **워시 봉우리 = 0%**  (알파가 가장 두껍다 — 868 이 키프레임을 재배치한 뒤로도 그대로)
+   8~11회차는 52% 한 자리만 재면서 그것을 «최악» 이라고 적었다(옛 주석의 «opacity .92» 는
+   868 **이전** 값이라 그 자체가 낡아 있었다). **값 줄의 가독 최악은 52% 가 아니다** — 값 줄은
+   카드 «안» 이라 상자가 1.00 이든 1.06 이든 어차피 워시 밑에 있고, 그렇다면 남는 축은 알파뿐이다.
+   ⇒ 두 자리를 **다 재고 «나쁜 쪽» 으로 판정**한다. 이건 무르게 푼 것의 반대다 — 문턱은
+     그대로 두고 **더 나쁜 프레임을 판정에 넣는** 것이다(11회차 브리핑이 «여유 1.23» 이라고
+     적은 값은 그래서 낙관이었다).
+   ⚠ `verify878` [C2] 는 아직 52% 한 자리를 쓴다 — 그 행의 자라 여기서 안 건드리고 등재로 넘긴다. */
+const PEAK = 0.52;          /* 크기 봉우리 — 기존 표·878 과의 연속성을 위해 계속 찍는다 */
+const PEAK_WASH = 0.0001;   /* 워시 봉우리(0%) — currentTime 0 은 «안 감았다» 와 구별이 안 돼 한 틱 뒤 */
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : fail++; };
@@ -51,11 +60,32 @@ const srgb = (v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.
 const L = (r, g, b) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
 
 /* 잉크 상자 안 «글리프 채움 ↔ 앉은 면» 의 비 — 위 «정의» 절 그대로 */
-function ratio(img, box) {
+/* ⚑⚑ **열창 오염 — 12회차 정정**(비평가 ED 가 잡았다).
+   «Lv. n» 의 Range bbox 왼쪽 끝을 **`fx-keep` 배지 판때기**(619 16회차 keep-out 원반)가 물고 있다.
+   그 판때기는 배지를 «원래 그림으로 되돌리는» 것이 일이라 **어느 프레임에서나 순백(255,255,255)**
+   이고, 그래서 상위1%(p99)를 **1.000 에 고정**한다 — 글자가 아무리 워시에 먹혀도 분자가 안 내려간다.
+   실측: 배지를 문 상자 4.82:1 ↔ 뺀 상자 **3.09:1**. 8~11회차의 «Lv. n» 값은 전부 이 오염분이다.
+   ⇒ 잰 상자에서 **`.fx-keep` 사각형과 겹치는 픽셀을 뺀다**(상자를 손으로 자르지 않는다 —
+     빼는 근거를 DOM 에서 읽어 온다. 손 좌표는 다음 레이아웃 변경에 조용히 틀린다). */
+function ratio(img, box, skip) {
   const v = [];
   const x0 = Math.max(0, Math.round(box.x) + 1), x1 = Math.min(img.width, Math.round(box.x + box.w) - 1);
   const y0 = Math.max(0, Math.round(box.y) + 1), y1 = Math.min(img.height, Math.round(box.y + box.h) - 1);
+  /* ⚠ 빼는 것은 «이웃 판때기» 뿐이고 «글자가 앉은 면» 은 빼면 안 된다 — 후자를 빼면 분모가
+     사라져 대비가 무한대로 읽힌다. 가르는 축은 **상자를 얼마나 덮는가**다: 면을 되돌리는
+     판때기(예: 바 자신)는 상자를 거의 통째로 덮고, 이웃 배지는 모서리를 조금 문다.
+     ⇒ 상자 면적의 **절반 미만**을 무는 판때기만 뺀다. */
+  const bw = Math.max(1, x1 - x0), bh = Math.max(1, y1 - y0);
+  const near = (skip || []).filter((s) => {
+    const ow = Math.min(x1, s.x + s.w) - Math.max(x0, s.x);
+    const oh = Math.min(y1, s.y + s.h) - Math.max(y0, s.y);
+    if (ow <= 0 || oh <= 0) return false;
+    return (ow * oh) / (bw * bh) < 0.5;
+  });
+  const hit = (x, y) => near.some((s) =>
+    x >= s.x - 1 && x <= s.x + s.w + 1 && y >= s.y - 1 && y <= s.y + s.h + 1);
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    if (hit(x, y)) continue;
     const i = (y * img.width + x) * 4;
     v.push(L(img.data[i], img.data[i + 1], img.data[i + 2]));
   }
@@ -122,7 +152,18 @@ async function boxes(p) {
       return bb ? { x: bb.x, y: bb.y, w: bb.r2 - bb.x, h: bb.b2 - bb.y } : null;
     };
     const c = card.getBoundingClientRect();
+    /* 열창에서 뺄 것 — keep-out 판때기(순백이라 p99 를 1.000 에 고정한다 · `ratio()` 머리말) */
+    const L2 = document.getElementById('fxl');
+    /* ⚠ `.fx-keep` 는 두 종류다 — **글자 사본**(`--flash-keep` 이 값 줄을 워시 위에 다시 그린 것)과
+       **배지 원반**(619 16회차 keep-out 판때기 · 글자가 없다). 빼야 하는 것은 **뒤엣것뿐**이다.
+       앞엣것까지 빼면 재려던 글자를 통째로 지운다. 가르는 축은 «글자를 들고 있는가» 다. */
+    const skip = (L2 ? [...L2.querySelectorAll('.fx-keep')] : [])
+      .filter((k) => !(k.textContent || '').trim())
+      .map((k) => { const r = k.getBoundingClientRect();
+                    return { x: r.left, y: r.top, w: r.width, h: r.height }; })
+      .filter((r) => r.w && r.h);
     return { lv: ink(card.querySelector('.sk-clv')), bar: ink(card.querySelector('.sk-bar>b')),
+             skip,
              card: { x: c.left, y: c.top, w: c.width, h: c.height },
              lvTxt: (card.querySelector('.sk-clv') || {}).textContent,
              barTxt: (card.querySelector('.sk-bar>b') || {}).textContent };
@@ -130,7 +171,8 @@ async function boxes(p) {
 }
 
 /* [강화] 를 누르고 **봉우리 한 장**을 찍는다 — 시간은 그 전에 멈춘다 */
-async function shotPeak(p, tag) {
+async function shotPeak(p, tag, peakArg) {
+  const peakAt = (peakArg === undefined ? PEAK : peakArg);
   await p.evaluate((peak) => {
     const btn = document.querySelector('#bCos [data-cosup]'); if (!btn) throw new Error('[강화] 없음');
     btn.click();
@@ -139,20 +181,20 @@ async function shotPeak(p, tag) {
       try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
         if (d) { a.currentTime = d * peak; a.pause(); } } catch (_) {}
     }
-  }, PEAK);
+  }, peakAt);
   await p.waitForTimeout(120);
   const f = path.join(TMP, tag + '.png');
   await p.screenshot({ path: f });
   return PNG.sync.read(fs.readFileSync(f));
 }
 
-async function measure(file, tag) {
+async function measure(file, tag, peak) {
   const { b, p, errs } = await boot(file);
   const pre = await boxes(p);
   const still = PNG.sync.read(fs.readFileSync(await (async () => {
     const f = path.join(TMP, tag + '-still.png'); await p.screenshot({ path: f }); return f;
   })()));
-  const img = await shotPeak(p, tag);
+  const img = await shotPeak(p, tag, peak);
   const post = await boxes(p);
   /* 연출 중 DOM 상태 — «패치가 실제로 섰는가 · 무엇을 들고 있는가 · 애니가 도는가» */
   const dom = await p.evaluate(() => {
@@ -181,16 +223,32 @@ async function measure(file, tag) {
   const cur = await measure('index.html', 'cur');
   if (!cur.pre || !cur.pre.lv || !cur.pre.bar) { console.log('  ✗ 값 줄 상자를 못 잡았다'); process.exit(1); }
 
-  const sLv = ratio(cur.still, cur.pre.lv), sBar = ratio(cur.still, cur.pre.bar);
-  const pLv = ratio(cur.img, cur.post.lv), pBar = ratio(cur.img, cur.post.bar);
-  console.log('[1] 지금 판 — 정지 ↔ 연출 봉우리(52%)');
-  console.log('  · «' + cur.pre.lvTxt + '» 정지 ' + f1(sLv.r) + ':1 → 연출 ' + f1(pLv.r) + ':1');
-  console.log('  · «' + cur.pre.barTxt + '» 정지 ' + f1(sBar.r) + ':1 → 연출 ' + f1(pBar.r) + ':1');
+  /* 워시 봉우리(0%) 한 장을 더 찍는다 — 머리말 «봉우리가 둘이다» */
+  const wash = await measure('index.html', 'cur-wash', PEAK_WASH);
+
+  const sLv = ratio(cur.still, cur.pre.lv, cur.pre.skip), sBar = ratio(cur.still, cur.pre.bar, cur.pre.skip);
+  const kLv = ratio(cur.img, cur.post.lv, cur.post.skip), kBar = ratio(cur.img, cur.post.bar, cur.post.skip);
+  const wLv = ratio(wash.img, wash.post.lv, wash.post.skip), wBar = ratio(wash.img, wash.post.bar, wash.post.skip);
+  /* 판정은 **나쁜 쪽**으로 — 두 봉우리 중 대비가 낮은 프레임이 가독의 최악이다 */
+  const pLv = kLv.r <= wLv.r ? kLv : wLv, pBar = kBar.r <= wBar.r ? kBar : wBar;
+  const wLvWorse = wLv.r < kLv.r, wBarWorse = wBar.r < kBar.r;
+  console.log('[1] 지금 판 — 정지 ↔ 두 봉우리(크기 52% · 워시 0%)');
+  console.log('  · «' + cur.pre.lvTxt + '» 정지 ' + f1(sLv.r) + ':1 → 크기봉 ' + f1(kLv.r)
+    + ':1 · **워시봉 ' + f1(wLv.r) + ':1** ⇒ 최악 ' + f1(pLv.r) + ':1 ('
+    + (wLvWorse ? '워시봉' : '크기봉') + ')');
+  console.log('  · «' + cur.pre.barTxt + '» 정지 ' + f1(sBar.r) + ':1 → 크기봉 ' + f1(kBar.r)
+    + ':1 · **워시봉 ' + f1(wBar.r) + ':1** ⇒ 최악 ' + f1(pBar.r) + ':1 ('
+    + (wBarWorse ? '워시봉' : '크기봉') + ')');
+  console.log('  · 열창에서 뺀 keep-out 판때기 ' + (cur.post.skip || []).length + '개'
+    + ' (글자 없는 `.fx-keep` 만 — `ratio()` 머리말)');
   console.log('  · 플래시 채움 = ' + cur.dom.flashBg + ' · 패치 ' + cur.dom.keeps.length + '장 '
     + JSON.stringify(cur.dom.keeps.map((k) => k.txt)));
 
-  ok(pLv.r >= 3.0, '[P1] «Lv. n» 이 연출 중에도 3.0:1 이상 — ' + f1(pLv.r) + ':1 (7회차 2.78~2.88)');
-  ok(pBar.r >= 3.0, '[P2] «n/500» 이 연출 중에도 3.0:1 이상 — ' + f1(pBar.r) + ':1 (7회차 2.30~2.63)');
+  ok(pLv.r >= 3.0, '[P1] «Lv. n» 이 연출 중에도 3.0:1 이상 — **최악 ' + f1(pLv.r) + ':1** '
+    + '(크기봉 ' + f1(kLv.r) + ' · 워시봉 ' + f1(wLv.r) + ' · 7회차 2.78~2.88)'
+    + '. ⚠ 12회차에 자를 두 번 조였다 — 프레임(워시 봉우리 신설)과 열창(keep-out 배지 제외)');
+  ok(pBar.r >= 3.0, '[P2] «n/500» 이 연출 중에도 3.0:1 이상 — **최악 ' + f1(pBar.r) + ':1** '
+    + '(크기봉 ' + f1(kBar.r) + ' · 워시봉 ' + f1(wBar.r) + ' · 7회차 2.30~2.63)');
   /* ⚑ [P3] — **사본이 약속한 것은 «글리프» 하나다.** 사본은 글자를 워시 «위» 에 다시 그리므로
      글리프 채움은 정지와 **같은 밝기**로 돌아온다. 하지만 그 글자가 **앉은 면**(바·카드)은 여전히
      워시 밑이라 합성비는 정지에 못 미친다 — 남는 몫이 `--flash-k` 가 미는 자리이고, 그러고도
@@ -315,7 +373,12 @@ async function measure(file, tag) {
 
   /* ── §R 되돌림 시험 — 두 손잡이를 각각 빼면 실제로 빨개지는가 ──
      안 세우면 이 회차는 «이미 참인 것을 게이트로 굳힌» 것이 된다(338 규칙). */
-  console.log('\n§R 되돌림 — 손잡이를 하나씩 빼면 빨개지는가');
+  /* ⚠ §R 은 **크기 봉우리 한 자리에서** 재고 그 자리의 현행값(kLv·kBar)과 견준다 — 되돌림 사본을
+     두 봉우리로 다 찍으면 브라우저를 네 번 더 띄운다. 여기가 묻는 것은 «손잡이가 무엇을 버는가»
+     라는 **상대** 질문이라 프레임만 같으면 성립한다. **절대 바닥**은 [P1]·[P2] 가 두 봉우리 중
+     나쁜 쪽으로 판정한다 — 둘을 섞어 견주면(12회차에 한 번 그랬다) 같은 판을 다른 프레임에서
+     재 놓고 «내려갔다» 를 묻는 꼴이 된다. */
+  console.log('\n§R 되돌림 — 손잡이를 하나씩 빼면 빨개지는가 (크기 봉우리 한 자리 · 상대 비교)');
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const DECL = '--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70';
   if (src.indexOf(DECL) < 0) { ok(false, '[R] 주입 앵커를 못 찾았다 — 조용한 통과 금지'); }
@@ -330,16 +393,16 @@ async function measure(file, tag) {
         const N = await measure(tmp, tag);
         const nLv = ratio(N.img, N.post.lv), nBar = ratio(N.img, N.post.bar);
         console.log('  · [' + tag + '] ' + why + ' — «Lv» ' + f1(nLv.r) + ':1 · «n/500» ' + f1(nBar.r) + ':1');
-        if (tag === 'R-e') ok(nLv.r <= pLv.r - 0.40 && nBar.r <= pBar.r - 0.40,
-          '[R-e] 두 손잡이를 빼면 **두 줄이 같이 내려간다** — «Lv» ' + f1(nLv.r) + ' (지금 ' + f1(pLv.r)
-          + ' · Δ' + f1(pLv.r - nLv.r) + ') · «n/500» ' + f1(nBar.r) + ' (지금 ' + f1(pBar.r)
-          + ' · Δ' + f1(pBar.r - nBar.r) + ') — 둘 다 Δ≥0.40'
+        if (tag === 'R-e') ok(nLv.r <= kLv.r - 0.40 && nBar.r <= kBar.r - 0.40,
+          '[R-e] 두 손잡이를 빼면 **두 줄이 같이 내려간다** — «Lv» ' + f1(nLv.r) + ' (지금 ' + f1(kLv.r)
+          + ' · Δ' + f1(kLv.r - nLv.r) + ') · «n/500» ' + f1(nBar.r) + ' (지금 ' + f1(kBar.r)
+          + ' · Δ' + f1(kBar.r - nBar.r) + ') — 둘 다 Δ≥0.40'
           + '. ⚠ 문턱을 «3.0 미만» 에서 **Δ** 로 갈아 끼웠다(12회차): 878 이 `#bCos .sk-bar` 를 어둡게 해'
           + ' 7회차 판조차 3.32·3.57 로 3.0 위에 서므로 옛 문턱은 «이 두 손잡이가 무엇을 버는가» 를'
           + ' 더 이상 묻지 못한다. **절대 3.0 바닥은 이제 바 색이 지키고 그 항은 `verify878` [R] 이 든다** —'
           + ' 여기가 물을 것은 그 바닥 «위에서» 손잡이가 버는 몫이다(333 처방: 자리를 비우지 않고 축을 바꾼다)');
-        else ok(nBar.r < pBar.r,
-          '[R-f] 세기(`--flash-k`)를 빼면 «n/500» 이 내려간다 — ' + f1(nBar.r) + ' < 지금 ' + f1(pBar.r)
+        else ok(nBar.r < kBar.r,
+          '[R-f] 세기(`--flash-k`)를 빼면 «n/500» 이 내려간다 — ' + f1(nBar.r) + ' < 지금 ' + f1(kBar.r)
           + ' (라벨만 올려서는 못 닫힌다는 CX 스윕의 재확인)');
       } finally { try { fs.unlinkSync(path.join(ROOT, tmp)); } catch (_) {} }
     }
