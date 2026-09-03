@@ -82,7 +82,7 @@ async function reset(page) {
     ['statw', 'defw', 'upw', 'dclw'].forEach(id => {
       const e = document.getElementById(id); if (e) e.classList.remove('on');
     });
-    S.gold = 1e18; S.dia = 1e12; S.relic = 1e12;
+    S.gold = 1e18; S.dia = 1e12; S.relic = 1e12; S.tstone = 1e12; S.rstone = 1e12;
   });
   await page.waitForTimeout(180);
 }
