@@ -50,8 +50,12 @@ const BASE_M = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-base-k.md');
 const BASE_J = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r24-base-k.json');
 /* ⚑ **199 25회차** — 이 회차 열을 r25 로 옮긴다(제품이 `OFF_DAY_CAP_MIN` 을 660 으로 내렸으므로
    r24 표는 더 이상 «지금 제품» 의 사진이 아니다 — 그대로 두면 [E1] 이 옳게 빨개진다). */
-const CUR_J  = path.join(ROOT, 'docs/review/199-bot-2026-09-02-r25.json');
-const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-02-r25.md');
+/* ⚑ **199 26회차** — 이 회차 열을 r26 으로 옮긴다. 판정 줄은 r25 와 자릿수까지 같지만
+   (26회차 제품 변경은 **유료 축**이라 무과금 봇을 안 건드린다 — 그 «Δ0» 자체가 §26-4 의 주장이고,
+   자가 그것을 재려면 **이 회차 트리로 찍은 표**를 봐야 한다), 표를 안 옮기면 [E1]·[E1b] 가
+   «지금 제품» 이 아닌 사진을 재게 된다(25회차가 r24 표를 두고 겪을 뻔한 자리 · 같은 이유). */
+const CUR_J  = path.join(ROOT, 'docs/review/199-bot-2026-09-03-r26.json');
+const CUR_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-03-r26.md');
 /* 23회차 표 — [S4] 가 «이 자가 그 결함을 실제로 잡는가» 를 되돌림 표본으로 쓴다(PM=15 세대) */
 const R23_M  = path.join(ROOT, 'docs/review/199-bot-2026-09-01-r23-both.md');
 /* 801 직후 표(= 25회차 직전 세대 · calib sha 가 base-k 와 **같다**) — [T2] 의 빨강 표본 */
@@ -172,9 +176,49 @@ function maxAxis(axes, total) {
   eq('[A4] 주인 확정 상수 불변 — 출석 1~6일차 `ATT_DIA` (739)', mAtt && mAtt[1], '1000');
   eq('[A5] 주인 확정 상수 불변 — 출석 7일차 `ATT_DIA7` (739)', mAtt7 && mAtt7[1], '10000');
   /* 결3 ⓑ 축 — 이 줄을 내리면 151 이용권 상품 가치가 같이 내려간다. 보정 손잡이가
-     살아 있는지만 여기서 확인한다(값 판정은 24회차 안건 · 23-6). */
-  yes('[A6] 결3 ⓑ 보정 손잡이 `PASS_OFF_MUL` 선언이 살아 있다 (23-6 안건이 가리키는 자리)',
+     살아 있는지만 여기서 확인한다(값 판정은 **[P1]·[P2]** 다 — 26회차가 세웠다). */
+  yes('[A6] [전제] 결3 ⓑ 보정 손잡이 `PASS_OFF_MUL` 선언이 살아 있다 (값 판정은 [P1]·[P2])',
       /const\s+PASS_OFF_MUL\s*=\s*[\d.]+\s*;/.test(SRC));
+  /* ⚑⚑ **199 26회차 신설 — 결3 ⓑ «구 +4h 동급 이상» 을 자가 든다**(25-8 2번 · 세 회차 미뤄진 항).
+     23정정11 → 24-5 3번 → 25정정8 이 세 회차 연속 «다음 회차 몫» 으로 넘겼고, 그 사이 25회차가
+     하루 예산을 1,440 → 660분으로 내려 **상품 가치가 문면 아래로 내려간 채**였다. 여기서 못박는다.
+
+     구 상품 = «1회 상한 +4h» ⇒ 하루에 나르던 다이아 = 240분 × `OFF_DIA_PM`.
+     새 상품 = «오프라인 ×배율» ⇒ 증분 = (m − 1) × (그 정책의 **하루 오프라인 밑변** × PM).
+     ⚑ 밑변은 정책마다 **다른 상수**가 정한다 — 그래서 하한이 둘이고, 값은 **큰 쪽**이 정한다:
+       · 부지런 — 하루 예산 `OFF_DAY_CAP_MIN` 에 걸린다(로그인 4회라 예산을 꽉 채운다)
+       · 대충   — 1회 상한 `OFF_CLAIM_CAP_H` 에 **먼저** 걸린다(로그인 1회 · 예산은 안 물린다)
+     〔26정정1〕 25정정8 이 «26회차 2번의 값을 **1.364** 로 못박는다» 고 적은 것은 **부지런 기준
+     하나**다. 대충 밑변(630분)이 더 작아 하한이 더 높고(1.3810), 두 부등식을 동시에 만족하는
+     값은 max = **1.381** 이다. 1.364 를 채택하면 대충에게만 −1.2% 문면 미달이 남는다.
+     ⚠ 이 항들은 **유료 축**이라 758 판정 줄(무과금 봇)과 독립이다 — 실제로 r26 표는 r26-base 와
+     판정 줄이 자릿수까지 같다(§26-4). */
+  const mMul  = SRC.match(/const\s+PASS_OFF_MUL\s*=\s*([\d.]+)\s*;/);
+  const mClaimH = SRC.match(/const\s+OFF_CLAIM_CAP_H\s*=\s*([\d.]+)\s*;/);
+  const MUL   = mMul ? Number(mMul[1]) : NaN;
+  const mCapP = SRC.match(/const\s+OFF_DAY_CAP_MIN\s*=\s*(\d+)\s*;/);
+  const CAPD  = mCapP ? Number(mCapP[1]) : NaN;              /* 부지런 밑변(분) */
+  const CAPC  = mClaimH ? Number(mClaimH[1]) * 60 : NaN;     /* 대충 밑변(분) */
+  const OLD_PLUS_MIN = 240;                                  /* 구 상품 «+4h» = 240분 */
+  const target = OLD_PLUS_MIN * PM;                          /* 구 상품이 나르던 다이아/일 */
+  const lowOf = baseMin => 1 + target / (baseMin * PM);      /* = 1 + 240/baseMin (PM 이 약분된다) */
+  const loD = lowOf(CAPD), loC = lowOf(CAPC);
+  yes('[P1] **`PASS_OFF_MUL` ≥ 부지런 하한** (밑변 = 하루 예산 ' + CAPD + '분 × PM ' + PM + ') — 구 «+4h»(' + fmt(target) + '/일) 동급 이상',
+      Number.isFinite(MUL) && Number.isFinite(loD) && MUL >= loD - 1e-9,
+      MUL + ' ≥ ' + loD.toFixed(4) + ' (증분 ' + fmt((MUL - 1) * CAPD * PM) + '/일)');
+  yes('[P2] **`PASS_OFF_MUL` ≥ 대충 하한** (밑변 = 1회 상한 ' + (CAPC / 60) + 'h = ' + CAPC + '분 × PM ' + PM + ') — 값을 정하는 것은 **이쪽**(작은 밑변)이다',
+      Number.isFinite(MUL) && Number.isFinite(loC) && MUL >= loC - 1e-9,
+      MUL + ' ≥ ' + loC.toFixed(4) + ' (증분 ' + fmt((MUL - 1) * CAPC * PM) + '/일)');
+  /* 되돌림 시험 — 옛 값 1.2 를 이 자에 대면 **두 항 다** 빨갛다(무르게 푼 수리가 아님을 못박는다).
+     ⚠ [P1]·[P2] 와 달리 이 항은 제품이 아니라 **상수 하나**를 대입해 보는 것이라 영구 초록이
+     아니다 — 밑변(예산·1회 상한)이 커져 1.2 가 충분해지는 세대가 오면 이 항이 빨개진다. */
+  yes('[P3] [음성] 옛 값 **1.2** 는 이 세대에서 두 하한을 **둘 다** 못 넘는다 (되돌림 시험)',
+      1.2 < loD - 1e-9 && 1.2 < loC - 1e-9,
+      '1.2 vs 부지런 ' + loD.toFixed(4) + ' · 대충 ' + loC.toFixed(4));
+  /* 표기 사본 — 배율을 말하는 자리는 725 의 `fmtMul` 한 벌에서만 온다. 26회차가 이 자리를 고쳤다
+     (`offMul().toFixed(1)` 은 1.381 을 «×1.4» 로 +1.4% 부풀려 적는다). */
+  yes('[P4] 오프라인 팝업의 이용권 배율 표기가 `fmtMul` 한 벌에서 온다 (725 · `toFixed` 사본 0건)',
+      /이용권 '\s*\+\s*fmtMul\(offMul\(\)\)/.test(SRC) && !/offMul\(\)\.toFixed\(/.test(SRC));
   /* ⚑ **199 25회차 신설(비평 AAS 정정6)** — 마크업의 **정적 기본값**이 예산 세대를 따라가야 한다.
      `#ofrMax` 는 팝업이 열릴 때 `showOfflineReward()` 가 덮어쓰지만, 그 전에 화면에 있는 것은
      마크업의 문자열이다. 25회차가 예산을 660 으로 내렸을 때 그 자리는 «하루 24시간» 인 채였고
