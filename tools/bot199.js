@@ -1818,9 +1818,22 @@ function writeReport(rep) {
     if (!C.length) return null;
     return { W, span, n: C.length, full: med(A), fin: med(F), once: med(O), cont: med(C), cross: med(X), crossI: medI(X) };
   };
-  /* ⓑ 정상성 — 창 W 와 그 절반의 **지속** 기울기가 얼마나 어긋나는가(두 정책 중 나쁜 쪽). */
   const WCAND = [3, 7, 14, 29];
   const halfOf = (w) => { const c = WCAND.filter(x => x < w); return c.length ? c[c.length - 1] : 1; };
+  /* ⓑ' **장부 정상성** — 창 W 와 그 절반의 **지속** 기울기가 얼마나 어긋나는가(두 정책 중 나쁜 쪽).
+     ⚑⚑ 863 — **27~30회차의 규약 자였다가 «관측» 으로 내려왔다.** 내린 이유는 값이 아니라
+     **분모**다(`probe863` [2]·[3]·[4] 가 커밋된 스냅 넷으로 못박는다):
+       · r26 → r30 에서 대충의 **절대** 어긋남은 1,571 → 1,420 으로 **줄었는데**(−9.6%)
+         이 비는 10.1% → 13.0% 로 **늘었다**(+29%). 늘린 것은 말미가 아니라 분모다 —
+         30회차 이관이 완전히 평평한 축(오프라인 `OFF_DIA_PM` 10→2.7)을 대충 지속 장부의
+         **40% → 16%** 로 깎았고, 대충은 퀘스트(일일)을 안 돌아 그 자리를 아무도 안 메웠다.
+       · 어긋남의 **91%가 축 하나(던전)**이고 그 축은 «추세» 가 아니라 **맥박**이다 —
+         하루치가 0/0/19,074/0/0… 이라 창은 «맥박을 몇 개 물었나» 만 센다(대충 W3 0개 ·
+         W7 1개 · W14 3개 ⇒ 기울기 0 / 2,725 / 4,020 이 맥박 수 ÷ 창 길이와 **정확히** 같다).
+         시드 12개가 **위상까지 같아**(전부 D11·14·17~18·21~22·26~27) 시드 풀링으로도 안 지워진다.
+     ⇒ 이 비는 «말미가 정상인가» 와 «평평한 축이 얼마나 큰가» 를 **같이** 재고 있었고,
+     밸런스 손잡이를 돌릴 때마다 뒤엣것 때문에 문턱으로 걸어간다. 규약에서 뺀다 — 단 **자리는
+     비우지 않는다**(333 처방): [E4] 가 정책별로 **자기 값**을 관측 칸에 계속 싣는다. */
   const statOf = (mode, w) => {
     let worst = 0;
     for (const pol of Object.keys(rep.policies)) {
@@ -1830,16 +1843,46 @@ function writeReport(rep) {
     }
     return worst;
   };
-  /* 규약: ⓐ W ≤ days−1(1일차 1회성 지급을 한 칸도 안 문다) ∧ ⓑ 정상성 ≤ 문턱 —
+  /* 정책 하나의 장부 정상성(관측 칸용) — 위 `statOf` 가 최악만 돌려주므로 27~30회차의 [E4] 는
+     **두 정책 표에 같은 수**를 «그 정책의 값» 인 양 실었다(부지런의 실제 값은 6.4% 인데
+     13.2% 라고 적혀 있었다 — `probe863` [5]). 정책별 표에는 정책별 수를 싣는다. */
+  const statPolOf = (pol, mode, w) => {
+    const a = tailSplit(pol, mode, w), b = tailSplit(pol, mode, halfOf(w));
+    if (!a || !b || !(a.cont > 0)) return null;
+    return Math.abs(a.cont - b.cont) / a.cont;
+  };
+  /* ⓑ **정책 대조 정상성** — 863 이 규약 자로 세운 것. 창 W 와 그 절반에서 «부지런 지속기울기 ÷
+     대충 지속기울기» 가 얼마나 어긋나는가. ④ 가 읽는 것은 **두 정책의 대조**이므로 창이 지켜야
+     할 성질도 «대조가 창에 안 흔들린다» 이다. 두 정책을 함께 밀고 당기는 손잡이(평평한 축의
+     크기 · 총 유입 척도)는 비에서 **상쇄**되므로, 863 이 잡은 분모 병이 구조적으로 안 생긴다.
+     ⚠ **27회차의 정당화는 글자 그대로 지켜진다** — 이 식의 입력은 **기울기 넷뿐**이고
+     ④ 비·목표액·v(30) 은 한 번도 안 들어간다(«자를 결과에 맞춘다» 가 여전히 불가능하다).
+     되돌림: `RSTAT` 를 `statOf` 로 되돌리면 27~30회차 그림으로 정확히 돌아간다
+     (`verify758` [U4] 가 그 순간 다시 1.8%p 로 빨개진다 — `probe863` §R 이 그것을 시험한다). */
+  const rstatOf = (mode, w) => {
+    const R = (ww) => {
+      const d = tailSplit('diligent', mode, ww), c = tailSplit('casual', mode, ww);
+      if (!d || !c || !(c.cont > 0) || !(d.cont > 0)) return null;
+      return d.cont / c.cont;
+    };
+    const a = R(w), b = R(halfOf(w));
+    if (a == null || b == null) return null;
+    return Math.abs(a - b) / a;
+  };
+  /* 규약: ⓐ W ≤ days−1(1일차 1회성 지급을 한 칸도 안 문다) ∧ ⓑ **정책 대조 정상성** ≤ 문턱 —
      그중 **가장 큰 W**. 넓은 창일수록 «덩어리로 들어오는» 축의 창 위상 잡음이 평균된다
      (probe199r27 [F]: 패스 기울기가 창마다 ×4.67 로 갈리고 어떤 창에서는 0 이다).
+     ⚑ 863 — **가장 좁은 후보(W3)는 비교 짝으로만 쓰고 채택하지 않는다.** 바로 위 근거의
+     당연한 귀결이다: 맥박 축을 세 칸으로 재는 창은 «위상» 을 재지 기울기를 안 잰다(대충 W3 은
+     던전 맥박을 **0개** 문다). ⓑ' 시절엔 W3 이 32~36% 라 문턱이 알아서 걸렀지만, 대조 비는
+     그 자리에서 오히려 잔잔해질 수 있어(맥박이 양쪽에서 같이 빠진다) 규약이 직접 막는다.
      ⚠ 후보가 하나도 문턱을 못 넘으면 **고르지 않는다**(null) — 자를 결과에 맞추지 않기 위해
      «규약이 창을 못 골랐다» 를 표가 그대로 말하게 한다. */
   const wPick = (mode) => {
-    const cand = WCAND.filter(w => w < rep.days).map(w => ({ w, st: statOf(mode, w) }))
+    const cand = WCAND.filter(w => w < rep.days).map(w => ({ w, st: rstatOf(mode, w), st0: statOf(mode, w) }))
                       .filter(x => x.st != null);
     if (!cand.length) return null;
-    const ok = cand.filter(x => x.st <= TAIL_STAT_MAX);
+    const ok = cand.filter(x => x.st <= TAIL_STAT_MAX && x.w !== WCAND[0]);
     return { cand, pick: ok.length ? ok[ok.length - 1] : null };
   };
   /* ⚑ 20회차(19-10 정정1 — ZZ·AAA·AAB **3인 일치**) — [D] 가 잰 ① 판정 수를 [G] 가 그대로
@@ -2302,25 +2345,34 @@ function writeReport(rep) {
        표가 스스로 말하게 한다. 26회차까지 이 둘은 본문에만 있었고([T5] 는 관측 행 하나),
        그래서 25·26 두 회차가 «W7 하나에 걸린 판정» 위에서 지렛대를 골랐다. */
     {
-      const rowsW = WCAND.filter(w => w < rep.days).map(w => ({ w, s: tailSplit(pol, 'summon', w), st: statOf('summon', w) }))
+      const rowsW = WCAND.filter(w => w < rep.days)
+                         .map(w => ({ w, s: tailSplit(pol, 'summon', w), st: rstatOf('summon', w), st0: statPolOf(pol, 'summon', w) }))
                          .filter(x => x.s);
       if (rowsW.length) {
         const pk = wPick('summon');
         L.push(`### [E4] ④ 말미 창 **규약** — 말미 정상 장부와 창 선택 — ${P} 〔27회차 신설 · 누적은 결2 ⓐ 그대로 · **기울기에서만** 일회성·유한 트랙을 뺀다〕`);
         L.push('');
-        L.push('| 창 W | 전체 기울기 | 일회성 | **유한 트랙** | **정상 기울기** | **교차일(정상 장부)** | ⓑ 정상성(vs W⌊/2⌋) |');
-        L.push('|---|---|---|---|---|---|---|');
+        L.push('| 창 W | 전체 기울기 | 일회성 | **유한 트랙** | **정상 기울기** | **교차일(정상 장부)** | ⓑ 정책 대조 정상성(vs W⌊/2⌋) | ⓑ\' 장부 정상성 〔관측〕 |');
+        L.push('|---|---|---|---|---|---|---|---|');
         rowsW.forEach(x => {
-          const mark = pk && pk.pick && pk.pick.w === x.w ? ' ✅' : '';
-          L.push(`| **W${x.w}**${mark} | ${fmtN(x.s.full)} | ${fmtN(x.s.once)} | ${fmtN(x.s.fin)} | **${fmtN(x.s.cont)}** | ${Number.isFinite(x.s.cross) ? x.s.cross.toFixed(1) : '∞'} | ${x.st == null ? '—' : (100 * x.st).toFixed(1) + '%'} (vs W${halfOf(x.w)}) |`);
+          const mark = pk && pk.pick && pk.pick.w === x.w ? ' ✅' : (x.w === WCAND[0] ? ' ⃠' : '');
+          L.push(`| **W${x.w}**${mark} | ${fmtN(x.s.full)} | ${fmtN(x.s.once)} | ${fmtN(x.s.fin)} | **${fmtN(x.s.cont)}** | ${Number.isFinite(x.s.cross) ? x.s.cross.toFixed(1) : '∞'} | ${x.st == null ? '—' : (100 * x.st).toFixed(1) + '%'} (vs W${halfOf(x.w)}) | ${x.st0 == null ? '—' : (100 * x.st0).toFixed(1) + '%'} |`);
         });
         L.push('');
         L.push(`_⚠ 네 칸은 **각각 시드별 p50** 이라 «전체 − 일회성 − 유한 = 정상» 은 항등식이 아니다`
           + ` (med(a−b) ≠ med(a) − med(b) · [E3] 각주와 같은 병). 교차일은 **시드별 정상 기울기**로 밀므로`
           + ` 판정에 쓰는 수는 «정상 기울기» 칸이다 — 세 칸의 뺄셈은 **구성비를 읽는 용도**다._`);
         L.push('');
-        L.push(`_규약 ⓐ W ≤ ${rep.days - 1}(1일차 1회성 지급을 안 문다) ∧ ⓑ 정상성 ≤ ${(100 * TAIL_STAT_MAX).toFixed(0)}% — 그중 가장 큰 W._`
-          + (pk && pk.pick ? ` **채택 W${pk.pick.w}**(정상성 ${(100 * pk.pick.st).toFixed(1)}% · 문턱까지 여유 ${(100 * (TAIL_STAT_MAX - pk.pick.st)).toFixed(1)}%p).`
+        L.push(`_⚑ **863 — 규약 자를 ⓑ' 장부 정상성에서 ⓑ 정책 대조 정상성으로 갈았다(문턱 ${(100 * TAIL_STAT_MAX).toFixed(0)}% 는 그대로).**`
+          + ` ⓑ' 는 «말미가 정상인가» 와 «평평한 축이 얼마나 큰가» 를 같이 재서, 30회차가 오프라인(완전히 평평한 축)을 깎자`
+          + ` **절대 어긋남이 줄었는데도**(대충 1,571 → 1,420) 비만 10.1% → 13.0% 로 올랐다. 어긋남의 91%는 축 하나(던전)이고`
+          + ` 그 축은 추세가 아니라 **맥박**이다(창은 맥박 개수만 센다). ④ 가 읽는 것은 두 정책의 **대조**이므로 창이 지킬 성질도`
+          + ` 대조의 정상성이고, 양쪽을 함께 미는 손잡이는 비에서 상쇄된다. ⓑ' 는 자리를 비우지 않고 **정책별 관측 칸**으로 남는다`
+          + ` (27~30회차의 표는 두 정책 칸에 «두 정책 중 최악» 을 같이 실어 부지런의 6.4% 를 13.2% 로 적고 있었다). 실측 \`probe863\`._`);
+        L.push('');
+        L.push(`_규약 ⓐ W ≤ ${rep.days - 1}(1일차 1회성 지급을 안 문다) ∧ ⓑ 정책 대조 정상성 ≤ ${(100 * TAIL_STAT_MAX).toFixed(0)}% — 그중 가장 큰 W._`
+          + ` _가장 좁은 후보 W${WCAND[0]} 는 비교 짝으로만 쓰고 **채택하지 않는다**(⃠ · 863 — 맥박 축을 ${WCAND[0]}칸으로 재는 창은 위상을 잰다)._`
+          + (pk && pk.pick ? ` **채택 W${pk.pick.w}**(대조 정상성 ${(100 * pk.pick.st).toFixed(1)}% · 문턱까지 여유 ${(100 * (TAIL_STAT_MAX - pk.pick.st)).toFixed(1)}%p · 장부 정상성 관측 ${pk.pick.st0 == null ? '—' : (100 * pk.pick.st0).toFixed(1) + '%'}).`
                            : ' ⚠ **규약이 창을 못 골랐다** — 후보가 전부 문턱 밖이다(자를 결과에 맞추지 않기 위해 고르지 않는다).'));
         L.push('');
       }
