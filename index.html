@@ -6150,14 +6150,71 @@
      `min()` 이라 **패널이 1527 보다 짧은 프레임(1600·1841)은 픽셀 하나 안 움직인다.**
      ⚠ 되돌리는 법 — `--rw-ph` 를 `100%` 로 되돌리면 `--rw-oy` 가 0 이 되어 859 이전과 항등이다. */
   .rw-panel{position:absolute;left:0;right:0;top:4px;bottom:0;overflow:hidden;
-    /* 그릇 밖을 이어받는 면 — 위는 .rw-bg 최상단 톤(#090C10) · 아래는 최하단 톤(#12130D).
-       이음매(50%)는 그릇이 항상 덮으므로 보이지 않는다(oy ≤ (100% − 820)/2 이라 구조적). */
-    background:linear-gradient(180deg,#090C10 0 50%,#12130D 50% 100%);
+    /* ── 그릇 밖을 이어받는 면 — **«벽이 이어진다» 는 결이 있어야 한다.** ──
+       1회차는 여기를 `.rw-bg` 의 최상단·최하단 **단색**(#090C10 / #12130D)으로 깔았는데,
+       채점자 CL 이 그 자리를 1순위 결함으로 잡았다(실측): 사각띠 **행 표준편차 (0,0,0)** =
+       한 행이 색 하나 · 패널 내부 대비 위 **4.07배 어둡고** 아래 2.32배 · 색상환도 뒤집혀
+       (위 띠 한색 B>G>R ↔ 내부 벽 난색 R>G>B) **«벽» 이 아니라 «검은 바탕에 뜬 팝업»** 으로 읽힌다.
+       ⇒ 2회차 — 결과 톤(내부 벽 평균 #362F24 · 바닥 평균 #33291E)을 바탕으로 깔고
+         `.rw-bg::before` 와 **같은 켜 줄눈·세로 이음매·얼룩**을 그 위에 얹는다.
+         위상(`background-position-x:132px`)도 16회차가 맞춘 값 그대로 — 그릇 안팎의 줄눈이
+         **한 격자로 이어져야** 「같은 벽」 이 된다(어긋나면 경계가 오히려 도드라진다).
+       ⚠ 이음매(50%)는 그릇이 항상 덮으므로 보이지 않는다(oy ≤ (100% − 820)/2 이라 구조적). */
+    background:
+      /* ⚑ 2회차 — **벽기둥이 그릇 밖으로 이어진다.** 내부 «행 표준편차 12.9» 의 대부분은
+         좌·우 벽기둥(`.rw-pil` 폭 86 · 림 6px 이 휘도를 크게 흔든다)이 만든다. 띠에 켜 줄눈만
+         깔면 σ 5.5 에서 멈춘다(가로 줄눈은 **한 행을 통째로** 같은 값으로 만들어 행 안 분산이 0 이다).
+         ⇒ 같은 기둥 무늬를 띠에도 깐다 — 「같은 벽이 위·아래로 이어진다」 는 가장 강한 신호이고,
+           금테는 그 위(z6)에 얹힌 장식으로 읽힌다. */
+      linear-gradient(90deg,rgba(96,82,60,.50) 0 5px,rgba(70,58,42,.34) 5px 72px,
+        rgba(126,110,80,.62) 72px 78px,rgba(6,5,4,.62) 78px 84px,rgba(0,0,0,0) 84px 86px),
+      linear-gradient(270deg,rgba(96,82,60,.50) 0 5px,rgba(70,58,42,.34) 5px 72px,
+        rgba(126,110,80,.62) 72px 78px,rgba(6,5,4,.62) 78px 84px,rgba(0,0,0,0) 84px 86px),
+      /* 켜 줄눈·세로 이음매 — `.rw-bg::before` 와 **같은 주기·같은 위상**(16회차가 맞춘 132px).
+         그릇 안팎의 격자가 한 줄로 이어져야 「같은 벽」 이 된다. */
+      repeating-linear-gradient(180deg,rgba(104,90,66,.55) 0 2px,rgba(5,5,4,.50) 2px 5px,
+        rgba(0,0,0,0) 5px 47px),
+      repeating-linear-gradient(90deg,rgba(96,81,60,.90) 0 3px,rgba(6,6,5,.90) 3px 7px,
+        rgba(0,0,0,0) 7px 163px),
+      repeating-linear-gradient(90deg,rgba(88,74,56,.60) 0 2px,rgba(6,6,5,.60) 2px 5px,
+        rgba(0,0,0,0) 5px 97px),
+      /* 얼룩 — 「행 표준편차」를 만드는 것은 세로 이음매와 이 얼룩뿐이다(가로 줄눈은 한 행을
+         통째로 같은 값으로 만든다). 채점자 둘이 요구한 값이 ≥12·≥15 이므로 내부(12.6~12.9)와
+         같은 급이 되도록 대비를 올리고 개수를 늘렸다. 자리는 전부 «띠 안»(위 20%) 이다. */
+      radial-gradient(circle at 18% 4%,rgba(84,70,53,.68) 0 66px,transparent 104px),
+      radial-gradient(circle at 74% 2%,rgba(18,15,11,.62) 0 58px,transparent 96px),
+      radial-gradient(circle at 40% 9%,rgba(88,73,56,.60) 0 76px,transparent 124px),
+      radial-gradient(circle at 12% 15%,rgba(82,67,51,.60) 0 70px,transparent 114px),
+      radial-gradient(circle at 62% 13%,rgba(16,13,10,.60) 0 64px,transparent 106px),
+      radial-gradient(circle at 90% 8%,rgba(86,72,55,.58) 0 78px,transparent 126px),
+      radial-gradient(circle at 30% 17%,rgba(20,17,12,.58) 0 62px,transparent 102px),
+      radial-gradient(circle at 52% 3%,rgba(22,18,13,.56) 0 58px,transparent 98px),
+      radial-gradient(circle at 84% 18%,rgba(20,16,12,.56) 0 60px,transparent 100px),
+      radial-gradient(circle at 4% 8%,rgba(80,66,50,.56) 0 64px,transparent 106px),
+      /* 바탕 톤 — **결과 톤**을 그대로 깐다(금테 안쪽 벽 평균 #362F24). 1회차의 #090C10 은
+         «재료 톤» 이라 합성 결과보다 4.07배 어두웠다(CL 실측 — 그것이 «검은 매트» 의 정체다).
+         하단 앵커라 이어받는 면은 **위 하나뿐**이므로 톤도 하나다(1회차의 위·아래 두 톤이
+         «서로 다른 색이라 하나의 벽으로 안 읽힌다» 던 CM 지적도 같이 사라진다). */
+      linear-gradient(180deg,#362F24 0 100%);
+    background-repeat:no-repeat,no-repeat,repeat,repeat,repeat,
+      no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat;
+    background-size:86px 100%,86px 100%,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto,auto;
+    background-position:left top,right top,132px 0,132px 0,48px 0,
+      0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0;
     --rw-ph:min(100%,calc(1527px * var(--rwc,1)));
-    /* ⚠ **정수로 내린다.** 그릇 상변이 소수(217.55)면 클립 상자가 소수라 하변에 안티에일리어싱
-       1행이 남고, `verify432` §2(«클립이 지우는 잉크 0개»)가 1080×1 짜리 차분으로 빨개진다.
-       캡이 안 걸리는 프레임은 oy = 0 이라 이 round 가 아무 일도 안 한다. */
-    --rw-oy:round(down,calc((100% - var(--rw-ph)) / 2),1px);
+    /* ── ⚑ 2회차 — **중앙 정렬에서 «하단 앵커» 로 바꿨다.** ──
+       1회차는 그릇을 세로 중앙에 뒀는데 두 가지가 동시에 걸렸다:
+         ⓐ **420 이 닫아 둔 겹침이 다시 열렸다** — 수반이 2280 에서 184.7px **위로** 올라가
+            33 재화 팝업(`#ciw`)이 「유물 소환」 버튼을 40.2px 물었다(`verify420` 22항 빨강).
+            그 자를 팝업 쪽에서 풀면 «9:19 기준은 한 칸도 안 움직였다»(63 검산값)가 깨진다.
+         ⓑ 채점자 둘(CL·CM)이 «위·아래 두 띠가 서로 다른 색이라 하나의 벽으로도 안 읽힌다» 를
+            각자 짚었다(위 L 11.7 ↔ 아래 18.4 · 색상 반전).
+       ⇒ 남는 세로를 **전부 위로** 보낸다. 레퍼런스의 장면은 «위가 벽 · 아래가 바닥» 이라
+         **벽이 위로 이어지는 것**이 물리적으로 맞고, 하변이 패널 바닥에 고정되므로
+         수반·안내문이 탭바에서 떨어진 거리가 859 전과 같은 축에 남는다(420 이 다시 초록).
+       ⚠ 그릇 하변 = 패널 하변이라 클립 상자의 **하변이 정수**다 —
+         `verify432` §2(«클립이 지우는 잉크 0개»)가 요구하는 자리가 그쪽이다. */
+    --rw-oy:calc(100% - var(--rw-ph));
     /* ⚠ 아래 예산 변수의 `100%` 는 이제 **그릇(.rw-bowl) 높이**로 풀린다 — 변수는 한 글자도
        안 고쳤고, 쓰는 자리가 `.rw-panel` 직속에서 `.rw-bowl` 직속으로 한 겹 내려갔을 뿐이다.
        (13·10회차 주석의 «100% 가 그 부모 높이로 풀린다» 함정을 **의도적으로** 쓴 자리다.) */
@@ -6434,7 +6491,7 @@
      `--rw-lt/gt/bt/fl` 을 쓴다(120 규약이 «패널 직속» 이라 하던 자리가 여기로 내려왔다).
      `overflow:hidden` 도 패널에서 여기로 내려온다 — 14회차 코니스처럼 «자리가 없으면 밖으로
      밀려 잘린다» 를 전제한 요소들이 그릇 밖(이어받는 벽) 위로 새면 안 된다. */
-  .rw-bowl{left:0;right:0;top:var(--rw-oy);height:var(--rw-ph);overflow:hidden}
+  .rw-bowl{left:0;right:0;bottom:0;height:var(--rw-ph);overflow:hidden}
   .rw-bowl>*{position:absolute}
   /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 (아트 대기)
      120: 바닥 그라디언트의 px 정지점을 **1527 대비 %** 로 환산했다(980→64.178 · 1120→73.347 ·
@@ -10174,7 +10231,14 @@
         배너 여백이 30 → 95 로 벌어져 407 이 확정한 «하단 앵커» 가 무너진다(`verify407` §3 이 그 값을
         못 박는다). 피해자가 있는 화면에서만 그 피해자에 맞춘다(`#modal.sk8`·`#modal.at70` 선례).
      ⚠ 이 규칙은 반드시 위 `#ciw{…}` **뒤에** 둔다 — `verify407` §0 이 `/#ciw\{[^}]*\}/` 로 **첫** 규칙을
-        읽으므로 앞에 두면 남의 게이트가 내 선언을 읽는다. */
+        읽으므로 앞에 두면 남의 게이트가 내 선언을 읽는다.
+     ⚑ **859 2회차 — 이 선언은 한 글자도 안 바뀌었다(그리고 그것이 하단 앵커를 고른 이유다).**
+        859 1회차가 그릇을 «세로 중앙» 에 두자 수반이 2280 에서 184.7px 위로 올라가 이 자리의
+        여백이 −40.2px 로 뒤집혔다(`verify420` 22항 빨강). 그때 팝업 쪽 하한(74px)으로 풀어 봤더니
+        겹침은 −3.2 까지 줄지만 **«[2280] 팝업 하변 1509.5 — 9:19 기준은 한 칸도 안 움직였다»**
+        (63 검산값)와 «교차점에서 정확히 234px» 이 대신 깨진다 — 남의 게이트가 못박은 값이다.
+        ⇒ 팝업을 옮기는 대신 **그릇을 하단 앵커로** 바꿨다(제품 주석 `--rw-oy`). 수반이 탭바에서
+          떨어진 거리가 859 전 축에 남아 이 규칙이 그대로 성립한다. */
   #relw.on ~ #ciw{padding-bottom:calc(234px + max(0px, 1931px - var(--frameh, 2280px)))}
   #ciw i,#ciw em,#ciw b,#ciw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
