@@ -169,21 +169,39 @@ const frameRects = (page, map) => page.evaluate((m) => {
       document.querySelector('.qs-tg b[data-t="rep"]').click();
       await sleep(120);
       out.backRep = !!document.querySelector('.qs-tg b[data-t="rep"].on');
-      /* 수령 — 반복 퀘스트 하나를 완료 상태로 만들고 눌러 본다 */
-      S.quest.summon.base = 0; S.summons = 1e6;
+      /* 수령 — 업적 퀘스트 하나를 «밀린 칸이 있는» 상태로 만들고 눌러 본다.
+         ⚠ 847(2026-09-03) — 여기 있던 세 항(「단계 +1」·「기준선 재설정」·「저장 = s0+1」)은
+           799 가 **선언째 없앤 축**을 묻고 있었다: 진행이 «수령 시점 기준 델타» 에서
+           **«누적 절대값»** 으로 바뀌면서 ⓐ `S.quest[].base` 는 아무도 안 읽고
+           ⓑ 한 번 누르면 **밀린 칸을 전부** 받는다(단계가 +1 이 아니다).
+           333 처방대로 자리를 비우지 않고 **799 의 실제 약속으로 방향을 뒤집었다**
+           — 표본은 `verify799` [C]·[E] 에서 옮겨 왔다(47 / 15 = 3칸). */
+      const Q = QUESTS.find((q) => q.id === 'summon');
+      S.summons = 47; S.quest.summon.s = 0;
       openQuest('rep');
       await sleep(120);
       const b = document.querySelector('.qs-b[data-q="summon"]');
       out.readyEnabled = b && !b.disabled;
       const dia0 = S.dia, s0 = S.quest.summon.s;
+      out.goal0  = questGoal(Q);                /* 등차 첫 칸 = 15 */
+      out.steps0 = questSteps(Q);               /* 47 / 15 = 3 칸 밀려 있다 */
       b.click();
       await sleep(700);
-      out.diaUp = S.dia > dia0;                 /* 다이아 지급 */
-      out.stepUp = S.quest.summon.s === s0 + 1; /* 단계 상승 */
-      out.rebased = S.quest.summon.base === 1e6;/* 기준선 재설정 */
-      /* 저장 반영 */
+      out.diaUp    = S.dia > dia0;                          /* 다이아 지급 */
+      out.diaExact = S.dia - dia0 === Q.dia * 3;            /* 799 — 보상은 칸당 «정액» × 칸수 */
+      out.stepJump = S.quest.summon.s - s0 === 3;           /* 799 — 밀린 칸을 한 번에 */
+      out.goalNext = questGoal(Q) === Q.step * 4;           /* 등차로 4번째 칸(60) */
+      out.noMore   = questReady(Q) === false;               /* 47 < 60 */
+      /* 저장 반영 — 옛 자는 `s0 + 1` 을 기다렸다(799 뒤엔 s0 + 3 이 정답이다) */
       const raw = JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}');
-      out.saved = raw.quest && raw.quest.summon && raw.quest.summon.s === s0 + 1;
+      out.saved = !!(raw.quest && raw.quest.summon && raw.quest.summon.s === s0 + 3);
+      /* ⚑ 옛 「기준선 재설정」 이 지키던 자리를 뒤집어 지킨다 — 수령해도 진행은 깎이지 않는다.
+         (옛 규칙이면 여기서 진행이 0 으로 떨어졌다 = 주인이 본 «554 인데 35 가 안 열린다») */
+      out.progKept = questProg(Q) === 47 && S.summons === 47;
+      /* 구 세이브가 아직 들고 있는 `base` 키를 심어도 진행·목표가 안 변한다(verify799 [C]) */
+      S.quest.summon.base = 999999;
+      out.baseIgnored = questProg(Q) === 47 && questGoal(Q) === Q.step * 4;
+      delete S.quest.summon.base;
       /* 사이드 아이콘 뱃지 */
       out.badge = !!document.querySelector('.side .ibtn[data-pop="quest"] .bdg');
       /* 비활성 버튼은 눌러도 아무 일 없다 */
@@ -212,10 +230,16 @@ const frameRects = (page, map) => page.evaluate((m) => {
     if (fn.selLeft === '-5px') ok('선택 알약이 좌측(일일)으로 이동'); else fail(`선택 알약 left ${fn.selLeft} (기대 -5px)`);
     yes('backRep', '토글 «반복» 으로 복귀');
     yes('readyEnabled', '완료 퀘스트의 [보상 받기] 활성화');
+    if (fn.goal0 === 15) ok('전제 — 등차 첫 칸 목표 15'); else fail(`전제 — 첫 칸 목표 ${fn.goal0} (기대 15)`);
+    if (fn.steps0 === 3) ok('전제 — 소환 47회에 밀린 칸 3'); else fail(`전제 — 밀린 칸 ${fn.steps0} (기대 3)`);
     yes('diaUp', '수령 → 다이아 증가');
-    yes('stepUp', '수령 → 퀘스트 단계 +1 (다음 목표로 갱신)');
-    yes('rebased', '수령 → 진행 기준선 재설정');
+    yes('diaExact', '수령 보상 = 칸당 정액 × 밀린 칸 3 (799)');
+    yes('stepJump', '수령 → 밀린 칸 3 개가 한 번에 오른다 (799 — «단계 +1» 이 아니다)');
+    yes('goalNext', '다음 목표가 등차로 4번째 칸(60)');
+    yes('noMore', '더 받을 게 없다 (47 < 60)');
     yes('saved', '수령 결과가 localStorage 에 저장됨');
+    yes('progKept', '수령해도 진행은 누적 절대값 그대로 — 기준선 재설정 없음 (799)');
+    yes('baseIgnored', '구 세이브의 `base` 키를 심어도 진행·목표 불변');
     yes('badge', '사이드 아이콘 뱃지 요소 존재');
     yes('disabledNoop', '비활성 [보상 받기] 클릭 → 변화 0');
     if (!fn.overflow.length) ok('행 자식 잉크가 행 밖으로 안 나감');
