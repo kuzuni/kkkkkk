@@ -7675,8 +7675,31 @@
      제목 글자는 잉크 좌단이 **−5px**(AR 68.5 · AS 68~69 vs 환산 73.5) 이라 `>i` 만 35→40 으로 민다.
      ⚠ `.pvt{left}` 를 통째로 미는 처방(AR)은 **✦ 까지 같이 밀어 맞던 것을 깬다**(✦ x37 ↔ 환산 38). */
   .pvc>.pvt>s{position:absolute;left:0;top:13px;font-size:27px;line-height:30px;color:var(--h)}
-  .pvc>.pvt>i{position:absolute;left:40px;top:0;font-size:57px;line-height:60px;color:#fff;
-    white-space:nowrap;-webkit-text-stroke:12px #000;paint-order:stroke fill}
+  /* ⚑ 833 4회차 — 제목 글자가 **가로 +9% · 세로 +4.7%** 였다(비평 CZ·DA 2인 일치, 둘 다 신뢰도 «높음»).
+     ⚠ 667 10회차는 같은 축을 «⑥ 서체(아트 대기)» 로 넘겼는데 그 근거는 **검정 획**이 ref 자신에게서
+     ±30% 흔들린다는 것이었다. 4회차는 **획이 안 섞이는 자**로 다시 쟀다 — `tools/ink151.py` 의
+     **흰 채움만**(min>200) bbox 와 `scan833b.py` 의 글리프 잉크:
+       | 흰 잉크 (환산 px) | ref | 수리 전 | Δ |
+       | 제목 1장 «광고 제거» | 185.7 × 43.3 | 200 × 46 | **+7.7% / +6.2%** |
+       | 제목 2장 «전투 효율 증가» | 278.5 × 47.5 | 307 × 49 | **+10.2% / +3.2%** |
+     획을 빼도 남으므로 **서체 «모양» 이 아니라 크기 축**이다(지시서 [3]-(나) — 잉크 폭·높이는 ②·⑥).
+     같은 자로 잰 이웃이 맞는 것이 방증이다: 가격 글자 +0.6% · ★ 불릿 −3.1% · 탭 글자 −6.5%.
+     ⇒ **손잡이 둘, 뜻도 둘**(126 서체 전환 때 «세로만 보정하고 가로를 안 되돌렸다» 던 그 처방):
+       ① `font-size 57 → 54.5`(×0.956) = **em 을 줄여 세로를 맞춘다** ⇒ 43.97 / 46.84 (ref +1.6% / −1.4%)
+       ② `scaleX(.96)` = 대체 서체의 **가로 advance 만** 되돌린다 ⇒ 183.6 / 281.8 (ref −1.1% / +1.2%)
+     네 값이 전부 ±1.6% 안이다. ⚠ `transform-origin:left` 가 필수 — 잉크 좌단(ref 75.4/73.4 ↔ 우리
+     74/73)은 두 비평가가 «맞음» 으로 올린 자리라 붙박아야 한다. 되돌리려면 57 / 없음 으로 되돌린다. */
+  .pvc>.pvt>i{position:absolute;left:40px;top:0;font-size:54.5px;line-height:60px;color:#fff;
+    white-space:nowrap;-webkit-text-stroke:12px #000;paint-order:stroke fill;
+    transform:scaleX(.96)}
+  /* ⚠⚠ **특이성 함정 — 207·325 가 같은 자리에서 걸렸다.** 이 페이지에는 4356행에
+     `#shopw i,#shopw em,#shopw b,#shopw u,#shopw s{… transform-origin:50% 50%}` 라는
+     **ID 특이도(1,0,1)** 태그 리셋이 있어서, 클래스만으로 쓴 `.pvc>.pvt>i`(0,3,1) 의
+     `transform-origin` 은 **조용히 진다**(선언은 남아 있는데 computed 는 «98.54px 30px» = 중심).
+     그러면 scaleX 가 중앙 기준으로 걸려 잉크 좌단이 78 → 82 로 **오른쪽으로 4.1px 밀리는데**,
+     그 자리는 두 비평가가 «맞음» 으로 올린 곳이다(ref 75.4/73.4 ↔ 우리 74/73).
+     ⇒ **같은 ID 스코프의 짝**을 신설해 좌변 원점을 되찾는다(325 가 `#blsw s` 에서 쓴 처방). */
+  #shopw .pvc>.pvt>i{transform-origin:0 50%}
   /* ⑤-1 티켓형 배너(1장) — 네 모서리가 «물린» 노랑 표. 좌 36% 크림 · 우 64% 노랑(ref 실측) */
   .pvc>.ban{left:50px;top:138px;width:462px;height:113px;border:7px solid #000;border-radius:10px;
     background:linear-gradient(90deg,#FDE7CF 0 36%,#F3BA4F 36% 100%);

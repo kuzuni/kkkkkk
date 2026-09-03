@@ -80,9 +80,12 @@ const DUMP = `(() => {
       const u = rb.querySelector('u');
       return { rb: B(rb), u: B(u), utop: num(getComputedStyle(u).top), b: B(rb.querySelector('b')) };
     });
+    const ti = c.querySelector('.pvt>i'), tcs = ti && getComputedStyle(ti);
     const stt = c.querySelector('.stt'), sti = stt && stt.querySelector('i');
     return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb, pil,
       frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs,
+      ti: B(ti), tiFs: tcs ? num(tcs.fontSize) : null, tiLh: tcs ? num(tcs.lineHeight) : null,
+      tiTr: tcs ? tcs.transform : null, tiOrg: tcs ? tcs.transformOrigin : null,
       stt: B(stt), sttI: B(sti),
       sttITop: sti ? num(getComputedStyle(sti).top) : null,
       sttIFs: sti ? num(getComputedStyle(sti).fontSize) : null,
@@ -213,6 +216,25 @@ const DUMP = `(() => {
   ok(new Set(cards.map(c => c.sttITop)).size === 1,
     '[8-e] 세 카드가 한 부품 — 라벨 자리가 한 값', cards.map(c => c.sttITop).join(' / '));
 
+  blk('§9 제목 글자 — em 은 세로로, scaleX 는 가로로 (원점은 **좌변**)');
+  /* 자 `tools/ink151.py`(흰 채움만 = 검정 획이 안 섞인다) · `tools/scan833b.py`(잉크 bbox):
+       | 흰 잉크 (환산 px) | ref | 수리 전 | 수리 후 |
+       | 제목 1장 | 185.7 × 43.3 | 200 × 46 (+7.7% / +6.2%) | **184 × 44** (−0.9% / +1.6%) |
+       | 제목 2장 | 278.5 × 47.5 | 307 × 49 (+10.2% / +3.2%) | **283 × 47** (+1.6% / −1.1%) |
+     ⚠⚠ [9-c] 가 이 수리의 **본체**다 — `#shopw i{transform-origin:50% 50%}`(ID 1,0,1)가
+     클래스 선택자(0,3,1)를 조용히 이겨서, 스코프 짝이 없으면 scaleX 가 **중앙 기준**으로 걸리고
+     잉크 좌단이 74 → 78 로 밀린다(두 비평가가 «맞음» 으로 올린 자리를 이번 수리가 깨는 것이다). */
+  for (const c of cards) {
+    ok(c.tiFs === 54.5, `[9-a] ${c.id} 제목 font-size = 54.5 (수리 전 57)`, `${c.tiFs}`);
+    ok(/matrix\(0\.96,/.test(c.tiTr), `[9-b] ${c.id} 제목 scaleX(.96)`, `${c.tiTr}`);
+    ok(/^0px /.test(c.tiOrg),
+      `[9-c] ${c.id} 제목 transform-origin 의 **x 가 0** — #shopw 특이성 함정을 이겼다`, `${c.tiOrg}`);
+    ok(c.tiLh === 60, `[9-d] ${c.id} line-height 60 불변 (세로 중심이 여기 매여 있다)`, `${c.tiLh}`);
+    ok(Math.abs((c.ti.x - c.card.x) - 78) < 0.6,
+      `[9-e] ${c.id} 제목 상자 좌단 78 불변 (원점이 좌변이라 상자가 안 움직인다)`,
+      `${p2(c.ti.x - c.card.x)}`);
+  }
+
   blk('§5 9:13.3(1600) — 카드 안 기하가 같다');
   const { page: p16, errs: e16 } = await open(browser, 1600);
   const c16 = await p16.evaluate(DUMP);
@@ -276,6 +298,25 @@ const DUMP = `(() => {
     back3.map(c => c.bCx).join(' / '));
   ok(back3.every(c => c.iTop === 9),
     '[R6] 탭 라벨을 top:9 로 되돌리면 §8 [8-a] 가 빨개진다', back3.map(c => c.iTop).join(' / '));
+  /* ⚑ [R7] 은 «값을 되돌리면 빨개진다» 가 아니라 **«스코프 짝을 빼면 조용히 진다»** 를 못박는다 —
+     이번 수리에서 실제로 사람을 속인 것이 그것이다(선언은 남아 있는데 computed 만 바뀐다). */
+  const back4 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.textContent = '#shopw .pvc>.pvt>i{transform-origin:50% 50%}';   /* 스코프 짝을 무력화 */
+    document.head.appendChild(st);
+    const A = document.getElementById('app').getBoundingClientRect();
+    return [...document.querySelectorAll('.pvc')].map((c) => {
+      const i = c.querySelector('.pvt>i');
+      return { org: getComputedStyle(i).transformOrigin,
+        l: +(i.getBoundingClientRect().left - c.getBoundingClientRect().left).toFixed(2) };
+    });
+  });
+  ok(back4.every(c => !/^0px /.test(c.org)),
+    '[R7] 스코프 짝을 되돌리면 §9 [9-c] 가 빨개진다 (원점이 중앙으로 돌아간다)',
+    back4.map(c => c.org).join(' / '));
+  ok(back4.every(c => c.l > 78.5),
+    '[R7b] 그때 제목 상자가 실제로 **오른쪽으로 밀린다** — [9-c] 가 지키는 것이 이 4px 이다',
+    back4.map(c => c.l).join(' / '));
 
   blk('§Z 콘솔');
   ok(errs.length === 0, '[Z] 콘솔·페이지 에러 0건', String(errs.length));

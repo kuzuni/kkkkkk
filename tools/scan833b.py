@@ -175,6 +175,59 @@ def tab(a, card, scale, tag, bg):
     return res
 
 
+def title(a, card, scale, tag, hdrfill):
+    """제목 글자 — **글리프 피치**(획 두께와 무관한 자)와 잉크 폭·높이.
+
+    ⚑ 3회차 비평 CZ·DA 2인 일치가 «제목 잉크 폭 +9.3~10.3%» 인데, 667 10회차는 같은 축을
+    «검정 획이 ref 자신에게서 ±30% 흔들린다» 며 ⑥ 서체(아트 대기)로 넘겼다. 그 둘을 가르려면
+    **획이 안 섞이는 자**가 필요하다 ⇒ **흰 채움만** 마스크해 글리프 덩이 중심 사이 거리를 잰다
+    (획을 두껍게 해도 글리프 중심은 안 움직인다). 잉크 폭(획 포함)도 같이 내서 둘을 대조한다.
+    """
+    cx0, cx1, cy = card
+    # ⚠ 창은 **머리띠 채움 안쪽**으로 좁힌다 — 위로 넓히면 카드 검정 테가, 오른쪽으로 넓히면
+    #   배너형 일러스트(`.ban1>.art` 는 카드-로컬 546 에서 시작해 머리띠와 겹친다)가 같이 걸려
+    #   잉크 폭이 창 폭으로 읽힌다(1차 작성이 623~627 을 찍은 뿌리).
+    y0 = int(cy + 16 / scale)
+    y1 = int(cy + 98 / scale)
+    x0 = int(cx0 + 60 / scale)
+    x1 = int(cx0 + 520 / scale)
+    box = a[y0:y1, x0:x1]
+    L = lum(box.astype(float))
+    sat = box.max(2) - box.min(2)
+    white = (L > 195) & (sat < 60)
+    hdr = np.abs(box - np.array(hdrfill)).sum(2) < 90
+    dark = (L < 60)
+    inkm = white | (dark & ~hdr)                    # 흰 채움 + 검정 획(밴드 채움은 뺀다)
+    cols = np.where(white.sum(0) >= 2)[0]
+    icols = np.where(inkm.sum(0) >= 2)[0]
+    if len(cols) < 10 or len(icols) < 10:
+        print(f'  {tag} 제목: 표본 부족')
+        return None
+    # 흰 덩이 → 글리프. 사이가 (환산) 6px 넘게 벌어지면 다른 글리프다
+    grp, s, p = [], cols[0], cols[0]
+    runs = []
+    for x in cols[1:]:
+        if (x - p) * scale > 6:
+            runs.append((s, p))
+            s = x
+        p = x
+    runs.append((s, p))
+    cts = [((s + e) / 2) for s, e in runs if (e - s) * scale > 8]
+    d = [(b - a2) * scale for a2, b in zip(cts, cts[1:])]
+    pitch = float(np.median([v for v in d if v < 120])) if d else float('nan')
+    rows = np.where(inkm.sum(1) >= 2)[0]
+    res = dict(pitch=pitch, w=(icols.max() - icols.min() + 1) * scale,
+               h=(rows.max() - rows.min() + 1) * scale,
+               l=(x0 + icols.min() - cx0) * scale,
+               t=(y0 + rows.min() - cy) * scale,
+               b=(y0 + rows.max() + 1 - cy) * scale,
+               cy=(y0 + (rows.min() + rows.max() + 1) / 2 - cy) * scale,
+               glyphs=len(cts))
+    print(f'  {tag} 제목: 글리프 {res["glyphs"]} · **피치 {pitch:.2f}** · '
+          f'잉크 {res["w"]:.1f}×{res["h"]:.1f} · 좌단 {res["l"]:.1f}')
+    return res
+
+
 def main():
     cap = os.environ.get('CAP833', 'docs/review/151-r20')
     if '--cap' in sys.argv:
@@ -188,7 +241,8 @@ def main():
     for n, c in RC.items():
         print(f'  ref {n} 카드 {c[0]:.2f}..{c[1]:.2f} · 상변 {c[2]:.2f}')
         R[n] = dict(rb=ribbons(ra, c, K, 'ref ' + n, BODY[n]),
-                    tab=tab(ra, c, K, 'ref ' + n, rbg))
+                    tab=tab(ra, c, K, 'ref ' + n, rbg),
+                    ti=title(ra, c, K, 'ref ' + n, S833.HDR[n]))
 
     print(f'\n== 우리 {cap}-c*.png  (크롭 원점 = 카드 좌상단 −{CROP_DX},−{CROP_DY})')
     O = {}
@@ -205,7 +259,8 @@ def main():
         print(f'  카드{i} [{kind}]')
         O.setdefault(kind, []).append(
             dict(rb=ribbons(oa, card, 1.0, f'  카드{i}', BODY[kind]),
-                 tab=tab(oa, card, 1.0, f'  카드{i}', obg)))
+                 tab=tab(oa, card, 1.0, f'  카드{i}', obg),
+                 ti=title(oa, card, 1.0, f'  카드{i}', S833.OURS_HDR[kind])))
 
     print('\n== 요약 (환산 px)')
     print('| 자리 | ref | 우리 | Δ |')
@@ -218,6 +273,13 @@ def main():
             for key, lab in (('l', '좌단'), ('r', '우단'), ('h', '높이')):
                 print(f'| {kind} 리본{j + 1} {lab} | {rr[j][key]:.1f} | {oo[j][key]:.1f} | '
                       f'**{oo[j][key] - rr[j][key]:+.1f}** |')
+        rti, oti = R[kind].get('ti'), O[kind][0].get('ti')
+        if rti and oti:
+            for key, lab in (('w', '제목 잉크 폭'), ('h', '제목 잉크 높이'),
+                             ('l', '제목 잉크 좌단'), ('t', '제목 잉크 상변'),
+                             ('b', '제목 잉크 하변'), ('cy', '제목 잉크 세로중심')):
+                print(f'| {kind} {lab} | {rti[key]:.1f} | {oti[key]:.1f} | '
+                      f'**{oti[key] - rti[key]:+.1f}** ({(oti[key] - rti[key]) / rti[key] * 100:+.1f}%) |')
         rt, ot = R[kind]['tab'], O[kind][0]['tab']
         if rt and ot:
             for key, lab in (('rise', '탭 솟은 높이'), ('ink_t', '탭 잉크 상변'),
