@@ -7,7 +7,8 @@
  *
  * 판정의 뼈대는 **407 이 `#tuto` 를 넣을 때 쓴 것과 같은 대조**다(등재문이 지정한 판정):
  *   «수리 전 트리에서 420 자리가 D7 에 잡히고, 수리 후 0건».
- *   ⚠ 그래서 이 자는 **420 규칙 한 줄을 뺀 사본**을 만들어 자를 두 번 돌린다. 사본은
+ *   ⚠ 그래서 이 자는 **되돌림 사본**을 만들어 자를 두 번 돌린다(888 부터 «420 규칙 제거 +
+ *      `#rwBasin` 80px 위로» — 아래 `NEG_RULE` 주석이 왜 수레를 바꿨는지 적는다). 사본은
  *      저장소 루트에 `.v439-neg.html` 로 쓰고 끝나면 지운다(.gitignore 등재) —
  *      `/tmp` 에 두면 `assets/**` 상대 경로가 404 라 레이아웃이 달라진다(360·367 선례).
  *   ⚠ 제품 `index.html` 은 **한 바이트도 안 건드린다** — 게이트가 중간에 죽어도 트리가
@@ -25,8 +26,19 @@ const ROOT = path.resolve(__dirname, '..');
 const PROBE = path.join(ROOT, 'tools', 'probe351.js');
 const INDEX = path.join(ROOT, 'index.html');
 const NEG = path.join(ROOT, `.v439-neg-${process.pid}.html`);
-/* 420 이 넣은 한 줄 — 이것을 빼면 33 재화 팝업이 89 유물 CTA 를 다시 문다(35px @1600) */
+/* 420 이 넣은 한 줄 — 이것을 빼면 33 재화 팝업이 89 유물 CTA 쪽으로 65px 내려온다 */
 const RULE420 = '  #relw.on ~ #ciw{padding-bottom:calc(234px + max(0px, 1931px - var(--frameh, 2280px)))}';
+/* ⚑ 888(2026-09-03) — [C] 의 되돌림 «수레» 를 바꿨다.
+   원래는 «420 규칙 한 줄만 빼면 35px 겹친다» 였는데, 그 35 는 **버튼의 그때 자리에서 나온 파생값**이다.
+   813 5회차(`47924ea`)가 `#rwBasin` 을 46px 내리고 866 1회차가 10px 되돌린 뒤로는
+   규칙을 빼도 **−1px(안 겹친다)** 라 C2~C5 가 통째로 빨갰고, 그러면 이 절이 물으려던 것
+   («축이 이 자리를 실제로 잡는가»)을 더는 **못 묻는다**(자가 무는 힘을 잃었다).
+   ⇒ 사본을 «420 규칙 제거 + 버튼을 80px 위로» 로 바꾼다 — 420 이 서 있던 세계(f 566)보다
+     조금 더 나쁜 자리를 **일부러** 만들어 축을 시험한다. 80 은 제품 파생값이 아니라 시험용 크기이고,
+     세로 스택이 ±40px 어느 쪽으로 걸어도 겹침이 남아 C5(≥20px)가 성립한다.
+     ⚠ 다시 «지금 스택에서 몇 px 겹치나» 를 이 절의 상수로 적지 마라 — 그것이 888 의 부패다.
+   같은 처방을 `verify420` §2·§R 이 같이 받았다(그쪽은 §N 음성 시험이 짝이다). */
+const NEG_RULE = '  /* [439 되돌림 대조] 420 규칙 제거 + 버튼 80px 위로(888) */\n  #rwBasin{position:relative;top:-80px}';
 
 let ok = 0, bad = 0;
 const T = (name, cond, extra) => {
@@ -90,10 +102,10 @@ try {
     /cur:relic/.test(now.out), '스캔 로그 확인');
 
   /* ── [C] 되돌림 대조 — 420 규칙을 뺀 사본에서는 잡혀야 한다 ───────────────── */
-  console.log('\n[C] 되돌림 대조 — 420 규칙 한 줄을 뺀 사본(.v439-neg.html)');
+  console.log('\n[C] 되돌림 대조 — 420 규칙을 빼고 버튼을 80px 올린 사본(.v439-neg.html · 888)');
   const html = fs.readFileSync(INDEX, 'utf8');
   T('C0 420 규칙 한 줄이 제품에 있다', html.includes(RULE420));
-  fs.writeFileSync(NEG, html.replace(RULE420, '  /* [439 되돌림 대조] 420 규칙 제거 */'));
+  fs.writeFileSync(NEG, html.replace(RULE420, NEG_RULE));
   const neg = run(['--only', 'cur:relic', '--json', J2], { P351_FILE: NEG });
   const negRows = readJson(J2);
   T('C1 사본으로 자가 돌았다', neg.code === 0 && !!negRows, 'exit ' + neg.code);
@@ -105,7 +117,7 @@ try {
   T('C4 무는 상자는 33 재화 팝업(#ciw 안 다이얼로그) 이다', negCta.some((d) => /ciw|\.ci\b/.test(String(d.path))),
     negCta.map((d) => d.path).join(' · '));
   const by = negCta.map((d) => d.by).filter((v) => typeof v === 'number');
-  T('C5 겹침이 «있어서» 잡혔다(≥20px — probe420 실측 35px)', by.length > 0 && Math.max(...by) >= 20,
+  T('C5 겹침이 «있어서» 잡혔다(≥20px — 사본이 만든 자리)', by.length > 0 && Math.max(...by) >= 20,
     by.length ? '최대 ' + Math.max(...by) + 'px' : '없음');
   /* ⚠ 대조가 «자를 넓혀서 아무거나 더 잡는 것» 이 아님을 못박는다 — 앞의 세 축은 사본에서도
      이 화면에서 조용해야 한다(그 셋으로는 원리적으로 못 보는 자리라는 것이 439 등재문이다). */
