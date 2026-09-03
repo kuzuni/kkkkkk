@@ -53,11 +53,16 @@ const R_MAX = 0.52;   /* 이보다 굵으면 ②와 ③이 안 갈린다 — 수
 const BAND  = 2.0;    /* 획 무리 — 비율의 max ÷ min. 수리 전 15.9배(CV) */
 const BAND_W = 1.4;   /* 덩어리 무리 — 코어 **폭**의 max ÷ min(상한이 정하므로 폭이 고와야 한다) */
 const SPREAD  = 1.5;  /* 목표(p90÷p50) — 2회차 CZ 가 ice 한 날에서 9% ↔ 67% 를 쟀다 */
-const RATCHET = 2.3;  /* 래칫(356 [B] 선례) — 3회차 실측 최악 2.21(stone). 목표에 닿기 전에 올리지 마라 */   /* 한 종 안 «코어÷본체» p90÷p10 — 2회차 CZ 가 ice 에서 7.4배를 쟀다 */
+const RATCHET = 1.7;  /* 래칫(356 [B] 선례) — 8회차 실측 최악 1.68(stone · 3회차 2.21 · `ice` 2.00 → 1.14). 목표에 닿기 전에 올리지 마라 */   /* 한 종 안 «코어÷본체» p90÷p10 — 2회차 CZ 가 ice 에서 7.4배를 쟀다 */
 const COVER = 0.75;   /* 본체 마루 중 ③층이 덮은 몫 — «축에만 코어가 없다» 가 여기서 잡힌다 */
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); c ? pass++ : fail++; };
+
+/* `--spread <종>` — 그 종의 **주 마루 화소마다** «본체 두께 · 코어 두께 · 비» 를 그대로 찍는다.
+   판정에는 아무 영향이 없다(진단 전용 · 8회차가 [B12] `ice` 의 불균질이 **어느 자리**에서 오는지
+   찍으려고 세웠다 — 7회차 «남은 문제» 1번). */
+const DUMP = (() => { const i = process.argv.indexOf('--spread'); return i > 0 ? (process.argv[i + 1] || '') : ''; })();
 
 async function measure(browser, url) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -72,6 +77,7 @@ async function measure(browser, url) {
     catch (e) { return { __err: String((e && e.message) || e).split('\n')[0].slice(0, 200) }; }
   };
   await ev(() => { window.requestAnimationFrame = () => 0; });
+  await page.evaluate((v) => { window.__SPREAD856 = v; }, DUMP);
 
   const out = await ev(() => {
     /* 855 — 주사위 고정(`verify792`·`probe792` 와 같은 자리·같은 처방). 적이 나오기까지 도는
@@ -266,7 +272,10 @@ async function measure(browser, url) {
        같은 날의 다른 단면은 35% · 끝단은 67%). [B10] 은 종을 **한 수**로 요약하므로 원리적으로
        못 본다 — 종 안의 흩어짐을 재는 축을 따로 세운다: 주 마루 화소마다 «그 자리 코어 두께 ÷
        그 자리 본체 두께» 를 내고 p90 ÷ p10 을 본다(양 끝 10% 는 화소 한두 개에 흔들린다). */
-    const spread = (body, core, w, h, cap) => {
+    /* ⚑ 8회차 — `keep` 는 **진단 전용**이다(`--spread <종>` 일 때만 배열이 들어온다). 판정에는
+       한 글자도 안 쓰이고, 재는 자리·순서는 아래 루프 그대로다(자를 따로 만들면 그것이 곧 사본이다).
+       7회차가 «먼저 어느 자리가 p50 을 끌어내리는지 찍어라» 를 8회차 1순위로 남긴 그 자리다. */
+    const spread = (body, core, w, h, cap, keep) => {
       const db = cham(body, w, h), dc = cham(core, w, h);
       let mx = 0;
       for (let p = 0; p < db.length; p++) if (body[p] && db[p] > mx) mx = db[p];
@@ -284,6 +293,7 @@ async function measure(browser, url) {
              · 덩어리 무리 — 코어는 상한 폭으로 **일정**해야 하므로 코어 **두께 자체**의 흩어짐을 본다.
            («코어가 없으면 0» 은 두 무리 모두 흩어짐으로 센다 — 그 자리에 층이 없다는 뜻이다.) */
         rs.push(dc[p] / v);              /* 코어가 없으면 0 — 그 자리에 층이 없다는 뜻이다 */
+        if (keep) keep.push([x, y, +(v / 5).toFixed(2), +(dc[p] / 5).toFixed(2), +(dc[p] / v).toFixed(3)]);
       }
       if (rs.length < 4) return { lo: 0, hi: 0, sp: 0, n: rs.length };
       rs.sort((a, b) => a - b);
@@ -334,13 +344,14 @@ async function measure(browser, url) {
       const big = biggest(body, bw, bh);
       let inMain = 0;
       for (const p of big.cell) if (core[p]) inMain++;
-      rows[id] = { sh: sp.sh || sp.k, nb, nc,
+      const keep = (id === (window.__SPREAD856 || '')) ? [] : null;
+      rows[id] = { sh: sp.sh || sp.k, nb, nc, dump: keep,
                    wb: +wb.toFixed(2), wc: +wc.toFixed(2), wbA: +wbA.toFixed(2),
                    ratio: wb > 0 ? +(wc / wb).toFixed(3) : 0,
                    main: big.n, mainSpec: inMain,
                    fMain: big.n ? +(inMain / big.n).toFixed(4) : 0,
                    cover: nb ? +ridgeCover(body, core, bw, bh).toFixed(3) : 0,
-                   spread: nb && nc ? spread(body, core, bw, bh, capMode) : { lo: 0, hi: 0, sp: 99, n: 0 } };
+                   spread: nb && nc ? spread(body, core, bw, bh, capMode, keep) : { lo: 0, hi: 0, sp: 99, n: 0 } };
       clearFx();
     }
     performance.now = _now;
@@ -391,6 +402,56 @@ async function measure(browser, url) {
       }
       console.log('');
 
+      /* ── 진단(`--spread <종>`) — 판정 밖이다. 어느 «자리» 가 p50 을 끌어내리는지 본다. ── */
+      if (DUMP) {
+        const q = r.out.rows[DUMP];
+        if (!q || !q.dump || !q.dump.length) {
+          console.log('  [dump] ' + DUMP + ' — 주 마루 표본 없음(종 이름을 확인하라: ' + ids.join(' · ') + ')\n');
+        } else {
+          const s = q.dump;
+          const xs = s.map(v => v[0]), ys = s.map(v => v[1]);
+          const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+          const cols = 56, sc = Math.max(1, Math.ceil((x1 - x0 + 1) / cols));
+          const W = Math.ceil((x1 - x0 + 1) / sc), H = Math.ceil((y1 - y0 + 1) / sc);
+          const acc = Array.from({ length: H }, () => Array.from({ length: W }, () => []));
+          for (const [x, y, tb, tc, ra] of s) acc[Math.floor((y - y0) / sc)][Math.floor((x - x0) / sc)].push(ra);
+          console.log('  [dump] ' + DUMP + ' — 주 마루 ' + s.length + '화소 · 셀 ' + sc + '×' + sc +
+                      'px · 숫자 = 그 셀 «코어÷본체» 평균 ×10 (0 = 코어 없음 · · = 마루 아님)');
+          for (let i = 0; i < H; i++) {
+            let line = '  ';
+            for (let j = 0; j < W; j++) {
+              const c = acc[i][j];
+              if (!c.length) { line += '·'; continue; }
+              const m = c.reduce((a, b) => a + b, 0) / c.length;
+              line += m <= 0.001 ? '0' : String(Math.min(9, Math.round(m * 10)));
+            }
+            console.log(line);
+          }
+          if (s.length <= 60) console.log('  표본(x y 본체 코어 비) — ' +
+            s.map(v => v.join(':')).join(' · '));
+          const rs = s.map(v => v[4]).sort((a, b) => a - b);
+          const Q = f => rs[Math.floor(f * (rs.length - 1))];
+          console.log('  분위 — p10 ' + Q(0.1).toFixed(3) + ' · p25 ' + Q(0.25).toFixed(3) +
+                      ' · p50 ' + Q(0.5).toFixed(3) + ' · p75 ' + Q(0.75).toFixed(3) +
+                      ' · p90 ' + Q(0.9).toFixed(3) + ' ⇒ p90÷p50 ' + (Q(0.9) / Q(0.5)).toFixed(2));
+          /* «가는 자리가 손해를 보는가» — 본체 두께 구간별로 갈라 본다(규격은 «비가 두께에 무관» 이다). */
+          const bins = [[0, 2], [2, 3], [3, 4], [4, 6], [6, 9], [9, 99]];
+          console.log('  본체 두께(로컬px) 구간별 — 규격은 «비가 두께에 무관» 이다');
+          for (const [lo, hi] of bins) {
+            const c = s.filter(v => v[2] >= lo && v[2] < hi);
+            if (!c.length) continue;
+            const rr = c.map(v => v[4]).sort((a, b) => a - b);
+            const zero = c.filter(v => v[4] <= 0.001).length;
+            console.log('    ' + String(lo).padStart(2) + '~' + String(hi).padEnd(3) +
+                        ' n=' + String(c.length).padStart(4) +
+                        '  비 중앙 ' + rr[Math.floor(0.5 * (rr.length - 1))].toFixed(3) +
+                        '  최소 ' + rr[0].toFixed(3) + '  최대 ' + rr[rr.length - 1].toFixed(3) +
+                        '  코어0 ' + zero + '화소');
+          }
+          console.log('');
+        }
+      }
+
       /* ⚑ 2회차부터 규격이 **두 무리**다(1회차 비평 2인 공통이 그렇게 갈랐다):
            · 획 무리 — 코어 폭 = 획 폭의 K. **비율**이 고른가를 본다.
            · 덩어리 무리 — 비율을 그대로 대면 지름의 35% 짜리 흰 원이 되어 «반짝임» 이 «채움» 이
@@ -411,12 +472,29 @@ async function measure(browser, url) {
       ok(mn > 0 && mx / mn <= BAND,
          '[B10b] 획 무리는 **비율**이 한 밴드 — 최대 ' + mx.toFixed(3) + ' ÷ 최소 ' + mn.toFixed(3) +
          ' = ' + (mn > 0 ? (mx / mn).toFixed(2) : '∞') + '배 ≤ ' + BAND + ' (수리 전 CV 15.9배 · CW 12.7배)');
+      /* ⚑⚑ 8회차 **이관**(333 처방) — 이 항은 «덩어리에서는 **상한이** 폭을 정한다» 를 전제로
+         «폭 자체가 한 밴드» 를 물었다. 그 전제는 **반쪽폭을 넓게 읽던 자** 위에서만 참이었다 —
+         닿는 데까지 본 가장 굵은 곳이 곧 그 자리의 굵기였으므로 덩어리는 **어디서나** 상한에
+         걸렸다. 8회차가 «획의 폭» 을 **국소**로 읽게 하자(자격 조건 `D(q) ≥ dist(p,q) + d(p)`)
+         길쭉한 덩어리(`rico`·`meteor`·`flask`)의 **가늘어지는 자리**는 상한이 아니라 그 자리
+         획 폭의 K 가 정하게 됐고 — 그것이 비평가들이 «본체를 안 따라간다» 로 지적한 바로 그
+         성질이다 — 종을 한 수로 요약한 «폭» 은 더 이상 한 값이 아니다.
+         ⚠ 무르게 푼 것이 아니라 **더 센 축으로 옮긴 것**이다. 새 축(«본체 대비 비» 가 한 밴드)을
+           **수리 전 제품**에 대면 rico .329 ÷ meteor .19 = **1.73배로 빨갛다**(8회차 착수 실측).
+           지금은 1.1배다. 즉 옛 항이 초록이던 자리에서 새 항은 빨갛고, 그 반대가 아니다.
+         규격 문장 자체(«코어는 덩어리의 채움이 아니다» = 상한을 넘지 않는다)는 [B10d] 가 따로 못박는다. */
+      const brs = blobIds.map(i => r.out.rows[i].ratio);
+      const bmx = brs.length ? Math.max.apply(null, brs) : 0, bmn = brs.length ? Math.min.apply(null, brs) : 0;
+      ok(blobIds.length >= 3 && bmn > 0 && bmx / bmn <= BAND_W,
+         '[B10c] 덩어리 무리 ' + blobIds.length + '종은 **본체 대비 비**가 한 밴드 — 최대 ' + bmx.toFixed(3) +
+         ' ÷ 최소 ' + bmn.toFixed(3) + ' = ' + (bmn > 0 ? (bmx / bmn).toFixed(2) : '∞') + '배 ≤ ' + BAND_W +
+         ' (수리 전 1.73배 · ' + blobIds.join(' · ') + ')');
+      /* [B10d] 규격 문장 그대로 — «넘으면 반짝임이 채움이 된다». 상한은 제품의 상수에서 온다(사본 금지). */
       const ws = blobIds.map(i => r.out.rows[i].wc);
       const wmx = ws.length ? Math.max.apply(null, ws) : 0, wmn = ws.length ? Math.min.apply(null, ws) : 0;
-      ok(blobIds.length >= 3 && wmn > 0 && wmx / wmn <= BAND_W,
-         '[B10c] 덩어리 무리 ' + blobIds.length + '종은 **폭**이 한 밴드 — 최대 ' + wmx.toFixed(2) +
-         ' ÷ 최소 ' + wmn.toFixed(2) + ' = ' + (wmn > 0 ? (wmx / wmn).toFixed(2) : '∞') + '배 ≤ ' + BAND_W +
-         ' (' + blobIds.join(' · ') + ')');
+      ok(blobIds.length >= 3 && wmn > 0 && capW > 0 && wmx <= capW * 1.05,
+         '[B10d] 어느 덩어리도 코어 폭이 **상한 폭**을 넘지 않는다 — 최대 ' + wmx.toFixed(2) +
+         ' ≤ ' + (capW * 1.05).toFixed(2) + ' (상한 ' + capW.toFixed(2) + ' +5% · 최소 ' + wmn.toFixed(2) + ')');
 
       /* ⚑ [B12] 는 **래칫**이다(356 [B] 선례). 2회차 CZ 1순위(«한 종 안에서 9% ↔ 67%»)를 재는 축을
          3회차에 세웠고, 3회차의 처방(창을 정사각에서 **원에 내접**하는 상자로)이 9종 → 3종으로
@@ -452,6 +530,16 @@ async function measure(browser, url) {
       ok(bad.length >= 4 || (mn > 0 && mx / mn > BAND),
          '[R2] 코어를 끄면 [B10] 이 빨개진다 — 목표대 밖 ' + bad.length + '종 · 밴드 ' +
          (mn > 0 ? (mx / mn).toFixed(2) : '∞') + '배');
+      /* 8회차 — [B10c] 를 «본체 대비 비» 로 옮겼으니 **그 축의 되돌림 시험**도 같이 세운다
+         (누른 항을 묻는 항을 한 줄 더 넣는다 — 328~330 교훈). 종별 손그림에서는 이 비가
+         한 밴드일 이유가 없다. */
+      const cW = rn.out.capW || 0, cK = rn.out.K || 0;
+      const bR = ids.filter(i => cW > 0 && cK * rn.out.rows[i].wb >= 0.8 * cW)
+                    .map(i => rn.out.rows[i].ratio).filter(v => v > 0);
+      const bx2 = bR.length ? Math.max.apply(null, bR) : 0, bn2 = bR.length ? Math.min.apply(null, bR) : 0;
+      ok(bR.length < 3 || bn2 <= 0 || bx2 / bn2 > BAND_W,
+         '[R4] 코어를 끄면 [B10c](덩어리 «본체 대비 비» 밴드)가 빨개진다 — ' +
+         (bn2 > 0 ? (bx2 / bn2).toFixed(2) : '∞') + '배 > ' + BAND_W);
       ok(noMain.length >= 8,
          '[R3] 코어를 끄면 [B11] 이 빨개진다 — 마루 덮임이 ' + COVER + ' 미만인 종 ' + noMain.length + '종 ≥ 8');
     }
