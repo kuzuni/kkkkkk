@@ -330,9 +330,14 @@ async function measure(file, tag) {
         const N = await measure(tmp, tag);
         const nLv = ratio(N.img, N.post.lv), nBar = ratio(N.img, N.post.bar);
         console.log('  · [' + tag + '] ' + why + ' — «Lv» ' + f1(nLv.r) + ':1 · «n/500» ' + f1(nBar.r) + ':1');
-        if (tag === 'R-e') ok(nLv.r < 3.0 || nBar.r < 3.0,
-          '[R-e] 두 손잡이를 빼면 빨개진다 — «Lv» ' + f1(nLv.r) + ' · «n/500» ' + f1(nBar.r)
-          + ' (7회차가 실제로 이 자리였다)');
+        if (tag === 'R-e') ok(nLv.r <= pLv.r - 0.40 && nBar.r <= pBar.r - 0.40,
+          '[R-e] 두 손잡이를 빼면 **두 줄이 같이 내려간다** — «Lv» ' + f1(nLv.r) + ' (지금 ' + f1(pLv.r)
+          + ' · Δ' + f1(pLv.r - nLv.r) + ') · «n/500» ' + f1(nBar.r) + ' (지금 ' + f1(pBar.r)
+          + ' · Δ' + f1(pBar.r - nBar.r) + ') — 둘 다 Δ≥0.40'
+          + '. ⚠ 문턱을 «3.0 미만» 에서 **Δ** 로 갈아 끼웠다(12회차): 878 이 `#bCos .sk-bar` 를 어둡게 해'
+          + ' 7회차 판조차 3.32·3.57 로 3.0 위에 서므로 옛 문턱은 «이 두 손잡이가 무엇을 버는가» 를'
+          + ' 더 이상 묻지 못한다. **절대 3.0 바닥은 이제 바 색이 지키고 그 항은 `verify878` [R] 이 든다** —'
+          + ' 여기가 물을 것은 그 바닥 «위에서» 손잡이가 버는 몫이다(333 처방: 자리를 비우지 않고 축을 바꾼다)');
         else ok(nBar.r < pBar.r,
           '[R-f] 세기(`--flash-k`)를 빼면 «n/500» 이 내려간다 — ' + f1(nBar.r) + ' < 지금 ' + f1(pBar.r)
           + ' (라벨만 올려서는 못 닫힌다는 CX 스윕의 재확인)');
