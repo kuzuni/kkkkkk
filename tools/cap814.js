@@ -180,6 +180,28 @@ const FREEZE = () => {
       await b.close();
     }
 
+    /* ── 벌 3: **정지(rest)** — 프리즈 «없이» 연출이 다 끝난 뒤 한 장 ────────────
+       ⚑⚑ 9회차 채점이 통째로 이 한 장이 없어서 뒤집혔다. 비평 2인(DH·DI)이 **각자 1순위**로
+         «keep 사본이 안 걷혀 «Lv. n» 이 **영구히** 금색(4.13:1)으로 남는다» 를 냈고, 근거로
+         `step-6/7/8`(400·480·560ms)과 `live-2..6` 을 «정지 상태» 로 읽었다.
+         **둘 다 옳게 쟀고, 잰 대상이 제품이 아니었다** — 그 두 벌은 위 `FREEZE` 로 `#fxl` 안
+         노드의 `remove()` 를 무력화한다. 제품에서는 플래시와 패치가 **같은 프레임(≈408ms)에
+         같이 사라지고** 값 줄은 이웃 카드와 같은 흰색으로 돌아온다(`probe814c` [P9][P10][P11]).
+       ⇒ 하네스가 «정지» 를 못 보여 준 것이 결함이다. **프리즈 없이 1.5초 뒤 한 장**을 더 찍어
+         «연출이 끝난 뒤» 를 채점자가 그 장에서 읽게 한다.
+       ⚠ 이 장은 `step`/`live` 와 달리 **무력화가 없다** — 그래서 이 장에 연출이 남아 있으면
+         그것은 하네스가 아니라 제품이다. */
+    {
+      const { b, p } = await boot(src);
+      const sel = await select(p);
+      const clip = clipOf(sel);
+      await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
+      await p.waitForTimeout(1500);
+      await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-rest.png`), clip });
+      log.push(`${kind}-rest @ 1500ms (프리즈 없음 · 연출이 다 끝난 «정지» 상태)`);
+      await b.close();
+    }
+
     if (kind !== 'now') { try { fs.unlinkSync(path.join(ROOT, src)); } catch (_) {} }
   }
 

@@ -223,6 +223,71 @@ async function measure(file, tag) {
     '[P7] 사본이 플래시 **뒤**에 그려진다 — 앞에 서면 워시가 사본 위에 다시 얹힌다');
   ok(cur.errs.length === 0, '[P8] 콘솔 에러 0건 — ' + (cur.errs[0] || '없음'));
 
+  /* ── [3] **연출이 끝난 뒤** — 프리즈 없는 실런타임에서 자리가 완전히 비는가 ──
+     ⚑ 9회차 채점 2인(DH·DI)이 **각자 1순위**로 «keep 사본이 안 걷혀 «Lv. n» 이 영구히 금색(4.13:1)
+       으로 남는다» 를 냈다. 그 판정의 근거는 `cap814` 의 `step-6/7/8`·`live-2..6` 인데, 그 벌은
+       스크린샷 8장을 찍으려고 **`#fxl` 안 노드의 `remove()` 를 무력화**한다 — 그래서 «수명이 다한
+       사본» 이 영원히 남은 것처럼 찍힌다(제품에는 없는 상태다).
+     ⇒ 말로 반박하지 않고 **자를 하나 더 세운다.** 프리즈 없이 실제로 굴려 «플래시와 패치가 같이
+       사라지는가 · 값 줄이 정지 색으로 돌아오는가» 를 묻는다. 이 항이 초록이면 두 채점자의
+       지적은 하네스가 만든 유령이고, 빨개지면 **그들이 옳다.** */
+  console.log('\n[3] 연출이 끝난 뒤 (프리즈 없음 · 실런타임)');
+  {
+    const b2 = await launch(chromium);
+    const ctx2 = await b2.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const p2 = await ctx2.newPage();
+    await p2.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });   /* ⚠ FREEZE 를 **안** 건다 */
+    await p2.goto('file://' + path.join(ROOT, 'index.html'));
+    await p2.waitForTimeout(1200);
+    await p2.evaluate(() => {
+      if (typeof window.step === 'function') window.step = () => {};
+      S.gold = 1e12; S.dia = 1e12; S.stone = 1e12; S.avatars = S.avatars || {};
+      for (const a of AVATARS) S.avatars[a.id] = 1;
+      S.avatar = AVATARS[0].id; S.cosLv = S.cosLv || {};
+      for (let i = 0; i < 12; i++) S.cosLv[AVATARS[i].id] = 12;
+      goTab('hero'); heroSubGo('cos'); uiDirty = true; renderUI();
+    });
+    await p2.waitForTimeout(400);
+    await p2.evaluate(() => { const all = [...document.querySelectorAll('#bCos [data-cosit]')];
+      (all.find((e) => e.dataset.cosit !== cosSel) || all[0]).click(); });
+    await p2.waitForTimeout(250);
+    const life = await p2.evaluate(() => new Promise((res) => {
+      const Lr = document.getElementById('fxl'), t0 = performance.now();
+      let flashGone = -1, keepGone = -1;
+      document.querySelector('#bCos [data-cosup]').click();
+      const tick = () => { const t = performance.now() - t0;
+        if (flashGone < 0 && !Lr.querySelector('.fx-flash')) flashGone = t;
+        if (keepGone < 0 && !Lr.querySelector('.fx-keep')) keepGone = t;
+        if (t < 1500) requestAnimationFrame(tick); else res({ flashGone, keepGone });
+      }; requestAnimationFrame(tick);
+    }));
+    const rest = await p2.evaluate(() => {
+      const cards = [...document.querySelectorAll('#bCos .sk-card')];
+      const sel = document.querySelector('#bCos .sk-card.sel');
+      /* ⚠ 이웃은 **같은 상태**의 칸이라야 한다 — `.dim`(착용 중)·`.lk`(미보유)는 `--clv-c` 가
+         `#ACACAC` 라 애초에 색이 다르다(`.sk-card.dim>.sk-clv` 규칙). 상태가 다른 칸과 견주면
+         이 항은 제품과 무관하게 빨개진다. */
+      const same = (c) => c && !c.classList.contains('dim') && !c.classList.contains('lk');
+      const other = cards.find((c) => c !== sel && same(c) && c.querySelector('.sk-clv'));
+      const col = (c) => c ? getComputedStyle(c.querySelector('.sk-clv')).color : '';
+      return { keeps: document.getElementById('fxl').querySelectorAll('.fx-keep').length,
+               fx: document.getElementById('fxl').childElementCount,
+               selDim: !!(sel && (sel.classList.contains('dim') || sel.classList.contains('lk'))),
+               sel: col(sel), other: col(other) };
+    });
+    await b2.close();
+    console.log('  · 플래시 사라짐 ' + Math.round(life.flashGone) + 'ms · 패치 사라짐 '
+      + Math.round(life.keepGone) + 'ms · 정지 «Lv» 색 = ' + rest.sel + ' (이웃 카드 ' + rest.other + ')');
+    ok(Math.abs(life.flashGone - life.keepGone) <= 34,
+      '[P9] ★ 패치가 **플래시와 같이** 사라진다 — 플래시 ' + Math.round(life.flashGone) + 'ms · 패치 '
+      + Math.round(life.keepGone) + 'ms (두 프레임 이내). 패치가 더 오래 살면 워시가 없는데 사본만 남아 글자가 이중으로 찍힌다');
+    ok(rest.keeps === 0 && rest.fx === 0,
+      '[P10] ★ 연출이 끝나면 레이어가 **완전히 빈다** — 패치 ' + rest.keeps + '장 · `#fxl` 자식 ' + rest.fx + '개');
+    ok(!rest.selDim && rest.sel === rest.other && /^rgb\(255, ?255, ?255\)$/.test(rest.sel),
+      '[P11] ★ 정지 «Lv. n» 이 **이웃 카드와 같은 색**으로 돌아온다 — 강화한 칸 ' + rest.sel
+      + ' · 이웃 ' + rest.other + ' (9회차 2인 공통 지적이 실제였다면 여기가 금색으로 빨개진다)');
+  }
+
   /* ── §R 되돌림 시험 — 두 손잡이를 각각 빼면 실제로 빨개지는가 ──
      안 세우면 이 회차는 «이미 참인 것을 게이트로 굳힌» 것이 된다(338 규칙). */
   console.log('\n§R 되돌림 — 손잡이를 하나씩 빼면 빨개지는가');
