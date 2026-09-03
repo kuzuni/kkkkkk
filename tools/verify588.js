@@ -172,20 +172,38 @@ const openPass = async (page) => {
   page2.on('pageerror', e => errs.push('old: ' + e));
   await page2.goto(URL);
   await page2.waitForTimeout(900);
-  const E = await page2.evaluate(() => ({
-    noAds: !!(S.pass && S.pass.noAds), offPlus: !!(S.pass && S.pass.offPlus),
-    bless: typeof autoBlessOn === 'function' && autoBlessOn(),
-    dia: S.dia, offMul: offMul(),
-    cls: document.getElementById('app').classList.contains('noads'),
-    ver: (JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}')).v || null,
-  }));
+  const E = await page2.evaluate(() => {
+    /* 858 — «권한을 끄면 배율이 사라지는가» 를 같은 트리에서 같이 잰다(짝 항 E3b).
+       읽고 나면 즉시 원복한다(뒤 항 E4·E5 가 구 세이브 상태를 그대로 본다). */
+    const had = S.pass.offPlus;
+    const on = offMul();
+    S.pass.offPlus = false; const off = offMul();
+    S.pass.offPlus = had;
+    return {
+      noAds: !!(S.pass && S.pass.noAds), offPlus: !!(S.pass && S.pass.offPlus),
+      bless: typeof autoBlessOn === 'function' && autoBlessOn(),
+      dia: S.dia, offMul: on, offMulNoPerm: off, passOffMul: PASS_OFF_MUL,
+      cls: document.getElementById('app').classList.contains('noads'),
+      ver: (JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}')).v || null,
+    };
+  });
   ok(E.noAds && E.offPlus && E.bless, 'E1 구 세이브의 이용권 3종 권한이 전부 살아 있다(회수 0)',
     'noAds=' + E.noAds + ' offPlus=' + E.offPlus + ' 자동축복=' + E.bless);
   ok(E.dia === 12345, 'E2 남은 다이아를 되돌려 주지도 뺏지도 않는다', String(E.dia));
   /* ⚑ 199 21회차 이관(333) — 옛 «상한 6+4 = 10시간» 은 제품에서 사라졌다(결3 ⓑ: 1회 상한 폐지,
-     151 은 ×배율 상품). 588 이 지키는 것은 «구 세이브의 권한이 살아 있는가» 이므로 축만 갈아 끼운다. */
-  ok(Math.abs(E.offMul - 1.2) < 1e-9, 'E3 구 세이브의 offPlus 권한이 새 상품(오프라인 ×배율)으로 이어진다',
-    '×' + E.offMul);
+     151 은 ×배율 상품). 588 이 지키는 것은 «구 세이브의 권한이 살아 있는가» 이므로 축만 갈아 끼운다.
+     ⚑ 858 — 그 이관이 **값 1.2 를 손으로 박아** 두는 바람에 199 26회차(1.2 → 1.381)에 그대로 부패했다.
+     배율의 «값» 은 이 자의 주장이 아니다(값을 정하는 항은 `verify758` [P1]·[P2] · 세대 상수 대조는
+     `verify151` [C2]). 588 이 묻는 것은 **«구 세이브의 권한이 배율로 전달되는가»** 이므로
+     자리는 제품 선언(`PASS_OFF_MUL`)에 맞추고, 그것이 헛초록이 되지 않게 **짝 항 둘**로 못박는다:
+     ① 배율이 1 이 아니다(상품이 무의미해지면 빨강) ② 같은 트리에서 권한을 끄면 정확히 1 로 돌아온다
+     (`offMul()` 이 권한을 안 보고 상수를 그냥 뱉으면 빨강 — 334 «되돌림 시험» 처방). */
+  ok(Math.abs(E.offMul - E.passOffMul) < 1e-9 && E.passOffMul > 1,
+    'E3 구 세이브의 offPlus 권한이 새 상품(오프라인 ×배율)으로 이어진다 — 제품 선언 `PASS_OFF_MUL` 과 일치 · 1 아님',
+    '×' + E.offMul + ' (PASS_OFF_MUL ×' + E.passOffMul + ')');
+  ok(E.offMulNoPerm === 1,
+    'E3b 짝 — 같은 트리에서 권한을 끄면 배율이 정확히 1 (E3 이 «상수를 그냥 뱉는» 헛초록이 아님)',
+    '×' + E.offMulNoPerm);
   ok(E.cls === true, 'E4 `#app.noads` 표식도 그대로', String(E.cls));
   /* KEY 는 안 올렸다 — 저장 구조가 안 바뀌었고(필드를 지운 것은 **상수**다), 올리면 구 세이브가
      전멸한다(LESSONS 44-②: 키 하나로 읽는 load() 에서 KEY 상승 = 구 세이브 전멸). */
