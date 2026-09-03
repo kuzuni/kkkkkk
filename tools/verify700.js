@@ -29,6 +29,9 @@ const URL = 'file://' + path.resolve(ROOT, 'index.html').replace(/\\/g, '/');
 const FRAMES = [1600, 1920, 2280, 2600];
 const MULS = [1, 10, 100, 1000];
 const SHELL_H = 98, BAR_W = 724, BAR_L = 178, GRID_GAP = 44, COST1 = 100;  /* GRID_GAP: 813 2회차 20 → 44 */
+/* 867 — 바가 벽을 떠나 «받침 위» 로 내려오면서 «아래 이웃» 이 격자에서 받침으로 바뀌었다.
+   GRID_GAP(44)은 **벽에 있던 시절의 값**이라 지우지 않고 계보로 남긴다(위 [B4] 주석). */
+const PED_GAP = 12;
 
 let pass = 0, fail = 0, hold = 0;
 const ok = (b, name, detail) => {
@@ -119,8 +122,14 @@ function preTree() {
             b: +q.bottom.toFixed(2), w: +q.width.toFixed(2), h: +q.height.toFixed(2) }; };
         const bar = R('#rwMulBar'), mid = R('.rw-mid'), grid = R('.rw-grid'),
           lin = R('.rw-lintel'), gnd = R('.rw-ground');
+        /* 867 — 자리가 «벽» 에서 «받침 위» 로 내려오면서 이웃이 바뀌었다. 옛 이름(gapGrid ·
+           clearLintel)은 **지우지 않는다** — [B5] 가 «바가 벽 밖에 있다» 를 그 값으로 묻는다. */
+        const flr = R('.rw-floor');
         return { H, bar, gapGrid: +(grid.t - bar.b).toFixed(2), clearLintel: +(bar.t - lin.b).toFixed(2),
           overSeam: +(gnd.t - bar.b).toFixed(2),
+          gapUp: +(bar.t - grid.b).toFixed(2),        /* 867 — 격자 하변 ↓ 바 (위 이웃) */
+          gapDown: +(flr.t - bar.b).toFixed(2),       /* 867 — 바 ↓ 받침 상변 (아래 이웃) */
+          overPed: +(flr.t - bar.b).toFixed(2),
           cxBar: +((bar.l + bar.r) / 2).toFixed(2), cxMid: +((mid.l + mid.r) / 2).toFixed(2) };
       }, H));
       await ctx.close();
@@ -152,18 +161,29 @@ function preTree() {
        ⚠ 갈림 문턱도 20 → 44 를 따라 **40 → 88** 로 옮긴다(여유 88 = 44 × 2). 안 옮기면
          1600(여유 46)이 «넉넉» 으로 분류돼 [B4] 가 «44 고정» 을 요구하고, 그 프레임은
          예산이 없어 영원히 빨갛다. */
-    const wide = rows.filter(r => r.clearLintel + r.gapGrid >= 88);
-    const tight = rows.filter(r => r.clearLintel + r.gapGrid < 88);
-    ok(wide.length >= 3 && wide.every(r => eq(r.gapGrid, GRID_GAP)),
-      '[B4] 벽이 넉넉한 프레임(여유 ≥ 88)은 바 하변 ↔ 격자 상변 = 44px 고정 — 격자 행 간(25.6)의 1.7배',
-      wide.map(r => r.H + ':' + r.gapGrid).join(' · ') + (wide.length ? '' : ' — 넓은 프레임 0'));
-    ok(tight.length >= 1 && tight.every(r => Math.abs(r.clearLintel - r.gapGrid) <= 1.5),
-      '[B4b] 벽이 좁은 프레임(여유 < 88)은 위·아래를 **고르게** 나눈다 — 754 가 잡은 8/20 비대칭이 없다',
-      tight.map(r => `${r.H}: 위 ${r.clearLintel} / 아래 ${r.gapGrid}`).join(' · ')
-        + (tight.length ? '' : ' — 좁은 프레임 0(1600 이 표본에 없다)'));
-    ok(rows.every(r => r.clearLintel > 0),
-      '[B5] 바 상변이 상인방 하변보다 아래 — 상인방(120 ② «66px 온전»)을 한 픽셀도 안 밟는다',
-      rows.map(r => r.H + ':' + r.clearLintel).join(' · '));
+    /* ── 867 이관 — **자리가 «벽» 에서 «아치 안쪽 받침 위» 로 내려왔다.** ──────────────
+       옛 [B4]·[B4b] 는 «벽 안에서 위·아래를 어떻게 나누는가» 를 물었다. 그 벽에는 이제 바가
+       없으므로 두 항은 **뜻을 잃는다**. 지우지 않고 **새 자리의 같은 질문**으로 갈아 끼운다
+       (333 처방 — 자리를 비우지 않는다):
+         [B4]  아래 이웃(받침)과의 여백이 전 프레임 **12px 고정**인가
+         [B4b] 위 이웃(격자 하변)과의 여백이 **격자 행 간(25.6)보다 넓고** 아래보다 큰가
+               — 813 5회차 CP·CQ 의 1순위(«1600 에서 25.1 ≈ 행 간 25.6 이라 바가 격자의
+                 한 줄로 읽힌다»)를 **새 이웃 기준으로** 다시 묻는 항이다.
+       ⚠ 옛 대역(44 고정 · 좁은 벽 대칭)은 «벽에 있을 때» 의 값이라 되살리지 마라 —
+         되살리려면 867 을 통째로 되돌려야 한다(그때는 [B5] 가 먼저 빨개진다). */
+    const ROW_PITCH = 25.6;   /* 격자 행 간 — 813 1회차 CF·CG 실측 */
+    ok(rows.every(r => Math.abs(r.gapDown - PED_GAP) <= 1),
+      '[B4] 바 하변 ↔ 받침 상변 = 12px 고정 — 바가 «받침 위에 얹힌» 것으로 읽힌다(867)',
+      rows.map(r => r.H + ':' + r.gapDown).join(' · '));
+    ok(rows.every(r => r.gapUp > ROW_PITCH && r.gapUp > r.gapDown),
+      '[B4b] 위(격자 하변↓바)가 격자 행 간 25.6 보다 넓고 아래(바↓받침)보다 크다 — «격자의 한 줄» 로 안 읽힌다(867)',
+      rows.map(r => `${r.H}: 위 ${r.gapUp} / 아래 ${r.gapDown} = ${(r.gapUp / r.gapDown).toFixed(2)}`).join(' · '));
+    /* ⚑ 방향 전환 — 옛 [B5] 는 «바가 상인방을 안 밟는다» 였고 자리가 벽 밖으로 나간 지금은
+       **아무것도 안 물어도 초록**이다(328-330 교훈의 «헛초록»). 바가 실제로 벽을 떠났는지를
+       묻는 쪽으로 뒤집는다 — 867 이 통째로 되돌아가면 이 항이 먼저 빨개진다. */
+    ok(rows.every(r => r.clearLintel > 0 && r.gapGrid < 0),
+      '[B5] ★ 바가 «상인방↓격자» 벽 밖에 있다 — 상인방 아래이면서 격자 **하변보다도** 아래(867)',
+      rows.map(r => `${r.H}: 상인방↓바 ${r.clearLintel} · 격자상변↓바하변 ${-r.gapGrid}`).join(' · '));
     /* ⚑ 이 항이 «자리» 결정의 본체다 — 아래 절 §1 의 표를 그대로 자로 옮긴 것이다.
        수반 옆 띠에 두면 1600 에서 바가 **접합선 그림자대(gy+4..gy+16)를 통째로 덮어**
        `verify120` [1600] ①-2 가 빨개진다(1회차에 실제로 그랬다: 그림자 52.6 vs 아래 47.5 = Δ−5.1).

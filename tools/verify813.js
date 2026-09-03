@@ -79,7 +79,8 @@ const MEASURE = `(() => {
   const rel = o => o && { t: +(o.t - p.t).toFixed(2), b: +(o.b - p.t).toFixed(2), h: +o.h.toFixed(2) };
   const o = { panel: p, grid: rel(R('#rwGrid')), mid: rel(R('#relw .rw-mid')),
               cap: rel(R('#relw .rw-cap')), fc: rel(R('#relw .rw-fc.bl')),
-              lintel: rel(R('#relw .rw-lintel')), mul: rel(R('#rwMulBar')) };
+              lintel: rel(R('#relw .rw-lintel')), mul: rel(R('#rwMulBar')),
+              floor: rel(R('#relw .rw-floor')) };
   /* 안내문의 **잉크** bbox — 상자가 아니라 실제로 칠해지는 자리(754 6회차 ⓐ 의 축) */
   const lines = [...document.querySelectorAll('#relw .rw-cap p')].map(el => {
     const rg = document.createRange(); rg.selectNodeContents(el);
@@ -94,7 +95,15 @@ const MEASURE = `(() => {
   return { panelH,
     g3: +(panelH - o.cap.b).toFixed(2),          /* 안내문 아래 여백 */
     gapB: +(o.fc.t - o.cap.b).toFixed(2),        /* 쌍ⓑ — 안내문 ↓ 코너 브래킷 */
-    gapA: +(o.mul.t - o.lintel.b).toFixed(2),    /* 쌍ⓐ — 상인방 ↓ 배수 바 */
+    /* ── 867 이관 — **쌍ⓐ 의 «위 이웃» 이 바뀌었다.** ──
+       5회차까지 배수 바는 «상인방 ↔ 격자» 벽에 있었고 쌍ⓐ 는 «상인방 ↓ 바» 였다. 867 이
+       바를 아치 안쪽 «받침 위 12» 로 내리면서 상인방과 바 사이에는 이제 **격자 516 이 통째로**
+       들어 있다 — 옛 쌍은 «맞닿은 두 변» 이 아니므로 754 의 붕괴 규칙이 뜻을 잃는다
+       (그대로 두면 1600 에서 696/820 = 85% 로 **아무것도 안 묻고 초록**이다).
+       ⇒ 쌍을 **새 이웃**(격자 하변 ↓ 바)으로 갈아 끼운다. 붕괴 규칙·판정선(25%)은 그대로다. */
+    gapA: +(o.mul.t - (o.grid.t + o.grid.h)).toFixed(2),   /* 쌍ⓐ — 격자 하변 ↓ 배수 바(867) */
+    gapA2: +(o.floor.t - o.mul.b).toFixed(2),              /* 쌍ⓐ' — 배수 바 ↓ 받침 상변(867) */
+    gapLin: +(o.mul.t - o.lintel.b).toFixed(2),            /* 계보 — 옛 쌍ⓐ(상인방 ↓ 바) */
     capInkOverlap: +Math.max(0, ov).toFixed(2),  /* 안내문 잉크 × 코너 브래킷 가로 겹침 */
     /* 813 5회차 — **상자**와 브래킷의 가로 겹침. 잉크(위)는 처음부터 0 이었고, 754 의 자를
        빨갛게 만들던 것은 이 값이다(상자가 left:0;right:0 이라 브래킷 열까지 뻗었다).
@@ -221,8 +230,16 @@ async function sweep(browser, url) {
   {
     const base = r[BASE].gapA, min = Math.min(...FRAMES.map(H => r[H].gapA));
     ok(min >= base * COLLAPSE,
-      '[5a] 쌍ⓐ «상인방 ↓ 배수 바» 가 판정선 위 — 754 의 [❌](12.1%)가 닫혔다',
+      '[5a] 쌍ⓐ «격자 하변 ↓ 배수 바» 가 판정선 위 — 754 의 [❌](12.1%)가 닫힌 채로 자리만 옮겼다(867)',
       at('gapA') + ' · ' + (min / base * 100).toFixed(1) + '% (판정선 25%)');
+    /* 867 — 아래 이웃도 같은 자로 본다. 위·아래 둘 다 안 물으면 «받침을 밟는 이동» 이
+       [5a] 만으로는 초록이다(위 간극은 오히려 커진다). */
+    ok(FRAMES.every(H => r[H].gapA2 >= 8) && FRAMES.every(H => r[H].gapA > r[H].gapA2),
+      '[5a2] 쌍ⓐ\' «배수 바 ↓ 받침 상변» 이 8px 위 · 위 간극보다 좁다 — 바가 아래(수반·소환 버튼) 쪽에 붙어 읽힌다(867)',
+      at('gapA2'));
+    /* ⚠ 867 이후 [5b]·[5c] 는 «바가 떠난 벽» 을 잰다 — 그 벽은 여전히 아치 정점(av + 8)이
+       바닥을 못 박고 있으므로 두 항의 수치와 근거는 그대로 살아 있다(둘은 «벽이 좁아서 생긴
+       문제가 아니다» 를 말하는 진단 항이고, 867 이 그 진단을 «그러니 벽 밖으로» 로 푼 것이다). */
     /* 상인방은 아치 정점 위 8px 보다 아래로 못 내려온다 ⇒ 긴 프레임의 벽에는 바닥이 있다.
        그 바닥이 기준 간극을 74.9 밑으로 못 내리므로 ③ 계열은 구조적으로 막혀 있다. */
     ok(FRAMES.filter(H => H >= 1920).every(H => r[H].wall >= 98 + 20 + 8),
@@ -280,7 +297,11 @@ async function sweep(browser, url) {
   {
     const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     /* R4 가 «안 바뀐다» 를 재려면 현행 값이 필요하다 — 상수로 적지 않고 이번 실행에서 뜬다. */
-    const R4_BASE = Object.fromEntries(FRAMES.map(H => [H, r[H].gapA]));
+    /* ⚑ 867 — R4 는 «상인방이 움직이는가» 를 재는 항이라 **옛 쌍(상인방 ↓ 바)** 으로 재야 한다.
+       쌍ⓐ 를 새 이웃(격자 하변 ↓ 바)으로 갈아 끼운 뒤 그대로 두면, 새 쌍은 `--rw-lt` 와
+       무관해서 «되돌려도 0.00px» 이 되고 **되돌림 시험이 조용히 죽는다**(실제로 그렇게
+       빨개졌고, 그 빨강이 이 자리를 가리켰다). 계보용으로 남긴 `gapLin` 이 그 자다. */
+    const R4_BASE = Object.fromEntries(FRAMES.map(H => [H, r[H].gapLin]));
     const REV = [
       /* 5회차 — 선언의 `38px` 가 `12px` 로 바뀌어 잡는 문자열만 옮겼다(묻는 것은 그대로). */
       ['R1', '[E4] 안내문 ref 비 분할을 옛 «고정 여백» 으로 되돌린다 ⇒ [3] 이 대역 밖으로',
@@ -324,11 +345,11 @@ async function sweep(browser, url) {
          묻는 항은 그 자체로 빨강이므로, 2회차의 원래 뜻(«이 상수가 쌍ⓐ 의 여유를 만든다»)으로
          되돌린다. ⚠ 죽었다→살았다가 **두 회차 만에 뒤집힌 자리**라, 다음 회차가 gt 를 다시 내리면
          이 항이 먼저 말한다(그때는 4회차 판본으로 또 뒤집는 것이 아니라 gt 를 왜 내렸는지를 적어라). */
-      ['R4', '[E3] 벽 폭 294 는 5회차에 **되살아났다** — 300 으로 되돌리면 쌍ⓐ 가 실제로 움직인다',
+      ['R4', '[E3] 벽 폭 294 는 5회차에 **되살아났다** — 300 으로 되돌리면 상인방↓바(옛 쌍ⓐ)가 실제로 움직인다',
         'calc(var(--rw-gt) - 294px * var(--rwc,1)),', 'calc(var(--rw-gt) - 300px * var(--rwc,1)),',
-        (rv) => { const d = Math.max(...FRAMES.map(H => Math.abs(rv[H].gapA - R4_BASE[H])));
-                  const s = (rv[BASE].gapA - R4_BASE[BASE]).toFixed(2);
-                  return { bad: d >= 0.5, got: '쌍ⓐ 최대 변화 ' + d.toFixed(2) + 'px (2280 ' + (s > 0 ? '+' : '') + s + ')' }; }],
+        (rv) => { const d = Math.max(...FRAMES.map(H => Math.abs(rv[H].gapLin - R4_BASE[H])));
+                  const s = (rv[BASE].gapLin - R4_BASE[BASE]).toFixed(2);
+                  return { bad: d >= 0.5, got: '상인방↓바 최대 변화 ' + d.toFixed(2) + 'px (2280 ' + (s > 0 ? '+' : '') + s + ')' }; }],
       /* ── ⚑⚑ 5회차의 **자기 되돌림 두 겹** — 이 회차가 한 일이 둘이라 시험도 둘이다. ──
          R5 = 예산(총량 36) · R6 = 그 예산을 가능하게 한 선행 수리(상자 좁히기).
          R5 는 총량만 4회차 값(12 + 78.6 = 90.6)으로 돌린다 — 다른 자리는 안 건드리므로
