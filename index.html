@@ -26663,6 +26663,159 @@ function auraSprite(key, b, render){
   return out;
 }
 
+/* ⚑⚑ 856 — ③층(하이라이트)을 «종별 손그림» 에서 **«본체 실루엣을 안쪽으로 깎은 코어»** 로.
+   792 10회차 비평 2인(CV·CW)이 각자 다른 종을 짚었는데 증상이 8회차 ⓐ 와 **글자만** 달랐다:
+   **하이라이트가 본체를 안 따라간다** — CV 점유율 5.2%(flask) ~ 82.8%(whirl) = 15.9배 ·
+   같은 절단면에서 하이라이트/본체 폭 slash 68% ↔ curve 14% 인데 **arrow 축 0px · boomer 팔 0px ·
+   spiral 리본 0px** / CW 면적비 7% ~ 89% = 12.7배. 9회차가 ①층(후광)에 한 일을 ③층은 안 받았다 —
+   ③층은 아직 종마다 손으로 적은 «흰 도형» 이라 폭이 **획에 안 매여 있었다**.
+   ⇒ **③층의 «형상» 을 종에서 없앤다.** 종이 그리는 것은 본체뿐이고, 하이라이트는 그 본체를
+     **한 곳에서** 획 폭의 `SPEC_K` 만 남기고 깎은 코어다 ⇒ 폭이 구성상 획에 매인다.
+   ⚑ 깎는 자는 «반지름 하나로 오므리기»(고정 반지름 erosion)가 **아니다** — 고정 반지름은 굵은
+     획에서 너무 넓고 가는 획에서 **0 이 된다**(CV 가 잰 «14% ↔ 68% · 0px» 이 정확히 그 모양이다).
+     대신 **거리변환의 마루(medial axis)에 그 자리 반쪽폭의 K 배 원을 찍는다**: 반쪽폭 h 인 자리의
+     코어 폭 = 2·K·h = **K × 획 폭** ⇒ 굵은 덩어리(화구)든 가는 리본(나선)이든 **국소적으로**
+     같은 비율이 나오고, 주 덩어리에는 마루가 반드시 있으므로 «0px» 이 구조적으로 안 생긴다.
+   ⚠ 비용은 **굽는 순간뿐**이다(종당 한 번 · 캐시 · 거리변환은 O(화소)). 4회차가 매 프레임 blur 로
+     ×1685 를 맞고 되돌린 자리라 `verify792` [P1] 이 그것을 지킨다.
+   ⚠ 호출부 17자리는 **한 글자도 안 건드린다** — ③층이 이미 `spec()` 한 곳을 지나므로 그 한 곳의
+     뜻만 바뀐다. 각 종이 적어 둔 옛 흰 도형은 **폴백**으로 남는다(`SPEC_ON = 0` 이 그 세계이고
+     되돌림 시험이 그 사본을 되돌림 대조로 쓴다 — 9회차 [R4] 와 같은 꼴). */
+const SPEC_ON   = 1;      /* 되돌림 시험이 여기를 끈다 — 0 이면 792 의 «종별 손그림» 하이라이트 */
+const SPEC_K    = 0.35;   /* 코어 폭 ÷ 획 폭 — CV 목표 «획 폭의 30~40%» 의 가운데 */
+const SPEC_A    = 0.94;   /* 봉우리 알파 = `SPEC` 색의 알파(한 색 문법을 값으로도 잇는다) */
+const SPEC_KNEE = 0.10;   /* 코어 전용 무릎 — 링과 같은 이유(처음부터 끝까지 페이드다) */
+const SPEC_MINR = 0.38;   /* 마루 원 최소 반지름(로컬px) — 가장 가는 획도 코어를 갖는다 */
+const SPEC_SPR  = new Map();
+let SPEC_BAKE = 0, SPEC_M = null;
+/* 코어 굽기용 **짧은** 페이드 — `HALO_TAPS`(1.4·2.8 로컬px)를 그대로 쓰면 폭 2~3px 짜리 코어가
+   통째로 뭉개진다. 같은 꼴·같은 가중치, 반지름만 1/4 이다(값을 손으로 다시 적지 않는다 — 402). */
+const SPEC_TAPS = HALO_TAPS.map(t => [t[0] * 0.10, t[1] * 0.10, t[2]]);
+/* 제곱 거리변환(Felzenszwalb 1차원 포물선 포락선 · 열 → 행 두 번 · O(화소)).
+   굽는 순간 한 번뿐이라 프레임 비용이 아니다 — 4회차가 못 쓴 매 프레임 필터와 다른 것이 이 점이다. */
+function edt2d(mask, w, h){
+  const INF = 1e20, n0 = Math.max(w, h);
+  const f = new Float64Array(n0), v = new Int32Array(n0), z = new Float64Array(n0 + 1);
+  const d = new Float64Array(w * h);
+  const pass = (get, set, n) => {
+    for(let i = 0; i < n; i++) f[i] = get(i);
+    let k = 0; v[0] = 0; z[0] = -INF; z[1] = INF;
+    for(let q = 1; q < n; q++){
+      let s = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k])) / (2*q - 2*v[k]);
+      while(s <= z[k]){ k--; s = ((f[q] + q*q) - (f[v[k]] + v[k]*v[k])) / (2*q - 2*v[k]); }
+      k++; v[k] = q; z[k] = s; z[k+1] = INF;
+    }
+    k = 0;
+    for(let q = 0; q < n; q++){ while(z[k+1] < q) k++; set(q, (q - v[k])*(q - v[k]) + f[v[k]]); }
+  };
+  /* ⚠ 씨앗은 **바깥**이다 — 잉크에서 «가장 가까운 바깥» 까지의 거리라야 마루가 반쪽폭이 된다.
+     (씨앗을 잉크로 두면 잉크 화소가 전부 0 이 되어 마루가 통째로 사라진다 — 1회차에 한 번 겪었다) */
+  for(let x = 0; x < w; x++) pass(y => (mask[y*w + x] ? INF : 0), (y, val) => { d[y*w + x] = val; }, h);
+  for(let y = 0; y < h; y++){ const o = y*w; pass(x => d[o + x], (x, val) => { d[o + x] = val; }, w); }
+  return d;                       /* 제곱 거리(로컬 비교만 하므로 뿌리는 필요할 때만 뽑는다) */
+}
+/* ⚠ `shotBody` 는 `draw()` 안에 사는 함수라 여기서 **이름으로 못 부른다** — 그리는 자를 인자로
+   받는다(9회차 `auraSprite` 가 같은 자리에서 겪은 실패 · 굽기 실패는 `null` + 폴백이라 조용하다). */
+function specSprite(key, b, render){
+  if(SPEC_SPR.has(key)) return SPEC_SPR.get(key);
+  let out = null;
+  try{
+    const S = Math.round(HALO_R * 2 * HALO_SS);
+    const mk = () => { const c = document.createElement('canvas'); c.width = c.height = S; return c; };
+    /* ① 본체 실루엣 — **같은 그리기 코드를 재귀로** 부른다(형상 사본 0). `SPEC_BAKE` 가 도는 동안
+       `halo()`·`spec()` 은 아무것도 안 그리고, `spec()` 은 **그 순간의 변환만** `SPEC_M` 에 받아 둔다(④). */
+    const base = { a: HALO_SS, b: 0, c: 0, d: HALO_SS, e: S / 2, f: S / 2 };
+    const src = mk(), sg = src.getContext('2d');
+    sg.setTransform(base.a, base.b, base.c, base.d, base.e, base.f);
+    const cb = Object.assign({}, b, { a: 0, mf: undefined });
+    if(cb.spin !== undefined) cb.spin = 0;
+    if(cb.sa !== undefined) cb.sa = 0;
+    const keep = ctx; ctx = sg; SPEC_BAKE++; SPEC_M = null;
+    try{ sg.save(); render(cb); sg.restore(); } finally { ctx = keep; SPEC_BAKE--; }
+    const M = SPEC_M; SPEC_M = null;
+    /* ② 실루엣을 **문턱으로 굳힌다**(α ≥ .5) — 9회차 ② 와 같은 이유다: 종이 제 손으로 깐 발광의
+       옅은 치맛단이 씨앗이 되면 «획 폭» 이 종마다 다른 뜻이 되어 규격의 뜻이 사라진다. */
+    const sd = sg.getImageData(0, 0, S, S).data;
+    const mask = new Uint8Array(S * S);
+    for(let i = 3, p = 0; i < sd.length; i += 4, p++) mask[p] = sd[i] >= 128 ? 1 : 0;
+    /* ③ 거리변환 → **«그 자리 반쪽폭의 K 만 남기고 깎기»**.
+       ⚑ 1회차에 두 길을 걸어 보고 여기 섰다(둘 다 실측으로 기각했다):
+         ⓐ «마루(국소 최대)에 K·h 원 찍기» — 마루를 «여덟 이웃보다 크다» 로 잡으면 **뾰족해지는
+            획**(창날·별 갈래)은 마루를 따라 D 가 계속 커져 꼭짓점 한 점만 남는다(ice 마루 덮임
+            0.455 · shuri 0.279). 네 축 중 하나만 봉우리면 되게 풀면 이번엔 **가장자리 화소가
+            섞여 들어와** 코어가 바깥으로 번진다(폭 비 0.39 → 0.88 · 밴드 2.25 로 되레 나빠졌다).
+         ⓑ ⇒ 마루를 «찾지» 않는다. 화소마다 **그 자리의 반쪽폭**을 알면 되고, 그것은
+            **자기 거리 안에서 본 D 의 최댓값**이다: 폭 w 인 띠에서 가장자리에서 d 만큼 들어온
+            화소는 반지름 d 안에 마루(h − d 떨어져 있다)를 품는다 ⟺ d ≥ h/2. 코어에 남길 것은
+            d ≥ (1−K)·h ≥ h/2 인 화소들뿐이므로 **남길 자리에서는 이 추정이 정확하다**
+            (더 바깥은 h 를 낮게 봐서 판정이 더 엄해질 뿐 — 안전한 쪽으로 틀린다).
+       ⇒ 코어 = { d ≥ (1−K)·h } · 폭 = 2(h − (1−K)h) = **K × 획 폭**. 마루 찾기도, 원 찍기도 없다. */
+    const d2 = edt2d(mask, S, S);
+    const dist = new Float32Array(S * S);
+    let dMax = 0;
+    for(let p = 0; p < dist.length; p++){ const v = mask[p] ? Math.sqrt(d2[p]) : 0; dist[p] = v; if(v > dMax) dMax = v; }
+    /* 반쪽폭 추정에 쓰는 «반지름 r 안의 최댓값» — 반지름을 몇 칸으로 양자화하고 칸마다
+       **분리 가능한 슬라이딩 최댓값**(가로 → 세로, 단조 덱)으로 한 번에 낸다. O(화소)다. */
+    const maxBox = (srcA, r) => {
+      const tmp = new Float32Array(S * S), dst2 = new Float32Array(S * S);
+      const dq = new Int32Array(S + 1);
+      const run = (get, set) => {
+        let head = 0, tail = 0;
+        for(let i = 0; i < S + r; i++){
+          if(i < S){
+            const v = get(i);
+            while(tail > head && get(dq[tail - 1]) <= v) tail--;
+            dq[tail++] = i;
+          }
+          const o = i - r;
+          if(o >= 0){
+            while(dq[head] < o - r) head++;
+            set(o, get(dq[head]));
+          }
+        }
+      };
+      for(let y = 0; y < S; y++){ const o = y*S; run(i => srcA[o + i], (i, v) => { tmp[o + i] = v; }); }
+      for(let x = 0; x < S; x++) run(i => tmp[i*S + x], (i, v) => { dst2[i*S + x] = v; });
+      return dst2;
+    };
+    const LV = [];                       /* 반지름 칸 — 기하급수라 칸 수가 로그로 준다 */
+    for(let r = 1; r < dMax + 2; r = Math.ceil(r * 1.45)) LV.push(r);
+    if(!LV.length) LV.push(1);
+    const boxes = LV.map(r => maxBox(dist, r));
+    const core = new Uint8Array(S * S);
+    const minR = SPEC_MINR * HALO_SS;
+    let hit = 0;
+    for(let p = 0; p < core.length; p++){
+      const d = dist[p];
+      if(!mask[p] || d <= 0) continue;
+      let li = 0; while(li < LV.length - 1 && LV[li] < d) li++;
+      const hh = boxes[li][p];                       /* 그 자리의 반쪽폭 추정 */
+      /* 문턱 둘 중 **무른 쪽**을 쓴다 — 비율(1−K)·h 와 «절대 최소 폭»(h − minR).
+         가장 가는 획에서도 코어가 사라지지 않게 하는 바닥이 뒤엣것이다. */
+      const t = Math.min((1 - SPEC_K) * hh, hh - minR);
+      if(d >= t){ core[p] = 1; hit++; }
+    }
+    if(!hit) throw new Error('no core');
+    const im = new ImageData(S, S);          /* 색은 종에 안 달린 **한 색**(`SPEC`)이다 */
+    for(let p = 0, i = 0; p < core.length; p++, i += 4){
+      if(!core[p]) continue;
+      im.data[i] = 255; im.data[i+1] = 255; im.data[i+2] = 255; im.data[i+3] = 255;
+    }
+    const seed = mk(); seed.getContext('2d').putImageData(im, 0, 0);
+    const dst = mk(), dg = dst.getContext('2d');
+    dg.globalCompositeOperation = 'lighter';
+    for(const [dx, dy, w] of (HALO_FADE ? SPEC_TAPS : [[0, 0, 1]])){
+      dg.globalAlpha = w; dg.drawImage(seed, dx * HALO_SS, dy * HALO_SS);
+    }
+    dg.globalAlpha = 1; dg.globalCompositeOperation = 'source-over';
+    /* ④ 굽는 프레임(본체 진입) ↔ 그리는 프레임(`spec()` 자리)의 차이를 되돌린다 — 9회차 ④ 와 같다. */
+    out = haloKneeCrop(dst, dg, S, Math.round(SPEC_A * 255), SPEC_KNEE);
+    if(out) out.m = M ? afInv(afMul(afInv(base), M)) : null;
+  }catch(e){ out = null; }
+  SPEC_SPR.set(key, out);
+  return out;
+}
+
 function draw(){
   const sx = cam.shake ? rnd(-cam.shake, cam.shake)*0.45 : 0;
   const sy = cam.shake ? rnd(-cam.shake, cam.shake)*0.45 : 0;
@@ -27077,8 +27230,9 @@ function draw(){
          다음 회차가 볼 후보: 종별 그라디언트를 **미리 구운 오프스크린 스프라이트**로 캐시하는 길
          (매 프레임 만들지 않으므로 blur 를 한 번만 낸다). 상세는 review §4회차. */
     let auraDone = 0;   /* 한 종이 `halo()` 를 두 번 부르는 자리가 있다 — 링은 한 장이다 */
-    const halo = fn => { if(AURA_BAKE){ if(!AURA_M) AURA_M = ctx.getTransform(); return; } if(AURA_ON){ if(auraDone) return; auraDone = 1; const a = auraSprite(sh + '|' + (b.col || ''), b, shotBody); if(a){ ctx.save(); if(a.m) ctx.transform(a.m.a, a.m.b, a.m.c, a.m.d, a.m.e, a.m.f); ctx.drawImage(a.c, a.ox, a.oy, a.w, a.h); ctx.restore(); return; } } const s = haloSprite(sh, fn); if(s){ ctx.drawImage(s.c, s.ox, s.oy, s.w, s.h); } else { ctx.save(); fn(); ctx.restore(); } };   /* ① 후광 — 본체 **앞에** 부른다(9회차부터 본체 실루엣에서 판 링 · 굽기 실패나 `AURA_ON=0` 이면 5회차 스프라이트로 폴백) */
-    const spec = fn => { ctx.save(); fn(); ctx.restore(); };   /* ③ 하이라이트 — 본체 **뒤에** 부른다 */
+    const halo = fn => { if(SPEC_BAKE) return; if(AURA_BAKE){ if(!AURA_M) AURA_M = ctx.getTransform(); return; } if(AURA_ON){ if(auraDone) return; auraDone = 1; const a = auraSprite(sh + '|' + (b.col || ''), b, shotBody); if(a){ ctx.save(); if(a.m) ctx.transform(a.m.a, a.m.b, a.m.c, a.m.d, a.m.e, a.m.f); ctx.drawImage(a.c, a.ox, a.oy, a.w, a.h); ctx.restore(); return; } } const s = haloSprite(sh, fn); if(s){ ctx.drawImage(s.c, s.ox, s.oy, s.w, s.h); } else { ctx.save(); fn(); ctx.restore(); } };   /* ① 후광 — 본체 **앞에** 부른다(9회차부터 본체 실루엣에서 판 링 · 굽기 실패나 `AURA_ON=0` 이면 5회차 스프라이트로 폴백) */
+    let specDone = 0;   /* 코어는 한 장이다 — 한 종이 `spec()` 을 두 번 부르는 자리가 있다(깃·호) */
+    const spec = fn => { if(SPEC_BAKE){ if(!SPEC_M) SPEC_M = ctx.getTransform(); return; } if(AURA_BAKE) return; if(SPEC_ON){ if(specDone) return; specDone = 1; const s = specSprite(sh + '|' + (b.col || ''), b, shotBody); if(s){ ctx.save(); if(s.m) ctx.transform(s.m.a, s.m.b, s.m.c, s.m.d, s.m.e, s.m.f); ctx.drawImage(s.c, s.ox, s.oy, s.w, s.h); ctx.restore(); return; } } ctx.save(); fn(); ctx.restore(); };   /* ③ 하이라이트 — 본체 **뒤에** 부른다(856 부터 본체 실루엣에서 깎은 코어 · 굽기 실패나 `SPEC_ON=0` 이면 종별 손그림으로 폴백) */
     /* 불덩이 공용 몸 — 화염구·화염병이 «크기만 다른 같은 원» 이던 자리(193 ⑧)를 갈랐지만
        «불» 이라는 재질은 공유해야 한 세트로 읽힌다. 재질만 함수로 남기고 형상은 각자 그린다. */
     const fireCore = rr => {
@@ -27088,7 +27242,9 @@ function draw(){
       ctx.fillStyle = '#ffdc8a'; ctx.beginPath(); ctx.arc(0,0,rr*0.6,0,6.283); ctx.fill();
       /* 792 ③ — 이 코어는 `#ffdc8a`(파랑 138)라 «근백색» 이 아니다. 불 계열 셋이 하이라이트
          층을 통째로 못 갖고 있던 자리다. 형상·크기는 그대로 두고 **가장 안쪽만** 흰불로. */
-      ctx.fillStyle = SPEC; ctx.beginPath(); ctx.arc(0,0,rr*0.3,0,6.283); ctx.fill();
+      /* ⚑ 856 — 손으로 적던 이 원도 `spec()` 을 지난다(안 지나면 이 종만 옛 문법으로 떨어진다 —
+         후광이 `halo()` 를 반드시 지나야 하는 것과 같은 자리다). 폴백일 때 그리는 그림은 그대로다. */
+      spec(() => { ctx.fillStyle = SPEC; ctx.beginPath(); ctx.arc(0,0,rr*0.3,0,6.283); ctx.fill(); });
     };
     if(sh === 'arc' || sh === 'slash'){          /* 검기 — 초승달 호(기준형) */
       ctx.rotate(b.a);
@@ -27369,8 +27525,10 @@ function draw(){
       ctx.moveTo(23.4,0); ctx.lineTo(4.7,2.65); ctx.lineTo(-12.5,1.7); ctx.lineTo(-15.6,0);
       ctx.lineTo(-12.5,-1.7); ctx.lineTo(4.7,-2.65);
       ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.9)';    /* 날 끝의 흰 섬광 — «꿰뚫는» 쪽을 가리킨다 */
-      ctx.beginPath(); ctx.moveTo(23.4,0); ctx.lineTo(11.7,1.56); ctx.lineTo(11.7,-1.56); ctx.closePath(); ctx.fill();
+      /* ⚑ 856 — 날 끝의 흰 섬광(«꿰뚫는» 쪽을 가리킨다)도 `spec()` 을 지난다. 종이 제 손으로
+         적어 두면 그 종만 ③층이 획에 안 매인 채로 남는다(CV: lance 64% ↔ curve 14%). */
+      spec(() => { ctx.fillStyle = 'rgba(255,255,255,.9)';
+                   ctx.beginPath(); ctx.moveTo(23.4,0); ctx.lineTo(11.7,1.56); ctx.lineTo(11.7,-1.56); ctx.closePath(); ctx.fill(); });
     }else if(sh === 'fire' || sh === 'boom'){    /* 화염구 — 둥근 화구(기준형) */
       fireCore(11);
     }else if(sh === 'rockfall' || sh === 'meteor'){ /* 운석 — 바위 코어 + 불꼬리 */
@@ -27509,7 +27667,9 @@ function draw(){
       };
       halo(() => coil(13.5, 'rgba(255,214,236,.24)'));
       coil(5.6, b.col);
-      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0,0,2.6,0,6.283); ctx.fill();
+      /* ⚑ 856 — CV 가 «spiral 리본에 ③층 0px» 로 짚은 자리다. 손으로 적던 가운데 흰 점은
+         **리본을 안 따라간다** — 같은 자리를 `spec()` 에 넘겨 코어가 나선 전체를 타게 한다. */
+      spec(() => { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0,0,2.6,0,6.283); ctx.fill(); });
     }else{                                       /* 드론 연사 탄·태그 없는 발 — 공용 구슬 */
       const g = ctx.createRadialGradient(0,0,1,0,0,9);
       g.addColorStop(0,'#ffffff'); g.addColorStop(0.5,b.col); g.addColorStop(1,'rgba(120,255,210,0)');

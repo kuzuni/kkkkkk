@@ -40,10 +40,15 @@ const SRC = path.join(ROOT, 'index.html');
      (360·367·438·439·453·467·471·541·710 선례). 이름에 pid 를 섞어 병렬 실행끼리 안 지운다(648). */
 const NEG_SPEC = path.join(ROOT, '.v792-neg-spec-' + process.pid + '.html');
 const NEG_HALO = path.join(ROOT, '.v792-neg-halo-' + process.pid + '.html');
-const TAG_SPEC = `    const spec = fn => { ctx.save(); fn(); ctx.restore(); };`;
+/* ⚠ 856 에 이 줄이 길어졌다(하이라이트가 «본체 실루엣에서 깎은 코어» 가 됐다) — 9회차가
+   `TAG_HALO` 에서 배운 대로 **머리만** 붙잡고 줄 끝까지 지운다(줄 전체를 글자로 적어 두면
+   다음 회차의 한 글자 수정에 자가 먼저 죽는다). */
+const TAG_SPEC = `    const spec = fn => { if(SPEC_BAKE){`;
 /* ⚠ 9회차에 이 줄이 길어졌다(후광이 «본체 실루엣에서 판 링» 이 됐다) — 줄 전체를 글자로
    적어 두면 다음 회차의 한 글자 수정에 자가 먼저 죽는다. **머리만** 붙잡고 줄 끝까지 지운다. */
-const TAG_HALO = `    const halo = fn => { if(AURA_BAKE){`;
+/* ⚠ 856 에 이 줄의 **머리**가 또 바뀌었다(`if(SPEC_BAKE) return;` 이 앞에 붙었다) — 붙잡는
+   대목을 더 짧게 내린다. 9회차 주석이 «머리만 붙잡아라» 라고 적어 둔 이유가 이것이다. */
+const TAG_HALO = `    const halo = fn => {`;
 /* 9회차 [R4] — 링을 끄면 5~8회차의 «종별 손그림» 후광(폴백)이 그대로 돌아온다. */
 const NEG_AURA = path.join(ROOT, '.v792-neg-aura-' + process.pid + '.html');
 const TAG_AURA = `const AURA_ON   = 1;`;
@@ -743,7 +748,7 @@ async function measure(browser, url) {
     }
 
     /* ---- [R] 되돌림 시험 ---- */
-    fs.writeFileSync(NEG_SPEC, src.replace(TAG_SPEC, `    const spec = fn => {};`), 'utf8');
+    fs.writeFileSync(NEG_SPEC, killLine(src, TAG_SPEC, `    const spec = fn => {};`), 'utf8');
     fs.writeFileSync(NEG_HALO, killLine(src, TAG_HALO, `    const halo = fn => {};`), 'utf8');
 
     const rSpec = await measure(browser, 'file://' + NEG_SPEC);
