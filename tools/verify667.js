@@ -238,18 +238,31 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
      **리본1 에는 제비꼬리가 없다**(ref 도 라운드 코너뿐 · 측정표 §7-1). */
   const F89 = await page.evaluate(() => {
     const c = document.querySelector('.pvc.ban1');
+    const b = [...document.querySelectorAll('.pvc')].find((x) => !x.classList.contains('ban1'));
     const g = (sel, el) => getComputedStyle(el, sel);
     return {
       rb2W: g('::after', c.querySelector('.rb2')).width,
       rb2Bd: g(null, c.querySelector('.rb2')).borderRightWidth,
-      rb1Ct: g('::after', c.querySelector('.rb1')).content
+      rb1Ct: g('::after', c.querySelector('.rb1')).content,
+      rb1W: g('::after', c.querySelector('.rb1')).width,
+      rb1Bd: g(null, c.querySelector('.rb1')).borderRightWidth,
+      blRb1Ct: g('::after', b.querySelector('.rb1')).content
     };
   });
   const rb2w = parseFloat(F89.rb2W), rb2bd = parseFloat(F89.rb2Bd);
+  const rb1w = parseFloat(F89.rb1W), rb1bd = parseFloat(F89.rb1Bd);
   ok('F8 리본2 제비꼬리 깊이 = 폭 − 테 = 6  (ref 3 ref px = 6.2 · 8회차 · 26 → 12)',
     near(rb2w - rb2bd, 6, 1), `폭 ${F89.rb2W} − 테 ${F89.rb2Bd} = ${(rb2w - rb2bd).toFixed(1)}`);
-  ok('F9 리본**1** 에는 제비꼬리가 없다 — ref 도 리본1 은 라운드 코너뿐이다(측정표 §7-1)',
-    F89.rb1Ct === 'none' || F89.rb1Ct === 'normal', F89.rb1Ct);
+  /* ⚑ 885 1회차 — 이 항은 «리본1 엔 제비꼬리가 없다» 로 굳어 있었고 **틀렸다**(333 처방으로 방향을 뒤집는다).
+     자 = 빨강 채움(255,86,93) 행별 우단 프로파일 · 문턱 60·90·130 스윕에서 부호 불변:
+       ref 파랑 rb1 **3~4 ref px** (최심이 **가운데** 36~52% 높이 = 라운드 코너면 끝이 깊어야 한다) ·
+       ref 파랑 rb2 3~4 · ref 초록 rb2 4 · **ref 초록 rb1 1(평평)**.
+     ⇒ «형마다 두 값» 이 하나 더 있는 것이지 «없는 부품» 이 아니다. 833 8회차 비평 DF 4순위와 같은 값. */
+  ok('F9 배너형 리본**1** 에도 제비꼬리가 있다 — 깊이 = 폭 − 테 = 6, 리본2 와 **한 값** (ref 파랑 rb1 3~4 ref px · 885)',
+    F89.rb1Ct !== 'none' && F89.rb1Ct !== 'normal' && near(rb1w - rb1bd, 6, 1),
+    `${F89.rb1Ct} · 폭 ${F89.rb1W} − 테 ${F89.rb1Bd}`);
+  ok('F9b 불릿형 리본1 에는 **없다** — ref 초록 rb1 은 깊이 1 ref px 로 평평하다(같은 자·같은 스윕 · 885)',
+    F89.blRb1Ct === 'none' || F89.blRb1Ct === 'normal', F89.blRb1Ct);
 
   /* F5~F7 — 일러스트 «자리». 6·7회차 비평 세 사람이 «판 좌단이 82~99px 어긋난다 / ref 에는 그 판이 없다»
      로 세 번 갈렸다. 자로 재면 **상자는 ref 환산과 0.4px 안**이고, 어긋나 보인 것은

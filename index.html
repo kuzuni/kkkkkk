@@ -8222,9 +8222,19 @@
      꼭짓점은 거기서 width 만큼 왼쪽이다 ⇒ 빨강에 파고드는 깊이 = width − 테 6.
      ref 3 ref px = 6.2 우리 px 를 넣으면 **width = 12**. 부수 효과로 띠 우단 최대값도
      249.2 → ref 252.6 으로 돌아온다(BC [1][2] «리본 우단이 −5~12px 안쪽» 의 뿌리가 이것이다). */
-  .pvc>.rb2::after{content:'';position:absolute;right:-6px;top:-6px;width:12px;height:76px;
+  /* ⚑ 885 1회차 — **리본1 의 제비꼬리도 «형마다 두 값» 이다**(667 [F9] 는 «리본1 엔 없다» 로 굳어 있었다).
+     8회차 비평 DF 4순위(«ref 리본1 에 깊이 10.3 오목 노치가 있는데 우리는 0»)를 같은 자로 재확인했다 —
+     자 = 빨강 채움(255,86,93) 행별 우단 프로파일, **문턱 60·90·130 스윕에서 부호 불변**:
+       | ref 리본 | 깊이(ref px → 우리 px) | 최심 행 |
+       | 파랑 rb1 | 3~4 → 6.2~8.3 | 36~52% 높이 |  ← 가운데가 제일 깊다 = **라운드 코너가 아니라 제비꼬리**
+       | 파랑 rb2 | 3~4 → 6.2~8.3 | 44~48% |
+       | 초록 rb1 | **1 → 2.1**   | 0~86%(평평)  |  ← 여기만 없다
+       | 초록 rb2 | 4 → 8.3       | 43~46% |
+     ⇒ **배너형 리본1 에만** 같은 부품을 붙인다(불릿형은 ref 가 평평하므로 그대로). 값은 새로 안 만들고
+     리본2 규칙을 **같이 읽게** 한다(402 «사본을 지운다») — 깊이 = 폭 12 − 테 6 = 6(ref 3 ref px = 6.2). */
+  .pvc>.rb2::after,.pvc.ban1>.rb1::after{content:'';position:absolute;right:-6px;top:-6px;width:12px;height:76px;
     background:var(--c);clip-path:polygon(100% 0,100% 100%,0 50%)}
-  .pvc.ban1>.rb2::after{height:67px}
+  .pvc.ban1>.rb2::after,.pvc.ban1>.rb1::after{height:67px}
   .pvc.ban1>.rb1{bottom:172px}
   .pvc.ban1>.rb2{bottom:54px}
   /* ⚑ 833 8회차 — 라벨 잉크가 **가로로만** 3.5% 좁았다. 비평가 **넷**(DB·DC·DD·DE)이 독립으로
