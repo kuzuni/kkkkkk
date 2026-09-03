@@ -107,6 +107,19 @@ function questsOfSrc() {
   return Object.keys(out).length ? out : null;
 }
 
+/* 제품에서 DQUESTS 의 하루 정액 합을 읽는다 — 같은 규약(402 «표를 손으로 옮겨 적지 않는다»).
+   ⚑ 199 30회차 이관: [B3] 이 이 합을 **8500 이라는 손 상수**로 들고 있었는데, 30회차가 이관(29-5 ⓓ)
+   으로 다섯을 ×2.6 하자 그 문턱이 제품보다 낮아져 **실재 값을 빨갛다고 말할 자**가 됐다.
+   문턱을 새 숫자로 바꿔 적으면 다음 이관에서 똑같이 부패하므로 **제품에서 읽게** 바꾼다. */
+function dqSumOfSrc() {
+  const i = SRC.indexOf('const DQUESTS = [');
+  if (i < 0) return null;
+  const body = SRC.slice(i, SRC.indexOf('];', i));
+  let sum = 0, n = 0;
+  body.replace(/\{\s*id:'([a-z]+)'[^}]*?dia:(\d+)/g, (_, id, d) => { sum += +d; n++; return ''; });
+  return n ? { sum, n } : null;
+}
+
 /* 퀘스트 축 이름 — 801 이 봇 장부에서 **업적**(누적 플레이량 × 단가)과 **일일**(하루 정액)을
    갈랐다. 801 이전 표(r24 · r801-pre)는 합본 한 축이라 이름이 하나다. 그래서 «퀘스트 몫» 은
    항상 아래 셋을 다 더해서 읽는다(어느 세대의 표든 같은 값이 나온다). */
@@ -139,6 +152,10 @@ function questModel(j, pol, price) {
   console.log('[A] 정적 — 제품 `QUESTS[].dia`');
   const Q = questsOfSrc();
   yes('[A0] 제품에서 `QUESTS` 표를 읽었다', !!Q, Q ? Object.keys(Q).join(' ') : '(못 읽음)');
+  /* ⚑ 199 30회차 이관 — [B3] 의 상한을 제품에서 읽는다(손 상수 8,500 폐기) */
+  const DQ = dqSumOfSrc();
+  yes('[A3] [전제] 제품에서 `DQUESTS` 하루 정액 합을 읽었다 ([B3] 이 이 값을 상한으로 쓴다)',
+      !!(DQ && DQ.n >= 5 && DQ.sum > 0), DQ ? DQ.n + '칸 · 합 ' + fmt(DQ.sum) + '/일' : '(못 읽음)');
   if (Q) {
     Object.keys(NEW).forEach(id => {
       eq('[A1:' + id + '] 단가 = 801 재정박 값', Q[id] && Q[id].dia, NEW[id]);
@@ -203,10 +220,13 @@ function questModel(j, pol, price) {
           '업적 ' + fmt(ax['퀘스트(업적)']) + ' · 일일 ' + (ax['퀘스트(일일)'] === undefined ? '없음(수령 0건)' : fmt(ax['퀘스트(일일)'])));
       near('[B1:' + pol + '] 표의 **업적** 축 ≈ Σ(단가 × 플레이량)', meas, model, 0.03,
            '모델은 마지막 스냅(`qv`·best·own)으로 다시 센 값');
-      /* 일일은 하루 정액(DQUESTS 합 8,500)이라 30일 상한이 있다 — 업적이 일일 자리로 새면 빨갛다 */
+      /* 일일은 하루 정액(DQUESTS 합)이라 30일 상한이 있다 — 업적이 일일 자리로 새면 빨갛다.
+         ⚑ 199 30회차 이관 — 상한을 **제품에서 읽는다**(옛 손 상수 8,500 은 30회차 이관으로 부패했다). */
       const dq = ax['퀘스트(일일)'] || 0;
+      const dqCap = (DQ && DQ.sum) || 0;
       yes('[B3:' + pol + '] **일일** 축이 하루 정액 × 30일 상한 안이다 (두 축이 안 섞였다)',
-          dq >= 0 && dq <= 8500 * 30, fmt(dq) + ' ≤ ' + fmt(8500 * 30));
+          dqCap > 0 && dq >= 0 && dq <= dqCap * 30,
+          fmt(dq) + ' ≤ ' + fmt(dqCap * 30) + ' (제품 DQUESTS ' + (DQ ? DQ.n : 0) + '칸 합 ' + fmt(dqCap) + '/일)');
     });
     /* [전제] — 옛 단가를 넣으면 이 항등식이 **깨져야** 한다. 안 깨지면 [B1] 은 아무것도 안 잰다. */
     const measD = incOf(cj, 'diligent').axes['퀘스트(업적)'];
