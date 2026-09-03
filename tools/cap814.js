@@ -155,6 +155,16 @@ const FREEZE = () => {
       const { b, p } = await boot(src);
       const sel = await select(p);
       const clip = clipOf(sel);
+      /* ⚑⚑ 7회차 — **live 벌에도 «수거 정지» 를 건다.** 6회차 채점에서 비평 2인(CX ⑦ · CY §0)이
+         독립으로 같은 구멍을 잡았다: 판 A 의 `live-1..6` **여섯 장 전부가 무연출 기준 프레임과
+         byte 동일**(md5 `44a22ff0…`)이라 «가로 눌림이 풀렸다» 를 확인할 자료가 **0장**이었다
+         (판 P 1장 · 판 B 2장 — 셋의 차는 제품이 아니라 **운**이다).
+         뿌리는 4회차가 `step` 벌에서 이미 진단한 그것이다 — 수거는 `fxBye()` 의 `setTimeout` 이고
+         스크린샷 한 장이 200~480ms 라 수명 620ms 안에 드는 프레임이 0~2장이다.
+         ⇒ `step` 벌과 같은 무력화를 걸면 알갱이가 **JS 틱이 실제로 옮긴 자리에 그대로 남아**
+         여섯 장이 «실제 흩어짐» 을 찍는다. `step` 벌(입자 정지)이 못 답하는 축이 이쪽이다.
+         ⚠ 채점 캡처 전용이다(제품 0줄) — 회귀는 `node tools/probe814b.js`. */
+      await p.evaluate(FREEZE);
       const t0 = Date.now();
       await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
       const at = [];
