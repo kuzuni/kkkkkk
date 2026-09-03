@@ -38,8 +38,11 @@ const f1 = n => (Number.isFinite(n) ? n.toFixed(1) : '∞');
 const f3 = n => (Number.isFinite(n) ? n.toFixed(3) : '∞');
 const pct = n => (n >= 0 ? '+' : '') + (n * 100).toFixed(1) + '%';
 
+/* ⚑ `verify758` [V] 가 이 파일을 **모듈로 불러** 같은 수를 쓴다(표 두 벌 금지 — 정정9 계보).
+   불려 온 자리에서는 인쇄하지 않고 맨 끝의 `module.exports` 로만 답한다. */
+const QUIET = require.main !== module;
 const P = [];
-const say = s => { P.push(s); console.log(s); };
+const say = s => { P.push(s); if (!QUIET) console.log(s); };
 
 const jf = ARG.json ? String(ARG.json) : 'docs/review/199-bot-2026-09-03-r28-base.json';
 const rep = JSON.parse(fs.readFileSync(path.resolve(ROOT, jf), 'utf8'));
@@ -143,15 +146,40 @@ for (let i = 0; i <= 6000; i++) {
   if (cd > DAYS && cc > DAYS && r > best.r) best = { r, k };
 }
 const limit = contD / contC;   /* k→0 극한 — v30 항이 사라지고 기울기 비만 남는다 */
+/* ⚑ 초판은 «척도로는 창에 못 넣는다» 로 적었고 **그것이 틀렸다** — 외삽 구간 최대가 1.875 로
+   창 하한 1.8 을 넘는다(`verify758` [V2] 가 즉시 빨개져 잡았다). 옳은 문장은 한 겹 아래다:
+   **척도 축은 ④ 의 두 과녁을 «동시에» 못 준다.** ④ 는 비(1.8~2.0)와 **절대 도달일**
+   (부지런 100일 ±10 · 대충 180~200일)을 같이 요구하는데, 비가 창에 닿는 자리에서
+   부지런 교차일은 절대 창 아래로 한참 내려간다. 아래 두 수가 그것을 찍는다. */
+const ABSW = [90, 110];      /* §0 ④ 절대 창 — 부지런 100일 ±10 */
+let kHitRatio = null, kInAbs = { r: -1, k: 0, cd: 0, cc: 0 };
+for (let i = 0; i <= 6000; i++) {
+  const k = Math.pow(10, -3 + i * 6 / 6000);
+  const cd = crossOf('diligent', k), cc = crossOf('casual', k), r = cc / cd;
+  if (!Number.isFinite(r)) continue;
+  if (cd > DAYS && cc > DAYS && r >= BAND[0] && kHitRatio == null) kHitRatio = { k, r, cd, cc };
+  if (cd >= ABSW[0] && cd <= ABSW[1] && r > kInAbs.r) kInAbs = { r, k, cd, cc };
+}
 say('## [C] ⚑⚑ 비의 상한 — 척도 손잡이로 얻을 수 있는 최대치');
 say('');
 say(`- k 를 1/1000 ~ 1000 전 구간 흔들었을 때 **외삽 구간의 최대 ④ 비 = ${f3(best.r)}** (k = ${best.k.toFixed(3)})`);
 say(`- (참고 — 측정 창 안 구간까지 포함한 최대는 ${f3(bestAny.r)} (k = ${bestAny.k.toFixed(3)}) 이지만 그 자리는 교차일이 ≤ ${DAYS}일이라 **자의 해상도(하루)가 지배한다** — 판정에 쓰지 마라)`);
 say(`- k→0 극한 = **말미 정상 기울기의 비 ${f3(limit)}** (v(30) 항이 과녁 대비 사라진다)`);
-say(`- §0 창 하한 ${BAND[0]} 까지 **${pct(BAND[0] / best.r - 1)}** 모자란다.`);
+say(`- §0 창 하한 ${BAND[0]} 까지 **${pct(BAND[0] / best.r - 1)}** — 즉 척도 축은 비 창에 **닿기는 한다**.`);
 say('');
-say('⇒ **758(총 유입 ×1/2)과 §0 ④ 판정 줄은 서로 다른 축이다.** 758 은 두 교차일을 같이 밀 뿐');
-say('   비를 안 움직이고(±1% 안), ④ 비를 움직이는 것은 **부지런 ↔ 대충의 말미 정상 수급 격차** 하나다.');
+say(`⚑⚑ **그러나 두 과녁을 동시에는 못 준다.** ④ 는 비(${BAND[0]}~${BAND[1]})와 **절대 도달일**(부지런 ${ABSW[0]}~${ABSW[1]}일)을 같이 요구한다:`);
+say('');
+say('| 자리 | k | 부지런 교차일 | 대충 교차일 | ④ 비 | 절대 창 |');
+say('|---|---|---|---|---|---|');
+if (kHitRatio) say(`| 비가 창 하한에 닿는 자리 | ${kHitRatio.k.toFixed(2)} | **${f1(kHitRatio.cd)}일** | ${f1(kHitRatio.cc)}일 | **${f3(kHitRatio.r)}** | **창 밖 ${pct(kHitRatio.cd / ABSW[0] - 1)}** |`);
+if (kInAbs.r > 0) say(`| 부지런이 절대 창 안인 자리(비 최대) | ${kInAbs.k.toFixed(2)} | ${f1(kInAbs.cd)}일 | ${f1(kInAbs.cc)}일 | **${f3(kInAbs.r)}** | 창 안 — 비가 ${pct(kInAbs.r / BAND[0] - 1)} |`);
+say('');
+say('⇒ **④ 를 두 반쪽으로 갈라야 27-8 5번의 질문에 답이 나온다.**');
+say('');
+say(`- **④-절대(도달일)** — 동시 만족 **불가능**. 절대 창은 유입 **×${kInAbs.k.toFixed(2)}** 를 요구하고 758 은 **×0.5** 를 요구한다 (**${(kInAbs.k / 0.5).toFixed(1)}배** 어긋난다).`);
+say(`  ⚑ 그런데 이 충돌은 **주인이 758 에서 이미 닫았다** — «도달일은 관측값으로만 보고»(758 등재문). ⇒ 남는 판정은 **비 하나**다.`);
+say(`- **④-비** — 동시 만족 **가능**. 758 축은 비를 안 움직인다(k=0.5 에서 ${f3(crossOf('casual', 0.5) / crossOf('diligent', 0.5))} ↔ 현행 ${f3(R0)} = ${pct(crossOf('casual', 0.5) / crossOf('diligent', 0.5) / R0 - 1)}).`);
+say(`  비를 움직이는 축은 **부지런 ↔ 대충의 말미 정상 수급 격차** 하나이고, 그 격차는 **총량을 안 늘리고도** 벌릴 수 있다([G]).`);
 say('');
 
 /* ────────────────────────────────────────────────────────────────────
@@ -289,3 +317,20 @@ if (ARG.out) {
   fs.writeFileSync(path.resolve(ROOT, String(ARG.out)), P.join('\n') + '\n');
   console.error('written: ' + ARG.out);
 }
+
+/* ⚑ 자(`verify758` [V])가 읽는 면. **값을 여기서 다시 계산하지 않는다** — 위에서 인쇄한
+   것과 글자 그대로 같은 변수를 넘긴다(같은 자 하나). */
+module.exports = {
+  json: jf, days: DAYS, W, band: BAND, goal: GOAL_DIA,
+  contD, contC,
+  crossD: crossOf('diligent'), crossC: crossOf('casual'), ratio: R0,
+  ratioAt: k => crossOf('casual', k) / crossOf('diligent', k),
+  crossAt: (pol, k) => crossOf(pol, k),
+  scaleMax: best.r, scaleMaxK: best.k, scaleLimit: limit,
+  absW: ABSW, kHitRatio, kInAbs,
+  axes: rows, flat, flatFree, poolD, poolC, freeD, freeC,
+  ratioFlatFreeZero: rFree, ratioFlatAllZero: rAll,
+  /* [G] 이관 — 받는 축 β 에서 목표 비 t 에 필요한 이관량(대충 기준/일) */
+  moveNeed: (beta, t) => { const g = poolD / poolC, den = 1 - beta * g; return den > 0 ? (contC - contD / t) / den : Infinity; },
+  betaOf,
+};

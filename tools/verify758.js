@@ -540,6 +540,52 @@ function maxAxis(axes, total) {
 
   }
 
+  /* ── [V] 758 축과 §0 ④ 판정 줄은 **서로 다른 축**이다 — 29회차 신설 ─────────
+     27-8 5번은 «758 과녁과 §0 ④ 과녁이 동시에 만족 불가능해 보인다» 를 주인 결정으로
+     올리라고 했고, 28-5 2번이 그 표를 «④ 창을 이 세대에서 지킬 수 있는가» 로 좁혔다.
+     29회차의 답은 **«두 과녁은 안 부딪힌다»** 이고, 그 근거는 산술 하나다 —
+     **④ 비는 척도(총 유입 ×k)에 거의 불변**이다. 이 절이 그 산술을 붙든다.
+     ⚠ 값은 `probe199r29` 를 **모듈로 불러** 그대로 쓴다(표 두 벌 금지 — [U3] 이 겪은 병).
+     되돌림: `probe199r29` 의 `crossOf` 에서 «① 창 안 실측» 을 빼면 큰 k 에서 교차일이
+     음수로 내려가 [V3] 이 즉시 빨개진다(초판이 실제로 그랬다). */
+  console.log('\n[V] 758 축 ↔ §0 ④ 판정 줄 — 척도 불변성 (29회차)');
+  let PB = null;
+  try { PB = require(path.join(ROOT, 'tools/probe199r29.js')); } catch (e) { PB = null; }
+  if (!PB) {
+    R.push({ n: '[V0] [전제] `tools/probe199r29.js` 를 모듈로 부를 수 있다', got: '(부르기 실패)', want: 'true', pass: false });
+  } else {
+    const r1 = PB.ratio, rHalf = PB.ratioAt(0.5);
+    yes('[V0] [전제] 자가 **실제로 척도를 밟는다** — k=0.5 에서 교차일이 ≥ 1.5배 밀린다 (안 밀리면 [V1] 은 아무것도 안 잰다)',
+        PB.crossAt('diligent', 0.5) / PB.crossD >= 1.5,
+        `부지런 ${PB.crossD.toFixed(1)}일 → ${PB.crossAt('diligent', 0.5).toFixed(1)}일 (×${(PB.crossAt('diligent', 0.5) / PB.crossD).toFixed(2)})`);
+    yes('[V1] ⚑ **척도 불변** — 758 과녁(자유 유입 ×1/2)에서 ④ 비가 현행 대비 ±5% 안이다 (758 은 ④ 를 사지도 팔지도 않는다)',
+        Math.abs(rHalf - r1) / r1 <= 0.05,
+        `k=1 ${r1.toFixed(3)} ↔ k=0.5 ${rHalf.toFixed(3)} (${((rHalf / r1 - 1) * 100).toFixed(1)}%)`);
+    /* ⚠ **초판이 여기서 «척도로는 창에 못 넣는다» 로 단언했다가 빨개졌다**(외삽 구간 최대
+       1.875 ≥ 1.8). 문턱을 넓혀 초록으로 만들지 않고 **문장을 옳은 쪽으로 갈았다** —
+       척도 축이 비 창에 닿기는 하지만, 그 자리에서 ④ 의 **다른 반쪽**(절대 도달일
+       부지런 100일 ±10)이 무너진다. 두 항이 그 «동시에 못 준다» 를 양쪽에서 붙든다. */
+    yes('[V2] ⚑ **척도 축은 ④ 의 두 과녁을 «동시에» 못 준다** — 비가 창 하한(' + RATIO_LO + ')에 닿는 k 에서 부지런 교차일이 절대 창(' + PB.absW[0] + '~' + PB.absW[1] + '일) 밖이다',
+        !!PB.kHitRatio && (PB.kHitRatio.cd < PB.absW[0] || PB.kHitRatio.cd > PB.absW[1]),
+        PB.kHitRatio ? `k=${PB.kHitRatio.k.toFixed(2)} 에서 비 ${PB.kHitRatio.r.toFixed(3)} · 부지런 ${PB.kHitRatio.cd.toFixed(1)}일 (절대 창 ${((PB.kHitRatio.cd / PB.absW[0] - 1) * 100).toFixed(1)}%)` : '(비 창에 닿는 k 없음)');
+    yes('[V3] ⚑ 그 반대쪽 — 부지런 교차일이 **절대 창 안**인 k 구간에서 ④ 비의 최대가 < ' + RATIO_LO,
+        PB.kInAbs.r > 0 && PB.kInAbs.r < RATIO_LO,
+        PB.kInAbs.r > 0 ? `k=${PB.kInAbs.k.toFixed(2)} · 부지런 ${PB.kInAbs.cd.toFixed(1)}일 · 비 최대 ${PB.kInAbs.r.toFixed(3)} (창 밖 ${((PB.kInAbs.r / RATIO_LO - 1) * 100).toFixed(1)}%)` : '(절대 창에 드는 k 없음)');
+    yes('[V3b] [전제] 두 자리 다 **음수 교차일 인공물이 아니다** — 교차일이 둘 다 측정 일수(' + PB.days + '일) 밖이다',
+        !!PB.kHitRatio && PB.kHitRatio.cd > PB.days && PB.kHitRatio.cc > PB.days && PB.kInAbs.cd > PB.days && PB.kInAbs.cc > PB.days,
+        PB.kHitRatio ? `비 자리 ${PB.kHitRatio.cd.toFixed(1)}/${PB.kHitRatio.cc.toFixed(1)}일 · 절대 창 자리 ${PB.kInAbs.cd.toFixed(1)}/${PB.kInAbs.cc.toFixed(1)}일` : '(자리 없음)');
+    yes('[V4] [전제] **«정책 평평» 축이 실재한다** — 로그인만으로 나오는 몫이 대충 말미 정상 기울기의 ≥ 50% (없으면 [V5]·[V6] 이 잴 것이 없다)',
+        PB.poolC / PB.contC >= 0.50,
+        `${PB.flat.map(x => x.k).join('·')} = ${Math.round(PB.poolC).toLocaleString('en-US')}/일 (${(PB.poolC / PB.contC * 100).toFixed(1)}%)`);
+    yes('[V5] **«평평 축 깎기» 만으로는 못 넣는다** — 손댈 수 있는 평평 축(주인 확정 상수 출석 제외)을 통째로 0 으로 해도 ④ 비 < ' + RATIO_LO,
+        PB.ratioFlatFreeZero < RATIO_LO,
+        `${PB.flatFree.map(x => x.k).join('·')} 전부 0 ⇒ ${PB.ratioFlatFreeZero.toFixed(3)} (창 밖 ${((PB.ratioFlatFreeZero / RATIO_LO - 1) * 100).toFixed(1)}%)`);
+    const need18 = PB.moveNeed(PB.betaOf('퀘스트(일일)'), RATIO_LO);
+    yes('[V6] ⚑ **이관 길은 열려 있다** — 평평 축 → 플레이량 축(퀘스트(일일)) 이관으로 ' + RATIO_LO + ' 에 닿는 데 필요한 양이 손댈 수 있는 평평 몫 안이다',
+        Number.isFinite(need18) && need18 > 0 && need18 <= PB.freeC,
+        `필요 ${Math.round(need18).toLocaleString('en-US')}/일 ↔ 가용 ${Math.round(PB.freeC).toLocaleString('en-US')}/일 (${(need18 / PB.freeC * 100).toFixed(1)}%)`);
+  }
+
   /* ── 결과 ─────────────────────────────────────────────────────────────── */
   console.log('');
   let ok = 0;
