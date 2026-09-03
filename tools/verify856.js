@@ -158,12 +158,48 @@ async function measure(browser, url) {
       sweep(rel1, false); sweep(rel2, true);
       return d;                                   /* 5배 스케일 거리 */
     };
-    /* 실효 폭 W = 4·mean(D) — 폭 w 인 곧은 띠에서 mean(D) = w/4 라 W = w 다(주석이 본문). */
+    /* 실효 폭 W = 4·mean(D) — 폭 w 인 곧은 띠에서 mean(D) = w/4 라 W = w 다(주석이 본문).
+       ⚠⚠ **5회차에 이 자를 [B10] 에서 내렸다 — 편향을 `tools/probe856.js` 가 수치로 잡았다.**
+       참값을 아는 합성 도형만 넣어 재니 두 편향이 **서로 반대 방향**으로 겹쳐 있었다:
+         ⓐ 이산화 **+2.0px 절대 오프셋**(곧은 띠에서 예외 없이 정확히 +2 — w=4 는 6.00 = ×1.50,
+            w=68 은 70.00 = ×1.03) ⇒ **가는 것일수록 크게 부푼다**.
+         ⓑ 둥근 캡·짧은 획은 평균을 끌어내린다(스타디움 w=48 L=24 에서 39.59 = ×0.825).
+       ⇒ band+stadium 전체에서 비가 **0.825~1.500(1.82배)** 이고, 결정적으로
+          «가는쪽 평균 1.188 ÷ 굵은쪽 평균 0.990 = **1.200**» 이다.
+       [B10] 은 «코어 폭 ÷ 본체 폭» 이라 **가는 것(코어)과 굵은 것(본체)을 같은 자로 재서 나눈다**
+       — 그래서 위 1.200 이 그대로 **비에 곱해진다**(4회차가 gale 에서 «잰 비 ÷ 기하학적 비 ≈ 1.68»
+       을 보고 «자부터 재라» 를 5회차 1순위로 남긴 것이 이것이다).
+       자리는 남겨 둔다 — [A] 표본이 «재고 있는가» 를 물을 때 쓰고, 편향표의 대조군이기도 하다. */
     const effW = (m, w, h) => {
       const d = cham(m, w, h);
       let s = 0, n = 0;
       for (let p = 0; p < d.length; p++) if (m[p]) { s += d[p] / 5; n++; }
       return n ? 4 * s / n : 0;
+    };
+    /* ⚑ **[B10] 이 쓰는 폭 — 주 마루의 두께 가중 평균** `W = 2·Σ(D²)/Σ(D)`.
+       재는 자리는 `ridgeCover`·`spread` 가 이미 쓰는 **주 마루**(D ≥ .35·Dmax · 4이웃 봉우리)이고
+       가중도 `ridgeCover` 와 같은 «그 자리 두께»다 — 자 안에서 «폭» 의 뜻이 한 벌이 된다.
+       `probe856` 실측: band·stadium **전 표본에서 비 1.000**(폭 4~68 · 캡 비중 3종 전부.
+       10.67 만 0.937 인데 그것은 도형을 화소로 굽는 쪽의 반올림이지 자의 편향이 아니다) ·
+       가는÷굵은 **0.975**(A 는 1.200). 쐐기에서는 **면적 가중 평균폭**을 읽는다(비 1.014~1.043) —
+       «굵은 자리가 그림에서 차지하는 몫도 그만큼 크다» 는 ridgeCover 의 가중과 같은 뜻이다.
+       ⚠ 마루 화소가 4개 미만이면(코어가 몇 화소뿐인 종) 0 을 돌려주지 않고 **봉우리 2·max(D)**
+         로 물러선다 — 조용한 0 은 [B10] 을 초록으로 지나가게 하는 얼굴이다(1회차 [R3] 교훈). */
+    const ridgeW = (m, w, h) => {
+      const d = cham(m, w, h);
+      let mx = 0;
+      for (let p = 0; p < d.length; p++) if (m[p] && d[p] > mx) mx = d[p];
+      if (!mx) return 0;
+      const need = mx * 0.35;
+      let a = 0, b = 0, n = 0;
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const p = y * w + x, v = d[p];
+        if (!m[p] || v < need) continue;
+        if (v < d[p - 1] || v < d[p + 1] || v < d[p - w] || v < d[p + w]) continue;
+        const t = v / 5; a += t * t; b += t; n++;
+      }
+      if (n < 4 || !b) return 2 * mx / 5;
+      return 2 * a / b;
     };
     /* ⚑ «주 덩어리에 ③층이 0px» 을 재는 자 — **연결성분이 아니라 마루(medial axis) 덮임**이다.
        1회차에 최대 연결성분으로 먼저 재 봤는데 CV 가 짚은 셋(arrow 축 · boomer 팔 · spiral 리본)이
@@ -290,15 +326,16 @@ async function measure(browser, url) {
         if (a0[i] >= 232 && a0[i + 1] >= 232 && a0[i + 2] >= 232) { core[p] = 1; nc++; }
       }
       /* ⚠ ③층은 본체의 부분집합이다 — «본체 밖 흰 화소» 를 세면 후광 위 잡음이 폭을 부풀린다. */
-      const wb = nb ? effW(body, bw, bh) : 0;
+      const wb = nb ? ridgeW(body, bw, bh) : 0;
       const capMode = (typeof SPEC_K !== 'undefined' && typeof SPEC_MAXR !== 'undefined')
         ? (SPEC_K * wb >= 0.8 * SPEC_MAXR * 2 * HALO_SS) : false;
-      const wc = nc ? effW(core, bw, bh) : 0;
+      const wc = nc ? ridgeW(core, bw, bh) : 0;
+      const wbA = nb ? effW(body, bw, bh) : 0;   /* 대조군(옛 자) — 표에만 찍고 판정에는 안 쓴다 */
       const big = biggest(body, bw, bh);
       let inMain = 0;
       for (const p of big.cell) if (core[p]) inMain++;
       rows[id] = { sh: sp.sh || sp.k, nb, nc,
-                   wb: +wb.toFixed(2), wc: +wc.toFixed(2),
+                   wb: +wb.toFixed(2), wc: +wc.toFixed(2), wbA: +wbA.toFixed(2),
                    ratio: wb > 0 ? +(wc / wb).toFixed(3) : 0,
                    main: big.n, mainSpec: inMain,
                    fMain: big.n ? +(inMain / big.n).toFixed(4) : 0,
@@ -344,13 +381,13 @@ async function measure(browser, url) {
       ok((r.out.baked || []).length >= 12,
          '[A2] 코어를 구운 종 ' + (r.out.baked || []).length + '종 ≥ 12 (굽기 실패는 조용히 폴백된다)');
 
-      console.log('\n  종                 본체폭   코어폭   비     마루덮임  종내흩어짐');
+      console.log('\n  종                 본체폭   코어폭   비     마루덮임  종내흩어짐   (옛자 본체폭)');
       for (const id of ids) {
         const q = r.out.rows[id];
         console.log('  ' + (q.sh + ' (' + id + ')').padEnd(20) +
                     String(q.wb).padStart(7) + String(q.wc).padStart(9) +
                     String(q.ratio).padStart(7) + String(q.cover).padStart(9) +
-                    String(q.spread.sp).padStart(8));
+                    String(q.spread.sp).padStart(8) + String(q.wbA).padStart(15));
       }
       console.log('');
 
