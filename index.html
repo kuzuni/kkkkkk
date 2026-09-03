@@ -7654,8 +7654,17 @@
      ⇒ `top:9 → 16`(+7) 로 중심 −16.5 = ref 두 값 사이. 하변 −1.0 도 ref 배너(−0.9)와 같아
      «글자 밑선이 카드 윗선에 앉는다» 는 ref 의 짜임이 그대로 나온다(판 높이 68 안에
      7+16+40 = 63 이라 넘치지 않는다 · 판·카드 기하 Δ0px). */
+  /* ⚑ 833 5회차 — 라벨이 **가로로만 6.5% 눌려** 있었다. 이 자리는 **비평가 넷이 독립으로**
+     같은 값을 냈다(3회차 CZ −6.5% · DA −6.5% · 4회차 DB −6.5% · DC −5.6% · 전원 «높이는 맞다»).
+     범인은 `scaleX(.94)` 하나다 — 세로(잉크 높이 ref 28.9~30.9 ↔ 우리 31)와 가운데 자리
+     (DB «좌단 +3.5 / 우단 −2.9» = 중심 대칭)는 이미 맞고 **폭만** 좁았다.
+     산수: 잉크 108 ÷ .94 = **114.9** ↔ ref 115.5(−0.5%) ⇒ **되돌릴 배율은 1.0**, 즉 scaleX 를 뺀다.
+     ⚠ 3회차가 만진 `top:16` 은 그대로 둔다 — 그 축(세로)은 넷 다 «맞음» 으로 올렸다.
+     ⚠ 여기서는 `#shopw i{transform-origin:50% 50%}`(4회차 ⓙ 의 그 함정)가 **오히려 옳았다** —
+     라벨은 `left:0;right:0;text-align:center` 로 가운데 정렬이라 중심 원점이 맞는 원점이다.
+     그래서 제목(§9)과 달리 스코프 짝이 필요 없고, 아예 transform 을 안 쓰는 것이 답이다. */
   .pvc>.stt>i{position:absolute;left:0;right:0;top:16px;text-align:center;color:#AFAFAF;
-    font-size:36px;line-height:40px;white-space:nowrap;transform:scaleX(.94)}
+    font-size:36px;line-height:40px;white-space:nowrap}
   .pvc.own>.stt{background:#1C8D5E}
   .pvc.own>.stt>i{color:#FFF8AA}
   /* ③ 마일리지 쿠폰 알약 — ref 상단 알약 **2개(불꽃·Ⓜ) 자리에 1개만**(주인 지시 ⓐ).

@@ -88,6 +88,7 @@ const DUMP = `(() => {
       tiTr: tcs ? tcs.transform : null, tiOrg: tcs ? tcs.transformOrigin : null,
       stt: B(stt), sttI: B(sti),
       sttITop: sti ? num(getComputedStyle(sti).top) : null,
+      sttITr: sti ? getComputedStyle(sti).transform : null,
       sttIFs: sti ? num(getComputedStyle(sti).fontSize) : null,
       sttILh: sti ? num(getComputedStyle(sti).lineHeight) : null };
   });
@@ -215,6 +216,15 @@ const DUMP = `(() => {
   }
   ok(new Set(cards.map(c => c.sttITop)).size === 1,
     '[8-e] 세 카드가 한 부품 — 라벨 자리가 한 값', cards.map(c => c.sttITop).join(' / '));
+  /* ⚑ 5회차 — 라벨이 **가로로만** 6.5% 눌려 있었다(비평가 **넷**이 독립으로 같은 값 ·
+     전원 «높이는 맞다»). 범인은 `scaleX(.94)` 하나이고 되돌릴 배율은 산수로 1.0 이다
+     (잉크 108 ÷ .94 = 114.9 ↔ ref 115.5). 실측 후 `ink151.py`: **115 × 31 ↔ ref 115.5 × 30.9**
+     (−0.4% / +0.3%). ⚠ 세로(top:16)는 3회차 자리 그대로 — 그 축은 넷 다 «맞음» 이었다. */
+  for (const c of cards) {
+    ok(c.sttITr === 'none',
+      `[8-f] ${c.id} 탭 라벨에 가로 배율이 없다 (scaleX(.94) 제거 — ref 폭 115.5 ↔ 우리 115)`,
+      `${c.sttITr}`);
+  }
 
   blk('§9 제목 글자 — em 은 세로로, scaleX 는 가로로 (원점은 **좌변**)');
   /* 자 `tools/ink151.py`(흰 채움만 = 검정 획이 안 섞인다) · `tools/scan833b.py`(잉크 bbox):
@@ -298,6 +308,15 @@ const DUMP = `(() => {
     back3.map(c => c.bCx).join(' / '));
   ok(back3.every(c => c.iTop === 9),
     '[R6] 탭 라벨을 top:9 로 되돌리면 §8 [8-a] 가 빨개진다', back3.map(c => c.iTop).join(' / '));
+  const back5 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.textContent = '.pvc>.stt>i{transform:scaleX(.94)}';      /* 833 5회차 전 */
+    document.head.appendChild(st);
+    return [...document.querySelectorAll('.pvc')]
+      .map(c => getComputedStyle(c.querySelector('.stt>i')).transform);
+  });
+  ok(back5.every(t => t !== 'none'),
+    '[R8] 탭 라벨에 scaleX(.94) 를 되돌리면 §8 [8-f] 가 빨개진다', back5.join(' / '));
   /* ⚑ [R7] 은 «값을 되돌리면 빨개진다» 가 아니라 **«스코프 짝을 빼면 조용히 진다»** 를 못박는다 —
      이번 수리에서 실제로 사람을 속인 것이 그것이다(선언은 남아 있는데 computed 만 바뀐다). */
   const back4 = await page.evaluate(() => {
