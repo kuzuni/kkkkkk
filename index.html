@@ -43769,7 +43769,21 @@ function jzTarget(t){
   s.setProperty('cursor', 'auto', 'important');
   const inner = jzWalk(t).best;
   if(old) s.setProperty('cursor', old, pr); else s.removeProperty('cursor');
-  return inner || w.best;
+  if(inner) return inner;
+  /* ⚑ 839 — 재걸음이 아무것도 못 찾았다 = 이 사슬에서 cursor:pointer 를 «선언» 한 것이 하나도 없다.
+     그 자리의 옛 답은 둘 중 하나다 — ⓐ 배경 장식을 담은 **그릇** · ⓑ 배경에서 물려받기만 하는 컨트롤.
+     ⓑ 를 지키려고 802 가 둔 폴백이 ⓐ 까지 살려 줘서, 리본 글자·타일·아이콘을 누르면 1080px 그릇
+     (`.dcl-grp`·`.df-grp`·`.st-grp`·`.sm-rb`·`.upr-grp`·`.upr-close`·`.sm-close`)이 통째로
+     `scale:.94` 로 물러났다(`probe839` [1]·[3] — 다섯 오버레이 104자리, 그중 «스스로 선언» **0자리**).
+     ⚑ 판정을 가른 것은 **같은 오버레이의 배경 자체가 무응답**이라는 것이다(`probe839` [4] 다섯 전부) —
+       «아무 데나 누르면 닫힘» 이라 장식을 누르는 것도 같은 배경 탭인데, 손가락이 리본 글자에 닿았는지
+       빈 자리에 닿았는지로 답이 갈렸다. 배경 탭의 응답이라면 배경에서도 나야 한다 ⇒ 사양이 아니라 결함.
+     ⇒ 프레임 폭을 채우는 그릇은 컨트롤일 수 없다(jzWalk 크기 가드와 **같은 어휘** · 여기서는 폭 축만 —
+       장식 그릇은 «낮고 넓다» 라 높이 가드에 안 걸린다) ⇒ 배경과 같은 답 = 무응답.
+     ⚠ 폭 가드보다 좁은 답은 **종전 그대로** 돌려준다 — 802 의 «호스트를 좁히기만 하고 없애지 않는다» 는
+       컨트롤 자리에서 그대로 살아 있다(`verify802` [D2] · 다섯 오버레이의 실컨트롤 16개는 전부
+       pointer 를 스스로 선언하므로 애초에 이 줄에 오지도 않는다). */
+  return w.best.getBoundingClientRect().width > innerWidth * 0.7 ? null : w.best;
 }
 const jzDead = el => !!(el.disabled || (el.matches && el.matches('[disabled],.lock,.off,.dis,.disabled')));
 /* ⚑ 491 7회차 — «회당 피드백의 호스트» 목록. 488 주인 지시(«카드 자체에»)로 룬·단련은

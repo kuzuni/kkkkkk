@@ -99,7 +99,15 @@ const PLAIN = [
   { id: 'wpnw', n: '05 장비', open: () => openWeapon(null, 'weapon') },
 ];
 
-const CTRL_SEL = '[data-mul],.stab,.sm-b,.sm-sk,.sm-close,.ifbtn,.cbtn,button,[role="switch"]';
+/* ⚑ 839 이관 — `.sm-close` 를 이 목록에서 뺐다. 그것은 컨트롤이 아니라 **«터치하여 닫기» 힌트 글자**다
+   (`index.html` `<div class="sm-close"><i …>터치하여 닫기</i></div>` · 09 `.upr-close` 와 한 벌).
+   폭이 1080 인 장식 그릇이고 cursor:pointer 를 **스스로 선언한 적이 없다** — 배경 `#sumw` 에서
+   물려받기만 한다. 839 가 그 자리를 «배경 탭과 같은 답 = 무응답» 으로 바꿨으므로 여기 남겨 두면
+   [D2]가 «멀쩡하던 누름을 잃었다» 로 읽는다 — 잃은 것이 아니라 **애초에 컨트롤이 아니었다**.
+   ⚠ 뺀 자리를 비우지 않았다 — 아래 [C3] 가 «그것이 정말 장식인가»(스스로 선언 안 함 + 839 로 무응답)를
+     묻는다. 누군가 `.sm-close` 에 진짜 버튼을 붙이면(= pointer 를 스스로 선언하면) [C3] 가 빨개진다. */
+const CTRL_SEL = '[data-mul],.stab,.sm-b,.sm-sk,.ifbtn,.cbtn,button,[role="switch"]';
+const DECO_SEL = '.sm-close,.upr-close';
 
 async function reset(page) {
   await page.evaluate(() => {
@@ -119,7 +127,7 @@ async function sweep(page, site, scope) {
   await page.evaluate(S2 => { try { eval('(' + S2 + ')').open(); } catch (_) {} }, `{open:${site.open}}`);
   await page.waitForTimeout(600);
   return page.evaluate(a => {
-    const [scopeId, sel] = a;
+    const [scopeId, sel, deco] = a;
     const root = document.getElementById(scopeId);
     if (!root) return { miss: true };
     const vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
@@ -140,8 +148,21 @@ async function sweep(page, site, scope) {
         lost: !!(o && !n),
       });
     });
-    return { miss: false, on, rows };
-  }, [scope || site.id, CTRL_SEL]);
+    /* ⚑ 839 이관 — 위 목록에서 뺀 «장식 힌트» 를 여기서 따로 잰다(자리를 비우지 않는다).
+       `decl` = 배경의 cursor 선언만 잠깐 끄고도 여전히 pointer 인가 = «스스로 선언했는가». */
+    const decos = [];
+    root.querySelectorAll(deco).forEach(el => {
+      if (!vis(el)) return;
+      const s = root.style, o0 = s.getPropertyValue('cursor'), pr = s.getPropertyPriority('cursor');
+      s.setProperty('cursor', 'auto', 'important');
+      let c = ''; try { c = getComputedStyle(el).cursor; } catch (_) {}
+      if (o0) s.setProperty('cursor', o0, pr); else s.removeProperty('cursor');
+      const n = jzTarget(el);
+      decos.push({ el: window.__jzDesc(el), w: +el.getBoundingClientRect().width.toFixed(1),
+                   decl: c === 'pointer', host: window.__jzDesc(n), quiet: n === null });
+    });
+    return { miss: false, on, rows, decos };
+  }, [scope || site.id, CTRL_SEL, DECO_SEL]);
 }
 
 async function run(file, label, quiet) {
@@ -228,6 +249,24 @@ async function run(file, label, quiet) {
   ok(widened === 0, '[D1] ★ 넓어진 자리 0건 — 새 호스트는 옛 호스트와 같거나 그 자손이다', widened + '건');
   ok(lost === 0, '[D2] ★ 사라진 자리 0건 — 멀쩡하던 누름을 null 로 떨어뜨리지 않았다', lost + '건');
 
+  /* ⚑ 839 이관 — [C]/[D] 목록에서 뺀 «터치하여 닫기» 힌트가 정말 장식인지를 여기서 묻는다.
+     둘을 같이 요구한다: ① pointer 를 스스로 선언한 적이 없다(= 배경에서 물려받기만 한다)
+     ② 839 로 무응답이다(= 배경 탭과 같은 답). 누가 그 자리에 진짜 버튼을 붙이면 ① 이 먼저 빨개진다. */
+  let deco = 0, decoDecl = 0, decoLoud = 0;
+  OVL.forEach(o => {
+    const r = cur.ovl[o.id];
+    if (!r || r.miss || !r.decos) return;
+    r.decos.forEach(d => {
+      deco++; if (d.decl) decoDecl++; if (!d.quiet) decoLoud++;
+      console.log('    · [장식] ' + o.n.padEnd(16) + ' ' + d.el + '(' + d.w + 'px) — 스스로 선언 '
+        + (d.decl ? 'O' : 'X') + ' · 호스트 ' + (d.quiet ? '없음(무응답)' : d.host));
+    });
+  });
+  ok(deco > 0, '[C3a] «터치하여 닫기» 힌트 표본이 실재한다(839 가 목록에서 뺀 자리)', deco + '개');
+  ok(decoDecl === 0, '[C3b] ★ 그 힌트는 pointer 를 **스스로 선언하지 않는다** = 컨트롤이 아니라 장식이다',
+     decoDecl + '개가 선언');
+  ok(decoLoud === 0, '[C3c] ★ 그 힌트는 무응답이다 — 배경 탭과 같은 답(839)', decoLoud + '개가 응답');
+
   /* ── [E] 대조군 ── */
   console.log('[E] 배경이 pointer 가 아닌 화면 — 옛 답과 새 답이 완전히 같아야 한다');
   PLAIN.forEach(p => {
@@ -245,7 +284,9 @@ async function run(file, label, quiet) {
   console.log('[R] 되돌림 시험 — «오염 재걸음» 을 지운 사본');
   const src = fs.readFileSync(SRC, 'utf8');
   const HEAD = 'function jzTarget(t){\n  const w = jzWalk(t);';
-  const TAIL = '  return inner || w.best;\n}';
+  /* ⚑ 839 이관 — 마지막 줄이 «폴백» 에서 «폭 가드가 붙은 폴백» 으로 바뀌었다(839).
+     이 자는 `jzTarget` 을 **통째로** 802 이전으로 되돌리므로 표식만 새 꼬리로 갈아 끼운다. */
+  const TAIL = '  return w.best.getBoundingClientRect().width > innerWidth * 0.7 ? null : w.best;\n}';
   const i0 = src.indexOf(HEAD), i1 = src.indexOf(TAIL, i0);
   ok(i0 > 0 && i1 > i0, '[R0] 전제 — 사본에서 갈아 끼울 자리를 찾았다');
   if (i0 > 0 && i1 > i0) {
