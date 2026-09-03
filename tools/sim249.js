@@ -363,6 +363,39 @@ let anchorSame = true;
 for(let s=BAND;s<=KNEE;s+=BAND) if(Math.abs(EC.eHp(s) - EC.HB*EC.eSmooth(s)) > 1e-9) anchorSame = false;
 ck('⑭ 관문 스테이지의 몹은 177 곡선 값 그대로다 (계단의 앵커)', anchorSame, anchorSame?'ok':'NG');
 
+/* ⑮ 199 28회차 — **판정 창 잠금(scope lock)**.
+   28회차가 27-8 1번의 «sim249 를 반드시 돌려라» 를 따르다 찾은 자의 결함이다:
+   `ES_M2` 를 1.127 → 1.120 으로 내리고 돌리면 **14/14 PASS** 가 나오는데, 그 PASS 는
+   아무것도 뜻하지 않는다 — `ES_M2` 를 **1.000**(무릎 위 성장 전폐)이나 **3.000**(터무니없는 벽)
+   으로 둬도 열네 항의 값이 **자릿수까지 똑같이** 나온다(⑨ ×34.49 / 진폭 1.81 고정).
+   이유는 구조다: 이 자의 표시·판정은 전부 s ≤ KNEE 이고 `eSmooth` 는 `M2^max(0,a−KNEE)` 라
+   a ≤ KNEE 에서 지수가 0 이다. 램프 항 `eSmooth(a+BAND)` 는 a = KNEE 에서 무릎 위를 물지만
+   그 자리(s = KNEE)의 램프 지수가 정확히 0 이라 역시 안 탄다.
+   ⇒ **PASS 를 «ES_M2 를 봐줬다» 로 읽으면 안 된다.** 그 오독이 26-2 표의 «sim249 —» 칸을
+   28회차가 채우려던 이유였고, 채워 넣은 값(14/14)이 곧 함정이다.
+   이 항은 그 사실을 **매 실행 인쇄**하고, 창이 무릎 위로 넓어지는 순간 빨개져
+   («ES_M2 를 판정하지 않는다» 라는 선언이 거짓이 되는 순간) 문구를 고치게 만든다.
+   ⚠ 이 항은 «M2 가 옳은 값인가» 를 묻지 않는다 — 무릎 위 손잡이의 판정은 봇(`bot199`)의
+   ①③④ 축이 한다(28회차가 실제로 그 자로 ES_M2 1.120 을 기각했다). */
+const m2Probe = (m2) => {
+  const es = a => (1 + EC.K*(a-1)) * Math.pow(EC.M1, Math.min(a, KNEE) - 1)
+                                   * Math.pow(m2,    Math.max(0, a - KNEE));
+  return s => { const a = EC.eBand(s);
+                return EC.RAMP ? es(a) * Math.pow(es(a + BAND) / es(a), EC.RAMP * (s - a) / BAND)
+                               : es(a); };
+};
+let m2Blind = true, m2First = null;
+{ const lo = m2Probe(EC.M2 * 0.5), hi = m2Probe(EC.M2 * 2);
+  for(let s = 1; s <= KNEE; s++)                       /* 판정 창 — 불변이어야 한다 */
+    if(Math.abs(lo(s) - hi(s)) > 1e-9 * Math.abs(hi(s))) m2Blind = false;
+  for(let s = 1; s <= KNEE * 4 && m2First === null; s++)  /* 창 밖 — 어디부터 타는가 */
+    if(Math.abs(lo(s) - hi(s)) > 1e-9 * Math.abs(hi(s))) m2First = s; }
+ck('⑮ 판정 창 잠금 — 이 자의 판정은 s ≤ ' + KNEE + ' 뿐이라 **ES_M2 를 판정하지 않는다**'
+   + ' (무릎 위 손잡이는 bot199 ①③④ 가 판정한다 · 199 28회차)',
+   m2Blind, m2Blind ? ('ES_M2 불변 (s ≤ ' + KNEE + ') · 처음 타는 스테이지 s'
+                       + (m2First === null ? '없음' : m2First))
+                    : 'NG — 창이 무릎 위로 넓어졌다: 위 문구를 고쳐라');
+
 console.log('[E] 게이트');
 R.forEach(x => console.log('  ' + (x.pass ? 'PASS' : x.d199 ? '⏸199' : 'FAIL') + ' — ' + x.n + '  →  ' + x.got));
 const fail = R.filter(x => !x.pass && !x.d199).length;
