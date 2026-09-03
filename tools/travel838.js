@@ -85,6 +85,8 @@ function summarize(env, org) {
     rE: mean(per.map(p => p.rE)),
     growth: mean(per.map(p => p.rE)) / Math.max(1e-9, mean(per.map(p => p.r0))),
     pairIoU, iouPeak: Math.max(...pairIoU), fanGap, pile,
+    /* ⚑ 838 5회차 — 비평 2인이 4회차에서 **직접 센 수**: 끝나도 발원 원반 안에 있는 알(DD 3알 · DE 2~6알) */
+    stuck: org.fr ? per.filter(p => p.rE < org.fr * 0.72).length : 0,   /* 그린 원반 ≈ 상자의 0.72(제품 `FXB_FOK` 와 같은 값 · DD 실측 52/71) */
     spill: Math.max(...per.map(p => p.over)),      /* 호스트 상자 밖으로 나간 잉크(px · 음수면 안쪽) */
   };
 }
@@ -131,13 +133,14 @@ async function runScene(scene, src) {
       /* ⚑ 발원은 호스트 중심이 아니라 **제품이 쓰는 그 점**이다 — 호스트가 `--burst-from`(838)으로
          발원을 신고했으면 그 자식의 중심에서 잰다(안 그러면 «출생 반경» 이 아이콘↔중심 거리를
          같이 세어 자가 유령을 만든다 · 2회차에 실제로 그랬다: 22px 링을 49px 로 읽었다). */
-      let ox = r.x + r.width / 2, oy = r.y + r.height / 2;
+      let ox = r.x + r.width / 2, oy = r.y + r.height / 2, fr = 0;
       try {
         const s2 = getComputedStyle(el).getPropertyValue('--burst-from').trim().replace(/^['"]|['"]$/g, '');
         const nd = s2 ? el.querySelector(s2) : null;
-        if (nd) { const rb = nd.getBoundingClientRect(); ox = rb.x + rb.width / 2; oy = rb.y + rb.height / 2; }
+        if (nd) { const rb = nd.getBoundingClientRect(); ox = rb.x + rb.width / 2; oy = rb.y + rb.height / 2;
+                  fr = Math.max(rb.width, rb.height) / 2; }
       } catch (e) {}
-      return { x: ox / sc, y: oy / sc,
+      return { x: ox / sc, y: oy / sc, fr: fr / sc,
                bx: r.x / sc, by: r.y / sc, bw: r.width / sc, bh: r.height / sc };
     }, scene.btn);
     if (!geo) return { err: '호스트 없음: ' + scene.btn, errs };

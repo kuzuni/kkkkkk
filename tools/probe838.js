@@ -51,7 +51,8 @@ const info = (k, v) => console.log('       · ' + k + ': ' + v);
          + p2(s.body) + ' 몸길이** (최소 알 ' + p2(s.bodyMin) + ')');
     info('출생 반경', 't=0 ' + p2(s.r0) + 'px → 끝 ' + p2(s.rE) + 'px = **×' + p2(s.growth) + '**');
     info('이웃 장 IoU', s.pairIoU.map(v => p2(v)).join(' · ') + ' (최대 ' + p2(s.iouPeak) + ')');
-    info('각도', '가장 큰 빈 각 ' + p2(s.fanGap) + '° · 2px 띠 최대 정렬 ' + s.pile + '알 · 스필 ' + p2(s.spill) + 'px');
+    info('각도', '가장 큰 빈 각 ' + p2(s.fanGap) + '° · 2px 띠 최대 정렬 ' + s.pile + '알 · 스필 ' + p2(s.spill) + 'px'
+         + ' · 발원 원반(r' + p2(s.geo.fr) + ') 안에서 끝난 알 ' + s.stuck + '개');
     console.log('\n| 알 | 최대 지름 | 총 이동 | 몸길이 | 경로 길이 | 최대 이웃 IoU |');
     console.log('|---|---|---|---|---|---|');
     s.per.forEach((e, i) => console.log('| #' + (i + 1) + ' | ' + p2(e.maxD) + ' | ' + p2(e.net) + ' | '

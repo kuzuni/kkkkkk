@@ -42185,7 +42185,7 @@ const FXB_KMAX = 0.55, FXB_BODY = 1.35, FXB_KLAD = 3;
    봉우리에서 최근접 중심거리 ÷ 지름 = 0.97 로 알끼리 겹쳐 «판때기 두 장» — CX ④ 3점).
    0.34 ⇒ 훈련 36px(−22%) · 단련 `.tb`(340×173) 58px·룬 `.rbt.b1`(420×112) 38px 로 **셋 다 상한에 안 닿거나
    조금만 닿는다**. 신고 안 한 호스트는 이 줄을 아예 안 지난다(583 «알갱이 크기 더 크게» 는 그대로다). */
-const FXB_FITS = 0.22, FXB_SZMIN = 16, FXB_KSTEPF = 0.70, FXB_BR = 0.34;   /* 838 3회차 — FITS 0.34→0.30 · FXB_BR = 탄생 반경이 «남은 방» 에서 갖는 몫 */
+const FXB_FITS = 0.22, FXB_SZMIN = 16, FXB_KSTEPF = 0.70, FXB_BR = 0.34, FXB_FOK = 0.72;   /* 838 3회차 — FITS 0.34→0.30 · FXB_BR = 탄생 반경이 «남은 방» 에서 갖는 몫 */
 /* ⚑ 619 12회차 — **스파크 크기의 눈금을 «절대» 로 정한다**(394 선례: «무엇을 눈금으로 삼는가» 를 먼저 적는다).
    11회차까지의 눈금은 «호스트 짧은 변 대비 %»(6회차 hsc)였고, 그 축에서 룬은 상한 1.6 에 붙어
    단일 62px · 3알 융합 97×64 «아메바» 로 읽혔다(비평가 EC ① · EB ⑥⑦ — 10·11회차 **네 명 연속**).
@@ -42392,7 +42392,8 @@ function fxBurst(t, col, n, strict, iv, ic){
     try {
       const s2 = getComputedStyle(t).getPropertyValue('--burst-from').trim().replace(/^['"]|['"]$/g, '');
       const nd2 = s2 ? t.querySelector(s2) : null, rf = nd2 ? fxRect(nd2) : null;
-      if(rf) fo = { x: rf.x + rf.w/2, y: rf.y + rf.h/2 };
+      /* 838 5회차 — 발원의 **반경**도 같이 읽는다(아래 «원반을 벗어난다» 규칙이 쓴다) */
+      if(rf) fo = { x: rf.x + rf.w/2, y: rf.y + rf.h/2, r: Math.max(rf.w, rf.h)/2 };
     } catch(_){}
   }
   if(fo){ p.x = fo.x; p.y = fo.y; }
@@ -42681,7 +42682,7 @@ function fxBurst(t, col, n, strict, iv, ic){
     };
     let ang = a, sx0 = 0, sy0 = 0, ex = 0, ey = 0, sx = 0, sy = 0, hitK = -1;
     /* 619 12회차 — «글자는 피했지만 이웃 알과 융합하는» 차선을 들고 있는다(아래 되돌림 참조) */
-    let fb = null;
+    let fb = null, fbR = null, tookSz = Infinity;    /* 838 5회차 — «가장 깊은 방향» 차선 · 그 방향이 허락하는 알 크기 */
     for(let k = 0; k <= ((kh.length || ks.length) ? FXB_KTRY : 0); k++){
       /* 0, +step, −step, +2step, −2step … 원래 각에서 가장 가까운 쪽부터 본다 */
       /* ⚑ 838 2회차 — 신고 호스트(`fo`)는 굴리는 각을 **크게** 잡는다. 발원이 아이콘(한쪽 끝)이라
@@ -42710,6 +42711,23 @@ function fxBurst(t, col, n, strict, iv, ic){
       /* 3회차 — 신고 호스트는 **탄생 반경도 «갈 곳» 을 따라간다**: 방이 좁은 방향(가격 숫자 쪽)에서
          22px 링을 고집하면 태어나는 자리가 이미 구멍 안이라 그 방향이 통째로 버려진다. */
       const room = fo ? rayRoom(p.x, p.y, ux, uy) : 0;
+      /* ⚑⚑ 838 5회차 — **발원 원반을 벗어나야 «나온다» 로 읽힌다.** 4회차 채점에서 비평 2인이
+         각각 같은 것을 셌다(DD «13알 중 3알이 250ms 에도 원점 25px 안 · 9알이 코인 지름 52 언저리» ·
+         DE «110ms 에 12알 중 6알이 아직 발원 25px 안»). 그 알들은 «안 움직이는 알» 이 아니라
+         **갈 방이 발원 반경보다 얕은 방향(「53」 쪽 33px)으로 쏜 알**이다.
+         ⇒ 방이 «발원 반경 + 알 반지름» 도 못 내주면 그 방향은 **안 쓴다** — 각도를 굴려 다른 데로 보낸다.
+         두 사람의 처방이 같았다: DD «+x ±40° 섹터를 막고 그 알을 좌·상·하로 재분배» ·
+         DE «최소 이동 반경 = 발원 반경 + 알 반경 을 하한으로 강제». */
+      /* ⚠ 발원의 «반경» 은 **상자**가 아니라 **그린 원반**이다 — 훈련 코인은 상자 71px 에 그림 52px
+         (4회차 채점 DD 실측 · 비 0.73)이라 상자를 그대로 쓰면 오른쪽 회랑이 통째로 금지돼
+         2회차의 «부채» 가 되돌아온다(5회차 1차 시도가 실제로 빈 각 185° 를 냈다). */
+      /* ⚑ 5회차 2차 — «못 벗어나는 방향을 **금지**» 하면 알이 깊은 쪽(왼쪽)으로 몰려 2회차의 부채가
+         되돌아온다(1차 시도 빈 각 185°). 등재문이 연 갈래를 여기서도 쓴다 — **상자가 좁으면
+         다른 축(알 크기)으로 갚는다**: 그 방향에서 «발원 원반을 벗어날 수 있는 가장 큰 알» 을 구하고,
+         그것이 최소 크기(`FXB_SZMIN`)보다 작을 때만 그 방향을 버린다. */
+      const roomSz = fo ? 2 * (room - fo.r * FXB_FOK) - 4 : Infinity;
+      const roomOk = !fo || roomSz >= FXB_SZMIN;
+      const deepest = fo && (!fbR || room > fbR.room);            /* 전부 얕을 때 쓸 «가장 깊은 방향» */
       const br = fo ? Math.min(FXB_RMIN, room * FXB_BR) : 0;
       sx0 = clamp(p.x + (fo ? ux*br : Math.cos(ang)*rx)*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
       sy0 = clamp(p.y + (fo ? uy*br : Math.sin(ang)*ry)*jt*rr, by0, by1);
@@ -42719,6 +42737,7 @@ function fxBurst(t, col, n, strict, iv, ic){
       ey = (r && !fo) ? sy0 : clamp(sy0 + uy*(fo ? dv : d), by0, by1);
       /* ⚑ 838 — 당김 사다리(위 `FXB_KMAX` 머리말). 큰 칸부터 넣고 걸리면 내려간다 ·
          마지막 칸이 종전 값(FXB_K)이라 **걸리는 자리에서는 종전과 동일**하다. 점 대상은 칸이 하나다. */
+      if(deepest) fbR = { ang, sx: sx0, sy: sy0, ex, ey, room };
       const dd = (r && !fo) ? Math.hypot(ex - p.x, ey - p.y) : 0;
       const kw = (r && !fo) ? clamp(FXB_BODY * sz / Math.max(1, dd), FXB_K, FXB_KMAX) : FXB_K;
       let took = false, anyOk = false;
@@ -42732,8 +42751,10 @@ function fxBurst(t, col, n, strict, iv, ic){
           || (!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey));
         if(okKh) anyOk = true;
         /* 619 12회차 — 글자 회피와 **융합 회피를 같은 각도 굴림 하나로** 본다(축을 새로 만들지 않는다) */
-        if(okKh && !fxbFuse(sx, sy, sz/2)){ took = true; break; }
-        if(okKh && !fb) fb = { ang, sx, sy, ex, ey };
+        if(okKh && roomOk && !fxbFuse(sx, sy, sz/2)){ took = true; tookSz = Math.min(sz, roomSz); break; }
+        /* 5회차 — 차선도 «깊은 방향» 중에서 고른다. 안 그러면 융합 하나 때문에 **얕은 원래 각**으로
+           되돌아가 그 알이 발원 원반 안에서 끝난다(A5 가 5알을 세던 자리다). */
+        if(okKh && roomOk && !fb) fb = { ang, sx, sy, ex, ey };
       }
       if(took) break;
       if(!anyOk) hitK = k;                             /* 이 각도의 **모든 칸**이 글자에 걸렸다 */
@@ -42741,6 +42762,15 @@ function fxBurst(t, col, n, strict, iv, ic){
     /* ⚑ 619 12회차 — 융합 때문에 끝까지 못 벌렸으면 «글자만 피한» 차선으로 되돌린다.
        융합은 «겹쳐 보인다» 이고 입자를 버리는 것은 «강화마다 터진다»([B] 1.00)를 깨는 것이라
        둘 중에는 겹침이 싸다 — 이 되돌림이 없으면 좁은 호스트에서 발화가 조용히 비어 버린다. */
+    /* 5회차 — 깊은 후보가 하나도 없었으면(방이 사방으로 얕은 호스트) **가장 깊은 방향**을 쓴다 —
+       마지막으로 굴린 각을 그냥 쓰면 그 알만 발원에 붙박인다. */
+    if(fo && !fb && fbR){ ang = fbR.ang; sx = fbR.sx; sy = fbR.sy; ex = fbR.ex; ey = fbR.ey; }
+    /* 5회차 2차 — 얕은 방향을 쓰기로 했으면 그 방향이 허락하는 크기로 줄인다(위 `roomSz` 머리말) */
+    if(fo && tookSz < sz){
+      sz = Math.max(FXB_SZMIN, Math.floor(tookSz));
+      el.style.width = sz + 'px'; el.style.height = sz + 'px';
+      el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
+    }
     if(fb && (fxbFuse(sx, sy, sz/2) || (kh.length
          && (fxbHit(kh, sx, sy) || fxbHit(kh, (sx + ex)/2, (sy + ey)/2) || fxbHit(kh, ex, ey))))){
       ang = fb.ang; sx = fb.sx; sy = fb.sy; ex = fb.ex; ey = fb.ey;
