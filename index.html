@@ -8136,7 +8136,14 @@
      ⚠ 좌표를 손으로 다시 적지 않는다(402 «사본을 지운다») — `--ntc-fr` 은 **카드 상자 기준**이라
      `mask-size` 를 카드 크기로 두고 `mask-position` 을 판의 좌상단만큼 되밀면 같은 타원이 같은 자리에 온다.
      그래서 `left/top` 과 `mask-position` 이 **한 변수**(`--art-l/--art-t`)를 같이 읽는다. */
-  .pvc>.art{--art-l:500px;--art-t:135px;left:var(--art-l);top:var(--art-t);width:462px;height:303px;
+  /* ⚑ 885 1회차 — **세로가 +7.9~9.6% 컸다**(비평 DL·DM **2인 일치** + 자체 자 = 셋이 독립으로 같은 부호).
+     ref 티켓 일러스트의 세로를 셋이 따로 쟀다: DL 276.4 · DM 280.7 · scan885 280.5 (우리 px 환산) ↔ 우리 303.
+     상변도 셋 다 «우리가 9px 위» 로 같다(DL 142.3 · DM 144.2 · scan885 140.3 ↔ 우리 135 · 카드-로컬).
+     ⇒ `--art-t 135 → 142` · `height 303 → 281` (하변 438 → 423 = ref 423.0 ↔ DM 422.9).
+     ⚠ **폭·좌단은 이 회차가 안 건드린다** — 두 비평가가 «어디까지가 티켓인가» 정의로 갈렸다
+     (DL 흰 테두리만 = 좌단 −86 · DM 회색 스텁 포함 = 좌단 −15.8). 부호는 같고 크기가 5배 다르다 ⇒ A3-ⓑ.
+     ⚠ `line-height` 도 같이 옮긴다 — 글리프가 판 한가운데 앉는다(667 6회차와 같은 짝). */
+  .pvc>.art{--art-l:500px;--art-t:142px;left:var(--art-l);top:var(--art-t);width:462px;height:281px;
     background:rgba(255,255,255,.12);border-radius:22px;
     -webkit-mask:var(--ntc-fr);mask:var(--ntc-fr);
     -webkit-mask-composite:source-in;mask-composite:intersect;
@@ -8158,7 +8165,7 @@
      ⚠ **초록·보라(불릿형)는 그대로 둔다** — 거기서는 ref 45.5~48.4% ↔ 우리 45.1~46.8% 로 맞다. */
   .pvc.ban1>.bg{background:var(--c)}
   .pvc>.art>em{position:absolute;left:0;right:0;top:0;text-align:center;
-    font-size:225px;line-height:303px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
+    font-size:225px;line-height:281px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
   /* ⚑ 480 — 오른쪽 일러스트 자리도 같은 ▶ 라 같은 뿌리로 흐렸다(파랑 판 위 `#E8ECF5` = 대비 1.83:1,
      WCAG 비텍스트 최소 3:1 미달). 배너 칸과 **한 규칙**으로 외곽선을 준다 — 획 두께만 글리프 크기에
      비례(62px→6 · 180px→12). 🎟·⏳ 는 색 이모지라 이 규칙이 닿아도 그림이 안 바뀌므로

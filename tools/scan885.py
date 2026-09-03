@@ -29,7 +29,9 @@ from PIL import Image
 
 REF = 'docs/ref/151-이용권-카드.png'
 K = 2.0628                       # 우리 px = ref px × K (측정표 §9)
-GREEN_TOP, GREEN_BOT = 302, 701  # ref 초록 카드 세로 범위 (scan667 --ref 실측)
+# ⚑ 885 1회차 정정 — `scan667 --ref` 의 302 는 카드 상변이 **아니다**(상태 탭·마일리지 알약·배지를 문 값).
+#   부품이 안 걸친 열(x=150·400)에서 «배경 → 검정 3px → 헤더 밴드» 로 넘어가는 행 = **328.5** (측정표 §15-3).
+GREEN_TOP, GREEN_BOT = 328.5, 701  # ref 초록 카드 세로 범위 (검정 바깥선 기준)
 BODY_G = [(52, 178, 130), (47, 162, 119)]   # 몸통 두 톤 (§12-2 · 비 0.912)
 HDR_G = (33, 145, 97)            # 헤더 밴드
 
@@ -64,15 +66,23 @@ def art_ref(dg=(25, 15), dl=70, dbg=False):
     R, G, B = a[..., 0], a[..., 1], a[..., 2]
     L = 0.299 * R + 0.587 * G + 0.114 * B
     bgl = float(np.median(L[:, :6]))
-    lo, hi = card_edges(a, (GREEN_TOP + GREEN_BOT) // 2, bgl)
+    # ⚠ 한 행만 재면 그 행이 노치·림에 걸려 «우단 15.5» 같은 값이 나온다 — 여러 행의 **중앙값**으로 잡는다.
+    los, his = [], []
+    for y in range(int(GREEN_TOP) + 40, int(GREEN_BOT) - 40, 7):
+        l, h = card_edges(a, y, bgl)
+        if l is not None:
+            los.append(l)
+        if h is not None:
+            his.append(h)
+    lo, hi = float(np.median(los)), float(np.median(his))
     ink = (~((G > R + dg[0]) & (G > B + dg[1]))) & (L >= dl)
 
     # ① 일러스트가 있는 «행» — 배지 아래(빈 행) ~ 리본 위
-    y_lo = GREEN_TOP + 28
-    band = ink[y_lo:GREEN_BOT - 60, int(hi) - 220:int(hi) + 14]
+    y_lo = int(GREEN_TOP) + 2
+    band = ink[int(y_lo):int(GREEN_BOT) - 60, int(hi) - 220:int(hi) + 14]
     rs = band.sum(1)
     rthr = max(3, 0.08 * rs.max())          # 상대 문턱 — 흐린 꼬리(AA·무늬 잔재)를 안 센다
-    rows = [y_lo + i for i, v in enumerate(rs) if v >= rthr]
+    rows = [int(y_lo) + i for i, v in enumerate(rs) if v >= rthr]
     # ⚠ 이 창에는 덩이가 **둘**이다 — 위가 별폭죽 배지(카드 상단 우측), 아래가 일러스트.
     #   빈 행 4칸 이상으로 끊어 «아래 덩이» 를 고른다(안 나누면 배지 상변이 아트 상변으로 읽힌다).
     grp, cur = [], [rows[0]]
