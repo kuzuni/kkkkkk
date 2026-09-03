@@ -73,13 +73,14 @@ const DUMP = `(() => {
     const bb = B(bdg);
     const lines = [...bdg.querySelectorAll('i,b')].map(B);
     const hdb = B(c.querySelector('.hdb'));
+    const pil = B(c.querySelector('.pil'));
     const fr = c.querySelector('.fr');
     const rbs = ['rb1', 'rb2'].map((k) => {
       const rb = c.querySelector('.' + k); if (!rb) return null;
       const u = rb.querySelector('u');
       return { rb: B(rb), u: B(u), utop: num(getComputedStyle(u).top) };
     });
-    return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb,
+    return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb, pil,
       frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs };
   });
 })()`;
@@ -150,10 +151,19 @@ const DUMP = `(() => {
       `[4-c] ${c.id} 그 검정 테가 ref ${refTop} 안`, `${p2(c.frBorder)}`);
   }
 
+  blk('§6 마일리지 알약 — 위로만 줄였다(아래끝 붙박이)');
+  for (const c of cards) {
+    ok(Math.abs(c.pil.h - 65.5) < 0.6, `[6-a] ${c.id} 알약 높이 ≈ ref 65.0~66.0`, `${p2(c.pil.h)}`);
+    const bot = c.pil.y + c.pil.h - c.card.y;
+    ok(Math.abs(bot - 14) < 0.6, `[6-b] ${c.id} 알약 하변 = 카드 상변 +14 (수리 전과 같다)`, `${p2(bot)}`);
+    const up = c.card.y - c.pil.y;
+    ok(up >= 50.5 && up <= 52.5, `[6-c] ${c.id} 카드 위로 솟는 양 51.4~52.2(ref)`, `${p2(up)}`);
+  }
+
   blk('§5 9:13.3(1600) — 카드 안 기하가 같다');
   const { page: p16, errs: e16 } = await open(browser, 1600);
   const c16 = await p16.evaluate(DUMP);
-  const sig = (cs) => cs.map(c => [c.id, c.bdg.w, c.bdg.h, c.hdb.h,
+  const sig = (cs) => cs.map(c => [c.id, c.bdg.w, c.bdg.h, c.hdb.h, c.pil.h, c.pil.y - c.card.y,
     ...c.rbs.map(r => r && r.utop)].join(',')).join('|');
   ok(sig(c16) === sig(cards), '[5-a] 두 프레임 서명 동일',
     sig(cards) === sig(c16) ? '동일' : `${sig(cards)} ↔ ${sig(c16)}`);
@@ -163,7 +173,8 @@ const DUMP = `(() => {
   blk('§R 되돌림 시험 — 수리 전 값을 넣으면 빨개진다');
   await page.addStyleTag({ content:
     '.pvc>.bdg{width:178px!important;height:178px!important}'
-    + '.pvc.ban1>.rb>u{top:52px!important}' });
+    + '.pvc.ban1>.rb>u{top:52px!important}'
+    + '.pvc>.pil{top:-54px!important;height:68px!important}' });
   await page.waitForTimeout(120);
   const back = await page.evaluate(DUMP);
   const b0 = back[0];
@@ -174,6 +185,13 @@ const DUMP = `(() => {
     '[R2] 그 상태의 종횡은 ref 밖', `${p2(inkW0 / inkH0)}`);
   ok(back.find(c => c.ban).rbs[0].utop === 52,
     '[R3] 배너형 수량을 52 로 되돌리면 [3-a] 가 빨개진다', '52');
+  const pb = back[0];
+  ok(Math.abs(pb.pil.h - 65.5) >= 0.6 && Math.abs(pb.card.y - pb.pil.y - 51.5) >= 0.6,
+    '[R4] 알약을 68/−54 로 되돌리면 §6 이 빨개진다',
+    `h ${p2(pb.pil.h)} · 솟음 ${p2(pb.card.y - pb.pil.y)}`);
+  ok(Math.abs(pb.pil.y + pb.pil.h - pb.card.y - 14) < 0.6,
+    '[R4b] 그때도 **하변은 14 로 같다** — 이번 수리가 «아래를 안 건드렸다» 는 증거',
+    `${p2(pb.pil.y + pb.pil.h - pb.card.y)}`);
 
   blk('§Z 콘솔');
   ok(errs.length === 0, '[Z] 콘솔·페이지 에러 0건', String(errs.length));

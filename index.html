@@ -7544,9 +7544,15 @@
   .pvc.own>.stt>i{color:#FFF8AA}
   /* ③ 마일리지 쿠폰 알약 — ref 상단 알약 **2개(불꽃·Ⓜ) 자리에 1개만**(주인 지시 ⓐ).
      ref 알약 블록은 카드 기준 x140..287 이고, 알약 1개짜리라 그 왼끝에서 시작한다 */
-  .pvc>.pil{left:291px;top:-54px;height:68px;padding:0 20px;border-radius:16px;z-index:2;
-    border:6px solid #000;background:linear-gradient(180deg,#F8CF47 0 6px,#F5B927 6px 34px,
-      #EC8B2F 34px 62px,#F8CF47 62px 68px);display:flex;align-items:center;gap:10px}
+  /* ⚑ 833 2회차 — **알약이 위로만 2.5px 넘쳤다**(비평 CX [8]·CY [3] 2인 일치).
+     둘이 같은 것을 봤다: 아래끝은 맞고(CY «93.5 ↔ 93.6») 높이만 크다(CX 기대 66.0 · CY 65.0 ↔ 우리 68).
+     ⇒ **아래끝을 붙박고 위에서만 줄인다** — `top −54 → −51.5` · `height 68 → 65.5`
+     (하변 = top + height = **+14 로 불변**). 카드 위로 솟는 양이 54 → 51.5 = ref 51.4~52.2 안.
+     ⚠ 배경 그러데이션 눈금도 같은 비(65.5/68)로 줄인다 — 안 줄이면 띠 세 개가 알약 안에서
+     1~2px 밀린다(마지막 밴드는 원래 패딩 상자 밖이라 안 보인다 · box-sizing 은 border-box). */
+  .pvc>.pil{left:291px;top:-51.5px;height:65.5px;padding:0 20px;border-radius:16px;z-index:2;
+    border:6px solid #000;background:linear-gradient(180deg,#F8CF47 0 5.8px,#F5B927 5.8px 32.8px,
+      #EC8B2F 32.8px 59.7px,#F8CF47 59.7px 65.5px);display:flex;align-items:center;gap:10px}
   .pvc>.pil>em{width:40px;height:40px;font-size:0;display:block}
   .pvc>.pil>em>.cic{width:40px;height:40px}
   .pvc>.pil>i{color:#fff;font-size:28px;line-height:32px;white-space:nowrap;
