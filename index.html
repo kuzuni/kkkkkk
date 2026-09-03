@@ -7284,7 +7284,12 @@
      ⚠ 늘어난 10px 은 **위로** 간다 — `--rw-bt` 가 «패널 바닥에서 역산» 이라 상자를 키우면
      상변이 올라가고 **하변은 픽셀 하나 안 움직인다**(813 이 1.00 으로 닫은 «수반↓안내문 22.0»
      이 그대로 남는 이유). */
-  .rw-basin{left:0;top:0;width:400px;height:226px;cursor:pointer;z-index:3}
+  /* ⚑⚑ 880 — **이 버튼이 «내 위에 누가 서 있는지» 를 신고한다**(`--burst-block` · 816 `--burst-keep`
+     과 같은 «부품이 화면 목록을 들지 않는다» 규약의 벽 판). 867 이 배수 바를 이 블록으로 옮긴
+     뒤로 지불 버스트의 상향 사거리 안에 그 바가 들어왔고, 신고가 없으면 알이 그 위에 착지한다.
+     ⚠ 바가 또 옮겨 가거나 사라지면 이 신고 한 줄만 고치면 된다 — 자바스크립트에는 이 화면의
+       요소 이름이 한 개도 안 적혀 있다(`fxbBlockRects` 는 신고를 읽을 뿐이다). */
+  .rw-basin{--burst-block:#rwMulBar;left:0;top:0;width:400px;height:226px;cursor:pointer;z-index:3}
   .rw-basin>*{position:absolute}
   /* 수반 실루엣 전체를 SVG 한 장으로 — clip/명암 대비 문제로 3회차까지 기단이 안 읽혔다.
      7회차: 높이는 G(238)·H(153)가 정반대라 측정표 h220(y527..626 그림자 포함)으로 중재 → 캔버스 216.
@@ -35201,6 +35206,19 @@ function rwSummonFx(it, first, iv){
   const m = born.length, ph = (rwFxW = (rwFxW + 0.6180339887) % 1);
   /* 상향 원뿔의 여유를 칸 범위에서 뺀다 — 종전 `dy > |dx| × RW_FX_UP` 과 같은 경계다(위 머리말) */
   const mg = Math.min(0.49, Math.atan(RW_FX_UP) / Math.PI);
+  /* ⚑⚑ 880 — **위쪽에 남이 서 있으면 거기까지만 난다.** 867 이 배수 바(`#rwMulBar`)를
+     «들보↔격자 벽» 에서 «수반/소환 버튼» 블록으로 옮긴 뒤, 이 버스트의 상향 사거리
+     (끝 반경 최대 345.9px · 발원↔바 322px) 안에 그 바가 처음으로 들어왔다 — 그래서
+     250ms 부터 «×10»·«×100» 칸을 4~6% 밟는다(`probe880` 수리 전).
+     ⚠ **구멍(`--burst-keep`)으로는 못 닫는 자리다** — ① 이 호출은 점 대상이라 `fxBurst` 가
+       `fxbKeepHoles` 를 아예 안 부르고 ② 불러도 바로 아래에서 자리를 **다시 적으므로**
+       각도 굴림이 통째로 버려진다. 그래서 «앉을 자리» 가 아니라 **«날아갈 거리»** 를 문다.
+     ⚠ **각도는 한 값도 안 건드린다**(838 3회차 «clamp 가 각도째 지웠다» 의 재발 방지) —
+       위쪽 원뿔·부채 간격·위상 수열·알 수·크기·수명 전부 불변이고, 줄어드는 것은
+       **벽을 향해 가던 알의 거리 하나**다(그 방향에 벽이 없으면 종전과 픽셀 동일).
+     ⚠ 여유는 `FXB_INPAD` — 619 14회차가 «잉크와 액자 사이에 늘 4px» 로 쓰는 그 값이다
+       (새 손 상수 0개). 벽 상자는 `#rwBasin` 이 CSS 로 신고한다(위 `fxbBlockRects` 머리말). */
+  const walls = (typeof fxbBlockRects === 'function') ? fxbBlockRects($('rwBasin'), FXB_INPAD) : [];
   born.forEach((nd, j) => {
     const dx0 = parseFloat(nd.style.getPropertyValue('--dx'));
     const dy0 = parseFloat(nd.style.getPropertyValue('--dy'));
@@ -35213,8 +35231,14 @@ function rwSummonFx(it, first, iv){
     /* 탄생점도 같은 각으로 옮긴다 — 반경(r0)은 그대로라 «링에서 태어나 그 방향으로 난다» 가 유지된다.
        (안 옮기면 알이 엉뚱한 자리에서 태어나 옆으로 미끄러지는 그림이 된다) */
     if(r0){ nd.style.left = (cx + ca * r0).toFixed(1) + 'px'; nd.style.top = (cy + sa * r0).toFixed(1) + 'px'; }
-    nd.style.setProperty('--dx', (ca * mag * RW_FX_FLY).toFixed(1) + 'px');
-    nd.style.setProperty('--dy', (sa * mag * RW_FX_FLY).toFixed(1) + 'px');
+    /* 880 — 이 방향으로 벽까지 갈 수 있는 거리에서 **탄생 반경을 뺀 만큼**이 이 알의 상한이다.
+       알 반폭은 `style.width`(스폰이 적은 값)에서 읽는다 — 봉투의 `scale` 은 끝 구간에서
+       0.586→0.5 라 그보다 작으므로 이 상한은 **전 프레임에 대해** 안전하다. */
+    const half = (parseFloat(nd.style.width) || 0) / 2;
+    const room = walls.length ? fxbRayLimit(walls, cx, cy, ca, sa, half) - r0 : Infinity;
+    const fly = Math.max(0, Math.min(mag * RW_FX_FLY, room));
+    nd.style.setProperty('--dx', (ca * fly).toFixed(1) + 'px');
+    nd.style.setProperty('--dy', (sa * fly).toFixed(1) + 'px');
   });
   return true;
 }
@@ -42708,6 +42732,59 @@ function fxbKeepHoles(t, m){
 function fxbHit(holes, x, y){
   for(const h of holes) if(x > h.x && x < h.x + h.w && y > h.y && y < h.y + h.h) return true;
   return false;
+}
+/* ⚑⚑ 880 — **호스트 «밖» 의 벽**(`--burst-block`, 문서 셀렉터).
+   위 `--burst-keep`(816) 과 짝이지만 **뜻이 반대편이다**:
+     · `--burst-keep` = «내 **안**의 이 잉크를 덮지 마라» → 앉을 자리를 뺀다(구멍).
+     · `--burst-block` = «내 **밖**의 이 상자에 들어가지 마라» → 날아갈 거리를 줄인다(벽).
+   ⚠ **816 의 계약은 한 글자도 안 건드린다.** `--burst-keep` 의 스캔을 조상까지 넓히는 길
+     (880 등재문의 처방 ⓐ)은 두 겹으로 막혀 있다 — ① 신고한 셋(`.cb`→`i` · `.tb`→`.tbn` ·
+     `.rbt.b1`→`.rbn`)의 셀렉터가 조상 범위에서는 **남의 자식까지** 문다(`verify816`·`verify818` 가
+     그 자리를 지킨다) ② 애초에 **점 대상 버스트는 `fxbKeepHoles` 를 아예 안 부른다**(`r` 이 null).
+     ⇒ 이름을 갈라 신고를 하나 더 놓는 것이 «한 칸만 넓힌다» 의 실제 모습이다.
+   ⚠ 호스트 자신과 그 **자손**은 절대 안 담는다 — 담는 순간 «내 안에서 터진다» 가 무너진다
+     (660 «스폰은 버튼뿐» · 816 의 «호스트 자신 제외» 와 같은 규약).
+   ⚠ 신고가 없으면 **빈 배열**이다 — 안 신고한 호스트는 한 값도 안 바뀐다. */
+function fxbBlockRects(t, m){
+  const f = fxSc(); if(!f || !t || t.nodeType !== 1) return [];
+  let sel = '';
+  try { sel = getComputedStyle(t).getPropertyValue('--burst-block').trim(); } catch(_){}
+  if(!sel) return [];
+  let els = [];
+  try { els = [...document.querySelectorAll(sel)]; } catch(_){ return []; }
+  const out = [];
+  for(const el of els){
+    if(el === t || t.contains(el)) continue;          /* 호스트와 그 자손은 벽이 아니다 */
+    const cs = getComputedStyle(el);
+    if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+    const b = el.getBoundingClientRect();
+    if(!b.width || !b.height) continue;
+    out.push({ x:(b.left - f.x)/f.s - m, y:(b.top - f.y)/f.s - m,
+               w:b.width/f.s + 2*m, h:b.height/f.s + 2*m });
+    if(out.length >= 8) break;                       /* 안전판 — 위 두 자와 같은 규약 */
+  }
+  return out;
+}
+/* ⚑ 880 — 발원 `(ox,oy)` 에서 단위 방향 `(ux,uy)` 로 갈 때 **벽에 닿기 전까지 갈 수 있는 거리**.
+   알의 잉크 반폭 `half` 만큼 상자를 미리 부풀려(민코프스키) 재므로 «중심만 피하고 잉크는 걸치는»
+   자리가 안 생긴다(816 의 «여유는 입자 크기에서» 와 같은 규칙).
+   벽이 없거나 그 방향에 안 걸리면 `Infinity` — 부르는 쪽은 종전 거리를 그대로 쓴다.
+   ⚠ 각도를 **안 건드린다**(838 3회차의 «clamp 가 각도째 지웠다» 를 되풀이하지 않는다) —
+     이 자는 «얼마나» 만 답하고 «어디로» 는 부르는 쪽이 이미 정한 그대로다. */
+function fxbRayLimit(walls, ox, oy, ux, uy, half){
+  let lim = Infinity;
+  for(const w of walls){
+    const x0 = w.x - half, x1 = w.x + w.w + half, y0 = w.y - half, y1 = w.y + w.h + half;
+    let t0 = 0, t1 = Infinity, ok = true;
+    for(const [p, q0, q1] of [[ux, x0 - ox, x1 - ox], [uy, y0 - oy, y1 - oy]]){
+      if(Math.abs(p) < 1e-6){ if(q0 > 0 || q1 < 0){ ok = false; break; } continue; }
+      let a = q0 / p, b = q1 / p; if(a > b){ const s = a; a = b; b = s; }
+      t0 = Math.max(t0, a); t1 = Math.min(t1, b);
+      if(t0 > t1){ ok = false; break; }
+    }
+    if(ok && t1 >= 0) lim = Math.min(lim, Math.max(0, t0));
+  }
+  return lim;
 }
 /* ⚑ 619 4회차 — 네 번째 인자 `strict`(선택). **줄 때만** 동작이 달라진다(기존 25 자리는 한 값도 안 바뀐다):
    42회차의 글자 회피는 «각도만 굴린다» 이고 굴려도 자리가 없으면 **그냥 앉는다** — 28회차가 입자를

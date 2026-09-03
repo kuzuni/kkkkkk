@@ -173,8 +173,16 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
      «넘으면 통째로 return» 이라 그대로 두면 발화가 조용히 빠진다([E1] 이 깨진다). */
   ok(/Math\.max\(1, Math\.min\(first \? RW_FX_N0 : UPFX_N, FXMAX - L\.childElementCount - 1\)\)/.test(code),
      'A5 상한을 «걷기» 가 아니라 «개수 줄이기» 로 지키고 바닥 1알을 보장한다(660 처방 · 발화는 안 빠진다)');
-  ok(/, FXPAL\.up, n, false, null, PAY_CUR\.relic\)/.test(code) && /RW_FX_FLY\)\.toFixed\(1\)/.test(code),
-     'A5b `iv` 는 안 넘기고(수명 그대로) **이동만** 이 자리에서 `RW_FX_FLY` 로 늘린다 — 공용 상수는 불변(3회차)');
+  /* ⚑ 880 이관 — 항을 지우지 않고 **묻는 것만 갈아 끼웠다**(333 처방).
+     종전 자는 `RW_FX_FLY).toFixed(1)` 이라는 **최종 식의 모양**을 그대로 물고 있었는데,
+     880 이 그 이동에 «위쪽 벽까지» 상한을 얹으면서(`fly = min(mag * RW_FX_FLY, room)`)
+     식의 모양만 바뀌고 **이 항이 지키던 뜻은 한 글자도 안 바뀌었다**(`iv` 안 넘김 · 이동을
+     이 자리에서 `RW_FX_FLY` 로 늘림 · 공용 상수 불변). ⇒ 모양이 아니라 그 셋을 묻는다.
+     「벽이 없으면 값이 종전과 같다」 는 `verify880` [C5] 가 실런타임으로 못박는다. */
+  ok(/, FXPAL\.up, n, false, null, PAY_CUR\.relic\)/.test(code)
+     && /mag \* RW_FX_FLY/.test(code)
+     && /setProperty\('--dx',/.test(code) && /setProperty\('--dy',/.test(code),
+     'A5b `iv` 는 안 넘기고(수명 그대로) **이동만** 이 자리에서 `RW_FX_FLY` 로 늘린다 — 공용 상수는 불변(3회차 · 880 이관)');
   const rw = nc((code.split('function rwHoldTick(){')[1] || '').split('\n[\'pointerup\'')[0]);
   /* 683 이관 — 홀드 틱은 이제 그 틱의 간격을 같이 넘긴다(`rwSummonFx(it, false, h.iv)`).
      ⚠ 첫 발은 **안 넘기는 것이 정답**이다(단발이라 «다음 틱» 이 없다 — 넘기면 수명이 반토막 난다). */
