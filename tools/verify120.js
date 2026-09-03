@@ -319,7 +319,8 @@ const inter = (a, b) => {
          받침 밑판 아랫변(y629)에서 재면 ref 는 **위 22.2 : 아래 20.0 = 0.90** 이고,
          밑판 안쪽(y622~625)에서 재면 31~38 = CF·CG 의 값이다 — 두 세대는 서로 다른
          지형지물을 쟀다. 정의(«밑판 외곽선의 최하단»)를 따르면 5회차 쪽이 이긴다. */
-      const iGap = Math.max(12, (GAP2_PX + g3) * 0.468);
+      /* 7회차 — .468 → .5(채점 2인이 각자 «ref 위 = 아래 = 1.00» 을 냈다 · scan813c 의 0.90 은 off-by-one) */
+      const iGap = Math.max(12, (GAP2_PX + g3) * 0.5);
       const wantG = [gt, T - gt, GAP2_PX + g3 - iGap, iGap];
       const gErr = Math.max(...gaps.map((g, i) => Math.abs(g - wantG[i])));
       ck(`[${H}] ⑥ 여백이 «아치 위:아래 = ref 1:3.797 + 벽 하한 232 + 안내문 ref 비» 배분 규칙대로`, gErr < 1.0,
