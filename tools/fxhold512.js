@@ -50,6 +50,15 @@ const HOLD_SRC = `
   };
   window.__fxhold = {
     peak: PEAK,
+    /* ⚑ 836 — **자리를 고정한다**(668 «시드 고정» 규약). 알 14개의 흩어짐은 Math.random 이 정하고,
+       알의 바깥 띠는 배경이 비쳐 보이는 반투명 구간이라 «알 밑에 룰렛의 어느 화소가 깔리는가» 가
+       실행마다 달라진다 — 그것이 [R1] 의 «정상» 쪽 값을 281~610 으로 흔든 마지막 잡음이다.
+       씨를 박으면 [G]와 [R]이 **같은 자리·같은 배경**을 보고 색만 다르다(비교가 색 하나로 좁아진다).
+       ⚠ 제품을 안 건드린다 — 자가 자기 페이지에서만 Math.random 을 갈아 끼운다. */
+    seed(n) {
+      let s = (n >>> 0) || 0x9e3779b9;
+      Math.random = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+    },
     async holdScene(fn) {
       const mo = new MutationObserver(rs => {
         for (const r of rs) for (const n of r.addedNodes) {

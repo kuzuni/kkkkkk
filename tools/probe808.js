@@ -13,11 +13,18 @@
  *   [4] 홀드       — 808 처방(연출을 세워 놓고 찍는다)의 크림 값 표본
  * 판정 [P] — ① 창 < 캡처 비용(구조적으로 못 맞춘다) ② 고정 한 장은 표본 폭이 문턱을 가로지른다
  *            ③ 홀드는 표본이 전부 문턱 위이고 폭이 좁다.
+ *
+ * ⚑ 836 (2026-09-03) — 이 자가 두 가지로 빨갰다(제품·자 무관, 러너가 바뀐 탓):
+ *   ⓐ [4] 가 홀드를 **손으로 한 벌 더** 적고 있어 808 시절 판(0% 에 서는 것)에 굳어 있었다
+ *      ⇒ `tools/fxhold512.js` 한 벌을 읽게 했다(사본 0). 836 의 봉우리 홀드가 곧 여기 [4] 다.
+ *   ⓑ [P1]·[P3] 의 문턱이 **808 이 돌던 러너의 절대값**(캡처 0.5s · 봉우리 2,000)에 붙어 있었다
+ *      ⇒ 문장이 말하는 «같은 자릿수»·«가로지른다» 그대로 비·교차로 옮겼다(836 과 같은 처방).
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 const { spawn } = require('child_process');
+const fxhold = require('./fxhold512');
 
 const SRC = path.resolve(__dirname, '../index.html');
 const argv = process.argv.slice(2);
@@ -45,6 +52,7 @@ const stopLoad = () => load.forEach(c => { try { c.kill('SIGKILL'); } catch (e) 
     await p.goto('file://' + SRC);
     await p.waitForFunction(() => typeof S !== 'undefined' && typeof roulFinish === 'function');
     await p.waitForTimeout(900);
+    await fxhold.install(p);                                    /* 836 — 홀드 한 벌을 심는다 */
     await p.evaluate(() => {
       window.step = () => {};                                   /* 배경 전투만 멈춘다(verify512 규약) */
       document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove());
@@ -53,6 +61,7 @@ const stopLoad = () => load.forEach(c => { try { c.kill('SIGKILL'); } catch (e) 
       openRoulette();
     });
     await p.waitForTimeout(500);
+    await p.evaluate(() => window.__fxhold.seed(0x512));   /* 836 — 알 자리를 고정한다(verify512 와 같은 씨) */
   };
   const finish = () => p.evaluate(() => { const i = ROULETTE.findIndex(x => x && x.dia); roulFinish(i < 0 ? 0 : i); });
   /* 350 처방 — 캡처를 페이지로 되돌려 «찍힌 픽셀» 을 읽는다 */
@@ -122,42 +131,40 @@ const stopLoad = () => load.forEach(c => { try { c.kill('SIGKILL'); } catch (e) 
     console.log('  +' + off + 'ms → 크림 ' + c);
   }
 
-  /* ── [4] 808 처방: 연출을 세워 놓고 찍는다 ─────────────────────── */
-  console.log('\n=== [4] 808 처방(홀드)의 크림 표본 ===');
+  /* ── [4] 808 처방: 연출을 세워 놓고 찍는다 ─────────────────────────
+     ⚑ 836 — 여기 있던 **홀드 사본**을 지웠다. 자(`verify512`)와 이 재현기가 같은 것을 손으로 두 벌
+        적고 있어서, 836 이 «어느 프레임에 세우는가» 를 고칠 때 한쪽만 고쳐질 자리였다(402 «사본을 지운다»).
+        이제 둘 다 `tools/fxhold512.js` 한 벌을 읽는다 — 그래서 [4] 는 **현행 처방**을 잰다. */
+  console.log('\n=== [4] 홀드 처방의 크림 표본 (836 봉우리 = ' + Math.round(fxhold.PEAK * 100) + '%) ===');
   const held = [];
   for (let r = 0; r < RUNS; r++) {
     await arm();
     const before = await p.screenshot({ clip: CLIP });
-    const nodes = await p.evaluate(async () => {
-      const hold = el => { try { el.remove = () => {}; el.style.animationPlayState = 'paused'; } catch (e) {} };
-      const mo = new MutationObserver(rs => { for (const q of rs) for (const n of q.addedNodes) {
-        if (n.nodeType !== 1) continue; hold(n); n.querySelectorAll && n.querySelectorAll('*').forEach(hold); } });
-      for (const id of ['fxl', 'fxlc']) { const L = document.getElementById(id); if (L) mo.observe(L, { childList: true, subtree: true }); }
+    const nodes = await p.evaluate(() => window.__fxhold.holdScene(() => {
       const i = ROULETTE.findIndex(x => x && x.dia);
       roulFinish(i < 0 ? 0 : i);
-      let prev = -1, still = 0;
-      for (let f = 0; f < 120 && still < 2; f++) {
-        await new Promise(r2 => requestAnimationFrame(r2));
-        const n = document.querySelectorAll('.fx-spark').length;
-        still = (n > 0 && n === prev) ? still + 1 : 0; prev = n;
-      }
-      return document.querySelectorAll('.fx-spark').length;
-    });
+    }));
     const after = await p.screenshot({ clip: CLIP });
     held.push(await creamOf(before, after));
-    if (r === 0) console.log('  (세운 버스트 ' + nodes + '개)');
+    if (r === 0) console.log('  (세운 버스트 ' + nodes.spark + '개 · 스케일 ' + nodes.scale.toFixed(3) + ')');
   }
   console.log('  크림 ' + held.join(' / ') + '  (문턱 500)');
 
   /* ── [P] 판정 ──────────────────────────────────────────────────── */
   const spread = a => Math.max(...a) / Math.max(1, Math.min(...a));
   console.log('\n=== [P] 판정 ===');
-  ok(wSpark && (wSpark[1] - wSpark[0]) < cost * 1.2,
+  /* ⚑ 836 — 문턱을 러너 절대값에서 **비**로 옮겼다. `cost * 1.2` 는 808 이 돌던 러너의 캡처 비용
+     (0.5s 안팎)에 붙은 수라 캡처가 빨라진 러너(실측 277ms)에서는 창 407ms 가 «같은 자릿수» 인데도
+     빨개졌다 — 836 이 잡은 것과 같은 병이다(문턱이 러너에 붙어 있다). 문장이 말하는 것은 비다. */
+  ok(wSpark && (wSpark[1] - wSpark[0]) < cost * 3,
     '[P1] 버스트가 사는 창이 스크린샷 한 장의 비용과 같은 자릿수다 — 고정 한 장은 «맞히기» 다',
-    '창 ' + (wSpark ? wSpark[1] - wSpark[0] : 0) + 'ms ↔ 캡처 ' + cost + 'ms');
+    '창 ' + (wSpark ? wSpark[1] - wSpark[0] : 0) + 'ms ↔ 캡처 ' + cost + 'ms (×'
+    + (wSpark ? ((wSpark[1] - wSpark[0]) / Math.max(1, cost)).toFixed(2) : '-') + ')');
   ok(!!gap, '[P2] 버스트가 죽은 뒤 `+n` 이 뜨기까지 **빈 창**이 있다 — 그 자리에 떨어지면 128 이 된다',
     gap ? gap[0] + '~' + gap[1] + 'ms' : '없음');
-  ok(Math.max(...old) > 2000 && Math.min(...old) <= 500,
+  /* ⚑ 836 — 여기도 절대값(`> 2000`)을 **가로지름**으로 바꿨다. 축이 묻는 것은 «봉우리가 몇이냐» 가
+     아니라 «오프셋 몇 ms 차이로 문턱의 위아래를 오가느냐» 다(실측 740 ↔ 0 ↔ 557 ↔ 76). */
+  ok(Math.max(...old) > 500 && Math.min(...old) <= 500,
     '[P3] 고정 한 장은 grab 이 캡처 한 장 값만큼만 밀려도 문턱을 가로지른다(= 등재문의 128 ↔ 2,647)',
     OFFS.map((o, i) => '+' + o + 'ms:' + old[i]).join(' · '));
   ok(held.every(v => v > 500) && spread(held) < 1.6,

@@ -14,6 +14,7 @@
  *       **색을 하나도 안 되돌려도** 크림이 나온다(정상 프레임의 잡음 바닥)
  * 판정 [P] — ① 0% 는 골짜기다 ② 봉우리는 문턱 위이고 폭이 좁다
  *            ③ 잡음 바닥은 색 띠로 가두면 사라진다 ④ 그래서 [R1] 의 비가 5배를 넘는다
+ * 되돌림 [R] — 홀드를 808 판(0%)으로 되돌리면 `verify512` 의 새 전제 [G0b] 가 먼저 빨개진다.
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -56,6 +57,7 @@ const stopLoad = () => load.forEach(c => { try { c.kill('SIGKILL'); } catch (e) 
       openRoulette();
     }, !!revert);
     await p.waitForTimeout(500);
+    await p.evaluate(() => window.__fxhold.seed(0x512));   /* 836 — 알 자리를 고정한다(verify512 와 같은 씨) */
   };
   const held = () => p.evaluate(() => window.__fxhold.holdScene(() => {
     const i = ROULETTE.findIndex(x => x && x.dia);
@@ -150,6 +152,16 @@ const stopLoad = () => load.forEach(c => { try { c.kill('SIGKILL'); } catch (e) 
   ok(nBand.cream * 5 < rBand.cream,
     '[P4] 색 띠로 가두면 «되돌리지 않아도 나오던» 잡음이 죽어 [R1] 의 5배 문턱이 여유로 선다',
     '정상 ' + nBand.cream + ' ↔ 되돌림 ' + rBand.cream);
+
+  /* ── [R] 되돌림 시험 — 새 전제가 실제로 문다 ────────────────────
+     `verify512` [G0b]·[R0b] 는 «세운 프레임이 봉우리인가» 를 스케일 ≥ .9 로 묻는다.
+     홀드가 808 판(0%)으로 되돌아가면 스케일이 .26 이라 **그 전제가 먼저** 빨개진다 —
+     크림이 조용히 수십 개로 내려앉는 이번 결함을 자가 두 번 놓치지 않는다는 못이다. */
+  const back = land.find(o => o[0] === 0);
+  ok(back && back[2] < 0.9,
+    '[R] 되돌림 — 홀드를 0%(808 판)로 되돌리면 `verify512` [G0b] 전제(스케일 ≥ .9)가 빨개진다',
+    '0% 스케일 ' + (back ? back[2].toFixed(3) : '-') + ' ↔ 봉우리 '
+    + ((land.find(o => Math.abs(o[0] - fxhold.PEAK) < 1e-9) || [0, 0, 0])[2]).toFixed(3));
 
   console.log('\n' + pass + '/' + (pass + fail) + (fail ? '  FAIL ' + fail : '  PASS'));
   await b.close();

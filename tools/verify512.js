@@ -231,6 +231,10 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
     const before = await p.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
     /* ⚑ 808 — 고정 «+110ms 한 장» 을 폐기하고 **연출을 세워 놓고** 찍는다(위 `holdScene` 머리말).
        세워 두면 캡처가 0.1s 가 걸리든 2s 가 걸리든 같은 프레임이라, 러너 부하가 값을 못 흔든다. */
+    /* ⚑ 836 — 알의 흩어짐에 **씨를 박는다**(668 «시드 고정»). 알 바깥 띠는 배경이 비치는
+       반투명 구간이라 «알 밑에 룰렛의 어느 화소가 깔리는가» 가 실행마다 달라져 [R1] 의 «정상» 쪽이
+       281~610 으로 흔들렸다. 씨를 박으면 [G]·[R] 이 같은 자리·같은 배경을 보고 **색만** 다르다. */
+    await p.evaluate(() => window.__fxhold.seed(0x512));
     const nodes = await p.evaluate(() => window.__v512.holdScene(() => {
       const i = ROULETTE.findIndex(x => x && x.dia);
       roulFinish(i < 0 ? 0 : i);
