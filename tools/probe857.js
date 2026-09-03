@@ -97,19 +97,36 @@ if (raw && raw.rep) {
 console.log('[5] 시뮬 예산 — 캐시를 쓰면 494 의 문턱이 성립하는가');
 ok(!!hit.rep && hit.rep.simSec <= 120, `시뮬 ${hit.rep ? hit.rep.simSec.toFixed(1) : '?'}초 ≤ 120초`);
 
-/* ── [6] 외삽 — 앵커 한 개로 표 전체를 대신 잴 수 있는가 ────────────── */
-console.log('[6] 외삽 — 앵커 한 개(캐시 없음) × 앵커 수 ≈ [1] 의 보정 몫');
-const one = run(['--days=1', '--seeds=1', '--policy=casual', '--calstages=' + CAL_STAGES[Math.floor(CAL_STAGES.length / 2)]]);
-ok(one.code === 0 && one.rep, `종료 코드 0 (실제 ${one.code})`);
-if (one.rep) {
+/* ── [6] 앵커 비용은 **앵커마다 다르다** ────────────────────────────────
+   ⚑ 이 절의 첫 시안은 «앵커 한 개 × 앵커 수 = 표 전체» 를 단언했다가 **빨개졌고, 그게 소득이다**
+      (338 규칙 — 재현이 처방을 기각한 자리): 한가운데 앵커(s580) 6.3초 × 19 + 하한 = **121.0초**인데
+      실측 보정은 **317.7초**로 **61.9% 모자랐다**. 앵커 비용은 스테이지를 따라 커진다(높은 앵커일수록
+      목표 화력까지 «펌프» 하는 몫이 크다) — 그래서 **한 개 외삽은 «추정» 이 아니라 «하한» 이다.**
+      게이트가 이 절을 그대로 베끼면 «보정이 세 배 느려져도 초록» 인 자를 만들었을 것이다. */
+console.log('[6] 앵커 비용의 산포 — 낮은/가운데 앵커를 각각 혼자 재 본다');
+const LOW = CAL_STAGES[0], MID = CAL_STAGES[Math.floor(CAL_STAGES.length / 2)];
+const oneOf = (s) => run(['--days=1', '--seeds=1', '--policy=casual', '--calstages=' + s]);
+const low = oneOf(LOW), one = oneOf(MID);
+ok(low.code === 0 && one.code === 0 && low.rep && one.rep, `종료 코드 0 (실제 ${low.code} · ${one.code})`);
+if (low.rep && one.rep) {
   ok(one.rep.calAnchors === 1 && one.rep.calSecPerAnchor > 0,
-     `앵커 1개 실측 — 개당 ${one.rep.calSecPerAnchor.toFixed(1)}초 + 하한 고정비 ${one.rep.calFloorSec.toFixed(1)}초`);
-  /* 외삽 = 앵커당 × 앵커 수 + 하한 고정비(앵커 수와 무관 — 857 이 갈라 찍는다) */
+     `앵커 1개(s${MID}) — 개당 ${one.rep.calSecPerAnchor.toFixed(1)}초 + 하한 고정비 ${one.rep.calFloorSec.toFixed(1)}초`);
+  const ratio = one.rep.calSecPerAnchor / Math.max(0.01, low.rep.calSecPerAnchor);
+  ok(ratio >= 1.3, `s${LOW} ${low.rep.calSecPerAnchor.toFixed(1)}초 ↔ s${MID} ${one.rep.calSecPerAnchor.toFixed(1)}초`
+                   + ` = ${ratio.toFixed(2)}배 — 앵커 비용은 스테이지를 따라 커진다(균일 외삽이 성립 안 한다)`);
+
+  /* 한 개 외삽 = 앵커당 × 앵커 수 + 하한 고정비(앵커 수와 무관 — 857 이 갈라 찍는다) */
   const est = one.rep.calSecPerAnchor * CAL_STAGES.length + one.rep.calFloorSec;
   if (raw && raw.rep) {
-    const dev = Math.abs(est - raw.rep.calSec) / raw.rep.calSec;
-    ok(dev <= 0.40, `외삽 ${est.toFixed(1)}초 ↔ 실측 ${raw.rep.calSec.toFixed(1)}초 — 어긋남 ${(dev * 100).toFixed(1)}% ≤ 40%`);
-  } else console.log(`       외삽 ${est.toFixed(1)}초 (비교할 [1] 이 없다)`);
+    ok(est < raw.rep.calSec,
+       `가운데 앵커 외삽 ${est.toFixed(0)}초 < 실측 보정 ${raw.rep.calSec.toFixed(0)}초`
+       + ` — 한 개 외삽은 **하한**이다(${((1 - est / raw.rep.calSec) * 100).toFixed(1)}% 모자란다)`);
+  } else console.log(`       가운데 앵커 외삽 ${est.toFixed(0)}초 (비교할 [1] 이 없다)`);
+
+  /* 게이트가 쓸 눈금 — «앵커 하나 ÷ 하한 보정 하나». 둘 다 «새 페이지 + BOT + 전투 시뮬» 이라
+     기계가 느려지면 같이 커진다. 총액이 아니라 **회귀 감시자**로 쓴다(총액은 위에서 기각됐다). */
+  console.log(`       [게이트 눈금] s${MID} 앵커 ÷ 하한 = ${(one.rep.calSecPerAnchor / Math.max(0.01, one.rep.calFloorSec)).toFixed(2)}배`
+              + ` (verify494 [2-c] 의 ANCHOR_X 가 이 수의 여유배다)`);
 }
 
 console.log(`\nPROBE857 ${pass}/${pass + fail}`);

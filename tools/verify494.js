@@ -27,16 +27,46 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const FAST = process.argv.includes('--fast');
+/* 857 — [2-c] 의 문턱. **절대 초가 아니라 비**다: κ 앵커 하나 ÷ 하한 보정(`calibrateFloor`) 하나.
+   둘 다 «새 페이지 부팅 + BOT 주입 + 전투 시뮬» 이라 기계가 느려지면 분자·분모가 같이 커진다.
+   실측(`probe857` [6] · 이 컨테이너): 앵커 s580 **6.3초** ÷ 하한 **1.1초** = **5.7배** ⇒ 여유 2.6배로 15.
+   ⚠ 이 수는 «보정 총액의 예산» 이 **아니다**(총액 외삽은 probe857 [6] 이 기각했다 — 앵커 비용이
+   스테이지를 따라 커져 한 개 외삽이 61.9% 모자란다). 이것은 **회귀 감시자**다:
+   `calibrateOne` 이 눈에 띄게 느려지면 이 비가 오른다. 근거표는 `docs/review/857-verify494예산문턱.md` §2. */
+const ANCHOR_X = 15;
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); c ? pass++ : fail++; };
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'v494-'));
+
+/* ⚑ 857 — **κ 캐시는 [2] 만의 문제가 아니었다.** 이 자는 봇을 **열 번** 부르는데(2·3·5·6·8·9·R 절),
+   그 전부가 `--calib` 없이 불러 **매번 κ 표를 처음부터 세우고 있었다**(실측 앵커 19개 ≈ 320초).
+   [2] 한 항만 고치면 나머지 아홉 번이 그대로 남아 자 전체가 **한 시간에 가깝다** — 지시서 [4] 가
+   «push 전에 돌려라» 고 요구하는 자가 그 값이면 아무도 안 돌린다(그 자체가 856·807 이 겪은 병이다).
+   ⇒ 부르는 자리마다 손으로 붙이지 말고 **입구 한 곳**에서 붙인다(402 «사본을 지운다»).
+   ⚠ **일부러 캐시를 안 받는 자리가 둘 있다** — `--calstages`(보정 축 [2-c]·[2-d])와 `--calib` 을
+   이미 준 자리. 그 둘은 «보정을 실제로 돌리는 것» 이 목적이므로 건드리면 그 항이 공허참이 된다. */
+const calSrc = (() => {
+  const dir = path.join(ROOT, 'docs', 'review');
+  const c = fs.readdirSync(dir).map(f => /^199-calib-r(\d+)\.json$/.exec(f)).filter(Boolean)
+              .sort((a, b) => Number(b[1]) - Number(a[1]));
+  if (!c.length) return null;
+  const dst = path.join(tmp, 'cal-shared.json');
+  fs.copyFileSync(path.join(dir, c[0][0]), dst);      /* 원본을 실행이 덧쓰지 않게 사본으로 */
+  return { name: c[0][0], path: dst };
+})();
+
 const run = (args) => {
   const md = path.join(tmp, 'r' + Math.random().toString(36).slice(2) + '.md');
   const js = md.replace(/\.md$/, '.json');
+  /* `--fresh-cal` 은 이 자만의 표식이다(bot199 로 안 넘긴다) — «일부러 캐시 없이» 를 말한다 */
+  const fresh = args.includes('--fresh-cal');
+  const bare = args.filter(a => a !== '--fresh-cal');
+  const useCal = calSrc && !fresh && !bare.some(a => /^--cal(ib|stages)=/.test(a));
+  const full = useCal ? [...bare, '--calib=' + calSrc.path] : bare;
   const t0 = Date.now();
   let code = 0;
-  try { execFileSync(process.execPath, [path.join(ROOT, 'tools', 'bot199.js'), ...args, '--out=' + md, '--json=' + js],
+  try { execFileSync(process.execPath, [path.join(ROOT, 'tools', 'bot199.js'), ...full, '--out=' + md, '--json=' + js],
                      { cwd: ROOT, stdio: 'pipe', timeout: 20 * 60 * 1000 }); }
   catch (e) { code = e.status == null ? -1 : e.status; }
   const sec = (Date.now() - t0) / 1000;
@@ -58,15 +88,90 @@ for (const f of ['tools/bot199.js', 'tools/probe494.js']) {
 ok(!fs.readFileSync(path.join(ROOT, 'tools', 'bot199.js'), 'utf8').includes('writeFileSync(path.join(ROOT, \'index.html\''),
    'bot199 이 index.html 을 쓰지 않는다(읽기 전용 관찰자)');
 
-/* ── [2] 예산 — 30일 1회 ≤ 2분 ────────────────────────────────────────── */
-console.log('[2] 예산 — 30일 1회 실행 ≤ 2분');
+/* ── [2] 예산 — «시뮬» 과 «보정» 은 다른 축이다 (작업 857) ───────────────
+ * ⚑ 2026-09-03 까지 이 항은 30일 1시드를 **`--calib` 없이** 부르고 벽시계 전체를 120초에 댔다.
+ *   그래서 빨간 것은 봇이 느려서가 아니었다 — `probe857` 실측: 캐시 없이 **328.4초** ↔
+ *   같은 명령에 캐시만 주면 **4.4초**(결과는 s386·cp·벽 12개까지 **동일**). 즉 그 문턱의
+ *   **98.7%가 κ 표를 새로 세우는 시간**이었고, 이 항은 «봇이 빠른가» 가 아니라
+ *   «이 기계에서 κ 앵커 19개를 새로 세우는 데 얼마 걸리는가» 를 재고 있었다.
+ * ⚑ **문턱(120초)은 어느 눈금의 값인가**(LESSONS 845-③) — 494 등재문·회차 기록의 «30일 ≤ 2분»
+ *   은 전부 **시뮬** 수다(4회차 «10일 47초» · 6회차 «30일 1시드 20.8초»). κ 표는 9회차가
+ *   «캐시가 있으면 실측을 생략한다» 고 만든 **별도 축**이다. ⇒ 문턱을 올리지 않고(등재문 ⓒ 금지)
+ *   **무엇을 재는가**를 고친다 — 두 축을 갈라 각자의 자로 잰다:
+ *     [2-a] 시뮬 예산   — κ 는 캐시에서 읽고 **시뮬만** ≤ 120초 (494 의 그 문턱 그대로)
+ *     [2-b] 캐시 확인   — 이 실행이 정말 보정을 안 샀는가 · 캐시 표가 지금 앵커 목록과 같은가
+ *                         (안 물으면 [2-a] 가 조용히 옛 자로 돌아가거나 낡은 표로 재게 된다)
+ *     [2-c] 보정 예산   — 앵커 **한 개**를 캐시 없이 재고 표 전체를 외삽한다. 문턱은 절대 초가
+ *                         아니라 **같은 실행에서 잰 하한 보정(`calibrateFloor`)에 대한 비**다
+ *                         — 둘 다 «새 페이지 부팅 + BOT 주입 + 전투 시뮬» 이라 기계 속도가 약분된다.
+ *     [2-d] 되돌림 시험 — 앵커를 둘로 늘리면 [2-c] 의 축이 실제로 커진다(안 커지면 그 자는 아무것도
+ *                         안 잰다 — «캐시로 갈아서 초록» 과 «무르게 푼 자» 는 겉모습이 같다).
+ *     [2-e] 전체 실측   — `V494_CALFULL=1` 일 때만(기본 실행에서 328초를 사지 않는다). 캐시 없는
+ *                         30일이 «앵커당 × N + 고정비» 와 맞는가. LESSONS 237-⑥ — 옵트인으로 빼는
+ *                         축에는 반드시 «대체 자» 를 같이 둔다. 여기서는 [2-c]·[2-d] 가 그것이다.
+ */
+console.log('[2] 예산 — 시뮬 / 보정 두 축 (857)');
 let base = null;
 if (FAST) {
   console.log('       (--fast — 건너뜀)');
 } else {
-  base = run(['--days=30', '--seeds=1', '--policy=diligent']);
-  ok(base.code === 0, `종료 코드 0 (실제 ${base.code})`);
-  ok(base.sec <= 120, `30일 1시드 ${base.sec.toFixed(1)}초 ≤ 120초`);
+  const { CAL_STAGES } = require(path.join(ROOT, 'tools', 'bot199.js'));
+  /* κ 캐시 표본은 입구(`run`)가 이미 골라 뒀다 — 저장소의 확정 표 중 **r 번호가 가장 큰 것**.
+     이름이 아니라 번호로 고르므로 199 가 다음 표를 올리면 자가 따라간다(손으로 적은 파일
+     이름은 다음 회차에 부패한다 — 211·289 «자가 자기 사본을 들면 부패한다» 의 파일판). */
+  ok(!!calSrc, 'κ 확정 표(docs/review/199-calib-r*.json)가 있다');
+  if (calSrc) {
+    const tbl = JSON.parse(fs.readFileSync(calSrc.path, 'utf8'));
+    /* 낡은 표로 재면 [2-a] 가 «지금 앵커 목록» 이 아닌 것을 재게 된다 — 그것부터 묻는다 */
+    ok(tbl.rows && tbl.rows.length === CAL_STAGES.length,
+       `[2-b] κ 표 ${calSrc.name} 의 앵커 ${tbl.rows ? tbl.rows.length : 0}개 = CAL_STAGES ${CAL_STAGES.length}개`);
+
+    base = run(['--days=30', '--seeds=1', '--policy=diligent']);
+    ok(base.code === 0, `종료 코드 0 (실제 ${base.code})`);
+    const sim = base.rep && base.rep.simSec != null ? base.rep.simSec : base.sec;
+    ok(sim <= 120, `[2-a] 30일 1시드 **시뮬** ${sim.toFixed(1)}초 ≤ 120초 (벽시계 ${base.sec.toFixed(1)}초)`);
+    ok(!!base.rep && /^캐시/.test(base.rep.calFrom || '') && base.rep.calAnchors === 0,
+       `[2-b] 이 실행은 보정을 안 샀다 — ${base.rep ? base.rep.calFrom : '?'} · 앵커 ${base.rep ? base.rep.calAnchors : '?'}개`);
+
+    /* [2-c] 보정 축 — 앵커 한 개(캐시 없음). 목록 한가운데를 표본으로 삼는다. */
+    const mid = CAL_STAGES[Math.floor(CAL_STAGES.length / 2)];
+    const one = run(['--days=1', '--seeds=1', '--policy=casual', '--calstages=' + mid]);
+    ok(one.code === 0 && one.rep && one.rep.calAnchors === 1,
+       `앵커 1개(s${mid}) 실측 — 종료 코드 ${one.code} · 앵커 ${one.rep ? one.rep.calAnchors : '?'}개`);
+    if (one.rep && one.rep.calAnchors === 1) {
+      const per = one.rep.calSecPerAnchor, floor = one.rep.calFloorSec;
+      const est = per * CAL_STAGES.length + floor;
+      /* 문턱은 «앵커 하나 : 하한 보정 하나» 의 비다. 기계가 두 배 느려지면 둘 다 두 배가 된다. */
+      ok(floor > 0 && per / floor <= ANCHOR_X,
+         `[2-c] 앵커 s${mid} ${per.toFixed(1)}초 ÷ 하한 ${floor.toFixed(1)}초 = ${(per / floor).toFixed(2)}배 ≤ ${ANCHOR_X}배`
+         + ` — 표 전체 **하한** ${est.toFixed(0)}초(앵커 ${CAL_STAGES.length}개 · 실제는 이보다 크다)`);
+
+      /* [2-d] 되돌림 시험 — 앵커를 둘로 늘리면 앵커 몫이 실제로 는다. */
+      const two2 = run(['--days=1', '--seeds=1', '--policy=casual',
+                        '--calstages=' + mid + ',' + CAL_STAGES[Math.floor(CAL_STAGES.length / 2) + 1]]);
+      const per2 = two2.rep && two2.rep.calAnchors === 2 ? (two2.rep.calSec - two2.rep.calFloorSec) : null;
+      ok(per2 != null && per2 >= 1.5 * per,
+         `[2-d] 앵커 2개의 앵커 몫 ${per2 == null ? '?' : per2.toFixed(1)}초 ≥ 1.5 × 1개 몫 ${per.toFixed(1)}초`
+         + ' — 이 축이 앵커 수에 실제로 반응한다');
+
+      /* [2-e] 옵트인 — 캐시 없는 30일 전체(≈5분). 외삽이 실측과 맞는가. */
+      if (process.env.V494_CALFULL === '1') {
+        const raw = run(['--days=30', '--seeds=1', '--policy=diligent', '--fresh-cal']);
+        ok(!!raw.rep && raw.rep.calAnchors === CAL_STAGES.length,
+           `[2-e] 캐시 없는 실행이 앵커 ${raw.rep ? raw.rep.calAnchors : '?'}개를 셌다 · 전체 ${raw.rep ? raw.rep.elapsedSec.toFixed(1) : '?'}초`);
+        /* «하한» 이 하한답게 서는가 — 균일 외삽이 실측을 넘으면 [2-c] 의 관찰줄이 거짓말이 된다.
+           (±N% 로 묶지 않는다: probe857 [6] 이 «앵커 비용은 스테이지를 따라 커진다» 를 찍었다.) */
+        ok(!!raw.rep && est < raw.rep.calSec,
+           `[2-e] 균일 외삽 ${est.toFixed(0)}초 < 실측 보정 ${raw.rep ? raw.rep.calSec.toFixed(0) : '?'}초 — 외삽은 하한이다`);
+        /* 그리고 시뮬 몫은 캐시 실행과 같은 자리여야 한다(보정을 사도 시뮬은 안 변한다) */
+        ok(!!raw.rep && Math.abs(raw.rep.simSec - sim) <= Math.max(5, sim * 0.5),
+           `[2-e] 캐시 없는 실행의 시뮬 ${raw.rep ? raw.rep.simSec.toFixed(1) : '?'}초 ≈ 캐시 실행 ${sim.toFixed(1)}초`);
+      } else {
+        console.log('       ([2-e] 전체 보정 실측은 `V494_CALFULL=1` 에서만 — 기본 실행은 328초를 사지 않는다.'
+                    + ' 대체 자는 [2-c]·[2-d] 다)');
+      }
+    }
+  }
 }
 
 /* ── 짧은 실행 한 벌로 나머지 항을 잰다 ──────────────────────────────── */
