@@ -87,6 +87,13 @@ async function measure(browser, url) {
   await ev(() => { window.requestAnimationFrame = () => 0; });
 
   const out = await ev(() => {
+    /* ⚑⚑ 855 — 주사위 고정. `probe792` 와 **같은 자리·같은 처방**이다(그 파일 주석이 본문).
+       `putFoe()` 가 «적이 나올 때까지» 도는 `step()` 횟수가 난수에 달려 플레이어가 선 자리가
+       회차마다 달라지고, 측정 상자가 그 자리에 매달려 있어 같은 발이 다른 격자에 찍힌다.
+       ⚠ [A2] 는 등재 당시 3/3 초록이었지만 **같은 표본·같은 문턱**이라 잠복이었을 뿐이다
+       (probe 쪽 같은 항이 6회 중 2회 빨강). 한쪽만 고치면 다음 회차에 이쪽이 빨개진다. */
+    let _rs = 0x2f6e2b1 >>> 0;
+    Math.random = () => { _rs = (Math.imul(_rs, 1664525) + 1013904223) >>> 0; return _rs / 4294967296; };
     localStorage.clear(); Object.assign(S, DEF());
     S.stage = 20; S.best = 20; S.guide.idx = 99;
     if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
@@ -124,10 +131,20 @@ async function measure(browser, url) {
     }
 
     putFoe(); clearFx();
-    const CX = Math.round(player.x + ox + 70), CY = Math.round(player.y + oy - 22), R = 60;
+    /* ⚑⚑ 855 — 상자를 **빈 자리**로(70 → 180) · 창은 dx ∈ [152, 203] 뿐이다.
+       뿌리·산수·«240 은 edgeFade 0.68, 300 은 0» 실측은 `probe792` 같은 자리 주석에 적어 뒀다.
+       요약: 플레이어 옆 70px 은 오라 링(화면 x ≤369)·위성이 상자에 같이 들어오는 자리고,
+       그 위상은 자가 붙기 전 1.1초의 실시간 루프 때문에 회차마다 다르다 ⇒ 밝은 것이 `base` 에
+       먼저 들어 있으면 그 화소가 `|a0 − base| ≤ 8` 로 잉크에서 탈락해 하이라이트가 통째로 사라진다. */
+    const CX = Math.round(player.x + ox + 180), CY = Math.round(player.y + oy - 22), R = 60;
     const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
     const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);
     const grab = () => { draw(); return ctx.getImageData(bx, by, bw, bh).data; };
+    /* ⚑⚑ 855 — 벽시계를 상수에 세운다(오라 반지름이 `sin(performance.now()/220)` 로 뛴다).
+       ⚠ **아래 프레임 비용 측정은 진짜 시계를 써야 하므로** 원본을 들고 있다가 그 앞에서 되돌린다.
+         안 되돌리면 `bake`·`frame` 이 전부 0 이 되어 «연출이 공짜» 라고 거짓말한다(792-③ 이 세운 축). */
+    const _now = performance.now.bind(performance);
+    performance.now = () => 1e6;
     const base = grab();
 
     /* 층 분해 — soft(후광) / hard(본체) / spec(하이라이트)
@@ -265,6 +282,7 @@ async function measure(browser, url) {
                spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
                tx: sp.tx === undefined ? undefined : CX - ox,
                ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 }; };
+    performance.now = _now;                   /* 855 — 여기서부터는 진짜 시계다(위 주석) */
     const t0 = performance.now();
     for (let n = 0; n < 60; n++) shots.push(perfShot(n));
     draw();                                   /* 첫 프레임 = 굽는 프레임 */

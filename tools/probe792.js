@@ -55,12 +55,21 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
   await ev(() => { window.requestAnimationFrame = () => 0; });
 
   const out = await ev(() => {
+    /* ⚑⚑ 855 — **주사위를 고정한다.** 시계를 세워도(아래 T0) 회차마다 잉크가 흔들려 남은 갈래를
+       쫓아가 보니 뿌리가 하나 더 있었다: `putFoe()` 가 «적이 나올 때까지» `step()` 을 도는데
+       그 횟수가 `Math.random()` 에 달렸다. 스텝 수가 다르면 **플레이어가 선 자리**가 달라지고
+       (실측 `near` 73.07 ↔ 73.31), 측정 상자는 `player.x + 70` 에 매달려 있으므로
+       상자가 배경(오라·플레이어 스프라이트) 위 다른 자리에 얹힌다 ⇒ 같은 발인데 잉크가 바뀐다.
+       시계(위상)와 주사위(자리) 둘을 다 묶어야 «같은 트리 = 같은 수» 가 된다.
+       ⚠ 판정식·문턱은 한 글자도 안 건드렸다 — 고친 것은 전부 «자가 무엇을 보고 있는가» 다. */
+    let _rs = 0x2f6e2b1 >>> 0;
+    Math.random = () => { _rs = (Math.imul(_rs, 1664525) + 1013904223) >>> 0; return _rs / 4294967296; };
     localStorage.clear(); Object.assign(S, DEF());
     S.stage = 20; S.best = 20; S.guide.idx = 99;
     if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
     spawnStage();
     step(1 / 60); draw();
-    const ox = camOx, oy = camOy;
+    let ox = camOx, oy = camOy;               /* 855 — 상자를 잡기 직전에 다시 굳힌다(아래) */
 
     const FXMAP = { shots, ghosts, bolts, zones, booms, drones, parts, rings };
     const clearFx = () => { for (const n in FXMAP) FXMAP[n].length = 0; };
@@ -92,10 +101,52 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
     }
 
     putFoe(); clearFx();
-    const CX = Math.round(player.x + ox + 70), CY = Math.round(player.y + oy - 22), R = 60;
+    /* ⚠ 855 — «플레이어·카메라를 정수 격자에 세운다» 는 갈래는 **재 보고 버렸다.** 부분화소가
+       남은 잡음의 뿌리인 것은 맞지만, 세우려면 상자를 잡기 전에 `draw()` 를 한 번 더 불러야 하고
+       그 한 번이 주사위 흐름을 밀어 **`spec` 이 도로 흔들렸다**(붙박이 1040 → 1040 ↔ 886).
+       고치려던 축을 되레 깨는 처방이라 원복했다 — 남은 잉크 잡음 ±1.5% 는 문턱에서 한참 멀다
+       (fSoft 최소 0.36 ↔ 문턱 0.12 · 밴드 2.1 ↔ 3.0). 다음 사람이 같은 길을 다시 파지 않게 남긴다. */
+    /* ⚑⚑ 855 — **상자를 빈 자리로 옮긴다.** 이것이 플레이키의 큰 뿌리였다.
+       발을 «플레이어 옆 70px» 에 세워 두고 그 둘레를 재면 상자 안에 **발이 아닌 것**이 같이 들어온다 —
+       플레이어 스프라이트 · 오라 링(반지름 92 안팎) · 플레이어를 도는 위성이 전부 그 반경이다.
+       그것들의 위상은 자가 붙기 전 1.1초 동안 진짜 게임 루프가 돈 만큼 **회차마다 다르다**
+       (시계를 세워도 «어느 위상에서 굳느냐» 가 다르고, 주사위를 묶어도 붙기 전 상태가 다르다).
+       ⇒ 밝은 것이 `base` 에 이미 들어 있으면 그 화소는 `|a0 − base| ≤ 8` 로 **잉크에서 탈락**하고,
+         하이라이트가 하필 거기 얹히면 spec 이 통째로 사라진다 — `bounce` 가 6회에 160 ↔ 1040 으로
+         뛴 것이 정확히 이것이다(온전한 원 = 1040px · 160 은 대부분이 남의 잉크에 먹힌 것).
+       발을 플레이어에게서 **180px** 떼면 오라(반지름 ≤92 ⇒ 화면 x ≤369)가 상자(x 397..517)에
+       닿지 않아 상자 안에는 그 발뿐이다.
+       ⚠ **창이 좁다 — 180 은 아무 값이나 고른 것이 아니다.** 이 게임의 전투 뷰포트는
+         `VW = 540`(1080 이 아니다 · SC=2 라 장치화소로 1080)이고 플레이어는 화면 x 277 에 선다.
+         · 아래로: 오라 오른끝 369 를 상자 좌변이 넘어야 하므로 **dx ≥ 152**
+         · 위로  : 상자 우변(CX+60)이 캔버스 540 안에 있어야 하므로 **dx ≤ 203**
+         실측으로 dx 240 은 `edgeFade` 0.676, dx 300 은 **0** 이라 잉크가 통째로 0 이 됐다
+         (한 번 그렇게 짚었다가 17종이 전부 0 으로 나왔다 — 다음 사람이 같은 데 빠지지 않게 남긴다).
+       ⚠ 70 → 180 은 «그리기 감쇠» 를 건드리지 않는다 — 감쇠는 `near < 62` 에서만 걸리고(둘 다 밖),
+         `edgeFade` 도 실측 1 이다. 즉 **그려지는 그림 자체는 한 화소도 안 바뀐다.** */
+    const CX = Math.round(player.x + ox + 180), CY = Math.round(player.y + oy - 22), R = 60;
     const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
     const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);
     const grab = () => { draw(); return ctx.getImageData(bx, by, bw, bh).data; };
+    /* ⚑⚑ 855 — **벽시계를 세우고 잰다.** 이 자는 `base` 와 `a0`·`a2` 를 서로 다른 순간에 그려
+       놓고 그 차(`|a0 − base|`)를 «그 발의 잉크» 라고 부른다. 그런데 상시 연출 중에
+       **벽시계로 도는 것**이 측정 상자 안에 있다 — 오라 반지름이
+       `(92 + 6·oLv('aura')) × (0.9 + 0.1·sin(performance.now()/220))`(index.html 26392)로 뛴다.
+       플레이어(화면 276,500)를 중심으로 한 반지름 92 안팎의 띠라 상자(x 286..406 · y 418..538)를
+       통째로 가로지르므로, 두 grab 사이에 오라가 움직인 만큼이 **발의 후광으로 둔갑**했다.
+       ⇒ 증상 둘이 같은 뿌리였다: ⓐ 같은 트리 반복이 흔들린다(위상이 매번 다르다) ·
+         ⓑ 잉크가 발의 실제 크기보다 몇 배 크다(남의 연출을 같이 셌다).
+       시계를 한 값에 묶으면 오라가 `base` 와 `a0` 에 **똑같이** 찍혀 뺄셈에서 정확히 사라진다.
+       ⚠ 여기서부터는 `step()` 이 없고 `grab()`(=`draw()`)뿐이라 시계를 세워도 진행이 멈추지 않는다.
+       ⚠ 문턱(1%)은 한 글자도 안 건드린다 — 825·854 처방대로 고친 것은 «자의 눈금» 이다. */
+    /* ⚠ 세우는 것만으로는 모자라다 — **어디에 세우는지까지 고정**해야 한다.
+       `performance.now()` 가 돌려준 값에 세우면 오라가 «그 순간의 위상» 에 굳으므로
+       회차마다 다른 반지름에 굳는다(실측: 그렇게 세운 3회가 잉크 6836·6853·**6362** 로
+       두 회차만 붙었다). 상수에 세우면 sin 이 한 값이라 전 회차가 같은 그림을 잰다.
+       값은 «페이지가 뜬 뒤 한참» 이면 아무 상수나 되고(경과시간을 보는 연출은 전부 끝난 쪽으로
+       굳는다), 1e6 은 그 조건을 만족하는 임의의 고정값이다. */
+    const T0 = 1e6;
+    performance.now = () => T0;
     const base = grab();
 
     /* 층 분해 — soft(후광) / hard(본체) / spec(하이라이트)
@@ -124,7 +175,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
                           ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 });
       clearFx(); shots.push(mk());              const a0 = grab();   /* r1 — 한 겹 */
       clearFx(); shots.push(mk(), mk());        const a2 = grab();   /* r2 — 두 겹 */
-      let hard = 0, sp2 = 0;
+      let hard = 0, sp2 = 0, mm = 0;            /* mm = 잉크 안 «가장 흰 화소»(min(r,g,b) 최댓값) */
       const m = new Uint8Array(bw * bh);        /* 잉크 전체 */
       const hd = new Uint8Array(bw * bh);       /* 본체 */
       const sf = new Uint8Array(bw * bh);       /* 후광 */
@@ -143,6 +194,10 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
         al = al < 0 ? 0 : (al > 1 ? 1 : al);
         if (al >= A_BODY) { hd[p] = 1; hard++; } else sf[p] = 1;
         if (a0[i] >= 232 && a0[i + 1] >= 232 && a0[i + 2] >= 232) sp2++;
+        /* 855 — 문턱(232)을 «넘었나» 만 세면 흔들릴 때 «왜» 를 못 말한다. 봉우리 자체를 같이 찍는다. */
+        const mn = a0[i] < a0[i + 1] ? (a0[i] < a0[i + 2] ? a0[i] : a0[i + 2])
+                                     : (a0[i + 1] < a0[i + 2] ? a0[i + 1] : a0[i + 2]);
+        if (mn > mm) mm = mn;
       }
       /* 본체 바깥 = 테두리에서 «본체가 아닌» 화소를 타고 들어간 영역 */
       const out = new Uint8Array(bw * bh);
@@ -166,7 +221,8 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
         if (hd[p]) { hx += x; hy += y; }
       }
       const ink = soft + hard;
-      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2,
+      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, mm,
+                   col: sp.col, r: sp.r === undefined ? null : sp.r,
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
                    fSpec: +(sp2 / Math.max(1, ink)).toFixed(4) };
       clearFx();
@@ -180,14 +236,20 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
     console.log('  [표] 종별 층 분해 (ink = soft + hard · f = 비율)\n');
     console.log('   ' + '종'.padEnd(9) + 'sh'.padEnd(10) + 'ink'.padStart(7) +
                 'soft'.padStart(8) + 'hard'.padStart(8) + 'spec'.padStart(7) +
-                'fSoft'.padStart(8) + 'fSpec'.padStart(8));
+                'fSoft'.padStart(8) + 'fSpec'.padStart(8) +
+                'mm'.padStart(5) + 'col'.padStart(10) + 'r'.padStart(6));
     for (const id of ids) {
       const r = out.rows[id];
       console.log('   ' + id.padEnd(9) + r.sh.padEnd(10) + String(r.ink).padStart(7) +
                   String(r.soft).padStart(8) + String(r.hard).padStart(8) +
                   String(r.spec).padStart(7) +
-                  r.fSoft.toFixed(3).padStart(8) + r.fSpec.toFixed(4).padStart(8));
+                  r.fSoft.toFixed(3).padStart(8) + r.fSpec.toFixed(4).padStart(8) +
+                  /* 855 — «문턱을 넘었나» 옆에 «봉우리가 얼마인가 · 무엇을 그렸나» 를 같이 찍는다.
+                     sp2 만 보면 흔들릴 때 «자가 못 봤다» 와 «그림이 안 나왔다» 를 못 가른다. */
+                  String(r.mm).padStart(5) + ('' + r.col).padStart(10) +
+                  (r.r === null ? '–' : String(r.r)).padStart(6));
     }
+    console.log('   (mm = 잉크 안 가장 흰 화소 min(r,g,b) · col/r = 그 종의 첫 발 규격 — 855)');
     console.log('');
 
     const noSoft = ids.filter(i => out.rows[i].fSoft < 0.12);
