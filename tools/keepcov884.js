@@ -176,6 +176,17 @@ async function runKeep(keep, opts) {
   } finally { await b.close(); }
 }
 
+/* 표본 열(`rows`)을 **성긴 격자**로 다시 읽는다 — `step` ms 간격 · 위상 `offset`.
+ * 873 의 `burn` 과 같은 «자 자신의 결함을 재는 손잡이» 다(제품과 무관): 옛 자가 왜 흔들렸는지를
+ * 반복 실행이 아니라 **결정적으로** 보인다(`probe884` [3]·[4] · `verify884` [R]).
+ * ⚠ `runKeep(..., {step:1})` 로 뜬 1ms 표본에서만 뜻이 있다(성긴 열을 더 성기게 읽으면 칸이 빈다). */
+function grid(rows, step, offset) {
+  const r = rows.filter(x => x.T % step === (offset % step));
+  const v = r.map(x => x.num);
+  return { n: r.length, max: v.length ? Math.max(...v) : 0,
+           n05: r.filter(x => x.num >= 0.05).length, n25: r.filter(x => x.num >= 0.25).length };
+}
+
 /* 고정 시드 여덟 판을 같은 자로 굴려 «판마다» 와 «판을 가로지른» 값을 낸다.
  * 판정은 **최솟값**으로 한다 — «어느 판에서도 덮인다» 가 물어야 할 문장이기 때문이다
  * (평균은 한 판이 0 이어도 초록이 될 수 있다). */
@@ -201,4 +212,4 @@ async function sweep(keep, opts) {
   };
 }
 
-module.exports = { runKeep, sweep, digest, SEED, SEEDS, STEP, CARD, BTN };
+module.exports = { runKeep, sweep, grid, digest, SEED, SEEDS, STEP, CARD, BTN };
