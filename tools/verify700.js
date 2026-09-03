@@ -193,11 +193,17 @@ function preTree() {
        상변이 내려가면 그만큼 짧아진다). 값을 둘 다 적어야 «높이가 안 줄었다» 는 거짓이 안 통과한다.
      ⚠ **바(#rwMulBar) 자신은 이 표에 없다** — [C] 는 «바를 얹느라 89 를 밀지 않았나» 를 묻는
        항이라 바는 애초에 대상이 아니다. 그 약속은 위 [B1]~[B6] 이 따로 지킨다. */
+  /* 3회차 [F1] 이 격자를 아래로 내리면서 이동이 늘었다 — 긴 세 프레임에서 격자·상인방·받침·
+     바닥·계단이 **같은 양**만큼 내려간다(gridt = lintelt = floort = groundt, 그리고 아래에서
+     역산하는 요소는 높이가 그만큼 준다). 계단(steps)만 84 의 정수배로 끊기므로 값이 다르다. */
   const ALLOW813 = {
     1600: { gridt: 20, capt: 12, floort: 20, floorh: -20, groundt: 20, groundh: -20 },
-    1920: { capt: 29.23, lintelt: 6 },
-    2280: { capt: 50.75, lintelt: 6 },
-    2600: { capt: 50.75, lintelt: 6 },
+    1920: { capt: 29.23, lintelt: -10.03, gridt: -10.03, floort: -10.03, floorh: 10.03,
+            groundt: -10.03, groundh: 10.03, stepsh: -0.02 },
+    2280: { capt: 50.75, lintelt: 67.95, gridt: 67.95, floort: 67.95, floorh: -67.95,
+            groundt: 67.95, groundh: -67.95, stepst: 84, stepsh: -84 },
+    2600: { capt: 50.75, lintelt: 151.66, gridt: 151.66, floort: 151.66, floorh: -151.66,
+            groundt: 151.66, groundh: -151.66, stepst: 168, stepsh: -168 },
   };
   {
     const pre = preTree();
