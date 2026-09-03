@@ -21,6 +21,16 @@
  *   ⓕ 검산   — 1600 의 배치는 **이미 띠 한가운데**다(391 이 세운 자): 위 15 ↔ 아래 16.
  *              그리고 **1920 에서도 덮는다**(`.bls-x` 11px) — 덮임이 감점이면 그 화면이 먼저 빨개진다.
  *
+ * ⚑⚑ 정오표(작업 848, 2026-09-03) — **ⓐ 의 «164» 와 ⓕ 의 «띠 한가운데» 는 등재 당시의 앵커 모드에
+ *    매인 값이고, 그 모드가 그 뒤 «두 번» 갈렸다**(짝인 `tools/verify414.js` 머리말의 같은 정오표 · 근거는
+ *    `tools/probe848.js`). 블록 1427 은 세 걸음 내내 **불변** — 움직인 것은 크기가 아니라 상변이다:
+ *      ① 하단 정렬(754 이전 · 이 자가 굳힌 값) 상변 **157** · 덮임 **164** · 위 15/아래 16
+ *      ② 중앙(754 7회차 — ① 을 «하단 정렬이라 결함» 이라고 못박고 되돌렸다) 상변 141.5 · 덮임 148.5
+ *      ③ 상단 가드(821 — .shortf 경계의 71.5px 계단을 없앴다) 상변 **126** · 덮임 **133** ← 지금
+ *    ⇒ 둘은 서로 다른 결함이 아니라 **한 값(상변)의 두 얼굴**이라 같이 겨눈다. «띠 한가운데»(391 자)는
+ *      754·821 이 각자의 게이트와 함께 폐기한 규약이므로 그 자를 되살리면 **821 을 되돌리라는 뜻**이 된다.
+ *      자리는 비우지 않는다(333 처방) — 재현기이므로 ① 의 값도 **산수로** 같이 남긴다.
+ *
  * ⚠ 이 자는 **«수리 전» 사본**에서도 돈다 — 351 1회차가 넣은 아래 가드 회수
  *   (`padding-bottom:clamp(16px, …, 146px)`)를 그 전의 고정 `146px` 로 되돌린 임시 파일을 만든다.
  *   갈아 끼울 자리를 못 찾으면 조용히 초록이 되지 않고 그렇게 말하고 죽는다(neg279 처방).
@@ -36,6 +46,10 @@ const NEW = '#blsw{padding-bottom:clamp(16px, calc(var(--frameh) - 1696px), 146p
 const OLD = '#blsw{padding-bottom:146px}';
 
 const INK = 142;      /* HUD 잉크 끝 = `.pedge` 하변 (351 4회차가 못박은 축) */
+/* 848 — `#blsw{padding-top:126}` = 짧은 기기에서 HUD 를 파고들지 않게 막는 **가드**(index.html 15096 ·
+   verify351 [1-g][1-h] 가 같은 값을 쓴다). 821 이 .shortf 의 블록 상변을 여기에 못박았다. */
+const GUARD_TOP = 126;
+const PB_SHORT = 16;  /* .shortf 아래 가드(351 ①) — 정오표 산수의 입력 */
 const TABH = 180;     /* 앱 탭바 높이 (390 이 못박은 띠의 아래끝) */
 
 let pass = 0, fail = 0;
@@ -115,6 +129,13 @@ async function measure(browser, file, H) {
      ⚠ 스트립은 `border-radius:20px` 이라 **아래 두 코너**에서는 탭바가 그대로 비친다 — 그건 덮인 자리가
      아니다. 그래서 «전체 띠» 와 «코너를 뺀 안쪽» 을 따로 센다(안쪽이 0 이어야 «가려지는 글자 0» 이다). */
   if (m.coverPromo > 0) {
+    /* ⚠ 848 수리 — 바로 위 ⓒ 의 «탭을 실제로 클릭» 은 딤이 그 클릭을 먹어 **팝업을 닫는다**
+       (`m.tabClickClosed` 가 세 프레임 모두 true 다). 그 상태로 이 띠를 찍으면 탭바를 숨겼을 때
+       **띠 전체**가 바뀌어(126616px = 클립 전부) «가려지는 글자 0» 이 거짓 빨강이 된다.
+       ⇒ 찍기 전에 팝업을 다시 연다. 아래 ⓒ «나갈 길» 절이 하던 재개방을 이 앞으로 당긴 것이고,
+       재는 값 자체는 한 글자도 안 바꿨다(순서만 고친다). */
+    await page.evaluate(() => { const w = document.getElementById('blsw'); if (!w.classList.contains('on')) w.classList.add('on'); });
+    await page.waitForTimeout(200);
     const R = 20;
     const clip = { x: Math.round(m.promo.l), y: Math.round(m.tabTop), width: Math.round(m.promo.w), height: Math.round(m.promo.b - m.tabTop) };
     const a = await page.screenshot({ clip });
@@ -197,9 +218,16 @@ async function measure(browser, file, H) {
 
   console.log('\n── 판정 ──────────────────────────────────────────────────────────');
 
-  /* ⓐ 등재문 재현 */
-  ok(Math.round(A[1600].coverPromo) === 164,
-    `[ⓐ 1600] 등재문 «프로모가 탭바를 164px 덮는다» 재현 — 실측 ${r1(A[1600].coverPromo)} (가로 ${r1(A[1600].promo.w)})`);
+  /* ⓐ 등재문 재현 — 848 재겨눔(위 정오표). 상수를 새 상수로 갈지 않고 **입력에서 산수로** 낸다:
+     덮임 = 상변 + 블록 − 탭바 상변. 등재문의 164 는 ① 하단 정렬(상변 = frameH − 아래 가드 − 블록)의 값이다. */
+  const blk1600 = A[1600].flowBot - A[1600].flowTop;
+  const topBottomAlign = A[1600].frameH - PB_SHORT - blk1600;
+  ok(A[1600].coverPromo > 0
+     && Math.round(A[1600].coverPromo) === Math.round(A[1600].flowTop + blk1600 - A[1600].tabTop)
+     && Math.round(topBottomAlign + blk1600 - A[1600].tabTop) === 164,
+    `[ⓐ 1600] 덮임은 실재하고 «상변 + 블록 − 탭바» 산수 그대로다 — 실측 ${r1(A[1600].coverPromo)} `
+    + `(상변 ${r1(A[1600].flowTop)} + 블록 ${r1(blk1600)} − 탭바 ${r1(A[1600].tabTop)}) `
+    + `· 등재문의 164 는 ① 하단 정렬(상변 ${r1(topBottomAlign)}) 시절 값 (가로 ${r1(A[1600].promo.w)} · 정오표)`);
   ok(Math.round(A[2280].coverAny) === 0,
     `[ⓐ 2280] 기준 프레임은 한 자식도 탭바를 안 덮는다 (${r1(A[2280].coverAny)})`);
 
@@ -211,10 +239,13 @@ async function measure(browser, file, H) {
   ok(block - band > 100,
     `[ⓔ] 164 를 «어딘가에서 뺀다» = 레퍼런스 절대값(.bls 1157 / 스트립 249)을 ${r1((block - band) / 1157 * 100)}% 깎는 것`);
 
-  /* ⓕ 검산 1 — 이미 띠 한가운데다(391 이 세운 자) */
+  /* ⓕ 검산 1 — 848 재겨눔. «띠 한가운데»(391 자)는 754·821 이 폐기한 규약이라, 지금 물어야 할 것은
+     «블록 상변이 **상단 가드 126** 에 붙는가»(821 규약 — .shortf 경계 계단 0)이고 대가는 «아래로 안 넘침» 이다. */
   const gTop = A[1600].flowTop - INK, gBot = A[1600].frameH - A[1600].flowBot;
-  ok(Math.abs(gTop - gBot) <= 2,
-    `[ⓕ 1600] 블록은 이미 «띠(잉크 142 ↔ 프레임 1600) 한가운데» — 위 ${r1(gTop)} ≈ 아래 ${r1(gBot)} (391 자)`);
+  ok(Math.round(A[1600].flowTop) === GUARD_TOP && gBot >= 0,
+    `[ⓕ 1600] 블록 상변이 **상단 가드 ${GUARD_TOP}** 에 붙고(821 규약) 아래로 안 넘친다 — `
+    + `상변 ${r1(A[1600].flowTop)} · 아래 여유 ${r1(gBot)} ≥ 0 `
+    + `(참고: 폐기된 391 «띠 한가운데» 자로는 위 ${r1(gTop)} / 아래 ${r1(gBot)})`);
   /* ⓕ 검산 2 — 1920 도 덮는다 */
   ok(A[1920].coverAny > 0,
     `[ⓕ 1920] 짧지 않은 프레임(shortf ${A[1920].shortf})도 탭바를 덮는다 — ✕ ${r1(A[1920].coverX)}px ⇒ «덮임» 은 1600 이 새로 만든 것이 아니다`);
