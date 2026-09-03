@@ -1796,6 +1796,12 @@ function writeReport(rep) {
      바뀌는 것은 «앞으로의 기울기» 뿐이다: cross = days + (목표 − v(days)) / 지속기울기. */
   const tailSplit = (pol, mode, wOpt) => {
     const runs = rep.policies[pol];
+    /* ⚑ 863 — **단일 정책 표(`--policy=diligent` 등)에서는 한쪽이 통째로 없다.**
+       옛 `statOf` 는 `Object.keys(rep.policies)` 만 돌아 없는 정책을 물은 적이 없지만,
+       863 의 `rstatOf` 는 두 정책을 **이름으로** 부르므로 여기서 막아야 한다
+       (안 막으면 `for (const r of undefined)` 로 표 인쇄가 통째로 죽는다 —
+       `verify494` 가 픽스처 실행 넷을 그렇게 잃어 91/99 로 빨개졌다). */
+    if (!runs || !runs.length) return null;
     const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
                    : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));
     const span = rep.days - Math.max(1, rep.days - W);
@@ -2373,7 +2379,9 @@ function writeReport(rep) {
         L.push(`_규약 ⓐ W ≤ ${rep.days - 1}(1일차 1회성 지급을 안 문다) ∧ ⓑ 정책 대조 정상성 ≤ ${(100 * TAIL_STAT_MAX).toFixed(0)}% — 그중 가장 큰 W._`
           + ` _가장 좁은 후보 W${WCAND[0]} 는 비교 짝으로만 쓰고 **채택하지 않는다**(⃠ · 863 — 맥박 축을 ${WCAND[0]}칸으로 재는 창은 위상을 잰다)._`
           + (pk && pk.pick ? ` **채택 W${pk.pick.w}**(대조 정상성 ${(100 * pk.pick.st).toFixed(1)}% · 문턱까지 여유 ${(100 * (TAIL_STAT_MAX - pk.pick.st)).toFixed(1)}%p · 장부 정상성 관측 ${pk.pick.st0 == null ? '—' : (100 * pk.pick.st0).toFixed(1) + '%'}).`
-                           : ' ⚠ **규약이 창을 못 골랐다** — 후보가 전부 문턱 밖이다(자를 결과에 맞추지 않기 위해 고르지 않는다).'));
+                           : (Object.keys(rep.policies).length < 2
+                                ? ' ⚠ **정책이 하나라 대조를 못 잰다 — 창을 안 고른다**(863). 단일 정책 표는 애초에 ④ 비를 못 내므로 §0 판정에 쓰지 않는다 — ⓑ\' 관측 칸만 읽어라.'
+                                : ' ⚠ **규약이 창을 못 골랐다** — 후보가 전부 문턱 밖이다(자를 결과에 맞추지 않기 위해 고르지 않는다).')));
         L.push('');
       }
     }
