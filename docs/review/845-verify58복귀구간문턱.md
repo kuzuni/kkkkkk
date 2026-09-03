@@ -99,7 +99,9 @@ lim = max( FLOOR 105 , 0.70 × 기대 실효 구간(선언 파생 153.6ms) = 107
 
 - `node tools/verify845.js` **9/9 PASS** (신설)
 - `node tools/verify58.js` **33/33 PASS** — 항 하나 늘었다([19-b] 전제항 신설). 동시 4실행에서도 4/4 초록.
-- 회귀(무수정): §8 표
+- 회귀(무수정): `verify732` **15/15 PASS**(같은 짝 `verify58` 의 되돌림 시험 — 주입 8축) ·
+  `probe844` **17/17 PASS** · `verify93` **33/33 PASS**
+- `node tools/verifyProgress.js` **PROGRESS OK**(§1~§5 빨강 0건)
 - `node tools/smoke.js` **SMOKE PASS**
 - 제품 `index.html` **0줄** · 레이아웃 Δ0px · 밸런스 0줄
 
