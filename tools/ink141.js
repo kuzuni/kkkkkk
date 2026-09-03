@@ -23,16 +23,22 @@ const JSON_AT = (() => { const i = process.argv.indexOf('--json'); return i > 0 
    두 번 재면 답이 3px 씩 갈렸다. 3× 로 찍으면 ±0.17px 이라 그 증폭을 견딘다. */
 const DSF = (() => { const i = process.argv.indexOf('--dsf'); return i > 0 ? +process.argv[i + 1] : 3; })();
 
-/* cap22.js 와 같은 세이브 — 5행 전부 진행 중(회색 버튼), 레퍼런스와 같은 상태 */
+/* cap22.js 와 같은 세이브 — 5행 전부 진행 중(회색 버튼), 레퍼런스와 같은 상태.
+   ⚑ 851(2026-09-03) — 799 가 진행을 «누적 절대값»(`questProg = q.get()`) 으로, 목표를 등차
+   (`step × (s+1)`) 로 바꾼 뒤로 기준선 `S.quest[].base` 는 **읽는 곳이 0곳**이다. 옛 표본은
+   그 base 로 짜여 있어 5행 중 4행이 진행 100% · 초록 활성이었다(레퍼런스와 정반대).
+   ⇒ 진행률은 **카운터와 s 두 값**으로 만든다. base 를 되살리는 방향으로 고치지 마라(799 금지). */
 const SAVE = {
-  totalKills: 1000, best: 12, summons: 500, upgrades: 3000,
+  totalKills: 44, best: 6, summons: 15, upgrades: 69,
   gold: 5e7, dia: 12000,
+  own: { slash: { n:0, l:1 }, shuri: { n:0, l:1 }, stone: { n:0, l:1 },
+         curve: { n:0, l:1 }, multi: { n:0, l:1 }, orbit: { n:0, l:1 } },
   quest: {
-    summon: { s: 3, base: 500 - 6 },
-    upg:    { s: 4, base: 3000 - 70 },
-    kill:   { s: 3, base: 1000 - 50 },
-    stage:  { s: 2, base: 0 },
-    coll:   { s: 1, base: 0 }
+    summon: { s: 1 },   /* goal 15×2  =  30 · 진행 15 (50%) */
+    upg:    { s: 12 },  /* goal 10×13 = 130 · 진행 69 (53%) */
+    kill:   { s: 1 },   /* goal 100×2 = 200 · 진행 44 (22%) */
+    stage:  { s: 6 },   /* goal 1×7   =   7 · 진행 6  (86%) */
+    coll:   { s: 1 }    /* goal 5×2   =  10 · 진행 6  (60%) */
   }
 };
 
@@ -128,9 +134,10 @@ async function inkOne(page, it) {
   const page = await ctx.newPage();
   await page.goto(URL);
   await page.waitForTimeout(1000);
+  /* 부팅 뒤 자동 전투가 카운터를 밀어 진행률이 실행마다 흔들린다 — 팝업을 열기 직전에 못박는다(851) */
   await page.evaluate(() => {
-    S.quest.stage.base = S.best - 4;
-    S.quest.coll.base  = Math.max(0, ownedTotal() - 5);
+    window.step = () => {};
+    S.totalKills = 44; S.best = 6; S.summons = 15; S.upgrades = 69;
     save();
   });
   await page.evaluate(() => document.querySelector('.side .ibtn[data-pop="quest"]').click());
