@@ -230,6 +230,29 @@ async function openAt(browser, H) {
   ok(C.stroke === 8,
     '[4-e] ★ 2회차 — 검정 테 8px(같은 패널의 카드·아이콘 액자·보유 바와 통일 — 1회차 5px 는 37.5% 얇았다)',
     C.stroke + 'px');
+  /* ⚑ 849 이관(2026-09-03) — [4-e] 는 **초록 상태 하나**만 재고 있었다. 그래서 2회차가 `.tb` 를
+     8 로 올릴 때 같은 버튼의 `.tb.no`(재화 부족·회색)를 5 로 두고 간 것을 **한 번도 못 봤다**
+     (849 가 828 의 예산 흔들림으로 뒤늦게 찾았다). 항을 지우거나 무르게 풀지 않고 **상태 축을 넓힌다** —
+     이 항의 뜻(«이 버튼의 검정 테는 패널 규약 8 이다»)은 상태마다 갈릴 이유가 없다.
+     클래스만 껐다 켜는 CSS 질문이라 게임 상태를 안 흔든다(뒤 절에 부작용 0). */
+  const STROKE2 = await page.evaluate(() => {
+    const btn = document.querySelector('#trTemper .tr-tp .tb');
+    const read = () => {
+      const bs = getComputedStyle(btn).boxShadow.replace(/rgba?\([^)]*\)/g, '');
+      const part = bs.split(/,(?![^(]*\))/).find(t => /inset/.test(t)) || '';
+      const n = (part.match(/(-?[\d.]+)px/g) || []).map(parseFloat);
+      return n.length >= 4 ? n[3] : null;
+    };
+    const had = btn.classList.contains('no');
+    btn.classList.add('no');   const no = read();
+    btn.classList.remove('no'); const on = read();
+    if (had) btn.classList.add('no');
+    return { no, on };
+  });
+  ok(STROKE2.no === 8 && STROKE2.on === 8,
+    '[4-e2] ★ 849 — 그 8 은 **두 상태 모두**다(`.tb` ↔ `.tb.no` 회색). 2회차가 `.no` 를 5 로 두고 갔고'
+    + ' 그 6px 차이가 828 에서 «회색으로 넘어가면 글자가 1.2% 흔들린다» 로 나왔다',
+    `초록 ${STROKE2.on}px · 회색 ${STROKE2.no}px`);
 
   /* ══ [5] 값은 안 죽었다 ═════════════════════════════════════════════ */
   console.log('\n=== [5] 지운 것은 «설명» 이고 «값» 이 아니다 — 버튼이 구간을 따라간다 ===');

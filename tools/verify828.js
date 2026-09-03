@@ -14,7 +14,8 @@
  *                  ⚠ 이 버튼은 `text-align:center` 라 «남는 자리» 로 방을 재면 **거울상 래칫**이
  *                    생긴다(클램프 성공 → 숫자가 가운데로 모임 → 방이 커짐 → 클램프 풀림).
  *   §5 두 경로   — 통짜 렌더(`renderTemper`)와 홀드 갱신(`liveTemper`)이 같은 클램프를 만든다(297).
- *   §6 배수·상태 — ×1000(701 `temperPlan`)과 `.no`(링 5px)에서도 예산을 지킨다.
+ *   §6 배수·상태 — ×1000(701 `temperPlan`)과 `.no`(회색)에서도 예산을 지킨다.
+ *        ⚑ 849 이관: `.no` 의 링은 5 가 아니라 **8** 이다(두 상태 통일) — [6-e]·[6-e2]·[6-e3].
  *   §7 프레임    — 9:19(2280)와 9:13.3(1600)에서 같은 값이다(가로 기하는 프레임 무관).
  *   §R 되돌림 시험 — 클램프를 무력화하면 **빨개진다**(§2 가 공짜로 초록인 항이 아님을 못박는다).
  *                  구조 가드(`white-space:nowrap`)는 클램프가 없어도 «숫자가 버튼 밖으로 내려가는»
@@ -274,7 +275,7 @@ async function openAt(browser, H) {
   }
 
   /* ══ §6 배수·상태 ═══════════════════════════════════════════════════ */
-  blk('§6 배수(701 ×1000)와 `.no`(링 5px) 상태에서도 예산을 지킨다');
+  blk('§6 배수(701 ×1000)와 `.no`(회색 · 849 뒤로 링 8) 상태에서도 예산을 지킨다');
   await page.evaluate('window.__setDigits(9, 1000)');
   const M = await ev(() => window.__tb(0));
   if (!M || M.__err) ok(false, '§6 배수 측정 실패');
@@ -286,24 +287,66 @@ async function openAt(browser, H) {
     ok(M.lines === 1 && M.numBot <= M.btnH + 0.5, '[6-c] ×1000 라벨도 한 줄·상자 안이다',
        'y' + M.numTop + '..' + M.numBot);
   }
-  const N = await ev(() => {
-    /* 재화를 0 으로 만들어 `.no`(회색 · 링 5px)로 만든다. 라벨은 «다음 1레벨» 값이다(701 주석). */
+  /* ⚑ 849 이관(2026-09-03) — 아래 셋은 원래 «[6-e] `.no` 의 링은 5px 다» 한 항이었다.
+     849 가 그 5 를 8 로 통일했으므로 **자리를 비우지 않고 방향만 돌린다**(333 처방).
+     ⚠ 옛 항이 실제로 지키던 뜻은 «5» 라는 수가 아니라 **«클램프가 링을 상수로 안 박고 읽는다»** 였다 —
+     그 뜻은 [6-e3] 으로 옮겼다. [6-e] 만 뒤집고 끝내면 클램프가 480 을 손으로 박아도 초록이라
+     849 가 고친 것(«예산이 상태를 안 탄다»)을 게이트가 못 지킨다.
+     라벨 문자열은 «다음 1레벨 비용» 이라 `S.tstone`(보유량)과 무관하다 — 그래서 alloc 을 고정한 채
+     보유량만 흔들면 **같은 글자**의 두 상태를 나란히 잴 수 있다(수리 전 fs 42.53 ↔ 41.59). */
+  const setStone = st => ev(`(() => {
     const s = 1414213500 / 100;
     S.temper = { alloc: { atk: s * 100, hp: s * 100, regen: s * 100 } };
-    S.tstone = 0; trMul = 1;
+    S.tstone = ${st}; trMul = 1;
     const w = document.getElementById('trTemper'); if (w) delete w.dataset.sig;
     renderTemper();
     return window.__tb(0);
-  });
-  if (!N || N.__err) ok(false, '§6 `.no` 측정 실패: ' + (N && N.__err));
+  })()`);
+  const N  = await setStone('0');                      /* 재화 0 ⇒ `.no`(회색) */
+  const NY = await setStone('1e30');                   /* 같은 라벨 · 재화 충분 ⇒ 초록 */
+  if (!N || N.__err || !NY || NY.__err) ok(false, '§6 `.no` 측정 실패: ' + ((N && N.__err) || (NY && NY.__err)));
   else {
     console.log('       .no «' + N.txt + '» 링 ' + N.ring + ' ⇒ 예산 ' + N.room
       + ' · 잉크 ' + N.labelInk + ' · fs ' + N.fs);
-    ok(N.no === true, '[6-d] 재화 0 이면 버튼이 `.no` 다', String(N.no));
-    ok(N.ring === 5, '[6-e] `.no` 의 링은 5px 다 — 예산이 상태를 탄다(그래서 상수로 안 박는다)',
+    console.log('       초록 «' + NY.txt + '» 링 ' + NY.ring + ' ⇒ 예산 ' + NY.room
+      + ' · 잉크 ' + NY.labelInk + ' · fs ' + NY.fs);
+    ok(N.no === true && NY.no === false, '[6-d] 재화 0 이면 버튼이 `.no` 다(충분하면 아니다)',
+       '.no ' + N.no + ' / 초록 ' + NY.no);
+    ok(N.ring === 8, '[6-e] ★ 849 — `.no` 의 링도 8 이다(686 이 `.tb` 만 8 로 올리고 두고 간 자리)',
        String(N.ring));
+    ok(N.txt === NY.txt && N.room === NY.room && N.room === 480 &&
+       Math.abs(N.fs - NY.fs) <= 0.01 && Math.abs(N.labelInk - NY.labelInk) <= 0.5,
+       '[6-e2] ★ 849 — **예산이 상태를 안 탄다**: 같은 라벨이 두 상태에서 같은 예산·같은 글자 크기다'
+       + '(수리 전 480 ↔ 486 · fs 42.53 ↔ 41.59 = 1.2% 흔들림)',
+       `예산 ${N.room} ↔ ${NY.room} · fs ${N.fs} ↔ ${NY.fs} · 잉크 ${N.labelInk} ↔ ${NY.labelInk}`);
     ok(N.labelInk <= N.room + 0.5, '[6-f] `.no` 에서도 라벨이 예산 안이다',
        N.labelInk + ' ≤ ' + N.room);
+  }
+  /* [6-e3] 되돌림 시험 — 링을 «두 상태 어느 쪽도 아닌» 제3의 값으로 흔들어, 클램프가 그 값을
+     **읽어서** 예산을 다시 푸는지 직접 묻는다. 480 을 손으로 박은 클램프는 여기서 빨개진다. */
+  const RING = await ev(() => {
+    const btn = document.querySelector('.tr-tp.k0 .tb');
+    const keep = btn.style.boxShadow;
+    btn.style.boxShadow = 'inset 0 0 0 24px #141414, 0 5px 0 #3F7412';
+    document.querySelector('.tr-tp.k0 .tbn').style.fontSize = '';
+    temperFitBtns();
+    const wide = window.__tb(0);
+    btn.style.boxShadow = keep;
+    document.querySelector('.tr-tp.k0 .tbn').style.fontSize = '';
+    temperFitBtns();
+    return { wide, back: window.__tb(0) };
+  });
+  if (!RING || RING.__err) ok(false, '[6-e3] 링 흔들기 실패: ' + (RING && RING.__err));
+  else {
+    /* 예산은 «버튼 안쪽 폭(clientWidth 496) − 링×2» 다 — 480 에서 빼는 것이 아니다(496 − 48 = 448). */
+    ok(RING.wide.ring === 24 && RING.wide.room === 448 &&
+       RING.wide.labelInk <= RING.wide.room + 0.5,
+       '[6-e3] ★ 828 의 뜻(이관) — 클램프는 링을 **읽는다**: 링을 24 로 흔들면 예산이 448 로 따라오고'
+       + ' 라벨도 그 안으로 다시 끊긴다(480 을 손으로 박았으면 여기서 빨갛다)',
+       `링 ${RING.wide.ring} ⇒ 예산 ${RING.wide.room} · 잉크 ${RING.wide.labelInk}`);
+    ok(RING.back.ring === 8 && RING.back.room === 480,
+       '[6-e4] 원복하면 8 · 480 으로 돌아온다(사본이 트리를 안 더럽혔다)',
+       `링 ${RING.back.ring} ⇒ 예산 ${RING.back.room}`);
   }
 
   /* ══ §R 되돌림 시험 ═════════════════════════════════════════════════ */
