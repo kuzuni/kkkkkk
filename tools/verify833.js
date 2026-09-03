@@ -78,10 +78,15 @@ const DUMP = `(() => {
     const rbs = ['rb1', 'rb2'].map((k) => {
       const rb = c.querySelector('.' + k); if (!rb) return null;
       const u = rb.querySelector('u');
-      return { rb: B(rb), u: B(u), utop: num(getComputedStyle(u).top) };
+      return { rb: B(rb), u: B(u), utop: num(getComputedStyle(u).top), b: B(rb.querySelector('b')) };
     });
+    const stt = c.querySelector('.stt'), sti = stt && stt.querySelector('i');
     return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb, pil,
-      frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs };
+      frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs,
+      stt: B(stt), sttI: B(sti),
+      sttITop: sti ? num(getComputedStyle(sti).top) : null,
+      sttIFs: sti ? num(getComputedStyle(sti).fontSize) : null,
+      sttILh: sti ? num(getComputedStyle(sti).lineHeight) : null };
   });
 })()`;
 
@@ -160,11 +165,61 @@ const DUMP = `(() => {
     ok(up >= 50.5 && up <= 52.5, `[6-c] ${c.id} 카드 위로 솟는 양 51.4~52.2(ref)`, `${p2(up)}`);
   }
 
+  blk('§7 리본2 우단 — ref 두 카드가 같은 자리(529.2)다');
+  /* 자 `tools/scan833b.py` (환산 px · 리본 왼끝에서 걸어 나가 처음 «카드 몸통색» 이 되는 자리):
+       ref 배너 리본2 **529.2** · ref 불릿 리본2 **529.2**(소수점까지 같다) ↔ 수리 전 520.0 / 525.0.
+       리본1 은 ref 자신이 430.2 ↔ 446.7 로 갈리므로 **안 건드린다**(A3-ⓑ).
+     제비꼬리가 마지막 열을 덮으므로 «보이는 우단 = 상자 우단 − 1» ⇒ 상자 530 이 곧 529. */
+  for (const c of cards) {
+    const r2 = c.rbs[1];
+    ok(Math.abs((r2.rb.x + r2.rb.w - c.card.x) - 530) < 0.6,
+      `[7-a] ${c.id} 리본2 우단 = 530 (보이는 529 ≈ ref 529.2)`,
+      `${p2(r2.rb.x + r2.rb.w - c.card.x)}`);
+    const r1 = c.rbs[0];
+    ok(Math.abs((r1.rb.x + r1.rb.w - c.card.x) - (c.ban ? 424 : 350)) < 0.6,
+      `[7-b] ${c.id} 리본1 우단은 **안 건드렸다** (${c.ban ? 424 : 350})`,
+      `${p2(r1.rb.x + r1.rb.w - c.card.x)}`);
+    /* ⚑ `--gx` 는 리본 오른끝 기준이라 w2 만 늘리면 판·수량이 같이 밀린다 —
+       g2 를 같은 Δ 만큼 키워 붙박은 것을 여기서 못박는다(667 [F3]·[F4] 와 같은 값). */
+    const bCx = r2.b.x + r2.b.w / 2 - c.card.x;
+    ok(Math.abs(bCx - (c.ban ? 441.5 : 451.5)) < 1.5,
+      `[7-c] ${c.id} 리본2 금색 판 중심 Δ0 (667 [F3]/[F4] 자리 ${c.ban ? 441.5 : 451.5})`, `${p2(bCx)}`);
+    ok(Math.abs((r2.u.x + r2.u.w / 2) - (r2.b.x + r2.b.w / 2)) < 0.6,
+      `[7-d] ${c.id} 수량 중심 = 판 중심 (667 [G4] 규약 유지)`,
+      `${p2(r2.u.x + r2.u.w / 2 - r2.b.x - r2.b.w / 2)}`);
+  }
+
+  blk('§8 상태 탭 — 판은 그대로, 라벨만 내렸다');
+  /* 자 `tools/scan833b.py` (카드 상변 기준 환산 px · 잉크 bbox):
+       | | ref 배너 | ref 불릿 | 수리 전 | 수리 후 |
+       | 잉크 상변 | −29.8 | −32.5 | −39.0 | **−32.0** |
+       | 잉크 하변 |  −0.9 |  −3.6 |  −8.0 |  **−1.0** |
+       | 잉크 중심 | −15.4 | −18.1 | −23.5 | **−16.5** |
+       | 판이 솟은 양 | 54.5 | 55.2 | 56.0 | 56.0(무변경) |
+     ⇒ 1회차 2인 일치 3번의 두 갈래 중 **CY(«잉크가 7.7px 위»)가 맞고 CX(«판이 3.8~5.7 높다»)는
+     기각**이다(판 Δ +1.2 = +2.2%). 손잡이는 `.stt>i{top}` 하나. */
+  for (const c of cards) {
+    ok(c.sttITop === 16, `[8-a] ${c.id} 탭 라벨 top = 16 (수리 전 9)`, `${c.sttITop}`);
+    ok(c.sttIFs === 36 && c.sttILh === 40,
+      `[8-b] ${c.id} 라벨 서체 상수 불변 (36/40 — 잉크 오프셋이 이 둘에 매여 있다)`,
+      `${c.sttIFs}/${c.sttILh}`);
+    ok(c.sttI.y + c.sttI.h <= c.stt.y + c.stt.h + 0.6,
+      `[8-c] ${c.id} 라벨 줄상자가 탭 판 안 (넘치면 잘린다)`,
+      `${p2(c.sttI.y + c.sttI.h - c.stt.y)} ≤ ${p2(c.stt.h)}`);
+    ok(Math.abs((c.card.y - c.stt.y) - 56) < 0.6 && Math.abs(c.stt.h - 68) < 0.6,
+      `[8-d] ${c.id} 탭 판은 **안 건드렸다** (솟음 56 · 높이 68)`,
+      `${p2(c.card.y - c.stt.y)} / ${p2(c.stt.h)}`);
+  }
+  ok(new Set(cards.map(c => c.sttITop)).size === 1,
+    '[8-e] 세 카드가 한 부품 — 라벨 자리가 한 값', cards.map(c => c.sttITop).join(' / '));
+
   blk('§5 9:13.3(1600) — 카드 안 기하가 같다');
   const { page: p16, errs: e16 } = await open(browser, 1600);
   const c16 = await p16.evaluate(DUMP);
   const sig = (cs) => cs.map(c => [c.id, c.bdg.w, c.bdg.h, c.hdb.h, c.pil.h, c.pil.y - c.card.y,
-    ...c.rbs.map(r => r && r.utop)].join(',')).join('|');
+    ...c.rbs.map(r => r && r.utop),
+    /* 833 3회차 편입 — 리본2 우단·탭 라벨도 두 프레임에서 같아야 한다 */
+    ...c.rbs.map(r => r && p2(r.rb.x + r.rb.w - c.card.x)), c.sttITop].join(',')).join('|');
   ok(sig(c16) === sig(cards), '[5-a] 두 프레임 서명 동일',
     sig(cards) === sig(c16) ? '동일' : `${sig(cards)} ↔ ${sig(c16)}`);
   ok(e16.length === 0, '[5-b] 1600 콘솔 에러 0건', String(e16.length));
@@ -192,6 +247,35 @@ const DUMP = `(() => {
   ok(Math.abs(pb.pil.y + pb.pil.h - pb.card.y - 14) < 0.6,
     '[R4b] 그때도 **하변은 14 로 같다** — 이번 수리가 «아래를 안 건드렸다» 는 증거',
     `${p2(pb.pil.y + pb.pil.h - pb.card.y)}`);
+  /* 3회차 두 수리의 되돌림 짝 — 둘 다 CSS 로는 못 되돌린다(리본 폭은 인라인 style 이고
+     `--gx` 는 그 폭에 매여 있다) ⇒ 인라인 값을 직접 되돌려 넣는다. */
+  const back3 = await page.evaluate(() => {
+    document.querySelectorAll('.pvc').forEach((c) => {
+      const ban = c.classList.contains('ban1');
+      const r2 = c.querySelector('.rb2');
+      r2.style.width = (ban ? 521 : 526) + 'px';          // 833 3회차 전
+      r2.style.setProperty('--gx', (ban ? 34 : 23) + 'px');
+      c.querySelector('.stt>i').style.top = '9px';
+    });
+    const A = document.getElementById('app').getBoundingClientRect();
+    const B = e => { const r = e.getBoundingClientRect();
+      return { x: r.left - A.left, y: r.top - A.top, w: r.width, h: r.height }; };
+    return [...document.querySelectorAll('.pvc')].map((c) => {
+      const cr = B(c), r2 = c.querySelector('.rb2');
+      return { ban: c.classList.contains('ban1'),
+        rbR: +(B(r2).x + B(r2).w - cr.x).toFixed(2),
+        bCx: +(B(r2.querySelector('b')).x + B(r2.querySelector('b')).w / 2 - cr.x).toFixed(2),
+        iTop: +getComputedStyle(c.querySelector('.stt>i')).top.replace('px', '') };
+    });
+  });
+  ok(back3.every(c => Math.abs(c.rbR - 530) > 1),
+    '[R5] 리본2 폭을 521/526 으로 되돌리면 §7 [7-a] 가 빨개진다',
+    back3.map(c => c.rbR).join(' / '));
+  ok(back3.every(c => Math.abs(c.bCx - (c.ban ? 441.5 : 451.5)) < 1.5),
+    '[R5b] 그때도 **판 중심은 같다** — 3회차가 판을 «`--gx` 로 붙박았다» 는 증거(움직인 것은 우단뿐)',
+    back3.map(c => c.bCx).join(' / '));
+  ok(back3.every(c => c.iTop === 9),
+    '[R6] 탭 라벨을 top:9 로 되돌리면 §8 [8-a] 가 빨개진다', back3.map(c => c.iTop).join(' / '));
 
   blk('§Z 콘솔');
   ok(errs.length === 0, '[Z] 콘솔·페이지 에러 0건', String(errs.length));
