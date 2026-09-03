@@ -97,16 +97,20 @@ const FREEZE = () => {
 
   /* ⚑ 6회차 — 판이 **셋**이다. 5회차 채점은 «판 P(4회차) ↔ 판 A(5회차)» 를 나란히 놓아
      회수량을 두 비평가가 각자 잴 수 있었다(그 표가 5회차 절의 회수 표다). 이번 회차가 바꾼 것도
-     한 줄(`--burst-rx`)이므로 **직전 판(p5)** 을 같이 찍는다 — 안 찍으면 «가로가 열렸다» 를
-     비평가가 눈으로만 말하게 된다. `pre` 는 814 이전(원 결함)이라 계속 바닥 대조로 둔다. */
-  for (const kind of ['now', 'p5', 'pre']) {
+     한 줄(`--burst-rx`)이므로 **직전 판**을 같이 찍는다 — 안 찍으면 «가로가 열렸다» 를
+     비평가가 눈으로만 말하게 된다. `pre` 는 814 이전(원 결함)이라 계속 바닥 대조로 둔다.
+     ⚑ **8회차 — «직전 판» 이 옮겨졌다(p5 → p7).** 8회차가 바꾼 것은 알갱이가 아니라 **워시와
+       값 줄**(`--flash-keep`·`--flash-k`)이라, 회수량을 재려면 나란히 놓을 판이 «5회차 판» 이
+       아니라 **«7회차 판»**(= 지금의 알갱이 손잡이 그대로 · 워시 신고만 없는 상태)이다.
+       그래야 두 판의 차가 **이 회차가 만든 것 하나**로 좁혀진다(대조군 오염 금지 — 아래 3회차 사고). */
+  for (const kind of ['now', 'p7', 'pre']) {
     let src = 'index.html';
-    if (kind === 'p5') {
+    if (kind === 'p7') {
       const s = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-      const A = '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}';
-      const B = '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}';
-      if (s.indexOf(A) < 0) throw new Error('5회차 판 주입 앵커를 못 찾았다 — ' + A.slice(0, 40));
-      src = '.cap814-p5.html';
+      const A = '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}';
+      const B = '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}';
+      if (s.indexOf(A) < 0) throw new Error('7회차 판 주입 앵커를 못 찾았다 — ' + A.slice(0, 40));
+      src = '.cap814-p7.html';
       fs.writeFileSync(path.join(ROOT, src), s.split(A).join(B));
     }
     if (kind === 'pre') {
@@ -121,7 +125,7 @@ const FREEZE = () => {
          "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));"],
         ['      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n', ''],
         ['  .sk-clv.fx-cvswap{animation:fxCvSwapS .34s cubic-bezier(.34,1.56,.64,1) both, fxCvLit .34s linear}', ''],
-        ['#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}', '']
+        ['#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}', '']
       ];
       let rev = s;
       for (const [a, b2] of REV) {
