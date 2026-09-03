@@ -204,8 +204,11 @@ async function holdCov(page, t, keep) {
   /* 신고할 «요소» 를 만든 것이 룬 쪽 제품 편집의 전부다(686 이 단련에 `.tbn` 을 만든 것과 같은 꼴) */
   ok(/'<b class="rbn">' \+ fmt\(runeCost\(r, l\)\) \+ '<\/b>'/.test(code),
      'A4 룬 수량이 **제 요소**를 갖는다(`<b class="rbn">`) — 그 전에는 `<i>` 안 벌거벗은 텍스트 노드라 가리킬 데가 없었다');
-  ok(/\.cb\{--burst-keep:i;/.test(code) && /if\(IC && r\) kh\.push\(\.\.\.fxbKeepHoles\(t, Math\.round\(FXB_KOS \* hsc \* FX_CIC_SC\)\)\);/.test(code),
-     'A5 816 의 신고(훈련 `.cb`→`i`)와 부품 호출은 **한 글자도 안 바뀌었다**');
+  /* ⚑ 838 3회차 이관 — 「한 글자도 안 바뀌었다」 는 838 이 여유에 `* fitK` 를 붙이면서 거짓이 됐다.
+     묻는 것(«816 의 신고와 그 부품 호출이 살아 있는가»)은 그대로 두고 **한 글자** 를 그 배율까지로 넓힌다
+     — 619 4회차 «여유는 입자 크기에서» 를 더 지키는 방향의 변경이다(`verify816` [A4] 와 같은 이관). */
+  ok(/\.cb\{--burst-keep:i;/.test(code) && /if\(IC && r\) kh\.push\(\.\.\.fxbKeepHoles\(t, Math\.round\(FXB_KOS \* hsc \* FX_CIC_SC( \* fitK)?\)\)\);/.test(code),
+     'A5 816 의 신고(훈련 `.cb`→`i`)와 부품 호출이 그대로다(838 의 크기 배율 `fitK` 만 여유에 붙는다)');
   ok(/const kh = \(r && !IC\) \? fxbTextHoles\(t, strict \? Math\.round\(FXB_KOS \* hsc\) : undefined\) : \[\];/.test(code),
      'A6 660 의 원형(«아이콘 버스트는 자손 글자 구멍을 안 판다»)도 무수정 — 이 작업은 «예외 두 줄» 이지 되돌리기가 아니다');
 

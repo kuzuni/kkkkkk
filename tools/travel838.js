@@ -62,6 +62,16 @@ function summarize(env, org) {
     return { maxD, net, pth, r0, rE, over, pts, body: maxD > 0 ? net / maxD : 0, ious, iouMax: Math.max(...ious) };
   });
   const pairIoU = per[0].ious.map((_, k) => mean(per.map(p => p.ious[k])));
+  /* ⚑ 838 3회차 — 비평 2인이 2회차에서 **각도**로 결함을 적었다(CZ «40.8° 부채» · DA «좌향 65° 쐐기 ·
+     f8 에 4알이 x=68±0.5 한 줄»). 그 둘을 자에 세운다:
+       fanGap = 끝점 방위각을 정렬해 **가장 큰 빈 각**(360 이면 알이 하나뿐) · 작을수록 온 원을 쓴다
+       pile   = 끝점 x 가 2px 띠 안에 몇 알이나 몰렸는가(클램프 서명) */
+  const angs = per.map(p => Math.atan2(p.pts[last].cy - org.y, p.pts[last].cx - org.x) * 180 / Math.PI)
+                  .map(v => (v + 360) % 360).sort((a, b) => a - b);
+  const fanGap = angs.length < 2 ? 360
+    : Math.max(...angs.map((v, i) => (i ? v - angs[i - 1] : v + 360 - angs[angs.length - 1])));
+  const xs = per.map(p => p.pts[last].cx);
+  const pile = Math.max(...xs.map(x => xs.filter(y => Math.abs(y - x) <= 1).length));
   const med = a => { const b = [...a].sort((x, y) => x - y); const h = b.length >> 1;
     return b.length % 2 ? b[h] : (b[h - 1] + b[h]) / 2; };
   return {
@@ -74,7 +84,7 @@ function summarize(env, org) {
     r0: mean(per.map(p => p.r0)),
     rE: mean(per.map(p => p.rE)),
     growth: mean(per.map(p => p.rE)) / Math.max(1e-9, mean(per.map(p => p.r0))),
-    pairIoU, iouPeak: Math.max(...pairIoU),
+    pairIoU, iouPeak: Math.max(...pairIoU), fanGap, pile,
     spill: Math.max(...per.map(p => p.over)),      /* 호스트 상자 밖으로 나간 잉크(px · 음수면 안쪽) */
   };
 }

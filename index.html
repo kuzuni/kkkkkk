@@ -41804,7 +41804,7 @@ const FXB_KMAX = 0.55, FXB_BODY = 1.35, FXB_KLAD = 3;
    봉우리에서 최근접 중심거리 ÷ 지름 = 0.97 로 알끼리 겹쳐 «판때기 두 장» — CX ④ 3점).
    0.34 ⇒ 훈련 36px(−22%) · 단련 `.tb`(340×173) 58px·룬 `.rbt.b1`(420×112) 38px 로 **셋 다 상한에 안 닿거나
    조금만 닿는다**. 신고 안 한 호스트는 이 줄을 아예 안 지난다(583 «알갱이 크기 더 크게» 는 그대로다). */
-const FXB_FITS = 0.34, FXB_SZMIN = 18, FXB_KSTEPF = 0.70;
+const FXB_FITS = 0.26, FXB_SZMIN = 16, FXB_KSTEPF = 0.70, FXB_BR = 0.34;   /* 838 3회차 — FITS 0.34→0.30 · FXB_BR = 탄생 반경이 «남은 방» 에서 갖는 몫 */
 /* ⚑ 619 12회차 — **스파크 크기의 눈금을 «절대» 로 정한다**(394 선례: «무엇을 눈금으로 삼는가» 를 먼저 적는다).
    11회차까지의 눈금은 «호스트 짧은 변 대비 %»(6회차 hsc)였고, 그 축에서 룬은 상한 1.6 에 붙어
    단일 62px · 3알 융합 97×64 «아메바» 로 읽혔다(비평가 EC ① · EB ⑥⑦ — 10·11회차 **네 명 연속**).
@@ -42029,6 +42029,15 @@ function fxBurst(t, col, n, strict, iv, ic){
      `ks`(최소 중심거리) **둘이 한 벌**이다. 검산: 룬 √wh 836 → 배율 1.176 ⇒ 스파크 **28~40px**
      (11회차 38~54 · 10회차 46~65). 훈련(408 → 1.00)·단련(471 → 1.15)은 상한에 안 닿아 **불변**이다. */
   const hsc = (strict && r) ? clamp(Math.sqrt(r.w * r.h) / 410, 1, FXB_DMAX / FXB_SZMAX) : 1;
+  /* ⚑ 838 3회차 — 발원을 신고한 호스트에서 알이 작아지는 **비율**(0<fitK≤1). 2회차는 «상한으로 자르기»
+     라 14알이 전부 같은 크기가 됐고 비평 2인이 그것을 각각 «한 장 안 크기 변주 0»(CZ ②)·«같은 도장을
+     14번 찍은 판때기 ±3%»(DA ②)로 적었다(씬 B 는 ±12%). ⇒ 상한이 아니라 **배율**로 누른다.
+     ⚠ 이 배율은 keep-out 여유에도 같이 걸린다 — 「여유는 입자 크기에서 나온다」(619 4회차)가
+       그 규칙이고, 2회차는 알만 줄이고 여유는 54px 짜리 값(30px)을 그대로 써서 **가격 숫자의 구멍이
+       발원 오른쪽 3px 까지 밀고 들어와** 오른쪽으로 나가는 알이 통째로 각도째 굴려졌다(CZ·DA 공통
+       «좌향 65° 쐐기»). 여유가 알을 따라 줄면 그만큼이 열린다. */
+  const fitK = (fo && r) ? Math.min(1, Math.max(FXB_SZMIN, FXB_FITS * Math.min(r.w, r.h))
+                                       / Math.max(1, FXB_SZMAX * hsc * szs * (ic ? FX_CIC_SC : 1))) : 1;
   const sparkMs = fxTickLife(iv, FXSPARK_MS);      /* 619 14회차 — 한 세대가 다음 틱까지 안 산다 */
   /* ⚑⚑ 660 — **아이콘 버스트는 «호스트 자기 글자» keep-out 을 안 탄다.**
      619 4·8회차의 그 규칙은 호스트가 **카드·행**(326×510 · 998×222)일 때 세운 것이다 —
@@ -42065,7 +42074,7 @@ function fxBurst(t, col, n, strict, iv, ic){
      ⚠ 링 기하·가둠 상자·이동량·수명은 **한 값도 안 건드린다** — 42회차 규약대로 각도만 굴린다.
      ⚠ 660 의 «스폰은 버튼뿐»(주인 지목 · `verify660` [C1][C2])도 그대로다 — 구멍은 버튼 «안»
        에서 앉을 자리를 고를 뿐이라 알이 버튼 밖으로 나가지 않는다. */
-  if(IC && r) kh.push(...fxbKeepHoles(t, Math.round(FXB_KOS * hsc * FX_CIC_SC)));
+  if(IC && r) kh.push(...fxbKeepHoles(t, Math.round(FXB_KOS * hsc * FX_CIC_SC * fitK)));   /* 838 3회차 — 여유는 입자 크기에서(619 4회차) */
   /* ⚑ 619 8회차 — strict 구멍 두 벌 추가(비평가 DT·DU 2인 공통 «스파크가 −n 플로터를 70% 은폐 ·
      진행바 위에 착지»): ① 살아 있는 플로터(`.fx-plus`) — 정보 층인데 #fxl 에 살아 호스트 자손 스캔에
      안 잡힌다 ② 진행바(`.rb`) — 단색 배경이라 43회차 «그림 잉크» 판정(backgroundImage)에 안 걸린다.
@@ -42139,9 +42148,13 @@ function fxBurst(t, col, n, strict, iv, ic){
        위상은 한 칸(2π/cnt) 안에서만 돌리므로 **링의 등간격은 그대로**다(15회차 «판때기» 방지 규칙 불변). */
     const a = (i/cnt)*Math.PI*2 + phase + rnd(-0.18, 0.18);
     const jt = rnd(0.82, 1.18);                        /* 개체차 — 완전 균일 링은 «판때기» 로 읽힌다(15회차 X ②) */
-    /* 838 2회차 — 신고한 호스트(`fo`)의 이동은 **상자 대각의 60~100%**다. 끝점은 아래에서 가둠 상자로
-       물리므로 이 값은 «상자 끝까지 가라» 는 뜻이고, 짧은 축은 상자가 알아서 잘라 준다. */
-    const d = r ? (fo ? rnd(0.60, 1.00) * Math.hypot(r.w/2, r.h/2) : 0) : rnd(80, 150);
+    /* ⚑ 838 3회차 — 이동량을 «상자 대각» 이 아니라 **그 방향으로 남은 거리**에서 뽑는다(아래 `rayRoom`).
+       2회차는 대각의 60~100%(98~164px)를 요청했는데 발원에서 벽까지가 좌 98·우 33·상 25·하 37px 이라
+       초과분을 clamp 가 **각도째 지웠다** — 비평 2인이 각각 그 서명을 찍었다(CZ «E1·E2·E3 요청 각도가
+       22.6° 차인데 끝 x 는 폭 1.3px» · DA «f8 에 4알이 x=68±0.5 한 줄»). 비율만 여기서 뽑고
+       길이는 방향이 정해진 뒤에 곱한다(같은 알은 후보를 바꿔도 같은 비율을 쓴다 — 난수 흐름 불변). */
+    const dFrac = (r && fo) ? rnd(0.82, 1.00) : 0;   /* 3회차 2차 — 0.60~1.00 은 이동을 절반으로 깎았다(65 → 30px). 벽에 «붙지만 않으면» 각도는 산다 */
+    const d = r ? 0 : rnd(80, 150);
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
@@ -42172,11 +42185,10 @@ function fxBurst(t, col, n, strict, iv, ic){
     /* ⚑ 838 2회차 — 발원을 신고한 호스트에서는 **날아갈 방이 남을 만큼만** 커진다(위 `FXB_FITS` 머리말).
        아래 가둠(`inM = sz/2 + FXB_INPAD`)이 이 값에서 파생되므로, 알이 작아지면 **상자가 저절로 열려**
        이동이 그만큼 늘어난다(814 5회차가 코스튬에서 손으로 한 산수를 여기서는 기하가 낸다). */
-    if(fo && r){
-      const cap = Math.max(FXB_SZMIN, Math.round(FXB_FITS * Math.min(r.w, r.h)));
-      if(sz > cap){ sz = cap;
-        el.style.width = sz + 'px'; el.style.height = sz + 'px';
-        el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px'; }
+    if(fitK < 1){
+      sz = Math.max(FXB_SZMIN, Math.round(sz * fitK));   /* 3회차 — 배율이라 알끼리의 변주(rnd 24~34)가 살아 있다 */
+      el.style.width = sz + 'px'; el.style.height = sz + 'px';
+      el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     }
     /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로(위 인자 머리말). 제거는 `fxBye` 가
        실제 애니 끝에서 재므로 따라온다(41회차 규약 — 여기서 상수를 새로 적지 않는다). */
@@ -42253,6 +42265,26 @@ function fxBurst(t, col, n, strict, iv, ic){
        ⚠ 좌표(점) 대상은 종전 그대로다 — 반경 22 원에서 80~150px 산포라 원래 확장이 있다. */
     /* 42회차 — 공통ㄹ. 시작·끝점이 대상 글자에 걸리면 **각도만** 좌우로 번갈아 굴려 피한다
        (반경 rx·ry·jt, 가둠 상자 bx/by, 이동량 FXB_K 는 그대로 — 링 기하는 안 건드린다). */
+    /* ⚑ 838 3회차 — **그 방향으로 «갈 곳» 이 얼마인가**: 가둠 벽까지의 거리와 keep-out 구멍까지의
+       거리 중 짧은 쪽이다. 구멍을 만나면 **각도를 굴려 버리는 대신 그 앞에서 멈춘다** —
+       2회차가 오른쪽 반원을 통째로 잃은 뿌리가 «구멍에 걸리면 후보를 버린다» 였다.
+       구멍은 축평행 사각형이라 슬랩 교차 한 벌이면 된다(원점이 구멍 «안» 이면 0 = 그 방향은 못 쓴다). */
+    const rayRoom = (px, py, ux2, uy2) => {
+      const E = 1e-6; let t = Infinity;
+      if(Math.abs(ux2) > E) t = Math.min(t, ((ux2 > 0 ? bx1 : bx0) - px) / ux2);
+      if(Math.abs(uy2) > E) t = Math.min(t, ((uy2 > 0 ? by1 : by0) - py) / uy2);
+      for(const h of kh){
+        let t0 = -Infinity, t1 = Infinity;
+        if(Math.abs(ux2) > E){ const a1 = (h.x - px)/ux2, a2 = (h.x + h.w - px)/ux2;
+          t0 = Math.max(t0, Math.min(a1, a2)); t1 = Math.min(t1, Math.max(a1, a2)); }
+        else if(px < h.x || px > h.x + h.w) continue;
+        if(Math.abs(uy2) > E){ const a1 = (h.y - py)/uy2, a2 = (h.y + h.h - py)/uy2;
+          t0 = Math.max(t0, Math.min(a1, a2)); t1 = Math.min(t1, Math.max(a1, a2)); }
+        else if(py < h.y || py > h.y + h.h) continue;
+        if(t1 >= Math.max(0, t0)) t = Math.min(t, Math.max(0, t0));
+      }
+      return Math.max(0, t === Infinity ? 0 : t);
+    };
     let ang = a, sx0 = 0, sy0 = 0, ex = 0, ey = 0, sx = 0, sy = 0, hitK = -1;
     /* 619 12회차 — «글자는 피했지만 이웃 알과 융합하는» 차선을 들고 있는다(아래 되돌림 참조) */
     let fb = null;
@@ -42270,10 +42302,16 @@ function fxBurst(t, col, n, strict, iv, ic){
          2회차 1차 시도가 실제로 그랬다(평균 이동 43px 중 세로 알이 9px). */
       let ux = Math.cos(ang), uy = Math.sin(ang);
       if(fo){ const vx = ux * r.w, vy = uy * r.h * rys, vm = Math.hypot(vx, vy) || 1; ux = vx/vm; uy = vy/vm; }
-      sx0 = clamp(p.x + (fo ? ux*FXB_RMIN : Math.cos(ang)*rx)*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
-      sy0 = clamp(p.y + (fo ? uy*FXB_RMIN : Math.sin(ang)*ry)*jt*rr, by0, by1);
-      ex = (r && !fo) ? sx0 : clamp(sx0 + ux*d, bx0, bx1);
-      ey = (r && !fo) ? sy0 : clamp(sy0 + uy*d, by0, by1);
+      /* 3회차 — 신고 호스트는 **탄생 반경도 «갈 곳» 을 따라간다**: 방이 좁은 방향(가격 숫자 쪽)에서
+         22px 링을 고집하면 태어나는 자리가 이미 구멍 안이라 그 방향이 통째로 버려진다. */
+      const room = fo ? rayRoom(p.x, p.y, ux, uy) : 0;
+      const br = fo ? Math.min(FXB_RMIN, room * FXB_BR) : 0;
+      sx0 = clamp(p.x + (fo ? ux*br : Math.cos(ang)*rx)*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
+      sy0 = clamp(p.y + (fo ? uy*br : Math.sin(ang)*ry)*jt*rr, by0, by1);
+      /* 끝점은 «남은 방» 의 60~100% — 벽에 붙지 않으므로 각도 정보가 살아 있다(2회차의 x=68 정렬이 이 자리다) */
+      const dv = fo ? Math.max(0, room - Math.hypot(sx0 - p.x, sy0 - p.y)) * dFrac : d;
+      ex = (r && !fo) ? sx0 : clamp(sx0 + ux*(fo ? dv : d), bx0, bx1);
+      ey = (r && !fo) ? sy0 : clamp(sy0 + uy*(fo ? dv : d), by0, by1);
       /* ⚑ 838 — 당김 사다리(위 `FXB_KMAX` 머리말). 큰 칸부터 넣고 걸리면 내려간다 ·
          마지막 칸이 종전 값(FXB_K)이라 **걸리는 자리에서는 종전과 동일**하다. 점 대상은 칸이 하나다. */
       const dd = (r && !fo) ? Math.hypot(ex - p.x, ey - p.y) : 0;

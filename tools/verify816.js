@@ -113,8 +113,12 @@ async function holdTrain(page, keep) {
      'A2 그 부품은 **호스트가 신고한 셀렉터**(`--burst-keep`)에 걸리는 자손만 훑는다');
   ok(keepFn.length > 0 && !/\[t, \.\.\.t\.querySelectorAll/.test(keepFn),
      'A3 **호스트 자신을 안 담는다** — 담으면 배경 그라디언트가 «그림 잉크» 로 걸려 상자 통째가 구멍이 된다(660 의 벽)');
-  ok(/if\(IC && r\) kh\.push\(\.\.\.fxbKeepHoles\(t, Math\.round\(FXB_KOS \* hsc \* FX_CIC_SC\)\)\);/.test(code),
-     'A4 아이콘 버스트가 그 구멍을 탄다 · 여유가 **아이콘 배율(`FX_CIC_SC`)을 같이 탄다**(619 4회차 «여유는 입자 크기에서»)');
+  /* ⚑ 838 3회차 이관 — 여유에 `* fitK` 가 붙었다. **묻는 것은 그대로다**(«여유가 입자 크기를 따라가는가»):
+     838 이 좁은 버튼에서 알을 줄이면서 여유만 54px 짜리 값으로 두면 구멍이 발원 옆 3px 까지 밀고 들어와
+     한쪽 반원이 통째로 죽는다 — 619 4회차의 규칙을 **더** 지키는 방향이라 항을 넓힌다. */
+  ok(/if\(IC && r\) kh\.push\(\.\.\.fxbKeepHoles\(t, Math\.round\(FXB_KOS \* hsc \* FX_CIC_SC( \* fitK)?\)\)\);/.test(code)
+     && /const fitK = \(fo && r\)/.test(code),
+     'A4 아이콘 버스트가 그 구멍을 탄다 · 여유가 **아이콘 배율(`FX_CIC_SC`)과 838 의 크기 배율(`fitK`)을 같이 탄다**(619 4회차 «여유는 입자 크기에서»)');
   /* ⚠ 신고는 **`.cb` 자신**이 한다 — 카드에 적으면 `--burst-to` 를 지운 사본에서 카드 안 `<i>` 넷이
      통째로 구멍이 되어 `verify619` [E3](되돌림 시험)이 0.06 으로 빨개진다(1회차에 실제로 그랬다). */
   ok(/\.tr-card>\.cb\{--burst-keep:i;/.test(code),
