@@ -82,6 +82,20 @@ const DUMP = `(() => {
     });
     const ti = c.querySelector('.pvt>i'), tcs = ti && getComputedStyle(ti);
     const stt = c.querySelector('.stt'), sti = stt && stt.querySelector('i');
+    /* 833 6회차 — 배너형 카드에만 있는 라벨(.ban>i).
+       ⚠ 상자 폭은 **offsetWidth**(레이아웃 값)로 잡는다 — getBoundingClientRect 는 scaleX 가 걸린
+       변환 후 bbox 라 «상자가 좁아졌다» 로 읽힌다. advance 는 Range 로 재고(667 [G3] 자와 같은 방법),
+       그 값은 변환 뒤 값이므로 배율로 나눠 **변환 전 advance** 를 되살린다. */
+    const bi = c.querySelector('.ban>i');
+    let banI = null;
+    if (bi) {
+      const bcs = getComputedStyle(bi);
+      const rg = document.createRange(); rg.selectNodeContents(bi);
+      banI = { fs: num(bcs.fontSize), lh: num(bcs.lineHeight), tr: bcs.transform,
+        org: bcs.transformOrigin, left: num(bcs.left), right: num(bcs.right),
+        stroke: num(bcs.webkitTextStrokeWidth), align: bcs.textAlign,
+        boxW: +bi.offsetWidth.toFixed(2), advScaled: +rg.getBoundingClientRect().width.toFixed(2) };
+    }
     return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb, pil,
       frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs,
       ti: B(ti), tiFs: tcs ? num(tcs.fontSize) : null, tiLh: tcs ? num(tcs.lineHeight) : null,
@@ -90,7 +104,7 @@ const DUMP = `(() => {
       sttITop: sti ? num(getComputedStyle(sti).top) : null,
       sttITr: sti ? getComputedStyle(sti).transform : null,
       sttIFs: sti ? num(getComputedStyle(sti).fontSize) : null,
-      sttILh: sti ? num(getComputedStyle(sti).lineHeight) : null };
+      sttILh: sti ? num(getComputedStyle(sti).lineHeight) : null, banI };
   });
 })()`;
 
@@ -245,6 +259,56 @@ const DUMP = `(() => {
       `${p2(c.ti.x - c.card.x)}`);
   }
 
+  blk('§10 배너 라벨 — 가로만 되돌렸다 (세로는 [G3] 이 막는 자리)');
+  /* 자 `tools/ink151.py`(흰 채움 min>246 · 검정 획이 안 섞인다):
+       | 배너 글자 (환산 px) | ref | 수리 전 | 수리 후 |
+       | 잉크 w × h | 235.2 × 28.9 | 261 × 28 (**+11.0%** / −3.1%) | **235 × 28** (−0.1% / −3.1%) |
+       | 잉크 중심 x (카드-로컬) | 317.7 + 50 = 367.7 | 369.0 | **369.0** (무변경) |
+     ⚑ 비평가 DB [A] 도 «낱자 가로 +19% · 총 폭 +11.0% · 높이 Δ+0.1» 로 같은 축을 찍었다.
+     ⚠ **세로를 안 올린 것이 이 절의 본체다** — fs 36 → 37 이면 advance 가 상자 폭(269)을 넘고,
+     넘치는 순간 `text-align:center` 가 죽어 잉크가 오른쪽으로만 밀린다(667 [G3] 이 같은 사고를
+     수량에서 이미 겪었다). [10-d] 가 그 여유를 매 실행 찍는다 — 높이 −3.1% 는 0.9px 이다.
+     ⚠ 원점은 여기서 **중앙이 옳다**(4회차 제목과 반대다) — 라벨이 `left/right + text-align:center`
+     라 잉크가 상자 중심 언저리에 앉고, 중앙 원점으로 줄여야 중심이 안 움직인다. [10-c] 가 그 뜻이고,
+     제목처럼 `transform-origin:0 50%` 짝을 만들면 이 자리는 **왼쪽으로 밀린다**. */
+  const banC = cards.find(c => c.ban);
+  ok(!!(banC && banC.banI), '[10-0] 배너형 카드에 라벨이 있다', banC && banC.banI ? 'ok' : '없음');
+  if (banC && banC.banI) {
+    const B10 = banC.banI;
+    const sx = (B10.tr.match(/matrix\(([-\d.]+)/) || [])[1];
+    ok(/^matrix\(0\.9,/.test(B10.tr), '[10-a] 배너 라벨 scaleX(.9) (수리 전 없음)', B10.tr);
+    ok(B10.fs === 36 && B10.lh === 40,
+      '[10-b] 세로 축(fs 36 · line-height 40)은 **안 건드렸다**', `${B10.fs}/${B10.lh}`);
+    ok(Math.abs(parseFloat(B10.org) - B10.boxW / 2) < 1.5,
+      '[10-c] 원점 x = 상자 중심 (#shopw 규칙이 이기는 것이 **여기서는 옳다**)',
+      `${B10.org} ↔ 상자 중심 ${p2(B10.boxW / 2)}`);
+    const adv0 = B10.advScaled / parseFloat(sx || 1);
+    /* ⚠⚠ 6회차가 자를 대고서야 안 것 — 이 라벨은 **이미 상자를 9.6px 넘고 있다**(advance 264.6 ↔
+       상자 255 · `.ban{border:7}` 과 `box-sizing:border-box` 때문에 상자는 269 가 아니라 255 다).
+       즉 `text-align:center` 는 여기서 이미 죽어 있고(넘치면 왼끝에서 시작한다 — 667 [G3] 이 수량에서
+       겪은 것과 같다), 667 은 그 사실을 알고 **넘침의 절반(4.8px)을 `left` 로 미리 갚아 놨다**
+       (CSS 주석 «그 4 를 빼고 적는다 ⇒ left = 2×(317.7−4.0) − 450»).
+       ⇒ 여기서 물을 것은 «안 넘치는가» 가 아니라 **«넘침이 그대로인가»** 다 — fs 를 올리면 넘침이
+       커지고 그만큼 잉크 중심이 오른쪽으로 밀려 667 의 보정이 어긋난다. 6회차가 세로를 안 건드린
+       진짜 이유가 이것이고, [10-h] 가 그 결과(잉크 중심)를 직접 잰다. */
+    ok(adv0 - B10.boxW >= 8 && adv0 - B10.boxW <= 11,
+      `[10-d] 넘침 = advance − 상자폭 이 9.6px 그대로 (667 이 그 절반을 left 로 갚아 놓은 값)`,
+      `${p2(adv0)} − ${p2(B10.boxW)} = ${p2(adv0 - B10.boxW)}`);
+    ok(Math.abs(B10.advScaled - 235.2) <= 8,
+      '[10-e] 변환 뒤 advance ≈ ref 환산 잉크 235.2 (±8 = side bearing 몫)', `${p2(B10.advScaled)}`);
+    /* 넘치는 줄은 상자 왼끝에서 시작하므로 레이아웃 잉크 중심 = 상자 좌단 + advance/2 이고,
+       배율은 **상자 중심** 기준이라 변환 뒤 중심 = 상자중심 + (레이아웃중심 − 상자중심)×0.9 다.
+       ref 목표는 배너-로컬 317.7 = 카드-로컬 367.7(배너 좌단 50). 캡처 실측(흰 채움)도 369.0 이다. */
+    const boxL = 50 + 7 + B10.left, boxC = boxL + B10.boxW / 2;
+    const inkC = boxC + (boxL + adv0 / 2 - boxC) * parseFloat(sx || 1);
+    ok(Math.abs(inkC - 367.7) <= 3,
+      '[10-h] 변환 뒤 잉크 중심이 ref 367.7(카드-로컬) ±3 — 배율이 중심을 안 옮겼다', `${p2(inkC)}`);
+    ok(B10.left === 181 && B10.right === 12 && B10.align === 'center',
+      '[10-f] 상자(181/12)와 가운데 정렬은 **안 건드렸다**',
+      `${B10.left}/${B10.right}/${B10.align}`);
+    ok(B10.stroke === 8, '[10-g] 검정 획 8px 불변 (배율은 획도 같이 누른다 — ⑤ 기록)', `${B10.stroke}`);
+  }
+
   blk('§5 9:13.3(1600) — 카드 안 기하가 같다');
   const { page: p16, errs: e16 } = await open(browser, 1600);
   const c16 = await p16.evaluate(DUMP);
@@ -317,6 +381,23 @@ const DUMP = `(() => {
   });
   ok(back5.every(t => t !== 'none'),
     '[R8] 탭 라벨에 scaleX(.94) 를 되돌리면 §8 [8-f] 가 빨개진다', back5.join(' / '));
+  /* 6회차 짝 — 배너 라벨의 배율을 지우면 §10 [10-a]·[10-e] 가 빨개진다.
+     ⚑ «상수를 지웠다» 로 끝내지 않고 **advance 가 실제로 ref 밖으로 나가는 것**까지 본다. */
+  const back6 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.textContent = '.pvc>.ban>i{transform:none!important}';       /* 833 6회차 전 */
+    document.head.appendChild(st);
+    const bi = document.querySelector('.pvc.ban1>.ban>i');
+    const rg = document.createRange(); rg.selectNodeContents(bi);
+    return { tr: getComputedStyle(bi).transform,
+      adv: +rg.getBoundingClientRect().width.toFixed(2), boxW: +bi.offsetWidth.toFixed(2) };
+  });
+  ok(back6.tr === 'none' && Math.abs(back6.adv - 235.2) > 8,
+    '[R9] 배너 라벨 배율을 지우면 §10 이 빨개진다 (advance 가 ref 235.2 밖으로 나간다)',
+    `${back6.tr} · advance ${p2(back6.adv)}`);
+  ok(back6.adv / 235.2 - 1 > 0.1 && Math.abs((back6.adv - back6.boxW) - 9.64) < 1,
+    '[R9b] 되돌린 폭은 ref 보다 +12.5% 이고 **넘침은 같다** — 6회차가 고친 것이 «넘침» 이 아니라 «넓음» 이라는 증거',
+    `+${p2((back6.adv / 235.2 - 1) * 100)}% · 넘침 ${p2(back6.adv - back6.boxW)}`);
   /* ⚑ [R7] 은 «값을 되돌리면 빨개진다» 가 아니라 **«스코프 짝을 빼면 조용히 진다»** 를 못박는다 —
      이번 수리에서 실제로 사람을 속인 것이 그것이다(선언은 남아 있는데 computed 만 바뀐다). */
   const back4 = await page.evaluate(() => {

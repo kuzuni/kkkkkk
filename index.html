@@ -7836,9 +7836,21 @@
      상자 중심 317.5 ↔ 잉크 중심 321.5). 그 4 를 빼고 적는다 ⇒ left = 2×(317.7−4.0) − 450 = **177**.
      ⚠ 우리 글자 잉크가 ref 환산보다 **7px 넓다**(271 ↔ 264 = +2.6%, ⑥ 서체 축)라 양끝을 동시에 맞출 수
      없다 — 그래서 **중심**을 맞춘다(양쪽 오차 3.5px씩). */
+  /* ⚠ 833 6회차 — **가로만** 되돌린다(4회차 ⓘ 가 제목에서 쓴 «em 은 세로 · scaleX 는 가로» 처방).
+     `ink151.py`(흰 채움 min>246) 실측: 잉크 261×28 ↔ ref 환산 235.2×28.9 = **폭 +11.0% · 높이 −3.1%**.
+     비평가 DB 도 «낱자 가로 +19% · 총 폭 +11.0% · 높이 Δ+0.1» 로 같은 축을 찍었다 ⇒ scaleX(.9) 로
+     261 → 234.9 (ref 235.2 대비 −0.1%).
+     ⚠ **세로는 손대면 안 되는 자리다** — fs 를 36 → 37 로 올리면 잉크가 268 이 되고 획 8 을 더하면
+     상자 폭 269(= left 181 ~ right 12)를 넘어, 667 [G3](«advance ≤ 상자폭»)이 빨개진다.
+     넘치는 순간 `text-align:center` 는 좌측 정렬로 무너져 잉크가 오른쪽으로 밀린다(LESSONS A1 «advance»).
+     높이 −3.1% 는 28 ↔ 28.9 = **0.9px** 이라 그 대가를 치를 값이 아니다.
+     ⚠ 원점 — 여기서는 4356행 `#shopw i{transform-origin:50% 50%}`(ID 1,0,1)가 이기는 것이 **옳다**.
+     라벨은 `left/right + text-align:center` 라 잉크가 상자 중심 언저리에 앉고(상자 중심 카드-로컬 365.5 ↔
+     잉크 중심 369.0), 중심 원점으로 줄이면 중심이 368.65 로 **ref 목표 317.7(배너-로컬)에 오히려 0.35px
+     가까워진다.** 4회차 제목(`.pvt>i`)처럼 `transform-origin:0 50%` 짝을 만들면 여기서는 반대로 밀린다. */
   .pvc>.ban>i{position:absolute;left:181px;right:12px;top:36px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;white-space:nowrap;-webkit-text-stroke:8px #000;
-    paint-order:stroke fill}
+    paint-order:stroke fill;transform:scaleX(.9)}
   /* ⑤-2 ★ 불릿(2·3장) — ref 는 반투명 어두운 행 4개(높이 72 · pitch 82) */
   .pvc>.pvl{left:41px;top:133px;width:545px;z-index:1}
   .pvc>.pvl>.pvb{position:relative;height:72px;margin-bottom:10px;border-radius:18px;

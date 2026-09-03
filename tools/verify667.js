@@ -283,8 +283,16 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
       split: +(rel(ban).l + ban.getBoundingClientRect().width * 0.36).toFixed(1),
       rb: [...c1.querySelectorAll('.rb')].map(r => rel(r.querySelector('b')).cx) };
   });
-  ok('R4 배너 글자 상자를 left:150 으로 되돌리면 [F1] 이 빨개진다 (좌단이 분할선 왼쪽 = 크림 칸을 문다)',
-    after8.banI.l < after8.split, '좌단 ' + after8.banI.l + ' ↔ 분할선 ' + after8.split);
+  /* ⚑ 이관(2026-09-03, 작업 833 6회차 · 333 처방 — 지우지 않고 **방향을 바꿔** 갈아 끼웠다).
+     6회차가 배너 라벨에 `scaleX(.9)` 를 걸어 잉크를 261 → 235 로 줄였다. 그래서 «left:150 으로
+     되돌리면 잉크가 크림 칸을 문다» 는 **더 이상 참이 아니다** — 좁아진 잉크는 left:150 에서도
+     좌단이 230.9 로 분할선(216.3) 오른쪽에 남는다(빨간 것은 자가 아니라 **문장**이었다).
+     8회차 수리가 지금도 지키는 것은 **자리(중심)** 다: left:150 이면 상자 중심이 365.5 → 350 으로
+     15px 밀려 [F2] 가 빨개진다. ⇒ 축을 [F1] 에서 [F2] 로 옮기고, 분할선 값은 «참고» 로 계속 찍는다
+     (그 수가 다시 216 왼쪽으로 가면 옛 결함이 되살아난 것이다). */
+  ok('R4 배너 글자 상자를 left:150 으로 되돌리면 [F2] 가 빨개진다 (상자 중심이 365.5 → 350 으로 15px 밀린다)',
+    !near(after8.banI.cx, 365.5, 1.5),
+    '중심 ' + after8.banI.cx + ' · (참고) 좌단 ' + after8.banI.l + ' ↔ 분할선 ' + after8.split);
   ok('R5 «--gx» 를 17/24 로 되돌리면 [F3] 이 빨개진다 (판 중심이 ref 에서 9~10px 밀린다)',
     !near(after8.rb[0], 352.5, 2) && !near(after8.rb[1], 441.5, 2), after8.rb.join(' / '));
   const after8b = await page.evaluate(() => {
