@@ -7542,7 +7542,19 @@
      ⚠ **높이(−6.2/−6.3)는 안 건드렸다** — 별 아웃라인이라 bbox 가 회전에 ±4px 흔들리고,
      BA 의 임계 스윕에서 **폭 Δ 의 부호가 뒤집힌다**(+19.5 ~ −11.4). 두 비평가가 스스로
      신뢰도를 «보통/낮음» 으로 적은 축이라 A3-ⓑ 대로 **자리만** 고친다(크기는 8회차 몫). */
-  .pvc>.bdg{left:824px;top:-38.5px;width:178px;height:178px;z-index:3}
+  /* ⚑ 833 1회차 — **상자가 정사각인데 ref 별은 세로로 길다.** 667 10회차가 «크기 −3.6%» 로
+     넘긴 자리인데, `tools/scan833.py` 로 **분홍 잉크 bbox** 를 재 보니 크기가 아니라 **종횡**이었다:
+     ref 별 잉크 158.8~160.9 × 169.2~171.2(종횡 **0.94**) ↔ 우리 166 × 165(**1.006**).
+     ⇒ 폭만 좁고 높이만 큰 것이라 «등방 축소»(356) 로는 둘 다 못 맞춘다 — 상자를
+     **172 × 184** 로 다시 적는다(별은 clip-path 가 % 라 상자를 그대로 따라간다).
+     검산: 잉크 = 상자 − 검정 테(6+6) = **160 × 171** ⇒ ref 159.9 / 170.2 중앙값과 Δ 0.1 / 0.8.
+     ⚠ **`top` 은 안 건드린다** — 잉크 윗변이 이미 ref 다(우리 −32.0 ↔ ref −29.8/−32.5).
+     비평가 BG 의 «윗변 −32.0 기대 ↔ −38.5» 는 ref **잉크**를 우리 **상자**에 댄 것이고,
+     −38.5 는 상자 윗변이다(잉크는 검정 테 6.5 안쪽에서 시작한다).
+     ⚠ 폭이 6 줄면 우변이 6 왼쪽으로 온다 — 그것이 맞는 방향이다(카드 바깥선 밖으로
+     우리 18.0 ↔ ref 9.2/15.4 ⇒ 12.0 으로). 되돌리려면 이 줄을 178/178 로 되돌리고
+     아래 두 줄의 45/95 를 되살리면 된다. */
+  .pvc>.bdg{left:824px;top:-38.5px;width:172px;height:184px;z-index:3}
   .pvc>.bdg>s{position:absolute;inset:0;background:#F43171;border:6px solid #000;border-radius:50%;
     clip-path:polygon(50% 0,58.7% 12.4%,73.2% 6.7%,76.1% 22.4%,91.1% 21.5%,88.2% 37.1%,
       100% 46.9%,89.8% 58.4%,97.3% 72.1%,82.1% 76.6%,83.6% 92.2%,68.5% 88.3%,63.5% 100%,
@@ -7556,10 +7568,13 @@
   /* ⚑ 5회차 — 뱃지 상자가 194 → 178(등방 0.92)로 줄었으므로 **두 줄도 8px(=(194−178)/2) 올린다**.
      안 올리면 4회차에 맞춰 둔 «잉크 중심 = 뱃지 중심 −4» 가 그 8만큼 다시 어긋난다.
      글자 «크기» 는 여전히 안 건드린다(위 주석의 380 함정 — 높이가 맞는 자리다). */
-  .pvc>.bdg>i{position:absolute;left:0;right:0;top:45px;text-align:center;color:#FFFC7E;
+  /* ⚑ 833 1회차 — 상자 높이가 178 → 184 로 커졌으므로 **두 줄도 3px(=(184−178)/2) 내린다**
+     (5회차 규약의 부호만 반대다 — 별 잉크 중심이 상자-로컬 89 → 92 로 내려갔다).
+     가로는 `left:0;right:0;text-align:center` 라 상자 폭 변화를 저절로 따라간다. */
+  .pvc>.bdg>i{position:absolute;left:0;right:0;top:48px;text-align:center;color:#FFFC7E;
     font-size:46px;line-height:48px;-webkit-text-stroke:8px #000;paint-order:stroke fill;
     transform:rotate(-10deg)}
-  .pvc>.bdg>b{position:absolute;left:0;right:0;top:95px;text-align:center;color:#FFFC7E;
+  .pvc>.bdg>b{position:absolute;left:0;right:0;top:98px;text-align:center;color:#FFFC7E;
     font-size:36px;line-height:40px;font-weight:400;-webkit-text-stroke:7px #000;
     paint-order:stroke fill;transform:rotate(-10deg)}
   /* ④ 타이틀 행 — 헤더 밴드 안. ✦ 는 밴드 색보다 밝은 림 색이다(ref) */
@@ -7760,7 +7775,15 @@
      **중심은 판 중심 그대로** 둔다(δ = (139 − 판폭) ÷ 2 — 불릿 24 · 배너 30).
      139 는 «999,999»(137.48)까지 받는다 ⇒ 199 가 이용권을 ×배율 상품으로 바꿔도 안 깨진다.
      ⚠ 글자 크기·색·세로 자리는 **0줄 변경**이고 움직인 것은 **빈 상자의 폭**뿐이다(잉크가 제자리로 온다). */
-  .pvc.ban1>.rb>u{right:calc(var(--gx) - 30px);width:139px;top:52px}
+  /* ⚑ 833 1회차 — 배너형 수량만 **3px 올린다**(불릿형은 안 건드린다).
+     667 10회차 ⓔ 가 «ref 가 0.0~14.4 로 흔들린다» 로 넘긴 자리인데, 문자열 길이로 갈라 다시
+     재도 **ref 안에서 안 모인다**(잉크 «높이» 자체가 ref 8~12 원시 = 16.5~24.8 환산 ↔ 우리 27).
+     ⇒ 잉크 상변·하변은 목표가 안 서고(A3-ⓑ), **중심**만 ref 배너형이 두 리본에서 **+11.3 으로
+     소수점까지 같다**(우리 +17.0/+17.0 — 이쪽도 흔들리지 않는다). 그 5.7 을 통째로 옮기면
+     상변이 ref 범위(0.0~4.1) 밖으로 **−2** 가 되어 숫자가 리본을 밟으므로 **3 만** 옮긴다:
+     중심 +14.0(Δ+2.7) · 상변 +1.0(ref 0.0~4.1 **안**) · 하변 27(Δ+4~8) — 세 축이 다 좋아진다.
+     되돌리려면 52 로 되돌리면 된다(다른 값과 안 엮여 있다). */
+  .pvc.ban1>.rb>u{right:calc(var(--gx) - 30px);width:139px;top:49px}
   .pvc>.rb>u{position:absolute;right:calc(var(--gx) - 24px);top:58px;width:139px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;text-decoration:none;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
