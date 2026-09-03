@@ -15,14 +15,29 @@
  * 407 처방(상자를 밀어 자리를 만든다)을 안 쓴 이유는 §3 이 숫자로 들고 있다 — 여기 상자들은
  * 전체 높이라 배너를 피하려면 세로 예산의 16~57% 를 내야 한다(403·404 가 방금 키운 그 시트들이다).
  *
+ * ⚑⚑ 850(2026-09-03) — **배너를 숨기는 겹이 둘이 됐다.** 작업 811(주인 지시 «팝업이 떠 있는데
+ *   그 밖의 HUD(**미션 트래커** · 재화 표시 · 스킬 슬롯줄)가 딤 너머로 읽힌다»)이 전면 딤 오버레이
+ *   **17종**에 `:is(#top,#tuto,#slots){visibility:hidden}` 을 걸었고, 그 17종은 여기 일곱을 **전부 품는다.**
+ *   `vis()` 는 `visibility:hidden` 을 «안 보인다» 로 읽으므로 §2-c·§R 74항이 «보임 **null**» 로 죽었다
+ *   (`tools/probe850.js` — 값이 틀린 게 아니라 **잴 것을 못 찾았다**. 노드도 상자도 그대로 살아 있다).
+ *   ⇒ 자를 세 자리에서 돌렸다:
+ *     ① §0 이 **두 번째 겹**을 등재한다(811 선언 · `#tuto` 포함 · 목록이 여기 일곱을 품는가).
+ *     ② §2-c 의 방향을 뒤집었다 — `#ciw` 는 407 이 살려 둔 자리였지만 **811 이 덮었다**(나중 지시가
+ *        이긴다 · 333 처방). 407 이 만든 자리가 살아 있다는 증거는 §R2 의 T2 항이 매 실행 다시 잰다.
+ *     ③ §R 의 사본은 이제 **두 겹을 다 뺀 것**이다 — 안 그러면 `BEFORE` 표를 잴 수가 없다.
+ *   ⚠ 무르게 풀지 마라 — «숨든 안 숨든 통과» 로 바꾸면 811 선언이 통째로 사라져도 초록이다(334).
+ *
  * 본다:
- *   §0 전제       — 선언이 있고, `#ciw` 는 목록에 **없고**, 배너 하단 앵커의 재료가 살아 있다
+ *   §0 전제       — 선언이 **둘 다** 있고, `#ciw` 는 419 목록에 **없고**(811 목록에는 있다),
+ *                   배너 하단 앵커의 재료가 살아 있다
  *   §1 불변식     — 오프너 전수 × 3프레임에서 «토막» 0건 (목록이 뒤처지면 여기가 먼저 빨개진다)
- *   §2 대가       — 406-④ 음성항: 407 이 살려 둔 `#ciw` 는 **숨김이 아니라 100% 보임**,
- *                   오버레이가 없는 화면·전체를 덮는 탭 페이지에서는 배너가 **안 숨는다**,
+ *   §2 대가       — 406-④ 음성항: 오버레이가 없는 화면·전체를 덮는 탭 페이지에서는 배너가 **안 숨는다**,
+ *                   `#ciw` 는 **811 이 덮어 숨는다**(토막이 아니다 · 850),
  *                   닫으면 **되돌아온다**(display 를 지운 것이 아니라 조건부로 감춘 것이다)
- *   §3 Δ0px       — 호스트 상자가 «선언을 뺀 사본» 과 2280·1600 에서 0.2px 이내로 같다(상수 0개)
- *   §R 되돌림시험 — 선언을 뺀 **사본**에서 토막이 실측값 그대로 되살아난다(+ 2280 음성항)
+ *   §3 Δ0px       — 호스트 상자가 «두 선언을 뺀 사본» 과 2280·1600 에서 0.2px 이내로 같다(상수 0개)
+ *   §R 되돌림시험 — 두 겹을 뺀 **사본**에서 토막이 실측값 그대로 되살아난다(+ 2280 음성항)
+ *   §R2 겹 분리   — 419 만 빼도(T1) · 811 의 `#tuto` 만 빼도(T2) 일곱은 여전히 숨는다
+ *                   = **두 겹이 각각 혼자서도 그 일곱을 지킨다** · `#ciw` 는 T2 에서 407 의 100% 로 돌아온다
  */
 const fs = require('fs');
 const path = require('path');
@@ -51,8 +66,15 @@ const RULE = (SRC.match(/#app:has\(:is\([^)]*\)\.on\) #tuto\{display:none\}/) ||
 /* 419 당시의 일곱 — 여기서 **줄어들면** 그때 갚은 자리가 되살아난다(늘어나는 것은 정상이다). */
 const RULE_MUST = ['#modal', '#collw', '#blsw', '#bagw', '#pfw', '#specw', '#cfw'];
 /* 일부러 뺀 둘 — `#ciw` 는 407 이 하단 여백으로 자리를 만들어 배너를 살려 둔 자리,
-   `#relw` 는 배경이 통째로 덮어 «토막» 이 원리적으로 안 생기는 자리(350 처방으로 유령을 기각했다). */
+   `#relw` 는 배경이 통째로 덮어 «토막» 이 원리적으로 안 생기는 자리(350 처방으로 유령을 기각했다).
+   ⚑ 850 — `#ciw` 가 **이 목록에 없는 것**은 그대로다(419 는 그 자리를 안 건드린다). 다만 811 이
+      자기 목록에 넣어 결과적으로 배너가 숨는다 — §2-c 가 그 사실을, §R2 가 407 의 자리를 잰다. */
 const RULE_NEVER = ['#ciw', '#relw'];
+/* ⚑ 850 — 두 번째 겹(작업 811). 목록을 손으로 안 적는다: 467 교훈대로 **제품에게 «그 모양의 선언» 을 묻는다.**
+   줄바꿈이 섞여 있으므로 `[\s\S]` 로 잡는다. */
+const RULE811 = (SRC.match(/#app:has\(:is\([\s\S]*?\)\.on\) :is\(#top,#tuto,#slots\)\{visibility:hidden\}/) || [''])[0];
+/* 811 목록에서 id 만 뽑는다(줄바꿈·공백 제거) */
+const RULE811_IDS = RULE811 ? (RULE811.match(/:is\(([\s\S]*?)\)\.on/) || ['', ''])[1].replace(/\s+/g, '').split(',').filter(Boolean) : [];
 const BAND = 501;      /* 배너 상변 = 프레임 하변 − 501 (`bottom:171` + 탭바 180 + 높이 150) */
 const FRAMES = [2280, 1920, 1600];
 
@@ -113,7 +135,7 @@ const MEAS = function (opt) {
     return !(cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0);
   };
   const cover = new Function('return (' + opt.coverSrc + ')')();
-  const out = { frameH: Math.round(A.height), box: null, hidden: true, visPct: null, stub: null, disp: null };
+  const out = { frameH: Math.round(A.height), box: null, hidden: true, visPct: null, stub: null, disp: null, visb: null };
   if (opt.boxSel) {
     const b = document.querySelector(opt.boxSel);
     if (b && vis(b)) {
@@ -122,7 +144,10 @@ const MEAS = function (opt) {
         Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10];
     }
   }
+  /* ⚑ 850 — «어느 겹이 숨겼나» 를 말하려면 두 낱말을 다 찍어야 한다:
+     419 는 `display:none`(상자까지 접는다) · 811 은 `visibility:hidden`(상자는 남긴다). */
   out.disp = tuto ? getComputedStyle(tuto).display : null;
+  out.visb = tuto ? getComputedStyle(tuto).visibility : null;
   if (!tuto || !vis(tuto)) return out;
   out.hidden = false;
   const t = tuto.getBoundingClientRect();
@@ -171,6 +196,18 @@ async function shot(browser, o, H, file) {
     '배너 껍데기가 그대로다 (하단 앵커 · 460×150)');
   ok(/#tabbar\{flex:none;height:180px/.test(SRC), '탭바 180 그대로다 (배너 상변 산식의 재료)');
   ok(SRC.includes('#app.dunrun #tuto{display:none}'), '던전 런 숨김(선례)이 그대로 살아 있다');
+  /* ── 850 — 두 번째 겹(811)을 등재한다 ─────────────────────────────────────
+     이 세 항이 없으면 811 이 조용히 좁아지는 날 §2-c 만 빨개지고 «왜» 를 아무도 못 읽는다. */
+  ok(!!RULE811 && SRC.split(RULE811).length === 2,
+    '850 — 811 HUD 숨김 선언(`:is(#top,#tuto,#slots){visibility:hidden}`)이 소스에 정확히 한 번 있다',
+    RULE811 || '(못 찾음)');
+  ok(RULE811.includes('#tuto'),
+    '850 — 811 목록이 `#tuto`(미션 트래커)를 **같이** 숨긴다 (주인 지시가 지목한 셋 중 하나)');
+  ok(RULE_MUST.every((s) => RULE811_IDS.includes(s)),
+    `850 — 811 의 ${RULE811_IDS.length}종이 419 의 일곱을 **전부 품는다** (겹이 겹인 근거 — 좁아지면 여기가 먼저 빨개진다)`,
+    RULE_MUST.filter((s) => !RULE811_IDS.includes(s)).join(',') || '빠진 것 없음');
+  ok(RULE811_IDS.includes('#ciw'),
+    '850 — `#ciw`(33 재화 정보)는 419 목록에는 **없고** 811 목록에는 **있다** — §2-c 의 방향을 정하는 자리다');
 
   /* ── §1 불변식 — 오프너 전수 ─────────────────────────────────────────────
      ⚠ 목록(HOSTS)이 아니라 **제품이 실제로 여는 화면 전부**를 훑는다. 손으로 적은 표는
@@ -194,11 +231,18 @@ async function shot(browser, o, H, file) {
     ok(!m.hidden && m.visPct === 100, `[2-a][${H}] 오버레이가 없는 메인 화면에서 배너는 **온전히 보인다** (보임 ${m.visPct}%)`);
     near(`[2-a][${H}] 배너 상변 = H − ${BAND}`, m.tutoY1, H - BAND);
   }
+  /* ⚑ 850 방향 전환 — 여기는 419 가 **안 건드리는** 자리인데(407 이 하단 여백으로 배너를 살려 뒀다),
+     811(나중 주인 지시)이 `#ciw` 를 자기 목록에 넣어 «미션 트래커» 를 껐다. 333 처방대로 나중 지시가
+     이긴다 ⇒ 묻는 것을 «배너가 살아 있는가» 에서 **«419 가 아니라 811 이 껐는가»** 로 옮겼다.
+     ⚠ 두 낱말을 다 물어야 뜻이 남는다: `display` 는 419 가 안 건드렸으니 **`none` 이 아니어야** 하고
+        (여기가 `none` 이 되면 누군가 `#ciw` 를 419 목록에 넣은 것이다 = §0 RULE_NEVER 와 짝),
+        `visibility` 는 811 이 껐으니 **`hidden`** 이다. 407 이 만든 자리는 §R2 T2 가 잰다. */
   for (const cur of ['gold', 'dia']) {
     for (const H of [2280, 1600]) {
       const m = await shot(browser, { label: 'cur:' + cur, sel: `[data-cur="${cur}"]`, box: '#ciw>.ci' }, H);
-      ok(!m.hidden, `[2-c][${H}] cur:${cur} — 배너가 **안 숨는다** (407 이 살려 둔 자리)`);
-      eq(`[2-c][${H}] cur:${cur} — 배너 100% 보임`, m.visPct, 100);
+      eq(`[2-c][${H}] cur:${cur} — 배너를 끈 것은 811 이다 (visibility)`, m.visb, 'hidden');
+      ok(m.disp !== 'none', `[2-c][${H}] cur:${cur} — 419 는 이 자리를 여전히 안 건드린다 (display ${m.disp})`);
+      ok(m.hidden, `[2-c][${H}] cur:${cur} — 그래서 배너는 «토막» 이 아니라 통째로 안 보인다 (850 · 811 이 덮었다)`);
     }
   }
   /* 전체를 덮는 탭 페이지에서는 규칙이 안 걸린다 — 덮임 100% 는 «토막» 이 아니므로 손댈 이유가 없다 */
@@ -230,11 +274,20 @@ async function shot(browser, o, H, file) {
   /* ── §3 Δ0px + §R 되돌림 시험 — **사본 한 벌로 둘 다 잰다** ────────────────
      ⚠ 사본은 **저장소 뿌리에** 둔다(407 선례) — `/tmp` 에 두면 `assets/` 상대 경로가 통째로 깨져
      그림이 안 뜨고, 그 차이가 «되돌렸더니 값이 다르다» 로 읽힌다(1회차에 tab:box 1.8 → 0 으로 실제로 그랬다). */
-  const tmp = path.join(ROOT, `.v419-neg-${process.pid}.html`);
+  /* ⚑ 850 — 사본이 셋이다. 419 만 빼면 811 이 여전히 배너를 끄므로 «토막» 을 잴 수가 없다
+     (그게 74건 빨강의 정체였다) ⇒ §3·§R 은 **두 겹을 다 뺀** 사본으로 재고,
+     겹 하나씩만 뺀 사본 둘은 §R2 가 «각 겹이 혼자서도 지키는가» 를 재는 데 쓴다. */
+  const strip811 = (s) => s.replace(RULE811, RULE811.replace(':is(#top,#tuto,#slots)', ':is(#top,#slots)'));
+  const tmp = path.join(ROOT, `.v419-neg-${process.pid}.html`);        /* 둘 다 뺀 사본 */
+  const tmp1 = path.join(ROOT, `.v419-neg419-${process.pid}.html`);    /* 419 만 뺀 사본 */
+  const tmp2 = path.join(ROOT, `.v419-neg811-${process.pid}.html`);    /* 811 의 #tuto 만 뺀 사본 */
   ok(SRC.split(RULE).length === 2, '선언이 소스에 정확히 한 번 있다 (사본을 만들 수 있다)');
-  fs.writeFileSync(tmp, SRC.replace(RULE, ''));
+  ok(strip811(SRC) !== SRC, '850 — 811 목록에서 `#tuto` 만 뺀 사본을 만들 수 있다 (겹 분리 시험의 재료)');
+  fs.writeFileSync(tmp, strip811(SRC).replace(RULE, ''));
+  fs.writeFileSync(tmp1, SRC.replace(RULE, ''));
+  fs.writeFileSync(tmp2, strip811(SRC));
   try {
-  console.log('§3 Δ0px — 호스트 상자가 «선언을 뺀 사본» 과 한 픽셀도 안 다르다 (처방이 배경만 만졌다)');
+  console.log('§3 Δ0px — 호스트 상자가 «두 겹을 뺀 사본» 과 한 픽셀도 안 다르다 (처방이 배경만 만졌다)');
   /* ⚑ 절대 좌표를 상수로 박지 않는다. 이 시트들은 **다른 워커가 지금도 고치고 있다** —
      1회차 중에 415 가 19 프로필 패널을 1600 에서 1396 → 1296 으로 바꿨고, 상수를 박았으면
      남의 정당한 작업에 내 게이트가 빨개졌을 것이다(402 «표는 뒤처진다» 의 좌표판).
@@ -254,14 +307,14 @@ async function shot(browser, o, H, file) {
     }
   }
 
-  /* ── §R 되돌림 시험 — 선언을 뺀 사본에서 «토막» 이 되살아난다 ─────────── */
-  console.log('§R 되돌림 시험 — 선언을 뺀 사본에서 토막이 실측값 그대로 되살아난다');
+  /* ── §R 되돌림 시험 — 두 겹을 뺀 사본에서 «토막» 이 되살아난다 (850) ───── */
+  console.log('§R 되돌림 시험 — 두 겹(419·811)을 뺀 사본에서 토막이 실측값 그대로 되살아난다');
   for (const o of HOSTS) {
     const want = BEFORE[o.label];
     if (!want) continue;
     for (const H of PAIR) {
       const m = REV[o.label + '@' + H];
-      ok(!m.hidden, `[R][${o.label}@${H}] 사본에서는 배너가 안 숨는다`);
+      ok(!m.hidden, `[R][${o.label}@${H}] 두 겹을 뺀 사본에서는 배너가 안 숨는다`);
       if (want[H] === 0) {
         /* ⚑ 467 음성항 — 이 자리는 **선언과 무관하게 0%** 다(뒤의 불투명 시트가 이미 다 덮는다).
            «토막» 이 원리적으로 안 생기므로 목록에 넣을 이유가 없다는 것을 매 실행 다시 잰다.
@@ -287,7 +340,27 @@ async function shot(browser, o, H, file) {
     eq('[R-음성] 사본에서도 cur:gold 는 100% 보임 (407 은 이 선언과 무관하게 산다)',
       REV['cur:gold@1600'].visPct, 100);
   }
-  } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
+  /* ── §R2 겹 분리 시험(850) — 두 겹이 **각각 혼자서도** 그 일곱을 지킨다 ─────
+     이 절이 이 수리가 «무르지 않다» 는 증거다. §R 이 두 겹을 한꺼번에 빼기 때문에,
+     이것 없이는 «419 선언이 통째로 사라져도 §R 은 초록» 이 된다(334 가 잡은 바로 그 함정).
+     ⚠ 한 항이라도 빨개지면 겹이 하나 걷힌 것이다 — 그때는 §2-c 의 방향을 다시 정하라. */
+  console.log('§R2 겹 분리 시험(850) — 419 만 빼도 · 811 의 #tuto 만 빼도 그 일곱은 여전히 안 보인다');
+  const LAYER = ['side:attend', 'side:bless', 'menu:bag', 'prof:19'];
+  for (const lab of LAYER) {
+    const o = HOSTS.find((h) => h.label === lab);
+    const m1 = await shot(browser, o, 1600, tmp1);
+    const m2 = await shot(browser, o, 1600, tmp2);
+    eq(`[R2-a][${lab}@1600] 419 만 빼도 배너는 안 보인다 — 811 이 혼자 지킨다 (visibility)`, m1.visb, 'hidden');
+    eq(`[R2-b][${lab}@1600] 811 의 #tuto 만 빼도 배너는 안 보인다 — 419 가 혼자 지킨다 (display)`, m2.disp, 'none');
+  }
+  /* 407 의 자리 — 419 목록 밖이라 811 을 걷으면 **하단 여백이 만든 «100% 보임» 이 그대로 돌아온다.**
+     이 두 항이 407 의 투자가 제품에 살아 있다는 증거이고, §2-c 를 방향 전환하면서 비운 자리를 대신 채운다. */
+  for (const H of PAIR) {
+    const m2 = await shot(browser, { label: 'cur:gold', sel: '[data-cur="gold"]', box: '#ciw>.ci' }, H, tmp2);
+    ok(!m2.hidden, `[R2-c][cur:gold@${H}] 811 을 걷으면 배너가 되살아난다 (407 이 만든 자리가 제품에 살아 있다)`);
+    eq(`[R2-c][cur:gold@${H}] 되살아난 배너는 «토막» 이 아니라 온전한 100% 다 (407 의 하단 여백)`, m2.visPct, 100);
+  }
+  } finally { for (const f of [tmp, tmp1, tmp2]) { try { fs.unlinkSync(f); } catch (e) {} } }
   /* 콘솔 에러 0 */
   {
     const m = await shot(browser, { label: 'side:bless', sel: '.side .ibtn[data-pop="bless"]' }, 1600);
