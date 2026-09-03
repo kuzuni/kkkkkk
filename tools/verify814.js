@@ -129,6 +129,14 @@ async function run(file, h) {
         return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, s: Math.max(r.width, r.height),
                  bw: parseFloat(e.style.width) || 0, dx: px('--dx'), dy: px('--dy') };
       }) : [],
+      /* ⚑ 6회차 — [B14] 가 쓰는 재료. «몇 알이 벽에 붙었나» 를 세면 각도 난수를 타서 흔들리므로
+         (825·836 계열 문턱 플레이키) **호스트가 신고한 값과 카드 상자**를 읽어 산수로 판정한다.
+         셋 다 «없으면 1» 이라 다른 화면에서는 종전과 같은 답이 나온다. */
+      bvar: (() => {
+        const cs = getComputedStyle(sel);
+        const num = (k) => { const v = parseFloat(cs.getPropertyValue(k)); return (v > 0 && v <= 1) ? v : 1; };
+        return { rx: num('--burst-rx'), ry: num('--burst-ry'), sz: num('--burst-sz') };
+      })(),
       fs: getComputedStyle(document.documentElement).getPropertyValue('--fx-plus-fs').trim()
     };
   });
@@ -263,6 +271,30 @@ function inter(plus, inks) {
        (세로 반경이 곧 이동량이라) 여기가 먼저 빨개진다. 겉보기 이동은 채점 캡처의 몫이다. */
     ok(trAvg >= 8, '[B13] 그 버스트의 **이동 벡터 바닥** — 평균 ' + trAvg.toFixed(1)
       + 'px ≥ 8 (3회차 판 10.6px · 이동량 상수 `FXB_K` 는 한 값도 안 건드렸다 — 가둠이 열린 만큼만 늘었다)');
+    /* ⚑⚑ 6회차 — **가로 링이 가둠 벽 «안» 에서 끝나는가.** 5회차 채점의 2인 공통 «단 하나» 다:
+       CR10 «10알 중 6알이 두 기둥(띠 폭의 23%에 60%)» · CR9 «10알 중 6알이 수평 ±30° 안 ·
+       우측 3알 간격 14.1px < 융합 문턱 18.9px» · CR10 «좌단 알이 폭의 38% 액자에 잘린다».
+       뿌리는 «알이 크다» 도 «이동이 짧다» 도 아니라 **끝점이 벽 밖이라 clamp 가 한 열에 눌러붙이는 것**이다.
+       ⚠ **«몇 알이 붙었나» 를 세지 않는다** — 각도가 난수(위상 굴림 + 지터 ±0.18)라 실행마다
+         갈리는 문턱 항이 된다(825·836·344·574 계열). 대신 **기하로 판정한다**: 최악 개체
+         (`jt` 상한 1.18 · `rr` 상한 1.00)의 끝점 + 알 반경이 벽을 못 넘으면 눌림은 **구조적으로 0** 이다.
+       산수(부품과 같은 식): `rx = (w/2 + FXB_M)·rxs` · 벽 = `w/2 − (알반경 + FXB_INPAD)`.
+       ⚠ 3·5회차 검산이 둘 다 `jt` 를 빼먹어 «맞다» 고 적고도 실제로는 넘었다(LESSONS 814-⑩) —
+         그래서 이 자는 `jt` 를 **식 안에** 넣어 둔다. */
+    {
+      const FXB_M = 6, FXB_INPAD = 4, JT = 1.18;
+      const rxE = (D.sel.w / 2 + FXB_M) * D.bvar.rx;      /* 부품의 `rx` (요소 대상 · fo 없음) */
+      const rad = szMax / 2;
+      const wall = D.sel.w / 2 - (rad + FXB_INPAD);       /* 부품의 가둠 `inM` 과 같은 식 */
+      const tip = rxE * JT;
+      console.log('  · 가로 — rx ' + rxE.toFixed(1) + 'px(신고 ' + D.bvar.rx + ') · 최악 끝점 '
+        + tip.toFixed(1) + 'px(jt 1.18) · 가둠 벽 ' + wall.toFixed(1) + 'px · 잉크 끝 '
+        + (tip + rad).toFixed(1) + 'px · 카드 반폭 ' + (D.sel.w / 2).toFixed(1) + 'px');
+      ok(tip <= wall && tip + rad <= D.sel.w / 2,
+        '[B14] ★ 가로 링이 **가둠 벽 안**에서 끝난다 — 최악 끝점 ' + tip.toFixed(1) + 'px ≤ 벽 '
+        + wall.toFixed(1) + 'px (넘으면 clamp 가 그 알들을 한 열에 눌러붙인다 · 잉크 '
+        + (tip + rad).toFixed(1) + ' ≤ 반폭 ' + (D.sel.w / 2).toFixed(1) + ' = 액자 절단 0)');
+    }
   }
   {
     /* 4회차 — 3회차 CR6 «테두리·내부 Δ ≤ 0.2/255 = 카드 본체가 0px 반응한다» 의 자리.
@@ -330,7 +362,11 @@ function inter(plus, inks) {
       /* ⚑ 5회차 — 3회차 판(«알은 그대로 두고 링만 누른다»)으로 되돌린다. 그 판이 4회차 2인 공통
          지적의 원본이므로, [B12]·[B13] 이 그 판에서 **실제로 빨개져야** 이 회차가 무른 수리가 아니다. */
       ['R-c', '3회차 판으로 되돌린다 (알 크기 신고를 빼고 링만 .29 로 누른 상태)',
-        '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}', '#bCos .sk-card{--burst-ry:.29}']
+        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}', '#bCos .sk-card{--burst-ry:.29}'],
+      /* ⚑ 6회차 — 5회차 판(«알은 줄였지만 가로 링은 벽 밖 그대로»)으로 되돌린다. 그 판이 5회차
+         2인 공통 지적의 원본이므로 [B14] 가 그 판에서 **실제로 빨개져야** 이 회차가 무른 수리가 아니다. */
+      ['R-d', '5회차 판으로 되돌린다 (가로 신고를 빼고 세로·알만 누른 상태)',
+        '#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60}', '#bCos .sk-card{--burst-ry:.344;--burst-sz:.7}']
     ];
     for (const [tag, why, from, to] of INJ) {
       if (src.indexOf(from) < 0) { ok(false, '[' + tag + '] 주입 앵커를 못 찾았다 — 조용한 통과 금지'); continue; }
@@ -351,6 +387,17 @@ function inter(plus, inks) {
           ok(nz > 25, '[R-c] 주입하면 [B12] 가 빨개진다 — 알 지름 ' + r0(nz) + 'px (> 25). '
             + '⚠ 이동 벡터는 ' + ntAvg.toFixed(1) + 'px 로 이번 판(11.6)과 큰 차가 없다 — '
             + '4회차 비평가의 «−70%» 는 **겉보기 이동**(프레임 간 중심 매칭)이고 이 자의 축이 아니다');
+        }
+        else if (tag === 'R-d') {
+          /* [B14] 와 **같은 식**으로 잰다(자를 두 벌 만들지 않는다) — 5회차 판은 가로 신고가 없어
+             `rx` 가 90 이고 알 반경이 12 라 끝점 106.2 > 벽 68 이다. */
+          const nz = N.D.sparkAt.length ? Math.max(...N.D.sparkAt.map((a) => a.bw)) : 0;
+          const nRx = (N.D.sel.w / 2 + 6) * N.D.bvar.rx, nTip = nRx * 1.18, nWall = N.D.sel.w / 2 - (nz / 2 + 4);
+          console.log('    · 5회차 판 — rx ' + nRx.toFixed(1) + 'px(신고 ' + N.D.bvar.rx + ') · 최악 끝점 '
+            + nTip.toFixed(1) + 'px · 가둠 벽 ' + nWall.toFixed(1) + 'px');
+          ok(nTip > nWall, '[R-d] 주입하면 [B14] 가 빨개진다 — 최악 끝점 ' + nTip.toFixed(1)
+            + 'px > 벽 ' + nWall.toFixed(1) + 'px (= 5회차 판이 실제로 벽 밖이었다 · 초과 '
+            + (nTip - nWall).toFixed(1) + 'px)');
         }
         else ok(!N.D.pop, '[R-b] 주입하면 [B3] 이 빨개진다 (팝 ' + (N.D.pop ? '걸림' : '없음') + ') — 이 수리는 «지운 것» 이 아니라 «옮긴 것» 이다');
       } finally { try { fs.unlinkSync(path.join(ROOT, tmp)); } catch (_) {} }
