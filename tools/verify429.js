@@ -22,6 +22,8 @@
  *       **유물 10종 전수에서 0건**. 개별 효과 문장(«… 상승 유물입니다»)은 그대로 있다.
  *   [E] 남긴 것 — ⓐ 미보유 분기(«유물 소환으로 획득하세요») ⓑ 진행바 문구(«소환할 때마다 Lv +1»)
  *       — 후자는 «일반 설명» 이 아니라 진행 상태 표시라 남긴다(등재문 지시).
+ *       ⓒ «보유 효과» 알약(E4a~E4d) — **칸마다 제 수치를 든다**. 861 이 옛 «`+` 한 글자» 대리
+ *         지표를 걷어내고 성질 넷(숫자 · 그 칸의 값 · 뭉개짐 없음 · Lv 의존)으로 갈랐다.
  *   [F] 껍데기 1px 불변 — 08 규격 부품 8개 bbox 가 **펫 세부와 픽셀 동일**(`.sk-db` 750x290 포함).
  *   [R] 되돌림 시험 — 무르게 푼 수리가 아님을 못박는다:
  *       R1 [?] 노드를 지우면 A1 이 빨개진다(«원래 있던 것을 세고 있는» 헛초록이 아니다)
@@ -316,7 +318,7 @@ const openRel = async (page) => {
     /* 전 유물을 소환 경로로 보유시킨다(상태를 손으로 안 짓는다) */
     S.relic = 1e7;
     for (let i = 0; i < 400 && RELICS.some((r) => !has(r.id)); i++) summonRelic(true);
-    const out = { hits: [], own: [], eff: 0, n: RELICS.length };
+    const out = { hits: [], own: [], ownExp: [], eff: 0, n: RELICS.length };
     for (const r of RELICS) {
       showItem(r.id);
       const p = document.querySelector('#mbox .sk-db p');
@@ -324,6 +326,9 @@ const openRel = async (page) => {
       out.hits.push(MOVED.filter((m) => h.includes(m)).length);
       if (h.includes(RELIC_EFF[r.eff] + '</em> 상승 유물입니다')) out.eff++;
       out.own.push((document.querySelector('#mbox .sk-ow .v b') || {}).textContent);
+      /* 861 — «그 칸의 값» 을 제품 상수에서 다시 만든다(자가 문자열을 손으로 안 적는다).
+         725 가 표기를 또 갈아도 이 기대값이 같이 따라가므로 여기는 다시 안 썩는다. */
+      out.ownExp.push(RELIC_EFF[r.eff] + ' ' + fmtEff(relicVal(r)));
       if (r === RELICS[0]) { out.pb = (document.querySelector('#mbox .sk-pb b') || {}).textContent;
                              out.sl = (document.querySelector('#mbox .sk-sl') || {}).textContent;
                              await settleBox();
@@ -331,6 +336,27 @@ const openRel = async (page) => {
                              out.lines = p ? Math.round(p.getBoundingClientRect().height
                                / parseFloat(getComputedStyle(p).lineHeight)) : 0; }
       closeModal();
+    }
+    /* 861 [E4d] — «칸마다» 축의 **의존성 시험**: 한 유물의 Lv 만 올리면 그 칸의 알약만 바뀌어야
+       한다. 위 [E4b] 는 제품이 쓰는 식을 다시 세운 것이라 «자기 값을 읽는가» 까지는 못 묻는다
+       (140 교훈 — 재계산은 대리 지표의 다른 얼굴이다). 여기는 **실제로 상태를 흔들어** 본다. */
+    {
+      const tgt = RELICS[1].id;
+      const before = [];
+      for (const r of RELICS) { showItem(r.id);
+        before.push((document.querySelector('#mbox .sk-ow .v b') || {}).textContent); closeModal(); }
+      S.own[tgt].l += 1;
+      const after = [];
+      for (const r of RELICS) { showItem(r.id);
+        after.push((document.querySelector('#mbox .sk-ow .v b') || {}).textContent); closeModal(); }
+      S.own[tgt].l -= 1;
+      out.dep = { i: RELICS.findIndex((r) => r.id === tgt),
+                  moved: after.map((t, i) => t !== before[i]).map((b, i) => (b ? i : -1)).filter((i) => i >= 0) };
+      /* 되돌렸는지 확인 — 이 자는 뒤의 [F] 대조군과 같은 페이지를 쓴다 */
+      const back = [];
+      for (const r of RELICS) { showItem(r.id);
+        back.push((document.querySelector('#mbox .sk-ow .v b') || {}).textContent); closeModal(); }
+      out.depBack = back.every((t, i) => t === before[i]);
     }
     /* 미보유 분기 — 세이브를 갈아 끼우지 않고 소유만 잠시 뺀다 */
     const one = RELICS[0].id, keep = S.own[one];
@@ -350,7 +376,34 @@ const openRel = async (page) => {
   ok(/유물 소환으로 획득하세요/.test(D.none || ''), 'E1 미보유 분기는 남아 있다', String(D.none).slice(0, 60));
   ok(D.pb === '소환할 때마다 Lv +1', 'E2 진행바 문구는 남아 있다(진행 상태 표시라 이관 대상이 아니다)', D.pb);
   ok(D.sl === '유물 설명', 'E3 라벨은 «유물 설명» 그대로', D.sl);
-  ok(D.own.every((t) => t && /\+/.test(t)), 'E4 «보유 효과» 알약은 칸마다 수치를 그대로 든다');
+  /* 861 (2026-09-03) — 여기 있던 판정식은 `D.own.every(t => /\+/.test(t))` 한 줄이었다.
+     «수치를 든다» 를 물으면서 실제로 센 것은 **더하기 기호 한 글자**다(140 교훈 — 대리 지표).
+     725 가 효과 표기를 «+15%» → «×1.15배» 로 전면 전환하자 그 한 글자가 프로젝트에서 사라져
+     이 항만 빨개졌고, 알약은 내내 제 수치를 들고 있었다(`probe861` [1]~[4] — 갈래 ⓐ 기각).
+     ⇒ **문자열이 아니라 성질을 직접 센다.** 셋으로 갈랐고, 지금 지키는 것이 아니라
+        «수치를 그대로 든다» 라는 뜻 자체다:
+        a 칸마다 숫자를 든다        — 표기 규약이 또 바뀌어도 안 죽는다
+        b 그 숫자가 **그 칸의 값**이다 — 제품 상수(RELIC_EFF·relicVal·fmtEff)에서 다시 만든다
+        c 10칸이 한 문자열로 안 뭉갠다 — 등재문의 갈래 ⓐ(«칸마다 같은 값») 를 실제로 잡는 축
+        d 그 칸의 Lv 를 올리면 **그 칸만** 바뀐다 — b 의 재계산이 못 묻는 «자기 값을 읽는가»
+     되돌림 시험은 `node tools/probe861.js` [5] 가 네 축 전부에 대해 갖고 있다. */
+  ok(D.own.every((t) => t && /\d/.test(t)),
+    'E4a «보유 효과» 알약은 칸마다 수치를 든다',
+    D.own.filter((t) => t && /\d/.test(t)).length + '/' + D.n + '칸');
+  {
+    const bad = D.own.map((t, i) => (t === D.ownExp[i] ? null : i)).filter((i) => i !== null);
+    ok(bad.length === 0,
+      'E4b 그 수치가 «그 칸의 값» 이다 — `RELIC_EFF[eff] + fmtEff(relicVal)` 와 글자까지 같다',
+      bad.length ? bad.map((i) => '#' + i + ' «' + D.own[i] + '» ↔ «' + D.ownExp[i] + '»').join(' / ')
+                 : D.n + '/' + D.n + '칸');
+  }
+  ok(new Set(D.own).size > 1,
+    'E4c 10칸이 «한 문자열» 로 뭉개져 있지 않다(등재문 갈래 ⓐ)',
+    '서로 다른 문자열 ' + new Set(D.own).size + '가지');
+  ok(D.dep && D.dep.moved.length === 1 && D.dep.moved[0] === D.dep.i && D.depBack,
+    'E4d 한 유물의 Lv 만 올리면 **그 칸의 알약만** 바뀐다(자기 값을 읽는다)',
+    D.dep ? '바뀐 칸 [' + D.dep.moved.join(',') + '] · 올린 칸 #' + D.dep.i
+            + ' · 원복 ' + (D.depBack ? 'OK' : '실패') : '측정 실패');
   {
     const a = D.parts, b = D.petParts;
     const bad = a.filter((p, i) => !p.has || !b[i].has || !(near(p.x, b[i].x, 0.5) && near(p.y, b[i].y, 0.5)
