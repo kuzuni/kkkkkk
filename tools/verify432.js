@@ -186,10 +186,13 @@ async function openFrozen(browser, h) {
       const looseInk = await diffBox(dpage, L.b, N.b, R);
       /* §R — 옛 선언으로 되돌린 판의 넘침(레이아웃 값이라 같은 페이지에서 재도 안전하다).
          ⚠ 789 — 시계를 끊었으므로 `requestAnimationFrame` 을 기다리면 **영영 안 온다**.
-            `scrollHeight` 읽기 자체가 강제 동기 레이아웃이라 기다릴 것이 없다. */
+            `scrollHeight` 읽기 자체가 강제 동기 레이아웃이라 기다릴 것이 없다.
+         ⚑ 875 — 875 가 top 을 g3 축에 묶어 넘침을 0 으로 만들었으므로 §R 도 top 을 되돌려야
+            의미가 있다(안 그러면 이 자가 잰 «되돌림» 이 875 뒤 상태의 절반만 되돌린 것이 된다).
+            432 이전 원본은 top:-104 · height:550 · background-size:auto 셋 다였다. */
       const rev = await S.page.evaluate(() => {
         const s = document.createElement('style');
-        s.textContent = '#relw .rw-mid::before{height:550px !important;background-size:auto !important}';
+        s.textContent = '#relw .rw-mid::before{top:-104px !important;height:550px !important;background-size:auto !important}';
         document.head.appendChild(s);
         const pn = document.querySelector('#relw>.rw-panel>.rw-bowl') || document.querySelector('#relw>.rw-panel');
         const v = { ovfY: pn.scrollHeight - pn.clientHeight };
@@ -262,10 +265,15 @@ async function openFrozen(browser, h) {
     `[4-d] 글로우는 여전히 \`pointer-events:none\` 이다(조작을 막지 않는다)`);
 
   console.log('\n§R 되돌림 시험 — 옛 선언으로 되돌리면 다시 빨개진다 ──────────');
+  /* ⚑ 875 — 옛 값(top:-104 · height:550) 복원 시 넘침 = mid_top + top + 550 − P
+                                                    = (P − 326 − g3) − 104 + 550 − P = **120 − g3**.
+     432 등재문의 «104 − g3» 는 866 이전(bt 식이 −216) 셈이라 늙었다 — 866 이 −216→−226 으로
+     10px 을 더 뺐고, 858(맞은편 상수 226→266 라인) 다음에 실제 상수는 다시 226 이 됐다.
+     지금 실측(g3=24)이 정확히 96 = 120 − 24 이라 새 식이 자와 맞는다. */
   for (const r of rows) {
-    const want = Math.max(0, +(104 - r.m.g3).toFixed(2));   /* 넘침 = 104 − --rw-g3 */
+    const want = Math.max(0, +(120 - r.m.g3).toFixed(2));   /* 넘침 = 120 − --rw-g3 (top:-104 · height:550 복원) */
     ok(Math.abs(r.rev.ovfY - want) <= 1,
-      `[R-${r.h}] 옛 선언(550 · size auto) 복원 시 ovfY **${r.rev.ovfY}** ≈ 104 − g3(${r.m.g3}) = ${want}`);
+      `[R-${r.h}] 옛 선언(top:-104 · h:550 · size auto) 복원 시 ovfY **${r.rev.ovfY}** ≈ 120 − g3(${r.m.g3}) = ${want}`);
   }
   ok(rows.some((r) => r.rev.ovfY >= 30),
     `[R-z] 그 중 실제로 큰 값이 있다(축이 죽지 않았다) — 최대 ${Math.max(...rows.map((r) => r.rev.ovfY))}px`);

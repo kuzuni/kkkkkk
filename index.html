@@ -7180,8 +7180,19 @@
      ⚠ `background-size` 를 864×550 으로 **먼저 얼려야** 한다 — 안 얼리면 `closest-side` 의 ry 가
         상자 높이를 따라 275 → 245 로 줄어 **글로우가 실제로 작아진다**(= 그림이 바뀐다).
         얼린 뒤에는 상자 높이가 «타일을 어디서 자르는가» 만 정하므로 잘리는 띠가 전부 투명이다.
-     넘침은 `44 − --rw-g3`(g3 하한이 44) ⇒ **네 프레임 전부 0**, 1600 은 정확히 패널 하변에 닿는다. */
-  .rw-mid::before{content:'';position:absolute;left:-232px;top:-104px;width:864px;height:490px;
+     넘침은 `44 − --rw-g3`(g3 하한이 44) ⇒ **네 프레임 전부 0**, 1600 은 정확히 패널 하변에 닿는다.
+     ── ⚑ 작업 875 (2026-09-03) — g3 이 24 로 내려간 뒤로 이 «하한 44» 전제가 늙었다.
+     813 5회차가 `--rw-g3` 를 44 → 24 로 내리면서 넘침이 60 − g3 = **36px** 로 부활했고, §2 가
+     잡은 «260×19 · 최대Δ12» 는 알파 5% 꼬리(y454~473 · 정말 지워지는 잉크)라 §2 도 같이 빨갛다.
+     ⇒ **top 을 g3 축에 묶는다 — 상자 높이 490 · 그림 크기는 한 픽셀도 안 바뀐다.**
+     새 식: box_bottom_from_panel_top = mid_top + top + 490 = P 를 강제하면
+             top = P − mid_top − 490 = P − (P − 326 − g3) − 490 = **g3 − 164**.
+     g3=24 ⇒ top −140, g3=44 ⇒ top −120, g3=60 ⇒ top −104(원래 값). 넘침 = 0 항상.
+     ⚠ 이 식은 «상자 하변» 을 g3 에 묶는 것이지 «상자 높이» 나 «tile 위치» 가 아니다 —
+        높이 490 은 이번에도 얼려 두고, `background-size` 도 얼려 둔다(§R2 게이트 유지).
+        결과: 잉크 잘림 0(§2 초록) · 잉크 높이 396 회복(§3-b 초록). 글로우 중심은 (200, 171)
+        에서 (200, 135)로 36px 위로 올라가지만 여전히 수반(mid_top~mid_top+226) 안이다. */
+  .rw-mid::before{content:'';position:absolute;left:-232px;top:calc(var(--rw-g3) - 164px);width:864px;height:490px;
     background:radial-gradient(closest-side ellipse at 50% 50%,#3E2B1D 0%,rgba(62,42,30,0) 72%);
     background-size:864px 550px;background-repeat:no-repeat;
     pointer-events:none}
