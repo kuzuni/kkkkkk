@@ -7918,8 +7918,19 @@
   .pvc>.ntc{right:0;bottom:91px;width:calc(var(--ntc-d) + 12px);height:138px;overflow:hidden;z-index:2;pointer-events:none}
   #shopw .pvc>.ntc>s{position:absolute;left:12px;top:12px;width:calc(var(--ntc-d) * 2);height:114px;box-sizing:border-box;
     border:10px solid #000;border-radius:50%}
+  /* ⚑ 833 10회차 — **밝은 림이 카드 우변의 검정 외곽선을 노치마다 11~12px 씩 덮고 있었다**
+     (9회차 채점 DH 1순위 «끊김 배너 5곳 × 12px · 불릿 4곳 × 11px · 신뢰 상» — ① 을 7 로 막은 유일한 항목).
+     기계: 이 림은 타원 테두리라 **위·아래 꼭지에서 테가 가로 띠가 되고**, 그 띠가 카드 우변
+     (= 타원 중심 = 이 상자의 50%) 쪽으로 뻗어 `.fr` 의 검정 10px 열을 그대로 덮는다.
+     `.ntc{z-index:2}` 가 `.fr`(z auto) 위라 조용히 이긴다.
+     ⚠ z 를 뒤집는 길은 막혀 있다 — `.fr` 을 올리면 상태 탭·배지가 카드 외곽선을 끊는 자리
+     (**ref 도 끊긴다** · DH «배너 y70..98» )까지 같이 메워져 실루엣이 ref 에서 멀어진다.
+     ⇒ **림만 카드 우변 10px 안쪽에서 자른다** — 림은 원래 검정 «안쪽» 부품이라 그 열에 있을 일이 없다.
+     실측(재현 `tools/probe833.js`): 검정 없는 행이 **5구간 → 0구간**(남는 둘은 탭·배지 = ref 도 같다) ·
+     림 화소 6137 → 5577(덮고 있던 560 화소만 빠졌다) · **림이 사라진 행 0개**(호는 그대로다).
+     되돌리려면 이 `clip-path` 한 줄을 지운다. */
   #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:calc((var(--ntc-d) + 12px) * 2);box-sizing:border-box;
-    border:12px solid var(--h);border-radius:50%}
+    border:12px solid var(--h);border-radius:50%;clip-path:inset(0 calc(50% + 10px) 0 0)}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
   .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:30px 30px 0 0;
     border:7px solid #000;border-bottom:0;background:var(--d);z-index:2}

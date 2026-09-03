@@ -526,6 +526,42 @@ const DUMP = `(() => {
     }
   }
 
+  blk('§15 노치 밝은 림이 카드 우변의 «검정 외곽선» 을 안 밟는다 (9회차 채점 DH 1순위)');
+  /* DH «우변 외곽선이 노치마다 11~12px 씩 끊긴다(신뢰 상 · 두 프레임에서 행 목록까지 재현)» —
+     ①(요소 배치)을 7 로 막은 유일한 항목이다. 1인 지적이라 338 규칙대로 재현부터 했고
+     (`tools/probe833.js` — 순검정 마스크 max<25 의 «검정 없는 행» 구간), 사실이었다:
+       수리 전 노치 자리 끊김 **9~10구간** ↔ 수리 후 **0구간**(남는 구간은 탭·배지가 덮는 자리로
+       **ref 도 끊긴다** — 자가 장식 상자로 그 둘을 갈라 센다).
+     뿌리는 밝은 림(`u`)이 타원 테라 **위·아래 꼭지에서 가로 띠**가 되어 카드 우변(= 타원 중심)의
+     검정 열을 덮는 것이고, `.ntc{z-index:2}` 가 `.fr` 위라 조용히 이긴다.
+     ⇒ 림만 카드 우변 10px 안쪽에서 자른다(`clip-path`). 이 절은 그 «자른 자리» 를 DOM 으로 잰다
+     (화소 증거는 probe833 이 든다 — 두 자가 같은 것을 서로 다른 방법으로 본다). */
+  const rim = await page.evaluate(() => {
+    const c = document.querySelector('.pvc.ban1'), cb = c.getBoundingClientRect();
+    const u = c.querySelector('.ntc>u'), ub = u.getBoundingClientRect();
+    const cp = getComputedStyle(u).clipPath;
+    /* ⚠ computed 값이 `calc(50% + 10px)` 그대로 남는다(브라우저가 안 푼다) — 두 꼴을 다 받는다.
+       % 는 **상자 폭 기준**이라 여기서 푼다(50% = 상자 폭의 절반 = 카드 우변). */
+    let right = null;
+    const mPx = cp.match(/inset\(\s*[\d.]+px\s+([\d.]+)px/);
+    const mCa = cp.match(/inset\(\s*[\d.]+px\s+calc\(\s*([\d.]+)%\s*\+\s*([\d.]+)px/);
+    if (mPx) right = +mPx[1];
+    else if (mCa) right = ub.width * (+mCa[1]) / 100 + (+mCa[2]);
+    return { cp, right, uL: ub.left - cb.left, uW: ub.width,
+      cardW: cb.width, frBorder: parseFloat(getComputedStyle(c.querySelector('.fr')).borderRightWidth) };
+  });
+  ok(rim.right !== null, '[15-a] 밝은 림에 clip-path 가 선언돼 있다', rim.cp);
+  if (rim.right !== null) {
+    /* 잘린 뒤 림의 오른쪽 끝(카드-로컬) = 림 상자 좌단 + 폭 − inset-right */
+    const cut = rim.uL + rim.uW - rim.right;
+    ok(cut <= rim.cardW - rim.frBorder + 0.5,
+      `[15-b] 잘린 림의 오른쪽 끝이 검정 열(카드 우변 −${rim.frBorder}) 왼쪽이다 — 림은 검정 «안쪽» 부품이다`,
+      `${p2(cut)} ≤ ${p2(rim.cardW - rim.frBorder)}`);
+    ok(Math.abs(cut - (rim.cardW - rim.frBorder)) < 1.5,
+      '[15-c] 그러면서도 검정 열에 **딱 붙는다** — 더 자르면 림과 곧은 림 사이가 벌어진다',
+      `${p2(cut)} ↔ ${p2(rim.cardW - rim.frBorder)}`);
+  }
+
   blk('§R 되돌림 시험 — 수리 전 값을 넣으면 빨개진다');
   await page.addStyleTag({ content:
     '.pvc>.bdg{width:178px!important;height:178px!important}'
