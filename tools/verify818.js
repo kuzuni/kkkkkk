@@ -14,7 +14,9 @@
  *   [A] 선언  — 두 버튼이 **자기 수량**을 신고한다(행·카드가 아니라 버튼 자신 — 816 §4) ·
  *               룬 수량이 요소를 갖는다(`<b class="rbn">`) · 816·660 의 원형은 무수정
  *   [B] 그림  — **자릿수 최악**에서 홀드 내내 수량 잉크 덮임 0(전제 항 B1 이 헛초록을 막는다)
- *   [C] 대가  — 660 이 «터진다» 로 세운 눈금(**동시 ≥8알**)을 지킨다 · 스폰은 버튼 안뿐 ·
+ *   [C] 대가  — 660 이 «터진다» 로 세운 눈금(**동시 ≥8알**)을 지킨다 · 스폰은 버튼 안뿐
+ *               (⚑ 870 — «버튼» 은 **그 알이 태어난 순간의 상자**다. 홀드 중 621 눌림이 상자를
+ *                왕복시키므로 표본 시각 상자로 재면 판정이 제비뽑기가 된다 · 되돌림은 [C1r]) ·
  *               레이아웃 Δ0px(룬 껍데기는 텍스트 노드와 같은 상자다)
  *   [R] 되돌림 — 신고를 지우면·엉뚱한 잉크(아이콘)를 신고하면 다시 덮인다(무르게 푼 수리가 아니다)
  *
@@ -115,11 +117,11 @@ const OBS_STOP = () => {
      · 밀도는 실시간이어야 뜻이 있다(«연속으로 터지는가») → 벽시계 홀드 + 페이지 안 관측기(825, 왕복 0회).
      · 덮임은 실시간일 이유가 없다(«궤적이 잉크를 지나는가») → 발화를 잡아 애니메이션 시간으로 건다.
    한 홀드에 얹으면 스텝이 메인 스레드를 붙잡아 밀도 쪽 수명·간격을 오염시킨다(등재문 처방 ⓐ). */
-async function hold(page, t, keep, want) {
+async function hold(page, t, keep, want, inject) {
   want = want || 'both';
   const out = {};
   if (want === 'both' || want === 'dens') Object.assign(out, await holdDens(page, t, keep));
-  if (want === 'both' || want === 'cov')  Object.assign(out, await holdCov(page, t, keep));
+  if (want === 'both' || want === 'cov')  Object.assign(out, await holdCov(page, t, keep, inject));
   return out;
 }
 
@@ -167,12 +169,13 @@ async function holdDens(page, t, keep) {
 }
 
 /* ── 덮임 축(846) — 발화 GENS 개를 잡아 **애니메이션 시간**으로 건다. 러너는 «얼마나 기다리는가» 만 정한다. */
-async function holdCov(page, t, keep) {
+async function holdCov(page, t, keep, inject) {
   const g = await arm(page, t, keep);
-  const zero = { frames: 0, steps: 0, max: 0, n25: 0, n05: 0, eggs: 0, peak: 0, out: 0, gens: 0 };
+  const zero = { frames: 0, steps: 0, max: 0, n25: 0, n05: 0, eggs: 0, peak: 0, out: 0, outNow: 0, gens: 0 };
   if (!g) return zero;
   const pr = page.evaluate(COV_RUN, { sel: { host: t.host, num: t.num },
-                                      gens: GENS, tick: TICK_MS, step: CSTEP, timeout: COV_TMO });
+                                      gens: GENS, tick: TICK_MS, step: CSTEP, timeout: COV_TMO,
+                                      inject: inject || null });   /* 870 — [C1r] 되돌림에서만 켠다 */
   await page.mouse.move(g.x, g.y);
   await page.mouse.down();
   const r = await pr;
@@ -182,7 +185,8 @@ async function holdCov(page, t, keep) {
   /* ⚠ 밀도 축과 **이름이 겹치는 값은 접두어를 붙여 돌려준다.** `life`·`per` 를 그대로 얹으면
      [C2b]·[C2c] 가 «측정한 노드 수명·발화당 스폰» 대신 «선언된 애니 길이·세대당 알» 을 묻게 되어
      상수를 상수와 비교하는 **헛초록**이 된다(한 홀드였을 때는 없던 함정이다). */
-  return { frames: r.frames, max: r.max, n25: r.n25, n05: r.n05, out: r.out, peak: r.peak,
+  return { frames: r.frames, max: r.max, n25: r.n25, n05: r.n05, out: r.out, outNow: r.outNow,
+           hbSwing: r.hbSwing, injected: r.injected, peak: r.peak,
            eggs: r.eggs, gens: r.gens, covPer: r.per, covLife: r.life, covStep: r.step, covTick: r.tick,
            /* 표본 수는 러너가 아니라 산수가 정한다 — [B1b] 가 이 등식을 직접 묻는다 */
            steps: Math.floor(((r.gens - 1) * r.tick + r.life) / r.step) + 1 };
@@ -297,8 +301,18 @@ async function holdCov(page, t, keep) {
   for (const k of Object.keys(T)) {
     pre[k] = await hold(page, T[k], 'none', 'both');        /* 818 이전 사본 = 구멍 0개 */
     const n = T[k].name;
-    ok(now[k] && now[k].out === 0, 'C1 ' + n + ' 660 [C] — 알 중심이 버튼 밖으로 나간 표본 0개',
-       (now[k] ? now[k].out : '?') + '개');
+    /* ⚑⚑ 870 — **이 항의 기준 상자를 «그 알이 태어난 순간의 버튼» 으로 옮겼다**(846 `COV_RUN` 머리말).
+       옛 자는 «finish() 를 부른 순간» 의 상자 하나로 열두 세대를 전부 쟀는데, 홀드 중 버튼은 621 눌림으로
+       **쉼 ↔ 눌림 ↔ 되튐** 을 왕복한다(아래 «상자 진폭» 기록 — 단련 top 20.6px). 그 순간이 눌림 봉우리면
+       쉬는 상자 안에서 끝난 알이 통째로 «밖» 으로 읽혀 같은 트리가 2판에 1판 빨갰다(`probe870` 재현:
+       룬 6판 중 표본 시각 자 3판 빨강 · 태생 시각 자 0판 · 나간 양은 전부 **0.12~0.92px** 이고
+       태생 상자로는 13.9~14.8px 안). 제품이 가두는 상자가 곧 `fxRect(t)` 의 그 상자이므로 자를 그쪽에 댄다.
+       ⚠ 무르게 푼 것이 아니다 — 밖에 난 알은 여전히 빨갛다. [C1r] 이 그것을 못박는다. */
+    ok(now[k] && now[k].out === 0, 'C1 ' + n + ' 660 [C] — 알 중심이 **제가 태어난** 버튼 상자 밖으로 나간 표본 0개',
+       (now[k] ? now[k].out : '?') + '개'
+       + (now[k] && now[k].hbSwing ? '  ── 기록(판정 안 함): 표본 시각 상자로 재면 ' + now[k].outNow
+          + '개 · 홀드 중 상자 진폭 top ' + p1(now[k].hbSwing.top[1] - now[k].hbSwing.top[0])
+          + 'px · 폭 ' + p1(now[k].hbSwing.w[1] - now[k].hbSwing.w[0]) + 'px(621 눌림)' : ''));
     /* ⚑ 816 은 «수리 전의 85%» 를 눈금으로 썼다. 여기서는 그 비가 아니라 **660 자신의 눈금**을 쓴다 —
        단련은 최악 자릿수의 잉크가 181px(버튼 폭의 53%)이라 구멍의 대가가 −28% 로 그 비를 못 넘는데,
        그것은 «연출이 죽었다» 가 아니라 «넓은 숫자를 비우면 그만큼 좁아진다» 는 산수다.
@@ -362,6 +376,14 @@ async function holdCov(page, t, keep) {
        '≥5% 표본 ' + (r2b ? r2b.n05 : '?') + '개 · 816 «코인(`s`)은 안 신고한다»');
     const r3 = await hold(page, T[k], null, 'cov');
     ok(r3 && r3.n05 === 0, 'R3 ' + n + ' 원복하면 다시 0 이다', '≥5% 표본 ' + (r3 ? r3.n05 : '?') + '개');
+    /* ⚑⚑ 870 — [C1] 의 기준 상자를 «태생» 으로 옮긴 것이 **자를 무르게 푼 것이 아님**을 못박는다.
+       표본기가 버튼 오른쪽 밖 30px 에 알 한 알을 우리 손으로 낳고(`inject`), 그 판의 [C1] 값이
+       ≥1 이어야 한다. 이 항이 빨개지는 길은 «자가 밖을 아예 못 본다» 뿐이다 — 그때가 [C1] 이
+       헛초록이 되는 자리다. ⚠ 이 판의 밀도·덮임 기록값에는 그 한 알이 섞인다(판정은 `out` 하나뿐). */
+    const rInj = await hold(page, T[k], null, 'cov', { dx: 30 });
+    ok(rInj && rInj.injected === 1 && rInj.out >= 1,
+       'C1r ' + n + ' **버튼 밖에 알을 낳으면 [C1] 이 빨개진다** — 태생 상자 자가 «밖» 을 여전히 본다',
+       '밖 알 ' + (rInj ? rInj.out : '?') + '개(주입 ' + (rInj ? rInj.injected : '?') + '알)');
   }
   /* ── 825 — 새 밀도 축의 되돌림 시험. 제품 파일은 **0줄**, `upFx` 를 한 겹 감싸 두 인자를 각각 죽인다.
         (곱 하나만 물으면 «한쪽이 죽고 다른 쪽이 메우는» 초록이 생긴다 — 그래서 둘을 갈라 죽여 본다.) */

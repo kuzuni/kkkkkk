@@ -22,6 +22,19 @@
  * ⚠ 눈금은 한 칸도 안 바뀐다 — 덮임은 816·818 과 같은 «1px 격자의 중심이 어느 알 안에 있는가» 다
  *   (행마다 x 구간을 합쳐 세므로 비용만 줄고 값은 같다 · `probe846` [3] 이 소박한 이중 루프와 대조한다).
  * ⚠ 338 — «함수를 불렀는가» 가 아니라 화면에 실제로 놓인 알의 상자를 센다. 알은 제품이 낳은 그 노드다.
+ *
+ * ⚑⚑ 870 — **«버튼 밖» 축(`out`)의 기준 상자를 «표본 시각» 에서 «그 알이 태어난 시각» 으로 옮겼다.**
+ *   `verify818` [C1] 이 같은 트리에서 2판에 1판 빨갛던 뿌리다(574·709·825·854·855 계열의 «자 플레이키»).
+ *   재현(`probe870`)이 갈래를 한 번에 갈랐다 — 룬 6판에서 **표본 시각 자 3판 빨강 · 태생 시각 자 0판**이고
+ *   밖으로 읽힌 알은 예외 없이 **0.12~0.92px** 만 나갔는데 **태생 상자로는 13.9~14.8px 안**이었다.
+ *   기계는 621 눌림이다 — 홀드 중 버튼 상자가 **쉼 ↔ 눌림 ↔ 되튐** 으로 흔들리고(단련 실측 폭
+ *   468.4~505.9 · top 1154.2~1174.8 = **20.6px 진폭**), 제품은 «그 알을 낳던 순간의 상자»(`fxRect(t)`)에
+ *   가두는데 이 표본기는 «finish() 를 부른 순간의 상자» 하나로 전부를 쟀다. 그 순간이 눌림 봉우리면
+ *   쉬는 상자 안에서 끝난 알이 통째로 «밖» 으로 읽힌다 — **제비뽑기**다.
+ *   ⚠ **제품을 무르게 푼 것이 아니다.** 묻는 것은 그대로 «알이 자기 버튼 안에서 났고 그 안에서 끝나는가»
+ *     이고, 제품이 실제로 지키는 그 상자에 자를 댄 것뿐이다. 밖에 난 알은 여전히 빨갛다 —
+ *     `arg.inject` 되돌림(아래)이 그것을 못박는다(`verify818` [C1r]).
+ *   ⚠ 눌림 진폭은 **기록으로만** 남긴다(`outNow`·`hbSwing` · LESSONS 239-① «흔들리는 양은 표에 기록으로만»).
  */
 
 /* 816·818 의 원래 자(소박한 이중 루프) — 등가 대조용으로만 쓴다 */
@@ -84,7 +97,9 @@ const COV_RUN = (arg) => new Promise(res => {
     return n / (w * h);
   };
 
-  const gens = [];
+  const gens = [], gbox = [];              /* 870 — 세대마다 «태어난 순간» 의 호스트 상자를 같이 적는다 */
+  const hbox = () => { const b = host.getBoundingClientRect();
+                       return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, w: b.width, h: b.height }; };
   let done = false;
   /* ⚑ 가드는 **첫 알이 나기 전에** 건다 — `fxBye` 의 제거 타이머는 알 나이 380ms 즈음에 터지므로,
      세 세대를 다 모은 뒤에 걸면 **첫 세대는 이미 걷힌 뒤**다(빈 상자라 궤적이 통째로 빠진다).
@@ -103,6 +118,9 @@ const COV_RUN = (arg) => new Promise(res => {
       if (nd.nodeType === 1 && /fx-spark/.test(nd.className + '')) born.push(nd);
     if (!born.length) return;
     gens.push(born);                       /* 한 콜백 = 한 발화(제품이 cnt 알을 동기로 붙인다) */
+    /* ⚑ 870 — 같은 프레임이라 이 상자가 곧 제품이 가둠에 쓴 `fxRect(t)` 의 상자다
+       (콜백은 발화가 알을 **동기로** 붙인 직후의 마이크로태스크에서 돈다). */
+    gbox.push(hbox());
     if (gens.length < arg.gens) return;
     done = true; mo.disconnect();
     finish();
@@ -112,7 +130,22 @@ const COV_RUN = (arg) => new Promise(res => {
 
   function finish() {
     if (!gens.length) { guarded = false; Element.prototype.remove = origRemove; res(null); return; }
-    const all = [].concat.apply([], gens);
+    /* ⚑ 870 되돌림(`arg.inject`) — **버튼 밖에 알 한 알을 우리 손으로 낳는다.** 태생 상자 자가
+       무르게 푼 것이 아님을 못박는 자리다(`verify818` [C1r]): 이 알이 있으면 `out` 은 반드시 ≥1 이다.
+       `position:fixed` 라 클라이언트 좌표 그대로 앉고, 애니메이션이 없어 아래 시간 걷기에 안 흔들린다. */
+    let injected = 0;
+    if (arg.inject) {
+      const hb0 = gbox[0], off = Number(arg.inject.dx) || 30;
+      const nd = document.createElement('s');
+      nd.className = 'fx-spark';
+      nd.style.cssText = 'position:fixed;margin:0;width:10px;height:10px;animation:none;'
+        + 'left:' + (hb0.right + off) + 'px;top:' + ((hb0.top + hb0.bottom) / 2) + 'px';
+      /* ⚠ 이 알은 «밖» 축(`out`)만 보라고 넣은 것이다 — 되돌림 판을 도는 홀드에서는 밀도·덮임 기록값
+         (`eggs`·`peak`·`max`)에 이 한 알이 섞인다. 판정에 쓰는 자리는 `out` 하나뿐이라 값이 안 흔들린다. */
+      nd.__inj = true; L.appendChild(nd); gens[0].push(nd); injected = 1;
+    }
+    /* 밀도·수명 값에는 이 알을 안 섞는다 — 되돌림은 «밖» 축 하나만 건드린다 */
+    const all = [].concat.apply([], gens).filter(nd => !nd.__inj);
     let life = 0;
     const anims = gens.map(g => {
       const A = [];
@@ -130,10 +163,10 @@ const COV_RUN = (arg) => new Promise(res => {
     const ink = inkOf(host.querySelector(sel.num));
     const tick = arg.tick, step = arg.step;
     const end = (gens.length - 1) * tick + life;
-    let frames = 0, max = 0, n05 = 0, n25 = 0, out = 0, peak = 0, sum = 0;
+    let frames = 0, max = 0, n05 = 0, n25 = 0, out = 0, outNow = 0, peak = 0, sum = 0;
     const rects = [];
     for (let tt = 0; tt <= end + 1e-6; tt += step) {
-      const rs = [];
+      const rs = [], rg = [];                          /* 870 — 알마다 «자기 세대» 를 같이 들고 다닌다 */
       for (let g = 0; g < gens.length; g++) {
         const lt = tt - g * tick;
         if (lt < 0 || lt > life) continue;              /* 아직 안 났거나 이미 걷힌 세대 — 안 센다 */
@@ -144,7 +177,7 @@ const COV_RUN = (arg) => new Promise(res => {
         if (lt < 0 || lt > life) continue;
         for (const nd of gens[g]) {
           const b = nd.getBoundingClientRect();
-          if (b.width && b.height) rs.push({ left: b.left, right: b.right, top: b.top, bottom: b.bottom });
+          if (b.width && b.height) { rs.push({ left: b.left, right: b.right, top: b.top, bottom: b.bottom }); rg.push(g); }
         }
       }
       if (!rs.length) continue;
@@ -154,13 +187,18 @@ const COV_RUN = (arg) => new Promise(res => {
       if (c > max) max = c;
       if (c >= 0.05) n05++;
       if (c >= 0.25) n25++;
+      /* ⚑ 870 — 판정 자는 **그 알의 태생 상자**(`gbox[g]`)다. 표본 시각 상자(`hb`)로 잰 값은
+         눌림 위상이 정하는 제비뽑기라 **기록으로만** 남긴다(위 머리말 · LESSONS 239-①). */
       const hb = host.getBoundingClientRect();
-      let o = 0;
-      for (const e of rs) {
+      let o = 0, oN = 0;
+      for (let ri = 0; ri < rs.length; ri++) {
+        const e = rs[ri], hg = gbox[rg[ri]] || hb;
         const cx = (e.left + e.right) / 2, cy = (e.top + e.bottom) / 2;
-        if (cx < hb.left || cx > hb.right || cy < hb.top || cy > hb.bottom) o++;
+        if (cx < hg.left || cx > hg.right || cy < hg.top || cy > hg.bottom) o++;
+        if (cx < hb.left || cx > hb.right || cy < hb.top || cy > hb.bottom) oN++;
       }
       if (o > out) out = o;
+      if (oN > outNow) outNow = oN;
       if (rects.length < (arg.rects | 0) && ink)
         rects.push({ ink: { left: ink.left, top: ink.top, width: ink.width, height: ink.height }, eggs: rs });
     }
@@ -169,9 +207,12 @@ const COV_RUN = (arg) => new Promise(res => {
     /* 잡은 세대와 그 사이에 가드가 붙잡아 둔 나머지를 **전부** 걷는다 — 다음 홀드의 첫 표본에 섞이면
        816 의 함정이다(`hold()` 이 «비고 다 지고 시작한다» 로 막는 그 자리). */
     for (const nd of [...L.children]) if (/fx-spark/.test(nd.className + '')) { try { nd.remove(); } catch (_) {} }
-    res({ frames, max, n05, n25, out, peak, eggs: frames ? sum / frames : 0,
+    /* 870 — 눌림이 홀드 중 상자를 얼마나 흔들었는가(기록 전용). 이 폭이 곧 옛 자의 제비뽑기 크기다. */
+    const sw = k => { const v = gbox.map(b => b[k]); return [Math.min.apply(null, v), Math.max.apply(null, v)]; };
+    res({ frames, max, n05, n25, out, outNow, peak, eggs: frames ? sum / frames : 0,
           gens: gens.length, per: gens.length ? all.length / gens.length : 0,
-          life, step, tick, alive, rects });
+          life, step, tick, alive, rects, injected,
+          hbSwing: { left: sw('left'), top: sw('top'), w: sw('w'), h: sw('h') } });
   }
 });
 
