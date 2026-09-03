@@ -41749,6 +41749,22 @@ const FXB_M = 6, FXB_K = 0.20, FXB_RMIN = 22, FXB_RMAX = 260;
    ⓑ 반경 방향으로는 못 뺀다 — 끝점이 이미 bbox 테두리라 밖으로 밀 여유가 없다. 그래서 **접선 방향**이다.
    ⓒ 못 피하면 마지막 후보를 그대로 쓴다(FX3_MTRY 와 같은 규약) — 링이 무너지는 것보다 낫다. */
 const FXB_KTRY = 9, FXB_KSTEP = 0.26;
+/* ⚑⚑ 838 — **사거리를 상자에 맞춰 접지 않는다.** 41회차가 «이동 = 중심→끝점 거리 × FXB_K(20%)» 로
+   적은 뒤, 그 거리는 28회차의 가둠 상자가 정하므로 **좁은 호스트에서 이동이 통째로 접힌다**:
+   훈련 강화 버튼(310×106)에서 상자 반폭은 128·반높이 26 이라 이동이 6~26px 이고, 알 지름이 46px 이니
+   한 알이 **제 몸길이의 0.41배**밖에 안 간다(`probe838` 재현 · 681 9회차 CV 0.59 · CW 21.4px).
+   점(좌표) 대상은 같은 곡선으로 4.8 몸길이를 가므로 **×11.7 차**다 — 갈라 놓은 것은 곡선이 아니라 이 비율이다.
+   ⇒ 비율을 **상자가 아니라 «제 몸길이» 에서 뽑는다**: 알 하나가 `FXB_BODY` 몸길이를 가려면
+   당김이 얼마여야 하는지 역산하고(`FXB_BODY × sz ÷ 중심→끝점 거리`), 상자가 그만큼을 못 내주면
+   **`FXB_KMAX` 까지만** 받는다(그 이상은 «상자를 넓히는» 것이라 28회차를 깬다).
+   ⚠ **스필은 구조적으로 0 그대로다** — 바뀌는 것은 시작점뿐이고 그 점은 중심과 끝점 **사이**에 있다.
+     끝점·가둠 상자·링 반경·알 크기·수명·개수는 한 값도 안 건드린다(28·13·14·21회차 전부 그대로).
+   ⚠ 시작점이 안쪽으로 더 들어오므로 «글자 위에서 태어난다»(21회차)가 되살아날 수 있다 —
+     그래서 당김은 **사다리**다: 큰 값부터 넣어 보고 keep-out(816·818 신고 잉크)·융합(619 12회차)에
+     걸리면 한 칸씩 내려 마지막 칸이 **종전 값 FXB_K** 다. 즉 걸리는 자리에서는 종전과 한 픽셀도 안 다르다.
+   ⚠ `FXB_KMAX` 0.55 = 시작 반경이 끝 반경의 45%. 0.72 까지 열어 보는 길은 봉우리(70ms)가 아직
+     출발 언저리라 14알이 한 덩이로 읽히는 쪽으로 기운다 — 열려면 알 수·크기(다른 축)와 한 벌이어야 한다. */
+const FXB_KMAX = 0.55, FXB_BODY = 1.35, FXB_KLAD = 3;
 /* ⚑ 619 12회차 — **스파크 크기의 눈금을 «절대» 로 정한다**(394 선례: «무엇을 눈금으로 삼는가» 를 먼저 적는다).
    11회차까지의 눈금은 «호스트 짧은 변 대비 %»(6회차 hsc)였고, 그 축에서 룬은 상한 1.6 에 붙어
    단일 62px · 3알 융합 97×64 «아메바» 로 읽혔다(비평가 EC ① · EB ⑥⑦ — 10·11회차 **네 명 연속**).
@@ -42173,16 +42189,26 @@ function fxBurst(t, col, n, strict, iv, ic){
       sy0 = clamp(p.y + Math.sin(ang)*ry*jt*rr, by0, by1);
       ex = r ? sx0 : clamp(sx0 + Math.cos(ang)*d, bx0, bx1);
       ey = r ? sy0 : clamp(sy0 + Math.sin(ang)*d, by0, by1);
-      sx = r ? p.x + (ex - p.x)*(1 - FXB_K) : sx0;
-      sy = r ? p.y + (ey - p.y)*(1 - FXB_K) : sy0;
-      if(!kh.length && !ks.length) break;
-      /* 시작·중간·끝 세 점으로 본다 — 이동이 짧아 세 점이면 선분 전체를 대표한다 */
-      const okKh = !kh.length
-        || (!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey));
-      /* 619 12회차 — 글자 회피와 **융합 회피를 같은 각도 굴림 하나로** 본다(축을 새로 만들지 않는다) */
-      if(okKh && !fxbFuse(sx, sy, sz/2)) break;
-      if(okKh && !fb) fb = { ang, sx, sy, ex, ey };
-      if(!okKh) hitK = k;
+      /* ⚑ 838 — 당김 사다리(위 `FXB_KMAX` 머리말). 큰 칸부터 넣고 걸리면 내려간다 ·
+         마지막 칸이 종전 값(FXB_K)이라 **걸리는 자리에서는 종전과 동일**하다. 점 대상은 칸이 하나다. */
+      const dd = r ? Math.hypot(ex - p.x, ey - p.y) : 0;
+      const kw = r ? clamp(FXB_BODY * sz / Math.max(1, dd), FXB_K, FXB_KMAX) : FXB_K;
+      let took = false, anyOk = false;
+      for(let q = 0; q < (r ? FXB_KLAD : 1); q++){
+        const kk = r ? kw - (kw - FXB_K) * q / (FXB_KLAD - 1) : FXB_K;
+        sx = r ? p.x + (ex - p.x)*(1 - kk) : sx0;
+        sy = r ? p.y + (ey - p.y)*(1 - kk) : sy0;
+        if(!kh.length && !ks.length){ took = true; break; }
+        /* 시작·중간·끝 세 점으로 본다 — 이동이 짧아 세 점이면 선분 전체를 대표한다 */
+        const okKh = !kh.length
+          || (!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey));
+        if(okKh) anyOk = true;
+        /* 619 12회차 — 글자 회피와 **융합 회피를 같은 각도 굴림 하나로** 본다(축을 새로 만들지 않는다) */
+        if(okKh && !fxbFuse(sx, sy, sz/2)){ took = true; break; }
+        if(okKh && !fb) fb = { ang, sx, sy, ex, ey };
+      }
+      if(took) break;
+      if(!anyOk) hitK = k;                             /* 이 각도의 **모든 칸**이 글자에 걸렸다 */
     }
     /* ⚑ 619 12회차 — 융합 때문에 끝까지 못 벌렸으면 «글자만 피한» 차선으로 되돌린다.
        융합은 «겹쳐 보인다» 이고 입자를 버리는 것은 «강화마다 터진다»([B] 1.00)를 깨는 것이라
