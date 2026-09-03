@@ -20,6 +20,9 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
+/* ⚑ 884 — [P2]·[P3] 의 **판정**은 결정적 자로 옮겼다(아래 [PD]). 홀드 표본은 «지금 화면» 을
+   보여 주는 기록으로 그대로 남는다 — 옛 자가 왜 흔들렸는지는 `docs/review/884-816자문턱재적합.md` §2. */
+const { sweep, SEEDS } = require('./keepcov884');
 
 const SRC = path.resolve(__dirname, '../index.html');
 const URL = 'file://' + SRC;
@@ -185,10 +188,9 @@ function digest(rows, key) {
 
   ok(pre.num.frames > 0, 'P1 홀드 중 알이 실제로 태어난다(발화 0 이면 이 재현은 무효다)',
      pre.num.frames + '표본');
-  ok(pre.num.max >= 0.25, 'P2 등재문 재현 — 수리 전 사본에서 숫자 잉크가 25% 이상 덮인다',
-     '최대 ' + p1(pre.num.max * 100) + '%');
-  ok(pre.num.pct05 >= 0.30, 'P3 등재문 재현 — 그 덮임이 «수명의 절반가량» 이어진다(CO 54%)',
-     '≥5% 표본 ' + p1(pre.num.pct05 * 100) + '%');
+  info('홀드 자(기록 전용 · 884) — 수리 전 최대 덮임',
+       p1(pre.num.max * 100) + '% · ≥5% 표본 ' + p1(pre.num.pct05 * 100) + '%'
+       + '  ⚠ 이 두 수는 **실행마다 갈린다**(884 §2 실측 10.0~23.3% / 14.6~30.2%) — 판정은 [PD]');
   ok(now.num.max < 0.05, 'P4 지금 트리 — 숫자 잉크 덮임이 사라졌다',
      '최대 ' + p1(now.num.max * 100) + '%');
   ok(now.eggs >= pre.eggs * 0.85, 'P5 밀도를 대가로 치르지 않았다(동시 알 수 ≥ 수리 전의 85%)',
@@ -197,9 +199,52 @@ function digest(rows, key) {
      '동시 ' + p1(both.eggs) + '알 ↔ 지금 ' + p1(now.eggs) + '알 (뭉침 '
      + p1(both.fused * 100) + '% ↔ ' + p1(now.fused * 100) + '%)');
   await setKeep('');                                  /* 원복 — 아래 비교군은 선언 그대로 본다 */
+  await browser.close();
+
+  /* ── [PD] 판정 — **결정적 자**(884 · `tools/keepcov884.js`) ──────────────────────
+     단발 버스트 한 세대를 낳고 애니를 멈춰 `currentTime` 을 5ms 씩 감아 수명 전 구간을 훑는다.
+     같은 시드에서 값이 **소수점까지 재현**되고(진폭 0 · `verify884` [A]), 고정 시드 여덟 판으로
+     «한 판의 제비뽑기» 를 지운다(872·882 교훈).
+     ⚠ 문턱은 **838 뒤에 다시 잰 값**에 맞췄다(등재문 지시 — «그냥 내리는 수리는 반려»):
+       수리 전 여덟 판 실측 최대 덮임 **7.5~17.6%** · ≥5% 표본 **9~18개/77**. */
+  console.log('\n[PD] 판정 — 결정적 자(884) · 고정 시드 ' + SEEDS.length + '판 · 단발 버스트 한 세대');
+  const dPre = await sweep('none');
+  const dNow = await sweep(null);
+  if (dPre.err || dNow.err) { ok(false, 'PD0 결정적 자가 돌았다', (dPre.err || dNow.err) + ''); }
+  else {
+    info('수리 전(구멍 0개)', '판마다 최대 덮임 ' + dPre.per.map(s => p1(s.num.max * 100) + '%').join(' · '));
+    info('지금 트리(숫자 신고)', '판마다 최대 덮임 ' + dNow.per.map(s => p1(s.num.max * 100) + '%').join(' · ')
+         + '  (코인 잉크는 ' + p1(dNow.coinMin * 100) + '~' + p1(dNow.coinMax * 100) + '% 덮인다 = 버스트는 살아 있다)');
+    ok(dPre.covered === dPre.seeds.length && dPre.maxMin >= 0.05,
+       'P2 등재문 재현 — 수리 전 사본에서 숫자 잉크가 **모든 판에서** 덮인다(838 뒤 재적합 · 문턱 5%)',
+       dPre.covered + '/' + dPre.seeds.length + '판 · 최대 덮임 '
+       + p1(dPre.maxMin * 100) + '~' + p1(dPre.maxMax * 100) + '%');
+    ok(dPre.n05Min >= 4,
+       'P3 등재문 재현 — 그 덮임이 **한 순간이 아니다**(≥5% 표본이 모든 판에서 4개 = 20ms 이상)',
+       '≥5% 표본 ' + dPre.n05Min + '~' + dPre.n05Max + '개 / ' + dPre.frames + '표본(수명 380ms)');
+    /* ⚠ 문턱이 «0» 이 아니라 1% 인 이유 — 격자가 잉크 상자를 `floor`/`ceil` 로 **한 칸씩 넓혀** 훑어서
+       구멍이 정확히 지켜도 모서리 한 칸이 걸릴 수 있다(여덟 판 중 시드 42 = 2,576칸 중 **1칸** 0.04%).
+       제품이 아니라 **자의 반올림**이다. 실측 최대 0.04% ↔ 문턱 1% = 25배 여유. */
+    ok(dNow.maxMax < 0.01 && dNow.coinMin >= 0.20,
+       'PD1 짝 항 — 지금 트리는 **여덟 판 전부 1% 미만**이고 그 판에서 **코인(미신고 잉크)은 덮인다**(헛초록이 아니다)',
+       '숫자 최대 ' + (dNow.maxMax * 100).toFixed(2) + '% · 코인 '
+       + p1(dNow.coinMin * 100) + '~' + p1(dNow.coinMax * 100) + '%');
+  }
+
+  const b2 = await launch(chromium);
+  const ctx2 = await b2.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const page2 = await ctx2.newPage();
+  page2.on('console', e => { if (e.type() === 'error') errs.push(e.text()); });
+  page2.on('pageerror', e => errs.push('pageerror: ' + e.message));
+  await page2.goto(URL);
+  await page2.waitForFunction(() => typeof S !== 'undefined' && typeof openTrain === 'function');
+  await page2.waitForTimeout(700);
+  await page2.evaluate(() => { S.gold = 1e18; S.dia = 1e9; S.rstone = 1e9; S.tstone = 1e9;
+    if (S.temper) S.temper.pts = 1e6; openTrain(); });
+  await page2.waitForTimeout(400);
 
   console.log('\n[C] 비교군 — 660 의 전제가 참인 자리(고정 라벨 버튼)');
-  const lab = await page.evaluate(() => {
+  const lab = await page2.evaluate(() => {
     const one = (host, sel) => {
       const h = document.querySelector(host); if (!h) return null;
       const b = h.querySelector(sel); if (!b) return null;
@@ -223,7 +268,7 @@ function digest(rows, key) {
 
   ok(errs.length === 0, 'C2 콘솔 에러 0건', errs.slice(0, 2).join(' | ') || '0');
 
-  await browser.close();
+  await b2.close();
   console.log('\nPROBE816 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   process.exit(fail ? 1 : 0);
 })();
