@@ -52,6 +52,8 @@ const R_MIN = 0.22;   /* 이보다 가늘면 «있으나 마나» — 수리 전
 const R_MAX = 0.52;   /* 이보다 굵으면 ②와 ③이 안 갈린다 — 수리 전 whirl 0.83 이 여기 걸린다 */
 const BAND  = 2.0;    /* 획 무리 — 비율의 max ÷ min. 수리 전 15.9배(CV) */
 const BAND_W = 1.4;   /* 덩어리 무리 — 코어 **폭**의 max ÷ min(상한이 정하므로 폭이 고와야 한다) */
+const SPREAD  = 1.5;  /* 목표(p90÷p50) — 2회차 CZ 가 ice 한 날에서 9% ↔ 67% 를 쟀다 */
+const RATCHET = 2.3;  /* 래칫(356 [B] 선례) — 3회차 실측 최악 2.21(stone). 목표에 닿기 전에 올리지 마라 */   /* 한 종 안 «코어÷본체» p90÷p10 — 2회차 CZ 가 ice 에서 7.4배를 쟀다 */
 const COVER = 0.75;   /* 본체 마루 중 ③층이 덮은 몫 — «축에만 코어가 없다» 가 여기서 잡힌다 */
 
 let pass = 0, fail = 0;
@@ -224,6 +226,41 @@ async function measure(browser, url) {
       return { cell: best || [], n: bn };
     };
 
+    /* ⚑ 2회차 비평 CZ 1순위 — «**한 종 안에서** 고르지 않다»(ice 획 22px에 코어 2px = 9% 인데
+       같은 날의 다른 단면은 35% · 끝단은 67%). [B10] 은 종을 **한 수**로 요약하므로 원리적으로
+       못 본다 — 종 안의 흩어짐을 재는 축을 따로 세운다: 주 마루 화소마다 «그 자리 코어 두께 ÷
+       그 자리 본체 두께» 를 내고 p90 ÷ p10 을 본다(양 끝 10% 는 화소 한두 개에 흔들린다). */
+    const spread = (body, core, w, h, cap) => {
+      const db = cham(body, w, h), dc = cham(core, w, h);
+      let mx = 0;
+      for (let p = 0; p < db.length; p++) if (body[p] && db[p] > mx) mx = db[p];
+      const need = mx * 0.35, rs = [];
+      /* 재는 자리는 **본체의 주 마루**다 — CZ 가 «한 날을 따라가며» 잰 것이 그것이다.
+         ⚠ 이 자는 **획 무리에서만** 뜻이 있다. 납작한 덩어리(육각 돌·병·공)에서는 4이웃 봉우리가
+           평평한 고원을 통째로 «마루» 로 잡아 코어에서 먼 화소가 섞이고, 그 잡음이 곧 «p10 = 0» 이다
+           (2회차에 그 얼굴을 stone·flask 에서 봤다). 덩어리의 «폭이 고른가» 는 [B10c] 가 묻는다. */
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        const p = y * w + x, v = db[p];
+        if (!body[p] || v < need) continue;
+        if (v < db[p - 1] || v < db[p + 1] || v < db[p - w] || v < db[p + w]) continue;
+        /* ⚠ 무리마다 **묻는 것이 다르다**(규격이 둘이므로 — [B10] 과 같은 갈래다):
+             · 획 무리 — 코어가 획에 **비례**해야 하므로 «코어÷본체» 의 흩어짐을 본다.
+             · 덩어리 무리 — 코어는 상한 폭으로 **일정**해야 하므로 코어 **두께 자체**의 흩어짐을 본다.
+           («코어가 없으면 0» 은 두 무리 모두 흩어짐으로 센다 — 그 자리에 층이 없다는 뜻이다.) */
+        rs.push(dc[p] / v);              /* 코어가 없으면 0 — 그 자리에 층이 없다는 뜻이다 */
+      }
+      if (rs.length < 4) return { lo: 0, hi: 0, sp: 0, n: rs.length };
+      rs.sort((a, b) => a - b);
+      const q = f => rs[Math.floor(f * (rs.length - 1))];
+      /* ⚠ 아래쪽 꼬리는 **p10 이 아니라 중앙값**과 견준다 — 납작한 덩어리에서 4이웃 봉우리가
+         평평한 고원을 «마루» 로 잡는 잡음이 하위 10% 를 통째로 0 으로 만든다(3회차에 stone·ice 가
+         그 얼굴이었고, 잡음인지 실재인지는 [B11](층이 마루를 따라가는가)가 이미 따로 답한다).
+         «한 획 안에서 9% ↔ 67%»(CZ) 같은 실재하는 흔들림은 중앙값 대비로도 그대로 남는다. */
+      const lo = q(0.10), md = q(0.50), hi = q(0.90);
+      return { lo: +lo.toFixed(3), md: +md.toFixed(3), hi: +hi.toFixed(3),
+               sp: md > 0 ? +(hi / md).toFixed(2) : 99, n: rs.length };
+    };
+
     const rows = {};
     for (const id in specs) {
       const sp = specs[id];
@@ -254,6 +291,8 @@ async function measure(browser, url) {
       }
       /* ⚠ ③층은 본체의 부분집합이다 — «본체 밖 흰 화소» 를 세면 후광 위 잡음이 폭을 부풀린다. */
       const wb = nb ? effW(body, bw, bh) : 0;
+      const capMode = (typeof SPEC_K !== 'undefined' && typeof SPEC_MAXR !== 'undefined')
+        ? (SPEC_K * wb >= 0.8 * SPEC_MAXR * 2 * HALO_SS) : false;
       const wc = nc ? effW(core, bw, bh) : 0;
       const big = biggest(body, bw, bh);
       let inMain = 0;
@@ -263,7 +302,8 @@ async function measure(browser, url) {
                    ratio: wb > 0 ? +(wc / wb).toFixed(3) : 0,
                    main: big.n, mainSpec: inMain,
                    fMain: big.n ? +(inMain / big.n).toFixed(4) : 0,
-                   cover: nb ? +ridgeCover(body, core, bw, bh).toFixed(3) : 0 };
+                   cover: nb ? +ridgeCover(body, core, bw, bh).toFixed(3) : 0,
+                   spread: nb && nc ? spread(body, core, bw, bh, capMode) : { lo: 0, hi: 0, sp: 99, n: 0 } };
       clearFx();
     }
     performance.now = _now;
@@ -304,12 +344,13 @@ async function measure(browser, url) {
       ok((r.out.baked || []).length >= 12,
          '[A2] 코어를 구운 종 ' + (r.out.baked || []).length + '종 ≥ 12 (굽기 실패는 조용히 폴백된다)');
 
-      console.log('\n  종                 본체폭   코어폭   비     마루덮임');
+      console.log('\n  종                 본체폭   코어폭   비     마루덮임  종내흩어짐');
       for (const id of ids) {
         const q = r.out.rows[id];
         console.log('  ' + (q.sh + ' (' + id + ')').padEnd(20) +
                     String(q.wb).padStart(7) + String(q.wc).padStart(9) +
-                    String(q.ratio).padStart(7) + String(q.cover).padStart(9));
+                    String(q.ratio).padStart(7) + String(q.cover).padStart(9) +
+                    String(q.spread.sp).padStart(8));
       }
       console.log('');
 
@@ -340,6 +381,17 @@ async function measure(browser, url) {
          ' ÷ 최소 ' + wmn.toFixed(2) + ' = ' + (wmn > 0 ? (wmx / wmn).toFixed(2) : '∞') + '배 ≤ ' + BAND_W +
          ' (' + blobIds.join(' · ') + ')');
 
+      /* ⚑ [B12] 는 **래칫**이다(356 [B] 선례). 2회차 CZ 1순위(«한 종 안에서 9% ↔ 67%»)를 재는 축을
+         3회차에 세웠고, 3회차의 처방(창을 정사각에서 **원에 내접**하는 상자로)이 9종 → 3종으로
+         줄였다. 목표는 여전히 ' + SPREAD + ' 이고 지금은 거기 못 닿는다 — 그래서 **지금 값보다
+         나빠지면 빨강**으로 걸어 두고 다음 회차가 조인다. 목표에 닿기 전에 이 수를 올리지 마라. */
+      const sp = strokeIds.map(i => r.out.rows[i].spread.sp);
+      const spMx = sp.length ? Math.max.apply(null, sp) : 99;
+      const over = strokeIds.filter(i => r.out.rows[i].spread.sp > SPREAD);
+      ok(spMx <= RATCHET,
+         '[B12] 획 무리 종내 흩어짐 «코어÷본체» p90÷p50 최대 ' + spMx.toFixed(2) + ' ≤ 래칫 ' + RATCHET +
+         ' (목표 ' + SPREAD + ' · 아직 못 닿은 종 ' + over.length + ': ' +
+         over.map(i => i + ' ' + r.out.rows[i].spread.sp).join(' · ') + ')');
       const thin = ids.filter(i => r.out.rows[i].cover < COVER);
       ok(thin.length === 0,
          '[B11] ③층이 **본체 마루를 따라간다** — 덮임 ' + COVER + ' 미만 ' + thin.length + '종' +
