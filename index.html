@@ -26760,7 +26760,15 @@ const SPEC_ON   = 1;      /* 되돌림 시험이 여기를 끈다 — 0 이면 7
 const SPEC_K    = 0.35;   /* 코어 폭 ÷ 획 폭 — CV 목표 «획 폭의 30~40%» 의 가운데 */
 const SPEC_A    = 0.94;   /* 봉우리 알파 = `SPEC` 색의 알파(한 색 문법을 값으로도 잇는다) */
 const SPEC_KNEE = 0.10;   /* 코어 전용 무릎 — 링과 같은 이유(처음부터 끝까지 페이드다) */
-const SPEC_MINR = 0.38;   /* 마루 원 최소 반지름(로컬px) — 가장 가는 획도 코어를 갖는다 */
+const SPEC_MINR = 0.38;   /* 코어 최소 반쪽폭(로컬px) — 가장 가는 획도 코어를 갖는다 */
+const SPEC_SIL  = 0.85;   /* «단단한 몸» 의 문턱 — 종이 제 손으로 깐 발광은 코어의 씨앗이 아니다 */
+/* ⚑ 1회차 비평 2인 공통 — **가장 굵은 종들이 «흰 덩어리» 로 뒤집힌다**(CX: boom 실체의 92% ·
+   meteor 53% · bounce 52% / CY: meteor 90.5% · stone 83.3% · shuri 80% · «규격상 각 변에 32.5%가
+   남아야 하는데 남은 테두리가 1~2px»). 비율만으로는 안 닫힌다 — «획 폭의 35%» 는 CV 가 **획**을
+   두고 준 목표이고, 덩어리(화구·바위·공)에 그대로 대면 지름의 35% 짜리 흰 원이 되어 «반짝임» 이
+   아니라 **채움**이 된다. ⇒ 규격을 한 줄 더 못박는다: **코어는 획의 속이지 덩어리의 채움이 아니다**
+   — 반쪽폭에 상한을 둬 굵은 종에서는 비율이 아니라 **상한 폭**이 코어를 정한다. */
+const SPEC_MAXR = 2.6;    /* 코어 최대 반쪽폭(로컬px) — 세트 획의 속이 가지는 폭. 넘으면 반짝임이 채움이 된다 */
 const SPEC_SPR  = new Map();
 let SPEC_BAKE = 0, SPEC_M = null;
 /* 코어 굽기용 **짧은** 페이드 — `HALO_TAPS`(1.4·2.8 로컬px)를 그대로 쓰면 폭 2~3px 짜리 코어가
@@ -26808,11 +26816,18 @@ function specSprite(key, b, render){
     const keep = ctx; ctx = sg; SPEC_BAKE++; SPEC_M = null;
     try{ sg.save(); render(cb); sg.restore(); } finally { ctx = keep; SPEC_BAKE--; }
     const M = SPEC_M; SPEC_M = null;
-    /* ② 실루엣을 **문턱으로 굳힌다**(α ≥ .5) — 9회차 ② 와 같은 이유다: 종이 제 손으로 깐 발광의
-       옅은 치맛단이 씨앗이 되면 «획 폭» 이 종마다 다른 뜻이 되어 규격의 뜻이 사라진다. */
+    /* ② 실루엣을 **문턱으로 굳힌다** — 9회차 ② 와 같은 이유다: 종이 제 손으로 깐 발광이 씨앗이
+       되면 «획 폭» 이 종마다 다른 뜻이 되어 규격의 뜻이 사라진다.
+       ⚠ 문턱은 링의 **α ≥ .5 가 아니라 `SPEC_SIL`(0.85)** 이다 — 1회차 비평 2인(CX·CW… CY)이
+         **독립으로 같은 두 종**을 짚었다: «boom 은 실체의 92% 가 백색»(CX) · «meteor 는 흰 판이
+         본체의 90.5% · 남은 테두리 1px»(CY). 뿌리는 하나였다 — 불 계열의 **방사 발광**은 중심에서
+         α .5~.85 라 링의 문턱(.5)에는 통째로 «본체» 로 들어오고, 그 넓은 원반의 35% 는 눈에 보이는
+         **단단한 몸**보다 훨씬 넓다. 링은 «발광까지 두르는» 것이 맞지만 코어는 **단단한 몸의 속**이다
+         — 같은 층 함수라도 두 문턱은 다른 질문에 답한다. */
     const sd = sg.getImageData(0, 0, S, S).data;
     const mask = new Uint8Array(S * S);
-    for(let i = 3, p = 0; i < sd.length; i += 4, p++) mask[p] = sd[i] >= 128 ? 1 : 0;
+    const solid = Math.round(SPEC_SIL * 255);
+    for(let i = 3, p = 0; i < sd.length; i += 4, p++) mask[p] = sd[i] >= solid ? 1 : 0;
     /* ③ 거리변환 → **«그 자리 반쪽폭의 K 만 남기고 깎기»**.
        ⚑ 1회차에 두 길을 걸어 보고 여기 섰다(둘 다 실측으로 기각했다):
          ⓐ «마루(국소 최대)에 K·h 원 찍기» — 마루를 «여덟 이웃보다 크다» 로 잡으면 **뾰족해지는
@@ -26858,7 +26873,7 @@ function specSprite(key, b, render){
     if(!LV.length) LV.push(1);
     const boxes = LV.map(r => maxBox(dist, r));
     const core = new Uint8Array(S * S);
-    const minR = SPEC_MINR * HALO_SS;
+    const minR = SPEC_MINR * HALO_SS, maxR = SPEC_MAXR * HALO_SS;
     let hit = 0;
     for(let p = 0; p < core.length; p++){
       const d = dist[p];
@@ -26867,7 +26882,9 @@ function specSprite(key, b, render){
       const hh = boxes[li][p];                       /* 그 자리의 반쪽폭 추정 */
       /* 문턱 둘 중 **무른 쪽**을 쓴다 — 비율(1−K)·h 와 «절대 최소 폭»(h − minR).
          가장 가는 획에서도 코어가 사라지지 않게 하는 바닥이 뒤엣것이다. */
-      const t = Math.min((1 - SPEC_K) * hh, hh - minR);
+      /* 문턱 셋의 **가운데** — ⓐ 비율 (1−K)·h · ⓑ 절대 최소 폭(가장 가는 획도 코어를 갖는다) ·
+         ⓒ 절대 최대 폭(덩어리가 흰 판이 되지 않는다). ⓐ 를 ⓑ 로 눕히고 ⓒ 로 세운다. */
+      const t = Math.max(hh - maxR, Math.min((1 - SPEC_K) * hh, hh - minR));
       if(d >= t){ core[p] = 1; hit++; }
     }
     if(!hit) throw new Error('no core');

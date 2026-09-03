@@ -50,7 +50,8 @@ const killLine = (src, tag, repl) =>
    자의 실효 폭 정의(4·mean D)는 끝단·꺾임에서 조금 낮게 나오므로 아래로 한 칸 넓힌다. */
 const R_MIN = 0.22;   /* 이보다 가늘면 «있으나 마나» — 수리 전 curve 0.14 · arrow 0 이 여기 걸린다 */
 const R_MAX = 0.52;   /* 이보다 굵으면 ②와 ③이 안 갈린다 — 수리 전 whirl 0.83 이 여기 걸린다 */
-const BAND  = 2.0;    /* 종끼리 max ÷ min — 수리 전 15.9배(CV) */
+const BAND  = 2.0;    /* 획 무리 — 비율의 max ÷ min. 수리 전 15.9배(CV) */
+const BAND_W = 1.4;   /* 덩어리 무리 — 코어 **폭**의 max ÷ min(상한이 정하므로 폭이 고와야 한다) */
 const COVER = 0.75;   /* 본체 마루 중 ③층이 덮은 몫 — «축에만 코어가 없다» 가 여기서 잡힌다 */
 
 let pass = 0, fail = 0;
@@ -269,7 +270,10 @@ async function measure(browser, url) {
     /* 코어를 구운 종을 **제품에게 묻는다**(자에 목록을 손으로 적으면 그것이 곧 사본이다 — 402) */
     const baked = (typeof SPEC_SPR !== 'undefined')
       ? Array.from(SPEC_SPR.entries()).filter(e => e[1]).map(e => String(e[0]).split('|')[0]) : [];
-    return { rows, baked, n: Object.keys(specs).length };
+    /* 규격 상수는 **제품에게 묻는다** — 자에 손으로 적으면 그것이 곧 사본이다(402). */
+    const K = typeof SPEC_K !== 'undefined' ? SPEC_K : 0;
+    const capW = (typeof SPEC_MAXR !== 'undefined' ? SPEC_MAXR : 0) * 2 * HALO_SS;
+    return { rows, baked, n: Object.keys(specs).length, K, capW };
   });
 
   await ctx.close();
@@ -309,15 +313,32 @@ async function measure(browser, url) {
       }
       console.log('');
 
-      const rs = ids.map(i => r.out.rows[i].ratio);
-      const outBand = ids.filter(i => r.out.rows[i].ratio < R_MIN || r.out.rows[i].ratio > R_MAX);
+      /* ⚑ 2회차부터 규격이 **두 무리**다(1회차 비평 2인 공통이 그렇게 갈랐다):
+           · 획 무리 — 코어 폭 = 획 폭의 K. **비율**이 고른가를 본다.
+           · 덩어리 무리 — 비율을 그대로 대면 지름의 35% 짜리 흰 원이 되어 «반짝임» 이 «채움» 이
+             된다(CX «boom 실체의 92%» · CY «meteor 90.5% · 남은 테두리 1px»). 상한 폭이 코어를
+             정하므로 **폭 자체**가 고른가를 본다.
+         무리를 가르는 것은 자의 취향이 아니라 **제품의 규칙 그 자체**다 — K·(본체 폭) 이 상한을
+         넘으면 그 종은 상한이 정한다(경계에 걸친 종은 두 규칙이 같은 값을 내므로 0.8 여유를 둔다). */
+      const capW = r.out.capW || 0, K = r.out.K || 0;
+      const isCap = i => capW > 0 && K * r.out.rows[i].wb >= 0.8 * capW;
+      const strokeIds = ids.filter(i => !isCap(i)), blobIds = ids.filter(isCap);
+      const outBand = strokeIds.filter(i => r.out.rows[i].ratio < R_MIN || r.out.rows[i].ratio > R_MAX);
       ok(outBand.length === 0,
-         '[B10a] 모든 종의 «코어 폭 ÷ 본체 폭» 이 ' + R_MIN + '~' + R_MAX + ' 안 — 밖 ' +
-         outBand.length + '종' + (outBand.length ? ' (' + outBand.map(i => i + ' ' + r.out.rows[i].ratio).join(' · ') + ')' : ''));
+         '[B10a] 획 무리 ' + strokeIds.length + '종의 «코어 폭 ÷ 본체 폭» 이 ' + R_MIN + '~' + R_MAX +
+         ' 안 — 밖 ' + outBand.length + '종' +
+         (outBand.length ? ' (' + outBand.map(i => i + ' ' + r.out.rows[i].ratio).join(' · ') + ')' : ''));
+      const rs = strokeIds.map(i => r.out.rows[i].ratio);
       const mx = Math.max.apply(null, rs), mn = Math.min.apply(null, rs);
       ok(mn > 0 && mx / mn <= BAND,
-         '[B10b] 종끼리 한 밴드 — 최대 ' + mx.toFixed(3) + ' ÷ 최소 ' + mn.toFixed(3) + ' = ' +
-         (mn > 0 ? (mx / mn).toFixed(2) : '∞') + '배 ≤ ' + BAND + ' (수리 전 CV 15.9배 · CW 12.7배)');
+         '[B10b] 획 무리는 **비율**이 한 밴드 — 최대 ' + mx.toFixed(3) + ' ÷ 최소 ' + mn.toFixed(3) +
+         ' = ' + (mn > 0 ? (mx / mn).toFixed(2) : '∞') + '배 ≤ ' + BAND + ' (수리 전 CV 15.9배 · CW 12.7배)');
+      const ws = blobIds.map(i => r.out.rows[i].wc);
+      const wmx = ws.length ? Math.max.apply(null, ws) : 0, wmn = ws.length ? Math.min.apply(null, ws) : 0;
+      ok(blobIds.length >= 3 && wmn > 0 && wmx / wmn <= BAND_W,
+         '[B10c] 덩어리 무리 ' + blobIds.length + '종은 **폭**이 한 밴드 — 최대 ' + wmx.toFixed(2) +
+         ' ÷ 최소 ' + wmn.toFixed(2) + ' = ' + (wmn > 0 ? (wmx / wmn).toFixed(2) : '∞') + '배 ≤ ' + BAND_W +
+         ' (' + blobIds.join(' · ') + ')');
 
       const thin = ids.filter(i => r.out.rows[i].cover < COVER);
       ok(thin.length === 0,
