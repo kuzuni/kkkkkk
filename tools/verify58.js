@@ -31,6 +31,12 @@
     [17] 씬 A 전투 발이 우측 «상한» 에서 세로 기둥으로 뭉치지 않는다 (37차 2인 공통ㄴ)
     [18] 퀘스트 체크 도장이 «정지 뒤 하드컷» 이 아니다 (37차 2인 공통ㄹ)
     [19] 씬 A HUD 알약 «팝» 의 복귀가 한 프레임에 급락하지 않는다 (37차 2인 공통ㅁ)
+         (⚑ 845 — 값이 **표본 격자**에 물려 같은 빌드가 73~172ms 로 널뛰던 것을 셋으로 막았다:
+          ⓐ 문턱 통과 시각을 앞뒤 두 표본 사이 **선형 보간**으로 · ⓑ 봉우리·정지폭·기대 구간을
+          표본이 아니라 **선언**(`@keyframes fxPunch` — CSSOM)에서 · ⓒ 폭 한 줄만 읽는 **rAF
+          기록기**(`pillRec`)를 따로. 문턱은 «max(105, 기대의 70%)» 로 **양쪽 다 엄해졌고**, 전제항
+          [19-b] 가 «보간이 실제로 두 점 사이에서 일어났는가» 를 못박는다. 되돌림 시험은
+          `tools/verify845.js`)
 
    실행: node tools/verify58.js            (실패 항목은 ✗ 로 찍힌다) */
 const { pw, launch } = require('./pwlaunch');
@@ -130,6 +136,26 @@ async function run(scene, span, step) {
     const samples = [];
     let vk = 0;                              /* 38회차 [18] — 체크 도장에 «처음 본 순서» 표를 붙인다 */
     const t0 = performance.now();
+    /* ⚑ 845 — [19] 전용 «알약 폭» 기록기. 공용 `tick` 은 표본 하나마다 selector 를 수십 개 돌아,
+       러너에 부하가 실리면 실측 간격이 **지시 8ms 에도 50~80ms** 로 벌어진다(표본 21~49장 실측).
+       [19] 는 «복귀가 얼마 동안 보이는가» 라 그 격자에 값이 그대로 물려 **84~149ms 로 널뛰었다**
+       (845 등재 — 7회 중 1회 73ms 로 빨강). 617·619 가 «프레임 시각» 에서 겪은 병의 사촌이다.
+       ⇒ **폭 한 줄만** 읽는 rAF 기록기를 따로 돌린다. 노드를 미리 잡아 두므로 프레임당 비용은
+         `getBoundingClientRect` 하나뿐이고(씬 A 의 타이밍 축에 부하를 얹지 말라는 570 규약을
+         지키는 유일한 모양이다), 표본이 «프레임» 이라 플레이어가 본 것과 같은 격자다.
+       ⚠ 그래도 격자는 남는다(부하가 실리면 rAF 도 늘어진다) — 값을 격자에서 떼는 것은
+         **[19] 쪽의 보간**이다. 기록기는 보간이 쓸 «가까운 두 점» 을 대는 몫이다. */
+    const pillEl = (sc === 'gain') ? document.querySelector('.cbox.cGold') : null;
+    const pillRec = [];
+    if (pillEl) {
+      const rec = () => {
+        const t = performance.now() - t0;
+        pillRec.push([Math.round(t * 10) / 10,
+          Math.round(pillEl.getBoundingClientRect().width * 100) / 100]);
+        if (t < span) requestAnimationFrame(rec);
+      };
+      requestAnimationFrame(rec);
+    }
     /* ⚑ 732 — «강화가 실제로 일어났나» 는 연출이 아니라 **판정**에서 읽는다(씬 C 골드 · 씬 D 강화 횟수).
        [7-b] «훈련 «+n» 0장» 의 전제가 이 값이다 — 없으면 «폐지됐다» 와 «씬이 안 났다» 가
        구별되지 않아, 종전 실패문의 모양 그대로 **헛초록**이 되살아난다(694 §R-d 가 같은 자리).
@@ -245,7 +271,31 @@ async function run(scene, span, step) {
         walk(btn);
         if (best) qlab = { x: best.left, y: best.top, w: best.width, h: best.height };
       } }
-    return { samples, goldPill, diaPill, FXMAX: typeof FXMAX === 'number' ? FXMAX : 120,
+    return { samples, pillRec, goldPill, diaPill, FXMAX: typeof FXMAX === 'number' ? FXMAX : 120,
+      /* ⚑ 845 — [19] 의 봉우리·바닥·기대 구간을 **선언에서** 읽는다. 종전에는 셋 다 표본에서
+         왔는데(`peak = max(표본)`), 부하가 실리면 봉우리 표본이 통째로 빠져 진폭이 20% 작아지고
+         그러면 문턱 둘이 같이 움직여 값이 또 흔들린다(84ms 실행의 봉우리는 242.6px = 선언 246.9 의
+         98.3%). 게이트가 자기 사본을 들면 부패한다(211·289)이므로 **CSSOM 에서** 캐낸다 —
+         제품이 봉우리·길이를 바꾸면 자가 따라온다. */
+      punchKf: (() => {
+        const out = { dur: null, kf: [] };
+        const eat = (rules) => { for (const r of rules || []) {
+          if (r.type === CSSRule.KEYFRAMES_RULE && r.name === 'fxPunch') {
+            for (const k of r.cssRules) {
+              const m = /scale\(\s*([\d.]+)\s*\)/.exec(k.style.transform || '');
+              if (m) for (const kt of String(k.keyText).split(','))
+                out.kf.push([parseFloat(kt), parseFloat(m[1])]);
+            }
+          }
+          if (r.type === CSSRule.STYLE_RULE && /(^|,)\s*\.fx-punch\s*($|,)/.test(r.selectorText || '')) {
+            const d = (r.style.animationDuration || r.style.getPropertyValue('animation-duration') || '').trim()
+              || (/(\d*\.?\d+)(ms|s)\b/.exec(r.style.animation || '') || [])[0] || '';
+            if (d) out.dur = parseFloat(d) * (/ms\s*$/.test(d) ? 1 : 1000);
+          }
+        } };
+        for (const ss of document.styleSheets) { try { eat(ss.cssRules); } catch (e) { /* CORS */ } }
+        out.kf.sort((a, b) => a[0] - b[0]);
+        return out; })(),
       /* 732 — [7-a]/[8] 전제. 씬 C 는 골드, 씬 D 는 강화석으로 «났다» 를 판정에서 읽는다. */
       paid: sc === 'beat' ? (S.cnt.levelUps - pay0) : (pay0 - S.gold),
       menub: mbr ? { x: mbr.left, y: mbr.top, w: mbr.width, h: mbr.height } : null,
@@ -633,26 +683,112 @@ async function run(scene, span, step) {
      ⚠ «한 표본이 먹은 비율» 로 재면 안 된다 — 표본 간격이 32~65ms 로 들쭉날쭉해서, 같은 속도라도
        간격이 두 배인 표본이 두 배를 먹는다(첫 시도가 그 값으로 «51%» 를 읽고 고친 줄 알 뻔했다).
        [18] 에서 배운 것과 같다: **표본 격자에 안 흔들리는 자**로 잰다.
-     → «복귀 실효 구간» — 봉우리에서 25% 내려온 첫 표본 ~ 바닥 10% 안에 든 첫 표본 사이의 시간.
-       속도가 아니라 «얼마 동안 복귀가 보이는가» 라서 간격이 흔들려도 값이 안 바뀐다. */
-  console.log('[19] 씬 A 알약 팝 — 복귀 실효 구간 (37차 Z·AA 2인 공통ㅁ)');
+     → «복귀 실효 구간» — 봉우리에서 25% 내려온 때 ~ 바닥 10% 안에 든 때 사이의 시간.
+       속도가 아니라 «얼마 동안 복귀가 보이는가» 라서 간격이 흔들려도 값이 안 바뀐다.
+
+     ⚑ **845 (2026-09-03) — 그 «안 흔들린다» 가 사실이 아니었다.** 39회차의 자는 «문턱을 넘은
+       **첫 표본**» 의 시각을 그대로 썼기 때문에, 값의 오차가 통째로 **표본 간격**이다. 러너에
+       부하가 실리면 공용 `tick` 의 실측 간격이 8ms 지시에도 50~80ms 로 벌어져(표본 21~49장)
+       같은 빌드가 **73 · 84 · 103 · 104 · 137 · 141 · 143 · 149 · 172ms** 로 널뛰었고 7회 중 1회가
+       문턱 90 아래로 내려갔다(845 등재 · 본 세션이 동시 4실행으로 84ms 재현).
+       뿌리가 셋이라 셋을 다 막았다 —
+         ⓐ **격자 양자화**: 문턱 통과 시각을 «첫 표본» 이 아니라 **앞뒤 두 표본 사이 선형 보간**으로
+            잡는다. 복귀 구간은 선언이 이미 «거의 선형»(`cubic-bezier(.3,.05,.7,.95)`)이라 보간이
+            바로 그 구간의 모양이다.
+         ⓑ **봉우리 표본 결손**: 진폭을 표본의 `max−min` 이 아니라 **선언**(`@keyframes fxPunch`)에서
+            읽는다. 84ms 실행은 봉우리를 242.6px = 선언 246.9 의 98.3% 로만 찍었고, 진폭이 깎이면
+            문턱 둘이 같이 움직여 값이 또 흔들린다. 바닥도 «표본 최소»(되튐 .985 의 밑점)가 아니라
+            **정지 폭**(scale 1)이다.
+         ⓒ **성긴 표본**: 폭 한 줄만 읽는 rAF 기록기(`pillRec`)를 따로 돌려 보간이 쓸 두 점을
+            프레임 격자로 좁힌다. `tick` 에는 한 줄도 더 안 얹었다(570 규약).
+       ⚠ **문턱은 한 칸도 안 넓혔다 — 양쪽 다 엄해졌다.** 상대 문턱(기대 실효 구간의 70% =
+         107.5ms)과 절대 하한(105ms — 아래 참조)이 둘 다 종전 90ms 위다.
+         («문턱을 표본 손실 몫만큼 내린다» 는 갈래 ⓑ 는 «복귀가 실제로 급락해도 초록» 이 되는
+         방향이라 안 골랐다 — 845 등재문이 ⓐ 를 1순위로 적어 둔 이유다.)
+       ⚑ **새 자가 맞다는 것은 39회차 자신의 산수가 증언한다.** 바로 위 주석이 «복귀 구간이
+         101ms(**실효 93ms**) → 202ms 로 펴진다» 라고 적어 두었는데 — 그 «202ms» 의 실효 몫이
+         이 자의 `exp` **153.6ms** 이고, 39회차 **이전** 빌드를 이 자로 재면 **78~94ms**(`verify845`
+         §R-a 실측)로 그 «실효 93ms» 와 같은 자리다. 같은 빌드를 옛 자는 **34ms** 로 읽었다 —
+         즉 옛 자는 흔들리기만 한 게 아니라 값 자체가 실효의 1/3 이었다. */
+  console.log('[19] 씬 A 알약 팝 — 복귀 실효 구간 (37차 Z·AA 2인 공통ㅁ · 845 재계측)');
   {
-    const ps = gain.samples.filter((s) => s.pillB);
-    if (ps.length < 4) {
-      ok(false, `알약 상자 표본 ${ps.length}장 — 잴 대상이 없다(.cbox.cGold 선택자 확인)`);
+    /* 선언에서 읽은 봉우리·길이. 못 읽으면 조용히 넘어가지 않고 빨개진다(211·289) */
+    const kf = (gain.punchKf && gain.punchKf.kf.length >= 3) ? gain.punchKf.kf : null;
+    const dur = gain.punchKf && gain.punchKf.dur;
+    /* 선언 곡선(구간별 선형)에서 «값 v 를 지나는 시각». 봉우리 뒤만 본다. */
+    const declT = (v, kfa) => {
+      const pk = kfa.reduce((m, r, i) => (r[1] > kfa[m][1] ? i : m), 0);
+      for (let i = pk; i < kfa.length - 1; i++) {
+        const [o0, s0] = kfa[i], [o1, s1] = kfa[i + 1];
+        if (s0 >= v && v >= s1 && s0 !== s1) return (o0 + (o1 - o0) * (s0 - v) / (s0 - s1)) / 100;
+      }
+      return null;
+    };
+    const rec0 = gain.pillRec || [];
+    if (!kf || !dur) {
+      ok(false, '[19-a] `@keyframes fxPunch` 를 CSSOM 에서 못 읽었다 — 선언이 바뀌었는지 확인');
+    } else if (rec0.length < 8) {
+      /* 기록기가 죽으면 [19] 가 통째로 헛초록이 된다 — 자리를 비우지 않고 빨개진다(333) */
+      ok(false, `[19-a] rAF 기록기 표본 ${rec0.length}장 — 잴 대상이 없다(.cbox.cGold 선택자 확인)`);
     } else {
-      const ws = ps.map((s) => s.pillB[0]);
-      const base = Math.min(...ws), peak = Math.max(...ws), total = peak - base;
-      const pk = ws.indexOf(peak);
-      const rec = ps.slice(pk);
-      const a = rec.find((s) => s.pillB[0] <= peak - 0.25 * total);
-      const c = rec.find((s) => s.pillB[0] <= base + 0.10 * total);
-      const span = (a && c) ? c.t - a.t : 0;
-      /* 되돌리면 빨개진다: 39회차 이전 빌드(고원 60% + 전 구간 ease-out)는 같은 자로 **34ms**
-         (두 번 연속 실행 34 · 34). 반영 후 **122ms**. 임계 90ms 은 눈대중이 아니라 37회차가
-         넘긴 처방 «복귀 구간을 180ms 로 펼 것» 의 **절반**이다(표본 격자 손실 몫). */
-      ok(span >= 90, `봉우리 ${peak.toFixed(1)}px → 바닥 ${base.toFixed(1)}px · `
-        + `복귀 실효 구간 ${span}ms (≥90 — 선언 202ms) · 표본 ${ps.length}장`);
+      const sMax = Math.max(...kf.map((r) => r[1]));
+      /* 정지 폭 = scale 1 일 때의 폭. 연출이 끝난 뒤(길이 + 여유 100ms) 표본의 중앙값으로 읽는다. */
+      const rest = rec0.filter((r) => r[0] > dur + 100).map((r) => r[1]).sort((a, b) => a - b);
+      const base = rest.length ? rest[rest.length >> 1] : Math.min(...rec0.map((r) => r[1]));
+      const peak = base * sMax, total = peak - base;
+      const w25 = peak - 0.25 * total, w10 = base + 0.10 * total;
+      /* 두 문턱의 통과 시각을 앞뒤 표본 사이 **선형 보간**으로 잡는다.
+         ⚠ 씬 A 는 3박자라 «팝» 이 여러 번 난다 — 앞 팝의 복귀는 다음 팝이 **중간에 끊는다**.
+           그래서 25% 문턱은 «처음» 이 아니라 **마지막** 하강 교차(= 뒤에 아무것도 안 오는 팝)를
+           잡고, 10% 는 그 뒤 첫 교차다. 처음 교차를 쓰면 «끊긴 복귀» 와 «온전한 복귀» 가 실행마다
+           섞여 값이 또 흔들린다(첫 시안이 동시 4실행에서 130~155ms 로 25ms 흔들린 이유). */
+      const cross = (v, from, last) => {
+        let hit = null;
+        for (let i = Math.max(0, from); i < rec0.length - 1; i++) {
+          const [t0, w0] = rec0[i], [t1, w1] = rec0[i + 1];
+          if (w0 > v && w1 <= v) { hit = { t: t0 + (t1 - t0) * (w0 - v) / (w0 - w1), i }; if (!last) break; }
+        }
+        return hit;
+      };
+      const A = cross(w25, 0, true);
+      const C = A ? cross(w10, A.i, false) : null;
+      const span = (A && C) ? C.t - A.t : 0;
+      /* 기대 실효 구간 — 같은 두 문턱을 **선언 곡선**에 대고 잰다(눈대중 임계 금지) */
+      const eA = declT(sMax - 0.25 * (sMax - 1), kf), eC = declT(1 + 0.10 * (sMax - 1), kf);
+      const exp = (eA !== null && eC !== null) ? (eC - eA) * dur : null;
+      const REL = 0.70;   /* 기대의 몇 % 를 요구하는가 — 보간·프레임 격자가 남기는 오차 몫 */
+      /* 절대 하한 — 상대 문턱만 두면 **선언 자신이 나빠진 빌드**가 헛초록이 된다(39회차 이전
+         빌드는 기대가 96ms 라 70% = 67ms 로 내려간다). 105ms 은 눈대중이 아니라 37회차가 넘긴
+         처방 «복귀 구간을 180ms 로 펼 것» 의 **실효 몫**(180 × 153.6/201.6 = 137ms)의 **3/4** 이다.
+         ⚠ 종전 90ms 을 그대로 안 쓴 이유 — 그 값은 **옛 눈금**의 것이다. 옛 자가 34ms 로 읽던
+           39회차 이전 빌드를 새 자는 **90ms** 로 읽으므로(`verify845` §R-a 실측), 90 을 그대로 두면
+           그 빌드가 문턱에 딱 붙어 되돌림 시험이 흔들린다. 새 눈금에서 «이전 빌드 90 ↔ 현행
+           128~140» 사이를 가르는 자리로 다시 적었다 — **문턱은 넓어진 게 아니라 엄해졌다.** */
+      const FLOOR = 105;
+      const lim = Math.max(FLOOR, exp === null ? FLOOR : REL * exp);
+      ok(span >= lim,
+        `[19-a] 봉우리 ${peak.toFixed(1)}px(선언 ×${sMax}) → 정지 ${base.toFixed(1)}px · `
+        + `복귀 실효 구간 ${span.toFixed(0)}ms (≥${lim.toFixed(0)} = max(${FLOOR}, ${(REL * 100).toFixed(0)}% × 기대 `
+        + `${exp === null ? 'n/a' : exp.toFixed(0)}ms) · 선언 ${dur.toFixed(0)}ms) · rAF 표본 ${rec0.length}장`);
+      /* [19-b] 전제 — 두 문턱이 **보간으로** 잡혔는가. 기록기가 성겨서 문턱 하나가 구간 밖으로
+         나가면 span 이 0 이 되는데, 그때 «복귀가 없다» 와 «못 쟀다» 가 구별되지 않는다.
+         보간이 실제로 두 점 사이에서 일어났음을 여기서 못박는다(694 §R-d 가 세운 «전제항»). */
+      ok(!!A && !!C && (C.i - A.i) >= 1,
+        `[19-b] 문턱 보간 — 25% ${A ? A.t.toFixed(0) + 'ms(표본 #' + A.i + '↔#' + (A.i + 1) + ')' : '못 잡음'} · `
+        + `10% ${C ? C.t.toFixed(0) + 'ms(표본 #' + C.i + '↔#' + (C.i + 1) + ')' : '못 잡음'}`);
+      /* 참고(문턱 아님) — 845 이전 자(공용 tick 격자 · «문턱을 넘은 첫 표본»). 같은 실행에서
+         나란히 찍어 둔다: 이 값이 흔들리는 폭이 845 가 고친 것이다. */
+      const ps = gain.samples.filter((s) => s.pillB);
+      let old = 'n/a';
+      if (ps.length >= 4) {
+        const ws = ps.map((s) => s.pillB[0]);
+        const ob = Math.min(...ws), op = Math.max(...ws), ot = op - ob;
+        const orec = ps.slice(ws.indexOf(op));
+        const oa = orec.find((s) => s.pillB[0] <= op - 0.25 * ot);
+        const oc = orec.find((s) => s.pillB[0] <= ob + 0.10 * ot);
+        old = ((oa && oc) ? oc.t - oa.t : 0) + 'ms';
+      }
+      console.log(`  · [19-참고] 845 이전 자(tick 격자 · 첫 표본) ${old} · tick 표본 ${ps.length}장 — 문턱 아님`);
     }
   }
 
