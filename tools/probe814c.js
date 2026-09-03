@@ -261,6 +261,27 @@ async function measure(file, tag) {
         if (t < 1500) requestAnimationFrame(tick); else res({ flashGone, keepGone });
       }; requestAnimationFrame(tick);
     }));
+    /* ⚑ 10회차 — 사본이 «금색에 갇히는가» 를 프레임마다 묻는다(채점 DK 의 «단 하나»).
+       ⚠ 이 항은 `step` 벌로는 못 판정한다 — 그 벌은 `currentTime` 을 손으로 감는데 사본의
+         애니는 갓 등록돼 그 감기를 놓칠 수 있다. **실런타임에서 원본과 나란히** 읽는 것이 답이다. */
+    const track = await p2.evaluate(() => new Promise((res) => {
+      const Lr = document.getElementById('fxl'), t0 = performance.now();
+      let n = 0, bad = 0; const sample = [];
+      document.querySelector('#bCos [data-cosup]').click();
+      const tick = () => {
+        const kp = [...Lr.querySelectorAll('.fx-keep')].find((k) => /Lv\./.test(k.textContent || ''));
+        const cl = kp && kp.firstElementChild;
+        const or = document.querySelector('#bCos .sk-card.sel .sk-clv');
+        if (cl && or) { n++;
+          const a = getComputedStyle(cl).color, b = getComputedStyle(or).color;
+          if (a !== b) bad++;
+          if (sample.length < 3) sample.push(Math.round(performance.now() - t0) + 'ms ' + a);
+        }
+        if (performance.now() - t0 < 700) requestAnimationFrame(tick);
+        else res({ n, bad, sample: sample.join(' · ') });
+      }; requestAnimationFrame(tick);
+    }));
+    await p2.waitForTimeout(900);
     const rest = await p2.evaluate(() => {
       const cards = [...document.querySelectorAll('#bCos .sk-card')];
       const sel = document.querySelector('#bCos .sk-card.sel');
@@ -281,6 +302,10 @@ async function measure(file, tag) {
     ok(Math.abs(life.flashGone - life.keepGone) <= 34,
       '[P9] ★ 패치가 **플래시와 같이** 사라진다 — 플래시 ' + Math.round(life.flashGone) + 'ms · 패치 '
       + Math.round(life.keepGone) + 'ms (두 프레임 이내). 패치가 더 오래 살면 워시가 없는데 사본만 남아 글자가 이중으로 찍힌다');
+    ok(track.bad === 0,
+      '[P12] ★ 사본 색이 **원본과 매 프레임 같다** — 어긋난 프레임 ' + track.bad + '/' + track.n
+      + ' (표본: ' + track.sample + '). 10회차 채점 DK 가 «사본이 금색에 평평하게 갇힌다» 를 냈는데'
+      + ' 그 근거도 `step` 벌이었다 — 실런타임에서는 사본이 원본의 램프를 그대로 따라간다');
     ok(rest.keeps === 0 && rest.fx === 0,
       '[P10] ★ 연출이 끝나면 레이어가 **완전히 빈다** — 패치 ' + rest.keeps + '장 · `#fxl` 자식 ' + rest.fx + '개');
     ok(!rest.selDim && rest.sel === rest.other && /^rgb\(255, ?255, ?255\)$/.test(rest.sel),

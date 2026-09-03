@@ -84,11 +84,26 @@ const clipOf = (sel) => ({ x: Math.max(0, Math.round(sel.x - 226)), y: Math.max(
 
 /* 4회차 — `step` 벌 전용 «수거 정지»(위 머리말 ⚠⚠). `fxl` 레이어 **안** 노드의 `remove` 만 무력화한다 —
    격자 재렌더·팝업 등 나머지 DOM 은 한 줄도 안 건드린다. */
+/* ⚑⚑ 10회차 — **무력화에 구멍이 하나 있었고 그것이 9·10회차 채점 넷을 통째로 뒤집었다.**
+   이 무력화의 뜻은 «`fxBye` 의 타이머 수거를 막아 8장이 한 곡선을 그리게 한다» 였다. 그런데
+   `remove()` 를 통째로 막으므로 **«한 자리에 한 장» 을 지키는 명시적 걷기까지** 같이 막힌다.
+   8회차가 값 줄 패치를 더하면서 그 구멍이 드러났다 — 50 코스튬 [강화]는 `renderUI()` 앞뒤로
+   패치를 **두 번** 뜨고(앞 장은 옛 카드에서 뜬 것이라 값도 자리도 낡았다) 뒷장이 앞장을 걷는데,
+   그 걷기가 막혀 **낡은 사본이 살아 있는 사본 옆에 겹쳐** 찍혔다. 채점자 넷(DH·DI·DJ·DK)이
+   각자 그것을 «사본이 금색에 갇힌다 · 4px 어긋난다 · 영구히 안 걷힌다» 로 읽었고 **넷 다 옳게
+   쟀다** — 잰 대상이 제품이 아니었을 뿐이다(실런타임 실측: 사본 **1장** · IoU **1.000** ·
+   dx/dy **0.00px** · 색이 원본과 매 프레임 같고 플래시와 같은 프레임에 사라진다 —
+   `probe814c` [P9]~[P12]).
+   ⇒ **`.fx-keep` 는 걷히게 둔다.** 그 노드를 걷는 것은 타이머가 아니라 «다음 장이 앞 장을
+     치우는» 명시적 걷기라, 막을 이유가 애초에 없었다. 플래시·알갱이의 타이머 수거는 종전대로 막는다.
+   ⚠ 이 구멍은 «하네스가 제품보다 나쁘게 보이게» 만들었다 — 캡처를 고칠 때는 **어느 걷기가
+     타이머고 어느 것이 규약인지** 갈라서 막아라. */
 const FREEZE = () => {
-  const inFx = (n) => { try { return !!(n && n.parentNode && n.parentNode.id === 'fxl'); } catch (_) { return false; } };
+  const keep = (n) => { try { return !!(n && n.classList && n.classList.contains('fx-keep')); } catch (_) { return false; } };
+  const inFx = (n) => { try { return !!(n && n.parentNode && n.parentNode.id === 'fxl' && !keep(n)); } catch (_) { return false; } };
   const R = Element.prototype.remove, RC = Node.prototype.removeChild;
   Element.prototype.remove = function () { if (inFx(this)) return; return R.call(this); };
-  Node.prototype.removeChild = function (c) { if (this && this.id === 'fxl') return c; return RC.call(this, c); };
+  Node.prototype.removeChild = function (c) { if (this && this.id === 'fxl' && !keep(c)) return c; return RC.call(this, c); };
 };
 
 (async () => {
@@ -145,7 +160,14 @@ const FREEZE = () => {
       await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
       for (let i = 0; i < STEPS.length; i++) {
         await p.evaluate((t) => {
-          document.getAnimations().forEach((a) => { a.pause(); try { a.currentTime = t; } catch (_) {} });
+          /* ⚑ 10회차 — **두 번 감는다.** 사본(`.fx-keep` 안 복제 노드)의 애니는 갓 등록돼
+             한 번의 `getAnimations()` 에 안 잡힐 수 있고, 그러면 그 사본만 시간이 안 감긴 채
+             찍힌다 — 판 A 의 «Lv.» 이 320ms 에도 금색이던 것이 그것이다(같은 순간 판 P 는 흰색).
+             채점자 넷이 그 차를 «이번 회차가 글자를 금색에 가뒀다» 로 읽었다. */
+          for (let k = 0; k < 2; k++) {
+            void document.body.offsetWidth;
+            document.getAnimations().forEach((a) => { a.pause(); try { a.currentTime = t; } catch (_) {} });
+          }
         }, STEPS[i]);
         await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-step-${i + 1}.png`), clip });
       }
