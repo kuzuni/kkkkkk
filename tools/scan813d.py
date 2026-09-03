@@ -39,16 +39,17 @@ def scan(path):
     W, H = im.size
     px = im.load()
 
-    # ── 패널 = 금테로 둘러싸인 상자. 아래에서 올라오며 «가로로 꽉 찬 밝은 줄»(금테)을 찾는다 ──
-    gold_bottom = None
-    for y in range(H - 1, H // 2, -1):
-        lit = sum(1 for x in range(60, W - 60, 4) if lum(px[x, y]) > 90)
-        if lit > (W - 120) / 4 * 0.80:
-            gold_bottom = y
-            break
-    if gold_bottom is None:
+    # ── 패널 하단 «테두리 조립체» — 어두운 안쪽 선 + 금테 띠. 887 이 경계를 정정한 자리다 ──
+    #    옛 판은 `inner_bottom = gold_bottom - 1`(아래에서 처음 만난 밝은 줄의 한 행 위)이었는데
+    #    그 자리는 **금테 띠 «안»** 이다. 우리 캡처의 띠는 **5px**, 레퍼런스는 **2px** 이라
+    #    같은 규약이 두 쪽에서 서로 다른 것을 잰다 — 그 비대칭이 «ref 1.00 ↔ 우리 0.96» 이라는
+    #    거짓 일치를 만들었다(실제는 0.90 ↔ 0.76). 상세는 `tools/scan887.py` · 887 review.
+    from scan887 import find_border                   # 자는 한 곳에서만 정의한다
+    b = find_border(px, W, H)
+    if not b:
         return None
-    inner_bottom = gold_bottom - 1                    # ⓒ 금테 «안쪽» 첫 행
+    gold_bottom = b['gold_bot']
+    inner_bottom = b['dark_top']                      # ⓒ 테두리 조립체의 최상단
 
     # ── ⓑ 안내문 잉크 — 금테 안쪽에서 위로 올라오며 밝은 글자 화소가 있는 행 ──
     #    ⚠ 금테(와 그 글로우)는 «가로로 꽉 찬 밝은 줄» 이라 문턱만으로는 글자와 안 갈린다 —
@@ -97,7 +98,7 @@ def scan(path):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('-')] or DEFAULT
-    print('SCAN813D — 안내문 위:아래 여백을 «우리 렌더의 화소» 로 (ref 과녁 1.00)\n')
+    print('SCAN813D — 안내문 위:아래 여백을 «우리 렌더의 화소» 로 (ref 과녁 0.90 — 887 정정)\n')
     bad = 0
     for p in args:
         r = scan(p)
@@ -106,11 +107,11 @@ def main():
         up = r['ink_top'] - r['base_bot']
         dn = r['inner_bottom'] - r['ink_bot']
         ratio = dn / up if up else 0
-        mark = 'OK' if 0.92 <= ratio <= 1.08 else '❌'
+        mark = 'OK' if 0.82 <= ratio <= 1.00 else '❌'   # 과녁 0.90 ± 레퍼런스 한 눈금(±10%)
         print(f"  {p}")
         print(f"    받침 밑판 아랫변 y{r['base_bot']} (연속 {r['run']}px) · 잉크 {r['ink_top']}..{r['ink_bot']}"
-              f" · 금테 안쪽 y{r['inner_bottom']}(금테 y{r['gold']})")
-        print(f"    위 = {up}px · 아래 = {dn}px · 아래/위 = {ratio:.3f}  [{mark}]  (ref 1.00)\n")
+              f" · 테두리 조립체 최상단 y{r['inner_bottom']}(금테 띠 하단 y{r['gold']})")
+        print(f"    위 = {up}px · 아래 = {dn}px · 아래/위 = {ratio:.3f}  [{mark}]  (ref 0.90)\n")
         if mark == '❌':
             bad += 1
     print('요약 — ' + ('전부 과녁 대역 안' if not bad else f'{bad}건이 대역 밖'))

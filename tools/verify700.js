@@ -313,11 +313,16 @@ function preTree() {
      · 수반·알약·안내문·바는 Δ0 — 이 회차는 «벽» 한 칸만 건드렸다.
      옛 표(866: 1600 gridt −3 · floor/ground −8 · mid/basin/lab/steps −10 · cost 4칸,
      긴 프레임 gridt/lintelt/floort/groundt −4.81 …)는 이 주석에 남긴다(333 — 어디서 왔는지를 지우지 않는다). */
+  /* ⚑ 887 이관 — 안내문 상자가 **네 프레임 전부 −1.84px**(위로) 움직인다. 813 7회차의 «.5»
+     분할이 잉크가 아니라 상자로 세운 값이었고(자가 위 +3 · 아래 −3 으로 비만 상쇄해 1.00 을
+     읽었다), 887 이 화소 자로 다시 세워 .551 로 옮긴 몫이다 — ref 위 10 : 아래 9 = 0.90.
+     이름과 값으로 등재한다(333 처방 — «Δ ≤ n» 으로 무르게 풀지 않는다). 상세 `verify887`. */
+  const CAP887 = { capt: -1.84 };
   const ALLOW813 = {
-    1600: { gridt: -2, floort: -2, floorh: 2, groundt: -2, groundh: 2, },
-    1920: {},
-    2280: {},
-    2600: {},
+    1600: { gridt: -2, floort: -2, floorh: 2, groundt: -2, groundh: 2, ...CAP887 },
+    1920: { ...CAP887 },
+    2280: { ...CAP887 },
+    2600: { ...CAP887 },
   };
   {
     const pre = preTree();
