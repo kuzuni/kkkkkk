@@ -528,7 +528,7 @@ const inter = (a, b) => {
         /* 클립이 뷰포트 y=108 에서 시작하고 fit 스케일이 1 이라 «샷 y = 프레임 y − 108» 이다
            (③ 센티넬 검사와 같은 좌표계). */
         const shot2 = await page.screenshot({ clip: { x: 0, y: regTop, width: 1080, height: regBot - regTop } });
-        const m = await page.evaluate(async ({ dataUrl, gy, s1t, s1b, snt }) => {
+        const m = await page.evaluate(async ({ dataUrl, gy, s1t, s1b, snt, gridB }) => {
           const img = new Image();
           await new Promise(res => { img.onload = res; img.src = dataUrl; });
           const c = document.createElement('canvas');
@@ -548,7 +548,18 @@ const inter = (a, b) => {
              (12회차에 실제로 Δ0.0 이 나왔다 — 게이트가 자기 구조물을 벽으로 착각한 것). */
           let peak = 0;
           for (let y = gy - 2; y <= gy + 5; y++) peak = Math.max(peak, row(y));
-          const wallAbove = band(gy - 76, gy - 60);
+          /* ── ⚑ 867 이관 — **창을 «격자 하변 바로 아래» 로 올린다.** ──────────────
+             옛 창(gy−76..gy−60)은 «받침보다 위의 벽» 을 재려던 자리인데, 867 이 배수 바를
+             그 벽(아치 안쪽)으로 내리면서 **그 창이 통째로 바에 덮였다** — 네 프레임 전부
+             벽 29.2~29.3 대신 **바의 셸 74.3~75.7** 을 재서 Δ가 2.4~3.0 으로 주저앉는다
+             (12회차가 «받침을 벽으로 착각» 했던 것과 **같은 종류의 사고**이고, 그때와 같은
+             처방을 쓴다: 창을 실제 벽으로 옮긴다).
+             ⚠ 문턱(15)은 한 칸도 안 넓혔다 — 창만 옮긴다. 새 창은 **격자 하변 +8..+24**,
+               즉 아치 안쪽에서 바보다 위의 벽이다(867 이 지키는 «격자 하변↓바 ≥ 25.6» 이
+               이 16px 창을 보장한다 — 실측 1600 30.5 · 나머지 74.9).
+             실측(바 숨김 대조): 새 창 26.4(1600)/28.0(2280) vs 옛 창의 «진짜 벽» 29.2/29.3
+             ⇒ 같은 벽면을 재고 있다(Δ ≤ 2.9). 바를 숨기든 보이든 값이 안 변한다. */
+          const wallAbove = band(gridB + 8, gridB + 24);
           /* ①-2 접합선 자기 그림자 — 바로 아래 12px 이 그 아래 60px 중 가장 어둡다(부호 정상).
              11회차의 «그림자대 vs 먼 바닥» 은 계단이 바닥을 채우면서 «먼 바닥» 자리가 없어졌다. */
           const shadow = band(gy + 4, gy + 16), below = band(gy + 24, gy + 76);
@@ -575,6 +586,7 @@ const inter = (a, b) => {
         }, {
           dataUrl: 'data:image/png;base64,' + shot2.toString('base64'),
           gy: Math.round(r.ground.t - regTop),
+          gridB: Math.round(r.grid.b - regTop),      /* 867 — «벽» 창의 새 앵커 */
           s1t: Math.round(r.st1.t - regTop), s1b: Math.round(r.st1.b - regTop),
           snt: stTop ? Math.round(stTop.t - regTop) : -1,
         });
@@ -594,7 +606,7 @@ const inter = (a, b) => {
           m.seamCentre >= 15, `x440~640 평균 ${m.seamCentre.toFixed(1)} (옛 캐스트 .86 = 8.4)`);
         ck(`[${H}] ① 접합선이 «보이는가» — 문지방 대비 ≥ 15`,
           m.peak - m.wallAbove >= 15,
-          `문지방 ${m.peak.toFixed(1)} vs 받침 위 벽 ${m.wallAbove.toFixed(1)} = Δ${(m.peak - m.wallAbove).toFixed(1)}`);
+          `문지방 ${m.peak.toFixed(1)} vs 벽(격자 하변 +8..+24) ${m.wallAbove.toFixed(1)} = Δ${(m.peak - m.wallAbove).toFixed(1)}`);
         ck(`[${H}] ①-2 접합선 밑 그림자 부호 — 아래 60px 보다 어둡다`,
           m.below - m.shadow >= 4,
           `그림자 ${m.shadow.toFixed(1)} vs 아래 ${m.below.toFixed(1)} = Δ${(m.below - m.shadow).toFixed(1)}`);
