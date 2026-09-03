@@ -40513,16 +40513,28 @@ const FXFLASH_RIM  = 2;                             /* 16회차 8 → 2 (EJ ⑤ 
    ⚠ `FXFLASH_RIM` 은 손잡이가 아니다 — 16회차가 8 → 2 로 내려 액자선 훼손이 +365% → **+570%** 로 나빠졌다.
    ✅ **되돌림** — 15~17회차 판은 아래 `pin` 을 옛 식으로 되돌리면 된다(그 식을 `pin` 머리말에 그대로 보존했다). */
 const FXFLASH_RING = 8;                             /* 폴백 — 실제 값은 호스트에서 읽는다(`fxRingIn`) */
-/* 호스트가 자기 액자를 그리는 **inset 그림자의 spread** 를 px 로 돌려준다(없으면 폴백).
-   ⚠ 컴마로 자르면 `rgb(20, 20, 20)` 이 쪼개진다 — 괄호 밖 컴마만 자른다. */
+/* 호스트가 자기 액자를 그리는 **띠 두께**를 px 로 돌려준다(없으면 0 · 못 읽으면 폴백).
+   ⚠ 컴마로 자르면 `rgb(20, 20, 20)` 이 쪼개진다 — 괄호 밖 컴마만 자른다.
+   ⚑⚑ **862 — 띠는 «inset 그림자» 하나가 아니다. `border` 겹을 같이 센다.**
+     18회차가 이 함수를 쓸 때 본 호스트 셋(훈련 카드·룬 행·단련 행)은 `border` 가 **0/0/0/0** 이라
+     inset spread 가 곧 띠 전부였다(위 ⓐ). 그래서 «액자 = inset spread» 가 그 셋에서는 참이었다.
+     유물 카드 `.rw-c` 는 액자를 **두 겹**으로 그린다 — `border:4px solid #A67B50` **＋**
+     `box-shadow: inset 0 0 0 2px #8A6732`(+ 바깥 1px). 즉 액자선은 rect 안쪽 **0~6px** 띠인데
+     이 함수는 **2** 라고 답했고, 그 답으로는 어떤 들이기도 **바깥 4px 을 못 살린다**
+     (`probe862` [2] — 들이기 2px 판의 액자선 잔존 **38.3%** ↔ 띠 전부 6px 판 **100%**).
+   ⚠ `getBoundingClientRect` 는 **border-box** 라 테두리가 상자 «안» 이다 — 그래서 더하는 것이 맞다
+     (`box-sizing` 이 무엇이든 rect 는 테두리를 포함한다).
+   ⚠ 619 의 호스트 셋은 `border` 가 0 이므로 **한 값도 안 바뀐다**(0 + 8 = 8). */
 function fxRingIn(el){
   let cs; try { cs = getComputedStyle(el); } catch(_){ return FXFLASH_RING; }   /* 못 읽을 때만 폴백 */
+  const bd = parseFloat(cs && cs.borderTopWidth) || 0;   /* 862 — 액자의 «바깥 겹» */
   const s = cs && cs.boxShadow;
   if(s && s !== 'none') for(const part of s.split(/,(?![^(]*\))/)){
     if(!/\binset\b/.test(part)) continue;
     const px = part.match(/-?\d*\.?\d+px/g);          /* x · y · blur · spread */
-    if(px && px.length >= 4){ const v = parseFloat(px[3]); if(isFinite(v) && v > 0) return v; }
+    if(px && px.length >= 4){ const v = parseFloat(px[3]); if(isFinite(v) && v > 0) return bd + v; }
   }
+  if(bd > 0) return bd;                               /* 862 — 안쪽 링 없이 테두리만으로 액자를 그리는 호스트 */
   /* ⚑ **액자가 없으면 들이기도 0 이다** — 폴백 8 을 여기에 쓰면 «없는 액자» 를 피하느라 상자만 좁아진다.
      18회차가 실측으로 잡았다: 룬은 `--flash-to:.rd`(효과 행)라 플래시 호스트가 **링 0px 인 자식**이고,
      거기에 8 을 물리면 자가 Δ +8 로 빨개진다(`probe619h` ⓛ). `.rd` 에서는 0 이 정답이다. */
@@ -43275,7 +43287,15 @@ function fxFlash(el, iv, inset, keep){
        앉아 액자선은 살고 글자에서는 물러난다. 축 구분(`s`)이 사라진 것은 링이 네 변에 같기 때문이다.
      ✅ **되돌림(15~17회차 판)** — 아래 한 줄을 옛 식으로 되돌리면 된다:
         `const pin = s => inset ? Math.min(s * (1 - 1 / FXFLASH_PEAK) / 2 + FXFLASH_RIM, Math.max(0, s / 2 - 12)) : 0;` */
-  const ring = inset ? fxRingIn(el) : 0;
+  /* ⚑⚑ **862 — 들이기는 `inset` 인자가 아니라 «호스트가 액자를 그리는가» 가 정한다.**
+     18회차는 들이기를 619 의 회당 발화(`inset`)에만 걸었다. 그런데 «흰 판이 액자선을 먹는다» 는
+     `inset` 과 아무 상관이 없는 **기하**다 — 유물 카드(89)는 **단발** 호출(`rwGainFx`)이라
+     그 문이 안 열렸고, 그래서 액자선(띠 6px)이 흰 테 9px 에 통째로 먹혀 잔존 **3.1%** 였다
+     (`probe862` [2] ⓐ · 683 9회차 CM ⓐ 가 그림에서 먼저 잡은 그 자리다).
+     ⇒ 액자를 그리는 호스트면 **누가 부르든** 그 띠만큼 들인다. 액자가 없는 호스트(`fxRingIn` = 0)는
+       **한 픽셀도 안 바뀐다** — 09·12·17·코스튬·장비의 단발 플래시가 그대로인 근거가 이것이다.
+     ⚠ `inset` 인자는 **여전히 산다** — 추적(rAF)·배지 keep-out 은 그대로 그 문 뒤다(`verify619` [K6]). */
+  const ring = fxRingIn(el);
   const pin = s => Math.min(ring, Math.max(0, s / 2 - 12));
   /* 자리 쓰기를 한 줄로 모은다 — 아래 17회차 추적이 같은 산수를 매 프레임 다시 쓴다(두 벌 금지). */
   const put = q => { const px = pin(q.w), py = pin(q.h);
@@ -43286,6 +43306,17 @@ function fxFlash(el, iv, inset, keep){
   /* 619 14회차 — 홀드 틱이면 «틱 안에서 끝나는» 길이로. CSS 기본값(.34s)이 곧 `full` 이다. */
   { const ms = fxTickLife(iv, FXFLASH_MS); if(ms !== FXFLASH_MS) d.style.animationDuration = ms + 'ms'; }
   L.appendChild(d);
+  /* ⚑⚑ **862 — 흰 테는 액자 띠보다 두꺼워지지 않는다**(`min(CSS 값, 띠)`).
+     들이기만으로는 절반이다: 상자를 띠만큼 들여도 흰 테가 CSS 그대로 9px 이면 [띠, 띠+9] 를 먹어
+     카드 «안» 으로 더 들어간다. 유물 카드에서 잰 값 — 액자선은 두 판 다 100% 인데
+     라벨 획의 **4.5:1 미만**이 상한 있음 **6%** ↔ 없음 **11%**(현행 7% · 정착 14%)다
+     (`probe862` [3] ⓔ↔ⓕ · 4-f). 즉 상한은 «읽을 수 있는가» 축에서 5%p 를 번다.
+     ⚠ **손 상수를 새로 안 적는다** — 기준값은 `.fx-flash` CSS 의 `border-width` 이고 그것을 **읽어서**
+       누른다(795 «그림은 자신에게서 읽는다» · 814 8회차 워시 손잡이와 같은 처방).
+     ⚠ 액자가 없는 호스트(`ring` = 0)는 이 문을 안 지난다 — CSS 값 그대로다.
+     ✅ **되돌림** — 이 블록을 지우면 흰 테는 CSS 값(9px)으로 돌아온다. */
+  if(ring > 0){ let bw = NaN; try { bw = parseFloat(getComputedStyle(d).borderTopWidth); } catch(_){}
+    if(bw > ring) d.style.borderWidth = ring + 'px'; }
   /* ⚑⚑ 814 8회차 — **워시 세기 호스트 신고**(`--flash-k`, 0<v<1). 7회차 채점 2인 공통 ⓐ 의 (b) 항이다.
      라벨을 워시 «위» 로 올려도(위 `--flash-keep`) 글자 «밑» 의 바가 1.44배 들리면 비는 안 돌아온다 —
      CX 가 k 를 스윕해 **0.70** 을 골랐다(0.80 은 3.09 로 걸치고 0.60 은 플래시가 눈에 띄게 죽는다).
