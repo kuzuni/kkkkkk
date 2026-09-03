@@ -4258,6 +4258,29 @@
     84%{transform:translate(calc(var(--dx)*.956),calc(var(--dy)*.956)) scale(.586);opacity:.42;animation-timing-function:linear}
     100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
 
+  /* ⚑⚑ 877 — **요소 대상 버스트(씬 A = 훈련·단련·룬 버튼)의 속도 이즈아웃.** 838 이 여덟 회차에 걸쳐
+     «알이 어디로 가는가»(끝점)를 열었으나 «어떻게 가는가»(속도)는 못 건드렸다 — 그 곡선이 공용
+     `@keyframes fxSpark`(09·12·17·장비·코스튬 공유 · 681 이 아홉 회차 고쳐 ⏸ 보류로 닫은 자리)라
+     이 행에서 손대면 남의 화면 다섯을 같이 바꾼다(838 §5-2). 838 비평 4인(DA·DE·DF·DG)이 «등속이다 ·
+     45→70ms 두 장이 같은 그림» 을 ③ 의 최대 실점으로 적었고 처방이 전부 `v(t)=v₀·e^(−t/τ)` 꼴이었다.
+     ⇒ **호스트 신고 갈래**(`--burst-ease`, `--burst-fit`·`--burst-n`·`--burst-from` 과 같은 규약)로 연다:
+       · **크기·알파 채널은 fxSpark 와 한 값도 안 다르다** — 프런트로딩한 것은 **이동(translate) 분수뿐**이다.
+         그래서 681 봉투([B4] 290ms 잉크 · [B7] 끝 급정거 · 알파 4칸 `fxSparkX`)와 660 아이콘 몸이 그대로 산다.
+       · **끝점은 fxSpark 와 동일**(0%→0 · 100%→1) — 사거리·스필·가림 게이트는 한 픽셀도 안 바뀐다(838 [A]~[D]).
+         바뀌는 것은 **언제 그 거리를 가는가** 뿐이다: 앞을 당겨(τ=0.32 지수 감속) 첫 프레임들이 «쏘아 나가고»
+         뒤가 «가라앉는다» — 씬 B(점 대상 265px)는 사거리가 커서 이미 이 곡선이 보이므로 스코프 밖이다.
+       · **신고 없으면 fxSpark 그대로다** — 09·12·17·장비·코스튬·우편·퀘스트는 한 값도 안 바뀐다. */
+  @keyframes fxSparkE{0%{transform:translate(0,0) scale(.26);opacity:.38;animation-timing-function:linear}
+    5%{transform:translate(calc(var(--dx)*.151),calc(var(--dy)*.151)) scale(.55);opacity:.74;animation-timing-function:linear}
+    12%{transform:translate(calc(var(--dx)*.327),calc(var(--dy)*.327)) scale(.89);opacity:.96;animation-timing-function:linear}
+    18%{transform:translate(calc(var(--dx)*.450),calc(var(--dy)*.450)) scale(1);opacity:1;animation-timing-function:linear}
+    29%{transform:translate(calc(var(--dx)*.623),calc(var(--dy)*.623)) scale(.875);opacity:.95;animation-timing-function:linear}
+    46%{transform:translate(calc(var(--dx)*.798),calc(var(--dy)*.798)) scale(.766);opacity:.87;animation-timing-function:linear}
+    66%{transform:translate(calc(var(--dx)*.913),calc(var(--dy)*.913)) scale(.67);opacity:.74;animation-timing-function:linear}
+    84%{transform:translate(calc(var(--dx)*.970),calc(var(--dy)*.970)) scale(.586);opacity:.42;animation-timing-function:linear}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
+  .fx-spark.fx-ease{animation-name:fxSparkE,fxSparkX}   /* 877 — 신고 호스트만. 나머지 longhand(길이·이징·fill)는 `.fx-spark` 것을 그대로 물려받는다 */
+
   /* ⚑⚑ 681 9회차 — **알마다 다른 «생명 시계» — 크기는 한 프레임도 안 흩고 알파만 흩는다.**
      7회차 비평 2인이 ④ 를 7 로 내린 유일한 축이 «동시 전멸» 이었다(CR «살아 있는 알들의 알파
      편차 175ms 0.9% · 250ms 3.1% · 320ms 6.3% — 같은 프레임에 태어나 같은 프레임에 α=0» ·
@@ -11763,7 +11786,7 @@
      ⚠ 단련(`.tb` 340×173 — 686 이 키웠다)·룬(`.rbt.b1` 420×112)도 670·687 이후 버튼에 «(아이콘)
        수량» 을 이고 있어 같은 결손이었고 **818 이 같은 신고로 닫았다**(각 선언 옆 머리말).
        세 자리의 답이 «수량 하나만 신고» 로 같고 **대가만 달랐다**: 훈련 −3% · 룬 −0% · 단련 −28%. */
-  .tr-card>.cb{--burst-keep:i;--burst-from:s;--burst-n:6;--burst-fit:.18;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
+  .tr-card>.cb{--burst-keep:i;--burst-from:s;--burst-n:6;--burst-fit:.18;--burst-ease:1;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
     justify-content:center;gap:8px;padding-right:11px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
@@ -11973,7 +11996,7 @@
      최대 **75.9%** · ≥25% 표본 57.1% · ≥5% 표본 77.1%). 그런데 **대가는 0** 이다 — 버튼이
      420×112 로 셋 중 가장 넓어 구멍(잉크 58.8×38 + 사방 30 = 119×98)을 파고도 동시 알 수가
      9.7 ↔ 9.7 로 **한 알도 안 줄었다**. 신고 자리는 816 §4 규약대로 **행이 아니라 버튼 자신**이다. */
-  .tr-rn>.rbt.b1{--burst-keep:.rbn;--burst-from:.cic;left:289px}
+  .tr-rn>.rbt.b1{--burst-keep:.rbn;--burst-from:.cic;--burst-ease:1;left:289px}
   /* ── 349 — «꾹 누르기» 버튼은 브라우저에 제스처를 뺏기면 안 된다 ────────────────────────
      실기기 보고(«꾹 눌러도 연속이 안 된다»)의 **둘째 원인**이다. `tools/probe349.js`·§드리프트
      실측: 손가락이 버튼 «안» 에서 ±30px 만 굴러도 크로미움이 그 터치를 스크롤 제스처로 채가
@@ -12161,7 +12184,7 @@
      ⚠ 대가는 알고 치른다: 짧은 라벨에서 초록 면이 더 빈다(Lv 0 «🪨1» 잉크 123.3 ⇒ 좌우 각 108.4 → 186.4px).
        686 §9 가 «아이콘+숫자 크기의 집 규칙이 없다» 며 라벨 크기 축을 얼려 둔 상태라 **라벨은 안 건드린다** —
        되돌림은 이 폭 한 값(496 → 340)과 위 `.td` 한 값(236 → 392)뿐이다. */
-  .tr-tp>.tb{--burst-keep:.tbn;--burst-from:.cic;right:26px;top:22px;width:496px;height:173px;border-radius:20px;cursor:pointer;
+  .tr-tp>.tb{--burst-keep:.tbn;--burst-from:.cic;--burst-ease:1;right:26px;top:22px;width:496px;height:173px;border-radius:20px;cursor:pointer;
     text-align:center;line-height:173px;font-size:52px;color:#fff;
     /* ⚠ 이 줄은 **혼자서는 아무 일도 안 한다** — 이 서체(GameKR)에 등폭 숫자 기능이 없어 4회차 실측에서
        no-op 이었다(«1»·«3»·«6» 상자 폭 21.4/28.6/32.1). 흔들림을 실제로 없애는 것은 아래 `.tbn` 의
@@ -42693,7 +42716,7 @@ function fxBurst(t, col, n, strict, iv, ic){
        빨개진다 — 660 [E3] «터진다» 의 밀도 눈금이다. 상한이면 첫 발(`fxUpOk` 의 10)만 6 으로 눌리고
        반복분 4 는 `min(4,6)` 이라 **한 값도 안 바뀐다**(첫 발 6 + 반복 4 = 14 → **10알**).
      ⚠ 신고가 없으면 상한이 없어 **종전 호출은 한 값도 안 바뀐다**(814·816·818 과 같은 규약). */
-  let rxs = 1, rys = 1, szs = 1, ncap = 0, fits = FXB_FITS;
+  let rxs = 1, rys = 1, szs = 1, ncap = 0, fits = FXB_FITS, easeOut = false;
   if(r && t && t.nodeType === 1){
     try {
       const st = getComputedStyle(t);
@@ -42707,6 +42730,8 @@ function fxBurst(t, col, n, strict, iv, ic){
       if(c >= 1) ncap = Math.round(c);
       const f = parseFloat(st.getPropertyValue('--burst-fit'));    /* 838 6회차 — 알 크기 몫(위 `FXB_FITS` 머리말) */
       if(f > 0 && f <= FXB_FITS) fits = f;
+      const eo = st.getPropertyValue('--burst-ease').trim();       /* 877 — 요소 대상 버스트만 이즈아웃 곡선(위 `fxSparkE` 머리말) */
+      if(eo && eo !== '0' && eo !== 'none') easeOut = true;
     } catch(_){}
   }
   if(ncap) cnt = Math.max(1, Math.min(cnt, ncap));                 /* 619 [B] «발화 N회» 는 그대로 — 줄어드는 것은 «개수» 다 */
@@ -42932,6 +42957,7 @@ function fxBurst(t, col, n, strict, iv, ic){
     /* ⚑ 681 9회차 — **알파 채널 4칸 양자화.** 링 인덱스로 돌려 이웃끼리 다른 칸에 앉힌다
        (같은 칸이 붙으면 «단일 시계» 가 그 자리에서 되살아난다). 크기·자리·이동은 안 건드린다. */
     el.classList.add('fxq' + (i & 3));
+    if(easeOut) el.classList.add('fx-ease');   /* 877 — 신고 호스트(훈련·단련·룬)만 이즈아웃 이동 곡선 */
 
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
     /* 21회차 — 넓은 대상(우편 행 826px)에서 타원 반축이 프레임을 넘길 수 있어 좌표를 물린다. */

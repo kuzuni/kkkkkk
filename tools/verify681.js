@@ -422,6 +422,13 @@ async function burstAndGrid(page) {
   /* ── [R] 되돌림 시험 ──────────────────────────────────────────────── */
   blk('R] 되돌림 — 옛 곡선을 얹으면 [B1]·[B3]·[B4] 가 빨개진다');
   await page.addStyleTag({ content: OLD });
+  /* ⚑ 877 이관 — 이 자는 훈련 버튼(`#trCards .cb`)에서 버스트를 재는데, 877 이 그 호스트에
+     `--burst-ease` 를 걸어 알이 `fxSparkE`(이즈아웃 이동 곡선)를 쓴다. 위 OLD/PREV5 는
+     `@keyframes fxSpark` 만 덮으므로, 되돌림이 훈련 알에 닿게 이즈아웃 갈래를 공용 곡선으로
+     되돌린다(크기·알파 채널은 fxSparkE 와 fxSpark 가 한 값도 안 다르므로 [B]-축 측정은 불변이고,
+     이동 채널만 OLD/PREV5 로 되돌아가 [R1]~[R7] 이 의도대로 빨개진다). 신고를 안 지우면
+     되돌린 사본이 여전히 이즈아웃이라 «되돌려도 안 빨개지는» 헛초록이 된다. */
+  await page.addStyleTag({ content: '.fx-spark.fx-ease{animation-name:fxSpark,fxSparkX}' });
   await page.waitForTimeout(60);
   const old = await burstAndSample(page);
   ok(!!old, 'R0 대조군 성립 — 옛 곡선 사본에서도 알이 태어난다', old ? old.n + '알' : 'n/a');
