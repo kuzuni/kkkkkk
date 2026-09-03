@@ -58,7 +58,11 @@ const OPENER = { label: 'tab:box', sel: '.tab[data-t="box"]' };
 const D2_SLACK = 2;
 
 const MEASURE = function () {
-  const pn = document.querySelector('#relw>.rw-panel');
+  /* ⚑ 859 이관 — 넘침을 담아 자르는 상자가 «패널» 에서 **«그릇(.rw-bowl)»** 으로 내려왔다.
+     859 는 패널을 영역 그대로 두고 장면·내용만 ref 비례로 캡한 그릇에 넣었으므로, 패널의
+     유일한 자식은 그 그릇이고 패널 자신은 절대 안 넘친다(scrollH = clientH). 432 가 재던
+     «수반 글로우 상자가 구획 밖으로 넘친다» 는 그릇 안에서 그대로 일어난다. */
+  const pn = document.querySelector('#relw>.rw-panel>.rw-bowl') || document.querySelector('#relw>.rw-panel');
   const mid = document.querySelector('#relw .rw-mid');
   if (!pn || !mid) return { err: 'no panel/mid' };
   const cs = getComputedStyle(pn), bs = getComputedStyle(mid, '::before');
@@ -167,7 +171,7 @@ async function openFrozen(browser, h) {
       const S = await openFrozen(browser, h);
       const A = { m: S.m, b: await shotCss(S.page, null) };                               /* 지금 판 */
       const A2 = { b: await shotCss(S.page, null) };                                      /* 789 — A/A 대조판 */
-      const V = { b: await shotCss(S.page, '#relw>.rw-panel{overflow:visible !important}') };
+      const V = { b: await shotCss(S.page, '#relw>.rw-panel,#relw>.rw-panel>.rw-bowl{overflow:visible !important}') };
       const N = { b: await shotCss(S.page, '#relw .rw-mid::before{display:none !important}') };
       const L = { b: await shotCss(S.page, '#relw .rw-mid::before{background-size:auto !important}') };
       /* 789 — 재는 창(패널 상변 ~ 프레임 바닥). `.pcb`(프레임 0~108)는 이 축이 닿을 수 없는 띠다 */
@@ -187,7 +191,7 @@ async function openFrozen(browser, h) {
         const s = document.createElement('style');
         s.textContent = '#relw .rw-mid::before{height:550px !important;background-size:auto !important}';
         document.head.appendChild(s);
-        const pn = document.querySelector('#relw>.rw-panel');
+        const pn = document.querySelector('#relw>.rw-panel>.rw-bowl') || document.querySelector('#relw>.rw-panel');
         const v = { ovfY: pn.scrollHeight - pn.clientHeight };
         s.remove();
         return v;

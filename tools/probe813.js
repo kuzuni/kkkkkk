@@ -37,7 +37,11 @@ const { judgeGaps } = require('./probe754.js');
 
 const MEASURE = () => {
   const q = (s) => document.querySelector(s);
-  const panel = q('#relw .rw-panel');
+  /* ⚑ 859 이관 — 재는 상자를 «패널» 에서 **«그릇(.rw-bowl)»** 으로 내린다. 859 가 장면·금테·내용을
+     ref 비례(1080×1527)로 캡한 그릇에 넣고 패널은 영역을 그대로 꽉 채우게 만들었으므로,
+     «패널 하변» 은 더 이상 눈에 보이는 변이 아니다(그 아래는 이어받는 벽면이다).
+     그릇이 없는 트리(859 이전 사본 · 되돌림 시험)에서는 패널로 떨어진다 — 그때는 둘이 같은 상자다. */
+  const panel = q('#relw .rw-bowl') || q('#relw .rw-panel');
   if (!panel) return { missing: true };
   /* ⚠ 커스텀 속성은 등록(@property)돼 있지 않아 `getPropertyValue` 가 **토큰 문자열**(`calc(100% - …)`)을
      그대로 준다 — parseFloat 이 NaN 이다. 그래서 예산 값을 **그려진 기하에서 역산**한다.
@@ -50,7 +54,7 @@ const MEASURE = () => {
   for (const [k, s] of [['lintel', '#relw .rw-lintel'], ['mul', '#rwMulBar'], ['grid', '#rwGrid'],
                         ['mid', '#relw .rw-mid'], ['cap', '#relw .rw-cap'], ['fcbl', '#relw .rw-fc.bl'],
                         ['floor', '#relw .rw-floor'], ['steps', '#relw .rw-steps'],
-                        ['panel', '#relw .rw-panel']])
+                        ['panel', '#relw .rw-bowl'], ['outer', '#relw .rw-panel']])
     els[k] = box(s);
   const panelH = Math.round(pr.height * 10) / 10;
   const r1 = (v) => (v == null ? null : Math.round(v * 10) / 10);

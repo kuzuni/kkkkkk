@@ -70,7 +70,12 @@ const ok = (b, name, detail) => {
 const MEASURE = `(() => {
   const R = s => { const e = document.querySelector(s); if (!e) return null;
     const q = e.getBoundingClientRect(); return { t: q.top, b: q.bottom, h: q.height }; };
-  const p = R('#relw .rw-panel');
+  /* ⚑ 859 이관 — 재는 상자가 «패널» 에서 **«그릇(.rw-bowl)»** 으로 내려왔다.
+     859 가 그릇을 ref 비례(1080×1527)로 캡하고 패널은 영역을 그대로 꽉 채우게 만들면서,
+     «패널 하변» 은 더 이상 **눈에 보이는 변**이 아니다(그 아래는 이어받는 벽면이다).
+     813 의 [3]·[2b]·[2c] 가 재던 «안내문 아래 여백» 은 금테가 도는 그릇 하변까지가 맞다 —
+     패널로 재면 2280 에서 263.6 이 나와 비가 4.57 로 튄다(그 값은 여백이 아니라 «그릇 밖» 이다). */
+  const p = R('#relw .rw-bowl') || R('#relw .rw-panel');
   const rel = o => o && { t: +(o.t - p.t).toFixed(2), b: +(o.b - p.t).toFixed(2), h: +o.h.toFixed(2) };
   const o = { panel: p, grid: rel(R('#rwGrid')), mid: rel(R('#relw .rw-mid')),
               cap: rel(R('#relw .rw-cap')), fc: rel(R('#relw .rw-fc.bl')),
@@ -85,7 +90,7 @@ const MEASURE = `(() => {
   const fcr = document.querySelector('#relw .rw-fc.bl').getBoundingClientRect();
   const ov = lines.reduce((m, L) =>
     Math.max(m, Math.min(L.x2, fcr.right) - Math.max(L.x1, fcr.left)), 0);
-  const panelH = +p.h.toFixed(2);
+  const panelH = +p.h.toFixed(2);          /* 859 — 이제 «그릇 높이» 다 */
   return { panelH,
     g3: +(panelH - o.cap.b).toFixed(2),          /* 안내문 아래 여백 */
     gapB: +(o.fc.t - o.cap.b).toFixed(2),        /* 쌍ⓑ — 안내문 ↓ 코너 브래킷 */
@@ -212,17 +217,37 @@ async function sweep(browser, url) {
        긴 네 프레임의 E 는 **한 픽셀도 안 움직였고**, 재배분은 벽 하한·벽 폭·안내문 비
        세 자리에서 났다. 1회차 §3 이 «총량을 줄이면 E 가 커진다» 를 보였으므로 그 반대편,
        즉 «우리가 E 를 안 키웠다» 도 같이 못박아야 짝이 맞는다. */
-    ok(FRAMES.filter(H => H !== 1600).every(H => Math.abs(r[H].gapMid - E_R4[H]) < 1.2),
-      '[6a] 긴 네 프레임의 E(격자↔수반)가 4회차 [G1] 값 — 2280 613.9 → 545.9 → **535.6** · 2600 867.2 → 715.5 → **702.0**',
-      FRAMES.filter(H => H !== 1600).map(H => H + ':' + r[H].gapMid + '/' + E_R4[H]).join(' · '));
+    /* ── ⚑ 859 이관 — **이 항의 축이 «값» 에서 «상수성» 으로 바뀌었다.** ──
+       [6a] 는 회차마다 E 의 «그 회차 값»(E_R2 → E_R3 → E_R4)을 못박아 조용한 이동을 막던
+       항이다. 859 가 그릇을 1527 로 캡하자 **E 는 프레임의 함수이기를 그만두었다** —
+       1841·1920·2280·2600 이 전부 같은 값이다(그 전에는 330.7 / 366.3 / 535.6 / 702.0 =
+       **2.12배** 진폭. 813 4회차 Q1 이 «프레임 간 3.72배» 로 1순위로 짚은 그 자리다).
+       ⇒ «네 프레임이 한 값인가» 와 «그 값이 레퍼런스 비(342)의 ±10% 안인가» 를 묻는다.
+         옛 값들은 위 상수 표에 그대로 남겨 둔다 — 어디서 왔는지를 지우지 않는다(333 처방).
+       ref E = 격자 하변 829 → 수반 상변 1171 = **342**(측정표 1080×1527 환산). */
+    {
+      const caps = FRAMES.filter(H => H !== 1600);
+      const es = caps.map(H => r[H].gapMid);
+      const spread = Math.max(...es) - Math.min(...es);
+      const REF_E = 342;
+      ok(spread < 1.2 && Math.abs(es[0] - REF_E) / REF_E < 0.10,
+        '[6a] 859 이후 E(격자↔수반)는 **프레임 무관 상수**이고 ref 342 의 ±10% 안 (859 전 330.7~702.0 = 2.12배)',
+        caps.map(H => H + ':' + r[H].gapMid).join(' · ') + ' · 진폭 ' + spread.toFixed(2) +
+        ' · ref 342 대비 ' + ((es[0] / REF_E - 1) * 100).toFixed(1) + '%');
+    }
     /* ⚑ «줄었다» 만 재면 다음 회차가 E 를 줄이면서 그 세로를 **아무 데나** 보내도 초록이다.
        줄어든 만큼이 **격자 위로 그대로 갔는지**(= 다른 칸으로 안 샜는지)를 같이 잰다 —
        3회차 비평 2인이 A/B 에서 «이동량이 정확히 1:1 상쇄» 를 각자 확인한 그 축이다. */
-    ok(FRAMES.filter(H => H !== 1600).every(H =>
-        Math.abs((E_R2[H] - r[H].gapMid) - (r[H].gt - GT_R2[H])) < 1.5),
-      '[6b] E 에서 뺀 만큼이 **격자 위로 그대로** 갔다 — 다른 칸으로 샌 세로 0px',
-      FRAMES.filter(H => H !== 1600).map(H =>
-        H + ':E −' + (E_R2[H] - r[H].gapMid).toFixed(1) + ' / 위 +' + (r[H].gt - GT_R2[H]).toFixed(1)).join(' · '));
+    /* ── ⚑ 859 이관 — «뺀 만큼이 격자 위로 갔다» 는 짝이 사라졌다. ──
+       859 는 세로를 **칸 사이에서 옮긴 것이 아니라 그릇 밖으로 뺐다**(패널의 이어받는 벽면).
+       그래서 옛 짝(E ↓ = 위 ↑)은 성립하지 않는다. 대신 그 사고를 막는 원래 목적 —
+       «세로가 아무 데로나 새지 않는다» — 은 **그릇 안 네 여백의 합이 그릇 예산과 같다**
+       로 그대로 잰다: gt + E + 위 + 아래 = 그릇높이 − 820(내용 3구획 516+216+88). */
+    ok(FRAMES.every(H => Math.abs((r[H].gt + r[H].gapMid + r[H].above + r[H].g3)
+                                  - (r[H].panelH - 820)) < 1.5),
+      '[6b] 그릇 안 네 여백의 합 = 그릇높이 − 820 — 세로가 그릇 밖·안 어디로도 안 샌다',
+      FRAMES.map(H => H + ':' + (r[H].gt + r[H].gapMid + r[H].above + r[H].g3).toFixed(1)
+        + '/' + (r[H].panelH - 820).toFixed(1)).join(' · '));
   }
 
   /* ── [R] 되돌림 시험 3겹 — **세 자리를 각각 빼면 각각 빨개진다** ────────────
@@ -231,6 +256,8 @@ async function sweep(browser, url) {
        (700 §preTree 의 1회차 함정). 이름에 pid(648 규약). */
   {
     const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    /* R4 가 «안 바뀐다» 를 재려면 현행 값이 필요하다 — 상수로 적지 않고 이번 실행에서 뜬다. */
+    const R4_BASE = Object.fromEntries(FRAMES.map(H => [H, r[H].gapA]));
     const REV = [
       ['R1', '[E4] 안내문 ref 비 분할을 옛 «38 고정» 으로 되돌린다 ⇒ [3] 이 대역 밖으로',
         '+ 38px * var(--rwc,1) + var(--rw-g3) - var(--rw-i));', '+ 38px);',
@@ -244,11 +271,27 @@ async function sweep(browser, url) {
          [E3] 이 하는 일은 **여유**다: 27.9%(2.6px) → 26.1%(1.0px). 1px 짜리 여유는 다음 회차의
          어떤 손질에도 뒤집히므로 그 차이를 그대로 항으로 못박는다(«쓸모없는 지렛대» 로
          오해해 3회차가 되돌리면 이 항이 말한다). */
-      ['R3', '[E3] 벽 폭 294 → 300 사본에서 쌍ⓐ 의 **여유**가 절반 밑으로 준다(판정선은 안 깨진다)',
+      /* ── ⚑ 859 가 [E3] 을 **무력화**했다 — 되돌림의 대상이 바뀐다. ──
+         캡이 걸리자 긴 프레임의 `--rw-lt` 는 `clamp()` 의 **하한(20)** 이 이겨 «gt − 294» 항이
+         한 번도 안 골라진다 ⇒ 294 를 300 으로 되돌려도 **한 픽셀도 안 변한다**(38.5% 그대로).
+         죽은 지렛대에 되돌림 시험을 걸어 두면 «사본에서 안 빨개진다» 로 영원히 빨간 항이 된다.
+         ⇒ R3 은 **859 자신의 되돌림**(캡 해제)으로 갈아 끼우고, [E3] 이 죽었다는 사실 자체는
+           R4 가 «되돌려도 값이 안 변한다» 로 못박는다. 자리를 비우지 않았다(333 처방). */
+      /* ⚠ 판정은 «E 상수성» **하나**다. 안내문 비(0.60)는 캡을 풀어도 그대로인데, 그 이유가
+         이 자의 눈금이 그릇을 따라가기 때문이다 — 캡이 없으면 그릇 = 패널이라 [3] 은
+         859 전과 같은 값을 읽는다(1회차 [E4] 가 이미 세운 값이라 859 의 공이 아니다).
+         «둘 다 깨진다» 로 적었다가 실행이 아니라고 답했다 — 자가 말한 쪽을 따른다. */
+      ['R3', '**859 캡 해제**(그릇 = 패널) 사본에서 [6a] 의 «E 상수성» 이 깨진다(진폭 0 → 371px)',
+        '--rw-ph:min(100%,calc(1527px * var(--rwc,1)));', '--rw-ph:100%;',
+        (rv) => { const caps = FRAMES.filter(H => H !== 1600).map(H => rv[H].gapMid);
+                  const spread = Math.max(...caps) - Math.min(...caps);
+                  const ratio = rv[2280].g3 / rv[2280].above;
+                  return { bad: spread > 1.2,
+                           got: 'E 진폭 ' + spread.toFixed(1) + 'px (안내문 비는 ' + ratio.toFixed(2) + ' 로 불변 — 눈금이 그릇을 따라간다)' }; }],
+      ['R4', '[E3] 벽 폭 294 → 300 사본이 859 이후 **아무것도 안 바꾼다** — 죽은 지렛대임을 못박는다',
         'calc(var(--rw-gt) - 294px * var(--rwc,1)),', 'calc(var(--rw-gt) - 300px * var(--rwc,1)),',
-        (rv) => { const b = rv[BASE].gapA, m = Math.min(...FRAMES.map(H => rv[H].gapA));
-                  const pct = m / b * 100;
-                  return { bad: pct >= 25 && pct <= 26.9, got: '쌍ⓐ 27.9% → ' + pct.toFixed(1) + '%' }; }],
+        (rv) => { const d = Math.max(...FRAMES.map(H => Math.abs(rv[H].gapA - R4_BASE[H])));
+                  return { bad: d < 0.5, got: '쌍ⓐ 최대 변화 ' + d.toFixed(2) + 'px' }; }],
     ];
     for (const [id, why, from, to, judge] of REV) {
       if (src.indexOf(from) < 0) { ok(false, `[${id}] 되돌림 사본을 못 만들었다 — 선언 문자열이 안 잡힌다`, from); continue; }

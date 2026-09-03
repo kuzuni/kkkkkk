@@ -63,6 +63,7 @@ const G3_MIN = 44, G3_MAX = 104;   /* 14회차 — 안내문 위 41px 고정과�
 const STEP_PITCH = 84;                 /* 단 면 높이 — 네 프레임 전부 동일 */
 /* 13회차 — 폭을 짝수로 바꿔 중심이 정확히 540 에 떨어지게 했다(비평 AD ⑨·AE ⑦: 세로 축 산포 2.5px) */
 const STEP_W = [842, 810, 778, 746, 714, 682, 650, 618];   /* 14회차 — 5단 → 8단 · Δ32 */
+const BOWL_H = 1527;              /* 859 — 그릇 캡 = ref 486×687 ×2.2222 (측정표 서두) */
 const PLINTH_OFF = 40;                 /* 받침 밑동 = 바닥선 + 40 (구간이 그보다 얕으면 구간 전체) */
 
 let pass = 0, fail = 0;
@@ -136,7 +137,7 @@ const inter = (a, b) => {
         return {
           scale: sc, frameH: ar.height / sc,
           tabTop: F(tabbar).t,
-          panel: q('.rw-panel'), bg: q('.rw-bg'), frame: q('.rw-frame'),
+          panel: q('.rw-panel'), bowl: q('.rw-bowl'), bg: q('.rw-bg'), frame: q('.rw-frame'),
           fcbl: q('.rw-fc.bl'), fcbr: q('.rw-fc.br'),
           grid: q('.rw-grid'), mid: q('.rw-mid'), floor: q('.rw-floor'), basin: q('.rw-basin'), cost: q('.rw-cost'), cap: q('.rw-cap'),
           lintel: q('.rw-lintel'), ground: q('.rw-ground'), steps: q('.rw-steps'),
@@ -159,23 +160,42 @@ const inter = (a, b) => {
         };
       });
 
-      const P = r.panel, regTop = 108, regBot = H - 180;
+      const P = r.panel, W = r.bowl, regTop = 108, regBot = H - 180;
       ck(`[${H}] ① 패널 = 영역 전체 (0,${regTop})~(1080,${regBot})`,
         Math.abs(P.l) < 0.6 && Math.abs(P.r - 1080) < 0.6 &&
         Math.abs(P.t - regTop) < 0.6 && Math.abs(P.b - regBot) < 0.6,
         `${P.w.toFixed(1)}×${P.h.toFixed(1)} @y${P.t.toFixed(1)}..${P.b.toFixed(1)} (탭바 상변 ${r.tabTop.toFixed(1)})`);
 
-      ck(`[${H}] ② 배경 .rw-bg = 패널 전체 (inset 0)`,
-        Math.abs(r.bg.l - P.l) < 0.6 && Math.abs(r.bg.r - P.r) < 0.6 &&
-        Math.abs(r.bg.t - P.t) < 0.6 && Math.abs(r.bg.b - P.b) < 0.6,
+      /* ── 작업 859 이관 — «패널» 이던 자리가 **«그릇(.rw-bowl)»** 으로 내려왔다. ──
+         859 전에는 패널 = 그릇이라 두 이름이 같은 상자였고, 그 상태에서 그릇이 프레임을 따라
+         1:1.848(2280)까지 길어지는 것이 813 이 못 닫는 뿌리였다(4회차 CJ·CK 독립 일치).
+         859 는 **패널은 영역을 그대로 꽉 채우고**(①·③ 은 한 줄도 안 바뀐다 — 주인 지시 120),
+         **장면·금테·내용만 ref 비례로 캡된 그릇 안**에 넣는다.
+         ⇒ 아래 세 항은 «장면이 그릇을 꽉 채우는가» 를 묻는 항이 됐고, 새로 생긴 «그릇이
+           레퍼런스 비례인가» 는 바로 아래 [859] 두 항이 묻는다. 자리를 비우지 않았다(333 처방). */
+      ck(`[${H}] ② 배경 .rw-bg = 그릇 전체 (inset 0)`,
+        Math.abs(r.bg.l - W.l) < 0.6 && Math.abs(r.bg.r - W.r) < 0.6 &&
+        Math.abs(r.bg.t - W.t) < 0.6 && Math.abs(r.bg.b - W.b) < 0.6,
         `${r.bg.w.toFixed(1)}×${r.bg.h.toFixed(1)}`);
-      ck(`[${H}] ② 금색 프레임 .rw-frame = 패널 가장자리 (inset 2)`,
-        Math.abs(r.frame.l - P.l - 2) < 0.6 && Math.abs(P.r - r.frame.r - 2) < 0.6 &&
-        Math.abs(r.frame.t - P.t - 2) < 0.6 && Math.abs(P.b - r.frame.b - 2) < 0.6,
+      ck(`[${H}] ② 금색 프레임 .rw-frame = 그릇 가장자리 (inset 2)`,
+        Math.abs(r.frame.l - W.l - 2) < 0.6 && Math.abs(W.r - r.frame.r - 2) < 0.6 &&
+        Math.abs(r.frame.t - W.t - 2) < 0.6 && Math.abs(W.b - r.frame.b - 2) < 0.6,
         `${r.frame.w.toFixed(1)}×${r.frame.h.toFixed(1)}`);
-      ck(`[${H}] ② 하단 코너 브래킷 2개가 패널 하변에 붙음`,
-        Math.abs(P.b - r.fcbl.b - 3) < 0.6 && Math.abs(P.b - r.fcbr.b - 3) < 0.6,
-        `bl ${(P.b - r.fcbl.b).toFixed(1)}px · br ${(P.b - r.fcbr.b).toFixed(1)}px`);
+      ck(`[${H}] ② 하단 코너 브래킷 2개가 그릇 하변에 붙음`,
+        Math.abs(W.b - r.fcbl.b - 3) < 0.6 && Math.abs(W.b - r.fcbr.b - 3) < 0.6,
+        `bl ${(W.b - r.fcbl.b).toFixed(1)}px · br ${(W.b - r.fcbr.b).toFixed(1)}px`);
+      /* [859-a] 그릇의 종횡비 = 레퍼런스(486×687 → 1080×1527 = 1:1.41389).
+         패널이 1527 보다 짧은 프레임에서는 캡이 안 걸리므로 그릇 = 패널이고, 그때는 «패널과 같다» 를 묻는다. */
+      const capped = P.h > BOWL_H + 0.6;
+      ck(`[${H}] ② 그릇 = 레퍼런스 비례 ${capped ? `(캡 ${BOWL_H})` : '(캡 미적용 — 패널이 더 짧다)'}`,
+        capped ? Math.abs(W.h - BOWL_H) < 0.6 && Math.abs(W.w - 1080) < 0.6
+               : Math.abs(W.h - P.h) < 0.6 && Math.abs(W.t - P.t) < 0.6,
+        `${W.w.toFixed(1)}×${W.h.toFixed(1)} = 1:${(W.h / W.w).toFixed(4)} (ref 1:${(BOWL_H / 1080).toFixed(4)}) · 패널 ${P.h.toFixed(1)}`);
+      /* [859-b] 그릇은 패널 안에서 **세로 중앙**이다 — 위·아래 띠가 같아야 «이어받는 벽» 으로 읽힌다. */
+      /* 위 띠는 정수로 내림(`round(down)`)이라 패널 높이가 홀수·소수면 아래 띠가 최대 1px 넓다 */
+      ck(`[${H}] ② 그릇이 패널 세로 중앙 (위 띠 = 아래 띠, 내림 오차 ≤ 1px)`,
+        Math.abs((W.t - P.t) - (P.b - W.b)) < 1.1 && W.t - P.t >= -0.6,
+        `위 ${(W.t - P.t).toFixed(1)} · 아래 ${(P.b - W.b).toFixed(1)}`);
 
       /* ③ 픽셀 — #relw 배경만 센티넬로 바꾸고 «영역 안에 그 색이 보이는가» */
       await page.evaluate(() => { document.getElementById('relw').style.background = '#FF00FF'; });
@@ -229,8 +249,9 @@ const inter = (a, b) => {
         out ? `이탈 ${out.l.toFixed(1)},${out.t.toFixed(1)}~${out.r.toFixed(1)},${out.b.toFixed(1)}` : '이탈 0');
 
       /* ⑥ 네 여백 전부 양수 + 레퍼런스 비율 */
-      const gaps = [r.grid.t - P.t, r.mid.t - r.grid.b, r.cap.t - r.mid.b, P.b - r.cap.b];
-      const spare = P.h - 820;
+      /* 859 — 예산은 패널이 아니라 **그릇** 위에서 돈다(CSS 의 `100%` 가 그릇 높이로 풀린다). */
+      const gaps = [r.grid.t - W.t, r.mid.t - r.grid.b, r.cap.t - r.mid.b, W.b - r.cap.b];
+      const spare = W.h - 820;
       ck(`[${H}] ⑥ 여백 4곳 전부 양수 (구획 겹침 0)`, gaps.every(g => g > 0.5),
         gaps.map(g => g.toFixed(1)).join(' / '));
       /* gap2(수반↔안내문)는 **고정 38px** 이다 — 비례로 키우면 프레임이 길어질수록
@@ -240,7 +261,7 @@ const inter = (a, b) => {
            T  = 수반 top − 격자 하단     av = min(186, (T − 219) / 2)
            gt = clamp(av + 82,  min(spare × .5075, 600),  T − av − 137) */
       const g3 = Math.min(Math.max(spare * 0.1325 - 38, G3_MIN), G3_MAX);
-      const bt = P.h - 88 - g3 - 38 - 216;          /* 수반 구획 상변(패널 기준) */
+      const bt = W.h - 88 - g3 - 38 - 216;          /* 수반 구획 상변(그릇 기준 — 859) */
       const T = bt - 516;
       /* 16회차 — «아래 최소» 137 → 80 (받침 40 + 접합선 띠 13 + 바닥 27). 계단 최소 1단 84 를 뺐다.
          따라서 av 상한식의 231(=94+137) → 174(=94+80). 1600 만 이 상한에 걸리므로 1600 만 움직인다.
@@ -268,7 +289,8 @@ const inter = (a, b) => {
          하한이 `av + 94` 뿐이라 벽 = gt − 20 − 66 = av + 8 이 되고, 바 98 을 넣고 남는 여유를
          반씩 나눠 13.8/13.8 이 된다. ⇒ 바가 요구하는 만큼을 직접 예약한다:
            232 = 20(금테) + 66(상인방) + 24(들보↔바) + 98(바) + 24(바↔격자) */
-      const gt = Math.max(av + 94, GT_FLOOR, Math.min(gtRule, T - av - 137));
+      /* 859 — 아래 예약 137 → 139(계단 구간 식이 요구하는 sh ≥ 138. 제품 주석 참조) */
+      const gt = Math.max(av + 94, GT_FLOOR, Math.min(gtRule, T - av - 139));
       /* 813 2회차 [E4] 이관 — **아래 블록(38 + g3)의 총량은 그대로 두고 ref 비로 나눈다.**
          12회차가 «gap2 = 38 고정» 을 세운 근거는 «비례로 키우면 안내문이 수반에서 떨어져
          한 덩어리로 안 읽힌다»(비평 L·N) 였는데, 813 1회차 비평 2인(CF·CG)이 **독립으로
@@ -292,9 +314,26 @@ const inter = (a, b) => {
          직접 확인했다(CH «2600 레퍼런스 대비 오차 −40% → −4.2%»). */
       const A = gaps[0], B = gaps[1];
       const ruleBinds = Math.abs(gt - gtRule) < 0.6;
-      ck(`[${H}] ⑥ 격자 위:아래 ${ruleBinds ? '= 47:53 (규칙 적용)' : '— 하한/상한이 이김(짧은 프레임은 예산 없음)'}`,
-        ruleBinds ? Math.abs(A / (A + B) - GT_SHARE) < 0.01 : gt >= gtRule - 0.6,
-        `위 ${A.toFixed(1)} : 아래 ${B.toFixed(1)} = ${(A / (A + B) * 100).toFixed(1)}:${(B / (A + B) * 100).toFixed(1)}`);
+      /* ── 859 이관 — **이기는 클램프가 하나 늘었다.** ──
+         859 전에는 «규칙이 안 먹는» 경우가 1600 하나뿐이었고 그때는 **하한**(av+94)이 이겨
+         gt 가 규칙보다 **위로** 올라갔다 — 그래서 옛 else 는 `gt >= gtRule` 한 줄이면 됐다.
+         859 가 그릇을 1527 로 캡하자 긴 세 프레임은 예산 T 가 613.3 으로 고정되고 **상한**
+         (`T − av − 137` = 아래에 받침40+띠13+계단84 를 예약하라)이 294.4 대신 290.3 을 골라
+         gt 가 규칙보다 **아래로** 4.1px 내려온다. 방향이 반대인 세 번째 경우다.
+         ⚠ 137 을 낮춰 규칙을 억지로 먹이지 않는다 — 그 137 은 계단 1단(84)의 몫이고,
+           16회차가 «낮추면 1920 이 1단 → 0단이 됐다» 를 실측으로 남겼다.
+         ⇒ 상한이 이긴 자리에서는 «비가 레퍼런스 대역(47~48%) 안이고, 세 프레임이 **같은 값**
+           인가» 를 묻는다. 후자가 이 항의 원래 목적(«규칙이 실제로 상수인가»)이고, 캡이
+           걸린 뒤로는 그 상수성이 오히려 **완전**해졌다(1841~2600 이 픽셀 동일). */
+      const capBinds = !ruleBinds && Math.abs(gt - (T - av - 139)) < 0.6;
+      const share = A / (A + B);
+      ck(`[${H}] ⑥ 격자 위:아래 ${ruleBinds ? '= 47:53 (규칙 적용)'
+            : capBinds ? '— 아래 예약(계단 1단)이 이김 · 비는 ref 대역 안'
+            : '— 하한이 이김(짧은 프레임은 예산 없음)'}`,
+        ruleBinds ? Math.abs(share - GT_SHARE) < 0.01
+          : capBinds ? Math.abs(share - GT_SHARE) < 0.01 && Math.abs(gt - (T - av - 139)) < 0.6
+          : gt >= gtRule - 0.6,
+        `위 ${A.toFixed(1)} : 아래 ${B.toFixed(1)} = ${(share * 100).toFixed(1)}:${((1 - share) * 100).toFixed(1)}`);
       /* ── 16회차 신설 — ② 아치 종횡비. ──
          «개구 588×888 고정» 은 사양인데, 짧은 프레임에서는 예산이 없어 다리를 누른다(6회차부터).
          누르는 것 자체는 허용하되 **어디까지** 눌러도 되는지에 자가 없어서, 1600 이 1:1.15 까지
@@ -357,9 +396,9 @@ const inter = (a, b) => {
       ck(`[${H}] ① 지면 접합선 = 받침 밑동 (바닥선 +${PLINTH_OFF}, Δ ≤ 1px)`,
         Math.abs(r.ground.t - (r.floorEl.t + wantGd)) < 1.0,
         `접합선 ${r.ground.t.toFixed(1)} vs 바닥선 ${r.floorEl.t.toFixed(1)} + ${wantGd.toFixed(1)}`);
-      ck(`[${H}] ① 접합선이 수반 구획 위 · 바닥이 패널 하변까지`,
-        r.ground.t <= r.mid.t + 0.6 && Math.abs(r.ground.b - P.b) < 0.6,
-        `${r.ground.t.toFixed(1)}..${r.ground.b.toFixed(1)} (수반 ${r.mid.t.toFixed(1)} · 패널 하변 ${P.b.toFixed(1)})`);
+      ck(`[${H}] ① 접합선이 수반 구획 위 · 바닥이 그릇 하변까지`,
+        r.ground.t <= r.mid.t + 0.6 && Math.abs(r.ground.b - W.b) < 0.6,
+        `${r.ground.t.toFixed(1)}..${r.ground.b.toFixed(1)} (수반 ${r.mid.t.toFixed(1)} · 그릇 하변 ${W.b.toFixed(1)})`);
       /* ③ 12회차 — 단 «크기» 고정 + 개수로 구간을 채운다. 늘어난 높이가 단을 늘리지 못하게 막는다. */
       /* `overflow:hidden` 은 rect 를 안 줄인다 — 래퍼와 실제로 겹치는 높이로 «보이는» 것을 센다.
          (1600 은 래퍼가 0px 이라 단이 4개 있어도 화면엔 하나도 안 나온다.) */
