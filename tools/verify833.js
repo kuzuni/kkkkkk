@@ -72,6 +72,21 @@ const DUMP = `(() => {
     const bw = s ? num(getComputedStyle(s).borderTopWidth) : 0;
     const bb = B(bdg);
     const lines = [...bdg.querySelectorAll('i,b')].map(B);
+    /* 885 3회차 — 배지 두 줄의 «가로 배율» 축. 선언이 아니라 **computed matrix** 로 낸다
+       (207 함정 — 선언이 남은 채 computed 만 달라지는 얼굴은 선언을 읽으면 못 잡는다).
+       matrix(a,b,c,d,e,f) 에서 rotate(θ)·scaleX(s) 는 [a,b] = s·[cosθ,sinθ] · [c,d] = [−sinθ,cosθ] 이므로
+       **가로 배율 = hypot(a,b) · 세로 배율 = hypot(c,d)** 다 — 각도 θ 를 몰라도 나오고,
+       각도를 바꿔도 이 자는 «배율» 만 잰다(세로가 1 이 아니면 높이를 건드린 것이다). */
+    const bdgLn = [...bdg.querySelectorAll('i,b')].map((e) => {
+      const cs = getComputedStyle(e);
+      const m = cs.transform.match(/matrix\\(([^)]+)\\)/);
+      const p = m ? m[1].split(',').map(parseFloat) : null;
+      return { tag: e.tagName, txt: e.textContent, tr: cs.transform,
+        sx: p ? +Math.hypot(p[0], p[1]).toFixed(4) : null,
+        sy: p ? +Math.hypot(p[2], p[3]).toFixed(4) : null,
+        fs: num(cs.fontSize), lh: num(cs.lineHeight),
+        stroke: num(cs.webkitTextStrokeWidth) };
+    });
     const hdb = B(c.querySelector('.hdb'));
     const pil = B(c.querySelector('.pil'));
     const fr = c.querySelector('.fr');
@@ -124,7 +139,7 @@ const DUMP = `(() => {
         sBorder: num(getComputedStyle(sq).borderTopWidth),
         uW: +uq.getBoundingClientRect().width.toFixed(2) };
     });
-    return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, hdb, pil, ntcD, ntc, art, hdbBot,
+    return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, bdgLn, hdb, pil, ntcD, ntc, art, hdbBot,
       frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs,
       ti: B(ti), tiFs: tcs ? num(tcs.fontSize) : null, tiLh: tcs ? num(tcs.lineHeight) : null,
       tiTr: tcs ? tcs.transform : null, tiOrg: tcs ? tcs.transformOrigin : null,
@@ -163,6 +178,34 @@ const DUMP = `(() => {
     const inkTop = c.bdg.y + c.bdgBorder + 0.5 - c.card.y;
     ok(inkTop >= -34 && inkTop <= -29,
       `[1-d] ${c.id} 배지 잉크 윗변이 카드 상변 위 29~34 (ref −29.8/−32.5)`, `${p2(inkTop)}`);
+  }
+
+  /* ── 885 3회차 신설 ─────────────────────────────────────────────────────────
+     배지 «글자» 의 가로 배율. 2회차 채점 2인(DP·DQ)이 «배지 가로만 좁다» 에 일치했고,
+     3회차가 `tools/scan885b.py`(세 번째 자)로 갈랐다 — **노랑 글자** 잉크는 임계 30~110
+     다섯 단 전부 −7.6~−8.2%(부호 불변)인데 **분홍 별판**은 같은 사다리에서 ref 가
+     181.5 → 144.4 로 미끄러져 **측정 한계**다. ⇒ 손잡이는 판이 아니라 글자이고,
+     `font-size` 가 아니라 **가로 배율**이다(높이는 −0.9% 로 맞아 있었다 · 380 함정).
+     수리 뒤 실측(같은 자): ref 154.7~156.8 ↔ 우리 155.0~157.0 = **+0.1~+0.8%**.
+     ⚠ 아래 [1-h] 가 «세로 배율 = 1» 을 같이 묻는 것이 이 수리의 핵심이다 —
+        높이를 건드리는 손잡이(fs)로 갈아타면 그 항이 먼저 빨개진다. */
+  blk('§1-2 배지 «글자» 가로 배율 — 885 3회차 (판은 안 건드렸다)');
+  for (const c of cards) {
+    const ln = c.bdgLn;
+    ok(ln.length === 2, `[1-e] ${c.id} 배지 줄이 둘(«${ln.map(l => l.txt).join('» · «')}»)`, `${ln.length}`);
+    ok(ln.every(l => Math.abs(l.sx - ln[0].sx) < 1e-3),
+      `[1-f] ${c.id} 두 줄이 **한 배율**을 쓴다 (833 [13-d] — 줄마다 손으로 다른 값을 적지 마라)`,
+      ln.map(l => p2(l.sx)).join(' · '));
+    ok(ln.every(l => Math.abs(l.sx - 1.09) <= 0.005),
+      `[1-g] ${c.id} 가로 배율 = 1.09 (수리 전 1 = 잉크 폭 −7.6~8.2%)`, ln.map(l => p2(l.sx)).join(' · '));
+    ok(ln.every(l => Math.abs(l.sy - 1) <= 0.005),
+      `[1-h] ${c.id} **세로 배율 = 1** — 높이 축은 안 건드렸다`, ln.map(l => p2(l.sy)).join(' · '));
+    ok(ln[0].fs === 46 && ln[0].lh === 48 && ln[1].fs === 36 && ln[1].lh === 40,
+      `[1-i] ${c.id} font-size/line-height 불변 (46/48 · 36/40 — 크기로 폭을 좇으면 380 함정)`,
+      `${ln[0].fs}/${ln[0].lh} · ${ln[1].fs}/${ln[1].lh}`);
+    ok(ln[0].stroke === 8 && ln[1].stroke === 7,
+      `[1-j] ${c.id} 검정 획 선언 8/7 불변 (배율은 획도 가로로 늘린다 — ⑤ 기록 · 833 [10-g] 와 같은 대가)`,
+      `${ln[0].stroke} · ${ln[1].stroke}`);
   }
 
   blk('§2 «2000%»·«가치» 두 줄이 별 잉크 중심을 따라간다');
@@ -623,6 +666,33 @@ const DUMP = `(() => {
     back3.map(c => c.bCx).join(' / '));
   ok(back3.every(c => c.iTop === 9),
     '[R6] 탭 라벨을 top:9 로 되돌리면 §8 [8-a] 가 빨개진다', back3.map(c => c.iTop).join(' / '));
+  /* 885 3회차 짝 — 배지 글자 배율을 1 로 되돌리면 §1-2 가 빨개진다.
+     ⚑ «상수를 되돌렸다» 로 끝내지 않고 **advance 가 실제로 8% 줄어드는 것**까지 본다
+     (R9 와 같은 꼴 — 선언만 보는 되돌림 시험은 «값이 바뀌었다» 만 말하고 «그림이 바뀌었다» 는 못 말한다). */
+  const backB = await page.evaluate(() => {
+    const now = [...document.querySelectorAll('.pvc')].map((c) => {
+      const e = c.querySelector('.bdg>i'); const rg = document.createRange();
+      rg.selectNodeContents(e); return +rg.getBoundingClientRect().width.toFixed(2);
+    });
+    const st = document.createElement('style');
+    st.textContent = '.pvc>.bdg{--bdg-sx:1}';                   /* 885 3회차 전 */
+    document.head.appendChild(st);
+    const back = [...document.querySelectorAll('.pvc')].map((c) => {
+      const e = c.querySelector('.bdg>i'); const cs = getComputedStyle(e);
+      const m = cs.transform.match(/matrix\(([^)]+)\)/);
+      const p = m ? m[1].split(',').map(parseFloat) : [1, 0, 0, 1];
+      const rg = document.createRange(); rg.selectNodeContents(e);
+      return { sx: +Math.hypot(p[0], p[1]).toFixed(4), adv: +rg.getBoundingClientRect().width.toFixed(2) };
+    });
+    st.remove();
+    return now.map((adv, i) => ({ nowAdv: adv, sx: back[i].sx, backAdv: back[i].adv }));
+  });
+  ok(backB.every(b => Math.abs(b.sx - 1) < 1e-3),
+    '[R16] 배지 글자 배율을 1 로 되돌리면 §1-2 [1-g] 가 빨개진다',
+    backB.map(b => p2(b.sx)).join(' / '));
+  ok(backB.every(b => b.nowAdv / b.backAdv > 1.07 && b.nowAdv / b.backAdv < 1.11),
+    '[R16b] 그때 잉크 advance 가 실제로 **8% 줄어든다** — 배율이 그림을 바꾼다는 증거 (2회차 2인 일치 −7.6~8.2%)',
+    backB.map(b => `${p2(b.backAdv)} → ${p2(b.nowAdv)}`).join(' / '));
   const back5 = await page.evaluate(() => {
     const st = document.createElement('style');
     st.textContent = '.pvc>.stt>i{transform:scaleX(.94)}';      /* 833 5회차 전 */
