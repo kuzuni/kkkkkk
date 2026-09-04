@@ -16,16 +16,21 @@
  *   [A] 구조   — (678 이관) 소모 비행 `fxSpend` 계열이 **선언째 없다** · `PAY_CUR` 한 표 ·
  *                543 공용 축은 살아 있고 획득 비행이 읽는다 · `.fx-spd` CSS 도 없다
  *   [B] 신원   — 세 자리의 알갱이가 각각 gold · rstone · tstone 이고 **자산이 실제로 로드됐다**
- *   [C] 크기   — 렌더 상자가 **660 산식**(구슬 24~34px × `FX_CIC_SC`)과 같다 · 찍힌 픽셀이 바뀐다
- *                (⚑ 660 이관 — 종전 543 산식 `ics × fxGrainSc × FX3_FLYS` 는 «화면을 가로지르던»
- *                 비행 알갱이의 값이라 74px 버튼 안에 안 들어간다. «구슬보다 크다»(주인 583)는
- *                 아래 [C-big] 이 그대로 지킨다)
+ *   [C] 크기   — 렌더 상자가 **제품 크기 사슬 전부**(구슬 24~34 × `hsc` × `--burst-sz` ×
+ *                `FX_CIC_SC` × `fitK` × 잉크보정)와 같다 · 알이 «버튼이 허용하는 최대» 까지 자란다 ·
+ *                찍힌 픽셀이 바뀐다
+ *                (⚑ 898 이관 — 종전 660 산식은 `hsc`·`szs`·`fitK` 세 축을 몰라 제품을 «절반» 으로
+ *                 읽었다. `probe898` 이 갈래를 갈랐다: 제품 무죄 · 자가 낡음. 상세는 [C] 머리말)
+ *   [C-big]   — 주인 지시 «알갱이 크기 더 크게» 의 살아 있는 몸 = `FX_CIC_SC`
+ *                (아이콘 알이 구슬보다 작지 않다 · 가둠이 안 무는 자리에서는 실제로 더 크다.
+ *                 종전 «절대 34px 초과» 는 838 `fitK` 이후 산술적으로 못 넘는 값이라 갈아 끼웠다)
  *   [D] 방향   — 출발이 «알약·보유 표시», 도착이 호스트. 거리 단조 감소(획득의 반대)
  *   [E] 금액   — `fxPay` «−n» 0건 · 488 훈련 사다리 «−n» 0건 · 알약 «움푹» 1건(43회차 유지)
  *   [F] 518    — 같은 씬에서 «획득 방향» 노드(알약으로 가는 비행·`+n`·딤 위 복제)는 0
  *   [G] 상한   — `#fxl` 최고 동시 노드 < FXMAX (543 규약 — 드롭 0)
  *   [R] 되돌림 — (678 이관) 660 이 세운 «버튼 아이콘 버스트» 를 무력화하면 화폐 아이콘 0 ·
- *                종전 앰버 스파크는 그대로다
+ *                종전 앰버 스파크는 그대로다 · (898 신설 [R3]) `FX_CIC_SC` 를 1 로 되돌린 **제품
+ *                사본**에서 단련 알이 지금 판의 상한에 못 닿는다 = [C-big-f] 가 무른 항이 아니다
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -141,7 +146,10 @@ const INSTALL = () => {
   await p.waitForTimeout(400);
   await p.evaluate(INSTALL);
 
+  /* ⚑⚑ 898 이관 — [C] 가 읽을 축이 **넷 더** 늘었다(아래 [C] 머리말). 상수는 손으로 안 적고
+     제품에게 묻는다 — 402 «표 두 벌» 방지이자, 상수가 바뀌면 자가 따라오게 하는 자리다. */
   const K = await p.evaluate(() => ({ FXMAX, FX3_FLYS, FX3_LAND, FX3_BSPITCH, CIC_SC: FX_CIC_SC,
+    FITS: FXB_FITS, SZMIN: FXB_SZMIN, SZMAX: FXB_SZMAX, DMAX: FXB_DMAX,
     ics: FXCUR.gold.ics, gs: { gold: fxGrainSc('gold'), rstone: fxGrainSc('rstone'), tstone: fxGrainSc('tstone') } }));
 
   const R = {};
@@ -158,6 +166,21 @@ const INSTALL = () => {
                cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
     }, s);
     if (!hostClip) { ok(false, '[B0-' + s.k + '] 호스트를 찾았다', s.host); continue; }
+    /* ⚑⚑ 898 — [C] 가 쓸 **살아 있는 축**(호스트 신고 두 값)을 발원 버튼에게 직접 묻는다.
+       ⚠ **상자는 여기서 재면 안 된다** — 제품의 `fitK` 는 버스트가 태어나는 **눌린 순간**의
+         `fxRect(버튼)` 을 쓰는데, 룬·단련 버튼은 눌림 연출에서 ×1.02 로 커진다(실측 룬
+         420×112 → 428.4×114.24 · 단련 496×173 → 505.9×176.5 · 훈련은 Δ0). 쉬는 상자로 재면
+         그 2% 가 그대로 «알 1px» 로 어긋난다 ⇒ 상자는 아래 홀드 창 **안에서** 표본으로 모은다. */
+    const AX = await p.evaluate(s => {
+      const h = document.querySelector(s.host); if (!h) return null;
+      const sel = (getComputedStyle(h).getPropertyValue('--burst-to') || '').trim();
+      const t = (sel && h.querySelector(sel)) || h;
+      const st = getComputedStyle(t);
+      const sz = parseFloat(st.getPropertyValue('--burst-sz'));
+      const ft = parseFloat(st.getPropertyValue('--burst-fit'));
+      return { sel: sel, szs: (sz > 0 && sz <= 1) ? sz : 1,
+               fits: (ft > 0 && ft <= FXB_FITS) ? ft : FXB_FITS };
+    }, s);
     const before = await p.screenshot({ clip: { x: hostClip.x, y: hostClip.y, width: hostClip.width, height: hostClip.height } });
     const bb = await (await p.$(s.btn)).boundingBox();
     await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
@@ -194,11 +217,18 @@ const INSTALL = () => {
         let live = [...document.querySelectorAll('#fxl .fx-cic')];
         if (!wave && live.length) wave = new Set(live);       /* 첫 무리를 굳힌다 */
         if (wave) live = live.filter(n => wave.has(n));
+        /* ⚑⚑ 898 — 크기 자를 **둘로 갈랐다.** `getBoundingClientRect` 는 `@keyframes fxSpark` 의
+           위상을 타서(알이 태어나 커졌다 사그라든다) «최대» 가 표본 위상 운에 흔들린다 —
+           ±2% 문턱에 그대로 대면 플레이키다(344 계열). ⇒ **크기 계약은 `offsetWidth`**(레이아웃 폭 ·
+           변환을 안 탄다 = 제품이 인라인으로 박은 `sz` 그 값)로 재고, rect 쪽 `w` 는 그대로 둔다
+           (아래 [D] 의 반경·[C-*-px] 의 «찍힌 픽셀» 이 계속 쓴다). */
         const g = live.map(n => {
           const r = n.getBoundingClientRect();
           const im = n.querySelector('img.cic');
           const ir = im ? im.getBoundingClientRect() : r;
-          return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: ir.width, h: ir.height };
+          const gsv = parseFloat(getComputedStyle(n).getPropertyValue('--fxgs')) || 1;
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: ir.width, h: ir.height,
+                   wn: (im ? im.offsetWidth : n.offsetWidth) * gsv, on: n.offsetWidth };
         });
         if (g.length && hr) {
           const cx = g.reduce((a, q) => a + q.x, 0) / g.length, cy = g.reduce((a, q) => a + q.y, 0) / g.length;
@@ -209,9 +239,15 @@ const INSTALL = () => {
              가둠에 눌려 중심이 우연히 밀렸기 때문이지 «퍼져서» 가 아니다 — **셋 다 자가 틀렸던 것**이다).
              퍼짐은 중심이 아니라 **반경**에 있다. 문턱·방향·의미는 그대로 두고 재는 양만 옮긴다. */
           const ox = hr.x + hr.width / 2, oy = hr.y + hr.height / 2;
+          /* ⚑ 898 — **눌린 순간의 발원 상자**도 같이 찍는다(위 AX 머리말: 제품의 `fitK` 가 이 값을 쓴다) */
+          const fr = fxRect(bh);
           out.push({ t: Math.round(performance.now() - t0), n: g.length,
                      d: g.reduce((a, q) => a + Math.hypot(q.x - ox, q.y - oy), 0) / g.length,
-                     cx, cy, w: Math.max(...g.map(q => q.w)) });
+                     cx, cy, w: Math.max(...g.map(q => q.w)),
+                     wnx: Math.max(...g.map(q => q.wn)), wnm: Math.min(...g.map(q => q.wn)),
+                     onx: Math.max(...g.map(q => q.on)), onm: Math.min(...g.map(q => q.on)),
+                     bw: fr ? fr.w : null, bh: fr ? fr.h : null,
+                     gsv: g.length ? (g[0].wn / Math.max(1, g[0].on)) : null });
         }
         if (performance.now() - t0 > 720) { clearInterval(iv); res(out); }
       }, 40);
@@ -231,7 +267,7 @@ const INSTALL = () => {
       const q = b.getBoundingClientRect();
       return { x: q.x + q.width / 2, y: q.y + q.height / 2 };
     }, s);
-    R[s.k] = { G, tr, from, hostClip, before, mid };
+    R[s.k] = { G, tr, from, hostClip, before, mid, AX };
     await p.waitForTimeout(400);
   }
 
@@ -263,30 +299,111 @@ const INSTALL = () => {
     if (!a || !bImg || a.length === bImg.length && Buffer.compare(a, bImg) === 0) return 0;
     return 100;                                       /* PNG 바이트 비교 — «달라졌는가» 만 본다 */
   };
+  /* ⚑⚑ 898 이관 — **산식이 또 바뀌었고, 이번엔 «자가 낡은» 쪽이었다.**
+     660 이 세운 값(구슬 24~34 × `FX_CIC_SC` = 38~54px)은 그 뒤 세 작업이 크기 사슬에 축을 더하면서
+     제품의 실제 크기와 갈라졌다 — `verify583` [C-train]·[C-rune]·[C-big] 3건이 그래서 빨갰다(898).
+       · 619 6·12회차 → `hsc`  (호스트 넓이 비례 · 상한 `FXB_DMAX/FXB_SZMAX`)
+       · 814 5회차   → `szs`  (호스트 신고 `--burst-sz`)
+       · 838 2·3·6회차 → `fitK`(호스트 신고 `--burst-fit`/`FXB_FITS` — «날아갈 방» 을 남기는 배수)
+     `probe898` 이 갈래를 갈랐다: 실측이 **사슬 전부와는 맞고**(제품 무죄 · 갈래 ⓐ 기각)
+     **660 산식과는 어긋난다**(위끝 차 훈련 187% · 룬 122% · 단련 44% · 갈래 ⓑ 확인).
+     ⚠ **단련이 초록이던 것은 헛초록이었다** — 두 구간이 겹쳐 실측이 우연히 낡은 창에 들었을 뿐이고,
+       뽑기(rnd 24~34)의 위끝이 안 나오는 실행에서는 그대로 빨개진다(플레이키 · 344 계열).
+     ⇒ 자리를 비우지 않고(333) **상수를 빼고 제품의 계약을 다시 유도**한다 — 아래 `chain()` 은
+       살아 있는 상수 넷(`FX_CIC_SC`·`FXB_FITS`·`FXB_SZMIN`·`FXB_SZMAX`/`FXB_DMAX`)과 호스트가
+       신고한 값(`--burst-sz`·`--burst-fit`)과 발원 상자만으로 구간을 **처음부터 계산**한다.
+       제품의 `sz` 를 읽어 오는 것이 아니므로(그러면 «식이 갈려도 초록» 이다 — LESSONS 831)
+       사슬에서 한 축이라도 빠지면 그 순간 빨개진다.
+     ⚠ **문턱은 한 칸도 안 넓혔다** — 종전 ±2% 그대로다(334·796). 넓힌 것이 아니라 **댈 자리**를 옮겼다. */
+  const CH = {};
   for (const s of SITES) {
-    const r = R[s.k]; if (!r) continue;
-    /* ⚑⚑ 660 이관 — **산식이 바뀌었다.** 종전 값(`ics 55 × 잉크보정 × FX3_FLYS 2.1` = 93~128px)은
-       알갱이가 **화면을 가로질러 날던** 시절의 크기다. 660 이 스폰을 강화 버튼 안으로 못 박으면서
-       그 값은 산술적으로 못 들어간다(가장 얇은 호스트 단련 `.tb` 는 **74px**).
-       ⇒ 자리를 비우지 않고 **버스트 자신의 계약**으로 갈아 끼운다: 구슬(24~34px)에 `FX_CIC_SC`
-       를 곱한 38~54px. 아래 [C-big] 이 «구슬보다 크다» 는 주인 지시(583)를 그대로 지킨다.
-       ⚠ 문턱은 **한 칸도 안 넓혔다** — 종전 ±2% 를 그대로 쓰되 구간(38~54)의 양 끝에 댄다. */
-    /* ⚠ 재는 것은 **안쪽 아이콘**이고 그 놈은 `--fxgs`(543 재화별 잉크 보정)를 탄다 —
-       바깥 `<s>` 상자(24~34 × FX_CIC_SC)에 그 보정을 곱해야 같은 값을 묻는다.
-       종전 543 산식도 `ics × fxGrainSc × FX3_FLYS` 로 **같은 세 축**이었다(가운데 축은 그대로다). */
-    const lo = 24 * K.CIC_SC * K.gs[s.cur], hi = 34 * K.CIC_SC * K.gs[s.cur];
-    const got = Math.max(...r.tr.map(x => x.w), 0);
-    ok(got >= lo * 0.98 && got <= hi * 1.02,
-       '[C-' + s.k + '] 버스트 아이콘 폭이 660 산식(구슬 24~34 × FX_CIC_SC ' + n1(K.CIC_SC)
-       + ' × 잉크보정 ' + n1(K.gs[s.cur]) + ')과 같다',
-       '실측 ' + n1(got) + ' vs 구간 ' + n1(lo) + '~' + n1(hi));
+    const r = R[s.k]; if (!r || !r.AX) { ok(false, '[C-' + s.k + '-ax] 발원 축을 읽었다'); continue; }
+    const a = r.AX, gs = K.gs[s.cur];
+    const box = r.tr.filter(x => Number.isFinite(x.bw) && x.bw > 0);
+    if (!box.length) { ok(false, '[C-' + s.k + '-ax] 눌린 순간의 발원 상자 표본이 있다'); continue; }
+    /* 눌림 연출이 상자를 흔들므로(×1.02) 표본의 **양 끝**으로 구간을 감싼다 — 한 순간의 값으로
+       못을 박으면 그 2% 가 곧바로 «알 1px» 오차가 된다(위 AX 머리말 · 344 계열 플레이키 방지). */
+    const mk = q => {
+      const hsc = Math.min(Math.max(Math.sqrt(q.w * q.h) / 410, 1), K.DMAX / K.SZMAX);
+      const cap = Math.max(K.SZMIN, a.fits * Math.min(q.w, q.h));   /* «버튼이 허용하는 만큼»(660·838) */
+      const fitIC = Math.min(1, cap / Math.max(1, K.SZMAX * hsc * a.szs * K.CIC_SC));
+      const fitPl = Math.min(1, cap / Math.max(1, K.SZMAX * hsc * a.szs));  /* 같은 자리의 «구슬» 갈래 */
+      /* 구슬 눈금 v(24~34) 하나가 낳는 **바깥 알 폭** — 제품의 두 번 반올림까지 그대로 따라간다 */
+      return { hsc, cap, fitIC, fitPl,
+               ic: v => Math.max(K.SZMIN, Math.round(Math.round(Math.round(v * hsc * a.szs) * K.CIC_SC) * fitIC)),
+               pl: v => Math.max(K.SZMIN, Math.round(Math.round(v * hsc * a.szs) * fitPl)) };
+    };
+    const sm = mk(box.reduce((m, x) => (Math.min(x.bw, x.bh) < Math.min(m.w, m.h) ? { w: x.bw, h: x.bh } : m),
+                             { w: box[0].bw, h: box[0].bh }));      /* 가장 작게 눌린 순간 */
+    const bg = mk(box.reduce((m, x) => (Math.min(x.bw, x.bh) > Math.min(m.w, m.h) ? { w: x.bw, h: x.bh } : m),
+                             { w: box[0].bw, h: box[0].bh }));      /* 가장 크게 부푼 순간 */
+    const lo = sm.ic(24), hi = bg.ic(34);
+    CH[s.k] = { cap: bg.cap, fitIC: bg.fitIC, fitPl: bg.fitPl, gs,
+                icHi: bg.ic(34), plHi: bg.pl(34), lo, hi, hi31: sm.ic(31) };
+    const all = r.tr.filter(x => Number.isFinite(x.onx));
+    const got = Math.max(...all.map(x => x.onx), 0), gotMin = Math.min(...all.map(x => x.onm), 1e9);
+    /* ① 계약 — 알이 «버튼이 허용하는 만큼» 을 **안 넘는다**(838 `fitK` 의 뜻) · 제품이 선언한
+         바닥(`FXB_SZMIN`) 아래로도 안 내려간다.
+       ⚠ 허용은 «±2% 또는 ±1px 중 큰 쪽» 이다. 넓힌 것이 아니라 **정수 양자화**를 적은 것이다 —
+         사슬에 `Math.round` 가 두 번 있어 16~19px 짜리 알에서는 2% 가 0.4px, 즉 «맞아도 어긋난» 다.
+         종전 ±2% 는 38~54px 구간의 값이었다(같은 비율이 그때는 1px 을 덮었다).
+       ⚠⚠ **아래끝을 «구슬 눈금 24» 에 못박지 않는다** — 그렇게 하면 **구조적으로 플레이키**다.
+         `fitK` 는 알이 태어나는 **그 순간의** 버튼 상자를 쓰는데, 621 눌림 연출이 홀드 내내 그
+         상자를 흔든다(실측 단련 505.9 → 459.2 · 룬 428.4 → 388.9 = 9% 진폭). 40ms 격자로는
+         그 골을 못 잡으므로 «가장 작게 눌린 순간» 을 아무리 표본에서 골라도 **자가 못 본 더 작은
+         순간에 태어난 알**이 남는다(실행마다 단련 min 22 ↔ 26 으로 흔들렸다 — 344 계열).
+         잴 수 없는 것을 문턱으로 세우지 않는다. 대신 **잴 수 있는 세 가지**로 계약을 가른다:
+           ① 위끝을 안 넘는다(이 항) · ② 바닥 `FXB_SZMIN` 아래로 안 간다(이 항)
+           ③ 위끝까지 실제로 자란다([C-*-hi]) — 셋이 함께 «사슬이 살아 있다» 를 못박는다. */
+    const tol = v => Math.max(1, v * 0.02);
+    ok(all.length > 0 && got <= hi + tol(hi) && gotMin >= K.SZMIN - 0.5,
+       '[C-' + s.k + '] 버스트 알 폭이 **제품 크기 사슬 전부**(구슬 24~34 × hsc ' + n1(bg.hsc)
+       + ' × --burst-sz ' + n1(a.szs) + ' × FX_CIC_SC ' + n1(K.CIC_SC) + ' × fitK ' + n1(bg.fitIC)
+       + ')의 위끝을 안 넘고 바닥 FXB_SZMIN ' + K.SZMIN + ' 아래로도 안 간다',
+       '실측 ' + n1(gotMin) + '~' + n1(got) + ' vs 위끝 ' + n1(hi) + ' · 바닥 ' + K.SZMIN);
+    /* ② 위끝 — 알이 실제로 «버튼이 허용하는 만큼» 까지 자란다(사슬이 몰래 더 눌리면 빨개진다).
+       ⚠ 눈금 34 를 요구하면 뽑기 운에 걸린다(50알 표본에서 34 가 안 나올 확률 ≈8%) — 상위 눈금
+         **31** 에 댄다(같은 표본에서 안 닿을 확률 0.65^50 ≈ 1.6e-10 · 문턱이 아니라 표본 수의 산수다). */
+    ok(got >= sm.ic(31) - tol(sm.ic(31)),
+       '[C-' + s.k + '-hi] ★ 알이 «버튼이 허용하는 최대»(cap ' + n1(bg.cap)
+       + 'px)까지 실제로 자란다 — 사슬이 몰래 더 눌리지 않았다',
+       '실측 최대 ' + n1(got) + ' ≥ 눈금31 ' + n1(sm.ic(31)));
+    /* ③ 잉크 보정 — 543 축(`--fxgs`)이 **살아서 걸린다**. 위 ①②는 바깥 상자만 보므로 이 항이 없으면
+       재화별 잉크 등가 배수가 통째로 사라져도 초록이다(333 «한 항이 두 자리를 겸하면 한쪽이 사라져도 초록»). */
+    const ink = all.map(x => x.gsv).filter(v => Number.isFinite(v) && v > 0);
+    const inkAvg = ink.length ? ink.reduce((x, y) => x + y, 0) / ink.length : null;
+    ok(inkAvg !== null && Math.abs(inkAvg - gs) <= 0.02,
+       '[C-' + s.k + '-ink] ★ 안쪽 아이콘이 543 잉크 보정(`--fxgs`)을 **실제로 탄다**',
+       '실측 ' + (inkAvg === null ? 'n/a' : inkAvg.toFixed(3)) + ' vs fxGrainSc(' + s.cur + ') ' + gs.toFixed(3));
     ok(diffPct(r.before, r.mid) > 0,
        '[C-' + s.k + '-px] 찍힌 픽셀 — 강화 중 호스트 영역이 실제로 달라진다');
   }
-  ok(Math.max(...SITES.map(s => (R[s.k] ? Math.max(...R[s.k].tr.map(x => x.w), 0) : 0)))
-     > 34,
-     '[C-big] ★ 주인 지시 «알갱이 크기 더 크게» — 종전 방사형 불꽃 상한(34px)보다 크다',
-     '최대 ' + n1(Math.max(...SITES.map(s => (R[s.k] ? Math.max(...R[s.k].tr.map(x => x.w), 0) : 0)))) + 'px');
+  /* ⚑⚑ 898 이관 — **[C-big] 의 «34px» 은 838 이후 산술적으로 못 넘는 값이다.**
+     주인 지시 583 «알갱이 크기 더 크게» 의 종전 몸은 «절대 34px 초과» 였는데, 838 의 `fitK` 가
+     알을 «버튼이 허용하는 만큼» 으로 누르면서 훈련 버튼(310×106 · `--burst-fit .18`)의 허용치가
+     **19.1px**, 룬(420×112)이 **24.6px** 이 됐다 — 그 자리에서 34 를 요구하는 항은 **영원히 빨간
+     게이트**다(348 §R 교훈: 전부를 기대하면 자가 죽는다). 그렇다고 지우면 주인 지시가 조용히
+     사라진다(333) ⇒ **같은 지시의 살아 있는 몸으로 갈아 끼운다.**
+     583 이 실제로 산 자리는 `FX_CIC_SC` 다 — «아이콘 알은 같은 자리의 구슬보다 크다».
+     ⚠ 그 배수는 `fitK` 가 아이콘 갈래에서만 분모에 `FX_CIC_SC` 를 곱하는 탓에 **가둠이 무는
+       자리에서는 상쇄된다**(훈련·룬에서 아이콘 상한 = 구슬 상한). 그래서 두 항으로 가른다:
+         ⓐ 전 자리 — 아이콘 알이 구슬보다 **작지는 않다**(상쇄는 허용, 역전은 금지)
+         ⓑ 가둠이 안 무는 자리(단련 `fitK(구슬)` = 1)에서는 **실제로 더 크다**
+       ⓑ 가 없으면 «`FX_CIC_SC` 를 1 로 만들어도 초록» 이 된다(334) — 아래 §R3 가 그것을 못박는다.
+     ⚑ 상쇄 자체가 옳은가는 이 자의 물음이 아니다 — **900 으로 등재**했다(주인 축). */
+  {
+    const ks = SITES.map(s => s.k).filter(k => CH[k]);
+    const bad = ks.filter(k => CH[k].icHi < CH[k].plHi - 0.5);
+    ok(ks.length === SITES.length && bad.length === 0,
+       '[C-big] ★ 주인 지시 «알갱이 크기 더 크게» — 아이콘 알이 같은 자리의 «구슬» 보다 **작지 않다**',
+       ks.map(k => k + ' ' + n1(CH[k].icHi) + '/' + n1(CH[k].plHi)).join(' · ')
+       + (bad.length ? ' · 역전 ' + bad.join('·') : ''));
+    const free = ks.filter(k => CH[k].fitPl >= 0.999);           /* 가둠이 «구슬» 을 안 무는 자리 */
+    ok(free.length > 0 && free.every(k => CH[k].icHi > CH[k].plHi + 0.5),
+       '[C-big-f] ★ 가둠이 안 무는 자리에서는 `FX_CIC_SC` 가 실제로 알을 키운다(583 이 산 몸)',
+       (free.join('·') || '없음') + ' · '
+       + free.map(k => n1(CH[k].icHi) + ' > ' + n1(CH[k].plHi)).join(' · '));
+  }
 
   /* ── [D] 방향 ─────────────────────────────────────────────────────── */
   /* ⚑⚑ 660 이관 — **이 절은 방향이 통째로 뒤집혔다.** 583 이 세운 «알약·보유 표시 → 카드» 비행은
@@ -394,6 +511,55 @@ const INSTALL = () => {
   ok(rvSpark >= 1, '[R2] ★ 아이콘을 빼도 **버스트 층 자체는 뜬다** — [R1] 의 0 이 «연출이 통째로 없어서» 가 아니다',
      rvSpark + '개 (≥1)');
   await p.evaluate(() => { if (window.__burst0) window.fxBurst = window.__burst0; });
+
+  /* ⚑⚑ 898 신설 — [R3] «`FX_CIC_SC` 를 1 로» 되돌림 시험.
+     위 [C-big]·[C-big-f] 는 **주인 지시 583 의 살아 있는 몸**을 묻는 항이라, 무르게 푼 수리가
+     아님을 못박는 짝이 있어야 한다(334). [R1]·[R2] 는 «아이콘 자리» 를 런타임에서 빼는 시험이라
+     크기 축은 못 건드린다 — `FX_CIC_SC` 는 `const` 라 런타임 주입이 안 되고, 그래서 **제품 사본**을
+     만들어 그 상수만 1 로 되돌린다(814 §R 선례).
+     기대: 되돌린 사본에서는 `fitK` 의 분모에서도 그 배수가 같이 빠져 아이콘 알이 «구슬» 과 같은
+     상한(단련 34px)에 앉는다 ⇒ 지금 판의 상한(38px)에 **못 닿는다** = [C-big-f] 가 실제로 빨개진다.
+     ⚠ 자리는 **단련**이다 — 훈련·룬은 가둠이 물어 지금도 상쇄돼 있어 되돌려도 값이 안 바뀐다
+       (그 사실 자체가 [C-big-f] 가 «가둠이 안 무는 자리» 에만 대는 이유다). */
+  if (CH.temper) {
+    const FROM = 'const FX_CIC_SC = 1.6;', TO = 'const FX_CIC_SC = 1;';
+    if (src.indexOf(FROM) < 0) {
+      ok(false, '[R3] 되돌림 앵커 `' + FROM + '` 를 찾았다 — 조용한 통과 금지');
+    } else {
+      const tmp = '.v583-r3-' + process.pid + '.html';
+      const tmpAbs = path.join(path.dirname(SRC), tmp);
+      fs.writeFileSync(tmpAbs, src.split(FROM).join(TO));
+      let revMax = null;
+      try {
+        const p2 = await ctx.newPage();
+        await p2.goto('file://' + tmpAbs);
+        await p2.waitForFunction(() => typeof S !== 'undefined' && typeof upFx === 'function');
+        await p2.waitForTimeout(1000);
+        await p2.evaluate(() => { S.gold = 5e8; S.dia = 1e6; S.rstone = 1e6; S.tstone = 1e6;
+          openTrain(); });
+        await p2.waitForTimeout(300);
+        await p2.evaluate(() => { setTrSub('temper'); renderTrain();
+          const L = document.getElementById('fxl'); if (L) L.innerHTML = ''; });
+        await p2.waitForTimeout(250);
+        const bb2 = await (await p2.$('#trTemper .tr-tp .tb')).boundingBox();
+        await p2.mouse.move(bb2.x + bb2.width / 2, bb2.y + bb2.height / 2);
+        await p2.mouse.down();
+        revMax = await p2.evaluate(() => new Promise(res => {
+          let m = 0; const t0 = performance.now();
+          const iv = setInterval(() => {
+            for (const n of document.querySelectorAll('#fxl .fx-cic')) m = Math.max(m, n.offsetWidth);
+            if (performance.now() - t0 > 720) { clearInterval(iv); res(m); }
+          }, 40);
+        }));
+        await p2.mouse.up();
+        await p2.close();
+      } finally { try { fs.unlinkSync(tmpAbs); } catch (_) {} }
+      ok(revMax !== null && revMax > 0 && revMax < CH.temper.icHi * 0.98,
+         '[R3] ★ `FX_CIC_SC` 를 1 로 되돌린 사본에서 단련 알이 지금 판의 상한에 **못 닿는다** = [C-big-f] 가 무른 항이 아니다',
+         '되돌린 판 최대 ' + n1(revMax) + 'px < 지금 판 상한 ' + n1(CH.temper.icHi)
+         + 'px (구슬 상한 ' + n1(CH.temper.plHi) + 'px)');
+    }
+  }
 
   console.log('\n콘솔 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
   ok(errs.length === 0, '[Z] 콘솔 에러 0');
