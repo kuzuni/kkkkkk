@@ -54,6 +54,8 @@ const MEASURE = () => {
   for (const [k, s] of [['lintel', '#relw .rw-lintel'], ['mul', '#rwMulBar'], ['grid', '#rwGrid'],
                         ['mid', '#relw .rw-mid'], ['cap', '#relw .rw-cap'], ['fcbl', '#relw .rw-fc.bl'],
                         ['floor', '#relw .rw-floor'], ['steps', '#relw .rw-steps'],
+                        /* 893 — 접합선(밑동). 계단 재원 = 수반 − (접합선 + 14) 를 [C] 가 읽는다. */
+                        ['ground', '#relw .rw-ground'],
                         ['panel', '#relw .rw-bowl'], ['outer', '#relw .rw-panel']])
     els[k] = box(s);
   const panelH = Math.round(pr.height * 10) / 10;
@@ -197,14 +199,23 @@ const MEASURE = () => {
     (m) => (m.vars.visGap - 3) / (m.vars.visAbove + 3), (v) => v >= 0.82 && v <= 1.00));
   c.push(chk('  (참고) 그릇 상자 축 아래/위 — 판정 아님 · 본체는 위 줄 상자 항이다',
     (m) => m.vars.I / m.vars.G, () => true));
-  /* ⚑ 9회차 관측 — 13회차가 예산식에 적어 둔 하한은 «계단 **최소 1단 84**» 였는데(위 `--rw-av`
-     주석) 1600 에서 `.rw-steps` 높이가 **0** 이다(≥1841 은 82.7). 채점자 EE 가 «수반 뒤 장식이
-     통째로 사라진다» 로 ① 을 깎은 자리이고, DOM 으로 재니 사실이었다.
-     ⚠ **판정 항으로 세우지 않는다** — 지금 세우면 1600 이 즉시 빨간데 그 재원은 813 의 축이
-     아니라 니치 제로섬(879 §17)에 걸려 있다. **893 으로 등재**했고, 그 작업이 이 줄을 판정으로
-     승격시킬 것이다. 그 전까지는 «보이게만» 둔다(안 보이면 다음 회차도 눈으로만 발견한다). */
-  c.push(chk('  (관측) 계단(.rw-steps) 높이 — 13회차 하한 «최소 1단 84» · 1600 = 0 (893 등재)',
-    (m) => (m.els.steps ? m.els.steps.h : null), () => true));
+  /* ⚑⚑ 893(2026-09-04) — **9회차의 관측 줄을 판정으로 승격시킨다(§49 예고 이행). 단 과녁이 바뀐다.**
+     9회차는 «13회차 하한 = 계단 최소 1단 84» 를 과녁으로 적어 두고 «1600 = 0 이라 지금 세우면
+     빨갛다» 며 관측으로만 뒀는데, 893 이 `git log -S` 로 판정한 결과 **그 과녁이 늙은 것**이었다:
+     하한은 219(13회차) → 231(14회차) → **174**(16회차, 비평 AJ·AK 처방으로 «계단 1단 84» 를 빼고
+     바닥 27 을 남겼다)로 두 번 갱신됐다. 1600 의 0단은 결함이 아니라 **확정된 설계**다.
+     ⇒ 자리를 비우지 않고 **방향을 뒤집는다**(333 처방) — 재는 것은 «높이가 84 인가» 가 아니라
+     **«억제가 재원 부족 때문인가»** 다. 재원 R = 수반 상변 − (접합선 + 14) 이고,
+     R ≥ 84 인데 0단이면 그것은 예산이 아니라 누가 계단을 죽인 것이다(`verify893` [2]·[R1]). */
+  const stRoom = (m) => (m.els.mid && m.els.ground ? m.els.mid.t - (m.els.ground.t + 14) : null);
+  c.push(chk('  (참고) 계단 재원 = 수반 − (접합선 + 14) · 한 단 = 84',
+    stRoom, () => true));
+  c.push(chk('계단 억제는 «재원 < 한 단» 일 때만 — 어긋난 px (1600 R 26 ⇒ 0단이 정답 · 893)',
+    (m) => {
+      const room = stRoom(m);
+      const sup = !m.els.steps || m.els.steps.h < 0.6;
+      return sup ? Math.max(0, room - 84) : Math.max(0, 84 - room);
+    }, (v) => v < 0.001));
   c.push(chk('패널 안 (안내문 하변 ≤ 패널H)', (m) => m.panelH - m.els.cap.b, (v) => v >= 0));
 
   const harm = pairs.filter((p) => p.harm !== 'none');
