@@ -40,8 +40,29 @@ const ENGINE_SRC = `(function(){
   var REL2 = REL1.map(function(r){ return [-r[0], -r[1], r[2]]; });
   var INF = 1e9;
   function chamCov(cv, w, h){
-    var d = new Float32Array(w * h), p;
-    for(p = 0; p < d.length; p++) d[p] = cv[p] >= 1 ? INF : 5 * (cv[p] - 0.5);
+    var d = new Float32Array(w * h), p, x, y;
+    /* 씨앗은 **경계를 실제로 품은 화소**(안/밖이 갈리는 자리에 맞닿은 것)뿐이다.
+       ⚠ «반쯤 덮인 화소를 전부 씨앗으로» 두면 알파가 여러 화소에 걸쳐 완만히 도는 종
+         (발광이 넓은 화구·병)에서 경계에서 **한참 안쪽** 화소가 «나는 경계다» 라고 우겨
+         거리밭이 통째로 눌린다 — 1회차에 본체폭이 boom −15% · stone +19% 로 뒤틀렸다.
+         전이 화소만 씨앗으로 두면 그 밭은 «cv = .5 등고선까지의 거리» 가 되어
+         옛 이진 마스크와 **같은 자리**를 재되 눈금만 소수 화소로 촘촘해진다. */
+    for(p = 0; p < d.length; p++) d[p] = INF;
+    for(y = 0; y < h; y++) for(x = 0; x < w; x++){
+      p = y * w + x;
+      var inP = cv[p] >= 0.5, tr = false, soft = false;
+      var nb = [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, y > 0 ? p - w : -1, y < h - 1 ? p + w : -1];
+      for(var t = 0; t < 4; t++){
+        var q = nb[t]; if(q < 0) continue;
+        if((cv[q] >= 0.5) !== inP){ tr = true; if(cv[q] > 0 && cv[q] < 1) soft = true; }
+      }
+      if(!tr) continue;
+      /* 이 화소가 스스로 반쯤 덮였으면 그 몫이 곧 «중심 → 경계» 다. 꽉 찼거나 텅 비었으면
+         경계가 어디인지 **자기는 모른다** — 건너편 이웃이 반쯤 덮였으면 그쪽에 맡기고(씨앗 없음),
+         건너편도 0/1 이면 그때만 경계가 화소 «사이» 에 있는 것이라 ±0.5 로 둔다(이진 규약). */
+      if(cv[p] > 0 && cv[p] < 1) d[p] = 5 * (cv[p] - 0.5);
+      else if(!soft) d[p] = inP ? 2.5 : -2.5;
+    }
     var sweep = function(rel, rev){
       for(var i = 0; i < h; i++){
         var y = rev ? h - 1 - i : i;

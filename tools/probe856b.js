@@ -116,15 +116,17 @@ let USE = SRC, TMP = null, OVTXT = '';
         const inject = `
     if(window.__HH856){
       const rec = [];
-      const run = (p, sx, sy) => { let n = 1;
-        for(let k = 1; k < S; k++){ const q = p + k*(sy*S + sx); if(q < 0 || q >= core.length || !core[q]) break; n++; }
-        for(let k = 1; k < S; k++){ const q = p - k*(sy*S + sx); if(q < 0 || q >= core.length || !core[q]) break; n++; }
+      /* 889 — core 는 이제 0/1 이 아니라 «덮인 몫» 이다 ⇒ 켠 화소를 세는 대신 몫을 더한다.
+         곧은 단면에서 덮인 몫의 합이 곧 그 자리의 참 폭이다(가장자리 반 칸이 반 칸으로 들어온다). */
+      const run = (p, sx, sy) => { let n = core[p];
+        for(let k = 1; k < S; k++){ const q = p + k*(sy*S + sx); if(q < 0 || q >= core.length || !(core[q] > 0)) break; n += core[q]; }
+        for(let k = 1; k < S; k++){ const q = p - k*(sy*S + sx); if(q < 0 || q >= core.length || !(core[q] > 0)) break; n += core[q]; }
         return n; };
       for(let y = 1; y < S - 1; y++) for(let x = 1; x < S - 1; x++){
         const p = y*S + x; if(!mask[p]) continue;
         const v = dist[p]; if(v < 0.35 * dMax) continue;
         if(v < dist[p-1] || v < dist[p+1] || v < dist[p-S] || v < dist[p+S]) continue;
-        const cw = core[p] ? Math.min(run(p, 1, 0), run(p, 0, 1)) : 0;
+        const cw = core[p] > 0 ? Math.min(run(p, 1, 0), run(p, 0, 1)) : 0;
         rec.push([v, hhArr[p], hmArr[p], cw]);
       }
       window.__HH856[key] = { rec: rec, dMax: dMax, S: S };
@@ -190,7 +192,7 @@ let USE = SRC, TMP = null, OVTXT = '';
     console.log('probe856b — 굽기 안 `hh` 덤프 (HALO_SS ' + SS + ' · K ' + K +
                 ' · minR ' + out.minR + ' · maxR ' + out.maxR + ' 로컬px)' + OVTXT);
     console.log('단위는 **굽는화소 = 기기화소**(HALO_SS = SC·SK_DRAW_SC). 규격 비 K = ' + K);
-    console.log('기하폭 = 2(dT−t) 연속값 · 굳은폭 = `core[]` 가 실제로 켠 화소 수(양자화 뒤)\n');
+    console.log('기하폭 = 2(dT−t) 연속값 · 굳은폭 = `core[]` 의 **덮인 몫 합**(889 뒤 — 굽기가 소수 화소로 앉는다)\n');
     const pad = (s, n) => String(s).padStart(n);
 
     const hdr = '종'.padEnd(10) + pad('마루', 6) + pad('획폭', 7) + pad('hh/d', 7) +
@@ -269,9 +271,21 @@ let USE = SRC, TMP = null, OVTXT = '';
 
     const ratsQ = strokeIds.map(t => t.ratQ), ratsG = strokeIds.map(t => t.rat);
     const bQ = bandOf(ratsQ), bG = bandOf(ratsG);
+    /* ⚑⚑ 889 **정정**(이 항의 방향은 그대로 두고 «무엇이 그 밴드를 만드는가» 를 갈랐다).
+       10회차는 «굳은 비 > 연속 비» 를 보고 남은 밴드를 **화소 격자** 하나로 지목했다. 889 가
+       굽기를 해석적 덮임(`clamp(dT − t + 0.5, 0, 1)`)으로 바꾸고 이 자도 «켠 화소 수» 에서
+       **덮인 몫 합**으로 바꿔 다시 재니 — 격자는 사라졌는데 **폭은 그대로다**(gale 4.00 → 4.04).
+       ⇒ 굳은폭이 마루의 이름값(2(dT−t))보다 넓은 몫은 이진화가 아니라 **문턱 밭 자체**다:
+         `t` 는 화소마다 제 `hh` 로 다시 서므로 축에서 벗어난 자리에서 `hh` 를 낮게 읽으면
+         (8회차 자격 조건은 «없는 굵기를 지어내지 않는» 쪽으로 보수적이다) 그만큼 `t` 가 내려가
+         코어가 **바깥으로 한 겹 더** 산다. 다음 회차가 볼 곳이 여기다(PROGRESS 889).
+       ⚠ 이 항은 그래서 **아직 참**이고, 참인 채로 두는 것이 옳다 — 닫혔다고 적으면 다음 세션이
+         이미 닫힌 줄 알고 지나간다. */
     if (!ok(bQ > bG,
-        '[P3] 남은 밴드는 **규격이 아니라 화소**다 — 굳은 비 밴드 ' + bQ.toFixed(3) +
-        ' > 연속 비 밴드 ' + bG.toFixed(3) + ' (둘이 같아지면 이 진단은 낡은 것이다)')) bad++;
+        '[P3] 굳은 비 밴드 ' + bQ.toFixed(3) + ' > 연속 비 밴드 ' + bG.toFixed(3) +
+        ' — 889 뒤로도 남았다. 이진화(격자)는 사라졌으므로(굳은폭이 덮인 몫 합이다) ' +
+        '남은 몫은 **문턱 밭**이다(종별 |굳은 − 연속| 최악 ' +
+        (strokeIds.length ? Math.max.apply(null, strokeIds.map(t => Math.abs(t.ratQ - t.rat))).toFixed(3) : '—') + ')')) bad++;
 
     const g = tab.find(t => t.id === 'gale');
     if (!ok(!!g && (g.brc.minR || 0) > (g.brc.ratio || 0),

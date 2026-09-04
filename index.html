@@ -27479,7 +27479,8 @@ function specSprite(key, b, render){
         if(r <= dist[p] * 0.7071 && v > hmArr[p]) hmArr[p] = v;   /* 원에 내접하는 창(3회차) */
       }
     }
-    const core = new Uint8Array(S * S);
+    /* ⚑ 889 — 켜짐/꺼짐이 아니라 **덮인 몫**(0~1)이다. 아래 문턱 판정 바로 뒤 주석이 본문. */
+    const core = new Float32Array(S * S);
     const minR = SPEC_MINR * HALO_SS, maxR = SPEC_MAXR * HALO_SS;
     let hit = 0;
     for(let p = 0; p < core.length; p++){
@@ -27514,13 +27515,30 @@ function specSprite(key, b, render){
       const dT = d - 0.5, hT = hh - 0.5;
       if(hT <= 0 || dT <= 0) continue;
       const t = Math.max(hm - 0.5 - maxR, Math.min((1 - SPEC_K) * hT, hT - minR));
-      if(dT >= t){ core[p] = 1; hit++; }
+      /* ⚑⚑ 889 — **켜고 끄지 않고 «덮인 몫» 을 적는다.** 856 10회차가 남긴 결손이 이 한 줄이다:
+         굽는화소 = 기기화소라(`HALO_SS = SC · SK_DRAW_SC`) 코어의 눈금이 화면 화소 한 칸인데,
+         이진으로 굳히면 `gale`(참 획폭 7.00)에서 규격이 요구하는 2.45화소를 놓을 눈금이
+         격자에 없다(이웃한 rung 은 3 과 4 뿐) ⇒ 4.00 으로 굳고, 그 «폭에 무관한 절대 오차» 가
+         가는 획에 가장 크게 걸려 [B13] 밴드로 남았다(문턱·계수·해상도는 전부 헛손질임을
+         10회차 ⓔ 가 자로 못박았다 — 다시 걷지 마라).
+         경계는 `dT = t` 인 등고선이고, 화소 한 칸이 그 경계에 얼마나 덮이는지는 **거리로 곧바로**
+         나온다: 경계가 화소 한복판을 지나면 0.5 · 한 칸 안이면 1 · 한 칸 밖이면 0
+         ⇒ `cv = clamp(dT − t + 0.5, 0, 1)`. 폭은 이제 소수 화소로 앉는다(2.45 를 실제로 놓는다).
+         ⚠ 문턱 자체는 **한 글자도 안 움직인다** — `cv ≥ 0.5 ⟺ dT ≥ t` 라 «켜진 자리» 의 집합은
+           옛 이진과 같고(마루 덮임·연결성분·상한 갈래 전부 불변), 달라지는 것은 **가장자리 한 겹**뿐이다.
+         ⚠ 이 부분 알파를 **자보다 먼저** 넣으면 안 된다(9회차 E6 이 그러다 물러났다) — 폭을
+           이진화해서 재는 자에서는 가장자리 알파가 화소 위상에 따라 흔들려 되레 나빠진다.
+           그래서 889 는 `tools/lib889.js`(덮인 몫 가중 폭)와 `tools/probe889.js`(참값을 아는
+           띠에서 그 자를 검증)를 **먼저** 세우고 이 줄을 고쳤다. */
+      const cvp = dT - t + 0.5;
+      if(cvp > 0){ core[p] = cvp < 1 ? cvp : 1; hit++; }
     }
     if(!hit) throw new Error('no core');
     const im = new ImageData(S, S);          /* 색은 종에 안 달린 **한 색**(`SPEC`)이다 */
     for(let p = 0, i = 0; p < core.length; p++, i += 4){
-      if(!core[p]) continue;
-      im.data[i] = 255; im.data[i+1] = 255; im.data[i+2] = 255; im.data[i+3] = 255;
+      const a = core[p] > 0 ? Math.round(255 * core[p]) : 0;    /* 889 — 덮인 몫이 곧 알파다 */
+      if(!a) continue;
+      im.data[i] = 255; im.data[i+1] = 255; im.data[i+2] = 255; im.data[i+3] = a;
     }
     const seed = mk(); seed.getContext('2d').putImageData(im, 0, 0);
     const dst = mk(), dg = dst.getContext('2d');

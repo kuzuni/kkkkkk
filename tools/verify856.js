@@ -35,6 +35,10 @@ const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+/* ⚑ 889 ① — «덮인 몫 가중» 폭 자. 선언은 `tools/lib889.js` 한 곳이고 여기서는 **그 문자열을
+   페이지에 넣어** 쓴다(자를 두 벌 적으면 그것이 곧 사본이다 — 402). 참값을 아는 띠에서 이 자가
+   실제로 소수 화소를 되찾는다는 것은 `tools/probe889.js` 가 따로 못박는다. */
+const { ENGINE_SRC } = require('./lib889.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
@@ -67,19 +71,23 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); c ? pass++ 
 /* [B13] 이 묶는 자리 — 획 폭 구간(로컬px). 되돌림 시험도 **같은 함수**로 묶는다(사본 금지 — 402). */
 const B13_LO = 6, B13_HI = 24, B13_W = 3;
 const B13_N  = 25;      /* 구간을 세려면 표본 이만큼 — 화소 몇 개짜리 구간은 안 센다 */
-const b13bands = (out, useIds) => {
+/* `col` — 0 이면 옛 이진 자의 두 칸(획폭·비), 2 면 889 의 «덮인 몫» 두 칸이다(같은 표본·같은 자리). */
+const b13bands = (out, useIds, col) => {
+  col = col || 0;
   const rowsOut = [];
   for (let lo = B13_LO; lo < B13_HI; lo += B13_W) {
     const hi = lo + B13_W, acc = [];
-    for (const i of useIds) for (const [wS, ra] of (out.rows[i].bank || []))
+    for (const i of useIds) for (const e of (out.rows[i].bank || [])) {
+      const wS = e[col], ra = e[col + 1];
       if (wS >= lo && wS < hi) acc.push(ra);
+    }
     if (acc.length < B13_N) continue;
     acc.sort((a, b) => a - b);
     const md = acc[Math.floor(0.5 * (acc.length - 1))];
     /* 구간마다 «누가 얼마나 넣었는가» — 한 종이 구간을 통째로 끌고 가는지 본다(진단 전용). */
     const by = [];
     for (const i of useIds) {
-      const v = (out.rows[i].bank || []).filter(e => e[0] >= lo && e[0] < hi).map(e => e[1]);
+      const v = (out.rows[i].bank || []).filter(e => e[col] >= lo && e[col] < hi).map(e => e[col + 1]);
       if (!v.length) continue;
       v.sort((a, b) => a - b);
       by.push([i, v.length, v[Math.floor(0.5 * (v.length - 1))]]);
@@ -109,6 +117,7 @@ async function measure(browser, url) {
   };
   await ev(() => { window.requestAnimationFrame = () => 0; });
   await page.evaluate((v) => { window.__SPREAD856 = v; }, DUMP);
+  await page.evaluate((s) => { window.__W889 = (0, eval)(s); }, ENGINE_SRC);
 
   const out = await ev(() => {
     /* 855 — 주사위 고정(`verify792`·`probe792` 와 같은 자리·같은 처방). 적이 나오기까지 도는
@@ -312,7 +321,7 @@ async function measure(browser, url) {
        각자 손으로 층화해 잰 것이 뒤엣것이다 — 자가 종을 **한 수**로 요약하는 동안 두 사람은
        획 8~12px 구간만 따로 재서 «45~50%» 를 봤고, 그래서 [B10a] 가 초록인 채로 눈에는
        `gale` 만 속심이 굵어 보였다. */
-    const spread = (body, core, w, h, cap, keep, bank) => {
+    const spread = (body, core, w, h, cap, keep, bank, dbC, dcC) => {
       const db = cham(body, w, h), dc = cham(core, w, h);
       let mx = 0;
       for (let p = 0; p < db.length; p++) if (body[p] && db[p] > mx) mx = db[p];
@@ -332,8 +341,19 @@ async function measure(browser, url) {
         rs.push(dc[p] / v);              /* 코어가 없으면 0 — 그 자리에 층이 없다는 뜻이다 */
         if (keep) keep.push([x, y, +(v / 5).toFixed(2), +(dc[p] / 5).toFixed(2), +(dc[p] / v).toFixed(3)]);
         /* [B13] — «그 자리 획 폭(로컬px)» 과 «그 자리 비» 한 쌍. 종 이름은 여기서 안 붙인다
-           (구간별로 묶는 축이라 종은 묻지 않는다 — 묶는 것은 node 쪽 [B13] 이 한다). */
-        if (bank) bank.push([+(2 * v / 5).toFixed(3), +(dc[p] / v).toFixed(4)]);
+           (구간별로 묶는 축이라 종은 묻지 않는다 — 묶는 것은 node 쪽 [B13] 이 한다).
+           ⚑ 889 ① — 뒤의 두 칸이 **같은 자리를 덮인 몫으로 잰 것**이다. 재는 자리(본체 주 마루)도
+             고르는 규칙도 위와 **한 벌**이고 다른 것은 거리밭과 꼭짓점 보정뿐이다:
+             천막의 꼭짓점 몫 δ 는 본체 밭에서 한 번 구해 **본체·코어에 같이** 얹는다 —
+             두 층은 동심(코어는 본체의 대칭 침식)이라 마루가 같은 자리에 있고, 표본이 그 자리에서
+             벗어난 몫도 같기 때문이다. */
+        if (bank) {
+          const dlt = dbC ? window.__W889.peak(dbC, p, w) : 0;
+          const bv = dbC ? (dbC[p] + dlt) : 0;
+          const cvv = dcC ? Math.max(0, dcC[p] + dlt) : 0;
+          bank.push([+(2 * v / 5).toFixed(3), +(dc[p] / v).toFixed(4),
+                     +(2 * bv / 5).toFixed(3), bv > 0 ? +(cvv / bv).toFixed(4) : 0]);
+        }
       }
       if (rs.length < 4) return { lo: 0, hi: 0, sp: 0, n: rs.length };
       rs.sort((a, b) => a - b);
@@ -359,6 +379,7 @@ async function measure(browser, url) {
       clearFx(); shots.push(mk(), mk());        const a2 = grab();
       const body = new Uint8Array(bw * bh);     /* ② 본체(α ≥ .55) */
       const core = new Uint8Array(bw * bh);     /* ③ 하이라이트(근백색) */
+      const alF = new Float32Array(bw * bh);    /* 889 — 문턱 **전**의 알파(덮인 몫의 재료) */
       let nb = 0, nc = 0;
       for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
         let c = 0, best = 0;
@@ -371,10 +392,70 @@ async function measure(browser, url) {
         let al = 1 - d2 / d1;
         if (!isFinite(al)) al = 1;
         al = al < 0 ? 0 : (al > 1 ? 1 : al);
+        alF[p] = al;
         if (al < A_BODY) continue;
         body[p] = 1; nb++;
         if (a0[i] >= 232 && a0[i + 1] >= 232 && a0[i + 2] >= 232) { core[p] = 1; nc++; }
       }
+      /* ⚑⚑ 889 ① — **같은 표본을 «덮인 몫» 으로 한 벌 더 만든다.** 이진 마스크(위)는 한 글자도
+         안 건드린다 — 마루 찾기·연결성분·[B11] 덮임은 전부 그대로 두고, **폭을 재는 자만** 바꾼다.
+           · 본체 — 알파가 곧 덮인 몫이다. 경사는 «링(α .62) → 단단한 몸(α 1)» 이므로
+             램프를 .60~1.00 으로 잡으면 **0.5 를 지나는 자리가 정확히 옛 문턱 `A_BODY`(0.80)** 다
+             ⇒ 이진화하면 위 마스크와 **같은 마스크**가 나온다(자리는 안 옮기고 눈금만 촘촘해진다).
+           · 코어 — 흰 층의 몫은 «본체 바탕색 B 에서 흰색으로 얼마나 갔나» 다:
+             `s = ((P−B)·(W−B)) / |W−B|²`. B 는 그 종 본체 화소(근백색 아닌 것)의 채널별 중앙값이고,
+             고원(plateau)은 근백색 화소의 s 중앙값이라 **종마다 자기 색으로 정규화**된다.
+             ⚠ 본체가 원래 흰 종(arrow·spiral·star — [진단] «코어를 끈 사본» 표)은 |W−B| 가 작아
+               나눗셈이 잡음을 키운다 ⇒ 그런 종은 **이진 마스크로 물러난다**(없는 정밀도를 짓지 않는다). */
+      const cvB = new Float32Array(bw * bh), cvC = new Float32Array(bw * bh);
+      let covOk = 0;
+      {
+        for (let p = 0; p < cvB.length; p++) {
+          const t = (alF[p] - 0.60) / 0.40;
+          cvB[p] = t <= 0 ? 0 : (t >= 1 ? 1 : t);
+        }
+        const chs = [[], [], []];
+        for (let i = 0, p = 0; i < a0.length; i += 4, p++)
+          if (body[p] && !core[p]) for (let k = 0; k < 3; k++) chs[k].push(a0[i + k]);
+        const med = a => { a.sort((x, y) => x - y); return a.length ? a[a.length >> 1] : 0; };
+        const B = chs.map(med);
+        let den = 0;
+        for (let k = 0; k < 3; k++) den += (255 - B[k]) * (255 - B[k]);
+        const spread255 = Math.max(255 - B[0], 255 - B[1], 255 - B[2]);
+        if (chs[0].length >= 40 && den > 0 && spread255 >= 40) {
+          const sArr = new Float32Array(bw * bh), hi = [];
+          for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
+            if (!body[p]) continue;
+            let s = 0;
+            for (let k = 0; k < 3; k++) s += (255 - B[k]) * (a0[i + k] - B[k]);
+            s /= den;
+            sArr[p] = s;
+            if (core[p]) hi.push(s);
+          }
+          if (hi.length >= 12) {
+            hi.sort((x, y) => x - y);
+            const plat = hi[hi.length >> 1];
+            if (plat > 0.15) {
+              for (let p = 0; p < cvC.length; p++) {
+                const t = sArr[p] / plat;
+                cvC[p] = t <= 0 ? 0 : (t >= 1 ? 1 : t);
+              }
+              covOk = 1;
+            }
+          }
+        }
+        if (!covOk) for (let p = 0; p < cvC.length; p++) cvC[p] = core[p];
+      }
+      const dbC = window.__W889.chamCov(cvB, bw, bh);
+      const dcC = window.__W889.chamCov(cvC, bw, bh);
+      /* ③층의 **기하 경계**는 «흰 층의 몫이 절반» 인 등고선이다. 옛 이진 문턱(≥232)은
+         고원의 안쪽을 재던 것이라, 제품이 가장자리에 부분 알파를 주면 그만큼 안으로 물러난다
+         (그 물러남이 [B11]·[B12] 에 «코어가 없어졌다» 로 찍힌다 — 실제로는 자리가 그대로다). */
+      const coreC = new Uint8Array(bw * bh);
+      let ncC = 0;
+      for (let p = 0; p < coreC.length; p++) if (body[p] && cvC[p] >= 0.5) { coreC[p] = 1; ncC++; }
+      const wbC = nb ? window.__W889.ridgeWD(dbC, body, bw, bh) : 0;
+      const wcC = ncC ? window.__W889.ridgeWD(dcC, coreC, bw, bh) : 0;
       /* ⚠ ③층은 본체의 부분집합이다 — «본체 밖 흰 화소» 를 세면 후광 위 잡음이 폭을 부풀린다. */
       const wb = nb ? ridgeW(body, bw, bh) : 0;
       const capMode = (typeof SPEC_K !== 'undefined' && typeof SPEC_MAXR !== 'undefined')
@@ -388,11 +469,25 @@ async function measure(browser, url) {
       const bank = [];
       rows[id] = { sh: sp.sh || sp.k, nb, nc, dump: keep, bank,
                    wb: +wb.toFixed(2), wc: +wc.toFixed(2), wbA: +wbA.toFixed(2),
+                   covOk, wbC: +wbC.toFixed(2), wcC: +wcC.toFixed(2),
+                   ratioC: wbC > 0 ? +(wcC / wbC).toFixed(3) : 0,
                    ratio: wb > 0 ? +(wc / wb).toFixed(3) : 0,
                    main: big.n, mainSpec: inMain,
                    fMain: big.n ? +(inMain / big.n).toFixed(4) : 0,
-                   cover: nb ? +ridgeCover(body, core, bw, bh).toFixed(3) : 0,
-                   spread: nb && nc ? spread(body, core, bw, bh, capMode, keep, bank) : { lo: 0, hi: 0, sp: 99, n: 0 } };
+                   cover: nb ? +ridgeCover(body, coreC, bw, bh).toFixed(3) : 0,
+                   coverBin: nb ? +ridgeCover(body, core, bw, bh).toFixed(3) : 0, ncC,
+                   spread: nb && nc ? spread(body, core, bw, bh, capMode, keep, bank, dbC, dcC) : { lo: 0, hi: 0, sp: 99, n: 0 } };
+      /* ⚑ 889 — [B12] 를 **같은 표본을 덮인 몫으로** 잰 값(같은 자리·같은 순서 · bank 의 뒤 두 칸).
+         자를 따로 만들면 그것이 곧 사본이라(402) 여기서는 이미 담긴 표본을 다시 묶기만 한다. */
+      {
+        const rs2 = (bank || []).map(e => e[3]).filter(v => isFinite(v));
+        rs2.sort((a, b) => a - b);
+        const Q = f => rs2[Math.floor(f * (rs2.length - 1))];
+        rows[id].spreadC = rs2.length >= 4
+          ? { md: +Q(0.5).toFixed(3), hi: +Q(0.9).toFixed(3),
+              sp: Q(0.5) > 0 ? +(Q(0.9) / Q(0.5)).toFixed(2) : 99, n: rs2.length }
+          : { md: 0, hi: 0, sp: 0, n: rs2.length };
+      }
       clearFx();
     }
     performance.now = _now;
@@ -456,6 +551,18 @@ async function measure(browser, url) {
                     String(q.wb).padStart(7) + String(q.wc).padStart(9) +
                     String(q.ratio).padStart(7) + String(q.cover).padStart(9) +
                     String(q.spread.sp).padStart(8) + String(q.wbA).padStart(15));
+      }
+      console.log('');
+      /* ⚑ 889 ① 진단(판정 밖) — **같은 표본을 «덮인 몫» 으로 잰 폭**. 옛 자와 나란히 찍어야
+         차가 «어느 종에서 얼마나» 인지 보인다(10회차 표의 «기하폭 ↔ 굳은폭» 과 같은 자리). */
+      console.log('  [889] 덮인 몫 가중 — 종        본체폭    코어폭     비    (옛 비)   정규화');
+      for (const id of ids) {
+        const q = r.out.rows[id];
+        console.log('  ' + (q.sh + ' (' + id + ')').padEnd(31) +
+                    String(q.wbC).padStart(7) + String(q.wcC).padStart(10) +
+                    String(q.ratioC).padStart(8) + String(q.ratio).padStart(9) +
+                    '   흩어짐 ' + String((q.spreadC || {}).sp).padStart(5) + ' (옛 ' + String(q.spread.sp) + ')' +
+                    (q.covOk ? '  종색' : '  이진(본체가 희다)'));
       }
       console.log('');
 
@@ -540,7 +647,12 @@ async function measure(browser, url) {
          ⇒ 묶는 축을 종이 아니라 **획 폭 구간**으로 바꾼다(재는 자리·가중은 [B12] 와 한 벌).
          ⚠ 이 자는 «비가 획 폭에 무관» 이라는 규격 문장 자체를 묻는다 — 규격이 참이면 구간별
            중앙값은 전부 K 근처로 같고, 바닥이 덮어쓰면 가는 구간만 위로 뜬다. */
-      const bandRows = b13bands(r.out, strokeIds);
+      /* ⚑⚑ 889 **이관**(333 처방) — 묶는 축(획 폭 구간)도 가중도 표본도 그대로이고 **자만**
+         «덮인 몫» 으로 바꾼다. 이 축이 존재하는 이유가 «바닥 4.0px 이 세 구간을 덮어쓴다» 인데
+         10회차가 그 바닥의 정체를 **화소 격자**로 특정했고, `probe889` [P4] 가 규격을 정확히
+         지키는 합성 띠에서도 옛 자만 1.27배를 만드는 것을 시험관에서 재현했다.
+         ⚠ 래칫(1.55)은 **한 칸도 안 올린다** — 자를 바꾼 값이 그 아래로 내려와야 한다. */
+      const bandRows = b13bands(r.out, strokeIds, 2);
       console.log('  [B13] 획 폭 구간별 — 규격이 참이면 «비» 가 구간마다 같고, 바닥이 덮어쓰면 «코어» 가 같다');
       for (const b of bandRows) {
         console.log('    획 ' + String(b.lo).padStart(2) + '~' + String(b.hi).padEnd(3) +
@@ -550,6 +662,18 @@ async function measure(browser, url) {
       }
       const b13mx = bandRows.length ? Math.max.apply(null, bandRows.map(b => b.md)) : 0;
       const b13mn = bandRows.length ? Math.min.apply(null, bandRows.map(b => b.md)) : 0;
+      /* ⚑ 889 ① 진단(판정 밖) — **같은 표본·같은 구간을 덮인 몫으로** 묶은 [B13].
+         옛 자의 밴드가 «규격» 인지 «격자» 인지는 이 두 줄을 나란히 놓아야 갈린다:
+         `probe889` [P4] 가 규격을 정확히 지키는 합성 띠에서 옛 자만 1.27배를 만드는 것을 이미
+         못박았으므로, 여기서 새 자의 밴드가 옛 자보다 낮으면 그 차가 곧 «격자 몫» 이다. */
+      const bandC = b13bands(r.out, strokeIds, 0);   /* 옛 이진 자 — 대조군(판정 밖) */
+      if (bandC.length) {
+        const cmx = Math.max.apply(null, bandC.map(b => b.md)), cmn = Math.min.apply(null, bandC.map(b => b.md));
+        console.log('  [889] 대조군 · 같은 구간을 옛 이진 자로 — ' +
+                    bandC.map(b => b.lo + '~' + b.hi + ' ' + b.md.toFixed(3) + '(n' + b.n + ')').join(' · '));
+        console.log('  [889] ⇒ 옛 자 밴드 ' + (cmn > 0 ? (cmx / cmn).toFixed(2) : '∞') + '배 (덮인 몫 ' +
+                    (b13mn > 0 ? (b13mx / b13mn).toFixed(2) : '∞') + '배 = [B13] 판정값)');
+      }
       const spr = (r.out.sprites || []).slice().sort((a, b) => a[1] - b[1]);
       console.log('  [진단] 구운 스프라이트 자체의 코어 폭(로컬px · 합성/근백색 문턱 이전)');
       console.log('    ' + spr.map(e => e[0] + ' ' + e[1]).join(' · '));
@@ -588,18 +712,32 @@ async function measure(browser, url) {
          3회차에 세웠고, 3회차의 처방(창을 정사각에서 **원에 내접**하는 상자로)이 9종 → 3종으로
          줄였다. 목표는 여전히 ' + SPREAD + ' 이고 지금은 거기 못 닿는다 — 그래서 **지금 값보다
          나빠지면 빨강**으로 걸어 두고 다음 회차가 조인다. 목표에 닿기 전에 이 수를 올리지 마라. */
-      const sp = strokeIds.map(i => r.out.rows[i].spread.sp);
+      /* ⚑⚑ 889 **이관**(333 처방 — 자리를 비우지 않고 자만 바꾼다). 이 항이 읽던 «코어 두께» 는
+         `dc` = **이진 근백색 마스크**의 거리였다. 제품이 코어 가장자리를 부분 알파로 바꾼 뒤
+         (889 ②) 그 자는 고원의 **안쪽**을 재게 되어 코어가 실제로는 그대로인데 «얇아졌다» 로
+         읽는다 — 9회차 E6 이 [B12] 를 1.68 → 1.76 으로 깨고 물러난 것이 정확히 이 얼굴이다
+         (10회차 마감이 «자를 먼저 바꾸라» 고 못박은 자리). ⇒ 같은 표본·같은 자리를 «덮인 몫» 으로
+         읽는다(`bank` 의 뒤 두 칸 · 자는 `tools/lib889.js` 한 곳).
+         ⚠ **무르게 푼 것이 아니다** — 새 자는 참값을 아는 띠에서 오차 0.000px 이고 옛 자는 최악
+           1.00px 이다(`probe889` [P1]·[P2]). 게다가 이 이관은 래칫을 **한 칸도 안 올린다**
+           (1.7 그대로 · 이 회차 실측 1.51 로 목표 1.5 에 붙었다). */
+      const sp = strokeIds.map(i => (r.out.rows[i].spreadC || r.out.rows[i].spread).sp);
       const spMx = sp.length ? Math.max.apply(null, sp) : 99;
-      const over = strokeIds.filter(i => r.out.rows[i].spread.sp > SPREAD);
+      const over = strokeIds.filter(i => (r.out.rows[i].spreadC || r.out.rows[i].spread).sp > SPREAD);
       ok(spMx <= RATCHET,
-         '[B12] 획 무리 종내 흩어짐 «코어÷본체» p90÷p50 최대 ' + spMx.toFixed(2) + ' ≤ 래칫 ' + RATCHET +
+         '[B12] 획 무리 종내 흩어짐 «코어÷본체»(덮인 몫) p90÷p50 최대 ' + spMx.toFixed(2) + ' ≤ 래칫 ' + RATCHET +
          ' (목표 ' + SPREAD + ' · 아직 못 닿은 종 ' + over.length + ': ' +
-         over.map(i => i + ' ' + r.out.rows[i].spread.sp).join(' · ') + ')');
+         over.map(i => i + ' ' + (r.out.rows[i].spreadC || r.out.rows[i].spread).sp).join(' · ') +
+         ' · 옛 이진 자로는 ' + Math.max.apply(null, strokeIds.map(i => r.out.rows[i].spread.sp)).toFixed(2) + ')');
+      /* ⚑ 889 이관 — 여기서 «코어가 있는가» 를 묻는 마스크도 [B12] 와 같은 이유로 «흰 층의 몫이
+         절반» 이다(옛 이진 문턱은 부분 알파 앞에서 고원 안쪽만 코어로 센다 — flask 0.833 → 0.717).
+         자리·가중·문턱(0.75)은 한 글자도 안 건드렸다. 옛 자의 값도 같이 찍어 둔다. */
       const thin = ids.filter(i => r.out.rows[i].cover < COVER);
       ok(thin.length === 0,
          '[B11] ③층이 **본체 마루를 따라간다** — 덮임 ' + COVER + ' 미만 ' + thin.length + '종' +
          (thin.length ? ' (' + thin.map(i => i + ' ' + r.out.rows[i].cover).join(' · ') + ')' : '') +
-         ' (수리 전 arrow 축 0px · boomer 팔 0px · spiral 리본 0px)');
+         ' (수리 전 arrow 축 0px · boomer 팔 0px · spiral 리본 0px · 옛 이진 자 최저 ' +
+         Math.min.apply(null, ids.map(i => r.out.rows[i].coverBin)).toFixed(3) + ')');
     }
 
     /* ---- [R] 되돌림 시험 ---- */
@@ -645,7 +783,7 @@ async function measure(browser, url) {
       {
         const cW1 = rn.out.capW || 0, cK1 = rn.out.K || 0;
         const sI = ids.filter(i => !(cW1 > 0 && cK1 * rn.out.rows[i].wb >= 0.8 * cW1));
-        const nb2 = b13bands(rn.out, sI);
+        const nb2 = b13bands(rn.out, sI, 2);   /* 889 — [B13] 이 쓰는 자와 **같은 자**라야 되돌림이 성립한다 */
         const ms = nb2.map(b => b.md);
         const x2 = ms.length ? Math.max.apply(null, ms) : 0;
         const n2 = ms.length ? Math.min.apply(null, ms) : 0;
