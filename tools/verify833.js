@@ -81,7 +81,12 @@ const DUMP = `(() => {
       const cs = getComputedStyle(e);
       const m = cs.transform.match(/matrix\\(([^)]+)\\)/);
       const p = m ? m[1].split(',').map(parseFloat) : null;
-      return { tag: e.tagName, txt: e.textContent, tr: cs.transform,
+      /* 885 4회차 — «회전의 중심» 을 같이 담는다. 두 줄이 **같은 페이지 점**을 중심으로 돌아야
+         회전이 강체이고, 그때만 «각도» 와 «두 줄 간격» 이 서로를 안 건드리는 두 손잡이가 된다.
+         org = 배지 상자 기준 원점 y (= 자기 top + transform-origin 의 y). */
+      const oy = parseFloat((cs.transformOrigin.split(' ')[1] || '0'));
+      return { tag: e.tagName, txt: e.textContent, tr: cs.transform, org: cs.transformOrigin,
+        top: num(cs.top), orgY: num(cs.top) + oy,
         sx: p ? +Math.hypot(p[0], p[1]).toFixed(4) : null,
         sy: p ? +Math.hypot(p[2], p[3]).toFixed(4) : null,
         ls: num(cs.letterSpacing), padL: num(cs.paddingLeft),
@@ -223,12 +228,35 @@ const DUMP = `(() => {
        matrix(a,b,c,d) 에서 회전각 = atan2(b,a) 이므로 **b > 0 이면 ref 와 같은 방향**이다.
        ⚠ 크기(잔차 약 −3.5~4°)는 «두 줄 간격» 과 한 쌍이라 다음 회차 몫이다(제품 주석 참조) —
           이 항은 **부호만** 못박는다. 부호는 AABB 를 안 바꾸므로 닫힌 축을 건드리지 않는다. */
+    /* ⚑⚑ 885 4회차 이관 — 3회차는 이 항을 «부호만» 이라고 적어 두고 **크기 10 을 ±0.5 로 못박았다.**
+       4회차가 «각도를 가정하지 않는 자»(`tools/scan885c.py`)로 ref 를 직접 재서 **+14.5~15.0°**
+       (문턱 5단 부호·값 유지 · ref 두 카드)를 냈으므로, 이 항은 이제 **ref 실측값**을 묻는다.
+       ⚠ 방향을 뒤집은 것이 아니라 «자리 잡기 전의 임시값» 을 «잰 값» 으로 갈아 끼운 것이다(333 처방). */
     ok(ln.every(l => {
       const m = l.tr.match(/matrix\(([^)]+)\)/); if (!m) return false;
       const p = m[1].split(',').map(parseFloat);
-      return p[1] > 0 && Math.abs(Math.atan2(p[1], p[0]) * 180 / Math.PI - 10) <= 0.5;
-    }), `[1-l] ${c.id} 글자 기울기가 **ref 와 같은 방향(+10°)** — 수리 전은 −10° 로 반대였다`,
+      const d = Math.atan2(p[1], p[0]) * 180 / Math.PI;
+      return p[1] > 0 && d >= 14.0 && d <= 15.5;
+    }), `[1-l] ${c.id} 글자 기울기가 ref 실측 +14.5~15.0° 안 (수리 전 −10° → 3회차 +10° → 4회차 +15°)`,
       ln.map(l => l.tr).join(' · '));
+    /* ⚑ 885 4회차 신설 — **강체 회전**. 두 줄이 같은 페이지 점을 중심으로 돌지 않으면
+       두 줄이 서로 «어긋나며» 벌어져 |θ| 를 키울 때마다 AABB 가 깨진다(3회차가 15° 를 넣어 보고
+       물러난 그 자리). 자로 잰 증거: 베이스라인 축에서 두 줄 잉크 중점의 어긋남이
+       ref **−0.2~−0.5**(= 강체) ↔ 수리 전 우리 **+6.9**(= d·sinθ, 줄마다 따로 회전) 였고,
+       수리 뒤 **−0.7** 로 ref 에 붙었다. 배지가 172×184 이므로 공통 원점은 상자 기준 y = 92 다. */
+    ok(ln.length === 2 && Math.abs(ln[0].orgY - ln[1].orgY) <= 0.05,
+      `[1-m] ${c.id} 두 줄이 **같은 점**을 중심으로 돈다 (강체 회전 — 상자 기준 원점 y 가 같다)`,
+      ln.map(l => `${p2(l.top)}+${l.org} ⇒ ${p2(l.orgY)}`).join(' · '));
+    ok(ln.every(l => Math.abs(l.orgY - 92) <= 0.05),
+      `[1-n] ${c.id} 그 공통 점이 **배지 중심 92**(172×184 의 한가운데) — 블록이 배지 안에 그대로 앉는다`,
+      ln.map(l => p2(l.orgY)).join(' · '));
+    /* ⚑ 885 4회차 신설 — 두 줄 «수직» 거리. 강체이므로 화면 수직 거리가 곧 베이스라인 수직 거리다.
+       ref 는 «빈 띠»(두 줄 잉크 사이 빈 구간) 10.6~10.7 이고, 우리 잉크 두께가 ref 보다 두꺼워
+       (윗줄 +10% · 아랫줄 +19% — **895 로 등재한 남은 축**) 중심 거리로 맞추면 글자가 붙는다.
+       ⇒ 과녁은 **빈 띠**이고 그때 상자 값이 48/95.75 = 중심 거리 43.75 다. */
+    ok(ln.length === 2 && Math.abs((ln[1].top + ln[1].lh / 2) - (ln[0].top + ln[0].lh / 2) - 43.75) <= 0.3,
+      `[1-o] ${c.id} 두 줄 중심 거리 43.75 (수리 전 46 — ref «빈 띠» 10.65 에 맞춘 값)`,
+      `${p2((ln[1].top + ln[1].lh / 2) - (ln[0].top + ln[0].lh / 2))}`);
   }
 
   blk('§2 «2000%»·«가치» 두 줄이 별 잉크 중심을 따라간다');
@@ -806,6 +834,50 @@ const DUMP = `(() => {
     '[R11b] 그때 상자·밝은 림도 **같이** 되돌아간다 — 세 폭이 한 값 파생이라는 증거',
     back11.map(c => `${c.w}/${c.uW}`).join(' '));
   await page.evaluate(() => { const e = document.getElementById('r11'); if (e) e.remove(); });
+
+  /* ⚑ [R17] 885 4회차 — **이 회차가 실제로 진 함정**을 못박는다.
+     `.pvc>.bdg>i{transform-origin:…}` 만 적으면 `#shopw i,#shopw b,…{transform-origin:50% 50%}`(5926행)이
+     **ID 급(1,0,1)** 으로 이겨서 선언이 한 픽셀도 안 먹는다 — 4회차가 선언을 넣고 캡처를 다시 재서야
+     알았다(`getComputedStyle` 이 «86px 24px» 을 돌려줬다). [R12] 와 같은 꼴이고 자리만 다르다.
+     ⇒ 스코프 짝을 무력화하면 **원점이 두 줄 각자의 가운데로 돌아가고 회전이 강체가 아니게 된다.** */
+  const back17 = await page.evaluate(() => {
+    const st = document.createElement('style');
+    st.id = 'r17';
+    st.textContent = '#shopw .pvc>.bdg>i,#shopw .pvc>.bdg>b{transform-origin:50% 50%}';
+    document.head.appendChild(st);
+    const out = [];
+    document.querySelectorAll('.pvc>.bdg').forEach((bd) => {
+      const bb = bd.getBoundingClientRect();
+      const ln = [...bd.querySelectorAll('i,b')].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { org: getComputedStyle(e).transformOrigin,
+          cx: +(r.x + r.width / 2 - bb.left).toFixed(2), cy: +(r.y + r.height / 2 - bb.top).toFixed(2) };
+      });
+      if (ln.length === 2) out.push({ org: ln.map(l => l.org).join(' · '),
+        dx: +(ln[1].cx - ln[0].cx).toFixed(2), dy: +(ln[1].cy - ln[0].cy).toFixed(2) });
+    });
+    return out;
+  });
+  ok(back17.length > 0 && back17.every(o => Math.abs(o.dx) < 1),
+    '[R17] 스코프 짝을 빼면 두 줄이 **수직으로만** 쌓인다 (강체가 깨진다 — 화면 x 어긋남이 0 으로 죽는다)',
+    back17.map(o => `dx ${o.dx} · dy ${o.dy}`).join(' / '));
+  await page.evaluate(() => { const e = document.getElementById('r17'); if (e) e.remove(); });
+  const now17 = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll('.pvc>.bdg').forEach((bd) => {
+      const bb = bd.getBoundingClientRect();
+      const ln = [...bd.querySelectorAll('i,b')].map((e) => {
+        const r = e.getBoundingClientRect();
+        return { cx: r.x + r.width / 2 - bb.left, cy: r.y + r.height / 2 - bb.top };
+      });
+      if (ln.length === 2) out.push({ dx: +(ln[1].cx - ln[0].cx).toFixed(2), dy: +(ln[1].cy - ln[0].cy).toFixed(2) });
+    });
+    return out;
+  });
+  /* 강체 예측: dx = −d·sin15 = −11.32 · dy = d·cos15 = 42.26 (d = 43.75). */
+  ok(now17.length > 0 && now17.every(o => Math.abs(o.dx + 11.32) <= 0.4 && Math.abs(o.dy - 42.26) <= 0.4),
+    '[R17b] 원복하면 두 줄 어긋남이 **강체 예측**(dx −11.32 · dy 42.26 = d 43.75 를 15° 돌린 값)과 같다',
+    now17.map(o => `dx ${o.dx} · dy ${o.dy}`).join(' / '));
 
   /* ⚑ [R12] — 8회차가 실제로 진 그 함정을 못박는다. 값을 되돌리는 시험이 아니라
      **스코프 짝을 빼면 조용히 원점이 가운데로 간다**([R7] 과 같은 꼴 · 207 · 325). */
