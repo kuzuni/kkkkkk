@@ -178,7 +178,10 @@ const MEASURE = () => {
        통째로 404 라 «찍힌 픽셀» 이 달라진다(360·367·438·439·453 선례). */
   {
     const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    const NEW = 'var(--rw-g3)) * .551));', OLD = 'var(--rw-g3)) * .5));';
+    /* ⚠ 813 10회차 — 제품의 분할이 «비례 .551» 에서 «어파인(.4737·T + 2.57)» 으로 바뀌었다.
+       거울 오프셋이 절대량이라 총량이 프레임마다 다르면 비례 계수로는 화소 비가 샌다(1600 0.810).
+       되돌림 대상 문자열만 옮긴다 — 사본이 만드는 세계(7회차 .5)는 그대로다. */
+    const NEW = 'var(--rw-g3)) * .4737 + 2.57px * var(--rwc,1)));', OLD = 'var(--rw-g3)) * .5));';
     const neg = path.join(ROOT, `.v887-neg-${process.pid}.html`);
     let rOld = null, rNew = null, note = '';
     if (!src.includes(NEW)) {
