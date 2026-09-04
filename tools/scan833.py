@@ -31,6 +31,18 @@ HDR = {'배너형(파랑)': (58, 134, 212), '불릿형(초록)': (33, 145, 97)}
 OURS_HDR = {'배너형(파랑)': (81, 148, 217), '불릿형(초록)': (33, 145, 97)}
 
 
+def has_cls(card, name):
+    """카드가 그 클래스를 갖는가 — 기하를 만든 자가 둘이라 **모양이 둘**이다.
+
+    901 — `cap151.js --geo` 는 `cls` 를 **목록**으로, `probe667b.js` 는 `className`
+    **문자열**로 싣는다. 옛 코드 `'ban1' in c['cls']` 는 둘 다 «도는» 것처럼 보이지만
+    문자열 쪽은 부분일치라 `ban10` 같은 이웃 클래스가 생기면 조용히 참이 된다.
+    ⇒ 어느 모양이든 **낱말 단위**로 가른다(자를 베끼는 형제 scan667b·scan667c 도 이걸 쓴다).
+    """
+    cls = card['cls']
+    return name in (cls if isinstance(cls, (list, tuple)) else str(cls).split())
+
+
 def lum(a):
     return 0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]
 
@@ -252,13 +264,21 @@ def main():
 
     print(f'\n== 우리 {cap}-c*.png')
     O, OB = {}, {}
-    for i, c in enumerate(json.load(open(geo))['cards'], 1):
+    cards = json.load(open(geo))['cards']
+    # 901 — 이 절이 묻는 두 키(`cls`·`card`)는 `cap151.js --geo --crop` 이 만든다.
+    # 없는 채로 들어오면 `KeyError` 한 줄로 죽어 «자가 부패했다» 처럼 보였다(등재문).
+    # 낡은 기하를 들고 온 것이 결손이므로, 죽을 거면 무엇을 다시 뽑아야 하는지 말한다.
+    miss = sorted({k for c in cards for k in ('cls', 'card') if k not in c})
+    if miss:
+        sys.exit(f'기하 {geo} 에 카드 키 {miss} 가 없다 — cap151.js 가 이 키들을 싣기 전에 뽑은 '
+                 f'낡은 덤프다. `node tools/cap151.js {cap}.png --geo --crop` 으로 다시 뽑아라.')
+    for i, c in enumerate(cards, 1):
         try:
             oa = np.asarray(Image.open(f'{cap}-c{i}.png').convert('RGB')).astype(int)
         except FileNotFoundError:
             print(f'(크롭 {cap}-c{i}.png 없음)')
             continue
-        kind = '배너형(파랑)' if 'ban1' in c['cls'] else '불릿형(초록)'
+        kind = '배너형(파랑)' if has_cls(c, 'ban1') else '불릿형(초록)'
         cx, cy = int(c['card']['x']), int(c['card']['y'])
         cw = int(c['card']['w'])
         # ⚠ 밴드 색은 «행의 중앙값» 이 아니라 **최빈색**으로 읽는다 — 배너형 카드는

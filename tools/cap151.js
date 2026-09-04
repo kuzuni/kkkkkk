@@ -72,6 +72,12 @@ const VH = HI > 0 ? +process.argv[HI + 1] : 2280;
     g.cards = [...document.querySelectorAll('.pvc')].map((c) => {
       const o = box(c.getBoundingClientRect());
       o.id = c.dataset.pv;
+      /* 901 — 카드의 «형»(배너형/불릿형)을 가르는 축은 **실제 클래스**다.
+         `scan833.py` 가 `c['cls']` 로 그것을 물었는데 이 덤프에 없어 «우리» 절이
+         한 번도 안 돌았다(`KeyError: 'cls'`). id 문자열 관례(`ban1` 이 아니라
+         `noads`)로 가르는 길도 있었지만, 형을 정하는 것은 CSS 의 `.pvc.ban1` 이므로
+         그 클래스를 그대로 넘긴다 — 카드가 늘어도 자를 안 고친다. */
+      o.cls = [...c.classList];
       o.own = c.classList.contains('own');
       o.stt = sub(c, '.stt'); o.sttI = sub(c, '.stt>i');
       o.bdg = sub(c, '.bdg'); o.bdgI = sub(c, '.bdg>i');
@@ -104,10 +110,19 @@ const VH = HI > 0 ? +process.argv[HI + 1] : 2280;
         return { x: e.left - A.left, y: e.top - A.top, w: e.width, h: e.height };
       }, c0.id);
       const app = await p.locator('#app').boundingBox();
+      /* 901 — 크롭 원점을 **한 곳에서** 계산해 클립과 기하 덤프가 같은 수를 쓰게 한다.
+         `scan833.py` 는 크롭-로컬 카드 상자(`c['card']`)를 묻는데 덤프에 없어
+         `cls` 바로 다음 줄에서 또 죽었다(첫 키가 가려 안 보이던 둘째 결손).
+         형제 자 `scan833b.py` 는 그 자리를 상수 `CROP_DX,CROP_DY = 40,80` 으로
+         때웠지만, 그 둘은 **여기서 정해지는 값**이라 이 줄이 바뀌면 조용히 어긋난다.
+         ⇒ 상수를 베끼게 두지 말고 실제 원점을 같이 실어 보낸다. */
+      const ox = Math.max(0, c.x - 40), oy = Math.max(0, c.y - 80);
+      const cw = Math.min(1080 - ox, c.w + 80), ch = c.h + 110;
+      c0.card = { x: +(c.x - ox).toFixed(1), y: +(c.y - oy).toFixed(1), w: +c.w.toFixed(1), h: +c.h.toFixed(1) };
+      c0.crop = { x: +ox.toFixed(1), y: +oy.toFixed(1), w: +cw.toFixed(1), h: +ch.toFixed(1) };
       await p.screenshot({
         path: path.resolve(__dirname, '..', out.replace(/\.png$/, '-c' + (i + 1) + '.png')),
-        clip: { x: app.x + Math.max(0, c.x - 40), y: app.y + Math.max(0, c.y - 80),
-          width: Math.min(1080 - Math.max(0, c.x - 40), c.w + 80), height: c.h + 110 }
+        clip: { x: app.x + ox, y: app.y + oy, width: cw, height: ch }
       });
     }
     await p.evaluate(() => { document.getElementById('shopList').scrollTop = 0; });
