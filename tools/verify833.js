@@ -84,6 +84,7 @@ const DUMP = `(() => {
       return { tag: e.tagName, txt: e.textContent, tr: cs.transform,
         sx: p ? +Math.hypot(p[0], p[1]).toFixed(4) : null,
         sy: p ? +Math.hypot(p[2], p[3]).toFixed(4) : null,
+        ls: num(cs.letterSpacing), padL: num(cs.paddingLeft),
         fs: num(cs.fontSize), lh: num(cs.lineHeight),
         stroke: num(cs.webkitTextStrokeWidth) };
     });
@@ -186,25 +187,36 @@ const DUMP = `(() => {
      다섯 단 전부 −7.6~−8.2%(부호 불변)인데 **분홍 별판**은 같은 사다리에서 ref 가
      181.5 → 144.4 로 미끄러져 **측정 한계**다. ⇒ 손잡이는 판이 아니라 글자이고,
      `font-size` 가 아니라 **가로 배율**이다(높이는 −0.9% 로 맞아 있었다 · 380 함정).
-     수리 뒤 실측(같은 자): ref 154.7~156.8 ↔ 우리 155.0~157.0 = **+0.1~+0.8%**.
-     ⚠ 아래 [1-h] 가 «세로 배율 = 1» 을 같이 묻는 것이 이 수리의 핵심이다 —
-        높이를 건드리는 손잡이(fs)로 갈아타면 그 항이 먼저 빨개진다. */
-  blk('§1-2 배지 «글자» 가로 배율 — 885 3회차 (판은 안 건드렸다)');
+     ⚑⚑ **그리고 손잡이는 «배율» 이 아니었다** — 총폭만 보면 «글자가 좁다» 와 «글자 사이가 안 벌어졌다» 가
+     안 갈린다(LESSONS 92-곁가지3). `scan885b.py --glyph` 로 윗줄 다섯 글리프를 열 덩이로 가르니:
+       ref  글리프 폭 합 **130.0** · 틈 합 **24.8**(6.2 ×4) · 총 154.7
+       우리 글리프 폭 합 **132.0**(+1.5% = 이미 맞다) · 틈 합 **11.0** · 총 143.0
+     ⇒ 부족분 전부가 **«글자 사이»** 다(24.8 − 11.0 = 13.8 ⊃ 총폭 부족 11.7).
+        `scaleX` 로 맞추면 이미 맞아 있던 글리프를 +9% 로 **틀리게** 만들면서 총폭만 맞춘다
+        ⇒ 손잡이는 **`letter-spacing`** 이고, 문자열 길이가 바뀌어도 따라가므로 구조적으로도 옳다.
+     수리 뒤 실측(같은 자): 총 **155.0** ↔ ref 154.7~156.8 · 글리프 합 **132~135**(무변경) · 틈 합 **20~23**.
+     ⚠ 아래 [1-h] 가 «가로·세로 배율 = 1» 을 같이 묻는 것이 이 수리의 핵심이다 —
+        배율이나 fs 로 갈아타면 그 항이 먼저 빨개진다(둘 다 «이미 맞는 글리프» 를 건드리는 손잡이다). */
+  blk('§1-2 배지 «글자» 사이 — 885 3회차 (글리프·판은 안 건드렸다)');
   for (const c of cards) {
     const ln = c.bdgLn;
     ok(ln.length === 2, `[1-e] ${c.id} 배지 줄이 둘(«${ln.map(l => l.txt).join('» · «')}»)`, `${ln.length}`);
-    ok(ln.every(l => Math.abs(l.sx - ln[0].sx) < 1e-3),
-      `[1-f] ${c.id} 두 줄이 **한 배율**을 쓴다 (833 [13-d] — 줄마다 손으로 다른 값을 적지 마라)`,
-      ln.map(l => p2(l.sx)).join(' · '));
-    ok(ln.every(l => Math.abs(l.sx - 1.09) <= 0.005),
-      `[1-g] ${c.id} 가로 배율 = 1.09 (수리 전 1 = 잉크 폭 −7.6~8.2%)`, ln.map(l => p2(l.sx)).join(' · '));
-    ok(ln.every(l => Math.abs(l.sy - 1) <= 0.005),
-      `[1-h] ${c.id} **세로 배율 = 1** — 높이 축은 안 건드렸다`, ln.map(l => p2(l.sy)).join(' · '));
+    ok(ln.every(l => Math.abs(l.ls - ln[0].ls) < 0.01),
+      `[1-f] ${c.id} 두 줄이 **한 값**을 쓴다 (833 [13-d] — 줄마다 손으로 다른 값을 적지 마라)`,
+      ln.map(l => p2(l.ls)).join(' · '));
+    ok(ln.every(l => Math.abs(l.ls - 2.9) <= 0.05),
+      `[1-g] ${c.id} letter-spacing = 2.9 (수리 전 0 = 틈 합 11.0 ↔ ref 24.8)`, ln.map(l => p2(l.ls)).join(' · '));
+    ok(ln.every(l => Math.abs(l.sx - 1) <= 0.005 && Math.abs(l.sy - 1) <= 0.005),
+      `[1-h] ${c.id} **가로·세로 배율이 둘 다 1** — 글리프 자체는 안 건드렸다 (이미 ref 폭 +1.5% 였다)`,
+      ln.map(l => `${p2(l.sx)}×${p2(l.sy)}`).join(' · '));
+    ok(ln.every(l => Math.abs(l.padL - l.ls) <= 0.05),
+      `[1-i] ${c.id} padding-left = letter-spacing — 마지막 글자 뒤 여백이 미는 가운데 정렬을 되갚는다`,
+      ln.map(l => `${p2(l.padL)} ↔ ${p2(l.ls)}`).join(' · '));
     ok(ln[0].fs === 46 && ln[0].lh === 48 && ln[1].fs === 36 && ln[1].lh === 40,
-      `[1-i] ${c.id} font-size/line-height 불변 (46/48 · 36/40 — 크기로 폭을 좇으면 380 함정)`,
+      `[1-j] ${c.id} font-size/line-height 불변 (46/48 · 36/40 — 크기로 폭을 좇으면 380 함정)`,
       `${ln[0].fs}/${ln[0].lh} · ${ln[1].fs}/${ln[1].lh}`);
     ok(ln[0].stroke === 8 && ln[1].stroke === 7,
-      `[1-j] ${c.id} 검정 획 선언 8/7 불변 (배율은 획도 가로로 늘린다 — ⑤ 기록 · 833 [10-g] 와 같은 대가)`,
+      `[1-k] ${c.id} 검정 획 선언 8/7 불변 — letter-spacing 은 획을 안 건드린다(833 [10-g] 의 ⑤ 대가가 여기선 0)`,
       `${ln[0].stroke} · ${ln[1].stroke}`);
   }
 
@@ -666,33 +678,31 @@ const DUMP = `(() => {
     back3.map(c => c.bCx).join(' / '));
   ok(back3.every(c => c.iTop === 9),
     '[R6] 탭 라벨을 top:9 로 되돌리면 §8 [8-a] 가 빨개진다', back3.map(c => c.iTop).join(' / '));
-  /* 885 3회차 짝 — 배지 글자 배율을 1 로 되돌리면 §1-2 가 빨개진다.
-     ⚑ «상수를 되돌렸다» 로 끝내지 않고 **advance 가 실제로 8% 줄어드는 것**까지 본다
-     (R9 와 같은 꼴 — 선언만 보는 되돌림 시험은 «값이 바뀌었다» 만 말하고 «그림이 바뀌었다» 는 못 말한다). */
+  /* 885 3회차 짝 — 배지 글자 사이를 0 으로 되돌리면 §1-2 가 빨개진다.
+     ⚑ «상수를 되돌렸다» 로 끝내지 않고 **advance 가 실제로 줄어드는 것**까지 본다
+     (R9 와 같은 꼴 — 선언만 보는 되돌림 시험은 «값이 바뀌었다» 만 말하고 «그림이 바뀌었다» 는 못 말한다).
+     줄어드는 양은 «글자 수 × 2.9» 다(윗줄 5자 = 14.5) — 배율이었다면 문자열 길이와 무관했을 자리라
+     이 항 자체가 «손잡이가 letter-spacing 이다» 의 증거이기도 하다. */
   const backB = await page.evaluate(() => {
-    const now = [...document.querySelectorAll('.pvc')].map((c) => {
+    const adv = () => [...document.querySelectorAll('.pvc')].map((c) => {
       const e = c.querySelector('.bdg>i'); const rg = document.createRange();
-      rg.selectNodeContents(e); return +rg.getBoundingClientRect().width.toFixed(2);
+      rg.selectNodeContents(e);
+      return { n: e.textContent.length, w: +rg.getBoundingClientRect().width.toFixed(2),
+        ls: parseFloat(getComputedStyle(e).letterSpacing) || 0 };
     });
+    const now = adv();
     const st = document.createElement('style');
-    st.textContent = '.pvc>.bdg{--bdg-sx:1}';                   /* 885 3회차 전 */
+    st.textContent = '.pvc>.bdg{--bdg-ls:0px}';                 /* 885 3회차 전 */
     document.head.appendChild(st);
-    const back = [...document.querySelectorAll('.pvc')].map((c) => {
-      const e = c.querySelector('.bdg>i'); const cs = getComputedStyle(e);
-      const m = cs.transform.match(/matrix\(([^)]+)\)/);
-      const p = m ? m[1].split(',').map(parseFloat) : [1, 0, 0, 1];
-      const rg = document.createRange(); rg.selectNodeContents(e);
-      return { sx: +Math.hypot(p[0], p[1]).toFixed(4), adv: +rg.getBoundingClientRect().width.toFixed(2) };
-    });
+    const back = adv();
     st.remove();
-    return now.map((adv, i) => ({ nowAdv: adv, sx: back[i].sx, backAdv: back[i].adv }));
+    return now.map((v, i) => ({ n: v.n, nowAdv: v.w, ls: back[i].ls, backAdv: back[i].w }));
   });
-  ok(backB.every(b => Math.abs(b.sx - 1) < 1e-3),
-    '[R16] 배지 글자 배율을 1 로 되돌리면 §1-2 [1-g] 가 빨개진다',
-    backB.map(b => p2(b.sx)).join(' / '));
-  ok(backB.every(b => b.nowAdv / b.backAdv > 1.07 && b.nowAdv / b.backAdv < 1.11),
-    '[R16b] 그때 잉크 advance 가 실제로 **8% 줄어든다** — 배율이 그림을 바꾼다는 증거 (2회차 2인 일치 −7.6~8.2%)',
-    backB.map(b => `${p2(b.backAdv)} → ${p2(b.nowAdv)}`).join(' / '));
+  ok(backB.every(b => b.ls === 0),
+    '[R16] 배지 글자 사이를 0 으로 되돌리면 §1-2 [1-g] 가 빨개진다', backB.map(b => p2(b.ls)).join(' / '));
+  ok(backB.every(b => Math.abs((b.nowAdv - b.backAdv) - b.n * 2.9) <= 1.0),
+    '[R16b] 그때 advance 가 **글자 수 × 2.9 만큼** 줄어든다 — 그림이 바뀐다는 증거이자 «배율이 아니라 글자 사이» 라는 증거',
+    backB.map(b => `${b.n}자 ${p2(b.backAdv)} → ${p2(b.nowAdv)} (Δ${p2(b.nowAdv - b.backAdv)})`).join(' / '));
   const back5 = await page.evaluate(() => {
     const st = document.createElement('style');
     st.textContent = '.pvc>.stt>i{transform:scaleX(.94)}';      /* 833 5회차 전 */

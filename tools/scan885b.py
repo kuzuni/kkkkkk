@@ -19,9 +19,14 @@
   ★ 창은 «카드 상변 위 ~40 ~ 배지 아래» 우상단 사분면으로 잡고, 카드마다 따로 낸다
     (ref 는 카드가 둘, 우리는 배지가 있는 카드가 둘 = 1:1 대응).
 
+⚑ **3회차 추가 — `--glyph`**: 총폭만 보면 «글자가 좁다» 와 «글자 사이가 안 벌어졌다» 가 안 갈린다
+   (LESSONS 92-곁가지3). 윗줄 «2000%» 를 **열 덩이**로 갈라 «글리프 폭 합» 과 «틈 합» 을 따로 낸다 —
+   이 자가 3회차의 처방을 `scaleX` 에서 `letter-spacing` 으로 뒤집었다.
+
 실행:
     python3 tools/scan885b.py                       ref + 기본 캡처
     python3 tools/scan885b.py --cap scratch/151-r37.png --geo scratch/geo37.json
+    python3 tools/scan885b.py --glyph --cap ... --geo ...
 """
 import json
 import sys
@@ -74,6 +79,37 @@ def measure(img, win, steps, mask_fn, scale):
     return out
 
 
+def glyph_split(img, win, t, scale, tag):
+    """윗줄 한 줄을 **열 덩이**로 갈라 «글리프 폭 합» 과 «글리프 사이 틈 합» 을 따로 낸다.
+
+    ⚠ 두 줄이 `rotate(-10deg)` 라 열 덩이는 글리프 높이만큼 옆으로 번진다(≈ H·sin10 ≈ 5px).
+      ref·우리가 **같은 각도**라 그 번짐은 두 쪽에 똑같이 들어가고, «글리프끼리»·«틈끼리» 비교는
+      그대로 성립한다(번짐은 글리프에 더하고 틈에서 같은 만큼 뺀다).
+    ⚠ 창(y0..y1)은 **윗줄만** 물어야 한다 — 아랫줄이 섞이면 열 덩이가 붙어 버린다.
+    """
+    x0, y0, y1 = win
+    m = yel_mask(img[y0:y1, x0:], t)
+    cols = m.sum(0)
+    runs, cur = [], None
+    for i, v in enumerate(cols):
+        if v > 0 and cur is None:
+            cur = i
+        if v == 0 and cur is not None:
+            runs.append((cur, i - 1))
+            cur = None
+    if cur is not None:
+        runs.append((cur, len(cols) - 1))
+    if not runs:
+        print('  %s — 잉크 없음' % tag)
+        return
+    ws = [(b - a + 1) * scale for a, b in runs]
+    gaps = [(runs[i + 1][0] - runs[i][1] - 1) * scale for i in range(len(runs) - 1)]
+    print('  %-22s 덩이 %d · 글리프 폭 합 **%.1f** (%s) · 틈 합 **%.1f** (%s) · 총 bbox %.1f'
+          % (tag, len(runs), sum(ws), ' '.join('%.1f' % w for w in ws),
+             sum(gaps), ' '.join('%.1f' % g for g in gaps),
+             (runs[-1][1] - runs[0][0] + 1) * scale))
+
+
 def main():
     cap = sys.argv[sys.argv.index('--cap') + 1] if '--cap' in sys.argv else 'scratch/151-r37.png'
     geo = sys.argv[sys.argv.index('--geo') + 1] if '--geo' in sys.argv else 'scratch/geo37.json'
@@ -94,6 +130,17 @@ def main():
         if pink_mask(ours[y0:y1, x0:], 60).sum() < 200:
             continue
         our_wins.append((c['id'], (x0, y0, y1)))
+
+    if '--glyph' in sys.argv:
+        print('\n=== ⚑ 윗줄 «2000%» 글리프/틈 분해 (LESSONS 92-곁가지3) — 우리 px 환산 ===')
+        for t in (50, 90, 110):
+            print(' 문턱 %d' % t)
+            # ref 윗줄만 — 아래 카드(초록)의 윗줄 행 범위
+            glyph_split(ref, (350, 330, 355), t, K, 'ref 아래카드 윗줄')
+            for cid, (wx, wy0, wy1) in our_wins:
+                # 우리 윗줄 = 배지 상자 상변 + 48(top) 부터 line-height 48 + 여유
+                glyph_split(ours, (wx, wy0 + 63, wy0 + 118), t, 1.0, '우리 %s 윗줄' % cid)
+        return
 
     for axis, steps, fn in (('① 분홍 별판', PINK_STEPS, pink_mask),
                             ('② 노랑 글자', YEL_STEPS, yel_mask)):
