@@ -58,6 +58,14 @@ const MEASURE = () => {
     els[k] = box(s);
   const panelH = Math.round(pr.height * 10) / 10;
   const r1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
+  const r2 = (v) => (v == null ? null : Math.round(v * 100) / 100);
+  /* 안내문 **줄 상자**(Range) — `verify813` [3] · `verify887` [5] 와 **같은 양**을 재는 자리.
+     그릇 상자(`.rw-cap`)는 위에만 행간 여백을 물고 있어 같은 값을 안 준다(879 §19). */
+  const capLines = [...document.querySelectorAll('#relw .rw-cap p')].map((el) => {
+    const rg = document.createRange(); rg.selectNodeContents(el);
+    const b = rg.getBoundingClientRect();
+    return { y1: b.top, y2: b.bottom };
+  });
   const vars = {
     panelH,
     sp: r1(panelH - 820),
@@ -68,6 +76,13 @@ const MEASURE = () => {
        아래 블록의 총량(38 + g3)은 그대로 두고 위·아래를 ref 비 0.625:0.375 로 나눈다. */
     I: r1(panelH - (els.cap ? els.cap.b : 0)),
     G: els.mid && els.cap ? r1(els.cap.t - els.mid.b) : null,
+    /* ⚑ 9회차 이관(887) — 위 I·G 는 **그릇 상자** 축이라 «위:아래» 판정의 자가 아니다.
+       887 이 확정한 자는 **줄 상자 + 밝힌 거울 상수**이고 그 짝 항이 `verify887` [5] 다
+       (같은 두 상수를 `verify813` [3] 도 쓴다 — 자를 두 곳에 두지 않으려면 **같은 양**을 재야 한다).
+       그래서 여기서도 줄 상자를 재 둔다: visAbove = 수반 하변 → 첫 줄 상자 상변 ·
+       visGap = 마지막 줄 상자 하변 → 그릇 하변. */
+    visAbove: capLines.length && els.mid ? r2(capLines[0].y1 - (pr.top + els.mid.b)) : null,
+    visGap: capLines.length ? r2(pr.bottom - capLines[capLines.length - 1].y2) : null,
     /* 아치는 `.rw-bg::after` 라 **의사 요소**여서 getBoundingClientRect 로 못 잡는다.
        2회차까지는 `min(186,(tt−174)/2)` 식을 그대로 옮겨 적었는데, [E1] 이 셋째 인자를
        더하면서 **식을 옮겨 적는 방식 자체가 늙었다** — `--rw-fl`(= gt + 516 + av)을 얹은
@@ -129,11 +144,17 @@ const MEASURE = () => {
   console.log('\n[B] 예산 변수 — 그려진 기하에서 역산 (패널 지역 좌표)');
   const keys = [['panelH', '패널 높이'], ['sp', '= 패널H − 820'], ['lt', '상인방 상변'], ['gt', '격자 상변'],
                 ['bt', '수반 상변'], ['tt', '= bt − 516'], ['av', '아치 뻗음(격자 하변→받침 상변)'], ['G', '수반 ↓ 안내문'], ['I', '안내문 ↓ 패널 하변'],
-                ['wall', '벽 = 격자 상변 − 상인방 하변'], ['gapMid', '격자 하변 → 수반 상변']];
+                ['wall', '벽 = 격자 상변 − 상인방 하변'], ['gapMid', '격자 하변 → 수반 상변'],
+                ['visAbove', '수반 하변 → 첫 줄 상자 상변 (887 축)'], ['visGap', '마지막 줄 상자 하변 → 그릇 하변 (887 축)']];
   console.log(`     ${'var'.padEnd(8)}${FRAMES.map((f) => String(f).padStart(9)).join('')}`);
   for (const [k, desc] of keys)
     console.log(`     ${k.padEnd(8)}${FRAMES.map((f) => String(byFrame[f].vars[k]).padStart(9)).join('')}   ${desc}`);
-  console.log(`     ${'여유'.padEnd(7)}${FRAMES.map((f) => String(Math.round((byFrame[f].vars.wall - 98) * 10) / 10).padStart(9)).join('')}   벽 − 바 98 (위·아래 두 간극의 합)`);
+  /* ⚑ 9회차 이관 — 옛 «여유 = 벽 − 바 98» 은 **바가 벽에 있던 시절**의 줄이다(867 이 격자 아래로
+     데려갔고 8회차 [H1] 이 벽에 남은 예약 146 까지 걷었다). 자리를 비우지 않고 **지금 예산이 걸린 곳**
+     으로 방향을 뒤집는다 — 니치 예산은 879 §17 의 항등식이다:
+       av = 격자↔바 간극 + 바 **시각** 높이(96.53 × s) + 12(867 «받침 위» 얹힘)
+     ⇒ 여기 찍는 «니치» 는 그 앞 두 항의 합이고, **배율과 간극이 1:1 로 맞바꾸는 총액**이다. */
+  console.log(`     ${'니치'.padEnd(7)}${FRAMES.map((f) => String(Math.round((byFrame[f].vars.av - 12) * 10) / 10).padStart(9)).join('')}   = 격자↔바 간극 + 바 시각 높이 (av − 12 · 879 §17 항등식)`);
 
   console.log('\n[C] 120 최소 요구 — 깨지면 ❌');
   const chk = (label, fn, ok) => {
@@ -164,12 +185,18 @@ const MEASURE = () => {
      브래킷이 아니라 **금테 안쪽 테두리**(inset 2 + 두께 5 = 7px)다. 12 = 7 + 5(상자 여유). */
   c.push(chk('안내문 ↓ 그릇 하변 ≥ 12 (금테 안쪽 테두리 7 + 5 · 5회차에 브래킷 32 에서 갈아 끼움)',
     (m) => m.vars.I, (v) => v >= 11.5));
-  /* ⚑ 813 6회차 — 대역이 바뀌었다(`tools/scan813c.py` 가 갈랐다 · verify813 [3] 주석 참조).
-     ⚠ 여기 값은 **상자** 기준이라 잉크 기준 대역 0.72~0.95 를 상자로 환산한 것이다
-     (상자 위 여유 4px · 아래 여유 4px ⇒ 잉크비 (I+4)/(40−I) 로 되풀면 I 14.4~17.4 = 0.66~0.94).
-     판정의 본체는 verify813 [3](잉크 축)이고 이 항은 그 미러다. */
-  c.push(chk('안내문 위:아래 비 = ref 1.00 (잉크 0.92~1.08) · 상자 환산 0.90~1.10',
-    (m) => m.vars.I / m.vars.G, (v) => v >= 0.90 && v <= 1.10));
+  /* ⚑⚑ 9회차 이관(887 정오) — **이 항은 늙어 있었다.** 과녁 «ref 1.00» 은 887 이 폐기했고
+     (아래 끝점을 «금테 띠 «안»» 으로 잡은 값 · 띠 두께가 ref 2px ↔ 우리 5px 이라 두 쪽에서
+     서로 다른 양을 훔친다), 확정값은 **0.90**(위 10 : 아래 9 ref px) · 대역 **0.82~1.00**
+     (= ±레퍼런스 한 눈금)이다. 게다가 이 미러는 **그릇 상자**(`vars.I`/`vars.G`) 로 재고 있어
+     본체(`verify813` [3])와 **다른 양**을 보고 있었다 — 그릇 상자는 위에만 행간 여백을 물어
+     같은 자리를 1.23 으로 읽는다(879 §19). ⇒ 333 처방대로 자리를 비우지 않고 **축과 과녁을
+     같이 갈아 끼운다**: 본체와 **같은 줄 상자 + 같은 거울 상수**(위 +3 · 아래 −3 · 화소 − 상자)를 쓴다.
+     그 거울이 실제 화소와 어긋나면 `verify887` [5] 가 빨개진다(자를 두 곳에 두지 않는다). */
+  c.push(chk('안내문 화소 아래/위 비 = ref 0.90 (대역 0.82~1.00 · 거울 위+3/아래−3 · 887)',
+    (m) => (m.vars.visGap - 3) / (m.vars.visAbove + 3), (v) => v >= 0.82 && v <= 1.00));
+  c.push(chk('  (참고) 그릇 상자 축 아래/위 — 판정 아님 · 본체는 위 줄 상자 항이다',
+    (m) => m.vars.I / m.vars.G, () => true));
   c.push(chk('패널 안 (안내문 하변 ≤ 패널H)', (m) => m.panelH - m.els.cap.b, (v) => v >= 0));
 
   const harm = pairs.filter((p) => p.harm !== 'none');
