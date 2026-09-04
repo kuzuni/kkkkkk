@@ -22,6 +22,7 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { holdUntil } = require('./holdburst');     /* 785 — 홀드 표본 문턱 공용 부품 */
+const { frameHold } = require('./frameburst');    /* 899 — 그 프레임 판(홀드를 프레임 단위로 훑는다) */
 const path = require('path');
 const fs = require('fs');
 
@@ -32,6 +33,14 @@ const URL = 'file://' + SRC;
    시간은 «바닥»(빠른 기계에서 종전과 같은 시간)과 «상한» 으로만 쓴다. */
 const HOLD_MS = Number(process.env.V619_HOLD || 2400);
 const NEED = Number(process.env.V619_NEED || 8), HOLD_MAX = 30000;
+/* ⚑ 899 — [M3] 도 같은 병이었다(고정 1100ms 안에 «프레임 20장» 을 요구 = 러너 속도).
+   문턱(20)은 그대로 두고 **표본이 찰 때까지** 누른다 — 1100 은 이제 «바닥»(빠른 기계에서 종전과 같은
+   시간)이고 30초는 «상한»(판정 문턱이 아니다). 재현기는 `tools/probe899.js`. */
+const M3_NEED = Number(process.env.V619_M3_NEED || 20);
+const HOLD_MS_M3 = Number(process.env.V619_M3_MIN || 1100), M3_CAP = 30000;
+const M3_SPOTS = [['train', '#trCards [data-tr]', '훈련'],
+                  ['rune', '#trRunes .rbt.b1', '룬'],
+                  ['temper', '#trTemper .tr-tp.k0 .tb', '단련']];
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? '  [' + d + ']' : '')); };
@@ -759,33 +768,59 @@ async function hold(page, sp, opt) {
        먼저 올렸고(`--burst-keep` · `fxbKeepHoles`), 그 축의 자는 `tools/verify816.js` 다.
        한 축을 두 자가 재면 문턱이 갈리는 날 어느 쪽이 옳은지 아무도 못 고른다(286·308 과 같은 꼴).
        20회차는 그 자리를 **재현으로 확인만** 하고(review §20 A/B 표) 자는 816 것을 쓴다. */
-    /* M3 — ⑶ 의 제품 쪽 답: 홀드 내내 «보이는 fx 0 · 홀드 링 0» 인 프레임이 **0장**이다. */
-    const gapRun = async (tab, sel) => {
-      await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, tab);
+    /* 탭을 갈아 끼운다 — [M3] 세 자리와 그 되돌림이 같이 쓴다(두 벌로 안 적는다) */
+    const m3Tab = async k => {
+      await page.evaluate(t => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(t); renderTrain(); }, k);
       await page.waitForTimeout(420);
-      return page.evaluate(s => new Promise(res => {
-        const btn = document.querySelector(s); const L = document.getElementById('fxl');
-        if (!btn || !L) return res(null);
-        btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, isPrimary: true, buttons: 1 }));
-        const t0 = performance.now(); let n = 0, blank = 0;
-        const tick = () => { const t = performance.now() - t0;
-          const vis = Array.from(L.children).filter(k => +(getComputedStyle(k).opacity || 0) > 0.02).length;
-          const hold = document.querySelectorAll('.fx-holding').length;
-          n++; if (!vis && !hold) blank++;
-          if (t < 1100) requestAnimationFrame(tick);
-          else { btn.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })); res({ n, blank }); } };
-        requestAnimationFrame(tick);
-      }), sel);
     };
-    for (const [tab, sel, nm] of [['train', '#trCards [data-tr]', '훈련'],
-                                  ['rune', '#trRunes .rbt.b1', '룬'],
-                                  ['temper', '#trTemper .tr-tp.k0 .tb', '단련']]) {
-      const G = await gapRun(tab, sel);
-      ok(!!G && G.n > 20 && G.blank === 0,
+    /* M3 — ⑶ 의 제품 쪽 답: 홀드 내내 «보이는 fx 0 · 홀드 링 0» 인 프레임이 **0장**이다.
+       ⚑⚑ 899(2026-09-04) — **제품 0줄 · 묻는 것도 그대로**이고 바뀐 것은 셋이다.
+         ① **누르는 법** — 고정 1100ms 에서 «프레임 M3_NEED(20)장이 찰 때까지»(`frameHold` · 785·869 처방).
+            옛 통과 조건 `G.n > 20` 은 사실 «이 기계가 1100ms 에 20프레임을 주는가» 라 러너 속도에
+            붙어 있었다 — `probe899` [1] 실측: ×4 스로틀에서 **8프레임 · 빈 프레임 0 인데 FAIL**,
+            등재문의 실측(훈련 0/17 · 룬 0/15 · 단련 0/16)과 같은 얼굴이다.
+         ② **항을 둘로 갈랐다** — 표본([M3s])과 축([M3]). 한 항에 묶여 있어서 실패 문구가
+            «빈 프레임 0/17» 로 **빨강이 초록으로 읽혔다**(899 등재문의 본체 · 653 «초록으로 읽히는 빨강» 의 거울).
+         ③ **축을 좁혔다(무르게 푼 것이 아니다)** — `#fxl` 은 화면 전체가 같이 쓰는 층이라 돌아가는
+            게임의 토스트·HUD 알갱이가 늘 떠 있고, 그것까지 세면 **발화와 홀드 링을 둘 다 죽여도
+            빈 프레임이 0** 이다(`probe899` [4] 실측 — 그 사본에서 층 전체 기준 blank 0). 660 이
+            «스폰 위치는 강화 버튼뿐» 이라고 못 박았으므로 **호스트 상자 ±160px** 만 이 홀드의 발화로 센다.
+         ⚠ 문턱(20 · 빈 프레임 0)은 **한 칸도 안 건드렸다**(334 규약). */
+    for (const [tab, sel, nm] of M3_SPOTS) {
+      await m3Tab(tab);
+      const G = await frameHold(page, { sel, need: M3_NEED, minMs: HOLD_MS_M3, capMs: M3_CAP });
+      ok(!!G && G.n >= M3_NEED && !G.stalled,
+         'M3s ' + nm + ' 표본이 있다 — 홀드가 프레임 ' + M3_NEED + '장을 실제로 모았다(러너 속도를 축에서 뗀다 · 785·869)',
+         G ? G.note : '—');
+      ok(!!G && G.blank === 0,
          'M3 ★ ' + nm + ' — 홀드 내내 «보이는 fx 0 · 홀드 링 0» 인 프레임 **0장**(⑶ 은 자 결함이었다)',
-         G ? '빈 프레임 ' + G.blank + '/' + G.n : '—');
+         G ? '빈 프레임 ' + G.blank + '/' + G.n + ' · ' + G.ms + 'ms' : '—');
       await page.waitForTimeout(400);
     }
+    /* ★ 되돌림 — 새 [M3] 이 «기다려 주는» 항이라 그 자체가 헛초록 후보다(869 §3 과 같은 이유).
+       홀드 발화(`upFx`)와 홀드 링(`fxHoldMark`)을 **둘 다** 죽인 사본에서 이 축이 아직 짖는가. */
+    console.log('\n[R-M3] 되돌림 — 홀드 발화·홀드 링을 죽이면 [M3] 이 빨개진다');
+    await trResetLv();
+    await page.evaluate(() => {
+      window.__m3upFx = window.upFx; window.upFx = () => false;
+      window.__m3mark = window.fxHoldMark; window.fxHoldMark = () => {};
+      document.querySelectorAll('.fx-holding').forEach(n => n.classList.remove('fx-holding'));
+    });
+    await m3Tab('train');
+    const MD = await frameHold(page, { sel: M3_SPOTS[0][1], need: M3_NEED, minMs: HOLD_MS_M3, capMs: M3_CAP });
+    ok(!!MD && MD.n >= M3_NEED, 'R-M3s 표본이 있다 — 사본에서도 프레임은 모였다(축이 «표본 굶음» 으로 빨개진 게 아니다)',
+       MD ? MD.note : '—');
+    ok(!!MD && MD.blank > 0, 'R-M3 ★ 발화·링을 죽인 사본은 빈 프레임이 생긴다(축이 아직 짖는다)',
+       MD ? '빈 프레임 ' + MD.blank + '/' + MD.n + (MD.firstBlank !== null ? ' · 첫 빈 프레임 ' + MD.firstBlank + 'ms' : '') : '—');
+    await page.evaluate(() => {
+      if (window.__m3upFx) window.upFx = window.__m3upFx;
+      if (window.__m3mark) window.fxHoldMark = window.__m3mark;
+    });
+    await trResetLv();
+    await m3Tab('train');
+    const ME = await frameHold(page, { sel: M3_SPOTS[0][1], need: M3_NEED, minMs: HOLD_MS_M3, capMs: M3_CAP });
+    ok(!!ME && ME.n >= M3_NEED && ME.blank === 0, 'R-M3b 원복하면 같은 자로 다시 초록',
+       ME ? '빈 프레임 ' + ME.blank + '/' + ME.n : '—');
   }
 
   console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
