@@ -111,6 +111,13 @@ const H_MAX = ARG_H ? parseFloat(ARG_H.slice(4)) : 3.0;
 const H_BAND = [0.5, 1.0, 3.0, 6.0];
 const T_STAGE = 40, S_END = RANKS[RANKS.length-1].s, L_MAX = 4000;
 const KNEE = EC.KNEE, BAND = EC.BAND, GATE_N = EC.GATE_N, GATE_HP = EC.GATE_HP;
+/* ⚑ 199 32회차 — 밴드가 사다리가 됐다(초기 BAND · 문턱 SW 위는 BAND2). **이 시뮬의 창은
+   s ≤ S_END(= 마지막 계급 스테이지)** 이라 사다리 문턱보다 아래면 종전과 한 값도 안 달라진다.
+   그래서 여기서는 «사다리를 모델링» 하지 않고 **창이 초기 구간 안에 있는지를 ② 가 묻는다** —
+   문턱이 창 안으로 내려오면 그 항이 빨개져서 «이 시뮬을 사다리까지 넓혀라» 라고 말한다
+   (조용히 옛 폭으로 계속 재는 것이 168-③ 이 말하는 사고다). */
+const BAND2 = EC.BAND2, SW = EC.SW;
+const bandW = EC.eBandW || (() => BAND);
 const eGold = EC.eGold;
 const mobGoldMul = s => s<3 ? G_ZOM : s<5 ? 0.44*G_GOB+0.56*G_ZOM : 0.44*G_GOB+0.16*G_DRK+0.40*G_ZOM;
 const mobHpMul   = s => s<3 ? H_ZOM : s<5 ? 0.44*H_GOB+0.56*H_ZOM : 0.44*H_GOB+0.16*H_DRK+0.40*H_ZOM;
@@ -203,7 +210,9 @@ console.log('');
 console.log('[A] 설치 상수');
 console.log('  적    ' + EC.desc);
 console.log('  표기  ' + (EC.form === '249' ? '249 «177 곡선 × 구간 계단» + 관문 보스' : '⚠ 249 미설치 (' + EC.form + ')'));
-console.log('  주기  ES_BAND ' + BAND + ' · 관문 s%' + GATE_N + '===0 · 관문 보스 체력 ×' + GATE_HP);
+console.log('  주기  ES_BAND ' + BAND + (SW ? ' · **사다리** s≥' + SW + ' 부터 ES_BAND2 ' + BAND2 + ' (문턱 = 관문 번호 ' + EC.BANDG + ')' : '')
+          + ' · 관문 = 구간 첫 칸' + (SW ? '' : '(= s%' + GATE_N + '===0)') + ' · 관문 보스 체력 ×' + GATE_HP);
+if(SW) console.log('  창    이 시뮬의 창 s ≤ ' + S_END + ' 은 사다리 문턱 ' + SW + ' **아래** — 초기 폭 ' + BAND + ' 한 벌로만 잰다(② 가 지킨다)');
 console.log('  페이싱 162 «모든 스테이지 = ' + N_MOB + '킬 + 보스» : ' + (PACE_162 ? '확인(구 isBossStage 폐기 — 주기 10 의 출처)' : '⚠ 구 isBossStage 잔존'));
 console.log('  보스  HP ×' + H_BOS + ' · 제한 ' + BSEC + '초');
 console.log('  DPS   ' + DK.desc + ' → DPS 계수 ' + DPS_K.toFixed(4) + '   (553 — 스킬 항 포함)');
@@ -280,14 +289,19 @@ ck('① 249 표기가 설치돼 있다 (eScale = eSmooth(eBand(s)) × 램프' + 
    크기다(R^(1−RAMP·(B−1)/B) — B 80 → ×2,155 · B 40 → ×47). ×2,155 이빨 하나가 30일의 29.5%
    를 먹어 벽의 «자리» 가 무너졌다(적중 6 → 3/8 · 첫 벽 525 → 754분 · 간격 1.47 → 1.69).
    항은 또 안 지우고 값만 199 확정값을 따라간다(3·5회차 선례). 근거 review §6-1·§6-2. */
-ck('② 주기 ES_BAND = 40 — 199 6회차 확정(벽의 «자리» ① 을 정하는 경계 점프의 크기 · 162 페이싱 불변)',
-   BAND === 40 && PACE_162, BAND + '/' + (PACE_162 ? '162 확인' : '구 규칙 잔존'));
+/* ⚑ 199 32회차 이관 — 사다리(31-5 결6). 항은 또 안 지우고 **뜻을 한 칸 넓힌다**: «주기가 40 인가»
+   는 이제 «**초기** 주기가 40 인가 + 이 시뮬의 창이 그 초기 구간 안에 통째로 드는가» 다.
+   창이 사다리를 물면(문턱 ≤ S_END) 이 시뮬은 두 폭을 같이 재야 하므로 그 순간 빨개진다. */
+ck('② 주기 ES_BAND = 40(초기) — 199 6회차 확정(벽의 «자리» ① 을 정하는 경계 점프의 크기 · 162 페이싱 불변)'
+   + (SW ? ' · 사다리 문턱 s' + SW + ' > 창 s' + S_END + ' 이라 이 창은 초기 폭 한 벌' : ''),
+   BAND === 40 && PACE_162 && (!SW || SW > S_END),
+   BAND + '/' + (PACE_162 ? '162 확인' : '구 규칙 잔존') + (SW ? '/문턱 ' + SW + (SW > S_END ? ' > ' : ' ≤ ') + S_END : ''));
 /* 199 4회차 — «구간 안 평지» 를 «구간 안 = 정확히 램프식» 으로 갈아 끼운다(333 처방 — 항을
    지우지 않고 방향만). 3회차 비평 ③(전원 3점)의 진단이 «평지라 돌파 국면이 13분» 이었고,
    ES_RAMP 가 구간 몫 성장의 RAMP 비율을 구간 안 비탈로 깐다. RAMP = 0 이면 구식과 동일하다. */
 const RAMP = EC.RAMP || 0;
-const rampAt = s => { const a = EC.eBand(s);
-  return EC.eSmooth(a) * Math.pow(EC.eSmooth(a + BAND) / EC.eSmooth(a), RAMP * (s - a) / BAND); };
+const rampAt = s => { const a = EC.eBand(s), w = bandW(a);   /* 32회차 — 폭은 구간에게 묻는다(사다리) */
+  return EC.eSmooth(a) * Math.pow(EC.eSmooth(a + w) / EC.eSmooth(a), RAMP * (s - a) / w); };
 let flat = true, jump = true;
 for(let s=1;s<=S_END;s++) if(Math.abs(EC.eHp(s)/(EC.HB*rampAt(s)) - 1) > 1e-9) flat = false;
 for(let s=BAND;s<=KNEE;s+=BAND) if(!(EC.eHp(s) > EC.eHp(s-1)*1.0001)) jump = false;

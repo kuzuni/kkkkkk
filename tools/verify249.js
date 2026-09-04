@@ -70,27 +70,44 @@ const near = (name, got, want, tol) =>
    먹어 «9일 칸» 을 삼켰다. 40 에서 ① 목표 칸 적중 3 → 6/8 · 첫 벽 754 → 525분 ·
    간격 기하평균 1.69 → 1.47. 항은 여기서도 안 지운다 — 값만 199 확정값을 따라간다
    (3·5회차 선례 · 표본은 아래에서 C.BAND 파생이라 자동으로 따라온다). 근거 review §6-1·§6-2. */
+/* ⚑ 199 32회차 이관(2026-09-04) — **주기가 상수에서 «사다리» 로**(31-5 결6 마감). 31회차의 벽
+   간격 항등식(`t_이탈/t_벽 = 장벽^(1/α)`)이 «한 상수로는 못 맞춘다» 를 구조로 보였다 — α 가
+   초기 6.90 ↔ 말미 2.21 로 3.1배 꺾이므로 사다리가 요구하는 밴드 폭이 46.5 ↔ 14.9~15.5 다.
+   ⇒ 초기 40 그대로 · 문턱(초기 폭의 관문 번호 `ES_BANDG`) 위는 `ES_BAND2` 16.
+   항은 여기서도 안 지우고 **방향만 넓힌다**(M1·BAND·RAMP 와 같은 꼴 · 333 처방) —
+   «ES_BAND 설치값» 은 이제 «**초기** 폭이 199 가 정한 값인가» 이고, 사다리의 두 상수와
+   «관문 = 구간 첫 칸» 이 새 항으로 붙는다. 되돌림 시험은 [J] 가 실제로 굽는다. */
 const C = { K:0.888, KNEE:80, M1:1.020, M2:1.127, A:0.5872, HB:55, DB:6,
-            BAND:40, GATE_N:40, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22, RAMP:0.2 };
+            BAND:40, BAND2:16, BANDG:9, GATE_N:40, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22, RAMP:0.2 };
+C.SW = C.BAND * C.BANDG;                                      /* 사다리 문턱 스테이지 = 360 */
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
-const eband  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
-const wScale = s => { const a = eband(s);
-  return smooth(a) * Math.pow(smooth(a + C.BAND) / smooth(a), C.RAMP * (s - a) / C.BAND); };
+const eband  = s => s < C.SW ? Math.max(1, C.BAND*Math.floor(s/C.BAND))
+                             : C.SW + C.BAND2*Math.floor((s - C.SW)/C.BAND2);
+const ebandW = a => a < C.SW ? C.BAND : C.BAND2;
+const wScale = s => { const a = eband(s), w = ebandW(a);
+  return smooth(a) * Math.pow(smooth(a + w) / smooth(a), C.RAMP * (s - a) / w); };
 const wHp    = s => C.HB * wScale(s);
 const wDmg   = s => C.DB * Math.pow(wScale(s), C.A);
-const wGate  = s => (s % C.GATE_N === 0 ? C.GATE_HP : 1);
+/* 관문 = 구간의 첫 칸. 사다리 아래에서는 «GATE_N 의 배수» 와 같은 집합이다(옛 뜻 보존). */
+const wGate  = s => (s >= C.BAND && eband(s) === s ? C.GATE_HP : 1);
 
 /* 곡선을 볼 스테이지 — 구간 안(같아야 함) · 관문(올라야 함) · 무릎 앞뒤 */
 /* 199 5회차 — 표본을 리터럴이 아니라 C.BAND 에서 파생시킨다(주기를 또 돌려도 자가 따라온다).
    경계 표본은 «관문 직전 칸»(BAND−1) 이고, 관문 표본은 GATE_N 의 배수 넷이다. */
 const B1      = C.BAND - 1;                                   /* 첫 구간의 마지막 칸(경계 검사) */
 const IN_BAND = [11, 13, 17, B1];   /* 전부 첫 구간(1..B1) 안 · B1 은 경계 검사용 */
-const GATES   = [1,2,3,4].map(k => k * C.GATE_N);             /* GATE_N 의 배수 */
+/* 199 32회차 — 관문 표본에 **사다리 위의 관문 둘**을 더한다. 376 은 40 의 배수가 아니므로
+   이 두 칸은 «관문 = 구간 첫 칸» 이라는 새 정의로만 관문이다(옛 정의로는 비관문 = 음성 표본). */
+const GATES   = [1,2,3,4].map(k => k * C.GATE_N).concat([C.SW, C.SW + C.BAND2]);
 /* ⚠ 표본은 **줄이지 않는다** — 파생만 하면 39/40 이 79/80 에 흡수돼 항이 4개 줄었다(103 → 99).
    옛 자리(주기 40 시절의 경계)도 그대로 두고 새 경계를 **더한다**: 옛 주기의 경계는 이제
    «구간 한복판» 이라 램프식이 거기서도 맞는지를 묻는 새 뜻을 얻는다. */
+/* 199 32회차 — 사다리가 생겼으므로 **문턱 앞뒤와 좁은 구간 안**을 표본에 더한다(줄이지 않는다).
+   문턱 직전 칸(SW−1)은 아직 넓은 폭의 램프 위이고, SW·SW+BAND2 는 새 앵커, 그 사이는 좁은 램프다. */
+const LATE_S  = [C.SW - 1, C.SW, C.SW + 1, C.SW + C.BAND2 - 1, C.SW + C.BAND2, C.SW + 2 * C.BAND2];
 const CURVE_S = Array.from(new Set([1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 200,
-                                    B1, C.BAND, C.BAND + 1, C.KNEE - 1, C.KNEE, C.KNEE + 1, 3 * C.BAND]))
+                                    B1, C.BAND, C.BAND + 1, C.KNEE - 1, C.KNEE, C.KNEE + 1, 3 * C.BAND]
+                                   .concat(LATE_S)))
                      .sort((a, b) => a - b);
 
 (async () => {
@@ -104,11 +121,33 @@ const CURVE_S = Array.from(new Set([1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 
   ok(cnt(/const eScale = /g) === 1,        '[A] eScale 정의 1곳',  cnt(/const eScale = /g));
   ok(cnt(/const BOSS_GATE_HP\s*=/g) === 1, '[A] BOSS_GATE_HP 정의 1곳', cnt(/const BOSS_GATE_HP\s*=/g));
   ok(parseFloat((src.match(/const ES_BAND\s*=\s*(\d+)/) || [])[1]) === C.BAND,
-     '[A] ES_BAND 설치값 = ' + C.BAND, (src.match(/const ES_BAND\s*=\s*(\d+)/) || [])[1]);
+     '[A] ES_BAND 설치값 = ' + C.BAND + ' (사다리의 **초기** 폭)', (src.match(/const ES_BAND\s*=\s*(\d+)/) || [])[1]);
+  /* ── 199 32회차 신설 — 사다리 배선 ─────────────────────────── */
+  ok(cnt(/const ES_BAND2\s*=/g) === 1,  '[A] ES_BAND2 정의 1곳',  cnt(/const ES_BAND2\s*=/g));
+  ok(cnt(/const ES_BANDG\s*=/g) === 1,  '[A] ES_BANDG 정의 1곳',  cnt(/const ES_BANDG\s*=/g));
+  ok(parseFloat((src.match(/const ES_BAND2\s*=\s*(\d+)/) || [])[1]) === C.BAND2,
+     '[A] ES_BAND2 설치값 = ' + C.BAND2 + ' (말미 폭 — α 2.21 이 요구하는 14.9~15.5)',
+     (src.match(/const ES_BAND2\s*=\s*(\d+)/) || [])[1]);
+  ok(parseFloat((src.match(/const ES_BANDG\s*=\s*(\d+)/) || [])[1]) === C.BANDG,
+     '[A] ES_BANDG 설치값 = ' + C.BANDG + ' (문턱을 **관문 번호**로 적었다 — 스테이지 리터럴 금지)',
+     (src.match(/const ES_BANDG\s*=\s*(\d+)/) || [])[1]);
+  ok(/const eBandSw\s*=\s*ES_BAND \* ES_BANDG;/.test(src),
+     '[A] 문턱 스테이지 = ES_BAND × ES_BANDG — 손으로 적은 스테이지 상수가 아니다');
+  ok(/const eBandW\s*=\s*a\s*=>\s*a < eBandSw \? ES_BAND : ES_BAND2;/.test(src),
+     '[A] eBandW — 구간의 폭을 앵커에게 묻는다(사다리)');
+  ok(/const eBand\s*=\s*s\s*=>\s*s < eBandSw \? Math\.max\(1, ES_BAND \* Math\.floor\(s \/ ES_BAND\)\)\s*\n\s*: eBandSw \+ ES_BAND2 \* Math\.floor\(\(s - eBandSw\) \/ ES_BAND2\);/.test(src),
+     '[A] eBand — 문턱 아래는 옛 격자 그대로 · 위는 문턱에서 다시 세는 좁은 격자');
+  /* ⚑ 사다리 위에서는 «관문 = 한 숫자의 배수» 가 거짓이다(376 은 40 의 배수가 아니다).
+     구 `BOSS_GATE_N` 은 그 거짓을 조용히 들고 있을 사본이라 32회차가 지웠다 — 되살아나면 빨갛다. */
+  ok(cnt(/const BOSS_GATE_N\s*=/g) === 0,
+     '[A] 구 BOSS_GATE_N(= «관문은 한 숫자의 배수») 사본 0건 — 사다리 위에서 거짓이 되는 자리다',
+     cnt(/const BOSS_GATE_N\s*=/g));
+  ok(/const isGateStage\s*=\s*s => s >= ES_BAND && eBand\(s\) === s;/.test(src),
+     '[A] isGateStage = «구간의 첫 칸» — 관문 판정의 단일 창구');
   ok(parseFloat((src.match(/const BOSS_GATE_HP\s*=\s*([\d.]+)/) || [])[1]) === C.GATE_HP,
      '[A] BOSS_GATE_HP 설치값 = ' + C.GATE_HP, (src.match(/const BOSS_GATE_HP\s*=\s*([\d.]+)/) || [])[1]);
-  ok(/const eScale = s => \{ const a = eBand\(s\);\s*\n\s*return eSmooth\(a\) \* Math\.pow\(eSmooth\(a \+ ES_BAND\) \/ eSmooth\(a\), ES_RAMP \* \(s - a\) \/ ES_BAND\); \};/.test(src),
-     '[A] eScale = eSmooth(eBand(s)) × 램프(ES_RAMP) — 199 4회차 표기');
+  ok(/const eScale = s => \{ const a = eBand\(s\), w = eBandW\(a\);\s*\n\s*return eSmooth\(a\) \* Math\.pow\(eSmooth\(a \+ w\) \/ eSmooth\(a\), ES_RAMP \* \(s - a\) \/ w\); \};/.test(src),
+     '[A] eScale = eSmooth(eBand(s)) × 램프(ES_RAMP) — 폭은 그 구간의 것(199 32회차 사다리 표기)');
   ok(cnt(/const ES_RAMP\s*=/g) === 1,      '[A] ES_RAMP 정의 1곳', cnt(/const ES_RAMP\s*=/g));
   ok(parseFloat((src.match(/const ES_RAMP\s*=\s*([\d.]+)/) || [])[1]) === C.RAMP,
      '[A] ES_RAMP 설치값 = ' + C.RAMP + ' (199 4회차 스윕 확정)', (src.match(/const ES_RAMP\s*=\s*([\d.]+)/) || [])[1]);
@@ -139,22 +178,30 @@ const CURVE_S = Array.from(new Set([1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 
   });
   /* 199 4회차 — «구간 안 동일» 을 «구간 안 = 정확히 램프 비율» 로 갈아 끼운다(333 처방).
      구간 안 이웃 칸의 비가 R^(RAMP/BAND) 와 1e-9 로 같아야 한다 — 평지(비 1)도, 임의 기울기도 빨갛다. */
-  const bandFlat = await page.evaluate(([B, RAMP]) => {
-    let ramp = true, up = true, drop = false;
-    for(let s=1;s<400;s++){
-      const a = Math.max(1, B*Math.floor(s/B)), a2 = Math.max(1, B*Math.floor((s+1)/B));
+  /* 199 32회차 — 사다리를 게이트 쪽에서 **독립으로 다시 계산**해 스윕한다(항등식 회피 · 212-①).
+     범위도 문턱 위 두 구간까지 넓혔다 — 안 넓히면 좁은 폭은 한 칸도 안 밟힌다. */
+  const SWEEP_END = C.SW + 3 * C.BAND2;
+  const bandFlat = await page.evaluate(([B, B2, SW, RAMP, END]) => {
+    const bandOf = s => s < SW ? Math.max(1, B*Math.floor(s/B)) : SW + B2*Math.floor((s - SW)/B2);
+    const wOf    = a => a < SW ? B : B2;
+    let ramp = true, up = true, drop = false, narrow = 0;
+    for(let s=1;s<END;s++){
+      const a = bandOf(s), a2 = bandOf(s+1), w = wOf(a);
+      if(w === B2) narrow++;                                             /* 좁은 폭 구간을 실제로 밟았는가 */
       if(a === a2){
-        const want = Math.pow(eSmooth(a + B) / eSmooth(a), RAMP / B);
+        const want = Math.pow(eSmooth(a + w) / eSmooth(a), RAMP / w);
         if(Math.abs(eHp(s+1)/eHp(s) - want) > 1e-9) ramp = false;        /* 같은 구간이면 정확히 램프 비율 */
       }
       if(a !== a2 && !(eHp(s+1) > eHp(s)*1.0001)) up = false;            /* 구간이 바뀌면 뛰어야 한다 */
       if(eHp(s+1) < eHp(s) - 1e-9 || eDmg(s+1) < eDmg(s) - 1e-9) drop = true;
     }
-    return { ramp, up, drop };
-  }, [C.BAND, C.RAMP]);
-  ok(bandFlat.ramp, '[B] 구간 안 이웃 칸 비 = R^(RAMP/BAND) — 정확히 램프 비율로만 오른다 (s 1..400)');
-  ok(bandFlat.up,   '[B] 구간이 바뀌는 칸(관문)에서 반드시 뛴다 (s 1..400)');
+    return { ramp, up, drop, narrow };
+  }, [C.BAND, C.BAND2, C.SW, C.RAMP, SWEEP_END]);
+  ok(bandFlat.ramp, '[B] 구간 안 이웃 칸 비 = R^(RAMP/폭) — 정확히 램프 비율로만 오른다 (s 1..' + SWEEP_END + ' · 두 폭 다)');
+  ok(bandFlat.up,   '[B] 구간이 바뀌는 칸(관문)에서 반드시 뛴다 (s 1..' + SWEEP_END + ')');
   ok(!bandFlat.drop,'[B] 어느 스테이지에서도 적이 약해지지 않는다');
+  ok(bandFlat.narrow >= 2 * C.BAND2,
+     '[B] 스윕이 좁은 폭 구간을 실제로 밟았다 — 위 세 항이 공허참이 아니다', bandFlat.narrow + '칸');
   near('[B] 스테이지 1 은 여전히 55', live[0].hp, 55, 1e-12);
   near('[B] 스테이지 1 은 여전히 6',  live[0].dmg, 6, 1e-12);
 
@@ -274,8 +321,12 @@ const CURVE_S = Array.from(new Set([1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 
   ok(shown.txt.indexOf('10스테이지마다 보스') < 0, '[G] 구 문구(«10스테이지마다 보스»)가 화면에 없다');
 
   /* ── [H] 음성 — ES_BAND=1 사본(=249 이전)에서는 계단이 사라진다 ─── */
-  const negSrc = src.replace(/const ES_BAND = \d+;/, 'const ES_BAND = 1;');   /* 199 3회차 — 설치값 리터럴에 안 묶는다 */
-  ok(negSrc !== src, '[H] 음성 사본에 «구간 계단 없음»(ES_BAND=1)을 실제로 심었다');
+  /* 199 32회차 — 사다리가 생긴 뒤로는 **한 상수만 1 로 내리면 계단이 안 사라진다**(문턱이
+     ES_BAND×ES_BANDG 라 같이 내려가고, 그 위는 여전히 폭 16 계단이다). 음성 사본은 두 폭을
+     같이 1 로 내려야 «249 이전» 이 된다 — 안 그러면 [H] 가 조용히 공허참이 된다. */
+  const negSrc = src.replace(/const ES_BAND  = \d+;/, 'const ES_BAND  = 1;')
+                    .replace(/const ES_BAND2 = \d+;/, 'const ES_BAND2 = 1;');
+  ok(negSrc !== src, '[H] 음성 사본에 «구간 계단 없음»(ES_BAND=ES_BAND2=1)을 실제로 심었다');
   fs.writeFileSync(NEG, negSrc);
   const np = await ctx.newPage();
   await np.goto('file://' + NEG.replace(/\\/g, '/'));
@@ -307,6 +358,54 @@ const CURVE_S = Array.from(new Set([1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 
   near('[H] N4 — 램프를 빼도 앵커(관문 s' + C.GATE_N + ')는 같은 값이다 : 램프가 앵커를 안 움직였다는 증명',
      neg2.anchor, wHp(C.GATE_N), 1e-12);
   await np2.close();
+  try{ fs.unlinkSync(NEG); }catch(e){}
+
+  /* ── [J] 되돌림 시험 — 199 32회차 사다리(31-5 결6) ────────────────
+     사양이 «되돌림은 ES_BAND2 를 40 으로» 라고 적었으므로 그것을 **실제로 구워서** 확인한다.
+     ① 좁은 폭을 초기 폭으로 되돌리면 사다리가 사라지고 문턱 위 값이 **옛 상수 40 모형과 정확히
+     같아진다**(= r31-base 표의 곡선) · ② 설치본은 그 값과 다르다(= 사다리가 실재한다) ·
+     ③ 문턱 **아래**는 설치본과 되돌림본이 한 비트도 안 다르다(= 사다리가 초기를 안 건드렸다).
+     ①③ 이 같이 서야 «바꾼 것은 말미 한 자리뿐» 이라는 이 회차의 주장이 증명된다. */
+  const oldBand = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
+  const oldHp   = s => { const a = oldBand(s);
+    return C.HB * smooth(a) * Math.pow(smooth(a + C.BAND) / smooth(a), C.RAMP * (s - a) / C.BAND); };
+  const revSrc = src.replace(/const ES_BAND2 = \d+;/, 'const ES_BAND2 = ' + C.BAND + ';');
+  ok(revSrc !== src, '[J] 되돌림 사본에 «사다리 없음»(ES_BAND2 = ES_BAND)을 실제로 심었다');
+  fs.writeFileSync(NEG, revSrc);
+  const rp = await ctx.newPage();
+  await rp.goto('file://' + NEG.replace(/\\/g, '/'));
+  await rp.waitForFunction(() => typeof eHp === 'function');
+  await rp.waitForTimeout(600);
+  /* ⚠ 표본에서 **두 격자의 공통 앵커**는 빼야 한다 — s360(=9×40) · s440(=11×40 = 360+5×16)은
+     사다리 앞뒤로 둘 다 구간 첫 칸이라 값이 원래 같다. 그 칸을 R2 에 넣으면 «사다리가 없다» 로
+     읽혀 자가 자기 주장을 반증한다(공통 앵커 자체는 R3 옆에서 «앵커는 안 움직였다» 로 쓴다). */
+  const REV_S = [C.SW + 1, C.SW + C.BAND2 - 1, C.SW + C.BAND2, C.SW + 2 * C.BAND2, 10 * C.BAND, 10 * C.BAND + 20];
+  const GATE_I = 2;                                   /* REV_S[2] = 376 — 새 정의로만 관문인 칸 */
+  const EARLY_S = [1, 11, 39, 40, 41, 80, 200, C.SW - 1, C.SW];
+  const rev = await rp.evaluate(ss => ({
+    late:  ss.late.map(s => eHp(s)), early: ss.early.map(s => eHp(s)),
+    gateNew: isGateStage(ss.gate)
+  }), { late: REV_S, early: EARLY_S, gate: REV_S[GATE_I] });
+  const liveLate = await page.evaluate(ss => ss.map(s => eHp(s)), REV_S);
+  const liveEarly = await page.evaluate(ss => ss.map(s => eHp(s)), EARLY_S);
+  REV_S.forEach((s, i) => near('[J] R1 — 되돌림본 s' + s + ' = 옛 «상수 ' + C.BAND + '» 모형', rev.late[i], oldHp(s), 1e-12));
+  ok(REV_S.every((s, i) => Math.abs(liveLate[i] / rev.late[i] - 1) > 1e-6),
+     '[J] R2 — 설치본은 문턱 위 **모든** 표본에서 되돌림본과 다르다 (사다리가 실재한다)',
+     REV_S.map((s, i) => (liveLate[i] / rev.late[i]).toFixed(3)).join(' '));
+  /* ⚠ R2 만으로는 무르다 — **구간 «안» 의 칸당 기울기는 폭과 거의 무관**하다(램프가 R^(RAMP/w)
+     인데 R ≈ M2^w 라 w 가 약분된다: s361·s375 의 비가 1.000 인 것이 그 실측이다).
+     사다리가 실제로 옮기는 것은 **경계 점프의 자리**이므로, 격자가 갈리는 칸에서 큰 차가
+     나는지를 따로 묻는다 — 안 물으면 «폭을 바꿔도 곡선은 그대로» 인 사본도 R2 를 통과한다. */
+  const bigGap = REV_S.filter((s, i) => Math.abs(Math.log(liveLate[i] / rev.late[i])) > Math.log(1.5));
+  ok(bigGap.length >= 3,
+     '[J] R2b — 그중 ≥3칸은 ×1.5 이상 갈린다 (경계 점프의 «자리» 가 실제로 옮겨졌다는 증거)',
+     bigGap.map(s => 's' + s).join('·') + ' — ' + REV_S.map((s, i) => (liveLate[i] / rev.late[i]).toFixed(3)).join(' '));
+  ok(EARLY_S.every((s, i) => Math.abs(liveEarly[i] - rev.early[i]) <= Math.abs(rev.early[i]) * 1e-12),
+     '[J] R3 — 문턱 **아래와 문턱 자신**(s' + EARLY_S.join('·s') + ')은 설치본 = 되돌림본'
+     + ' — 사다리가 초기를 안 건드렸고 문턱 앵커도 안 움직였다');
+  ok(rev.gateNew === false,
+     '[J] R4 — 되돌림본에서 s' + REV_S[GATE_I] + ' 는 관문이 **아니다** (설치본에서는 관문 — 관문 격자가 실제로 촘촘해졌다)');
+  await rp.close();
   try{ fs.unlinkSync(NEG); }catch(e){}
 
   ok(errs.length === 0, '[I] 콘솔·런타임 에러 0', errs.length + (errs.length ? ' : ' + errs.slice(0,3).join(' | ') : ''));

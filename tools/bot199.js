@@ -1226,8 +1226,25 @@ const isWallFrac = w => (w.lenCal != null ? w.lenCal : w.len) >= WALL_FRAC * Mat
    다음 회차가 검산할 수 있어야 한다(4회차 규약 그대로). */
 /* 9회차 — WALLBAND(비교 전용 강제 주기)가 있으면 그것이 이긴다. 없으면 제품 밴드.
    10회차 — GEO(기하 관문 격자 재분류)가 있으면 그것이 또 이긴다(리플레이 전용). */
-const isWall = (w, band) => GEO ? geoSetOf(band).has(w.stage)
-  : w.stage % Math.max(1, WALLBAND || band || 40) === 0;
+/* ⚑ 199 32회차 — 밴드가 **사다리**가 되면서(초기 40 · s360 위 16) «관문 = 한 숫자의 배수» 가
+   깨졌다(376 은 40 의 배수가 아니다). 그래서 실행마다 **제품에게 관문 격자를 통째로 묻고**
+   (`r.gateSet` — `isGateStage` 로 굽는다) 그 집합으로 가른다. 격자를 못 받은 옛 표(r31 이전
+   JSON 리플레이 포함)는 종전 «배수» 로 떨어지므로 옛 표를 다시 그려도 수가 안 바뀐다.
+   호출부는 `r.band` 대신 **실행 r 을 통째로** 넘긴다 — 숫자를 넘기던 옛 호출도 그대로 받는다. */
+const gateCache = new WeakMap();
+const gateSetOf = (r) => {
+  if(!r || !Array.isArray(r.gateSet)) return null;
+  if(!gateCache.has(r)) gateCache.set(r, new Set(r.gateSet));
+  return gateCache.get(r);
+};
+const isWall = (w, r) => {
+  const band  = (r && typeof r === 'object') ? r.band : r;
+  if(GEO) return geoSetOf(band).has(w.stage);
+  if(WALLBAND) return w.stage % Math.max(1, WALLBAND) === 0;
+  const gates = gateSetOf(r);
+  if(gates) return gates.has(w.stage);
+  return w.stage % Math.max(1, band || 40) === 0;
+};
 
 async function runOne(page, pol, seed, days, onRow) {
   const P = POLICIES[pol];
@@ -1331,6 +1348,15 @@ async function runOne(page, pol, seed, days, onRow) {
     /* 199 5회차 — 분류·순 이동을 재는 데 필요한 두 값. 밴드 주기는 상수를 손으로 적지 않고
        **제품에게 묻는다**(ES_BAND 를 199 가 다시 돌리면 자가 조용히 옛 주기로 센다). */
     out.band = (typeof ES_BAND === 'number' ? ES_BAND : 40);
+    /* ⚑ 199 32회차 — 주기가 «사다리» 라 **한 숫자로는 관문을 못 센다**(376 은 40 의 배수가
+       아니다). 그래서 주기 대신 **관문 격자 자체**를 제품의 `isGateStage` 로 구워 넘긴다 —
+       분류가 제품의 관문 정의를 그대로 따라가고, 다음 회차가 폭을 또 돌려도 자가 안 낡는다.
+       범위는 이 실행이 실제로 밟은 끝 + 여유 한 구간이다. */
+    out.gateSet = (typeof isGateStage === 'function')
+      ? (() => { const g = [], top = Math.max(1, S.stage | 0, S.best | 0) + 2 * out.band;
+                 for(let s = 1; s <= top; s++) if(isGateStage(s)) g.push(s);
+                 return g; })()
+      : null;
     out.minutes = minute;
     out.amin = amin;               /* 7회차 — ③ 의 분모(활성 총 분 = 로그인 수 × activeMin) */
     out.diaIn = B.diaIn; out.diaOut = B.diaOut; out.viol = B.viol.slice(); out.warn = B.warn.slice();
@@ -1561,7 +1587,11 @@ function writeReport(rep) {
          상한이 창의 «어디쯤» 인가가 아니라 **어느 경계에서 넘는가** 가 답이다.
          마지막 유효 앵커가 경계 직전 칸이면 좌표는 창이 아니라 한 칸이다. */
       const BANDA = (allRuns[0] && allRuns[0].band) || 40;
-      if (firstBad.s % BANDA === 0 && maxAnchor === firstBad.s - 1) {
+      /* 199 32회차 — 사다리 위에서는 «BANDA 의 배수» 가 경계가 아니다(376·632 …).
+         격자를 받았으면 그것으로 묻는다(못 받았으면 옛 배수 — 옛 표 리플레이 보존). */
+      const gsA = (allRuns[0] && Array.isArray(allRuns[0].gateSet)) ? new Set(allRuns[0].gateSet) : null;
+      const isBoundary = (s) => gsA ? gsA.has(s) : (s % BANDA === 0);
+      if (isBoundary(firstBad.s) && maxAnchor === firstBad.s - 1) {
         /* ⚑ 12회차 비평 FF(#2) 정정 — 목표 비(`target`)에는 `kGuess` 되먹임이 섞여 있어
            «제품의 계단» 이 아니다. 계단은 제품항만으로 찍는다(관문 배수 포함).
            `target = eHp·boss.hp·bossGateHp / (BOSS_SEC·0.5) / kGuess` 이므로 제품항 비는
@@ -1658,10 +1688,10 @@ function writeReport(rep) {
   const wA = (w) => (w.amin != null ? w.amin : w.min);
   const actTot = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
   const faceNetOf = (r) => {
-    const w = r.walls.filter(x => isWall(x, r.band) && x.trunc !== true); const f = [];
+    const w = r.walls.filter(x => isWall(x, r) && x.trunc !== true); const f = [];
     for (let i = 0; i + 1 < w.length; i++) {
       const a = wA(w[i]) + w[i].len, b = wA(w[i + 1]);
-      const pause = r.walls.filter(x => !isWall(x, r.band) && wA(x) >= a && wA(x) < b)
+      const pause = r.walls.filter(x => !isWall(x, r) && wA(x) >= a && wA(x) < b)
                            .reduce((s, x) => s + Math.min(x.len, b - wA(x)), 0);
       f.push(Math.max(0, b - a - pause));
     }
@@ -1921,16 +1951,16 @@ function writeReport(rep) {
        구 판정(WALL_FRAC)은 대조 칸으로만 남는다. */
     const BAND = (runs[0] && runs[0].band) || 40;
     /* 13회차 — 개수도 잘린 정체를 뺀다(위 `wallsOf` 와 같은 규약). 잘린 개수는 따로 찍는다. */
-    const wallsAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r.band) && w.trunc !== true).length);
-    const truncAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r.band) && w.trunc === true).length);
-    const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w, r.band)).length);
+    const wallsAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r) && w.trunc !== true).length);
+    const truncAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r) && w.trunc === true).length);
+    const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w, r)).length);
     /* ⚑ 7회차 — 상승면·실오르막도 **활성 자**로 잰다(정정6). 벽시계로 재면 상승면이 로그아웃
        시간을 통째로 삼켜 ③ 의 분자가 부풀고, 분모(달력 총 분)와 함께 두 쪽이 다 오염된다.
        `w.amin` = 정체 시작의 활성 분 · `w.len` = 정체의 활성 길이 ⇒ 같은 자 안에서 뺀다.
        (17회차 정정3 — `wA`·`actTot` 는 [G] 와 공유하는 함수 스코프 것을 쓴다.) */
     const ACT = med(runs.map(actTot)) || (rep.days * 1440);
     const faceOf = (r) => {
-      const w = r.walls.filter(x => isWall(x, r.band) && x.trunc !== true); const f = [];
+      const w = r.walls.filter(x => isWall(x, r) && x.trunc !== true); const f = [];
       for (let i = 0; i + 1 < w.length; i++) f.push(wA(w[i + 1]) - (wA(w[i]) + w[i].len));
       return f;
     };
@@ -1950,7 +1980,13 @@ function writeReport(rep) {
     const netAll  = runs.map(netOf);
     const faceNet = runs.map(r => faceNetOf(r));
     const faceNetMed = med(faceNet.map(f => f.length ? f.reduce((a, b) => a + b, 0) / f.length : 0));
-    L.push(`### [D] 벽 — ${P} (같은 스테이지 **활성** ${WALL_MIN}분 이상 정체 · **벽 = 관문 스테이지(${BAND}의 배수) 정체 · 멈춤 = 밴드 안 정체**)`);
+    /* 199 32회차 — 사다리라 «배수» 한 마디로는 관문을 못 적는다. 격자를 받았으면 그 성질을 적는다. */
+    const GS0 = runs[0] && Array.isArray(runs[0].gateSet) ? runs[0].gateSet : null;
+    const gateDesc = GS0
+      ? `제품 \`isGateStage\` 격자 — 도달권 관문 ${GS0.filter(s => s <= Math.max(...runs.map(r => r.final && r.final.stage || 0))).length}칸`
+        + `(초기 폭 ${BAND}${GS0.some((s, i) => i > 1 && s - GS0[i-1] !== BAND) ? ' · 사다리 위는 좁은 폭' : ''})`
+      : `${BAND}의 배수`;
+    L.push(`### [D] 벽 — ${P} (같은 스테이지 **활성** ${WALL_MIN}분 이상 정체 · **벽 = 관문 스테이지(${gateDesc}) 정체 · 멈춤 = 밴드 안 정체**)`);
     L.push('');
     /* ⚑ 5회차 비평 3인 일치 — «적중 n/8 · 첫 벽 · 간격 기하평균» 은 ① 의 채점 축인데 표에 없어서
        회차마다 손으로 세다가 빠졌다(5회차 §5-5 가 셋 다 누락). 자가 매번 찍는다.
@@ -1981,7 +2017,7 @@ function writeReport(rep) {
        «관측이 끝났다» 는 뜻이라, 적중·개수·간격에 넣으면 창 길이가 점수를 만든다.
        [D] 표에는 남긴다(§12-1 실패 프로브와 같은 규약 — 재현 경로를 지우지 않는다). */
     const isTrunc = (w) => w.trunc === true;
-    const wallsOf = (r) => r.walls.filter(w => isWall(w, r.band) && !isTrunc(w));
+    const wallsOf = (r) => r.walls.filter(w => isWall(w, r) && !isTrunc(w));
     /* ⚑ 199 8회차 — ① 의 자를 **네 곳** 고친다(7회차 비평 S·U 독립 일치 · 정정7·9·10).
        7회차까지의 ① 은 «점수를 못 매기는 자» 였고, 5·6·7회차가 세 번 연속 그 위에서 계수를 돌렸다.
          ⓐ **분모가 정책 공통 6칸이었다.** 대충은 첫 로그인 1,260분 · 세션 30활성분이라
@@ -2187,11 +2223,11 @@ function writeReport(rep) {
     /* ⚑ 5회차 비평 N — «밴드 안 멈춤» 이 몇 시간짜리인지 안 찍으면 «숨» 이라는 이름이 판정을 흐린다
        (r5 부지런 15개가 전부 ≥184분 · 대충은 ≈23.5시간짜리가 다섯). 길이를 같이 적는다. */
     {
-      const plen = runs.flatMap(r => r.walls.filter(w => !isWall(w, r.band)).map(w => w.len));
+      const plen = runs.flatMap(r => r.walls.filter(w => !isWall(w, r)).map(w => w.len));
       if (plen.length) L.push('')
         , L.push(`멈춤 길이 — p50 ${med(plen)}분 · p90 ${q(plen, 0.9)}분 · 최대 ${Math.max.apply(null, plen)}분`
-          + ` (합 p50 = ${med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0)))}분`
-          + ` = 활성 시간의 ${(100 * med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0))) / ACT).toFixed(1)}%)`);
+          + ` (합 p50 = ${med(runs.map(r => r.walls.filter(w => !isWall(w, r)).reduce((a, w) => a + w.len, 0)))}분`
+          + ` = 활성 시간의 ${(100 * med(runs.map(r => r.walls.filter(w => !isWall(w, r)).reduce((a, w) => a + w.len, 0))) / ACT).toFixed(1)}%)`);
     }
     L.push('');
     /* ⚑ 8회차 — «① 좌표»(달력 중앙)와 «배정된 칸» 을 같이 찍는다. 앞 회차들이 이 표를 눈으로
@@ -2202,7 +2238,7 @@ function writeReport(rep) {
          배정 칸은 안 뺐다.** 같은 회차에 «판정을 늘리면 읽는 쪽도 갈라라» 를 적어 놓고
          읽는 쪽을 하나 더 빠뜨린 자리다(대충에서 표 2 ↔ 헤드라인 1 로 실제로 갈렸다).
          `wallsOf` 와 **같은 필터**를 쓴다 — 두 벌로 적지 않는다. */
-      const ws0 = r0 ? r0.walls.filter(w => isWall(w, r0.band) && w.trunc !== true) : [];
+      const ws0 = r0 ? r0.walls.filter(w => isWall(w, r0) && w.trunc !== true) : [];
       const seat = new Map();                       /* 벽 → 배정된 칸 (1:1) */
       if (r0) {
         const cand = [];
@@ -2222,7 +2258,7 @@ function writeReport(rep) {
       L.push('|---|---|---|---|---|---|---|---|---|---|');
       (r0 ? r0.walls : []).slice(0, 40).forEach((w, i) => {
         const h = Math.floor(w.min / 60), m = w.min % 60;
-        const isW = isWall(w, r0.band);
+        const isW = isWall(w, r0);
         if (isW) wi++;
         const st = isW ? (seat.has(wi) ? seat.get(wi) + '분' : '**잉여**') : '—';
         L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${Math.round(wallT(w))} | ${w.len} | ${w.lenCal == null ? '—' : w.lenCal} | ${h}시간 ${m}분 |`
