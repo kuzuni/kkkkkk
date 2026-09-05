@@ -125,11 +125,28 @@ async function open(ctx, opt) {
   const ratio = await inkRatio(ctx);
   const ink = (r) => r.bw * ((ratio[r.src] || { w: 1 }).w);
 
-  const REFG = 65.3, REFD = 59.06;
+  /* ⚑ 671 이관(911, 2026-09-05) — 젬 상자 **59.06 → 65.3**.
+     671(완료 2026-09-01, sess-1518-20796)이 «같은 `.pcb` 안에서 코인 65.3 ↔ 젬 59.06 = 비 1.106 이
+     411·356 의 «덩치 최대÷최소 ≤ 1.05» 를 넘는다» 를 닫으면서 젬 상자를 코인과 **한 값**으로 모았다
+     (`index.html` 5099·5106). 이 자만 옛 값에 굳어 §[4]·§[5] 가 빨갰던 것이고 **제품은 내내 옳았다** —
+     59.06 을 되살리는 것은 671 을 되돌리는 것이다(`verify671` [R-2] 가 그 사본을 빨갛게 잡는다).
+     ⚠ **두 이름을 한 상수로 접지 마라** — §[5] 는 «골드와 다이아가 **각각** 제 ref 에 있는가» 를 묻는다.
+     한 이름으로 접으면 «둘이 같기만 하면 초록» 이 되어 671 이전으로 다시 갈라져도 안 짖는다.
+     그 대신 «671 이 세운 코인 = 젬» 은 §[5] 의 [5-b] 가 **따로** 묻는다(333 «누른 항을 묻는 항»). */
+  const REFG = 65.3, REFD = 65.3;
 
   /* ── [1] 재현 — 현행 무력화만으로 N회 재면 흔들린다 ─────────────────── */
   blk('[1] 등재문 재현 — 현행 무력화(`.pcb-p.fx-punch`)만으로 6회 측정');
   const page = await open(ctx, {});
+  /* ⚑ 911 — 펄스를 **두 알약에 다 걸고** 잰다. 방치 수입이 골드만 올리므로 자연 표본에서는
+     골드만 튀는데, 옛 자는 그 자리를 «다이아도 어긋난다»(= 낡은 REFD) 로 메우고 있었다.
+     UI 발 진입점(`fxPunch(el, soft=true)` → `fxPzHit`)을 제품 그대로 불러 **같은 축이 두 알약을
+     같이 덮는지**를 실제로 묻는다 — 표본이 «어쩌다 펄스에 걸렸는가» 에 의존하지 않게 하는 값도 겸한다. */
+  await page.evaluate(`(function(){
+    ['#dunw .pcb-g','#dunw .pcb-d'].forEach(function(q){
+      var el = document.querySelector(q); if(el) fxPunch(el, true, true);
+    });
+  })()`);
   const on = [];
   for (let i = 0; i < 6; i++) {
     const s = await page.evaluate(SHOT + '()');
@@ -144,7 +161,7 @@ async function open(ctx, opt) {
   const offRef = (v, ref) => Math.abs(v / ref - 1) > 0.005;
   const badG = on.filter((s) => offRef(s.g, REFG)).length;
   const badD = on.filter((s) => offRef(s.d, REFD)).length;
-  ok(badG + badD > 0, '§5 의 두 값이 실제로 ref 를 벗어난다 (자 부패가 재현된다)',
+  ok(badG > 0 && badD > 0, '§5 의 두 값이 실제로 ref 를 벗어난다 (자 부패가 재현된다)',
     '골드 ' + badG + '/6 · 다이아 ' + badD + '/6 벗어남');
   const spanG = Math.max(...on.map((s) => s.g)) - Math.min(...on.map((s) => s.g));
   const spanD = Math.max(...on.map((s) => s.d)) - Math.min(...on.map((s) => s.d));
@@ -174,7 +191,9 @@ async function open(ctx, opt) {
   ok(on.some((s) => offRef(s.g, REFG)) && on.some((s) => offRef(s.d, REFD)),
     '골드도 다이아도 같은 원인으로 어긋난다 (골드만 «결정적 드리프트» 가 아니다)',
     '골드 ' + badG + '/6 · 다이아 ' + badD + '/6');
-  ok(both.length > 0 || true, '두 알약이 같은 `fxPz` 표에 같이 올라간다', 'a 쌍 표본 ' + both.length + '건');
+  /* ⚑ 911 — 옛 자는 여기가 `both.length > 0 || true` 라 **무엇을 재도 초록**이었다(헛초록).
+     `|| true` 를 걷어내 «두 알약이 같은 표에 같이 올라간다» 를 실제로 묻게 한다. */
+  ok(both.length > 0, '두 알약이 같은 `fxPz` 표에 같이 올라간다', 'a 쌍 표본 ' + both.length + '건');
 
   /* ── [4] 처방 — 애니메이터를 끄면 값이 정확해진다 ───────────────────── */
   blk('[4] 처방 — 만드는 쪽(`fxPunch`/`fxPzHit`)을 끄고 6회 측정');
@@ -189,16 +208,17 @@ async function open(ctx, opt) {
       + '   인라인 g=' + (g.inlineTr || '없음') + ' d=' + (d.inlineTr || '없음'));
     await page.waitForTimeout(220);
   }
-  ok(off.every((s) => !offRef(s.g, REFG)), '6회 전부 골드 = 65.3 (±0.5%)',
+  /* ⚑ 911 — 기대값을 문장에 손으로 적지 않는다(그 사본이 늙어서 이 자가 빨갰다). 상수에서 찍는다. */
+  ok(off.every((s) => !offRef(s.g, REFG)), '6회 전부 골드 = ' + REFG + ' (±0.5%)',
     off.map((s) => r2(s.g)).join(' · '));
-  ok(off.every((s) => !offRef(s.d, REFD)), '6회 전부 다이아 = 59.06 (±0.5%)',
+  ok(off.every((s) => !offRef(s.d, REFD)), '6회 전부 다이아 = ' + REFD + ' (±0.5%)',
     off.map((s) => r2(s.d)).join(' · '));
   ok(off.every((s) => !s.trG && !s.trD), '인라인 transform 이 남지 않는다 (쉬는 상태와 같은 값)',
     '남은 표본 ' + off.filter((s) => s.trG || s.trD).length + '건');
   await page.close();
 
   /* ── [5] 제품 값이 원래 그 값임을 10 상점으로 검산 ─────────────────── */
-  blk('[5] 검산 — 같은 부품을 10 상점에서 재면 처음부터 65.3 / 59.06 이다');
+  blk('[5] 검산 — 같은 부품을 10 상점에서 재면 처음부터 ' + REFG + ' / ' + REFD + ' 이다');
   const p2 = await open(ctx, { stop: true });
   await p2.evaluate(() => { openShopPage(); return 1; });
   await p2.waitForTimeout(500);
@@ -219,8 +239,17 @@ async function open(ctx, opt) {
     return out;
   })()`);
   ok(!offRef(ink(shop.g), REFG) && !offRef(ink(shop.d), REFD),
-    '10 상점 `.pcb` = 65.3 / 59.06 ⇒ 제품(`index.html` 4519~4520)은 안 바뀌었다',
+    '[5-a] 10 상점 `.pcb` = ' + REFG + ' / ' + REFD + ' ⇒ 제품(`index.html` 5099·5106)은 안 바뀌었다',
     r2(ink(shop.g)) + ' / ' + r2(ink(shop.d)));
+  /* ⚑ 911 신설 — 333 «누른 항을 묻는 항». [5-a] 는 두 알약을 **각각** 제 ref 에 대는 항이라,
+     REFD 를 옮긴 이번 수리 자체(«671 이 코인과 젬을 한 값으로 모았다»)는 아무도 안 묻는다.
+     둘이 다시 갈라지면 [5-a] 는 «REFD 도 같이 갈아 끼우면» 초록으로 되돌아갈 수 있으므로,
+     411·356 눈금(덩치 최대÷최소 ≤ 1.05)을 **찍힌 값으로** 여기서 따로 못박는다. */
+  const bg = ink(shop.g), bd = ink(shop.d);
+  const rat = Math.max(bg, bd) / Math.min(bg, bd);
+  ok(rat <= 1.05,
+    '[5-b] 671 — 같은 `.pcb` 안에서 코인과 젬이 **한 값**이다 (411·356 눈금 ≤ 1.05)',
+    r2(bg) + ' ÷ ' + r2(bd) + ' = ' + r4(rat) + ' (671 수리 전 65.3 ÷ 59.06 = 1.106)');
   await p2.close();
 
   /* ── [6] 무르게 안 풀었음 — 정적 회귀는 껐어도 그대로 보인다 ───────── */
@@ -229,7 +258,7 @@ async function open(ctx, opt) {
   const s3 = await p3.evaluate(SHOT + '()');
   const g3 = ink(s3.rows.find((r) => r.slot === 'pcbG')), d3 = ink(s3.rows.find((r) => r.slot === 'pcbD'));
   ok(offRef(g3, REFG) && offRef(d3, REFD),
-    '정적 `scale(1.05)` 사본에서 골드·다이아가 둘 다 ref 를 벗어난다',
+    '[6] 정적 `scale(1.05)` 사본에서 골드·다이아가 둘 다 ref 를 벗어난다',
     r2(g3) + ' / ' + r2(d3) + ' (기대 ' + REFG + ' / ' + REFD + ')');
   await p3.close();
 
