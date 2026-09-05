@@ -254,6 +254,97 @@ def mprofile(prof, straight, i0, i1, k, us=MOUTH_U):
     return [(u, width_at(prof, straight, i0, i1, k, u)) for u in us]
 
 
+# ── ③ «검정 띠 두께» 축 (923 8회차 신설 — 7회차 채점 2인(GT·GU)이 각자 세운 자를 저장소로 들인다) ──
+#   7회차까지 이 파일에는 **바깥 모서리 하나**(검정↔바탕 = 실루엣)밖에 없었다. 그래서 «띠가 얼마나
+#   두꺼운가» 는 매 회차 비평가의 자에만 있었고, 그 자가 «ref 불릿은 어깨가 12.5~14.7» 을 냈을 때
+#   저장소 안에서 재현할 방법이 없었다. 이 절이 그 축이다.
+#
+#   자 — 행마다 검정 띠의 **두 모서리**를 부분화소로 잡는다:
+#     · 바깥 = 검정↔바탕  … `outer_x` (실루엣 · 위와 같은 자)
+#     · 안쪽 = 검정↔밝은 림 … 그 자리에서 왼쪽으로 걸으며 밝기가 «밝은 쪽 고원의 절반» 을 넘는 자리
+#   두 점구름을 만든 뒤 **안쪽 점 → 바깥 점구름 최소 유클리드 거리**를 두께로 쓴다.
+#   ⚑ 가로 폭을 그대로 쓰면 안 된다 — 어깨에서 경계가 기울어 있어 1/cos 만큼 부풀고(45°면 √2),
+#     그 편향이 «불릿이 두껍다» 를 통째로 만들 수 있다. 최소 거리는 참 두께의 **하한**이라
+#     부호가 뒤집히지 않는다(7회차 채점 GT 와 같은 규약).
+#   ⚠ 밝기는 `max(R,G,B)` 로 본다 — 림·몸통은 밝고 띠는 검정이라 채널 하나로는 카드 색에 흔들린다.
+#   ⚠⚠ **검정 상태(2026-09-05, 8회차 1단계) — 이 축은 «우리» 와 «ref 배너» 에서만 검정됐다.**
+#     우리 곧은변 **10.05 / 10.06**(선언 10 · 채점 GT «정확히 10.000») · 우리 노치 전 구간 9.79~10.06 ·
+#     **ref 배너** 곧은변 10.31 · 노치 9.4~10.3(= «고르다» — 채점 2인과 같은 결론).
+#     그런데 **ref 불릿(초록)은 곧은변이 11.81 로 읽힌다** — 채점 2인은 둘 다 **10.17~10.23** 을 냈다.
+#     유력한 뿌리는 **초록 카드 바깥의 그림자 경사**(row 520 실측: 검정 → 9 → 27 → 42 → 46 → 배경 49 =
+#     4 ref px 램프)라 `outer_x` 의 |Δ바탕| 문턱이 바깥으로 밀린다(측정표 §14 «그림자는 바탕 위에만»).
+#     ⇒ **이 축의 ref 불릿 값을 과녁으로 쓰지 마라.** 8회차 2단계가 할 일은 그 편향을 걷는 것이고,
+#     걷기 전에는 «두께 표» 를 제품에 넣으면 안 된다(338 — 자를 못 믿으면 처방도 못 믿는다).
+#     ⚠ 노치 «오염된 자리» 는 여전히 빼야 한다(배너 첫 자리 = 배지·탭 · 불릿 y188·y213 = 티켓 톱니).
+DARK_F = 0.50        # «검정» 경계 준위(그 자리 밝은 고원의 비율) — 사다리는 --darkf 로 흔든다
+BAND_MARGIN = 12     # 노치 창 밖으로 점구름에 넣는 이웃 행 수(얕은 깊이 칸을 채운다)
+BAND_BINS = [(-2, 2), (2, 4), (4, 7), (7, 10), (10, 16), (16, 24), (24, 34)]
+
+
+def inner_x(g, xo, x0, darkf=DARK_F):
+    """행 밝기 g 에서 «검정 띠의 안쪽(림 쪽) 모서리» 를 부분화소로. 못 찾으면 None.
+
+    xo(바깥 모서리)에서 왼쪽으로 걸으며 어두운 구간을 지나고, 밝은 쪽 고원 V 의 절반을 넘는
+    첫 자리에서 선형 보간한다. V 는 그 자리 왼쪽 3화소의 최댓값(림 242 · 몸통 201 · ref 는 다른 값).
+    """
+    i = int(np.floor(xo))
+    if i <= x0 + 2:
+        return None
+    # 어두운 구간부터 만난다(바깥 모서리 바로 안쪽은 검정이어야 한다)
+    while i > x0 + 2 and g[i] > 60:
+        i -= 1
+    while i > x0 + 2 and g[i] <= 60:
+        i -= 1
+    # 이제 g[i] 가 «밝은 쪽» 첫 화소, g[i+1] 이 어두운 쪽
+    v = float(max(g[max(x0, i - 3):i + 1].max(), g[i]))
+    lvl = v * darkf
+    if g[i] < lvl or g[i + 1] >= lvl:
+        return None
+    f = (g[i] - lvl) / max(1e-6, (g[i] - g[i + 1]))
+    return i + f
+
+
+def band_prof(a, y0, y1, x0, x1, bg, t, k, straight, i0=None, i1=None, darkf=DARK_F):
+    """[y0,y1) 행에서 (깊이 u, 띠 두께, 행) 을 낸다 — 둘 다 «우리 px».
+
+    깊이는 **그 두께를 낸 바깥 점**의 깊이로 적는다(안쪽 점 자리로 적으면 어깨에서 한 칸 밀린다).
+    i0·i1 을 주면 그 행 구간(노치)만 본다 — 이웃 `BAND_MARGIN` 행까지 점구름에 넣는다.
+    ⚠ 이웃을 좁게 잡으면 **얕은 깊이 칸이 통째로 빈다** — 노치 창은 «깊이 ≥ 6» 이라
+    u 2~6 은 창 밖 행에만 있고, 입에서는 한 행에 깊이가 여러 px 씩 뛴다(4행이면 0 → 6 을 건너뛴다).
+    """
+    g = a.max(2)
+    outs, inns = [], []
+    lo = y0 if i0 is None else y0 + i0
+    hi = y1 if i1 is None else y0 + i1 + 1
+    for y in range(max(y0, lo - BAND_MARGIN), min(y1, hi + BAND_MARGIN)):
+        row = a[y, x0:x1]
+        xo = outer_x(row, bg, t, k)
+        if xo is None:
+            continue
+        xi = inner_x(g[y], xo + x0, x0, darkf)
+        outs.append((xo + x0, y))
+        if xi is not None:
+            inns.append((xi, y))
+    if not outs or not inns:
+        return []
+    O = np.array(outs, float)
+    out = []
+    for xi, y in inns:
+        d = np.hypot(O[:, 0] - xi, O[:, 1] - y)
+        j = int(d.argmin())
+        out.append(((straight - (O[j, 0] - x0)) * k, float(d[j]) * k, y))
+    return out
+
+
+def band_table(rows, bins=BAND_BINS):
+    """(u, 두께) 쌍을 깊이 칸으로 묶어 중앙값을 낸다."""
+    out = []
+    for a0, a1 in bins:
+        vs = [d for u, d, _ in rows if a0 <= u < a1]
+        out.append(((a0, a1), float(np.median(vs)) if vs else None, len(vs)))
+    return out
+
+
 # ── ② «마지막 알약 아랫변 ↔ 리본1 윗변» 틈 (923 1회차 신설 · 등재문 ②) ──────────
 #   같은 절차를 ref 와 우리에게 쓴다: 알약 가로 구간의 **행 중앙값** 밝기로
 #   「알약 채움(어둡다) → 카드 몸통(중간) → 리본 검정 테(가장 어둡다)」 를 가르고,
@@ -328,7 +419,25 @@ def scan(a, y0, y1, x0, x1, bg, k, t, label):
             cells = '  '.join(f'u{u:<2d} {("  n/a" if w is None else f"{w:6.2f}")}'
                               for u, w in mp)
             print(f'        입 폭(우리px · 절대깊이) — {cells}')
+        if '--band' in sys.argv:
+            df = float(sys.argv[sys.argv.index('--darkf') + 1]) if '--darkf' in sys.argv else DARK_F
+            bp = band_prof(a, y0, y1, x0, x1, bg, t, k, straight, s, e, df)
+            cells = '  '.join(f'u{b0}~{b1} {("  n/a" if v is None else f"{v:6.2f}")}({n})'
+                              for (b0, b1), v, n in band_table(bp))
+            print(f'        띠 두께(우리px · 깊이칸) — {cells}')
         out.append(st)
+    if '--band' in sys.argv:
+        df = float(sys.argv[sys.argv.index('--darkf') + 1]) if '--darkf' in sys.argv else DARK_F
+        # 곧은 변 — 노치 구간(±4행)을 뺀 행만이 두께의 기준선이다. 한 번에 재야
+        # 점구름이 서고, 행마다 따로 부르면 «한 점까지의 거리» = 가로 폭이 되어 못 쓴다.
+        inn = set()
+        for (s0, e0) in ns:
+            inn.update(range(max(0, s0 - BAND_MARGIN - 2), min(len(prof), e0 + BAND_MARGIN + 3)))
+        rows = [r for r in band_prof(a, y0, y1, x0, x1, bg, t, k, straight, None, None, df)
+                if (r[2] - y0) not in inn and abs(r[0]) <= 1.5]
+        if rows:
+            print(f'    곧은변 띠 두께(우리px) 중앙값 {np.median([d for _, d, _ in rows]):6.2f}'
+                  f'  (표본 {len(rows)})')
     return out
 
 
