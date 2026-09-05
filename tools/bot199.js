@@ -43,6 +43,9 @@ const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+/* ⚑ 199 33회차 — «창 역량»(이 창이 말미 축을 판정할 수 있는가)은 표가 스스로 말해야 한다.
+   판정식은 `tools/win199.js` 한 곳에 있고 게이트(`verify199win`)가 같은 함수를 시험한다. */
+const WIN = require('./win199');
 
 const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html');
@@ -1352,6 +1355,11 @@ async function runOne(page, pol, seed, days, onRow) {
        아니다). 그래서 주기 대신 **관문 격자 자체**를 제품의 `isGateStage` 로 구워 넘긴다 —
        분류가 제품의 관문 정의를 그대로 따라가고, 다음 회차가 폭을 또 돌려도 자가 안 낡는다.
        범위는 이 실행이 실제로 밟은 끝 + 여유 한 구간이다. */
+    /* ⚑ 199 33회차 — 사다리 문턱·좁은 폭도 **제품에게 묻는다**. 격자에서 되찾을 수도 있지만
+       (`win199.ladderSw`), 격자는 이 실행이 밟은 끝까지만 구우므로 창이 짧으면 폭이 바뀌는
+       자리를 한 번도 안 담는다 — 그때 «사다리 없음» 과 «창이 못 봄» 이 같은 얼굴이 된다. */
+    out.bandSw = (typeof eBandSw === 'number') ? eBandSw : null;
+    out.band2  = (typeof ES_BAND2 === 'number') ? ES_BAND2 : null;
     out.gateSet = (typeof isGateStage === 'function')
       ? (() => { const g = [], top = Math.max(1, S.stage | 0, S.best | 0) + 2 * out.band;
                  for(let s = 1; s <= top; s++) if(isGateStage(s)) g.push(s);
@@ -2154,7 +2162,16 @@ function writeReport(rep) {
        를 고를 수 있었다(17-1 정정3 «라벨 하나가 두 값» 의 재발 · 이번엔 제품 주석까지
        옮겨 갔다). 값을 다시 계산하지 않고 이 순간의 것을 그대로 싣는 이유도 같다 —
        재계산하면 자가 둘이 되고, 둘이 갈리는 날 본문이 또 고르게 된다. */
+    /* ⚑⚑ 199 33회차 — **창 역량**(32-8 1번의 규약 ① 집행). 32-4 는 30일 표에서 ①③ 이
+       «비트 동일» 인 것을 보고 하마터면 사다리를 되돌릴 뻔했다 — 30일 창이 사다리를
+       **구조적으로 못 보기** 때문이다(창 끝 s376 = 첫 좁은 관문 · 창 끝의 벽은 잘린 벽).
+       그 사실을 본문이 매번 손으로 알아채게 두지 않는다: 창마다 자가 직접 찍는다.
+       판정식·문구는 `tools/win199.js` 한 곳(게이트가 같은 함수를 시험한다). */
+    const SW      = WIN.ladderSw(runs[0] || null);
+    const lateP50 = med(runs.map(r => WIN.lateWalls(wallsOf(r), SW)));
+    const WINV    = WIN.judge({ sw: SW, late: lateP50 });
     JUDGE[pol] = {
+      win: WINV, sw: SW,
       hit: hitP50, tgtN, nullE,
       out:    med(runs.map(outOf)),
       outIn:  med(runs.map(r => pairOf(r).outIn)),
@@ -2165,6 +2182,12 @@ function writeReport(rep) {
       reach0: REACH[0] || 0,
       span:   spanP50, spanT: SPAN_T,
     };
+    /* 33회차 — ① 헤드라인 **위**에 둔다. 값을 먼저 읽고 나서 «그런데 이 창은 못 본다» 를
+       읽으면, 이미 고른 결론을 뒤집는 순서가 된다(32-4 가 실제로 그 순서였다). */
+    L.push(`**⚑ 창 역량 — 말미 축(① 문턱 위 간격·적중 · ③ 문턱 위 진폭 · ② 말미 한계 수급): ${WIN.label(WINV)}**`
+      + ` 〔문턱 s${SW || '—'} 위 잘리지 않은 배정 벽 p50 = ${lateP50}개 · 기준 ≥ ${WIN.MIN_LATE}`
+      + ` = «간격은 벽이 둘 이상이어야 정의된다»〕 — §0-2 판정 창 규약`);
+    L.push('');
     L.push(`**① 축 — 목표 칸 적중 p50 = ${hitP50}/${tgtN}`
       + ` (**널 기준선 ${nullE.toFixed(2)} 대비 ${(hitP50 - nullE) >= 0 ? '+' : ''}${(hitP50 - nullE).toFixed(2)}칸**`
       + `${hitP50 < nullE ? ' ⚠ **난수 산포 이하**' : ''}`
@@ -2584,6 +2607,11 @@ function writeReport(rep) {
                      : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
         };
         const jcell = (f) => pols.map(p => f(JUDGE[p])).join(' | ');
+        /* ⚑⚑ 33회차 — 판정 줄 **맨 위**에 창 역량. [G] 만 읽고 결론을 적는 회차가 있으므로
+           ([D] 를 안 여는 회차가 실제로 있었다) 같은 말을 두 표에 다 세운다. 값은 [D] 가 잰
+           그 순간의 것(`JUDGE`)이고 여기서 다시 계산하지 않는다 — 20회차 규약. */
+        L.push(`| **⚑ 창 역량 — 말미 축(①문턱위 간격·적중 · ③문턱위 진폭 · ②말미 수급) 〔§0-2 판정 창 규약〕** | `
+          + jcell(j => WIN.label(j.win)) + ` | — |`);
         L.push(`| **① 목표 칸 적중 p50 〔달력 중앙 좌표 · ±20% · 1:1 배정 · [D] 헤드라인과 같은 자〕** | `
           + jcell(j => `${j.hit}/${j.tgtN} — 널 ${j.nullE.toFixed(2)} 대비 ${(j.hit - j.nullE) >= 0 ? '+' : ''}${(j.hit - j.nullE).toFixed(2)}칸${j.hit < j.nullE ? ' ⚠ **난수 이하**' : ''}`)
           + ` | ${jrat(j => j.hit - j.nullE)} |`);
