@@ -690,6 +690,54 @@ const DUMP = `(() => {
       `${p2(cut)} ↔ ${p2(rim.cardW - rim.frBorder)}`);
   }
 
+  blk('§16 ★ 불릿의 검정 획은 «원반 팽창» 이다 — 마이터 창이 안 뻗는다 (885 6회차 · 5회차 채점 2인 일치)');
+  /* ⚑ 5회차 채점 EV(+57~64%)·EW(+21~35%)가 «★ 검정 획이 두껍다» 로 일치했는데 **크기가 2배 갈렸다.**
+     6회차 셋째 자(`tools/scan885e.py` — 금색을 원본으로 깐 거리장)가 갈린 이유를 찍었다:
+     **몸통은 맞고(p50 −3% · p75 −3%) 꼬리만 어긋난다(p90 +46% · p95 +75% · max +89%)** —
+     `-webkit-text-stroke` 의 **마이터 조인**이 5각 별 꼭짓점에서 창처럼 뻗은 것이다.
+     ⚠ `stroke-linejoin:round` 는 Chromium 의 text-stroke 에 **안 물린다**(실측 — 넣은 판과 안 넣은 판의
+     분위가 소수점까지 같다). 그래서 처방은 «획을 얇게» 가 아니라 **원반 팽창 링**이다(`.cbox i` 선례).
+     ⚑ 이 절이 지키는 것은 세 가지다:
+       ⓐ 마이터 획이 **없다**(다시 넣으면 꼬리가 돌아온다) ⓑ 링이 **등방**(356 규약)이고 반지름이 3.5 ·
+       ⓒ 방향이 **16 이상**(적으면 꼭짓점에 톱니 구멍이 생겨 «원반» 이 아니게 된다).
+     ⚠ 화소 과녁(«실루엣 ÷ 금색» = ref 1.176/1.231 · 문턱 사다리 네 단에서 불변)은
+     `scan885e.py` 가 소유한다 — 이 자는 그 값을 만드는 **선언**을 지킨다. */
+  const star = await page.evaluate(() => {
+    const s = document.querySelector('.pvc>.pvl>.pvb>s');
+    if (!s) return null;
+    const cs = getComputedStyle(s);
+    const ts = cs.textShadow || '';
+    /* «Xpx Ypx 0px rgb(0,0,0)» 꼴을 전부 뽑아 반지름을 잰다(색이 앞에 오는 브라우저도 있다). */
+    const offs = [...ts.matchAll(/(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px/g)]
+      .map(m => ({ x: +m[1], y: +m[2], blur: +m[3] }));
+    return { stroke: parseFloat(cs.webkitTextStrokeWidth) || 0, n: offs.length,
+      r: offs.map(o => +Math.hypot(o.x, o.y).toFixed(3)),
+      blur: offs.map(o => o.blur), txt: s.textContent.trim() };
+  });
+  ok(!!star && star.txt === '★', '[16-a] ★ 불릿 표본을 잡았다', star ? star.txt : '없음');
+  if (star) {
+    ok(star.stroke < 0.01,
+      '[16-b] `-webkit-text-stroke` 가 **0** 이다 — 마이터 조인이 남아 있으면 꼭짓점에서 창이 뻗는다 (p95 +75%)',
+      `${p2(star.stroke)}px`);
+    ok(star.n >= 16,
+      '[16-c] 링 방향이 **16 이상** — 적으면 꼭짓점에 톱니 구멍이 생겨 «원반» 이 아니다',
+      `${star.n} 방향`);
+    const rmin = Math.min(...star.r), rmax = Math.max(...star.r);
+    ok(star.n > 0 && rmax - rmin < 0.05,
+      '[16-d] 모든 방향의 반지름이 **한 값** = 등방이다 (356 규약 — 타원 링 금지)',
+      `${p2(rmin)} ~ ${p2(rmax)}`);
+    ok(star.n > 0 && Math.abs(rmax - 3.1) < 0.15,
+      '[16-e] 반지름 3.1 — **ref 링/변 실측 그대로다**(1.50 ref-px × K = 3.09 · 여유에 맞춰 고른 값이 아니다)',
+      p2(rmax));
+    ok(star.blur.every(b => b < 0.01),
+      '[16-f] 흐림 0 — 흐리면 링이 «두께» 가 아니라 «그림자» 가 되어 자가 못 잰다',
+      star.blur.map(p2).join('/'));
+    /* 방향 수만 채우고 한쪽에 몰리면 링이 안 닫힌다 — 이웃 사이 «호 길이» 로 본다. */
+    ok(star.n > 0 && (2 * Math.PI * rmax / star.n) < 1.3,
+      '[16-g] 이웃 방향 사이 호 길이 < 1.3px — 그래야 곧은 변에서 링이 이어진다',
+      `${p2(2 * Math.PI * rmax / Math.max(star.n, 1))}px`);
+  }
+
   blk('§R 되돌림 시험 — 수리 전 값을 넣으면 빨개진다');
   /* ⚑ 5회차 이관 — 되돌림 표본을 **178×178** 에서 **172×184**(4회차 상자)로 갈았다.
      178×178 은 이제 종횡이 1.006 이라 새 ref(1.000)와 «같은» 쪽이라 [R2] 가 아무것도 안 잡는다 —
