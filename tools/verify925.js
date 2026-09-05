@@ -13,6 +13,8 @@
  * 절 —
  *   [1] 규칙   — 목록이 아니라 판별기다. 갈래는 넷(사슬 require · 사슬 주입 · 사슬 밖 · 무관).
  *   [2] 전수   — 화소를 재는 자(922 의 census) 중 **사슬 밖 0**.
+ *                (952) 그 인구의 «무관» 칸은 **적어 두기만 한 자**(문자열 표본)뿐이고, «도는 코드로 재는데
+ *                브라우저를 안 띄우는 자» 는 0 이다 — 갈래는 `tools/quote952.js` 가 가른다.
  *   [3] 넷     — 925 가 갈아 끼운 넷이 실제로 사슬을 지나고, 자기 사본(모듈 해석·실행 파일 폴백)을 안 든다.
  *   [4] 자식   — `verify471` 처럼 **자식 프로세스에 절대 경로로 심는 자**는 «사슬 밖» 이 아니다(거짓 양성 0).
  *   [5] 그린 것 — 그 넷의 entry 로 판을 지으면 걷개가 실제로 심긴다(= 사슬에 붙은 장치를 받는다).
@@ -29,6 +31,7 @@ const os = require('os');
 const { pw, launch } = require('./pwlaunch');
 const shell918 = require('./shell918');
 const { census } = require('./probe922');
+const { pixelKind } = require('./quote952');      /* 952 — «적어 둔 코드» ↔ «도는 코드» */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -109,8 +112,24 @@ const OLD_BOOTSTRAP =
   ok('[2b] 그중 «사슬 밖» 이 한 자도 없다', bad.length === 0, bad.join(' ') || '어긋남 0');
   ok('[2c] 갈래의 합이 전체다 (한 자가 두 칸에 안 들어간다)',
     byKind('chain') + byKind('inject') + bad.length + byKind('none') === px.length);
-  ok('[2d] «무관» 으로 새는 자가 없다 — 화소를 재면 브라우저를 띄운다', byKind('none') === 0,
-    px.filter(f => classifyFile(T(f)) === 'none').join(' ') || '0개');
+  /* 작업 952 — «무관» 을 두 갈래로 가른다.
+     세는 쪽(`shell918.RE_PX`)은 **주석만 벗긴 소스**에 정규식을 대므로 «문자열 표본으로 적어 둔 화소 코드» 도
+     인구에 든다(걷개를 켜는 자리에서는 넉넉한 쪽이 안전하다 — 안 재는 자에 켜져도 무해). 그런데 여기서는
+     그 넉넉함이 곧 오탐이었다: `verify936` 은 판별기에 먹이는 인공 표본 `BASE` 안에 `getImageData` 를
+     들고 있을 뿐 브라우저를 한 번도 안 띄운다 ⇒ 사슬을 지나라고 요구할 대상 자체가 없다.
+     ⚠ **문턱을 무르게 푼 것이 아니다** — 의무는 «도는 코드로 재는 자»(`pixelKind === 'code'`) 에 그대로 남고,
+        [2g] 가 «적어 두기만 한 자» 를 이름까지 찍어 눈에 보이게 둔다. 되돌림은 `verify952` §R. */
+  const kindOf = f => pixelKind(fs.readFileSync(T(f), 'utf8'));
+  const leak = px.filter(f => classifyFile(T(f)) === 'none' && kindOf(f) === 'code');
+  const quoted = px.filter(f => classifyFile(T(f)) === 'none' && kindOf(f) === 'quote');
+  ok('[2d] «무관» 으로 새는 자가 없다 — **도는 코드로** 화소를 재면 브라우저를 띄운다',
+    leak.length === 0, leak.join(' ') || '0개');
+  ok('[2g] «무관» 인 자는 한 자도 빠짐없이 «적어 두기만 한 자» 다 (952 — 인구는 그대로, 갈래만 갈랐다)',
+    quoted.length === byKind('none'),
+    quoted.join(' ') || '0개');
+  ok('[2h] 그 가름이 «무엇을 해도 quote» 가 아니다 — 도는 코드는 code 로 잡힌다',
+    pixelKind('await page.evaluate(() => ctx.getImageData(0, 0, 1, 1));') === 'code'
+    && pixelKind("const S = ['ctx.getImageData(0,0,1,1)'].join('');") === 'quote');
 
   /* 작업 931 — 여집합까지 넓힌다.
      925 의 [2] 는 «화소를 재는 자» 만 센다. 그 여집합 44 는 화소를 안 재서 918/922 걷개도 907 깃발도
