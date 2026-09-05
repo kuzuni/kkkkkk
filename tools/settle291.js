@@ -136,9 +136,21 @@ function enabled() {
   const v = process.env.PW_SETTLE;
   if (v === '0' || v === 'off') return false;
   if (v === '1' || v === 'on') return true;
-  /* 기본값 — 게이트(`verify*.js`)만. 연출 캡처 하네스(`cap*.js`)는 건드리지 않는다. */
+  /* 기본값 — 게이트(`verify*.js`)와 **재현기(`probe*.js`)**. 연출 캡처 하네스(`cap*.js`)는 건드리지 않는다.
+     ⚑ **작업 955 — `probe*.js` 를 넣은 것이 이 줄의 전부다.** 조건 ⓐ 는 `cap*` 을 빼려고 단 것이고
+       그 이유는 지금도 옳은데(연출 한복판을 일부러 찍는다), **빼려던 것 말고도 빠져 있었다** —
+       `probe*.js` 617자 중 rect 를 재는 **361자**가 통째로 훅 밖이었다. probe 는 «자를 새로 세우는
+       자» 라 **게이트보다 먼저 거짓말을 한다**: 941 1회차가 `openRelw()` 뒤 250ms 에서 `jzSheetIn`
+       0% 프레임(scale .985)을 잡아 **등재문을 기각할 뻔했다**(LESSONS 941 ①).
+       실측(`probe955`) — `#relw .rw-panel` 이 정착 없이 1063.8×1962.12 · 정착하면 1080×1992,
+       네 자리 × 스로틀 12판 중 **9판에서 값이 움직인다**(relic 은 한가한 판에서도 결정적).
+     ⚠ **정착하면 «안 되는» probe 는 자기 파일에 한 줄로 선언한다** — 옵트인 관례
+       (`if (!process.env.PW_SETTLE) process.env.PW_SETTLE = '1';` · probe353·941·950)의 대칭이다:
+         if (!process.env.PW_SETTLE) process.env.PW_SETTLE = '0';   // 955 — 이 자는 연출 한복판을 일부러 잰다
+       그 한 줄 옆에 **사유(955)를 적는 것**까지가 규약이고, 여기에 **이름 목록을 두지 않는 것**이 규약이다(402 «사본을 지운다» — 목록은 자가 늘면 뒤처진다).
+       `verify955` [4a] 가 그 목록이 생기는 순간 빨개진다. */
   const entry = String(process.argv[1] || '').replace(/\\/g, '/').split('/').pop();
-  return /^verify.*\.js$/.test(entry);
+  return /^(verify|probe).*\.js$/.test(entry);
 }
 
 /* 페이지 하나에 정착을 심는다. 두 번 불러도 한 번만 감싼다.
