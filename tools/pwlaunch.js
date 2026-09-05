@@ -89,13 +89,43 @@ const evguard = require('./evguard731');
 
 const arm = b => evguard.armBrowser(armBrowser(b));
 
+/* 작업 907 — «판 결정성» 깃발을 한곳에서 판다.
+   903 이 `verify432` 에서 뿌리를 찍었다: 한 페이지에서 스타일 태그를 갈아 끼우며 여러 판을 찍는 자는
+   **부분 리라스터(타일 재사용)** 에 노출돼 같은 화면이 «±1~19 단위 두 얼굴» 을 갖는다. 처방은 깃발
+   `--disable-partial-raster` 한 줄인데, 그것을 자마다 손으로 적으면 **빠져도 아무도 모른다**(903 §5).
+   ⇒ 상수 하나(`DET_ARGS`)로 이름을 주고, 자는 `launch(chromium, det({ … }))` 로 부른다.
+   - `det(opts)` — 기존 opts 의 args 뒤에 깃발을 «중복 없이» 붙여 돌려준다(opts 없으면 새로 만든다).
+   - `PW_NOPR=1` — 이 자를 안 고치고도 깃발을 켠다(A/B 세기용 · `tools/probe907.js` 가 쓴다).
+   - `PW_NOPR=0` — 자가 `det()` 로 박아 둔 깃발까지 **끈다**(되돌림 시험 · 깃발이 빠진 세상 재현).
+   되돌림 스위치가 양방향인 이유는 «깃발이 실제로 축을 죽이는가» 를 같은 자로 두 번 물어야 하기 때문이다. */
+const DET_ARGS = ['--disable-partial-raster'];
+
+function det(opts) {
+  const o = Object.assign({}, opts || {});
+  o.args = (o.args || []).slice();
+  for (const a of DET_ARGS) if (!o.args.includes(a)) o.args.push(a);
+  return o;
+}
+
+/* 환경변수는 마지막에 적용된다 — 자가 무엇을 적었든 A/B 는 환경이 이긴다. */
+function envArgs(opts) {
+  const v = process.env.PW_NOPR;
+  if (v === undefined || v === '') return opts;
+  const o = Object.assign({}, opts || {});
+  o.args = (o.args || []).slice();
+  if (v === '0') o.args = o.args.filter(a => !DET_ARGS.includes(a));
+  else for (const a of DET_ARGS) if (!o.args.includes(a)) o.args.push(a);
+  return o;
+}
+
 async function launch(chromium, opts) {
-  try { return arm(await chromium.launch(opts)); } catch (e) {
+  const o = envArgs(opts);
+  try { return arm(await chromium.launch(o)); } catch (e) {
     const exe = findExecutable();
     if (!exe) throw e;
     console.log('[i] 번들 브라우저 없음 → ' + exe + ' 사용');
-    return arm(await chromium.launch(Object.assign({}, opts, { executablePath: exe })));
+    return arm(await chromium.launch(Object.assign({}, o, { executablePath: exe })));
   }
 }
 
-module.exports = { pw, launch, findExecutable };
+module.exports = { pw, launch, findExecutable, det, DET_ARGS };
