@@ -97,13 +97,38 @@ const MEASURE = `(host, grp, close) => {
            close: cr ? { y: fy(cr.top), b: fy(cr.bottom) } : null, rel };
 }`;
 
+/* ⚑ 912 — «열렸는가» 를 묻는 술어. MEASURE 가 null 을 내는 조건과 **같은 식**이어야 한다
+   (다르면 «기다림은 통과했는데 측정은 null» 이라는 새 유령이 생긴다). */
+const OPENED = ([host, grp]) => {
+  const vis = (e) => { const cs = getComputedStyle(e);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return false;
+    const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1; };
+  const H = document.querySelector(host), G = document.querySelector(grp);
+  if (!H || !G || !vis(H)) return false;
+  return [...G.querySelectorAll('*')].some(vis);
+};
+
 async function open1(browser, F, css, kase) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: F.h }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
+  /* 912 — 삼킨 예외를 되살린다. 실패가 «측정 실패» 한 줄로만 남던 것이 이 자의 결함이었다. */
+  const cerr = [];
+  page.on('pageerror', (e) => cerr.push(String(e.message).split('\n')[0].slice(0, 90)));
   await page.goto(URL, { waitUntil: 'load' });
-  await page.waitForTimeout(650);
+  /* ⚑ 912 — 고정 `waitForTimeout(650)` 이 아니라 **트리거가 준비됐는지**를 묻는다.
+     650ms 는 한가한 기계에서 고른 수라 회귀 스윕처럼 브라우저가 여럿 뜬 실행에서는
+     근거가 없다(등재문 처방 ⓐ). 준비되면 즉시 지나가므로 평시에는 오히려 빨라진다. */
+  const fnName = String(kase.open).split('(')[0].trim();
+  await page.waitForFunction((n) => typeof window[n] === 'function', fnName, { timeout: 20000 })
+    .catch(() => {});
   if (css) await page.addStyleTag({ content: css });
-  await page.evaluate(`try{ ${kase.open} }catch(e){}`);
+  /* 912 — `catch(e){}` 로 삼키지 않는다. 던진 것은 갈래 ⓐ 의 증거다. */
+  let threw = '';
+  try { await page.evaluate(kase.open); } catch (e) { threw = String(e.message).split('\n')[0].slice(0, 90); }
+  /* ⚑ 912 — 트리거 뒤에도 «떴는가» 를 묻는다. 아래 380ms 는 **정착**(jzBoxIn 오버슛)용이지
+     «열림»용이 아니었는데, 열림까지 그 한 줄에 기대고 있었다. */
+  const opened = await page.waitForFunction(OPENED, [kase.host, kase.grp], { timeout: 10000 })
+    .then(() => true).catch(() => false);
   await page.waitForTimeout(380);
   /* 8회차 — **이 자가 4번에 1번 빨갰다**(§2 «묶음 중심 = 프레임 중심» 이 17@2600 Δ6.25 · 18@1920 Δ4.74,
      TOL 1.5 초과). 뿌리는 제품이 아니라 **이 대기 한 줄**이다: 묶음은 열릴 때 `jzBoxIn`(220ms)을 타고
@@ -122,7 +147,42 @@ async function open1(browser, F, css, kase) {
   }, kase.grp);
   await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; });
   const m = await page.evaluate(`(${MEASURE})(${JSON.stringify(kase.host)},${JSON.stringify(kase.grp)},${JSON.stringify(kase.close)})`);
-  return { ctx, page, m };
+  /* ⚑ 912 — null 이면 **왜** 인지까지 들고 나온다. 세 갈래가 «측정 실패» 한 낱말로 뭉쳐 있던 것이
+     이 자를 못 고치게 만들던 것이다(probe912 의 갈래와 같은 이름을 쓴다). */
+  let why = '';
+  if (!m) {
+    const d = await page.evaluate(([host, grp]) => {
+      const H = document.querySelector(host), G = document.querySelector(grp);
+      const cs = H ? getComputedStyle(H) : null;
+      const vis = (e) => { const c = getComputedStyle(e);
+        if (c.display === 'none' || c.visibility === 'hidden' || Number(c.opacity) === 0) return false;
+        const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1; };
+      return { host: !!H, grp: !!G, hostVis: H ? vis(H) : false, disp: cs ? cs.display : '',
+               kidsVis: G ? [...G.querySelectorAll('*')].filter(vis).length : -1 };
+    }, [kase.host, kase.grp]).catch(() => null);
+    why = !d ? '진단 evaluate 실패'
+      : threw ? `ⓐ 트리거가 던졌다 «${threw}»`
+      : !d.host || !d.grp ? `ⓑ 노드 없음(host ${d.host} · grp ${d.grp})`
+      : !d.hostVis ? `ⓑ 호스트가 안 떴다(display:${d.disp} · 열림대기 ${opened ? '통과' : '시간초과'})`
+      : `ⓒ 떴는데 «보이는 자식» 0(열림대기 ${opened ? '통과' : '시간초과'})`;
+    if (cerr.length) why += ` · 콘솔«${cerr[0]}»`;
+  }
+  return { ctx, page, m, why };
+}
+
+/* ⚑ 912 — 측정이 null 이면 **다시 찍는다**(등재문 처방 ⓐ의 짝). 한 번의 헛읽음으로
+   §1~§4 열두 항이 통째로 안 세어지던 것(총항 60 → 48)이 이 자의 두 번째 결함이다 —
+   총항이 실행마다 갈리면 «전과 같은 자인가» 를 물을 수 없다.
+   ⚠ 무르게 푸는 길이 아니다: 재시도해도 안 뜨면 **이유를 말하며** 그대로 빨개진다. */
+async function openRetry(browser, F, css, kase, tries = 3) {
+  let last = null;
+  for (let t = 1; t <= tries; t++) {
+    const r = await open1(browser, F, css, kase);
+    if (r.m) { if (t > 1) r.why = `${t}판째에 읽힘`; return r; }
+    await r.ctx.close();
+    last = r;
+  }
+  return { ctx: null, page: null, m: null, why: `${tries}판 모두 실패 — ${last ? last.why : ''}` };
 }
 
 (async () => {
@@ -131,11 +191,11 @@ async function open1(browser, F, css, kase) {
     /* ── §전제 — 딤 상자로 재면 수리 전에도 중앙이다 ───────────────────────── */
     blk('§전제 자가 헛초록이 아님 — 무엇을 재는가');
     {
-      const { ctx, m } = await open1(browser, FRAMES[0], null, CASES[0]);
+      const { ctx, m, why } = await openRetry(browser, FRAMES[0], null, CASES[0]);
       ok(m && Math.abs(m.hostCy - FRAMES[0].h / 2) < TOL,
         '§전제 딤(`#statw`)은 `inset:0` 이라 **상자로 재면 언제나 중앙**이다',
-        m ? `상자 중심 ${r2(m.hostCy)} vs 프레임 중심 ${FRAMES[0].h / 2} — 그래서 묶음으로 잰다` : '측정 실패');
-      await ctx.close();
+        m ? `상자 중심 ${r2(m.hostCy)} vs 프레임 중심 ${FRAMES[0].h / 2} — 그래서 묶음으로 잰다` : '측정 실패 — ' + why);
+      if (ctx) await ctx.close();
     }
 
     /* ── §1·§2·§3·§4 ─────────────────────────────────────────────────────── */
@@ -143,12 +203,16 @@ async function open1(browser, F, css, kase) {
       blk(`§1~§4 ${K.id} ${K.name} (${K.host})`);
       const got = [];
       for (const F of FRAMES) {
-        const { ctx, m } = await open1(browser, F, null, K);
-        got.push({ F, m });
-        await ctx.close();
+        const { ctx, m, why } = await openRetry(browser, F, null, K);
+        got.push({ F, m, why });
+        if (ctx) await ctx.close();
       }
       const bad = got.filter((g) => !g.m);
-      ok(!bad.length, `[${K.id}] 프레임 5종 전부 측정됐다`, bad.length ? '실패 ' + bad.map((b) => b.F.id).join(',') : '5/5');
+      /* 912 — 실패하면 **어느 프레임이 왜** 인지까지 적는다. 재시도로 읽힌 판도 밝힌다. */
+      const retried = got.filter((g) => g.m && g.why).map((g) => `${g.F.id} ${g.why}`);
+      ok(!bad.length, `[${K.id}] 프레임 5종 전부 측정됐다`,
+        bad.length ? '실패 ' + bad.map((b) => `${b.F.id} — ${b.why}`).join(' / ')
+                   : '5/5' + (retried.length ? ' (' + retried.join(' · ') + ')' : ''));
       if (bad.length) continue;
 
       /* §2 중앙 앵커 */
@@ -316,15 +380,15 @@ async function open1(browser, F, css, kase) {
     for (const K of CASES) {
       const revert = `${K.grp}{top:0!important}`;   /* 묶음을 프레임 상단에 도로 못 박는다 */
       const F = FRAMES[0];                          /* 1600 — 주인이 본 «넓은 화면» */
-      const { ctx, m } = await open1(browser, F, revert, K);
+      const { ctx, m, why } = await openRetry(browser, F, revert, K);
       const cyBad = m ? Math.abs(m.cy - F.h / 2) > TOL : false;
       const gap = m && m.close ? m.close.y - m.bottom : null;
       ok(cyBad, `[R] ${K.id} 옛 절대 배치 사본은 §2 를 못 지킨다`,
-        m ? `중심 ${r2(m.cy)} vs ${F.h / 2} (Δ ${r2(m.cy - F.h / 2)})` : '측정 실패');
+        m ? `중심 ${r2(m.cy)} vs ${F.h / 2} (Δ ${r2(m.cy - F.h / 2)})` : '측정 실패 — ' + why);
       ok(gap != null && gap <= K.was.gap1600 + TOL,
         `[R] ${K.id} 그 사본은 1600 에서 간극이 수리 전 값으로 돌아간다`,
-        gap == null ? '측정 실패' : `간극 ${r2(gap)}px (수리 전 ${K.was.gap1600}px)`);
-      await ctx.close();
+        gap == null ? '측정 실패 — ' + why : `간극 ${r2(gap)}px (수리 전 ${K.was.gap1600}px)`);
+      if (ctx) await ctx.close();
     }
     /* §6 의 되돌림 — 옛 상단 앵커를 도로 심으면 «340px 스윙» 이 그대로 돌아온다.
        무르게 푼 수리가 아님을 이 두 항이 못박는다(1920 은 위로, 2600 은 아래로 갈린다). */
