@@ -43,6 +43,17 @@ const REF = {                     /* ref 실측(우리 px) — `python3 tools/sc
   bl: { flat: 24.75, len: 97.0, dep: 32.11, wd: [92.61, 82.36, 63.89, 42.26] }
 };
 const W_TOL = 2.5;                /* 옛 타원은 8자리 중 4자리에서 이 창 밖이다(§R 이 매 실행 확인한다) */
+/* ⚑⚑ 5회차 신설 — **«입(mouth)» 축**. 4회차 채점 2인(GN·GO)이 공통 1순위로 «ref 는 노치가 곧은변에
+   접선으로 스며드는데 우리는 모서리로 꺾인다» 를 냈는데, 위 [B5] 는 깊이를 **D 의 비율**로 읽어
+   입구 첫 8px(배너 25% = 깊이 7.9)을 통째로 건너뛴다 ⇒ 그 자리가 **자에 없었다**.
+   ⇒ 깊이를 **절대 px** 로 읽는 축을 세운다(`scan923.py --mouth` 와 같은 격자·같은 절차).
+   ⚠ 비율이 아니라 절대 px 인 이유 — 두 그림의 D 가 0.3px 만 달라도 «같은 %» 가 서로 다른 실물 깊이를
+     가리켜, 램프가 가파른 입구에서는 그 차이가 폭 1px 로 증폭된다.
+   ⚠ 창 ±2.0 은 [B5] 의 ±2.5 보다 좁다 — 5회차 수리의 실측 최대 |Δ| 가 0.83 이고, 수리 전 값
+     (배너 −3.95 · 불릿 −11.80)은 그 두 배 넘게 밖이다. */
+const MOUTH_U = [1, 2, 3, 4, 6];
+const M_TOL = 2.0;
+const REF_M = { ban: [65.01, 63.88, 62.75, 61.61, 59.35], bl: [106.51, 104.36, 102.22, 100.08, 95.79] };
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'ok ' : 'FAIL'} ${m}`); };
@@ -148,7 +159,9 @@ function notchStats(png, box, bg) {
       };
       return cross(idx[idx.length - 1], -1) - cross(idx[0], 1);
     };
-    return { y0: a, y1: b, len: b - a + 1, dep: D, flat: best, wd: FRACS.map((f) => wAt(f * D)) };
+    return { y0: a, y1: b, len: b - a + 1, dep: D, flat: best, wd: FRACS.map((f) => wAt(f * D)),
+      /* 5회차 — 같은 `wAt` 에 **절대 깊이**를 넣는다(자를 새로 만들지 않는다 — 같은 자, 다른 격자). */
+      md: MOUTH_U.map((u) => wAt(u)) };
   });
 }
 
@@ -297,6 +310,13 @@ async function shot(page, sel, out) {
           `[B5-${Math.round(f * 100)}] ${k}(${c.id}) y${n.y0} 깊이 ${Math.round(f * 100)}% 세로 폭 `
           + `${got == null ? 'n/a' : got.toFixed(2)} (ref ${want} · ±${W_TOL})`);
       });
+      /* ⚑⚑ 5회차의 본체 — «입» 이 곧은변에 스며드는가. [B5] 가 못 보는 첫 8px 을 절대 깊이로 묻는다. */
+      MOUTH_U.forEach((u, j) => {
+        const got = n.md[j], want = REF_M[k][j];
+        ok(got != null && Math.abs(got - want) <= M_TOL,
+          `[B6-u${u}] ${k}(${c.id}) y${n.y0} 깊이 ${u}px 세로 폭 `
+          + `${got == null ? 'n/a' : got.toFixed(2)} (ref ${want} · ±${M_TOL})`);
+      });
     }
   }
 
@@ -309,8 +329,8 @@ async function shot(page, sel, out) {
     const st = document.createElement('style');
     st.id = '__v923rev';
     st.textContent = '#shopw .pvc>.ntc>s{clip-path:none!important;background:none!important;'
-      + 'inset:12px auto auto 12px!important;width:calc(var(--ntc-d)*2)!important;'
-      + 'height:calc(100% - 24px)!important;box-sizing:border-box!important;'
+      + 'inset:calc(12px + var(--ntc-m,0px)) auto auto 12px!important;width:calc(var(--ntc-d)*2)!important;'
+      + 'height:calc(100% - 24px - 2*var(--ntc-m,0px))!important;box-sizing:border-box!important;'
       + 'border:10px solid #000!important;border-radius:50%!important}';
     document.head.appendChild(st);
   });
@@ -340,8 +360,8 @@ async function shot(page, sel, out) {
     document.getElementById('__v923rev').textContent =
       '#shopw .pvc{--ntc-rev:47.4px}#shopw .pvc.ban1{--ntc-rev:33.6px}'
       + '#shopw .pvc>.ntc>s{clip-path:none!important;background:none!important;'
-      + 'inset:12px auto auto 12px!important;width:calc(var(--ntc-d)*2)!important;'
-      + 'height:calc(100% - 24px)!important;box-sizing:border-box!important;'
+      + 'inset:calc(12px + var(--ntc-m,0px)) auto auto 12px!important;width:calc(var(--ntc-d)*2)!important;'
+      + 'height:calc(100% - 24px - 2*var(--ntc-m,0px))!important;box-sizing:border-box!important;'
       + 'border:10px solid #000!important;border-radius:50% / var(--ntc-rev)!important}';
   });
   await page.waitForTimeout(120);
@@ -371,6 +391,43 @@ async function shot(page, sel, out) {
     `[R4] 적어도 한 형에서 «바닥([B1])은 초록인데 깊이별 폭([B5])은 빨강» 이다 — [B5] 가 [B1] 로 `
     + `대체되지 않는다는 증거 · ${r4.map((r) => `${r.k}:${r.flat.toFixed(1)}${r.flatOk ? '초록' : '빨강'}/`
       + `${r.wdBad ? '폭빨강' : '폭초록'}`).join(' ')}`);
+  /* ⚑⚑ 5회차 신설 — **되돌림 셋째: «입» 만 눌러 본다.** 위 둘(순수 반원 · 2회차 타원)은 모양을
+     통째로 갈아 [B1]·[B5] 를 무너뜨리지만, 5회차가 만진 것은 표의 **머리**(f ≤ .16 의 v > 1)뿐이라
+     그 둘로는 이번 수리가 되돌려졌는지 알 수 없다. ⇒ 표의 머리를 v = 1 로 눌러(= 4회차 상태)
+     **[B6] 은 빨개지고 [B5] 는 초록인가**를 묻는다. 초록이어야 «[B6] 이 [B5] 로 대체되지 않는다» 가
+     증명된다(3회차가 [R4] 로 세운 것과 같은 꼴).
+     ⚠ 사보타주는 CSS 가 아니라 **표 자체**다 — 상자 여백도 `pvNtcMargin` 이 표에서 파생하므로
+     표만 누르면 상자까지 4회차 값으로 같이 돌아간다(그래서 이 되돌림이 «수리 전» 과 픽셀 동일이다). */
+  blk('§R3 되돌림 셋째 — 표의 «머리»(v>1)만 v=1 로 누르면 [B6] 이 빨개지고 [B5] 는 초록이다');
+  await page.evaluate(() => {
+    document.getElementById('__v923rev').textContent = '';   /* 앞 되돌림 CSS 를 걷는다 */
+    Object.keys(NTC_PROF).forEach((k) => NTC_PROF[k].forEach((p) => { if (p[1] > 1) p[1] = 1; }));
+    openShopTab('pass');
+  });
+  await page.waitForTimeout(500);
+  const png4 = await shot(page, '#app', tmp);
+  const r5 = [];
+  for (const c of boxes) {
+    if (c.y < 0 || c.bottom > png4.height) continue;
+    const i = ((c.y + Math.round(c.h / 2)) * png4.width + Math.min(png4.width - 3, c.x + c.w + 12)) * 4;
+    const bg = [png4.data[i], png4.data[i + 1], png4.data[i + 2]];
+    const k = c.ban ? 'ban' : 'bl';
+    /* 앞 되돌림 둘과 같은 창 — 배너 맨 위 자리는 분홍 배지가 물어 토막이라 길이로 걸러 낸다
+       (안 거르면 그 토막이 «입 33px 틀림» 같은 유령을 낸다 — §B 가 쓰는 창과 같은 것이다). */
+    const ns = notchStats(png4, c, bg).filter((n) => n.dep > 20 && Math.abs(n.len - REF[k].len) <= 8);
+    if (!ns.length) continue;
+    const mBad = ns.flatMap((n) => n.md.map((g, j) => (g == null ? 99 : Math.abs(g - REF_M[k][j]))));
+    const wOut = ns.flatMap((n) => n.wd.map((g, j) => (g == null ? 99 : Math.abs(g - REF[k].wd[j]))));
+    r5.push({ k, id: c.id, mMax: Math.max(...mBad), wMax: Math.max(...wOut) });
+  }
+  for (const r of r5) {
+    ok(r.mMax > M_TOL,
+      `[R5] ${r.k}(${r.id}) 표의 머리를 v=1 로 누르면 «입 폭»([B6])이 창 밖 — 최대 |Δ| ${r.mMax.toFixed(2)} > ${M_TOL}`);
+  }
+  ok(r5.length > 0 && r5.every((r) => r.wMax <= W_TOL),
+    `[R5b] 그때 «깊이별 폭»([B5])은 전부 초록이다 — [B6] 이 [B5] 로 대체되지 않는다는 증거 · `
+    + r5.map((r) => `${r.k}:입${r.mMax.toFixed(2)}/폭${r.wMax.toFixed(2)}`).join(' '));
+
   try { require('fs').unlinkSync(tmp); } catch (e) { /* 지워졌으면 됐다 */ }
 
   blk('§Z 콘솔');

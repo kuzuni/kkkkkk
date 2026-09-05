@@ -221,6 +221,20 @@ def wprofile(prof, straight, i0, i1, k, fracs=(0.25, 0.50, 0.75, 0.90)):
     return [(f, width_at(prof, straight, i0, i1, k, f * D)) for f in fracs]
 
 
+# ── 5회차 신설: «입(mouth)» 축 — 깊이를 **절대 px** 로 읽는다 ────────────────────
+#   4회차까지의 `wprofile` 은 깊이를 **D 의 비율**(25·50·75·90%)로 읽는다. 그 격자는
+#   입구 쪽 첫 8px 을 통째로 건너뛴다(배너 25% = 깊이 7.9px) — 4회차 채점 2인(GN·GO)이
+#   공통 1순위로 낸 «노치 입 필렛»(ref 는 곧은변에 **접선**으로 스며들고 우리는 모서리로
+#   꺾인다)이 사는 자리가 바로 그 건너뛴 구간이다.
+#   ⚠ 비율이 아니라 절대 px 인 이유 — 두 그림의 D 가 0.3px 다르면 «같은 %» 가 서로 다른
+#     실물 깊이를 가리켜, 램프가 가파른 입구에서는 그 차이가 폭 1px 로 증폭된다.
+MOUTH_U = (1, 2, 3, 4, 6, 8, 10)
+
+
+def mprofile(prof, straight, i0, i1, k, us=MOUTH_U):
+    return [(u, width_at(prof, straight, i0, i1, k, u)) for u in us]
+
+
 # ── ② «마지막 알약 아랫변 ↔ 리본1 윗변» 틈 (923 1회차 신설 · 등재문 ②) ──────────
 #   같은 절차를 ref 와 우리에게 쓴다: 알약 가로 구간의 **행 중앙값** 밝기로
 #   「알약 채움(어둡다) → 카드 몸통(중간) → 리본 검정 테(가장 어둡다)」 를 가르고,
@@ -290,6 +304,11 @@ def scan(a, y0, y1, x0, x1, bg, k, t, label):
             cells = '  '.join(f'{int(f * 100):3d}% {("  n/a" if w is None else f"{w:6.2f}")}'
                               for f, w in wp)
             print(f'        깊이별 폭(우리px) — {cells}   평탄부 {st["flat"]:.2f}')
+        if '--mouth' in sys.argv:
+            mp = mprofile(prof, straight, s, e, k)
+            cells = '  '.join(f'u{u:<2d} {("  n/a" if w is None else f"{w:6.2f}")}'
+                              for u, w in mp)
+            print(f'        입 폭(우리px · 절대깊이) — {cells}')
         out.append(st)
     return out
 

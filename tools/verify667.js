@@ -101,7 +101,10 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
         sH: +n.querySelector('s').getBoundingClientRect().height.toFixed(1),
         uW: +n.querySelector('u').getBoundingClientRect().width.toFixed(1),
         uH: +n.querySelector('u').getBoundingClientRect().height.toFixed(1),
-        sSpan: sp && sp.span, sApex: sp && sp.apex, uApex: up && up.apex,
+        sSpan: sp && sp.span, sApex: sp && sp.apex, uApex: up && up.apex, uSpan: up && up.span,
+        /* 923 5회차 — 표의 머리가 v > 1(노치 «입»)이라 스팬은 «길이» 가 아니라 «길이 × vmax» 다.
+           vmax 를 제품에게 물어서 [A3] 이 그 몫을 도로 나눌 수 있게 한다(값을 자에 손으로 안 적는다). */
+        vmax: Math.max(...(NTC_PROF[c.classList.contains('ban1') ? 'ban' : 'bl'].map(p => p[1]))),
         cen: +(cb.bottom - (nb.top + nb.height / 2)).toFixed(1)
       };
     })
@@ -135,8 +138,13 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     /* ⚑ 923 3회차 이관 — 잣대만 바뀌었다(뜻은 7회차 그대로). 옛 항은 링 상자의 높이를 물었는데
        3회차부터 그 상자는 노치 상자를 통째로 덮으므로(모양은 폴리곤) **폴리곤 바깥 곡선의 세로 스팬**
        을 묻는다. 그것이 «그려질 노치 길이» 다 — 상자를 물면 늘 len+24 라 항이 늘 초록인 벙어리가 된다. */
-    ok(`A3 ${t}(${c.id}) 노치 폴리곤 세로 스팬 = ${E.sH}  (7회차 — 문턱 스윕에서 ref 와 부호가 안 갈리는 값)`,
-      c.ntc.every(n => near(n.sSpan, E.sH, 1)), c.ntc.map(n => n.sSpan).join('/'));
+    /* ⚑ 923 5회차 이관 — 잣대에서 «입» 몫을 나눈다(뜻은 7회차 그대로: 그려질 노치 길이가 선언인가).
+       프로필 표의 머리가 v>1 이 된 뒤로 바깥 곡선의 스팬은 **길이 × vmax** 다(배너 88.1 · 불릿 131.7).
+       vmax 는 제품(`NTC_PROF`)에서 읽어 오므로 «표를 바꾸면 자가 따라온다» 가 유지되고,
+       `NTC_LEN` 을 건드리면 여전히 빨개진다(그것이 이 항이 지키는 것이다). */
+    ok(`A3 ${t}(${c.id}) 노치 폴리곤 세로 스팬 ÷ 프로필 vmax = ${E.sH}  (7회차 — 문턱 스윕에서 ref 와 부호가 안 갈리는 값)`,
+      c.ntc.every(n => near(n.sSpan / n.vmax, E.sH, 1)),
+      c.ntc.map(n => n.sSpan + '/' + n.vmax.toFixed(3) + '=' + (n.sSpan / n.vmax).toFixed(1)).join(' '));
     /* ⚑ 923 2회차 이관 — 이 항은 **두 번째로 방향이 바뀐다**(333 처방 · 자리는 그대로 둔다).
        5회차 «두 형이 같은 80» → 833 8회차 «두 값 80/86» → 지금 «두 형이 같은 82».
        8회차를 되돌리는 것이 아니라 **자를 갈아 끼운 것**이다: 8회차의 근거(`scan667.py` 정수 자)는
@@ -152,9 +160,15 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
       c.ntc.every(n => near(n.w, NTC_DEP[k] + RIM, 1) && near(n.uW, NTC_DEP[k] + RIM - 10, 1)
         && near(n.uApex, NTC_DEP[k] + RIM, 0.1)),
       c.ntc.map(n => n.w + '/' + n.uW + '/' + n.uApex).join(' '));
-    ok(`A5 ${t}(${c.id}) 상자는 링보다 위·아래로 ${RIM} 씩 넓다 (밝은 림 «u» 의 호가 안 잘리게)`,
-      c.ntc.every(n => near(n.h, E.sH + 2 * RIM, 1) && near(n.uH, E.sH + 2 * RIM, 1)),
-      c.ntc.map(n => n.h + '/' + n.uH).join(' '));
+    /* ⚑ 923 5회차 이관 — 이 항의 **뜻을 산수 대신 직접** 묻는다. 옛 항은 «상자 = 길이 + 2×12» 라는
+       산수였고 그것이 «림의 호가 안 잘린다» 를 대신했는데, 5회차부터 상자 높이는 프로필 표가 정한다
+       (`pvNtcMargin` — 입 v>1 이 상자를 넘으면 `overflow:hidden` 이 도로 잘라 «표만 바뀌고 그림은
+       그대로» 가 된다). ⇒ 이제 **림 폴리곤의 세로 스팬이 상자 안에 들어가는가**를 직접 묻고,
+       상자가 그보다 4px 넘게 크지 않은 것(= 여백을 손으로 부풀리지 않았다)까지 짝으로 묻는다.
+       ⚠ 옛 산수는 여백 0 일 때(vmax = 1) 이 항과 같은 값을 낸다 — 되돌림 §R 이 그 자리를 지킨다. */
+    ok(`A5 ${t}(${c.id}) 밝은 림 «u» 의 호가 상자 안에 다 들어간다 (상자 ≥ 림 스팬, 여유 ≤ 4px · 림 상자도 같은 높이)`,
+      c.ntc.every(n => n.h + 0.5 >= n.uSpan && n.h - n.uSpan <= 4 && near(n.uH, n.h, 1)),
+      c.ntc.map(n => n.h + '≥' + n.uSpan + '(' + (n.h - n.uSpan).toFixed(1) + ') u' + n.uH).join(' '));
     ok(`A6 ${t}(${c.id}) 맨 아래 노치 **중심** ↔ 카드 하변 = ${E.cen0}`,
       near(c.ntc[c.ntc.length - 1] && c.ntc[0].cen, E.cen0, 1.5), c.ntc[0] && c.ntc[0].cen);
     const cens = c.ntc.map(n => n.cen).sort((a, b) => a - b);
