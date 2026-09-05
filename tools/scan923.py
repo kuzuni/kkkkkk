@@ -50,6 +50,9 @@ def runs(vals, minlen=1):
 
 
 COV = '--nocov' not in sys.argv    # 4회차: 덮개 적분이 기본(--nocov 로 옛 문턱 자)
+PED = '--ruler8' not in sys.argv   # 9회차 자 수리 둘(받침 빼기 · 안쪽 끝도 덮개)이 기본 — `--ruler8` 로 8회차 자
+PED_W0, PED_W1 = 3, 9              # 받침 표본 창 — 경계 화소 i 에서 +3..+8(경계 번짐 두 화소를 건너뛴다)
+COLSCAN = '--norow' not in sys.argv and '--nocol' not in sys.argv   # 9회차: 띠 점구름에 «열 스캔» 도 넣는다
 MIN_EXT_OUR = 12.0                # «카드 재질» 로 인정할 최소 덩이 두께(**우리 px** — ref 에서는 /K)
 GAP_OUR = 3.0                     # 덩이를 이어 붙일 수 있는 틈(우리 px · ref 1.45px) — 아래 ⚑
 
@@ -143,12 +146,30 @@ def outer_x(row, bg, t, k=1.0):
         full = float(np.abs(blk - np.array(bg)).sum())
         if full <= 0:
             return i + 0.5
+        # ⚑⚑ **9회차 — 덮개 창의 오른쪽 꼬리가 «바탕이 아닌 바탕» 을 먹고 있었다.**
+        #   8회차 채점 2인이 ref 곧은변 띠를 10.06~10.23 으로 읽는데 이 자만 10.32~10.34 였다
+        #   (GV 진단 «창 오른쪽 꼬리를 한 화소 더 먹는다»). 뿌리는 **바탕 표본의 자리**다 —
+        #   8회차 2단계가 세로 변화(행마다)를 고쳤지만 **가로 변화**가 남아 있었다:
+        #   카드 바로 오른쪽은 그림자가 깔려 far-margin 바탕과 |Δ|₁ 가 **20~26** 이나 되는데
+        #   (ref 초록 y400: 편평한 바탕이 19·26·26·22·23 으로 읽힌다) 덮개는 그 화소마다
+        #   α = 26/127 ≈ 0.20 씩을 «부분 덮개» 로 세어 경계를 최대 **+0.56 우리px** 바깥으로 민다.
+        #   ⇒ **바탕을 경계 바로 옆에서 다시 잰다**(단 두 줄): 받침 ped = 경계 밖 [i+3, i+9) 의
+        #   |Δbg|₁ 중앙값이고 α = (d − ped)/(full − ped) 다. 우리 렌더는 경계 밖이 참 바탕이라
+        #   ped = 0 → **한 값도 안 변한다**(실측 곧은변 10.00 그대로). ref 만 내려온다.
+        #   ⚠ ped 는 full 의 절반으로 자른다 — 배지처럼 «오른쪽에 다른 부품» 이 서 있는 행에서
+        #     받침이 폭주해 경계가 안으로 말려 들어가지 않게(그 행들은 최빈 곧은변에서 이미 빠진다).
+        #   ⚠ 되돌리려면 `--ruler8`(자 자신의 회귀 `verify923` §R8 이 그 사본으로 ref 를 다시 읽는다).
+        ped = 0.0
+        if PED:
+            pw = d[min(len(d), i + PED_W0):min(len(d), i + PED_W1)]
+            if len(pw):
+                ped = min(float(np.median(pw)), 0.5 * full)
         xs = i
         while xs > 0 and d[xs] < 0.95 * full:
             xs -= 1
         acc = 0.0
         for x in range(xs + 1, min(len(d), i + 4)):
-            acc += min(1.0, max(0.0, d[x] / full))
+            acc += min(1.0, max(0.0, (d[x] - ped) / (full - ped)))
         return xs + 0.5 + acc
     if i + 1 >= len(d):
         return i + 0.5
@@ -325,6 +346,27 @@ def inner_x(g, xo, x0, darkf=DARK_F):
         i -= 1
     # 이제 g[i] 가 «밝은 쪽» 첫 화소, g[i+1] 이 어두운 쪽
     v = float(max(g[max(x0, i - 3):i + 1].max(), g[i]))
+    if COV and PED:
+        # ⚑⚑ **9회차 — 띠의 두 끝을 «다른 자» 로 재고 있었다(8회차 채점이 남긴 +0.2 의 뿌리).**
+        #   바깥 끝(`outer_x`)은 4회차에 **덮개 적분**으로 갈았는데(942 처방 — 문턱 자는 하드 에지에서
+        #   한쪽으로 치우친다) 안쪽 끝은 그대로 **50% 교차**였다. 한 띠의 두 끝을 서로 다른 자로 재니
+        #   그 편향 차가 통째로 두께에 실린다.
+        #   실측(ref 초록 y660 · 곧은변): g = … 241 | 49 | 0 0 0 1 | 43 49 … 이고 검정 덮개는
+        #   c(481) = (241−49)/241 = 0.797 · c(480) = 0 ⇒ 참 경계는 **480.70**(면적)인데
+        #   50% 교차는 **480.63** 을 준다 ⇒ 두께가 10.15 대신 **10.28** 로 읽힌다.
+        #   ⇒ 안쪽도 같은 자로: c = (V − g)/V 를 **꽉 찬 검정 화소 왼쪽 끝**에서 왼쪽으로 적분한다.
+        #   ref 곧은변 10.33 → **10.15**(채점 GV 10.15 «반값» · GW 10.11 과 같은 자리) ·
+        #   우리 렌더는 경계 화소가 한 장뿐이라 두 자의 값이 사실상 같다(10.00 그대로).
+        #   ⚠ 되돌리려면 `--ruler8` — 그러면 이 함수도 8회차의 50% 교차로 돌아간다(§R8 이 그 사본을 쓴다).
+        if v <= 0:
+            return None
+        xs = i + 1                                  # 첫 «어두운» 화소
+        while xs + 1 < len(g) and (v - g[xs]) / v < 0.95:
+            xs += 1                                 # 꽉 찬 검정을 만날 때까지
+        acc = 0.0
+        for x in range(max(x0, xs - 4), xs):
+            acc += min(1.0, max(0.0, (v - float(g[x])) / v))
+        return xs - 0.5 - acc
     lvl = v * darkf
     if g[i] < lvl or g[i + 1] >= lvl:
         return None
@@ -353,6 +395,36 @@ def band_prof(a, y0, y1, x0, x1, bg, t, k, straight, i0=None, i1=None, darkf=DAR
         outs.append((xo + x0, y))
         if xi is not None:
             inns.append((xi, y))
+    # ⚑⚑ **9회차 — 얕은 깊이 칸은 «행» 으로는 못 채운다(8회차 2단계 §5 가 남긴 선행 과제).**
+    #   입 근처에서 노치 경계는 곧은변과 거의 나란하다 — 한 행이 깊이를 여러 px 씩 건너뛰어
+    #   u2~4 · u7~10 칸이 통째로 빈다(ref 불릿 y298 자리: 두 칸 다 표본 0). 같은 병목을
+    #   6회차가 «입 폭» 축에서 이미 만났고 그 처방이 **행이 아니라 열로 읽는 것**이었다(REF_M 주석).
+    #   ⇒ 여기서도 **열(세로) 스캔을 점구름에 더한다**: 한 열은 «몸통 → 검정 → 노치 속 바탕 →
+    #   검정 → 몸통» 이라 위·아래 어깨가 각각 «재료 → 바탕» 한 번씩이다. 열을 그대로 `outer_x`·
+    #   `inner_x` 에 먹이면(아래 어깨는 뒤집어서) 같은 자·같은 규약이 그대로 쓰인다.
+    #   ⚠ 열 표본은 **점구름에 더할 뿐** 두께 계산 규약(안쪽 점 → 바깥 점구름 최소 거리)은 그대로다.
+    if i0 is not None and COLSCAN and outs:
+        ylo, yhi = max(y0, lo - BAND_MARGIN), min(y1, hi + BAND_MARGIN)
+        ymid = (lo + hi) // 2
+        bgm = np.median(np.array([bg_of(bg, y) for y in range(ylo, yhi)], float), axis=0)
+        xmin = int(min(o[0] for o in outs)) - 2
+        for x in range(max(x0 + 1, xmin), min(x1, int(straight + x0) + 2)):
+            for side in (0, 1):
+                s0, s1 = (ylo, ymid) if side == 0 else (ymid, yhi)
+                if s1 - s0 < 6:
+                    continue
+                col = a[s0:s1, x]
+                gc = g[s0:s1, x]
+                if side == 1:                      # 아래 어깨 — «재료 → 바탕» 방향으로 뒤집는다
+                    col, gc = col[::-1], gc[::-1]
+                yo = outer_x(col, bgm, t, k)
+                if yo is None:
+                    continue
+                yi = inner_x(gc, yo, 0, darkf)
+                m = (lambda p: s0 + p) if side == 0 else (lambda p: s0 + (s1 - s0 - 1) - p)
+                outs.append((float(x), m(yo)))
+                if yi is not None:
+                    inns.append((float(x), m(yi)))
     if not outs or not inns:
         return []
     O = np.array(outs, float)
@@ -450,9 +522,12 @@ def scan(a, y0, y1, x0, x1, bg, k, t, label):
         if '--band' in sys.argv:
             df = float(sys.argv[sys.argv.index('--darkf') + 1]) if '--darkf' in sys.argv else DARK_F
             bp = band_prof(a, y0, y1, x0, x1, bg, t, k, straight, s, e, df)
+            bt = band_table(bp)
             cells = '  '.join(f'u{b0}~{b1} {("  n/a" if v is None else f"{v:6.2f}")}({n})'
-                              for (b0, b1), v, n in band_table(bp))
+                              for (b0, b1), v, n in bt)
             print(f'        띠 두께(우리px · 깊이칸) — {cells}')
+            # 9회차 — 노드 게이트(`verify923` [B8])가 **같은 자·같은 칸**을 그대로 읽게 한다.
+            st['band'] = [[b0, b1, v, n] for (b0, b1), v, n in bt]
         out.append(st)
     if '--band' in sys.argv:
         df = float(sys.argv[sys.argv.index('--darkf') + 1]) if '--darkf' in sys.argv else DARK_F
@@ -464,8 +539,11 @@ def scan(a, y0, y1, x0, x1, bg, k, t, label):
         rows = [r for r in band_prof(a, y0, y1, x0, x1, bg, t, k, straight, None, None, df)
                 if (r[2] - y0) not in inn and abs(r[0]) <= 1.5]
         if rows:
-            print(f'    곧은변 띠 두께(우리px) 중앙값 {np.median([d for _, d, _ in rows]):6.2f}'
+            straight_th = float(np.median([d for _, d, _ in rows]))
+            print(f'    곧은변 띠 두께(우리px) 중앙값 {straight_th:6.2f}'
                   f'  (표본 {len(rows)})')
+            for st in out:
+                st['straight_band'] = straight_th
     return out
 
 
@@ -507,12 +585,26 @@ if __name__ == '__main__':
     t = float(sys.argv[sys.argv.index('--t') + 1]) if '--t' in sys.argv else T0
     ladder = [t * 0.8, t, t * 1.2] if '--ladder' in sys.argv else [t]
     did = False
+    res = {}
     for tv in ladder:
         if '--ref' in sys.argv:
-            report_ref(tv); did = True
+            res = report_ref(tv); did = True
         if '--cap' in sys.argv:
             png = sys.argv[sys.argv.index('--cap') + 1]
             geo = sys.argv[sys.argv.index('--geo') + 1]
-            report_cap(png, geo, tv); did = True
+            res = report_cap(png, geo, tv); did = True
+    # 9회차 — 노드 게이트가 같은 자를 그대로 읽게 하는 통로(`verify923` [B8]).
+    #   ⚠ 새 축을 여기서 «다시 계산» 하지 않는다 — 위 `scan()` 이 낸 것을 그대로 싣는다(사본 금지 · 402).
+    if '--json' in sys.argv:
+        # NaN 은 JSON 이 아니다(노드 `JSON.parse` 가 즉사한다 — 939 «자가 못 쟀다» 를 조용히 만든다).
+        def clean(v):
+            if isinstance(v, dict):
+                return {a: clean(b) for a, b in v.items()}
+            if isinstance(v, (list, tuple)):
+                return [clean(x) for x in v]
+            if isinstance(v, float) and not np.isfinite(v):
+                return None
+            return v
+        print('@@JSON@@' + json.dumps(clean(res), ensure_ascii=False))
     if not did:
         print(__doc__)

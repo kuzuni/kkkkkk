@@ -22,6 +22,7 @@
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { py } = require('./pydep937');   /* 파이썬 자를 부를 때는 이 통로로 — 937·939 종료 코드 사전 */
 const PNG = require('./png913').PNG();
 const { chromium } = pw();
 
@@ -47,9 +48,17 @@ const FRACS = [0.25, 0.50, 0.75, 0.90];
    ⚑ 검산 — 자가 이제 두 카드의 곧은변을 **둘 다 x=485.63** 으로 읽는다(수리 전 배너 485.63 ↔
      불릿 486.35). 1회차 채점 GK 가 «노치 없는 행만 골라 재면 두 형의 차는 0.01 우리px» 라고
      적어 둔 그 값이다. */
+/* ⚑⚑ **9회차 — 자를 고쳤으니 과녁도 다시 읽는다(333 이관).** 9회차 자 수리 둘(덮개의 «받침»
+   빼기 · 안쪽 끝도 덮개)은 ref 쪽만 움직인다(우리 렌더는 경계 밖이 참 바탕이라 ped=0).
+   바뀐 것은 **배너 바닥 하나**가 사실상 전부다 — y136 자리가 18.57 → 16.50 으로 내려와
+   두 자리가 **둘 다 16.50** 이 됐다(전에는 18.57/16.50 의 평균 17.54 였다). 나머지는 Δ≤0.11:
+     ban dep 31.79 → 31.86 · wd [57.53, 50.80, 38.95, 26.17] → [57.53, 50.85, 38.98, 26.10]
+     bl  dep 31.87 → 31.85 · wd [92.83, 82.70, 64.33, 42.69] → [92.81, 82.72, 64.31, 42.76] · flat 26.82 불변
+   ⚠ 우리 값은 **한 픽셀도 안 움직였다**(배너 바닥 18.0 · 불릿 26.0) — 이 이관은 «ref 를 어떻게
+   읽었는가» 의 정정이지 제품 변화가 아니다. */
 const REF = {                     /* ref 실측(우리 px) — `python3 tools/scan923.py --ref [--prof]` */
-  ban: { flat: 17.54, len: 59.8, dep: 31.79, wd: [57.53, 50.80, 38.95, 26.17] },
-  bl: { flat: 26.82, len: 97.0, dep: 31.87, wd: [92.83, 82.70, 64.33, 42.69] }
+  ban: { flat: 16.50, len: 59.8, dep: 31.86, wd: [57.53, 50.85, 38.98, 26.10] },
+  bl: { flat: 26.82, len: 97.0, dep: 31.85, wd: [92.81, 82.72, 64.31, 42.76] }
 };
 const W_TOL = 2.5;                /* 옛 타원은 8자리 중 4자리에서 이 창 밖이다(§R 이 매 실행 확인한다) */
 /* ⚑⚑ 5회차 신설 — **«입(mouth)» 축**. 4회차 채점 2인(GN·GO)이 공통 1순위로 «ref 는 노치가 곧은변에
@@ -73,7 +82,24 @@ const M_TOL = 2.0;
    오염된 창에서는 이 자가 이제 숫자 대신 **n/a** 로 답한다(음수 폭을 내면 조용히 속는다 — 939). */
 /* ⚑ 8회차 2단계 — 여기도 불릿만 움직였다(바탕 표본 수리): [118.27,109.67,105.46,100.77,95.79] →
    아래 값. 배너는 Δ≤0.11(72.17 → 72.07 = 다섯 화소 중앙값 바탕의 잔차)이라 그대로 다시 적는다. */
-const REF_M = { ban: [72.07, 67.46, 63.94, 61.78, 59.35], bl: [116.93, 109.62, 104.30, 100.15, 95.91] };
+const REF_M = { ban: [72.03, 67.34, 63.86, 61.73, 59.33], bl: [117.08, 109.55, 104.24, 100.21, 95.91] };
+/* ⚑⚑ **9회차 신설 — «띠 두께의 깊이 표»**(7·8회차 채점 넷이 ②를 7 로 막은 유일한 항목).
+   ref 실측(`python3 tools/scan923.py --ref --band` · 9회차 자 수리 뒤 · 오염 안 된 자리:
+   불릿 y298 한 자리 · 배너 y136·y204 평균). 칸은 자의 `BAND_BINS` 와 **같은 격자**이고
+   값은 «그 칸에 든 바깥 점들의 두께 중앙값» 이다.
+     불릿 — u-2~2 10.15 · u2~4 13.29 · u4~7 13.77 · u7~10 14.18 · u10~16 14.03 · u16~24 12.14 · u24~34 10.64
+     배너 — 전 칸 9.4~10.1 로 **고르다**(대조군 — 이 형은 표를 안 만든다. 한 값 10.0 으로 적는다)
+   ⚑ 이 표는 저장소 자 혼자 낸 것이 아니다 — 8회차 채점 2인이 **각자의 자**로 낸 표
+   (4→13.4 · 6→14.0 · 8→14.3 · 12→14.4 · 16→13.5 · 24→11.6 · 곧은변·바닥 10.1)와 같은 그림이고,
+   9회차 자 수리(받침 빼기 · 안쪽 끝도 덮개 · 열 스캔)가 그 자리를 **독립으로 재현**했다.
+   ⚠ 창 ±0.9 는 [B5] 의 ±2.5 보다 좁다 — 수리 전(어디서나 10)이면 어깨 칸이 −4.0 안팎으로
+   그 창의 네 배 밖이고(§R9 가 그 사본으로 확인한다), 수리 후 실측 최대 |Δ| 는 0.61 이다.
+   ⚠ u-2~2 는 **관측 칸**이다(8회차 채점이 여기서 갈렸다 — GV 10.82 ↔ GW 13.15) — null 로 둔다. */
+const REF_B = {
+  ban: [null, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0],
+  bl: [null, 13.29, 13.77, 14.18, 14.03, 12.14, 10.64]
+};
+const B_TOL = 0.9;
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'ok ' : 'FAIL'} ${m}`); };
@@ -473,20 +499,76 @@ async function shot(page, sel, out) {
       inner.push([din, -ntcV(pf, 1) * hin]);
       /* 바깥·림은 **제품 함수가 내는 그 곡선**이다(사본 금지 — 402). */
       const sm = ntcInnerSamples(pf, din, hin, NTC_OFF_N);
-      const oc = ntcOffset(sm, 10, NTC_OFF_N), rc = ntcOffset(sm, 22, NTC_OFF_N);
+      const bt = NTC_BAND[k];
+      const oc = ntcOffset(sm, bt, NTC_OFF_N), rc = ntcOffset(sm, bt, NTC_OFF_N, 12);
       const b = span(oc, inner), r = span(rc, oc);
+      /* 9회차 — «깊이별» 두께. 안쪽 곡선 위의 그 깊이 점에서 바깥 폴리라인까지의 최소 거리다
+         (자 `scan923.py --band` 의 «안쪽 점 → 바깥 점구름 최소 거리» 와 같은 뜻). */
       out.push({ k, min: b.mn, max: b.mx, u: b.u, rmin: r.mn, rmax: r.mx, n: oc.length });
     }
     return out;
   });
+  /* ⚑⚑ **923 9회차 — 깊이별 두께는 «선언 기하» 가 아니라 자에게 묻는다.**
+     선언 기하로 재면 «바깥 점의 깊이» 가 원판 반지름만큼 깊어져 자의 칸과 **한 칸 반이 밀린다**
+     (실측: 같은 그림을 선언 기하로 재면 봉우리가 u16~24 · 자로 재면 u10~16). ref 표는 자가 낸
+     것이므로 **같은 자·같은 칸**으로 우리 캡처도 재야 비교가 성립한다(885 «회차마다 자를 새로
+     만들면 값이 못 이어진다»). ⇒ `scan923.py --cap … --band --json` 을 그대로 부른다
+     (사본 금지 · 402 — 자를 노드로 옮겨 적으면 두 벌이 갈린다). */
+  const geoTmp = path.join(ROOT, `.v923-${process.pid}.geo.json`);
+  require('fs').writeFileSync(geoTmp, JSON.stringify({
+    cards: boxes.map((c) => ({ id: c.id, box: { x: c.x, y: c.y, w: c.w, h: c.h } }))
+  }));
+  let scanned = null;
+  try {
+    const raw = String(py(['tools/scan923.py', '--cap', tmp, '--geo', geoTmp, '--band', '--json'],
+      { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+    const line = raw.split('\n').find((l) => l.startsWith('@@JSON@@'));
+    scanned = line ? JSON.parse(line.slice(8)) : null;
+  } finally {
+    try { require('fs').unlinkSync(geoTmp); } catch (e) { /* 지워졌으면 됐다 */ }
+  }
+  ok(!!scanned, `[B8-0] 자(scan923.py --band)가 우리 캡처를 읽었다 — 카드 ${scanned ? Object.keys(scanned).length : 0}장`);
+  for (const [ci, c] of boxes.entries()) {
+    const rows = scanned && scanned[`card${ci + 1}`];
+    if (!rows) continue;
+    const k = c.ban ? 'ban' : 'bl';
+    const want = REF_B[k];
+    /* 자가 낸 노치 중 «온전히 보이는» 자리만(위 §B 와 같은 규약 — 배지에 가린 토막은 관측). */
+    for (const n of rows.filter((r) => r.D > 20 && Math.abs(r.length - REF[k].len) <= 8 && r.band)) {
+      const got = n.band.map(([a0, a1, v, cnt]) => [a0, a1, v == null ? null : +v.toFixed(2), cnt]);
+      const off = got.map(([, , v], j) => (v == null || want[j] == null ? 0 : Math.abs(v - want[j])));
+      ok(Math.max(...off) <= B_TOL,
+        `[B8] ${k}(${c.id}) y${n.y0} 띠 두께(자 · 깊이칸) `
+        + got.map(([a0, a1, v, cnt], j) => `u${a0}~${a1} ${v == null ? 'n/a' : v}/${want[j] == null ? '—' : want[j]}(${cnt})`).join(' ')
+        + ` · 최대 |Δref| ${Math.max(...off).toFixed(2)} ≤ ${B_TOL}`);
+    }
+  }
   for (const t of thick) {
     /* ⚑⚑ 923 7회차 — 래칫(≥4.0)이 **과녁으로 올라섰다.** 바깥·림이 안쪽 곡선의 법선 오프셋이라
        띠 두께는 이제 «어디서나 10» 이 성립한다(실측 배너 9.97~10.06 · 불릿 9.97~10.03).
        ⚠ **두 쪽을 다 묻는다** — 얇아지는 것만 막으면 «오프셋을 그만두고 통째로 두껍게» 도 초록이 된다.
        ⚠ 이 수는 6회차 채점 GS 가 찍힌 화소로 잰 8.08 과 **정의가 다르다**(찍힌 띠는 구멍이 입 쪽을
        덮어 더 두껍게 보인다) — 섞어 쓰지 마라. 남은 −0.07 은 표본을 솎은 이음선 몫이다(`NTC_OFF_E`). */
-    ok(t.min >= 9.9 && t.max <= 10.15,
-      `[B8] ${t.k} 띠 두께(선언 기하) ${t.min}~${t.max}(최소 u=${t.u}) = 10 — 곧은변 10 · ref 9.93 (점 ${t.n})`);
+    /* ⚑⚑ **923 9회차 — 이 항이 «상수 10» 에서 «형마다 한 벌짜리 두께 표» 로 이관됐다(333 처방).**
+       7·8회차 채점 넷이 ②를 7 로 막은 유일한 항목이 «어깨 띠가 ref 보다 −2.7~−4.7 얇다» 였고,
+       8회차 채점 2인이 각자의 자로 낸 표를 9회차에 저장소 자가 **독립으로 재현**했다
+       (`scan923.py --band` 9회차 수리 뒤 ref 불릿 u2~4 13.29 · u7~10 14.18 · u10~16 14.03 ·
+        u16~24 12.14 · u24~34 10.64 · 곧은변 10.15 — 채점 표 4→13.4 · 8→14.3 · 12→14.4 · 24→11.6).
+       ⚠ **«어디서나 10» 을 그대로 두면 안 되는 이유**가 이 항의 뜻이다 — 이제 묻는 것은
+         ① 두 끝(곧은변·바닥)은 여전히 **정확히 10**(833 §12 파생이 항등식으로 남는다) ·
+         ② 마디마다 **표 그대로**(±0.35) · ③ 어깨가 실제로 **두껍다**(max/min ≥ 1.35 — 음성항).
+       ③ 이 없으면 표를 통째로 10 으로 되돌려도 ①②가 초록이라 «이관» 이 아니라 «삭제» 가 된다
+       (§R9 가 그 사본으로 이 항이 빨개지는 것을 매 실행 확인한다). */
+    /* ⚑ 9회차 — 이 항은 이제 **선언 기하 쪽 짝**이다(찍힌 화소 쪽은 위 [B8]). 두 가지를 묻는다:
+       ① 두 끝(곧은변·바닥)은 여전히 **정확히 10** — 833 §12 «꼭지에서 셋이 d−10 · d · d+12» 와
+          7회차 «곧은변 띠 10» 이 항등식으로 남는다(어깨만 표를 따른다).
+       ② 어깨가 **실제로 두껍다**(불릿 max/min ≥ 1.35 · 배너는 반대로 고르다 ≤ 10.15).
+       ② 가 없으면 표를 통째로 10 으로 되돌려도 ①이 초록이라 이 이관이 «삭제» 가 된다
+       (§R9 가 그 사본으로 이 항과 [B8] 이 같이 빨개지는 것을 매 실행 확인한다). */
+    const flat = t.k === 'ban';
+    ok(t.min >= 9.9 && t.min <= 10.15 && (flat ? t.max <= 10.15 : t.max / t.min >= 1.35),
+      `[B8a] ${t.k} 띠 두께(선언 기하) ${t.min}~${t.max}(최소 u=${t.u}) — 두 끝 10`
+      + ` · ${flat ? '배너는 고르다' : `어깨비 ${(t.max / t.min).toFixed(2)} ≥ 1.35`} (점 ${t.n})`);
     /* 짝 항 — 림도 같은 오프셋으로 나온다(833 §12 «림 두께 12 불변» 을 꼭지 하나가 아니라 곡선 전체로). */
     ok(t.rmin >= 11.9 && t.rmax <= 12.15,
       `[B8b] ${t.k} 림 두께(선언 기하) ${t.rmin}~${t.rmax} = 12 — 833 §12 [12-d] 를 «꼭지» 에서 «곡선 전체» 로`);
@@ -660,6 +742,72 @@ async function shot(page, sel, out) {
   });
   ok(r7.every((r) => r.mn < 9.9),
     `[R7] 옛 방사 배율로 되돌리면 띠가 [B8] 창(≥9.9) 밖으로 얇아진다 — ${r7.map((r) => `${r.k} ${r.mn}(u=${r.u})`).join(' · ')}`);
+
+  /* ⚑⚑ **923 9회차 신설 §R8 — 자 자신의 되돌림 시험.**
+     이 회차는 제품만 고친 게 아니라 **자를 고쳤다**(덮개의 받침 빼기 · 안쪽 끝도 덮개).
+     그 수리가 «값을 실제로 움직였는가» 를 ref 로 매 실행 확인한다 — `--ruler8` 사본은
+     8회차 자(안쪽은 50% 교차 · 받침 없음)라 곧은변 띠를 **10.3 대**로 읽고, 고친 자는
+     채점 2인(GW 10.11 · GV 10.15/10.06)과 같은 **10.1~10.2** 로 읽는다.
+     ⚠ 이 항이 없으면 «자를 고쳤다» 는 말만 남는다(자 수리는 게이트가 없으면 아무도 안 짖는다). */
+  blk('§R8 되돌림 — 자를 8회차 것(`--ruler8`)으로 되돌리면 ref 곧은변 띠가 10.3 대로 되돌아간다');
+  const refBand = (extra) => {
+    const raw = String(py(['tools/scan923.py', '--ref', '--band', '--json'].concat(extra || []),
+      { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+    const line = raw.split('\n').find((l) => l.startsWith('@@JSON@@'));
+    const sc = line ? JSON.parse(line.slice(8)) : {};
+    const out = {};
+    for (const [name, rows] of Object.entries(sc)) {
+      const st = rows.find((r) => r.straight_band != null);
+      if (st) out[name] = +st.straight_band.toFixed(2);
+    }
+    return out;
+  };
+  const r8now = refBand(), r8old = refBand(['--ruler8']);
+  const names = Object.keys(r8now);
+  ok(names.length === 2
+     && names.every((n) => r8now[n] >= 10.0 && r8now[n] <= 10.25)
+     && names.every((n) => r8old[n] >= 10.28),
+    `[R8] 고친 자 ${names.map((n) => `${n} ${r8now[n]}`).join(' · ')} (채점 2인 10.06~10.23) `
+    + `↔ 8회차 자 ${names.map((n) => `${n} ${r8old[n]}`).join(' · ')} (+0.2 잔차)`);
+
+  /* ⚑⚑ **923 9회차 신설 §R9 — 두께 표를 «어디서나 10» 으로 되돌리면 [B8]·[B8a] 가 빨개지는가.**
+     이 회차의 이관(«상수 10» → «형마다 한 벌짜리 두께 표»)이 «삭제» 가 아니라는 증거다 —
+     되돌린 사본을 **같은 자**(scan923.py · ref 와 같은 칸)로 다시 재서 어깨 칸이 창 밖으로
+     나가는 것을 매 실행 확인한다(338 규칙 — 이미 참인 것을 굳힌 항이 아니다). */
+  blk('§R9 되돌림 여섯째 — 띠 두께 표를 «어디서나 10» 으로 되돌리면 [B8] 이 빨개진다');
+  await page.evaluate(() => {
+    NTC_BAND.bl = [[0, 10]];
+    pvNtcCache.clear();
+    Object.keys(NTC_PROF).forEach((k) => NTC_PROF[k].forEach((p, i) => { p[1] = PROF0[k][i]; }));
+    openShopTab('pass');
+  });
+  await page.waitForTimeout(500);
+  await shot(page, '#app', tmp);
+  const geoR = path.join(ROOT, `.v923-${process.pid}.r9.json`);
+  require('fs').writeFileSync(geoR, JSON.stringify({
+    cards: boxes.map((c) => ({ id: c.id, box: { x: c.x, y: c.y, w: c.w, h: c.h } }))
+  }));
+  let r9 = [];
+  try {
+    const raw = String(py(['tools/scan923.py', '--cap', tmp, '--geo', geoR, '--band', '--json'],
+      { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+    const line = raw.split('\n').find((l) => l.startsWith('@@JSON@@'));
+    const sc = line ? JSON.parse(line.slice(8)) : {};
+    for (const [ci, c] of boxes.entries()) {
+      const rows = sc[`card${ci + 1}`];
+      if (!rows || c.ban) continue;
+      const want = REF_B.bl;
+      for (const n of rows.filter((r) => r.D > 20 && Math.abs(r.length - REF.bl.len) <= 8 && r.band)) {
+        const off = n.band.map(([, , v], j) => (v == null || want[j] == null ? 0 : Math.abs(v - want[j])));
+        r9.push({ id: c.id, y0: n.y0, worst: +Math.max(...off).toFixed(2) });
+      }
+    }
+  } finally {
+    try { require('fs').unlinkSync(geoR); } catch (e) { /* 지워졌으면 됐다 */ }
+  }
+  ok(r9.length > 0 && r9.every((r) => r.worst > B_TOL),
+    `[R9] 표를 «어디서나 10» 으로 되돌리면 불릿 어깨 칸이 [B8] 창(±${B_TOL}) 밖이다 — `
+    + r9.map((r) => `${r.id} y${r.y0} |Δref| ${r.worst}`).join(' · '));
 
   blk('§Z 콘솔');
   ok(errs.length === 0, `[Z] 콘솔·페이지 에러 0건 — ${errs.length}`);
