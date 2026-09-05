@@ -36,8 +36,9 @@ const ok = (msg, cond, detail) => {
    래칫은 «늘면 빨강» 이므로 **줄어든 것도 여기서 다시 적어야** 지나간다 — 그 자리가 이 줄이다. */
 /* ⚑ 4회차 — `probe866.py` 가 R 에서 빠졌다(알약 바깥·속 여덟 모서리가 전부 부분 화소다 · §7). */
 /* ⚑ 5회차 — `scan885b.py` 가 R 에서 빠졌다(글리프 덩이의 모서리가 전부 부분 화소다 · §8). */
-const RED = ['scan885e.py', 'scan887.py'];
-const FIXED = ['scan667b.py', 'probe866.py', 'scan885b.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
+/* ⚑ 6회차 — `scan885e.py` 가 R 에서 빠졌다(거리장을 1/4 px 격자에서 깐다 · §9). */
+const RED = ['scan887.py'];
+const FIXED = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
 /* ⚑ 942 1회차 — `probe409g.py` 가 B 에서 빠졌다(`--diag` 를 «이웃 두 층에 비례로 나누는» 자로 갈아 끼웠다 ·
    자는 `tools/verify942.js`). 주홍 래칫도 «줄어든 것을 여기 다시 적어야» 지나간다 — 그 자리가 이 줄이다. */
 const FIXED942 = ['probe409g.py'];
@@ -325,6 +326,65 @@ console.log('\n[8] 5회차 수리 — `scan885b.py` 윗줄 글리프 «틈» 이
       og.length === 4 && og.every((v) => Math.abs(v - 3 * K) < 0.02)
       && Math.abs(glyphs(oldOut).reduce((a, b) => a + b, 0) - 63 * K) < 0.05,
       og.join(' '));
+  }
+}
+
+/* ── [9] 6회차 수리 — `scan885e.py` 거리장 두께 ────────────────────────────
+   ref 절만 본다(`--cap` 에 ref 를 주면 «★ 창 자동 탐색 실패» 로 코드 3 이니, ref 표는
+   `--cap` 없이 못 낸다 — 그래서 이 자는 **캡처가 있을 때만** 값을 재고 없으면 SKIP 한다.
+   ⚠ scipy 는 상시 의존이 아니다(938) — 없으면 코드 2 로 SKIP. */
+console.log('\n[9] 6회차 수리 — `scan885e.py` 거리장 두께가 정수 격자에서 풀렸는가');
+{
+  const { py, available } = require('./pydep937');
+  const CAP = process.env.SCAN885E_CAP || 'scratch/151-r932.png';
+  const run = (extra) => String(py(['tools/scan885e.py', '--cap', CAP, ...extra],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  let oldOut, newOut;
+  /* ⚠⚠ **`py()` 는 코드 2·3 을 만나면 부모를 그대로 내린다**(`process.exit` — 자기 완결적인 스캔 자에게는
+     그것이 옳다). 그래서 «없어도 되는 것» 은 부르기 **전에** 물어야 이 절만 SKIP 된다:
+       ⓐ 캡처는 **커밋 금지 자산**이라 갓 클론한 트리에는 없는 것이 정상이다(있으면 재고 없으면 건너뛴다).
+       ⓑ scipy 는 **상시 의존이 아니다**(938 — `scan885e` 하나만 쓴다). `available()` 은 안 죽이고 묻는다.
+     ⚠ python3 를 직접 spawn 하면 `verify937` [D1] 이 빨개진다 — 반드시 `py()`/`available()` 을 거친다. */
+  const capOk = fs.existsSync(path.join(ROOT, CAP));
+  const sciOk = available('scipy');
+  if (!capOk) console.log(`  SKIP [9] 캡처가 없다(${CAP}) — node tools/cap151.js ${CAP} --geo 로 찍고 다시 돌려라`);
+  else if (!sciOk) console.log('  SKIP [9] scipy 없음 — pip3 install scipy (938 — 상시 의존이 아니다)');
+  else { oldOut = run(['--int']); newOut = run([]); }
+  if (oldOut && newOut) {
+    /* ref 절 16단의 «T(2·중앙값)» 을 뽑는다 — 표의 첫 블록이 ref 다. */
+    const refTable = (o) => (o.split('== cap')[0] || '');
+    const med = (o) => [...refTable(o).matchAll(/^\s+\d+\s+\d+ \|\s+([0-9.]+)\s+([0-9.]+)/gm)].map((m) => +m[1]);
+    const oo = med(oldOut), nn = med(newOut);
+    const uniq = (a) => [...new Set(a.map((v) => v.toFixed(2)))];
+    /* ⚑ 지문 — 정수 EDT 는 거리를 «정수 격자의 √합» 에만 떨어뜨린다. 2·중앙값이라 √2·√5 꼴이 그대로 보인다. */
+    const isGrid = (v) => [2.83, 3.41, 3.85, 4.00, 2.00, 2.24, 4.47].some((g) => Math.abs(v - g) < 0.02);
+    ok('[9-a] ⚑ 옛 자의 ref 두께 16단은 **격자값 몇 개에만** 앉는다 (2√2 · √(1+4) 꼴 — 정수 EDT 의 지문)',
+      oo.length === 16 && uniq(oo).length <= 4 && oo.every(isGrid), uniq(oo).join(' '));
+    ok('[9-b] 1/4 px 걸음은 그 격자를 벗어난다 (서로 다른 값이 여섯 단 이상)',
+      nn.length === 16 && uniq(nn).length >= 6, uniq(nn).join(' '));
+    /* 정의가 안 바뀌었다 — 같은 단끼리 ±0.6 ref px 안이고 **부호(우리가 얇다)는 그대로**다. */
+    ok('[9-c] 같은 단끼리 옛 값에서 ±0.6 ref px 안이다 — 걸음만 곱아졌지 재는 것이 안 바뀌었다',
+      nn.length === oo.length && nn.every((v, i) => Math.abs(v - oo[i]) <= 0.6),
+      nn.map((v, i) => (v - oo[i]).toFixed(2)).slice(0, 8).join(' ') + ' …');
+    /* ⚑ 되돌림 — `--int` 는 옛 자의 출력을 **한 글자도 안 틀리고** 되살린다(표 전체를 글자로 견준다). */
+    ok('[9-d] ⚑ `--int` 가 낸 ref 표는 옛 걸음의 격자값 그대로다 — 되돌림이 가능하다',
+      oo.length === 16 && oo.filter((v) => Math.abs(v - 2.83) < 0.005).length >= 10, oo.slice(0, 4).join(' '));
+    /* ⚑⚑ 이 회차의 두 번째 결과 — 손 상수 과녁의 근거였던 «ref 가 안 움직인다» 가 격자였다. */
+    const ratios = (o) => [...o.matchAll(/같은 단의 ref\s+([0-9.]+) \/ ([0-9.]+)/g)].map((m) => [+m[1], +m[2]]);
+    let gOld, gNew;
+    try {
+      gOld = run(['--gate', '--int']); gNew = run(['--gate']);
+    } catch (e) { if (e && e.status === 1) { gOld = String(e.stdout || ''); gNew = String(e.stdout || ''); } else throw e; }
+    const ro = ratios(gOld), rn = ratios(gNew);
+    ok('[9-e] ⚑ 옛 걸음의 ref «실루엣 ÷ 금색» 은 문턱 네 단에서 **안 움직인다**(손 상수 과녁 1.176/1.231 의 근거)',
+      ro.length === 4 && ro.slice(0, 3).every(([w]) => Math.abs(w - 1.176) < 0.002),
+      ro.map(([w, h]) => `${w}/${h}`).join(' '));
+    ok('[9-f] ★ 1/4 px 걸음에서는 **단마다 움직인다** — 그 부동이 곧 격자였다 (그래서 과녁을 «같은 단의 ref» 로 옮겼다)',
+      rn.length === 4 && rn[3][0] - rn[0][0] > 0.05 && rn[3][1] - rn[0][1] > 0.05,
+      rn.map(([w, h]) => `${w}/${h}`).join(' '));
+    ok('[9-g] 그래도 제품은 두 판정에서 다 통과한다 (자를 갈아 과녁을 무르게 하거나 조인 것이 아니다)',
+      /SCAN885E PASS/.test(gOld) && /SCAN885E PASS/.test(gNew),
+      `옛 ${/PASS/.test(gOld) ? 'PASS' : 'FAIL'} · 새 ${/PASS/.test(gNew) ? 'PASS' : 'FAIL'}`);
   }
 }
 
