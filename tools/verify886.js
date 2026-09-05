@@ -12,17 +12,20 @@
  * 이 자가 지키는 약속은 여섯:
  *
  *   [1] 받침 상변  — 지면선보다 `--rw-ped`(16px) 위, 다섯 프레임 전부
- *   [2] ★ 얹힘     — 바 하변 ↔ 받침 상변 = `--rw-mb-seat`(4px). 제품이 이 둘에서 top 을 파생한다
+ *   [2] ★ 얹힘     — 바 하변 ↔ 받침 상변 = `--rw-mb-seat`. 제품이 이 둘에서 top 을 파생한다
+ *                    ⚑ **910 이 그 값을 4 → 0 으로 내렸다** — 파고들지 않고 «닿기만» 한다
  *   [3] ★ 안 덮는다 — **화소로** 지면선 아래에 바의 잉크가 0 (접합선·계단·바닥 — 867 [3] 의 실질)
  *   [4] 여유의 정체 — «지면선 ↓ 수반» 은 빈 곳이 아니다: 받침이 그 구간의 절반(1600)을 먹고,
  *                    받침 상면 15.76 은 **니치 안**에 이미 들어와 있다
  *   [5] ★ 기각의 근거 — 앵커를 «안 덮게»(clear ≥ 0) 옮긴 사본에서 `verify879` [2] 또는 [2c] 가
  *                    **반드시** 빨개진다. 886 이 «고칠 수 없다» 고 말한 근거를 자가 들고 있는다
- *   [6] Δ0px       — 이번 정정은 **그리는 것을 한 픽셀도 안 바꿨다**(옛 리터럴 식 사본과 대조)
+ *   [6] ★ 4px 위    — 910 이후 바는 옛 리터럴 식(`fl − 98 − 12·rwc`)보다 **정확히 4·rwc 위**다
+ *                    (886 은 «그리는 것을 한 픽셀도 안 바꿨다» 였다 — 910 이 그 문장을 뒤집었다)
  *
  * §R  `--rw-ped` 를 0 으로 만든 사본에서 [1]·[2] 가 빨개진다 — 제품이 그 값을 **실제로 읽는다**
- * §R2 `--rw-mb-seat` 를 0 으로 만든 사본에서 바가 4px 올라가 «간극 ×1.5» 가 깨진다
- *     — 얹힘 4px 이 «장식» 이 아니라 **예산의 일부**임을 반대편에서 못박는다
+ * §R2 `--rw-mb-seat` 를 **4px 으로 되돌린**(886 자리) 사본에서 얹힘 3.94 가 되살아나고
+ *     그려진 간극이 정확히 그만큼 늘어난다 — 910 의 4px 이 «장식» 이 아니라 **예산과 연동**임을
+ *     반대편에서 못박는다(옛 문장 «0 으로 만들면 간극 ×1.5 가 깨진다» 는 상자 자 위의 것이었다)
  *
  * ⚠ 사본은 저장소 루트에 둔다 — /tmp 는 assets·웹폰트가 404 라 다른 것을 재게 된다(700 §preTree).
  * 127 — 클라우드 러너 브라우저 해석은 tools/pwlaunch.js 공용.
@@ -39,7 +42,8 @@ const SRC = path.join(ROOT, 'index.html');
 const URL = 'file://' + SRC.replace(/\\/g, '/');
 const FRAMES = [1600, 1841, 1920, 2280, 2600];
 const PED = 16;            /* 886 — 받침 상변이 지면선 위로 나온 몫(제품 `--rw-ped`) */
-const SEAT = 4;            /* 886 — 바 하변이 받침 상면을 파고든 «얹힘»(제품 `--rw-mb-seat`) */
+const SEAT = 0;            /* 910 — 얹힘(제품 `--rw-mb-seat`). 886 의 4 를 0 으로 내렸다 */
+const SEAT_886 = 4;        /* 886 자리 — §R2 가 되돌리는 값(그 사본에서 얹힘 3.94 가 되살아난다) */
 const ROW_PITCH = 25.6;    /* 격자 행 간 — `verify879` ROW_PITCH 와 한 벌(자를 새로 만들지 않는다) */
 const GAP_K = 1.5;         /* `verify879` [2] 문턱 */
 const MB_MIN_SC = 0.85;    /* `verify879` [2c] 문턱 */
@@ -174,11 +178,13 @@ function variant(tag, from, to) {
     at('pedRise') + ' (조상 배율 ' + FRAMES.map(H => r[H].sc).join('/') + ')');
 
   /* ── [2] 얹힘 — 제품이 두 값에서 top 을 파생한다 ──────────────────────── */
+  /* ⚑ 910 이관(333 — 자리를 비우지 않고 방향을 뒤집는다): «4px 얹혀 있다» → «파고들지 않고 닿는다».
+     문턱도 자도 그대로이고 바뀐 것은 제품의 값 하나다. 되살아나는지는 §R2 가 사본으로 묻는다. */
   ok(FRAMES.every(H => Math.abs(r[H].seat - SEAT * r[H].sc) <= 0.6),
-    '[2] ★ 바 하변이 받침 상면에 ' + SEAT + 'px 얹혀 있다 — 다섯 프레임 전부 같은 값(원점이 하변이라 배율이 안 건드린다)',
+    '[2] ★ 바 하변이 받침 상면을 **파고들지 않는다**(얹힘 ' + SEAT + ') — 상면에 닿기만 한다 · 다섯 프레임 전부 같은 값(원점이 하변이라 배율이 안 건드린다)',
     at('seat'));
   ok(FRAMES.every(H => Math.abs(r[H].gapFl - (PED - SEAT) * r[H].sc) <= 0.6),
-    '[2b] 그 결과 «바 하변 ↓ 지면선» 은 ' + (PED - SEAT) + 'px — 867 이 적은 12 와 항등이다(그래서 Δ0px)',
+    '[2b] 그 결과 «바 하변 ↓ 지면선» 은 ' + (PED - SEAT) + 'px — 910 이 867 의 리터럴 12 와의 항등을 끝냈다(바가 4·rwc 올라갔다 · [6])',
     at('gapFl'));
 
   /* ── [3] 안 덮는다 — 867 [3] 의 **실질**을 화소로 ─────────────────────── */
@@ -234,13 +240,16 @@ function variant(tag, from, to) {
       rows.map(o => 'clear ' + o.clear + ' → 그려진 간극 ×' + o.gapX + ' / 간극을 지키면 바 ' + o.pctKeepG + '%').join(' · ')
         + ' (격자 꼬리 ' + (c0 ? c0.tail : '?') + ')');
     ok(r[1600].gapUpDrawn / ROW_PITCH >= GAP_K - 0.02 && r[1600].mul.h / longBar >= MB_MIN_SC,
-      '[5b] 현행(얹힘 ' + SEAT + ')도 두 문턱을 **동시에** 넘는다 — «유일한 자리» 는 879 4회차가 무효로 만들었다(clear 0 도 넘는다)',
+      '[5b] 현행(910 = 얹힘 ' + SEAT + ' = 위 표의 clear 0)이 두 문턱을 **동시에** 넘는다 — 886 이 «유일» 이라 부른 자리(얹힘 4)를 떠났는데도 둘 다 초록이다',
       '1600 그려진 간극 ×' + (r[1600].gapUpDrawn / ROW_PITCH).toFixed(2) +
       '(상자 자로는 ×' + (r[1600].gapUp / ROW_PITCH).toFixed(2) + ')' +
       ' · 바 ' + (r[1600].mul.h / longBar * 100).toFixed(1) + '%');
   }
 
-  /* ── [6] Δ0px — 정정은 그리는 것을 한 픽셀도 안 바꿨다 ────────────────── */
+  /* ── [6] ★ 910 이관 — 886 은 여기서 «Δ0px» 를 약속했다. 910 이 그 약속을 **뒤집는다**:
+     바는 옛 리터럴 자리(지면선 위 12)보다 정확히 **얹힘 4px 만큼 위**에 있고, 가로·높이는
+     여전히 Δ0px 다(옮긴 것은 세로 한 축뿐 — 866 의 폭·중심을 안 건드렸다는 짝 항). ──── */
+  let rLit = null;   /* 옛 리터럴 식 사본의 실측 — §R1b 가 «움직였나» 의 기준으로 다시 쓴다 */
   {
     const url = variant('lit',
       'top:calc(var(--rw-fl) - 98px - (var(--rw-ped) - var(--rw-mb-seat)) * var(--rwc,1));z-index:5;',
@@ -248,14 +257,23 @@ function variant(tag, from, to) {
     if (!url) ok(false, '[6] 사본을 못 만들었다');
     else {
       const rv = await sweep(browser, url);
-      let worst = 0, who = '';
-      for (const H of FRAMES) for (const k of ['t', 'b', 'h', 'l', 'r']) {
-        const d = Math.abs(r[H].mul[k] - rv[H].mul[k]);
-        if (d > worst) { worst = d; who = H + ' mul.' + k; }
+      rLit = rv;
+      let worstXY = 0, whoXY = '', worstUp = 0;
+      for (const H of FRAMES) {
+        for (const k of ['h', 'l', 'r']) {
+          const d = Math.abs(r[H].mul[k] - rv[H].mul[k]);
+          if (d > worstXY) { worstXY = d; whoXY = H + ' mul.' + k; }
+        }
+        for (const k of ['t', 'b']) {
+          const d = Math.abs((rv[H].mul[k] - r[H].mul[k]) - SEAT_886 * r[H].sc);
+          if (d > worstUp) worstUp = d;
+        }
       }
-      ok(worst < 0.02,
-        '[6] ★ 옛 리터럴 식(`fl − 98 − 12·rwc`) 사본과 바의 상자가 Δ0px — 886 은 «무엇에 매였는가» 만 바꿨다',
-        '최대 Δ ' + worst.toFixed(3) + 'px' + (who ? ' (' + who + ')' : ''));
+      ok(worstXY < 0.02 && worstUp < 0.1,
+        '[6] ★ 옛 리터럴 식(`fl − 98 − 12·rwc`) 사본보다 바가 **정확히 4·rwc 위** — 910 이 886 의 «Δ0px» 를 뒤집었고, 가로·높이는 그대로다',
+        '세로 올라간 몫 ' + FRAMES.map(H => (rv[H].mul.b - r[H].mul.b).toFixed(2)).join('/')
+          + ' (기대 ' + (SEAT_886 * r[1600].sc).toFixed(2) + ') · 가로·높이 최대 Δ '
+          + worstXY.toFixed(3) + 'px' + (whoXY ? ' (' + whoXY + ')' : ''));
     }
   }
 
@@ -280,7 +298,11 @@ function variant(tag, from, to) {
   }
   {
     /* §R1b — 867 자리(리터럴 12)에서는 같은 이동에 바가 **안 따라간다**. 결속이 없던 것이
-       곧 867 이 4px 얹힘을 몰랐던 이유이므로, 그 «안 따라감» 을 자가 직접 찍는다. */
+       곧 867 이 4px 얹힘을 몰랐던 이유이므로, 그 «안 따라감» 을 자가 직접 찍는다.
+       ⚑ 910 이관 — 기준이 **제품**에서 **리터럴 사본**([6] 의 `rLit`)으로 바뀐다. 910 이 바를
+         4·rwc 올려서 제품과 리터럴이 더 이상 같은 자리가 아니기 때문이다. 이 항이 묻는 것은
+         «리터럴 식에서 받침을 옮겼을 때 바가 따라가는가» 이므로 짝은 리터럴끼리여야 한다
+         (제품과 견주면 «안 따라감» 이 아니라 910 의 4px 을 재게 된다 — 자가 다른 것을 묻는다). */
     const src = fs.readFileSync(SRC, 'utf8');
     const f = path.join(ROOT, `.v886-lit0-${process.pid}.html`);
     const body = src
@@ -289,27 +311,32 @@ function variant(tag, from, to) {
       .split('    --rw-ped:16px;').join('    --rw-ped:0px;');
     fs.writeFileSync(f, body); tmp.push(f);
     const rv = await sweep(browser, 'file://' + f.replace(/\\/g, '/'));
-    ok(FRAMES.every(H => Math.abs(rv[H].mul.b - r[H].mul.b) < 0.02)
+    ok(!!rLit && FRAMES.every(H => Math.abs(rv[H].mul.b - rLit[H].mul.b) < 0.02)
       && FRAMES.every(H => Math.abs(rv[H].seat - SEAT * rv[H].sc) > 10),
-      '§R1b 옛 리터럴 식에서는 받침을 옮겨도 바가 **안 따라간다** — 얹힘이 조용히 갈린다(867 이 4px 을 몰랐던 기계)',
-      '바 하변 이동 ' + FRAMES.map(H => (rv[H].mul.b - r[H].mul.b).toFixed(2)).join('/') +
+      '§R1b 옛 리터럴 식에서는 받침을 옮겨도 바가 **안 따라간다** — 얹힘이 조용히 갈린다(867 이 4px 을 몰랐던 기계 · 910: 짝은 리터럴끼리다)',
+      '바 하변 이동(리터럴 기준) ' + (rLit ? FRAMES.map(H => (rv[H].mul.b - rLit[H].mul.b).toFixed(2)).join('/') : '기준 없음') +
       ' · 얹힘 ' + FRAMES.map(H => rv[H].seat).join('/') + ' (여기서 얹힘이 갈려야 한다)');
   }
   {
-    const url = variant('seat0', '    --rw-mb-seat:4px;', '    --rw-mb-seat:0px;');
+    /* ⚑⚑ 910 이관(333 — 자리를 비우지 않고 **부호를 뒤집는다**). 이 항은 세 번째 문장을 쓴다:
+         886  «얹힘을 0 으로 만들면 «간극 ×1.5» 가 깨진다»        ← 상자 자 위의 판정이었다
+         879₄ «0 으로 만들면 그려진 간극이 정확히 4px 줄어든다»    ← 연동만 남기고 깨짐은 뺐다
+         910  «**4 로 되돌리면** 얹힘 3.94 가 되살아나고 간극이 정확히 그만큼 늘어난다»
+       제품이 0 이 된 뒤 «0 사본» 은 제품 자신이라 아무것도 안 묻는다(공허한 항). 그래서
+       되돌리는 쪽을 사본으로 굴린다 — 되돌림 시험이자 «누른 항을 묻는 항» 이다(328~330 규약).
+       ⚠ 사본은 CSS 만 되돌린다(JS `RW_MB_SEAT` 은 0 그대로) — 배율은 그대로 두고 **그리는 자리만**
+         886 으로 돌려 보는 것이 이 항이 묻는 것이다. 둘을 같이 되돌리는 것은 제품의 몫이다. */
+    const url = variant('seat4', '    --rw-mb-seat:0px;', '    --rw-mb-seat:' + SEAT_886 + 'px;');
     if (!url) ok(false, '§R2 사본을 못 만들었다 — `--rw-mb-seat` 선언이 안 잡힌다');
     else {
       const rv = await sweep(browser, url);
-      /* ⚑ 879 4회차 이관 — 옛 문장은 «얹힘 0 이면 «간극 ×1.5» 가 깨진다» 였고, 그 판정도
-         **격자 상자** 자 위에 서 있었다(그려진 자로는 ×1.68 로 안 깨진다 — [5] 참조).
-         이 항이 실제로 지키는 것은 «4px 이 예산과 **연결돼 있다**» 이므로, 문장을
-         **깨짐** 이 아니라 **연동**으로 적는다: 얹힘을 없앤 만큼 그려진 간극이 정확히 줄어든다.
-         깨지느냐는 910 이 답할 몫이다(지금 답은 «안 깨진다»). */
-      const dGap = r[1600].gapUpDrawn - rv[1600].gapUpDrawn;
-      ok(rv[1600].seat < 1 && Math.abs(dGap - SEAT * r[1600].sc) < 0.6,
-        '§R2 얹힘을 0 으로 만들면 그려진 간극이 **정확히 그 4px 만큼** 줄어든다 — 4px 은 장식이 아니라 **예산의 일부**다(다만 879 4회차 뒤로는 그것이 문턱을 깨지 않는다 · 910)',
-        '1600 얹힘 ' + rv[1600].seat + ' · 그려진 간극 ' + r[1600].gapUpDrawn + ' → ' + rv[1600].gapUpDrawn +
-        ' (Δ' + dGap.toFixed(2) + ' ↔ 기대 ' + (SEAT * r[1600].sc).toFixed(2) +
+      const dGap = rv[1600].gapUpDrawn - r[1600].gapUpDrawn;
+      ok(Math.abs(rv[1600].seat - SEAT_886 * r[1600].sc) < 0.6
+         && Math.abs(dGap - SEAT_886 * r[1600].sc) < 0.6,
+        '§R2 ★ 얹힘을 886 자리(' + SEAT_886 + 'px)로 되돌리면 얹힘 3.94 가 되살아나고 그려진 간극이 **정확히 그만큼** 늘어난다 — 910 이 옮긴 것이 실제로 이 값이다',
+        '1600 얹힘 ' + r[1600].seat + ' → ' + rv[1600].seat +
+        ' · 그려진 간극 ' + r[1600].gapUpDrawn + ' → ' + rv[1600].gapUpDrawn +
+        ' (Δ' + dGap.toFixed(2) + ' ↔ 기대 ' + (SEAT_886 * r[1600].sc).toFixed(2) +
         ' · ×' + (rv[1600].gapUpDrawn / ROW_PITCH).toFixed(2) + ')');
     }
   }
