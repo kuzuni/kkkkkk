@@ -72,12 +72,29 @@ const BAND13  = 1.55;
    ⚑ 이 수가 «자의 몫» 이 아님은 `tools/probe889d.js` 가 못박는다 — 규격을 정확히 지키는
      합성 띠를 **이 자·이 묶음**으로 재면 여섯 구간이 전부 K = 0.350(잔차 0.0000 · 밴드 1.000)이다. */
 const BAND14  = 1.25; /* 7회차 실측 최악 1.17(arrow · gale 1.15 · lance 1.08). 목표는 1.0 — 닿기 전에 올리지 마라 */
+/* ⚑⚑ 927 — [B14] 의 **칸당 표본 문턱**. 묶는 축이 «종» 에서 «종 × 기울기 칸» 으로 넓어지면
+   같은 표본이 세 칸으로 나뉘므로 칸당 수가 ~3배 준다. 문턱을 그대로 25 로 두면 두 구간을
+   채우는 칸이 **하나**뿐이라(lance@0~ 1.078) 축이 «세지는» 게 아니라 **못 재게** 된다.
+   ⚠ 이 수를 «칸이 늘어나서» 내린 것이 아니다 — **잡음 바닥이 안 움직이는 데까지만** 내렸다:
+     문턱 25 → 바닥 중앙 1.005 · 최악 1.062 / 문턱 **20 → 1.005 · 1.062(같다)** /
+     문턱 12 → 최악 1.114 / 문턱 10 → 1.121. 곧 표본 20~24 짜리 칸은 25 짜리보다 시끄럽지
+     않고, 20 아래로 내려가야 비로소 자가 흔들린다. 그 아래로 내리지 마라 —
+     내리는 순간 [B14] 가 재는 것이 제품이 아니라 자의 흔들림이 된다. */
+const B14_N   = 20;
 const RATCHET = 1.7;  /* 래칫(356 [B] 선례) — 8회차 실측 최악 1.68(stone · 3회차 2.21 · `ice` 2.00 → 1.14). 목표에 닿기 전에 올리지 마라 */   /* 한 종 안 «코어÷본체» p90÷p10 — 2회차 CZ 가 ice 에서 7.4배를 쟀다 */
 const COVER = 0.75;   /* 본체 마루 중 ③층이 덮은 몫 — «축에만 코어가 없다» 가 여기서 잡힌다 */
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); c ? pass++ : fail++; };
 
+/* ⚑⚑ 927 — **마루 기울기 칸**. 10회차 교차표가 쓴 칸 그대로다(0 = 축 정렬 · 45 = 대각 ·
+   격자가 90° 주기라 0~45° 로 접혀 들어온다). 이 칸을 [B14] 의 **두 번째 묶는 축**으로 쓴다 —
+   진단도 판정도 이 표 하나를 읽는다(사본 금지 — 402). */
+const ANG_BINS = [[0, 15], [15, 30], [30, 45.1]];
+const angBinOf = (a) => {
+  for (let k = 0; k < ANG_BINS.length; k++) if (a >= ANG_BINS[k][0] && a < ANG_BINS[k][1]) return k;
+  return -1;                                  /* 각이 없는 자리(마루 이웃 2 미만) — 어느 칸도 아니다 */
+};
 /* [B13] 이 묶는 자리 — 획 폭 구간(로컬px). 되돌림 시험도 **같은 함수**로 묶는다(사본 금지 — 402). */
 const B13_LO = 6, B13_HI = 24, B13_W = 3;
 const B13_N  = 25;      /* 구간을 세려면 표본 이만큼 — 화소 몇 개짜리 구간은 안 센다 */
@@ -100,15 +117,30 @@ const b13bands = (out, useIds, col, opt) => {
     /* 구간마다 «누가 얼마나 넣었는가» — 한 종이 구간을 통째로 끌고 가는지 본다(진단 전용). */
     const by = [];
     const md50 = a => { const t = a.slice().sort((x, y) => x - y); return t[Math.floor(0.5 * (t.length - 1))]; };
-    for (const i of useIds) {
-      const v = (out.rows[i].bank || []).filter(e => e[col] >= lo && e[col] < hi).map(e => e[col + 1]);
+    /* ⚑⚑ 927 — `opt.byAng` 면 종을 **«종 × 마루 기울기 칸»** 으로 쪼갠다(키는 `종@칸`).
+       주지 않으면 한 칸짜리 묶음이라 종전과 **한 글자도 다르지 않다** — [B13] 이 읽는 `acc`·`md`
+       는 이 갈래 밖에서 이미 끝났으므로 어느 쪽이든 [B13] 의 판정값은 안 움직인다. */
+    const grp = (opt && opt.byAng)
+      ? ANG_BINS.map((_, k) => ({ suf: '@' + Math.round(ANG_BINS[k][0]) + '~' + Math.round(ANG_BINS[k][1]) + '°',
+                                  sel: e => angBinOf(e[4]) === k }))
+      : [{ suf: '', sel: () => true }];
+    for (const i of useIds) for (const g of grp) {
+      const sel = (out.rows[i].bank || [])
+        .filter(e => e[col] >= lo && e[col] < hi && g.sel(e));
+      const v = sel.map(e => e[col + 1]);
       if (!v.length) continue;
+      /* ⚑⚑ 927 — 여섯째 칸 = 이 칸에 담긴 표본의 **기울기 칸 구성**(칸별 화소 수 · 각이 없는
+         자리는 `aOut`). [B15] 가 «[B14] 가 견주는 두 칸이 정말 같은 기울기인가» 를 이것으로
+         묻는다 — 묶는 곳에서 한 번에 세므로 사본이 아니다(402). */
+      const ac = ANG_BINS.map(() => 0);
+      let aOut = 0;
+      for (const e of sel) { const k = angBinOf(e[4]); if (k < 0) aOut++; else ac[k]++; }
       /* ⚑ 889 8회차 — 뒤 두 칸은 **같은 구간을 짝/홀로 반씩 가른** 중앙값이다(bank 의 자리 순서).
          같은 폭·같은 종의 두 반쪽이 서로 얼마나 어긋나는지가 곧 이 자의 **잡음 바닥**이고,
          [B14] 의 밴드가 그 바닥 위에 있는지를 그것으로 가른다. 자리를 하나 더 재는 것이 아니라
          이미 잰 표본을 둘로 나눈 것뿐이라 사본이 아니다(402). */
       const ev = v.filter((_, k) => k % 2 === 0), od = v.filter((_, k) => k % 2 === 1);
-      by.push([i, v.length, md50(v), ev.length ? md50(ev) : 0, od.length ? md50(od) : 0]);
+      by.push([i + g.suf, v.length, md50(v), ev.length ? md50(ev) : 0, od.length ? md50(od) : 0, ac, aOut]);
     }
     by.sort((a, b) => b[1] - a[1]);
     rowsOut.push({ lo, hi, n: acc.length, md, core: md * (lo + hi) / 2, by });
@@ -120,16 +152,27 @@ const b13bands = (out, useIds, col, opt) => {
    올린 것이고, 묶음은 `b13bands` 의 `by`(구간별 종별 중앙값)를 그대로 읽는다 —
    재는 자리·가중·표본 문턱(`B13_N`)이 [B13]·[B12] 와 **한 벌**이다(사본 금지 — 402).
    판정도 되돌림 시험도 이 함수 하나를 부른다. */
-const b14bands = (out, useIds, col) => {
+const b14bands = (out, useIds, col, opt) => {
   const bySp = {};
-  for (const b of b13bands(out, useIds, col)) for (const e of b.by) {
-    if (e[1] < B13_N) continue;                 /* 구간 문턱과 **같은** 표본 수 */
-    (bySp[e[0]] = bySp[e[0]] || []).push([b.lo, e[2], e[1]]);
+  const BN = (opt && opt.n) || B13_N;
+  for (const b of b13bands(out, useIds, col, opt)) for (const e of b.by) {
+    if (e[1] < BN) continue;                    /* 구간 문턱과 **같은** 표본 수 */
+    (bySp[e[0]] = bySp[e[0]] || []).push([b.lo, e[2], e[1], e[5] || [], e[6] || 0]);
   }
   return Object.keys(bySp).filter(k => bySp[k].length >= 2).map(k => {
     const v = bySp[k].map(e => e[1]);
     const mx = Math.max.apply(null, v), mn = Math.min.apply(null, v);
-    return { sp: k, band: mn > 0 ? mx / mn : Infinity, bins: bySp[k].length, mx, mn };
+    /* ⚑⚑ 927 — `angs` = 이 묶음이 견주는 **모든 구간**에 걸쳐 표본이 앉은 기울기 칸의 수.
+       1 이면 견주는 두 칸의 기울기가 정말 고정된 것이고, 2 이상이면 그 밴드는 폭 축이 아니라
+       «폭 + 기울기» 를 같이 읽은 값이다(옛 묶음의 `arrow` 가 그것이다 — [B15] 가 묻는다). */
+    const seen = new Set();
+    let noAng = 0;
+    for (const e of bySp[k]) {
+      (e[3] || []).forEach((c, i) => { if (c > 0) seen.add(i); });
+      noAng += e[4] || 0;
+    }
+    return { sp: k, band: mn > 0 ? mx / mn : Infinity, bins: bySp[k].length, mx, mn,
+             angs: seen.size, noAng };
   }).sort((a, b) => b.band - a.band);
 };
 
@@ -400,10 +443,39 @@ async function measure(browser, url) {
          ⚠ 이 자는 **획 무리에서만** 뜻이 있다. 납작한 덩어리(육각 돌·병·공)에서는 4이웃 봉우리가
            평평한 고원을 통째로 «마루» 로 잡아 코어에서 먼 화소가 섞이고, 그 잡음이 곧 «p10 = 0» 이다
            (2회차에 그 얼굴을 stone·flask 에서 봤다). 덩어리의 «폭이 고른가» 는 [B10c] 가 묻는다. */
+      /* ⚑⚑ 927 — **두 패스로 가른다.** 마루 판정과 담기를 한 패스로 하면 «마루 기울기» 를 담을 수
+         없다: 기울기는 반경 2 안의 **마루 이웃**에서 나오는데, 한 패스에서는 아직 안 지나간
+         이웃(아래·오른쪽)이 통째로 빠져 같은 자리가 «지나간 순서» 에 따라 다른 각을 받는다.
+         ⇒ ① 마루 화소를 먼저 다 고르고(`isPk`) ② 그 다음에 담는다. 고르는 규칙·순서(y 우선)는
+         한 글자도 안 바뀌므로 `rs`·`keep`·`bank` 의 **자리 순서가 종전과 같다** —
+         8회차의 짝/홀 잡음 바닥도 9회차의 dump↔bank 짝도 그대로 성립한다. */
+      const pk = [], isPk = new Uint8Array(w * h);
       for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
         const p = y * w + x, v = db[p];
         if (!body[p] || v < need) continue;
         if (v < db[p - 1] || v < db[p + 1] || v < db[p - w] || v < db[p + w]) continue;
+        isPk[p] = 1; pk.push(p);
+      }
+      /* 마루 기울기 — 반경 2 안 마루 이웃 오프셋의 2차 모멘트 주축. 격자가 90° 주기라 0~45° 로
+         접는다(0 = 축 정렬 · 45 = 대각). 10회차 진단이 node 쪽에서 쓰던 식 **그대로**이고,
+         이제 그 진단도 이 칸을 읽는다(사본 금지 — 402). 이웃이 2 미만이면 각이 없다(−1). */
+      const angAt = (p) => {
+        const x = p % w, y = (p - x) / w;
+        let sxx = 0, syy = 0, sxy = 0, n = 0;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+          if (!dx && !dy) continue;
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if (!isPk[ny * w + nx]) continue;
+          sxx += dx * dx; syy += dy * dy; sxy += dx * dy; n++;
+        }
+        if (n < 2) return -1;
+        const th = (Math.atan2(2 * sxy, sxx - syy) / 2) * 180 / Math.PI;
+        const f = ((th % 90) + 90) % 90;
+        return f > 45 ? 90 - f : f;
+      };
+      for (const p of pk) {
+        const x = p % w, y = (p - x) / w, v = db[p];
         /* ⚠ 무리마다 **묻는 것이 다르다**(규격이 둘이므로 — [B10] 과 같은 갈래다):
              · 획 무리 — 코어가 획에 **비례**해야 하므로 «코어÷본체» 의 흩어짐을 본다.
              · 덩어리 무리 — 코어는 상한 폭으로 **일정**해야 하므로 코어 **두께 자체**의 흩어짐을 본다.
@@ -421,8 +493,11 @@ async function measure(browser, url) {
           const dlt = dbC ? window.__W889.peak(dbC, p, w) : 0;
           const bv = dbC ? (dbC[p] + dlt) : 0;
           const cvv = dcC ? Math.max(0, dcC[p] + dlt) : 0;
+          /* 다섯째 칸 = **마루 기울기**(927). 앞 네 칸은 자리도 뜻도 그대로다 — [B13]·[B14] 는
+             `col`·`col+1` 만 읽으므로 칸을 더해도 그 자들이 읽는 값이 안 바뀐다. */
           bank.push([+(2 * v / 5).toFixed(3), +(dc[p] / v).toFixed(4),
-                     +(2 * bv / 5).toFixed(3), bv > 0 ? +(cvv / bv).toFixed(4) : 0]);
+                     +(2 * bv / 5).toFixed(3), bv > 0 ? +(cvv / bv).toFixed(4) : 0,
+                     +angAt(p).toFixed(2)]);
         }
       }
       if (rs.length < 4) return { lo: 0, hi: 0, sp: 0, n: rs.length };
@@ -801,20 +876,12 @@ async function measure(browser, url) {
                깃 ↔ **세로** 활이라 첫 후보가 **마루의 기울기**(축 정렬 ↔ 대각)다 — 굽기의 거리밭도
                자의 거리밭도 격자 위에서 도는 것이라 45° 에서 축과 다르게 앉을 수 있다.
                기울기는 **이미 담긴 좌표**에서 낸다(자를 새로 만들지 않는다 — 402): 반경 2 안의
-               마루 이웃 오프셋의 2차 모멘트에서 주축 각을 구하고, 축 대칭이라 0~45° 로 접는다. */
-            for (const p of pts) {
-              let sxx = 0, syy = 0, sxy = 0, n = 0;
-              for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-                if (!dx && !dy) continue;
-                if (!at.has(key(p.x + dx, p.y + dy))) continue;
-                sxx += dx * dx; syy += dy * dy; sxy += dx * dy; n++;
-              }
-              if (n < 2) { p.ang = -1; continue; }
-              const th = (Math.atan2(2 * sxy, sxx - syy) / 2) * 180 / Math.PI;
-              const f = ((th % 90) + 90) % 90;            /* 0~90 — 격자는 90° 주기다 */
-              p.ang = f > 45 ? 90 - f : f;                /* 0 = 축 정렬 · 45 = 대각 */
-            }
-            const angBins = [[0, 15], [15, 30], [30, 45.1]];
+               마루 이웃 오프셋의 2차 모멘트에서 주축 각을 구하고, 축 대칭이라 0~45° 로 접는다.
+               ⚑⚑ 927 — 그 식은 이제 `spread()` 안에 있고 각은 **`bank` 의 다섯째 칸**으로 담겨
+               온다. 여기서 다시 세면 그것이 곧 사본이므로(402) 담긴 값을 그대로 읽는다 —
+               판정([B14])과 이 진단이 **한 수**를 본다는 것이 927 의 요점이다. */
+            pts.forEach((p, i) => { p.ang = q.bank[i][4]; });
+            const angBins = ANG_BINS;
             const oriRows = [];
             for (const [lo, hi] of angBins) {
               const c = pts.filter(p => p.ang >= lo && p.ang < hi);
@@ -928,15 +995,46 @@ async function measure(browser, url) {
       /* ⚑ 7회차 — ⓐ 는 이제 진단이 아니라 **판정 [B14]** 다(아래). 여기서는 그 값을 나란히
          찍기만 하고, 재는 것은 판정과 **같은 함수**(`b14bands`)다 — 사본을 만들지 않는다. */
       const sp14 = b14bands(r.out, strokeIds, 2);
+      /* ⚑⚑ 927 — **[B14] 가 실제로 재는 것**: 종이 아니라 «종 × 마루 기울기 칸» 을 고정한 폭 축.
+         10회차 교차표가 `arrow` 의 두 구간이 **서로 다른 기울기 칸에 통째로** 앉아 겹치는 칸이
+         하나도 없음을 찍었다 — 곧 옛 최악값 1.17 은 «폭이 3px 늘 때 비가 얼마나 변하는가» 를
+         **잴 수 없는** 수였다. 상대 축을 고정하면 그 자리는 비고, 남는 것이 폭 축의 실측이다. */
+      const B14OPT = { byAng: true, n: B14_N };
+      const sp14a = b14bands(r.out, strokeIds, 2, B14OPT);
+      /* ⚑⚑ 927 — **새 축의 잡음 바닥**(8회차 교훈 5: 바닥 없는 축에는 래칫을 걸 자리가 없다).
+         같은 종·같은 구간·**같은 기울기 칸**의 표본을 짝/홀로 반씩 갈라 두 중앙값의 비를 본다 —
+         세 축이 다 고정이니 규격이 시키는 차는 0 이고, 남는 것은 순수한 표본 흔들림이다. */
+      const b14floor = (() => {
+        const nz = [];
+        for (const b of b13bands(r.out, strokeIds, 2, B14OPT)) for (const e of b.by) {
+          if (e[1] < B14_N || !(e[3] > 0) || !(e[4] > 0)) continue;
+          nz.push(Math.max(e[3], e[4]) / Math.min(e[3], e[4]));
+        }
+        nz.sort((a, b) => a - b);
+        return nz.length ? { n: nz.length, md: nz[Math.floor(0.5 * (nz.length - 1))], mx: nz[nz.length - 1] } : null;
+      })();
+      {
+        console.log('  [진단·927] 판정이 쓰는 묶음 «종 × 기울기 칸» — ' +
+          (sp14a.length ? sp14a.map(e => e.sp + ' ' + e.band.toFixed(3) + '배(' + e.bins + '구간)').join(' · ')
+                        : '두 구간을 채우는 칸 없음') +
+          '\n    ⚠ 옛 묶음의 최악 `arrow` 는 두 구간이 **서로 다른 기울기 칸에 통째로** 앉아 겹치는 칸이 0 이다' +
+          ' — 그 1.17 은 폭 축을 잰 값이 아니다(10회차 교차표).' +
+          (b14floor ? '\n    새 축의 잡음 바닥(같은 종·구간·기울기 칸을 짝/홀로 반) — ' + b14floor.n +
+                      '칸 · 중앙 ' + b14floor.md.toFixed(3) + ' · 최악 ' + b14floor.mx.toFixed(3) +
+                      '  ⇒ [B14] 의 ' + (sp14a.length ? sp14a[0].band.toFixed(3) : '—') + ' 는 바닥 위다'
+                    : ''));
+      }
       {
         const spBands = sp14.map(e => [e.sp, e.band, e.bins]);
         const binBands = bandRows.map(b => {
           const v = b.by.filter(e => e[1] >= B13_N).map(e => e[2]);
           return v.length >= 2 ? [b.lo, Math.max.apply(null, v) / Math.min.apply(null, v), v.length] : null;
         }).filter(Boolean).sort((a, b) => b[1] - a[1]);
-        if (spBands.length) console.log('  [B14] ⓐ 종을 고정하고 폭만(판정) — ' +
+        /* ⚑ 927 — 이 ⓐ 는 **더 이상 판정이 아니다**(판정은 «종 × 기울기 칸» 으로 옮겼다).
+           자리를 비우지 않고 진단으로 남긴다 — 두 묶음의 차가 곧 927 이 고친 몫이기 때문이다. */
+        if (spBands.length) console.log('  [진단·927] ⓐ 종«만» 고정하고 폭 — ' +
           spBands.map(e => e[0] + ' ' + e[1].toFixed(2) + '배(' + e[2] + '구간)').join(' · ') +
-          '  ⇒ 최악 ' + spBands[0][1].toFixed(2) + '배');
+          '  ⇒ 최악 ' + spBands[0][1].toFixed(2) + '배 (기울기가 안 고정된 옛 값 · 판정 아님)');
         if (binBands.length) console.log('  [진단·889 5회차] ⓑ 폭을 고정하고 종만 — ' +
           binBands.map(e => '획' + e[0] + '~ ' + e[1].toFixed(2) + '배(' + e[2] + '종)').join(' · ') +
           '  ⇒ 최악 ' + binBands[0][1].toFixed(2) + '배');
@@ -1048,13 +1146,47 @@ async function measure(browser, url) {
            합성 띠를 **이 자·이 묶음**으로 재서 여섯 구간 전부 K = 0.350(밴드 1.000 · 잔차 0.0000)
            을 받았다. 곧 여기 남는 1.17 은 **자의 바닥이 아니라 제품의 몫**이다 —
            그것이 확인되기 전에는 이 축에 래칫을 걸 수 없었다(자의 몫이면 문턱이 자를 굳힌다). */
+      /* ⚑⚑ 927 **이관**(333 처방 — 자리를 비우지 않고 묶는 축만 넓힌다). 이 항의 이름은 내내
+         «폭 축만» 이었는데 **종을 고정해도 마루 기울기가 안 고정됐다** — 10회차 교차표가
+         `arrow` 의 두 구간(획 9~12 · 획 12~15)이 각각 30~45° · 0~15° 에 **통째로** 앉아
+         겹치는 칸이 하나도 없음을 찍었다. 곧 그 1.17 은 «폭이 3px 늘 때 비가 얼마나 변하는가»
+         를 **잴 수 없는** 수였다(이름과 재는 것이 달랐다 — 927 의 결손이 이것이다).
+         ⇒ 묶는 축을 «종» 에서 **«종 × 마루 기울기 칸»** 으로 넓혀 상대 축을 고정한다.
+         ⚠ **무르게 하는 이관이 아니다** — 최악값은 `arrow` 1.174 → `gale` **1.167** 로
+           수는 거의 그대로인데 **뜻이 생겼고**(교란 없는 폭 축), 래칫 1.25 는 한 글자도 안 건드렸다.
+           그리고 이 수는 새 축의 잡음 바닥(최악 1.062)보다 **위**라 자의 흔들림이 아니다. */
       {
-        const worst = sp14.length ? sp14[0] : null;
-        ok(sp14.length >= 2 && worst && worst.band <= BAND14,
-           '[B14] **폭 축만** — 종을 고정하면 구간별 비가 한 밴드 · ' + sp14.length + '종 · 최악 ' +
-           (worst ? worst.sp + ' ' + worst.band.toFixed(2) + '배(' + worst.bins + '구간 · ' +
+        const worst = sp14a.length ? sp14a[0] : null;
+        ok(sp14a.length >= 2 && worst && worst.band <= BAND14,
+           '[B14] **폭 축만** — «종 × 마루 기울기 칸» 을 고정하면 구간별 비가 한 밴드 · ' +
+           sp14a.length + '칸 · 최악 ' +
+           (worst ? worst.sp + ' ' + worst.band.toFixed(3) + '배(' + worst.bins + '구간 · ' +
             worst.mn.toFixed(3) + '~' + worst.mx.toFixed(3) + ')' : '—') +
-           ' ≤ ' + BAND14 + ' (자의 바닥은 1.000 — `probe889d` [D1])');
+           ' ≤ ' + BAND14 + ' (칸당 표본 ' + B14_N + ' · 자의 바닥 ' +
+           (b14floor ? b14floor.mx.toFixed(3) : '—') + ' · 합성 띠에서는 1.000 — `probe889d` [D1])');
+      }
+      /* ⚑⚑ 927 신설 [B15] — **[B14] 의 이름이 재는 것과 같은가**를 묻는 항. 927 의 결손은
+         «값이 크다» 가 아니라 ««폭 축만» 이라고 적힌 항이 폭과 기울기를 같이 읽었다» 였으므로,
+         고친 뒤에는 **견주는 칸들의 기울기가 정말 하나인지**를 자가 직접 물어야 한다.
+         ⚠ 이 항이 곧 927 의 되돌림 시험이다 — 묶음을 «종만» 으로 되돌리면 `arrow` 의 두 구간이
+           서로 다른 기울기 칸에 앉으므로 `angs` 가 2 가 되어 **곧바로 빨개진다**(아래 [R7] 이
+           그 되돌린 사본을 실제로 돌려 못박는다). 문턱을 낮춰 칸을 늘리는 길로도 못 빠져나간다 —
+           칸이 늘어도 기울기가 섞이면 이 항은 그대로 빨갛다. */
+      {
+        const bad = sp14a.filter(e => e.angs !== 1);
+        ok(sp14a.length >= 2 && bad.length === 0,
+           '[B15] [B14] 가 견주는 칸은 **기울기가 하나**다 — ' + sp14a.length + '칸 · 섞인 칸 ' +
+           bad.length + (bad.length ? '(' + bad.map(e => e.sp + ' 기울기 ' + e.angs + '칸').join(' · ') + ')' : '') +
+           ' (옛 «종만» 묶음에서는 arrow 가 2칸에 걸친다 — 그 1.17 이 폭 축이 아니었던 이유)');
+        /* ⚑⚑ 927 신설 [R7] — **묶음을 되돌리면 [B15] 가 빨개진다.** 위 [B15] 는 지금 묶음이
+           깨끗하다는 것만 말하므로, 그것이 «묶음 덕분» 인지 «어차피 섞일 일이 없어서» 인지는
+           되돌려 봐야 갈린다. **같은 제품·같은 표본**을 옛 묶음(`byAng` 없음)으로 재서 기울기가
+           섞인 칸이 실제로 나오는지 본다 — 판정과 같은 함수를 부르므로 사본이 아니다(402). */
+        const mixed = b14bands(r.out, strokeIds, 2).filter(e => e.angs !== 1);
+        ok(mixed.length >= 1,
+           '[R7] 묶음을 «종만» 으로 되돌리면 [B15] 가 빨개진다 — 기울기가 섞인 칸 ' + mixed.length +
+           (mixed.length ? '칸(' + mixed.map(e => e.sp + ' ' + e.angs + '칸 · 밴드 ' +
+             e.band.toFixed(3)).join(' · ') + ')' : '칸') + ' ≥ 1');
       }
 
       /* ⚑⚑ 8회차 **이관**(333 처방) — 이 항은 «덩어리에서는 **상한이** 폭을 정한다» 를 전제로
@@ -1169,11 +1301,14 @@ async function measure(browser, url) {
            하이라이트에서는 한 종의 구간별 중앙값이 한 밴드일 이유가 없다 — 구간 하나만 값을
            갖고 나머지는 0 이라 밴드가 ∞ 거나, 애초에 «2구간 이상인 종» 이 둘이 안 된다.
            ⚠ 판정과 **같은 함수**(`b14bands`)를 부른다 — 사본을 만들면 되돌림이 성립하지 않는다. */
-        const nb14 = b14bands(rn.out, sI, 2);
+        /* ⚑ 927 — 판정과 **같은 묶음·같은 문턱**(`B14OPT` 과 같은 값)을 쓴다. 사본을 만들거나
+           옛 묶음으로 되돌리면 되돌림 시험이 판정이 아닌 것을 시험하게 된다(402). */
+        const nb14 = b14bands(rn.out, sI, 2, { byAng: true, n: B14_N });
         const w14 = nb14.length ? nb14[0].band : Infinity;
         ok(!(nb14.length >= 2 && w14 <= BAND14),
-           '[R6] 코어를 끄면 [B14](폭 축)가 빨개진다 — 2구간 이상인 종 ' + nb14.length + '종 · 최악 밴드 ' +
-           (isFinite(w14) ? w14.toFixed(2) : '∞') + ' (초록이려면 2종 이상 · ' + BAND14 + ' 이하여야 한다)');
+           '[R6] 코어를 끄면 [B14](«종 × 기울기 칸» 폭 축)가 빨개진다 — 2구간 이상인 칸 ' + nb14.length +
+           '칸 · 최악 밴드 ' +
+           (isFinite(w14) ? w14.toFixed(2) : '∞') + ' (초록이려면 2칸 이상 · ' + BAND14 + ' 이하여야 한다)');
       }
       ok(bad.length >= 4 || (mn > 0 && mx / mn > BAND),
          '[R2] 코어를 끄면 [B10] 이 빨개진다 — 목표대 밖 ' + bad.length + '종 · 밴드 ' +
