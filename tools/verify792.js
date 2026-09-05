@@ -159,6 +159,16 @@ async function measure(browser, url) {
        요약: 플레이어 옆 70px 은 오라 링(화면 x ≤369)·위성이 상자에 같이 들어오는 자리고,
        그 위상은 자가 붙기 전 1.1초의 실시간 루프 때문에 회차마다 다르다 ⇒ 밝은 것이 `base` 에
        먼저 들어 있으면 그 화소가 `|a0 − base| ≤ 8` 로 잉크에서 탈락해 하이라이트가 통째로 사라진다. */
+    /* ⚑ 936 — **재는 자리를 못박는다**(928 처방의 나머지 여집합 · 형제 자 8곳).
+       상자는 `player.x` 에 매달려 있는데 플레이어는 ① `page.goto` 뒤 실시간 루프 ② `putFoe()` 가
+       «적이 나올 때까지» 도는 `step()` 을 타고 **판마다 다른 자리**에 선다. 그러면 상자가 잡는
+       그림의 몫이 달라진다 — 수리 전 실측(프로세스 3판): `verify710` 잉크 화소 shuri 5072 /
+       5913 / 6287(±12%) · lance 4771 / 5427 / 6068. 못박으면 판을 넘어 같은 값이 나온다.
+       ⚠ 자리는 제품의 «집»(`spawnStage()` 가 쓰는 `WORLD.w/2, WORLD.h/2`)에서 판다 — 자에
+         좌표를 손으로 적으면 그것이 곧 사본이다(402).
+       ⚠ **재는 것은 한 칸도 안 바뀐다** — 상자 크기·문턱·발 놓는 자리(`CX − ox`)는 그대로고,
+         바뀌는 것은 «어느 자리에서 재는가» 뿐이다. */
+    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
     const CX = Math.round(player.x + ox + 180), CY = Math.round(player.y + oy - 22), R = 60;
     const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
     const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);

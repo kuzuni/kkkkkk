@@ -162,7 +162,13 @@ async function measure(page) {
     };
     const clear = () => { enemies.length = 0; corpses.length = 0; shots.length = 0; ghosts.length = 0;
                           parts.length = 0; zones.length = 0; booms.length = 0; bolts.length = 0;
-                          rings.length = 0; drones.length = 0; cam.shake = 0; player.vx = 0; player.vy = 0; };
+                          rings.length = 0; drones.length = 0; cam.shake = 0; player.vx = 0; player.vy = 0;
+                          /* ⚑ 936 — **자리까지** 못박는다(928 처방). 속도만 0 으로 두면 상자는
+                             `page.goto` 뒤 실시간 루프가 밀어 놓은 자리에 매달린 채 굳는다 —
+                             한 판 안에서는 (아래 `window.step` 정지 덕에) 고정이지만 **판마다**
+                             다른 자리라 상자에 드는 바탕(바닥 타일·오라 가장자리)이 달라진다.
+                             자리는 제품의 «집»(`spawnStage()` 의 `WORLD.w/2, WORLD.h/2`)에서 판다(402). */
+                          player.x = WORLD.w / 2; player.y = WORLD.h / 2; };
     /* 두 프레임의 «배경» 이 같아야 차분이 곧 그림이다 — 그래서 **세계를 멈춘다**.
        `step` 을 빈 함수로 바꾸면 draw 는 계속 도는데 카메라·애니·파티클이 한 프레임도 안 움직인다. */
     const realStep = window.step;

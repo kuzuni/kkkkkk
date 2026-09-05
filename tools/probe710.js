@@ -91,6 +91,16 @@ async function measure(url) {
     /* 캔버스 한 상자만 잘라 «달라진 화소» 를 이진 마스크로 만든다.
        ⚠ 자리는 **용사 옆 70게임px** 로 잡는다 — 임의의 화면 좌표에 두면 `edgeFade()` 가 알파를
          0 으로 눌러 잉크가 통째로 0 이 되고(1회차 실측), 몸 겹침 감쇠(`near < 62`)도 피해야 한다. */
+    /* ⚑ 936 — **재는 자리를 못박는다**(928 처방의 나머지 여집합 · 형제 자 8곳).
+       상자는 `player.x` 에 매달려 있는데 플레이어는 ① `page.goto` 뒤 실시간 루프 ② `putFoe()` 가
+       «적이 나올 때까지» 도는 `step()` 을 타고 **판마다 다른 자리**에 선다. 그러면 상자가 잡는
+       그림의 몫이 달라진다 — 수리 전 실측(프로세스 3판): `verify710` 잉크 화소 shuri 5072 /
+       5913 / 6287(±12%) · lance 4771 / 5427 / 6068. 못박으면 판을 넘어 같은 값이 나온다.
+       ⚠ 자리는 제품의 «집»(`spawnStage()` 가 쓰는 `WORLD.w/2, WORLD.h/2`)에서 판다 — 자에
+         좌표를 손으로 적으면 그것이 곧 사본이다(402).
+       ⚠ **재는 것은 한 칸도 안 바뀐다** — 상자 크기·문턱·발 놓는 자리(`CX − ox`)는 그대로고,
+         바뀌는 것은 «어느 자리에서 재는가» 뿐이다. */
+    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
     const CX = Math.round(player.x + ox + 70), CY = Math.round(player.y + oy - 22), R = 60;
     const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
     const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);
