@@ -462,8 +462,13 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
         out.push({ ban: c.classList.contains('ban1'), h: +r.height.toFixed(1),
           ink: +(bd + ins).toFixed(2), inner: +(r.height - 2 * (bd + ins)).toFixed(2),
           /* 캡은 절대배치라 «패딩 상자 + left» 가 그 화면 x 다 (테 두께가 한 번 들어간다) */
+          /* 885 8회차 — 캡 왼끝은 이제 **검정 립**(border-left)이고 크림은 그 오른쪽부터다.
+             둘을 따로 낸다: capL = 립 좌단 · creamL = 크림 좌단 · redL = 상자 우단(= 위 줄의 빨강). */
+          lipW: parseFloat(cap.borderLeftWidth) || 0,
           capL: +(r.left + bd + parseFloat(cap.left) - cb.left).toFixed(2),
-          redL: +(r.left + bd + parseFloat(cap.left) + parseFloat(cap.width) - cb.left).toFixed(2) });
+          creamL: +(r.left + bd + parseFloat(cap.left) + (parseFloat(cap.borderLeftWidth) || 0) - cb.left).toFixed(2),
+          redL: +(r.left + bd + parseFloat(cap.left) + (parseFloat(cap.borderLeftWidth) || 0)
+                  + parseFloat(cap.width) - cb.left).toFixed(2) });
       });
     });
     return out;
@@ -483,11 +488,22 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
        **두 읽기를 다 담는 창**으로 적는다 — 이 항이 지키는 것은 «몇 px 이냐» 가 아니라
        **«캡이 리본 왼쪽 테를 덮어 검정이 0 이고, 빨강이 너무 오른쪽에서 시작하지 않는다»** 이고,
        그 뜻은 두 읽기 어느 쪽에서도 같다(9회차까지의 +33 은 두 창 어디에도 안 들어온다).
-     ⚠ 2 ref-px 의 갈림 자체는 **896 으로 등재**했다 — 세 번째 부분화소 자로 닫을 자리다. */
-  ok('[G8] 크림 캡이 카드 바깥선 «위» 에서 시작한다 — 카드선 밖 0~5 (ref: ET −3.05 · 667 10회차 0 · 리본 왼끝에 검정 0)',
-    g10.every((r) => r.capL <= 0.6 && r.capL >= -5), g10.map((r) => r.capL).join(' / '));
-  ok('[G8b] 그래서 빨강이 카드선 +18~25 에서 시작한다 (ref: EU +18.6~20.6 · 667 10회차 +23.7 · 9회차까지 +33)',
-    g10.every((r) => r.redL >= 17.5 && r.redL <= 25), g10.map((r) => r.redL).join(' / '));
+     ⚠ 2 ref-px 의 갈림 자체는 **896 으로 등재**했다 — 세 번째 부분화소 자로 닫을 자리다.
+     ⚑⚑ **885 8회차 — 896 이 닫혔고, 이 항의 전제(«리본 왼끝에 검정 0»)가 뒤집혔다.**
+     7회차 채점 2인(EZ·FA)이 «리본 있는 행 ↔ 없는 행» 을 나란히 읽어 **리본에만 있는 검정 2열**을
+     찾았고(카드 프레임은 그보다 오른쪽 x11.4~16.3), 셋째 자 `tools/scan885f.py` 가 네 리본 전부에서
+     재현했다 — **리본 왼끝은 «검정 립» 이고 크림은 카드선 안쪽 +0.18 에서 시작한다.**
+     그리고 ET(−3.05)와 EU(+18.6~20.6)가 갈린 이유도 같은 자가 냈다:
+       ⓐ ET 의 −3.05 는 **크림이 아니라 립**의 좌단이었다(scan885f: 립 좌단 −2.8~−3.7).
+       ⓑ EU 의 +18.6~20.6 은 **캡 «아래» 줄**의 빨강이다(캡이 기울어 있다 — 위 28.85 · 중 25.2 · 아래 20.9).
+     ⇒ 두 항을 «두 읽기를 다 담는 창» 에서 **각자의 축으로** 갈랐다(333 처방 — 자리를 안 비웠다). */
+  ok('[G8] 리본 왼끝 **검정 립**이 카드선 밖 −2.5~−4 에서 시작한다 (ref scan885f: −2.8~−3.7 · ET 가 잰 −3.05 가 이것이다)',
+    g10.every((r) => r.lipW >= 2 && r.capL <= -2.5 && r.capL >= -4.5),
+    g10.map((r) => `${r.capL}(립${r.lipW})`).join(' / '));
+  ok('[G8c] 그 립 오른쪽에서 **크림이 카드선 안쪽 −0.5~+1** 에서 시작한다 (ref scan885f +0.18 · 채점 EZ +0.23 · FA +0.31)',
+    g10.every((r) => r.creamL >= -0.5 && r.creamL <= 1.0), g10.map((r) => r.creamL).join(' / '));
+  ok('[G8b] 그래서 빨강이 **위 줄에서** 카드선 +28~32 에서 시작한다 (ref scan885f 위 28.85 / 중 25.2 / 아래 20.9 — EU 의 +18.6~20.6 은 아래 줄이다)',
+    g10.every((r) => r.redL >= 28 && r.redL <= 32), g10.map((r) => r.redL).join(' / '));
 
   /* R9·R10 — 10회차의 두 수리를 되돌린다 */
   const after10 = await page.evaluate(() => {

@@ -801,27 +801,42 @@ const DUMP = `(() => {
        ref  위 25.42 · 중 22.00 · 아래 17.53 (기울기 7.89)   ↔   수리 전 우리 21.4 / 22.0 / 21.4 (기울기 **0.00**)
        수리 후 우리 25.23 / 21.67 / 17.23 (기울기 8.00)  ⇒ 세 자리 전부 Δ ≤ 0.34
      ⇒ 손잡이는 «폭» 이 아니라 **clip 으로 아래를 깎는 것**이고, 중간 폭 22.0 을 붙박는 항등식이
-     `width − clip/2 = 22.0` 이다(27.10 − 5.10 = 22.00). 이 절이 그 항등식을 지킨다 —
+     `width − clip/2` 이다. 이 절이 그 항등식을 지킨다 —
      둘 중 하나만 손대면 5회차까지 맞아 있던 중간 폭이 조용히 깨진다.
-     ⚠ **좌단은 이 절이 안 건드린다** — 자에 따라 갈리는 자리로 896 에 등재돼 있다. */
+     ⚑⚑ **885 8회차 이관 — 중간 폭의 «ref 값» 이 22.00 이 아니라 25.07 이었다.**
+     6회차가 쓴 «크림 채움 런» 자는 ref 의 왼쪽 램프 2열(209·238)을 크림에서 빼고 세는데
+     우리 캡은 램프가 없어 0열을 뺀다 — **같은 자가 아니었다**(그래서 «Δ0.00» 이 나왔다).
+     `tools/scan885f.py`(원점 = 카드 바깥선 · 전 경계 부분화소 50% · 위·중·아래 세 줄 ·
+     ref 와 우리에게 같은 절차)로 다시 재면 ref 중간 폭은 **25.07** 이고,
+     **기울기 7.95 는 6회차 값(7.89)과 그대로 같다** — 틀렸던 것은 폭과 좌단뿐이다.
+     ⇒ 폭 27.10 → **30.47**(내용 폭) · 깎는 폭 10.20 → **11.34** · 중간 폭 22.00 → **24.80**.
+     ⚠ **좌단은 이제 이 절이 «안 건드리는» 자리가 아니다** — 896 이 8회차에 닫혔다(검정 립).
+     그래도 좌단의 임자는 `verify667` [G8] 이므로 여기서는 폭만 본다. */
   const caps = await page.evaluate(() => [...document.querySelectorAll('.pvc>.rb')].map((rb) => {
     const cs = getComputedStyle(rb, '::before');
     const nums = [...(cs.clipPath || '').matchAll(/(-?[\d.]+)px/g)].map(m => +m[1]);
     return { w: parseFloat(cs.width), clip: cs.clipPath || '', nums,
-      cls: rb.className, left: parseFloat(cs.left) };
+      cls: rb.className, left: parseFloat(cs.left),
+      lipW: parseFloat(cs.borderLeftWidth) || 0, box: cs.boxSizing };
   }));
   ok(caps.length >= 4, '[17-a] 리본 캡 표본 4개 이상', `${caps.length}개`);
   for (const c of caps) {
     /* clip 은 polygon(0 0, 100% 0, calc(100% − Npx) 100%, 0 100%) — 유일한 px 값이 기울기다. */
     const slant = c.nums.length ? Math.max(...c.nums) : 0;
-    ok(/polygon/.test(c.clip) && Math.abs(slant - 10.2) < 0.15,
-      `[17-b] ${c.cls} 아래에서 깎는 폭 = 10.20 (ref 기울기 7.89 ↔ 우리 8.00 을 주는 값)`,
+    ok(/polygon/.test(c.clip) && Math.abs(slant - 11.34) < 0.15,
+      `[17-b] ${c.cls} 아래에서 깎는 폭 = 11.34 (ref 기울기 7.95 ↔ 우리 7.94 를 주는 값 · 8회차)`,
       `${p2(slant)} · ${c.clip.slice(0, 60)}`);
-    ok(Math.abs(c.w - 27.1) < 0.15,
-      `[17-c] ${c.cls} 캡 상자 폭 = 27.10`, `${p2(c.w)}px`);
-    ok(Math.abs((c.w - slant / 2) - 22.0) < 0.2,
-      `[17-d] ${c.cls} **중간 높이 폭 = 22.00** — ref 중 10.67 ref px × K 와 Δ0.00 인 닫힌 값 (width − clip/2)`,
+    ok(Math.abs(c.w - 30.47) < 0.15,
+      `[17-c] ${c.cls} 캡 «크림» 폭 = 30.47 (내용 폭 — 검정 립 3.20 은 border-left 라 여기 안 든다)`,
+      `${p2(c.w)}px`);
+    ok(Math.abs((c.w - slant / 2) - 24.80) < 0.2,
+      `[17-d] ${c.cls} **중간 높이 크림 폭 = 24.80** — scan885f 로 잰 ref 25.07 과 Δ0.27 (width − clip/2)`,
       `${p2(c.w)} − ${p2(slant / 2)} = ${p2(c.w - slant / 2)}`);
+    /* 8회차 신설 — 립이 «border-left» 라는 사실 자체를 못박는다. 이 항이 없으면 다음 회차가
+       `width` 를 상자 폭으로 착각해 립을 지우고도 [17-c][17-d] 를 초록으로 통과한다. */
+    ok(Math.abs(c.lipW - 3.0) < 0.1 && c.box === 'content-box',
+      `[17-f] ${c.cls} 리본 왼끝 **검정 립 = 3px** (ref 잉크적분 3.2~4.4 · ET 가 잰 3.05) · box-sizing 명시`,
+      `${p2(c.lipW)}px · ${c.box}`);
   }
   const slants = caps.map(c => (c.nums.length ? Math.max(...c.nums) : 0));
   ok(slants.every(v => Math.abs(v - slants[0]) < 0.01),
