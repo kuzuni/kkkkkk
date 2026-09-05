@@ -1,0 +1,347 @@
+{
+ "runs": 5,
+ "par": 7,
+ "env": {
+  "EVGUARD": "0"
+ },
+ "files": [
+  "probe552.js",
+  "probe227.js",
+  "probe305.js",
+  "probe562.js",
+  "probe620.js",
+  "probe622.js",
+  "probe636.js"
+ ],
+ "all": {
+  "probe552.js": [
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 60581,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 58044,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 61895,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 60773,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 59891,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   }
+  ],
+  "probe227.js": [
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 42453,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "    프레임 공백 12건 (최대 3195ms) | --- run 3: fxFly 6건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 15건 (최대 2238ms)"
+   },
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 47130,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "    프레임 공백 17건 (최대 2702ms) | --- run 3: fxFly 7건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 16건 (최대 1771ms)"
+   },
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 40677,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "    프레임 공백 16건 (최대 3346ms) | --- run 3: fxFly 8건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 12건 (최대 1908ms)"
+   },
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 48505,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "    프레임 공백 14건 (최대 3079ms) | --- run 3: fxFly 6건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 15건 (최대 1931ms)"
+   },
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 43053,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "    프레임 공백 16건 (최대 4189ms) | --- run 3: fxFly 7건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 15건 (최대 2584ms)"
+   }
+  ],
+  "probe305.js": [
+   {
+    "file": "probe305.js",
+    "code": 0,
+    "ms": 57157,
+    "verdict": "PROBE305 PASS — 10/10",
+    "pass": true,
+    "fail": false,
+    "tail": "gap 분포: 최소 0.6ms · 최대 3.1ms · 제품의 관성 창 90ms |  | PROBE305 PASS — 10/10"
+   },
+   {
+    "file": "probe305.js",
+    "code": 0,
+    "ms": 60188,
+    "verdict": "PROBE305 PASS — 10/10",
+    "pass": true,
+    "fail": false,
+    "tail": "gap 분포: 최소 0.6ms · 최대 0.9ms · 제품의 관성 창 90ms |  | PROBE305 PASS — 10/10"
+   },
+   {
+    "file": "probe305.js",
+    "code": 0,
+    "ms": 58520,
+    "verdict": "PROBE305 PASS — 10/10",
+    "pass": true,
+    "fail": false,
+    "tail": "gap 분포: 최소 0.6ms · 최대 2.7ms · 제품의 관성 창 90ms |  | PROBE305 PASS — 10/10"
+   },
+   {
+    "file": "probe305.js",
+    "code": 0,
+    "ms": 57611,
+    "verdict": "PROBE305 PASS — 10/10",
+    "pass": true,
+    "fail": false,
+    "tail": "gap 분포: 최소 0.6ms · 최대 10.8ms · 제품의 관성 창 90ms |  | PROBE305 PASS — 10/10"
+   },
+   {
+    "file": "probe305.js",
+    "code": 0,
+    "ms": 60381,
+    "verdict": "PROBE305 PASS — 10/10",
+    "pass": true,
+    "fail": false,
+    "tail": "gap 분포: 최소 0.6ms · 최대 3.0ms · 제품의 관성 창 90ms |  | PROBE305 PASS — 10/10"
+   }
+  ],
+  "probe562.js": [
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 79728,
+    "verdict": "PROBE562 PASS — 6/6",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(4535ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   },
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 82820,
+    "verdict": "PROBE562 PASS — 6/6",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(4728ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   },
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 85097,
+    "verdict": "PROBE562 PASS — 6/6",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(4540ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   },
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 79871,
+    "verdict": "PROBE562 PASS — 6/6",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(4509ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   },
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 80924,
+    "verdict": "PROBE562 PASS — 6/6",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(4473ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   }
+  ],
+  "probe620.js": [
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 25666,
+    "verdict": "PROBE620 8/8 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 47% |  | PROBE620 8/8 PASS"
+   },
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 23788,
+    "verdict": "PROBE620 8/8 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 43% |  | PROBE620 8/8 PASS"
+   },
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 27254,
+    "verdict": "PROBE620 8/8 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 43% |  | PROBE620 8/8 PASS"
+   },
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 22909,
+    "verdict": "PROBE620 8/8 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 47% |  | PROBE620 8/8 PASS"
+   },
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 22862,
+    "verdict": "PROBE620 8/8 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 45% |  | PROBE620 8/8 PASS"
+   }
+  ],
+  "probe622.js": [
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 37366,
+    "verdict": "PROBE622 20/20 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   },
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 38510,
+    "verdict": "PROBE622 20/20 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   },
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 39726,
+    "verdict": "PROBE622 20/20 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   },
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 40332,
+    "verdict": "PROBE622 20/20 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   },
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 42173,
+    "verdict": "PROBE622 20/20 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   }
+  ],
+  "probe636.js": [
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 106193,
+    "verdict": "PROBE636 12/12 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   },
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 108457,
+    "verdict": "PROBE636 12/12 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   },
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 105740,
+    "verdict": "PROBE636 12/12 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   },
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 107437,
+    "verdict": "PROBE636 12/12 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   },
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 103940,
+    "verdict": "PROBE636 12/12 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   }
+  ]
+ }
+}
