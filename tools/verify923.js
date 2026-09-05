@@ -38,9 +38,18 @@ const FRACS = [0.25, 0.50, 0.75, 0.90];
    를 찾아냈고(942 «번짐 편향» 계열), `scan923.py` 의 경계 읽기를 **덮개 적분**으로 갈아 세 자가
    0.2px 안에서 만났다(ref 배너 곧은변 GN 485.587 ↔ 이 자 485.63). 아래는 그 자의 값이다 —
    ⚠ 옛 문턱 자의 값과 섞어 쓰지 마라(불릿 길이 92.8 ↔ 97.0 처럼 2~4px 씩 다르다). */
+/* ⚑⚑ **8회차 2단계 — 불릿(초록) 과녁을 다시 쟀다.** 자의 바탕 표본이 «카드 한복판 화소 하나» 라
+   초록 카드가 통째로 +1.18 우리px 바깥으로 밀려 읽히고 있었다(위 `bgRowFn` ⚑⚑ · `scan923.py`
+   BG_COLS 절). **배너는 한 자리도 안 움직인다**(그 카드는 오염된 띠 밖이다) — 아래 `ban` 은
+   4회차 값 그대로이고, 바뀐 것은 `bl` 뿐이다:
+     flat 24.75 → **26.82** · dep 32.11 → **31.87** · wd [92.61,82.36,63.89,42.26] →
+     [92.83,82.70,64.33,42.69] · len 97.0 불변.
+   ⚑ 검산 — 자가 이제 두 카드의 곧은변을 **둘 다 x=485.63** 으로 읽는다(수리 전 배너 485.63 ↔
+     불릿 486.35). 1회차 채점 GK 가 «노치 없는 행만 골라 재면 두 형의 차는 0.01 우리px» 라고
+     적어 둔 그 값이다. */
 const REF = {                     /* ref 실측(우리 px) — `python3 tools/scan923.py --ref [--prof]` */
   ban: { flat: 17.54, len: 59.8, dep: 31.79, wd: [57.53, 50.80, 38.95, 26.17] },
-  bl: { flat: 24.75, len: 97.0, dep: 32.11, wd: [92.61, 82.36, 63.89, 42.26] }
+  bl: { flat: 26.82, len: 97.0, dep: 31.87, wd: [92.83, 82.70, 64.33, 42.69] }
 };
 const W_TOL = 2.5;                /* 옛 타원은 8자리 중 4자리에서 이 창 밖이다(§R 이 매 실행 확인한다) */
 /* ⚑⚑ 5회차 신설 — **«입(mouth)» 축**. 4회차 채점 2인(GN·GO)이 공통 1순위로 «ref 는 노치가 곧은변에
@@ -62,7 +71,9 @@ const M_TOL = 2.0;
    GP 의 68.2~72.5 / 113.3~118.9, 4회차 GO 의 72.07 / 115.72 와 **같은 자리**다. ⇒ 갈림은 닫혔다.
    ⚠ 이 값들은 **오염 안 된 창**의 것이다(배너 = 아래 두 자리의 평균 · 불릿 = y299 한 자리).
    오염된 창에서는 이 자가 이제 숫자 대신 **n/a** 로 답한다(음수 폭을 내면 조용히 속는다 — 939). */
-const REF_M = { ban: [72.17, 67.46, 63.94, 61.78, 59.35], bl: [118.27, 109.67, 105.46, 100.77, 95.79] };
+/* ⚑ 8회차 2단계 — 여기도 불릿만 움직였다(바탕 표본 수리): [118.27,109.67,105.46,100.77,95.79] →
+   아래 값. 배너는 Δ≤0.11(72.17 → 72.07 = 다섯 화소 중앙값 바탕의 잔차)이라 그대로 다시 적는다. */
+const REF_M = { ban: [72.07, 67.46, 63.94, 61.78, 59.35], bl: [116.93, 109.62, 104.30, 100.15, 95.91] };
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'ok ' : 'FAIL'} ${m}`); };
@@ -70,8 +81,30 @@ const blk = (t) => console.log('\n' + t);
 const num = (s) => parseFloat(String(s).replace(/[^0-9.\-]/g, '')) || 0;
 
 /* ── 화소 자 (scan923.py 의 이식 — 같은 절차) ──────────────────────────── */
-function rowOuter(px, W, y, x0, x1, bg) {
+/* ⚑⚑ 8회차 2단계(2026-09-05) — **바탕은 «한 색» 이 아니라 행마다 잰다.**
+   `scan923.py` 가 ref 바탕을 «카드 한복판 행의 화소 하나» 로 잡고 있었고, 초록(불릿) 카드에서
+   그 행이 하필 ref 화면의 밝은 파랑 패널 띠(y454~512 · (45,46,66)) 위에 앉아 **카드 전체**가
+   +1.18 우리px 바깥으로 밀려 읽혔다(곧은변 띠 11.81 ↔ 채점 2인 10.17~10.23). 이 자는 우리 캡처를
+   재므로 지금은 바탕이 균일해 값이 안 변하지만, **같은 절차** 규약이라 함정도 같이 걷는다.
+   ⇒ `bgFn(y)` = 그 행 오른쪽 여백 BG_COLS 화소의 채널별 중앙값. */
+const BG_COLS = 5;
+function bgRowFn(png, xr) {
+  const { width: W, data } = png;
+  const x1 = Math.max(1, Math.min(W, xr)), x0 = Math.max(0, x1 - BG_COLS);
+  return (y) => {
+    const out = [];
+    for (let ch = 0; ch < 3; ch++) {
+      const v = [];
+      for (let x = x0; x < x1; x++) v.push(data[(y * W + x) * 4 + ch]);
+      v.sort((a, b) => a - b);
+      out.push(v[v.length >> 1]);
+    }
+    return out;
+  };
+}
+function rowOuter(px, W, y, x0, x1, bgf) {
   /* 오른쪽에서 왼쪽으로 오며 |Δbg|₁ 가 T 를 처음 넘는 자리 — 부분화소 50% 교차(선형 보간) */
+  const bg = typeof bgf === 'function' ? bgf(y) : bgf;
   const d = [];
   for (let x = x0; x < x1; x++) {
     const i = (y * W + x) * 4;
@@ -307,8 +340,7 @@ async function shot(page, sel, out) {
   const measured = {};
   for (const c of boxes) {
     if (c.y < 0 || c.bottom > png.height) { console.log(`  --  ${c.id} 화면 밖 — 건너뜀`); continue; }
-    const i = ((c.y + Math.round(c.h / 2)) * png.width + Math.min(png.width - 3, c.x + c.w + 12)) * 4;
-    const bg = [png.data[i], png.data[i + 1], png.data[i + 2]];
+    const bg = bgRowFn(png, Math.min(png.width, c.x + c.w + 13));   /* 행마다 — 위 ⚑⚑ */
     const k = c.ban ? 'ban' : 'bl';
     /* ⚠ 맨 위 노치는 **분홍 배지가 카드 우변을 덮어** 토막 나 있다(ref 도 같다 — ref 배너 맨 위
        노치는 길이 39.2 · 평탄부 2.06). 가려진 자리를 과녁에 걸면 유령 실패가 난다 ⇒
@@ -478,8 +510,7 @@ async function shot(page, sel, out) {
   const png2 = await shot(page, '#app', tmp);
   for (const c of boxes) {
     if (c.y < 0 || c.bottom > png2.height) continue;
-    const i = ((c.y + Math.round(c.h / 2)) * png2.width + Math.min(png2.width - 3, c.x + c.w + 12)) * 4;
-    const bg = [png2.data[i], png2.data[i + 1], png2.data[i + 2]];
+    const bg = bgRowFn(png2, Math.min(png2.width, c.x + c.w + 13));   /* 행마다 — 위 ⚑⚑ */
     const k = c.ban ? 'ban' : 'bl';
     const ns = notchStats(png2, c, bg).filter((n) => n.dep > 20 && Math.abs(n.len - REF[k].len) <= 8);
     const worst = ns.length ? Math.min(...ns.map((n) => n.flat)) : 0;
@@ -509,8 +540,7 @@ async function shot(page, sel, out) {
   const r4 = [];
   for (const c of boxes) {
     if (c.y < 0 || c.bottom > png3.height) continue;
-    const i = ((c.y + Math.round(c.h / 2)) * png3.width + Math.min(png3.width - 3, c.x + c.w + 12)) * 4;
-    const bg = [png3.data[i], png3.data[i + 1], png3.data[i + 2]];
+    const bg = bgRowFn(png3, Math.min(png3.width, c.x + c.w + 13));   /* 행마다 — 위 ⚑⚑ */
     const k = c.ban ? 'ban' : 'bl';
     const ns = notchStats(png3, c, bg).filter((n) => n.dep > 20 && Math.abs(n.len - REF[k].len) <= 8);
     const outw = ns.flatMap((n) => n.wd.map((g, j) => (g == null ? 0 : Math.abs(g - REF[k].wd[j]))));
@@ -552,8 +582,7 @@ async function shot(page, sel, out) {
   const r5 = [];
   for (const c of boxes) {
     if (c.y < 0 || c.bottom > png4.height) continue;
-    const i = ((c.y + Math.round(c.h / 2)) * png4.width + Math.min(png4.width - 3, c.x + c.w + 12)) * 4;
-    const bg = [png4.data[i], png4.data[i + 1], png4.data[i + 2]];
+    const bg = bgRowFn(png4, Math.min(png4.width, c.x + c.w + 13));   /* 행마다 — 위 ⚑⚑ */
     const k = c.ban ? 'ban' : 'bl';
     /* 앞 되돌림 둘과 같은 창 — 배너 맨 위 자리는 분홍 배지가 물어 토막이라 길이로 걸러 낸다
        (안 거르면 그 토막이 «입 33px 틀림» 같은 유령을 낸다 — §B 가 쓰는 창과 같은 것이다). */
@@ -586,8 +615,7 @@ async function shot(page, sel, out) {
   const r6 = [];
   for (const c of boxes) {
     if (c.y < 0 || c.bottom > png5.height) continue;
-    const i = ((c.y + Math.round(c.h / 2)) * png5.width + Math.min(png5.width - 3, c.x + c.w + 12)) * 4;
-    const bg = [png5.data[i], png5.data[i + 1], png5.data[i + 2]];
+    const bg = bgRowFn(png5, Math.min(png5.width, c.x + c.w + 13));   /* 행마다 — 위 ⚑⚑ */
     const k = c.ban ? 'ban' : 'bl';
     const ns = notchStats(png5, c, bg).filter((n) => n.dep > 20 && Math.abs(n.len - REF[k].len) <= 8);
     if (!ns.length) continue;
