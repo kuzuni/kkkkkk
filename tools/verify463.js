@@ -25,6 +25,12 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+/* 914 (2026-09-05) — **이 자는 게임 루프를 세우지 않는다.** 그래서 자동 전투가 보스에게 지면
+   `openDefeat()` 가 `#defw`(inset:0 · z39 · rgba(0,0,0,.62))를 켜고 **알약을 제자리에 둔 채 덮는다**.
+   아래 대조는 전부 «두 장 사이에 흐른 200ms 동안 바뀐 것은 주입한 스타일뿐» 을 전제하므로
+   그 딤이 창 안에 들면 [0] 이 **21,375px = 알약의 88%** 로 빨개진다(등재문 914 의 실측).
+   처방은 540 이 이미 공용으로 적어 두었다 — 이 자가 그 줄을 안 읽고 있었을 뿐이다(907 교훈 ①). */
+const { install, defeatStuck, defeatBlocked } = require('./closers540');
 const { chromium } = pw();
 
 /* 409 9회차 — R4b 이관. 옛 항은 «남은 차이 × 10 < 되돌림 신호» 라는 **비율**이었는데, AA 재래스터
@@ -57,7 +63,24 @@ const ok = (msg, cond, detail) => {
   console.log('  ' + (cond ? 'PASS' : 'FAIL') + ' ' + msg + (detail ? ' — ' + detail : ''));
 };
 
-async function shoot(page, slot) {
+/* 914 — «두 장이 **같은 화면**에서 찍혔나» 의 서명. 좌표만으로는 못 가른다: 전면 딤은 알약을
+   제자리에 둔 채 덮는다. 그래서 «알약 중심에 무엇이 서 있나»(elementsFromPoint)를 같이 적는다.
+   ⚠ 이름을 목록으로 두지 않는다 — `#defw` 만 묻는 자는 다음 껍데기가 오면 다시 조용해진다.
+      묻는 것은 «덮은 것이 있는가» 이고, 무엇이 덮었는지는 실패 문구가 말한다(912 교훈 ②). */
+const SIG = Object.create(null);
+const screenSig = (page, sel) => page.evaluate(s => {
+  const bar = document.querySelector(s);
+  const on = bar && bar.querySelector(':scope > .stab.on');
+  if (!on) return '활성 칸 없음';
+  const r = on.getBoundingClientRect();
+  const top = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2)[0];
+  const nm = e => e ? (e.tagName.toLowerCase() + (e.id ? '#' + e.id : '')
+    + (typeof e.className === 'string' && e.className.trim() ? '.' + e.className.trim().split(/\s+/).join('.') : '')) : '없음';
+  return [r.x.toFixed(2), r.y.toFixed(2), r.width.toFixed(2), r.height.toFixed(2), nm(top)].join('|');
+}, sel);
+
+async function shoot(page, slot, sel) {
+  if (sel) SIG[slot] = await screenSig(page, sel);
   fs.mkdirSync(path.dirname(SHOT), { recursive: true });
   await page.screenshot({ path: SHOT });
   const b64 = fs.readFileSync(SHOT).toString('base64');
@@ -159,6 +182,9 @@ const pillarOf = mask => {
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
     await page.goto('file://' + path.resolve(ROOT, 'index.html'));
     await page.waitForTimeout(1400);
+    /* 914 — 껍데기 걷개. `arm` 은 `openDefeat` 의 **제품 경로는 그대로 부르고**(표시 전용 · 자동
+       부활은 진행) 껍데기만 즉시 걷으며 막은 횟수를 센다 — 판정을 바꾸지 않는다(540 규약). */
+    await install(page, { arm: true });
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
     await page.addStyleTag({ content: '.fx-fly,.fx-plus,.fx-spark,.fx-toast,.fx-check,.fx-flash{display:none!important}'
       + '.stab>.bdg,.stabs .sk-lock{display:none!important}' });
@@ -223,15 +249,24 @@ const pillarOf = mask => {
         '인셋 ' + info.aLeft + '/' + info.aRight + ' · 기둥 ' + ap.l + '/' + ap.r);
 
       /* ---------- [2] 그린 것 — 직선부 열이 부모 규약대로다 ---------- */
-      await shoot(page, 'N');
+      await shoot(page, 'N', sel);
       /* [0] **이 실행의 잡음 바닥을 스스로 잰다.** 예산을 손으로 정하지 않기 위해서다 —
          마스크를 갈아 끼우면 코너 호가 다시 래스터되면서 몇 픽셀이 흔들린다(시간만 흘리면 0px 이니
          드리프트가 아니다). 지금 값(23)을 **그대로** 한 번 덮었다 걷은 뒤의 차이가 곧 그 바닥이고,
          아래 음성항·되돌림 항은 전부 이 바닥에 견줘 판정한다. 바닥이 커지면 자가 저절로 엄해진다. */
-      await setStyle(injBefore(23)); await shoot(page, 'F0');
+      await setStyle(injBefore(23)); await shoot(page, 'F0', sel);
       const noise0 = await diffCols(page, info, 0, Math.round(info.w), 'N', 'F0');
-      await setStyle(null); await shoot(page, 'Z0');
+      await setStyle(null); await shoot(page, 'Z0', sel);
       const noise = Math.max(noise0, await diffCols(page, info, 0, Math.round(info.w), 'N', 'Z0'));
+      /* ⚑ **914 신설 — 이 항이 [0] 보다 먼저다.** [0] 은 «바뀐 픽셀 수» 만 말할 수 있어서,
+         200ms 창 안에 화면이 갈리면 «21,375px» 이라는 **뜻 없는 수**로 빨개진다(등재문 914).
+         그 수는 결함을 말하지 않는다 — «두 장이 다른 화면이었다» 를 말한다. 그래서 그것부터 묻고,
+         실패 문구가 **무엇이 덮었는지**를 이름으로 말하게 한다(912 교훈 ②: «틀렸다» 가 아니라
+         «무엇이 어떻게 틀렸다»). 여기가 초록이어야 [0] 의 수가 뜻을 가진다. */
+      const sigs = ['N', 'F0', 'Z0'].map(k => SIG[k]);
+      ok(hname + ' [0-화면] 대조 세 장이 **같은 화면**에서 찍혔다 (알약 좌표 · 알약을 덮은 것이 같다)',
+        sigs.every(s => s === sigs[0]),
+        sigs.map((s, i) => ['N', 'F0', 'Z0'][i] + '「' + s + '」').join('  '));
       ok(hname + ' [0] 같은 값(23)을 덮었다 걷으면 그림이 안 바뀐다 (이 자의 대조는 시간 드리프트를 안 탄다)',
         noise === 0, noise + 'px (문턱 ' + AA + ')');
       const LX = [['좌', R + 3], ['우', Math.round(info.w) - R - 3]];   /* 코너 바로 뒤 = 옛 기둥이 남던 자리 */
@@ -329,6 +364,14 @@ const pillarOf = mask => {
     console.log('\n[4] 표본');
     ok('마스크를 쓰는 «가운데 칸» 호스트가 둘 다 있다 (한 곳만이면 규칙을 지워도 초록이 된다)',
       mid >= 2, mid + '곳');
+    /* 914 — 걷개가 **실제로 돌았는지**를 같이 찍는다. 늘 0 인 팔은 아무것도 증명하지 않는다
+       (LESSONS 353-④). 0 이어도 빨갛게 하지는 않는다 — 실행마다 죽는 판이 있고 없고가 갈리는 것은
+       자동 전투의 몫이지 결함이 아니다. 대신 «켜진 채 남았나» 는 판정한다: 켜진 채면 그 뒤 대조가
+       전부 딤 위에서 찍힌 것이라 [2]·[R]·[3] 의 단면이 통째로 뜻을 잃는다. */
+    const dBlocked = await defeatBlocked(page);
+    const dStuck = await defeatStuck(page);
+    ok('18 패배 딤(`#defw`)이 측정 끝에 켜진 채로 남지 않았다 (켜지면 알약을 제자리에서 덮는다 — 914)',
+      dStuck === false, '켜짐 ' + dStuck + ' · 막은 횟수 ' + (dBlocked == null ? '계측 없음' : dBlocked + '회'));
     console.log('\n[5] 콘솔');
     ok('콘솔 에러 0건', errs.length === 0, errs.length + '건' + (errs[0] ? ' — ' + errs[0].slice(0, 90) : ''));
 
