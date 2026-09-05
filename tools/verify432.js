@@ -44,6 +44,25 @@
  *   §4 부품 보전 — 41 재화 바 3알약이 안 잘린다(100 게이트 ⑤) · 상자 규격이 선언대로다
  *   §R 되돌림 시험 — 옛 선언(550 · background-size 자동)으로 되돌리면 **다시 빨개진다**
  *   §R2 동결이 하중을 받는가 — 높이만 490 이고 `background-size` 를 풀면 **글로우가 작아진다**
+ *
+ * ⚑ **903(2026-09-05) — [R2-1600] 플레이키의 뿌리는 «부분 리라스터» 였다(제품 0줄 · 창·문턱 0칸).**
+ *   재현(`tools/probe903.js`)이 «몇 번에 한 번» 부터 셌다: **20회 중 10회 빨강**(무변경 트리).
+ *   흔들린 것은 글로우가 **아니다** — `glowInk.h` 는 20회 전부 **391**, `looseInk` 의 본체 띠도
+ *   전부 `y1002~1346` 로 같았다. bbox 를 349 → 420 으로 늘린 것은 **바깥에서 섞여 든 한 띠**다:
+ *       `y929~934`(53px · Δ19) + `y964`(1px) + `y977`(202px · Δ1) = **256px**
+ *   그 자리는 배수 토글 바 **`.stabs.sp4`**(y896~984 · x248.7~829.3 — 700·701·713 부품)이고
+ *   글로우 축과 아무 상관이 없다. 차분 문턱이 `d > 0`(1단위)이라 **한 띠가 bbox 를 71px 늘린다.**
+ *   ⚠ **창을 글로우 상자로 좁혀도 안 낫는다** — `::before` 상자 상변이 **y929** 라 그 띠가
+ *      상자 **안**이다(처방 후보를 실측으로 기각했다 — `probe903` [5], 8회 중 1회 여전히 빨강).
+ *   ⚑ 뿌리: **Chromium 의 부분 리라스터(타일 재사용)**. 스타일 태그를 붙였다 떼면 레이어가
+ *      더러워지는데, 그 띠의 타일이 **전체 재라스터되는지 부분 재사용되는지가 판마다 갈려**
+ *      같은 화면이 ±1~19 단위로 두 얼굴을 갖는다. 태그를 한 번도 안 붙이면(`when.js` 실측)
+ *      6.5초 동안 **한 픽셀도** 안 변한다 — 시간·애니메이션이 아니라 **라스터 세대**다.
+ *   ⇒ 처방은 **`--disable-partial-raster` 한 줄**(아래 `launch`). 창도 문턱도 판정식도 한 칸도
+ *      안 건드렸다. 켜고 6회 재현 — **빨강 0/6 · `looseInk.h` 전부 349 · 판 사이 차분 0**.
+ *   ⇒ 그리고 그 결정성을 **[0-g] 가 이름을 대고 지킨다**(맨 끝에 A 를 한 장 더 찍어 첫 판과
+ *      비교한다). 깃발이 빠지면 이 항이 **먼저** 빨개진다(무보정 실측 8/8 비영) — §2·§3·§R2 가
+ *      «글로우가 흔들렸다» 는 거짓말을 하는 대신 여기서 멈춘다(789 의 A/A 를 **판 전체**로 늘린 것).
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -162,7 +181,9 @@ async function openFrozen(browser, h) {
 }
 
 (async () => {
-  const browser = await launch(chromium);
+  /* ⚑ 903 — 부분 리라스터를 끈다. 이 자는 «같은 페이지에서 스타일만 갈아 끼운 판» 을 차분하므로
+     타일 재사용이 살아 있으면 축과 무관한 띠가 판마다 두 얼굴을 갖는다(위 903 절 · [0-g] 가 지킨다). */
+  const browser = await launch(chromium, { args: ['--disable-partial-raster'] });
   const rows = [];
   try {
     const dctx = await browser.newContext({ viewport: { width: 300, height: 300 } });
@@ -174,10 +195,14 @@ async function openFrozen(browser, h) {
       const V = { b: await shotCss(S.page, '#relw>.rw-panel,#relw>.rw-panel>.rw-bowl{overflow:visible !important}') };
       const N = { b: await shotCss(S.page, '#relw .rw-mid::before{display:none !important}') };
       const L = { b: await shotCss(S.page, '#relw .rw-mid::before{background-size:auto !important}') };
+      /* 903 — **끝 판**. 네 상태를 다 찍고 나서 처음 상태로 돌아와 한 장 더 찍는다(아래 [0-g]) */
+      const Z = { b: await shotCss(S.page, null) };
       /* 789 — 재는 창(패널 상변 ~ 프레임 바닥). `.pcb`(프레임 0~108)는 이 축이 닿을 수 없는 띠다 */
       const R = roi(A.m, h);
       /* §0 [0-e] — A/B 를 묻기 전에 A/A 부터(432-④). 창 안이 0 이 아니면 아래 세 차분은 못 읽는다 */
       const aaInk = await diffBox(dpage, A.b, A2.b, R);
+      /* 903 [0-g] — 판 다섯 장을 찍는 **내내** 얼어 있었는가(A/A 는 처음 두 장만 본다) */
+      const zzInk = await diffBox(dpage, A.b, Z.b, R);
       /* §2 — 클립을 풀면 달라지는 픽셀이 있는가(= 클립이 지우는 잉크) */
       const clipInk = await diffBox(dpage, A.b, V.b, R);
       /* §3 — 글로우를 끄면 달라지는 픽셀 = 글로우가 그린 잉크 */
@@ -199,7 +224,7 @@ async function openFrozen(browser, h) {
         s.remove();
         return v;
       });
-      rows.push({ h, m: A.m, R, aaInk, clipInk, glowInk, rev, looseInk });
+      rows.push({ h, m: A.m, R, aaInk, zzInk, clipInk, glowInk, rev, looseInk });
       await S.ctx.close();
     }
     await dctx.close();
@@ -223,6 +248,13 @@ async function openFrozen(browser, h) {
   ok(rows.every((r) => r.aaInk.n === 0),
     `[0-e] **A/A** — 아무것도 안 바꾸고 두 번 찍으면 창 안이 정확히 같다(= 화면이 정말 얼었다): ${rows.map((r) => `${r.h}:${r.aaInk.n}`).join(' · ')}` +
     (rows.some((r) => r.aaInk.n) ? ` ⚠ 비영 bbox ${rows.filter((r) => r.aaInk.n).map((r) => `${r.aaInk.w}×${r.aaInk.h}@y${r.aaInk.y1}`).join('·')}` : ''));
+  /* 903 — A/A 는 **처음 두 장**만 본다. 정작 §R2 가 읽는 판(N·L)은 그 뒤에 찍히므로,
+     그 사이에 라스터 세대가 갈리면 A/A 는 초록인 채로 §R2 만 조용히 흔들렸다(무보정 실측 8/8).
+     ⇒ 마지막에 **처음 상태로 돌아와 한 장 더** 찍어 첫 판과 비교한다. `--disable-partial-raster`
+        가 빠지면 이 항이 먼저, 이름을 대고 빨개진다. */
+  ok(rows.every((r) => r.zzInk.n === 0),
+    `[0-g] **판 전체가 얼어 있었다** — 다섯 판을 다 찍고 처음 상태로 돌아와 찍은 판이 첫 판과 정확히 같다: ${rows.map((r) => `${r.h}:${r.zzInk.n}`).join(' · ')}` +
+    (rows.some((r) => r.zzInk.n) ? ` ⚠ 비영 bbox ${rows.filter((r) => r.zzInk.n).map((r) => `${r.zzInk.w}×${r.zzInk.h}@y${r.zzInk.y1}`).join('·')} — 부분 리라스터 의심(903)` : ''));
   ok(rows.every((r) => r.m.glowTopAbs >= r.R.y && r.R.y + r.R.height >= r.m.panelBot + 104),
     `[0-f] 그 창이 축을 **통째로** 담는다 — 글로우 상변 ${rows.map((r) => r.m.glowTopAbs).join('·')} ≥ 창 상변 ${rows.map((r) => r.R.y).join('·')} · 창 하변은 패널 하변 + 104(넘침 최댓값)보다 아래다`);
 
