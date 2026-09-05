@@ -21,6 +21,7 @@
  * ── 이 자가 지키는 약속 다섯 ────────────────────────────────────────────────
  *   [1] 레퍼런스 상단 띠의 랜드마크 = 0건 (D1 3·6·12 · D2 10·20·40 — 여섯 문턱 전부)
  *   [2] 같은 자가 우리 띠에서는 ≥10건을 잡는다 — **양성 대조**(자가 눈이 먼 게 아니다)
+ *   [2b] 그 셈이 선 **창** 이 옳다 — 화소로 찾은 띠 하변 = DOM 이 아는 격자 상변 (954 신설)
  *   [3] 자의 **감도 한계가 레퍼런스 띠의 실제 max|Δ| 보다 아래**다 — 진폭 2 짜리 선을
  *       주입하면 잡힌다(ref 의 실제 최댓값 1.74 보다 가는 선도 본다) ⇒ [1] 은 관측이다
  *   [4] EF 가 지목한 61.4% 자리가 **잡음 대역 안**(z < 10)
@@ -32,6 +33,17 @@
  *   [R2] EF 처방(정점을 띠의 61.4% 로)을 제품에 넣으면 **1600 에서 두 가지가 깨진다** —
  *        아치 종횡비가 `verify120` ② 하한(1:1.25) 아래로 내려가고, 니치(= av − 12)가
  *        배수 바 셸 98 보다 좁아진다(879 §17 제로섬). 산문이 아니라 기계가 검산한다.
+ *   [R3] 옛 하변 규칙(계조 60 «두께»)을 되살리면 1600 의 띠가 다시 굶고 [2] 가 빨개진다 —
+ *        그리고 [R3b] 레퍼런스는 두 규칙이 같은 띠를 낸다 (954 신설)
+ *
+ * ── 954 (2026-09-05) — [2] 1600 빨강의 뿌리는 «문턱» 이 아니라 «창» 이었다 ──────────
+ * 926 이 상인방을 누른 뒤 이 자의 1600 띠가 **293행 → 13행**으로 굶어 [2] 가 15/16 이 됐다.
+ * 등재문의 처방은 «창이 짧아진 만큼 `OUR_MIN`(10) 을 비례시켜라» 였지만 재현이 그 전제를
+ * 기각했다 — **DOM 이 아는 1600 의 띠는 212.8px** 이고 자가 짚은 하변은 **20** 이었다.
+ * 옛 하변 규칙(계조 60 으로 트리거 + 뒤 40행 평균 밝은 비율 ≥ 0.20)이 **몰딩 세 줄**을
+ * 격자로 오인한 것이다(1600 에서 0.235 ≥ 0.20 · 1841 은 같은 세 줄이 흩어져 0.175 로 통과).
+ * ⇒ `probe891` 의 하변 판정만 «면»(계조 90) 축으로 갈았고 **`OUR_MIN` 은 10 그대로**다.
+ * 자를 갈아도 제품 판정([5] 지분 · [R2])은 한 자도 안 움직인다(LESSONS 932-⑥).
  */
 'use strict';
 const path = require('path');
@@ -50,6 +62,8 @@ const SENS_AMP = 2;        /* [3] 감도 시험 진폭(계조) — ref 띠의 �
 const R1_AMP = 8;          /* [R1] 되돌림 주입 진폭 */
 const NOISE_Z = 10;        /* [4] 잡음 대역 상한(= D2 의 가장 무른 문턱) */
 const SHARE_TOL = 0.05;    /* [5] 지분 대역 ±5% */
+const BOT_TOL = 3;         /* [2b] 화소 띠 하변 ↔ DOM 격자 상변 허용 오차(px) — 크롭 반올림 ±1 */
+const LEG_STARVE = 20;     /* [R3] 옛 규칙이 1600 에서 굶긴 띠 길이의 상한(실측 13행) */
 const ARCH_W = 589;        /* 아치 개구 폭(19회차 [O] 이후 고정) */
 const ARCH_MIN = 1.25;     /* 아치 종횡비 하한 — verify120 ② */
 const BAR_SHELL = 98;      /* 배수 바 셸(96·437 규약) — 니치가 이보다 좁으면 바가 안 들어간다 */
@@ -106,13 +120,14 @@ const ARCH = () => {
   /* 자를 태울 빈 페이지 — 레퍼런스도 우리 캡처도 data: URL 로 이 한 함수를 지난다 */
   const lab = await (await browser.newContext({ viewport: { width: 400, height: 300 } })).newPage();
   await lab.goto('about:blank');
-  const rule = (buf, inject) => lab.evaluate(
-    ([src, url, inj]) => eval(src)(url, inj),
-    [MEASURE, dataUrl(buf), inject || null],
+  const rule = (buf, inject, opt) => lab.evaluate(
+    ([src, url, inj, o]) => eval(src)(url, inj, o),
+    [MEASURE, dataUrl(buf), inject || null, opt || null],
   );
 
   const refBuf = fs.readFileSync(path.isAbsolute(REF) ? REF : path.join(ROOT, REF));
   const ref = await rule(refBuf, null);
+  const refLeg = await rule(refBuf, null, { legacyBot: true });   /* 954 [R3b] — 옛 규칙 대조 */
 
   /* ── [1] 레퍼런스 띠에 랜드마크 0건 ── */
   {
@@ -168,7 +183,13 @@ const ARCH = () => {
       const b = el.getBoundingClientRect();
       return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) };
     });
-    our[H] = await rule(await p.screenshot({ clip: { x: r.x, y: r.y, width: r.w, height: r.h } }), null);
+    const shot = await p.screenshot({ clip: { x: r.x, y: r.y, width: r.w, height: r.h } });
+    our[H] = await rule(shot, null);
+    our[H].gridTopDom = Math.round((await p.evaluate(() => {
+      const el = document.querySelector('#relw .rw-bowl') || document.querySelector('#relw .rw-panel');
+      return document.querySelector('#rwGrid').getBoundingClientRect().y - el.getBoundingClientRect().y;
+    })) * 10) / 10;
+    our[H].leg = await rule(shot, null, { legacyBot: true });   /* 954 [R3] — 옛 규칙 대조 */
 
     /* [R2] 는 같은 페이지에 덮어쓰기 한 장을 얹어 잰다 */
     await p.addStyleTag({ content: r2Override(arch[H].gt) });
@@ -183,6 +204,19 @@ const ARCH = () => {
     ok(m.cntT[0] >= OUR_MIN,
       `[2] 우리 ${H} — 같은 자가 같은 띠에서 랜드마크를 ${OUR_MIN}건 이상 잡는다 (양성 대조)`,
       `띠 ${m.n}행 · D1 ${m.cntT.join('/')} · D2 ${m.cntZ.join('/')} · max|Δ| ${m.maxAbs.toFixed(1)} (z ${m.maxZ.toFixed(0)})`);
+  }
+
+  /* ── [2b] 자의 창이 «진짜 격자 상변» 에 걸렸는가 — DOM 이 검산한다(954) ──
+     [2] 는 «랜드마크가 몇 건인가» 만 묻는다. 그 셈이 뜻을 가지려면 세는 창부터 옳아야 하고,
+     우리 쪽에는 그 정답이 DOM 에 있다. 926 이 상인방을 누르자 옛 하변 판정이 몰딩을 격자로
+     오인해 1600 의 띠가 13행으로 굶었는데(954 등재 = `verify891` [2] 빨강), **[2] 만으로는
+     «창이 굶었다» 와 «정말 랜드마크가 없다» 가 구별되지 않는다.** 이 항이 그 둘을 가른다. */
+  for (const H of FRAMES) {
+    const m = our[H];
+    const d = m.bot - m.gridTopDom;
+    ok(Math.abs(d) <= BOT_TOL,
+      `[2b] 우리 ${H} — 화소로 찾은 띠 하변이 DOM 이 아는 격자 상변과 같은 자리 (|Δ| ≤ ${BOT_TOL}px)`,
+      `화소 bot ${m.bot} ↔ DOM 격자 상변 ${m.gridTopDom} · Δ ${d.toFixed(1)}px · 띠 ${m.n}행`);
   }
 
   /* ── [5] 지분 ── */
@@ -210,6 +244,20 @@ const ARCH = () => {
     ok(a.ratio >= ARCH_MIN && a.niche >= BAR_SHELL,
       `[R2] 현행은 그 둘을 둘 다 지킨다 (되돌림 시험의 짝 항)`,
       `종횡비 1:${a.ratio.toFixed(3)} ≥ 1:${ARCH_MIN} · 니치 ${a.niche} ≥ ${BAR_SHELL}`);
+  }
+
+  /* ── [R3] 되돌림 시험(954) — 옛 하변 규칙을 되살리면 1600 이 다시 굶는다 ──
+     무르게 푼 수리가 아님을 이 짝이 못박는다: 고친 축(하변 판정)을 되돌리면 그 자리에서만
+     빨개지고, 레퍼런스는 두 규칙이 **같은 자리**를 낸다(= 이 수리는 우리 쪽 창만 움직였다). */
+  {
+    const m = our[1600];
+    ok(m.leg.n <= LEG_STARVE && Math.abs(m.leg.bot - m.gridTopDom) > BOT_TOL && m.leg.cntT[0] < OUR_MIN,
+      `[R3] 옛 하변 규칙(계조 60 «두께»)을 1600 에 되살리면 띠가 굶고 [2] 가 다시 빨개진다`,
+      `옛 규칙 bot ${m.leg.bot} (띠 ${m.leg.n}행 · D1 ${m.leg.cntT.join('/')}) ↔ 새 규칙 bot ${m.bot} (띠 ${m.n}행 · D1 ${m.cntT.join('/')})` +
+      ` · DOM 격자 상변 ${m.gridTopDom}`);
+    ok(refLeg.top === ref.top && refLeg.bot === ref.bot,
+      `[R3b] 레퍼런스는 옛 규칙과 새 규칙이 같은 띠를 낸다 — 954 의 수리는 우리 쪽 창만 움직였다`,
+      `옛 ${refLeg.top}..${refLeg.bot} (${refLeg.n}행) ↔ 새 ${ref.top}..${ref.bot} (${ref.n}행)`);
   }
 
   /* ── 문서 정합 — 다음 채점자가 같은 갈림을 세 번째로 열지 않게 ── */

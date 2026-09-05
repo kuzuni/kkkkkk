@@ -33,6 +33,15 @@
  * 문턱은 둘 다 스윕한다 — 문턱으로 답이 바뀌면 그 자는 이 약속을 못 맡는다
  * (A3-ⓑ «임계 스윕 없는 크기 지적은 믿지 마라» 의 자기 적용).
  *
+ * ── 954 — 띠 하변을 «면» 으로 찾는다(옛 규칙 기각) ─────────────────────────
+ * 926 이 상인방을 누른 뒤 **1600 에서만** 이 자의 띠가 293행 → **13행**으로 굶었고
+ * `verify891` [2](양성 대조)가 15/16 으로 빨개졌다. 등재문(954)은 «창이 짧아졌으니
+ * 문턱 `OUR_MIN` 을 창 길이에 비례시키라» 를 처방으로 적었지만 **전제가 틀렸다** —
+ * DOM 이 아는 1600 의 띠는 **212.8px** 이다(격자 상변 213 ↔ 자가 짚은 20).
+ * 짧아진 것은 띠가 아니라 **자의 창**이었다(LESSONS 932-③ «갈림이 창의 것인지 그림의 것인지»).
+ * ⇒ 고친 것은 문턱이 아니라 하변 판정이고, 그 자리가 진짜 격자인지는 **DOM 이 검산한다**
+ *   (`verify891` [2b] · 다섯 프레임 전부 |Δ| ≤ 3px).
+ *
  * ── §R 감도 시험 (귀무 결과가 «자가 눈이 먼 것» 이 아님을 못박는다) ─────────
  * 레퍼런스 화소 사본의 **61.4% 자리**(EF 가 정점이라고 한 바로 그 행)에 진폭 A 의 가로선을
  * 그려 넣고 같은 자를 다시 댄다. A 를 2·4·8·16 으로 스윕해 **잡히기 시작하는 진폭**을 찍는다.
@@ -58,7 +67,7 @@ const EF_AT = 0.614;               /* EF 가 «ref 아치 정점» 이라고 한
    페이지 안에서 도는 자. 레퍼런스와 우리 캡처가 **똑같이** 이 함수를 지난다.
    ──────────────────────────────────────────────────────────────────────────── */
 const MEASURE = /* js */ `
-(async (dataUrl, inject) => {
+(async (dataUrl, inject, opt) => {
   const img = new Image();
   await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
   const W = img.naturalWidth, H = img.naturalHeight;
@@ -95,16 +104,36 @@ const MEASURE = /* js */ `
   if (top < 0) return { err: '띠 상변을 못 찾았다' };
 
   /* ② 띠 하변 — 격자 카드 «면» 이 시작하는 행.
-     ⚠ «밝은 행» 만으로는 안 된다 — 우리 쪽 상인방(들보)은 폭 전체를 채우는 밝은 띠라
-     그 자에는 격자와 구분이 안 된다. 가르는 것은 **두께**다: 격자는 카드가 서 있는 키 큰
-     구역이고 규칙선은 몇 행짜리다. ⇒ 밝은 첫 행 뒤 40행의 평균 밝은 비율까지 묻는다. */
+     ⚠ «밝은 행» 만으로는 안 된다 — 우리 쪽 상인방(들보)·몰딩은 폭 전체를 채우는 밝은 띠라
+     계조 60 문턱에서는 격자와 구분이 안 된다.
+     ⚠⚠ **옛 규칙(«60 문턱으로 트리거 + 뒤 40행 평균 밝은 비율 ≥ 0.20»)은 954 가 기각했다** —
+     그 «두께» 는 몰딩 **세 줄이 40행 창 안에 들어오기만 해도** 채워진다. 926 이 상인방을
+     누른 뒤 1600 에서 정확히 그 일이 났고(몰딩 y20‥23 · 37 · 56‥59 ⇒ 평균 0.235 ≥ 0.20),
+     자는 **격자 상변 213 대신 20 을 짚어 띠가 13행으로 굶었다**(1841 은 같은 세 줄이 흩어져
+     0.175 로 간신히 통과했을 뿐이라 옛 규칙은 프레임 높이에 얹혀 있었다 · LESSONS 932-②).
+     ⇒ 가르는 것은 «두께» 가 아니라 **밝기의 층**이다. 카드 «면» 은 계조 90 에서도 넓게 밝고
+     (ref 0.532 · 우리 0.468), 몰딩 규칙선은 그 문턱에서 **0.002** 다 = 세 자릿수 여유.
+     트리거를 면 문턱으로 올리고, 두께는 «뒤 40행 중 면 행이 몇 행인가» 로 같은 축에서 묻는다
+     (ref 20/40 · 우리 40/40 ↔ 몰딩 자리 0/40). opt.legacyBot 은 되돌림 시험용 옛 규칙이다. */
   const SPAN = 40;
+  const FACE = 90;          /* 카드 면 문턱(계조) — 몰딩 규칙선은 여기서 0.002 */
+  const FACE_HIT = 0.30;    /* 트리거 — 그 행의 면 비율 */
+  const FACE_KEEP = 0.10;   /* 뒤따르는 행이 «면» 으로 세어지는 최소 비율 */
+  const KEEP_MIN = 0.25;    /* 뒤 40행 중 면 행의 최소 몫 (ref 0.50 · 우리 1.00) */
+  const legacy = !!(opt && opt.legacyBot);
   let bot = -1;
   for (let y = top + 8; y + SPAN < H; y++) {
-    if (brightFrac(y, 60) < 0.30) continue;
-    let s = 0;
-    for (let k = 0; k < SPAN; k++) s += brightFrac(y + k, 60);
-    if (s / SPAN >= 0.20) { bot = y; break; }
+    if (legacy) {
+      if (brightFrac(y, 60) < 0.30) continue;
+      let s = 0;
+      for (let k = 0; k < SPAN; k++) s += brightFrac(y + k, 60);
+      if (s / SPAN >= 0.20) { bot = y; break; }
+    } else {
+      if (brightFrac(y, FACE) < FACE_HIT) continue;
+      let f = 0;
+      for (let k = 0; k < SPAN; k++) if (brightFrac(y + k, FACE) >= FACE_KEEP) f++;
+      if (f / SPAN >= KEEP_MIN) { bot = y; break; }
+    }
   }
   if (bot < 0) return { err: '격자 상변을 못 찾았다' };
 
@@ -141,7 +170,7 @@ const MEASURE = /* js */ `
   abs.forEach((v, i) => { if (v >= T[0]) list.push({ frac: +((i + 1) / n).toFixed(3), d: +v.toFixed(2) }); });
 
   return {
-    W, H, top, bot, n, margin: MARGIN,
+    W, H, top, bot, n, margin: MARGIN, legacyBot: legacy,
     ramp: Math.max(...prof) - Math.min(...prof),
     maxAbs, maxAtFrac: maxAt < 0 ? -1 : (maxAt + 1) / n,
     med, maxZ: med > 0 ? maxAbs / med : Infinity,
@@ -167,9 +196,9 @@ if (require.main === module) (async () => {
   /* 자를 태울 빈 페이지 하나 — 그림은 전부 data: URL 로 들어간다 */
   const lab = await (await browser.newContext({ viewport: { width: 400, height: 300 } })).newPage();
   await lab.goto('about:blank');
-  const run = (buf, inject) => lab.evaluate(
-    ([src, url, inj]) => eval(src)(url, inj),
-    [MEASURE, dataUrl(buf), inject || null],
+  const run = (buf, inject, opt) => lab.evaluate(
+    ([src, url, inj, o]) => eval(src)(url, inj, o),
+    [MEASURE, dataUrl(buf), inject || null, opt || null],
   );
 
   /* ── ① 레퍼런스 ── */
@@ -203,6 +232,8 @@ if (require.main === module) (async () => {
         clip: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.w), height: Math.round(rect.h) },
       });
       const m = await run(shot, null);
+      const mL = await run(shot, null, { legacyBot: true });   /* 954 — 옛 규칙(계조 60 두께) 대조 */
+      m.legN = mL.n; m.legBot = mL.bot;
       m.domBand = Math.round(rect.gridTop * 10) / 10;
       m.domPanelH = Math.round(rect.h * 10) / 10;
       m.domShare = m.domBand / m.domPanelH;
@@ -259,6 +290,16 @@ if (require.main === module) (async () => {
     const m = out.frames[H];
     if (m) console.log(`     우리 ${H}  ${(m.domShare * 100).toFixed(2)}%  (띠 ${m.domBand} ÷ 패널 ${m.domPanelH}) · Δ ${((m.domShare / refShare - 1) * 100).toFixed(1)}%`);
   }
+
+  console.log('\n[D] 띠 하변이 **진짜 격자 상변**에 걸렸는가 — 화소로 찾은 자리 ↔ DOM 이 아는 자리 (954)');
+  console.log('     그림          화소 bot   DOM 격자 상변    Δ      옛 규칙 bot(띠)');
+  for (const H of FRAMES) {
+    const m = out.frames[H];
+    if (!m) continue;
+    console.log(`     우리 ${H}   ${String(m.bot).padStart(6)}   ${String(m.domBand).padStart(10)}` +
+      `   ${(m.bot - m.domBand).toFixed(1).padStart(6)}   ${String(m.legBot).padStart(6)} (${m.legN}행)`);
+  }
+  console.log('     ⚠ 옛 규칙은 1600 에서 몰딩 세 줄을 격자로 오인해 띠를 13행으로 굶겼다(954).');
 
   console.log('\n[R] 감도 — 레퍼런스 사본의 61.4% 자리에 가로선을 주입하면 잡히는가');
   console.log('     진폭   D1 3/6/12       D2 10/20/40');
