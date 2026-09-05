@@ -106,6 +106,10 @@ async function openAt(browser, H, css) {
   if (css) await page.addStyleTag({ content: css });
   await page.evaluate(() => { S.relic = 1e9; openRelw(); });
   await page.waitForTimeout(200);
+  /* 915 — 짝인 `verify886` 과 같은 자리·같은 이유(200 < `settle291.MIN_WAIT` 250 이라 공용 훅이
+     안 돈다 · 그 대기가 `jzPgIn` 한복판이다). 재현자와 게이트가 **다른 프레임**에서 재면
+     «자가 갈린다» 가 하나 더 생기므로 같이 넣는다(896 계열을 새로 만들지 않는다). */
+  if (page.settle291) await page.settle291();
   return { ctx, page };
 }
 
