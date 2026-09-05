@@ -55,18 +55,43 @@ const TRACE_MS = 3000;
         .find((e) => e.scrollHeight - e.clientHeight > 1) || null;
       window.__top = () => { const b = window.__box(); return b ? b.scrollTop : -1; };
       /* dsFling 이 불렸는가 · 그때 v */
-      window.__fl = null;
+      window.__fl = null; window.__dt0 = null;
       const orig = window.dsFling;
-      window.dsFling = function (r) { window.__fl = { v: r.v, acc: r.acc }; return orig.apply(this, arguments); };
+      window.dsFling = function (r) {
+        window.__fl = { v: r.v, acc: r.acc };
+        const res = orig.apply(this, arguments);
+        /* 첫 프레임의 `dt` 를 제품과 **같은 값**으로 뜬다 — `dsFling` 은 부를 때
+           `last = performance.now()` 를 찍고 첫 rAF 에서 `dt = min(34, now − last)` 를 쓴다.
+           우리 rAF 는 제품 것과 같은 프레임에 서므로 `now` 가 같다. `t` 는 orig 가 `last` 를
+           찍은 직후라 `now − t` 는 제품의 dt 를 아주 살짝 밑도는 값이다. */
+        const t = performance.now();
+        requestAnimationFrame(n => { if (window.__dt0 == null) window.__dt0 = n - t; });
+        return res;
+      };
       /* 뗀 순간을 **동기로** 찍는다 — 제품의 pointerup 리스너(capture, dsInit 에서 먼저 등록)가
          이미 dsFling 을 예약한 뒤 우리 차례가 온다. 이때 scrollTop 은 아직 «드래그만» 의 값이다. */
       window.__lm = 0; window.__gap = null; window.__nmv = 0;
       window.__rel = null; window.__trace = [];
-      addEventListener('pointermove', () => { window.__lm = performance.now(); window.__nmv++; }, true);
+      /* ⚑ `probe305` 주석은 «dsRec 은 모듈 지역 let 이라 밖에서 못 읽는다» 고 적어 두었는데
+         **틀렸다** — 최상위 `let` 은 스크립트 전역 선언 환경에 들어가 다른 스크립트에서
+         이름으로 닿는다(실측: `typeof dsRec` = 'object' · `dsDragged` = 'boolean').
+         그래서 «관성 미발화» 가 셋 중 어느 조건에 걸렸는지 **직접** 물을 수 있다:
+           ① `!dsRec`  ② `!dsDragged`  ③ `performance.now() − dsRec.t ≥ 90`
+         (제품 `end` 는 dsRec 을 지우므로 r.t 는 pointermove 때 미리 떠 둔다 — 우리 리스너가
+          제품 것 뒤에 도는 같은 이벤트라 그 값이 곧 제품이 쓴 값이다.) */
+      window.__recT = null; window.__recV = null;
+      addEventListener('pointermove', () => {
+        window.__lm = performance.now(); window.__nmv++;
+        try { if (dsRec) { window.__recT = dsRec.t; window.__recV = dsRec.v; } } catch (_) {}
+      }, true);
       addEventListener('pointerup', () => {
         const now = performance.now();
         window.__gap = window.__lm ? now - window.__lm : 'move 0건';
         window.__drag = document.body.classList.contains('ds-drag');
+        /* 제품이 실제로 쟀을 gap 과 그 판정 재료 — dsFling 이 안 불렸을 때 이 셋이 답을 준다 */
+        let dragged = null; try { dragged = dsDragged; } catch (_) {}
+        window.__why = { pgap: window.__recT == null ? null : now - window.__recT,
+                         dragged, recV: window.__recV };
         const b = window.__box();
         window.__rel = { t: now, s: b ? b.scrollTop : -1, el: b };
         /* 궤적 기록 — 관성과 **같은 rAF 줄**에 서므로 프레임이 굶으면 표본도 같이 준다.
@@ -102,7 +127,7 @@ const TRACE_MS = 3000;
     await page.waitForTimeout(TRACE_MS + 200);
     const d = await page.evaluate(() => ({
       gap: window.__gap, fl: window.__fl, nmv: window.__nmv, drag: window.__drag,
-      rel: { t: window.__rel.t, s: window.__rel.s }, trace: window.__trace,
+      why: window.__why, dt0: window.__dt0, rel: { t: window.__rel.t, s: window.__rel.s }, trace: window.__trace,
     }));
     await ctx.close();
 
@@ -118,7 +143,7 @@ const TRACE_MS = 3000;
     let settleT = 0;
     for (let k = tr.length - 1; k >= 0; k--) if (tr[k][1] !== endS) { settleT = tr[k][0]; break; }
     const swap = tr.some(p => p[2] === 0);
-    rows.push({ i, gap: d.gap, nmv: d.nmv, v: d.fl ? d.fl.v : null, fling: !!d.fl,
+    rows.push({ i, gap: d.gap, nmv: d.nmv, v: d.fl ? d.fl.v : null, fling: !!d.fl, why: d.why || {}, dt0: d.dt0,
       relS: d.rel.s, lag, t0, s450, n450, settleT, settleS: endS, frames: tr.length, swap,
       moving: settleT > TRACE_MS - 400,
       gateD: s450 == null ? null : s450 - t0, wallD: s450 == null ? null : s450 - d.rel.s,
@@ -131,11 +156,11 @@ const TRACE_MS = 3000;
   await browser.close();
 
   const n = x => (x == null ? '—' : Math.round(x));
-  console.log('\n| # | gap | v | 왕복 lag(ms) | 뗀 곳 | 왕복 t0 | 450ms(표본) | 마지막변화(ms) | 끝값 | 프레임 | ⓐ게이트 | ⓑ벽시계 | ⓒ총이동 | 게이트판정 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('\n| # | gap | v | 첫dt | 왕복 lag(ms) | 뗀 곳 | 왕복 t0 | 450ms(표본) | 마지막변화(ms) | 끝값 | 프레임 | ⓐ게이트 | ⓑ벽시계 | ⓒ총이동 | 게이트판정 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rows) {
-    if (r.err) { console.log(`| ${r.i} | — | — | — | — | — | — | — | — | — | — | — | — | ERR ${r.err} |`); continue; }
-    console.log(`| ${r.i} | ${typeof r.gap === 'number' ? r.gap.toFixed(1) : r.gap} | ${r.v == null ? '—' : r.v.toFixed(3)} | `
+    if (r.err) { console.log(`| ${r.i} | — | — | — | — | — | — | — | — | — | — | — | — | — | ERR ${r.err} |`); continue; }
+    console.log(`| ${r.i} | ${typeof r.gap === 'number' ? r.gap.toFixed(1) : r.gap} | ${r.v == null ? '—' : r.v.toFixed(3)} | ${r.dt0 == null ? '—' : r.dt0.toFixed(1)} | `
       + `${n(r.lag)} | ${n(r.relS)} | ${n(r.t0)} | ${n(r.s450)}(${r.n450}) | ${n(r.settleT)}${r.moving ? '⇢' : ''} | ${n(r.settleS)} | `
       + `${r.frames} | ${n(r.gateD)} | ${n(r.wallD)} | ${n(r.totalD)} | ${r.gateD != null && r.gateD > 20 ? 'PASS' : 'FAIL'} |`);
   }
@@ -146,6 +171,15 @@ const TRACE_MS = 3000;
   const noFling = ok.filter(r => !r.fling);
   console.log(`\n  표본 ${ok.length} · 관성 미발화 ${noFling.length} · 컨테이너 교체 ${ok.filter(r => r.swap).length}`
     + ` · 3초 안에 안 멎음 ${ok.filter(r => r.moving).length}`);
+  /* ㉠ 관성 미발화의 «어느 조건에 걸렸나» — 벽시계 축과 뭉개면 진짜 회귀를 덮는다(1회차 결론) */
+  for (const r of noFling) {
+    const w = r.why || {};
+    const why = w.dragged === false ? 'dsDragged=false(드래그로 확정 못 됨)'
+      : w.pgap == null ? 'dsRec 없음(pointerdown 이 못 잡았다)'
+      : w.pgap >= 90 ? `제품 gap ${Math.round(w.pgap)}ms ≥ 90(관성 창 밖)`
+      : `조건 셋 다 통과인데 미발화 — 재조사(gap ${Math.round(w.pgap)}ms · dragged ${w.dragged} · r.v ${w.recV})`;
+    console.log(`  ㉠ #${r.i} 관성 미발화 — ${why}`);
+  }
   console.log(`  ⓐ 게이트 눈(450ms − 왕복 t0) 미달 ${gateBad.length}`
     + ` · ⓑ 벽시계(450ms − 뗀 곳) 미달 ${wallBad.length}`
     + ` · ⓒ 총 이동(끝값 − 뗀 곳) 미달 ${totBad.length}`);

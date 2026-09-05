@@ -47625,16 +47625,29 @@ function dsFling(r){
   dsStop();
   if(Math.abs(r.v) < DS_VMIN) return;
   let sp = Math.max(-DS_VMAX, Math.min(DS_VMAX, r.v)), last = performance.now();
+  /* 946 — 목표 위치는 **소수로** 이어 간다. `scrollTop` 은 정수 화소로 스냅되므로
+     (실측: 360 에서 +0.4px 을 써도 읽으면 그대로 360 · +0.5 부터 361) 매 프레임 «쓴 값» 을
+     다시 읽어 다음 걸음의 기준으로 삼으면 **0.5px 미만의 걸음이 통째로 버려진다.**
+     그리고 입력 직후의 첫 rAF 는 거의 바로 온다(실측 dt 0.12~1.9ms) — 곧 느린 플릭에서는
+     첫 걸음이 언제나 소수점이라 `moved` 가 false 가 되고 **관성이 시작도 못 하고 죽었다**
+     (946 실측: 부하 56표본에서 3~5건이 «떼도 한 화소도 안 움직임»). 되돌리려면 아래
+     `pos` 를 지우고 `r.acc + sp*dt` 를 다시 쓰면 된다. */
+  let pos = r.acc, bx = null;
   const step = now => {
     const dt = Math.min(34, now - last); last = now;
     const box = dsLive(r, r.px, r.y);
     if(!box){ dsGlide = 0; return; }
-    box.scrollTop = r.acc + sp * dt;
-    const moved = box.scrollTop !== r.acc;
-    r.acc = box.scrollTop;
+    if(box !== bx){ bx = box; pos = r.acc; }   /* 컨테이너가 갈리면 누적 위치를 이어 붙인다 */
+    pos += sp * dt;
+    box.scrollTop = pos;
+    /* «끝에 닿았는가» 는 스냅이 아니라 **브라우저가 잘랐는가** 로 본다 —
+       스냅만이면 어긋남이 ≤0.5px 이고, 상·하한에서 잘리면 그보다 크게 벌어진다. */
+    const got = box.scrollTop, capped = Math.abs(got - pos) > 1;
+    if(capped) pos = got;
+    r.acc = got;
     sp *= Math.pow(DS_DAMP, dt / 16.67);
     dsBar(box);
-    if(Math.abs(sp) < DS_VMIN || !moved){ dsGlide = 0; return; }
+    if(Math.abs(sp) < DS_VMIN || capped){ dsGlide = 0; return; }
     dsGlide = requestAnimationFrame(step);
   };
   dsGlide = requestAnimationFrame(step);
