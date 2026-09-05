@@ -172,7 +172,7 @@ async function open(ctx, css, w, h) {
     window.fxPzHit = () => false;      /* UI 발 — JS 진폭 경로(93/13회차) */
     try { fxPz.clear(); } catch (e) { /* 표가 없으면 끌 것도 없다 */ }
     document.querySelectorAll('.pcb-p').forEach((e) => {
-      e.classList.remove('fx-punch', 'fx-punch2');
+      e.classList.remove('fx-punch');               /* 897 — `fx-punch2` 는 제품에서 삭제됐다 */
       e.style.transform = ''; e.style.transformOrigin = '';
     });
   });

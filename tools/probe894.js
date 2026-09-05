@@ -200,10 +200,16 @@ function report(name, opt = {}) {
   return out;
 }
 
-const LIST = ['fxSpark', 'fxHandTap', 'fxPunch', 'fxPunch2', 'fxPay', 'fxToastIn', 'fxHandRing', 'jzSlam'];
+/* 894 가 890 에게서 받아 센 8건 — **이력이다. 줄이지 마라**(자가 «무엇이 사라졌는지» 를 이걸로 안다) */
+const LIST0 = ['fxSpark', 'fxHandTap', 'fxPunch', 'fxPunch2', 'fxPay', 'fxToastIn', 'fxHandRing', 'jzSlam'];
+/* 897 — `fxPunch2` 는 **제품에서 삭제**됐다(93 4회차 이후 한 번도 안 붙던 죽은 곡선 · `probe897`).
+   목록을 손으로 지우는 대신 «제품에 있는 것만» 으로 파생시킨다 — 402 «표가 아니라 파생».
+   사라진 것이 무엇인지는 `MISSING` 이 들고 있고, `verify894` [A6] 이 그 한 건을 이름으로 못박는다. */
+const LIST = LIST0.filter((n) => blockOf(n) && declOf(n) && declOf(n).durMs);
+const MISSING = LIST0.filter((n) => !LIST.includes(n));
 
 /* 자(`verify894`)가 같은 산수를 두 번 적지 않게 내보낸다(402 «사본을 지운다») */
-module.exports = { SRC, FRAME_MS, LIST, easingOf, isLinear, blockOf, declOf, stopsOf,
+module.exports = { SRC, FRAME_MS, LIST, LIST0, MISSING, easingOf, isLinear, blockOf, declOf, stopsOf,
                    chanStops, CH, valueAt, traceOf, alphaMetric, speedMetric };
 if (require.main !== module) return;
 

@@ -3765,18 +3765,16 @@
     90%{transform:scale(.985);outline:3px solid rgba(255,255,255,0);animation-timing-function:ease-out}
     100%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}}
   .fx-punch{animation:fxPunch .42s ease-out both}
-  /* 93 — UI 발 3박자용 «톡톡» 펄스. 도착이 5~6번 나뉘어 오므로 한 번의 폭을 줄이고(1.17→1.09)
-     길이를 .42 → .16s 로 잘라 **횟수**로 손맛을 만든다. filter 는 쓰지 않는다(17회차 교훈 — 첫 페인트 3~4프레임 지연). */
-  /* 봉우리를 18~46% 고원으로 편다 — .16s 짜리라 «한 점 봉우리» 로 두면 ≥1.085 인 구간이 12ms 라
-     눈에도 캡처에도 한 프레임 안 걸린다(6회차에 .42s 짜리에서 이미 한 번 겪은 것). */
-  /* 3회차 — 고원을 14~58% 로 더 넓힌다. 2회차(18~46%)는 ≥1.085 구간이 45ms 라 93ms 간격 캡처에
-     «최대 ×1.071» 로만 찍혔다(비평가 K ⑧ — 사양 ×1.09 에 2pp 미달). 14~58% = 70ms. */
-  @keyframes fxPunch2{0%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}
-    14%{transform:scale(1.095);outline:4px solid rgba(255,255,255,.62)}
-    58%{transform:scale(1.09);outline:4px solid rgba(255,255,255,.44)}
-    80%{transform:scale(1.02);outline:3px solid rgba(255,255,255,.14)}
-    100%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}}
-  .fx-punch2{animation:fxPunch2 .16s ease-out both}
+  /* ⚑ 897 — **UI 발 «톡톡» 펄스의 CSS 판(`@keyframes fxPunch2` · `.fx-punch2`)은 여기서 삭제됐다.**
+     93 3회차까지 이 곡선이 그 펄스였는데, **93 4회차가 경로를 JS 진폭(`fxPzHit`)으로 갈았다** —
+     160ms 마다 애니를 재시작하면 봉우리가 잘려 «≥1.05 가 표본 80장 중 6장» 이었다(그 자리 주석은
+     `FX3_PZ_HIT` 선언 위에 그대로 있다). 그때부터 `fxPunch()` 는 첫 줄에서 `if(soft) return fxPzHit(...)`
+     으로 빠지므로 **그 아래 `soft ? 'fx-punch2' : 'fx-punch'` 는 닿을 수 없는 가지**가 됐고,
+     이 곡선은 3회차 값 그대로 «있는데 아무도 안 쓰는» 상태로 남아 있었다(`probe897` [P3-c] —
+     UI 발 도착에 클래스 부착 **0회**). 894 가 «한 프레임 최대 이동 90.4%» 로 잰 것이 이 곡선이다.
+     ⚠ 되살리지 마라 — 되살리면 verify93 [4-a]~[4-d](«비트 3~6회 · 진폭 ≥ FX3_PZ_MAX»)가 곧바로
+       빨개진다. 곡선이 필요하면 값이 아니라 **경로**부터 93 과 다시 이야기할 것. 지운 원문은
+       `docs/review/897-fxPunch2죽은곡선.md` §3 에 통째로 있다. */
   /* 알약(.cbox)은 아이콘 `i` 가 left:-31·width:63 이라 **박스 왼쪽 밖**에 걸쳐 있다. 박스 중심을
      기준으로 확대하면 코인이 꽂히는 그 아이콘이 8~13px 왼쪽으로 튄다(비평가 G·H 공통 ⑤).
      아이콘 중심(박스 좌변 +0.5px)을 pivot 으로 삼아 **도착점이 움직이지 않게** 한다. */
@@ -3791,11 +3789,14 @@
      ⇒ 바로 아래 줄이 3회차에 이미 고쳐 둔 결함과 **같은 것**이다. 그때 UI 발 펄스(`fx-punch2`)에만
        달아서 **전투 발 펄스(`fx-punch`)가 3회차 이후 40회차를 그대로 통과했다** — 씬 A(gain)가
        전투 발이라 지적이 이 자리에서만 나왔다. 두 클래스를 한 선언으로 묶어 다시 갈라지지 않게 한다.
+     ⚑ 897 — 그 «두 클래스» 중 `.fx-punch2` 는 이제 없다(위 삭제 주석). 남은 짝은 `.fx-punch`(전투 발)와
+       `.fx-pay`(지불)이고, **UI 발은 `fxPzHit` 이 인라인으로 같은 `transform-origin:1px 50%` 를 직접 적는다**
+       — 그래서 이 줄에서 한 이름을 덜어도 세 자리의 pivot 규약은 그대로다(`verify897` [B3]).
      ⚠ 봉우리·길이·되튐은 한 프레임도 안 바꾼다(verify93 [4] «피크 ≥1.15» 는 93 의 값이다).
        바뀌는 것은 **pivot 뿐**이고, 그 결과 코인이 꽂히는 아이콘 중심이 고정된다(사양 «도착점이
        움직이지 않는다»). 박스 우변은 (211−1)×0.166 = 34.8px 오른쪽으로 더 자라지만 828.8 < 1080 이라
        프레임 안이고, 오른쪽에는 형제 알약이 없다(골드가 `.curs` 의 마지막 칸이다). */
-  .cbox.fx-punch,.cbox.fx-punch2,.cbox.fx-pay{transform-origin:1px 50%}
+  .cbox.fx-punch,.cbox.fx-pay{transform-origin:1px 50%}
   /* ⚑ 43회차 — 42차 **2인 공통ㅅ** «upg 는 재화를 «쓰는데» HUD 반응이 0 이다»(④ 어휘 불일치)
      (BI «골드 아이콘 bbox 8프레임 전부 동일 · 알약 영역 평균 40.5 → 39.8 = JPEG 노이즈» ·
       BJ «128A → 127A 인데 아이콘 bbox 불변 · 비행체 0 — gain/quest 는 +16~26% 튄다»).
@@ -43033,23 +43034,31 @@ function fxPunch(el, soft, beat){
   /* 아이콘 6개가 30ms 간격으로 도착하는데 도착마다 애니메이션을 재시작하면 **매번 scale 1.02 에서
      처음으로 되돌아가** 알약이 끝까지 안 커진다(비평가 2명이 «튀는 프레임이 한 장도 없다» 로 잡았다).
      한 번 튀는 동안(300ms)은 재시작하지 않는다. */
-  /* 93 — UI 발(soft)은 반대다. 도착이 0.56~1.26s 에 걸쳐 5~6번 나뉘어 오므로 **매번 짧고 작게**
+  /* 93 3회차 — UI 발(soft)은 반대다. 도착이 0.56~1.26s 에 걸쳐 5~6번 나뉘어 오므로 **매번 짧고 작게**
      튀어야 «톡톡» 하는 손맛이 난다 — 재시작 간격 420 → 160ms, 봉우리 1.17 → 1.09.
-     전투 발은 종전 그대로(420ms 고원) — 초당 수십 회라 짧게 자르면 떨림으로 읽힌다. */
+     전투 발은 종전 그대로(420ms 고원) — 초당 수십 회라 짧게 자르면 떨림으로 읽힌다.
+     ⚠ **이 문단은 이력이다** — 바로 위 조기 반환(4회차)이 UI 발을 통째로 `fxPzHit` 으로 보낸 뒤로
+       여기서 말하는 «160ms·1.09» 는 한 번도 안 굴렀다(897). */
+  /* ⚑ 897 — 위 조기 반환 뒤로는 `soft` 가 예외 없이 거짓이라, 여기 있던 삼항 셋(`soft ? … : …`)은
+     **닿을 수 없는 가지**였다. 그 중 하나가 **선언된 적 없는 `FX3_PUNCH`** 를 읽고 있었다 —
+     조기 반환을 걷어내는 사람이 있으면 첫 UI 발 도착에서 `ReferenceError` 로 즉사했을 지뢰다
+     (319 `bagUse is not defined` 와 같은 얼굴 · `probe897` [P3-b]·[P3-e] 가 그 폭발을 실제로 찍는다).
+     ⇒ 셋을 «전투 발» 상수로 접었다. 아래 값(420 · 'fx-punch' · 450)은 **삼항의 거짓 가지 그대로**라
+     동작 Δ0 이다. UI 발 쪽 값(160 · 'fx-punch2' · 190)은 93 4회차 이후 한 번도 안 쓰였다. */
   const now = performance.now();
-  const gap = soft ? FX3_PUNCH : 420;
+  const gap = 420;
   if(el.__fxPunchT && now - el.__fxPunchT < gap) return false;   /* 애니메이션 길이와 같게 — 중간에 재시작되면 고원이 깨진다 */
   el.__fxPunchT = now;
-  const cls = soft ? 'fx-punch2' : 'fx-punch';
+  const cls = 'fx-punch';
   /* 93 — 앞 펄스의 «지우기» 타이머를 반드시 끈다. 160ms 간격으로 다시 걸면서 지우기를 190ms 뒤로
      걸어 두면, **다음 펄스가 시작된 30ms 뒤에 앞 타이머가 그 클래스를 떼어** 펄스가 한 번만 보인다
      (실측: 도착 5회에 펄스 2회). 420ms 짜리 전투 발에서는 간격 == 길이라 안 드러났던 버그다. */
   if(el.__fxPunchTo) clearTimeout(el.__fxPunchTo);
-  el.classList.remove('fx-punch'); el.classList.remove('fx-punch2');
+  el.classList.remove('fx-punch');
   void el.offsetWidth;
   el.classList.add(cls);
   fxPunchN++;                                          /* 93 게이트용 — «몇 번 튀었나» 를 재는 유일한 결정적 신호 */
-  el.__fxPunchTo = setTimeout(() => { el.__fxPunchTo = 0; el.classList.remove(cls); }, soft ? 190 : 450);
+  el.__fxPunchTo = setTimeout(() => { el.__fxPunchTo = 0; el.classList.remove(cls); }, 450);
   return true;
 }
 /* ── 41회차(5차 폴리시 라운드 1회차) — `fx*` **공용 퇴장 규약** ───────────────────────────

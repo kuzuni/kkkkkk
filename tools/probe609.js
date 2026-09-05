@@ -93,7 +93,7 @@ const STOP = `(function(){
   window.fxPzHit = function(){ return false; };     /* UI 발 — JS 진폭 경로(93/13회차) */
   try { fxPz.clear(); } catch(e){}
   document.querySelectorAll('.pcb-p').forEach(function(e){
-    e.classList.remove('fx-punch','fx-punch2');
+    e.classList.remove('fx-punch');   /* 897 — fx-punch2 는 제품에서 삭제됐다 */
     e.style.transform = ''; e.style.transformOrigin = '';
   });
 })`;
