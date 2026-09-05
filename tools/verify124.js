@@ -237,9 +237,12 @@ function safeElapsed(bless, until0, cands) {
      조용해진다). 물음을 **개수에서 규칙으로** 옮긴다: raw 넘침은 ⑴ 전부 `.ntc` 안의 링이고
      ⑵ 그 수가 **정확히 노치 수 × 2**(`<s>` 검정 링 + `<u>` 밝은 림)여야 한다. 노치가 하나 더 생기면
      자리 수가 따라 늘어 초록이지만, `.ntc` **밖**의 새 넘침이나 짝이 안 맞는 링은 그대로 빨개진다. */
-  ok('[2-s2] raw 넘침은 «잘려 있음이 확인된» .ntc 안의 링뿐 · 자리 수 = 노치 수 × 2 (래칫 — 679 · 667 6회차)',
-    pv.spillRaw.every((a, i) => a.length === pv.ntcN[i] * 2
-      && a.every(t => t === 'S@ntc' || t === 'U@ntc')),
+  /* ⚑ 923 3회차 이관 — 래칫이 **0 으로 내려갔다**(자리를 비운 것이 아니라 과녁이 좋아졌다).
+     옛 링은 상자보다 넓은 «2d × len» 짜리 타원 테라 상자를 넘고 `.ntc{overflow:hidden}` 이 잘랐다.
+     3회차부터 모양은 상자 안의 **폴리곤**이라 넘는 것이 아예 없다 ⇒ 허용 목록이 «노치 수 × 2» 에서
+     **0** 이 된다. 다시 늘면 빨개진다(래칫의 뜻은 그대로 — 숫자만 내려갔다). */
+  ok('[2-s2] raw 넘침 0자리 — 3회차부터 링이 상자를 안 넘는다(모양이 폴리곤이다 · 래칫 679 · 667 6회차)',
+    pv.spillRaw.every(a => a.length === 0),
     JSON.stringify(pv.spillRaw) + ' / 노치 ' + JSON.stringify(pv.ntcN));
   /* 679 음성항 — 정말 새는 노드(클리핑 조상 없음)를 주입하면 [2-s] 가 빨개져야 한다.
      안 그러면 «축을 바꾼 것» 이 아니라 «항을 끈 것» 이다. */
@@ -584,11 +587,28 @@ function safeElapsed(bless, until0, cands) {
     return { before, off, offN: off.map(a => a.length), after };
   }, SPILL_SRC);
   ok('[R6-a] 되돌림 전 «보이는 넘침» 0', r2.before.every(n => n === 0), JSON.stringify(r2.before));
-  /* 667 6회차 이관 — [2-s2] 와 같은 이유로 «카드당 1개» 가 아니라 **노치 수 × 2** 다 */
-  ok('[R6-b] .ntc 클리핑을 떼면 카드마다 그 링들(<s>·<u>)이 «샌다» 로 잡힌다',
-    r2.offN.every((n, i) => n === pv.ntcN[i] * 2)
-      && r2.off.every(a => a.every(t => t === 'S@ntc' || t === 'U@ntc')),
-    JSON.stringify(r2.off) + ' / 노치 ' + JSON.stringify(pv.ntcN));
+  /* ⚑⚑ 923 3회차 이관 — 사보타주가 바뀌었다. `overflow:visible` **한 줄로는 이제 아무것도 안 샌다**
+     (폴리곤이 상자 안에 있다 — 그것이 [2-s2] 가 0 이 된 이유다). 그래서 이 항은 두 가지를 같이 묻는다:
+       ⓐ 클리핑을 떼도 새는 자리가 0 이다 = 3회차의 주장 자체
+       ⓑ **옛 «상자보다 넓은 링» 을 되살리면** 그때는 잡힌다 = 자가 여전히 눈을 뜨고 있다는 증거
+     ⓑ 가 없으면 이 항은 «축을 바꾼 것» 이 아니라 «항을 끈 것» 이다(679 규약). */
+  ok('[R6-b] 클리핑을 떼도 새는 자리 0 — 3회차부터 넘침 자체가 없다',
+    r2.offN.every(n => n === 0), JSON.stringify(r2.off));
+  const r2b = await page.evaluate(SPILL_SRC => {
+    const spillOf = eval(SPILL_SRC);
+    const cds = [...document.querySelectorAll('#shopList .pvc')];
+    const st = document.createElement('style');
+    st.id = 'v923r6'; st.textContent = '#shopw .pvc>.ntc{overflow:visible !important}'
+      + '#shopw .pvc>.ntc>s{inset:12px auto auto 12px !important;width:calc(var(--ntc-d)*2) !important;'
+      + 'height:calc(100% - 24px) !important;clip-path:none !important}';
+    document.head.appendChild(st);
+    const off = cds.map(c => spillOf(c, true));
+    st.remove();
+    return off;
+  }, SPILL_SRC);
+  ok('[R6-b2] 옛 «상자보다 넓은 링»(2d × len)을 되살리고 클리핑을 떼면 카드마다 다시 «샌다» 로 잡힌다',
+    r2b.every((a, i) => a.length >= pv.ntcN[i] && a.every(t => t === 'S@ntc')),
+    JSON.stringify(r2b) + ' / 노치 ' + JSON.stringify(pv.ntcN));
   ok('[R6-c] 되돌림을 걷으면 다시 0', r2.after.every(n => n === 0), JSON.stringify(r2.after));
 
   /* ================= 9. 콘솔 ================= */

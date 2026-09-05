@@ -58,7 +58,7 @@ const EXP = {
    833 8회차의 «형마다 두 값(40/43)» 은 `scan667.py` 가 **정수 화소**로 낸 ref 15 ↔ 16 화소,
    곧 **한 칸**(우리 2.06px) 차이였다. 부분화소 자 셋(scan923.py · 923 1회차 채점 GJ·GK)이
    ref 두 형을 31.36~31.67 로 **같게** 읽는다 ⇒ 한 값 41(보이는 깊이 31). 상세는 index.html `NTC_DEP` 주석. */
-const NTC_DEP = { ban: 41, bl: 41 };
+const NTC_DEP = { ban: 41.65, bl: 41.65 };   /* 923 3회차 — 폴리곤은 상자 폭 반올림에 안 매인다(2회차 잔차 −0.49 를 닫았다) */
 const RING = 10, RIM = 12;          /* `s` 검정 테 · `u` 밝은 림 (4회차 ②) */
 
 /* 자가 재는 «스팬» 과 CSS 길이의 관계 — 7회차 검산식.
@@ -82,12 +82,26 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     txt: c.innerText,
     ntc: [...c.querySelectorAll('.ntc')].map(n => {
       const nb = n.getBoundingClientRect();
+      /* ⚑ 923 3회차 — 노치 «모양» 이 상자에서 **폴리곤**으로 옮겨졌다(옛 «작은 상자 + border-radius»
+         폐기). 그래서 «그려질 길이·깊이» 는 상자 크기가 아니라 폴리곤 좌표에서 읽는다:
+           span = 바깥 곡선의 세로 스팬(= 노치 길이) · apex = 카드 우변에서 가장 깊은 점. */
+      const pol = (el, eo) => {
+        const cp = getComputedStyle(el).clipPath;
+        if (cp.indexOf('polygon') !== 0) return null;
+        const xs = [...cp.matchAll(/calc[(]\s*100%\s*([+-])\s*([\d.]+)px\s*[)]/g)]
+          .map(m => (m[1] === '-' ? +m[2] : -m[2]) + eo);
+        const ys = [...cp.matchAll(/(?:calc[(][^)]*[)]|100%|-?[\d.]+px)\s+(-?[\d.]+)px/g)].map(m => +m[1]);
+        if (!xs.length || !ys.length) return null;
+        return { apex: +Math.max(...xs).toFixed(2), span: +(Math.max(...ys) - Math.min(...ys)).toFixed(1) };
+      };
+      const sp = pol(n.querySelector('s'), 0), up = pol(n.querySelector('u'), 10);
       return {
         w: +nb.width.toFixed(1), h: +nb.height.toFixed(1),
         sW: +n.querySelector('s').getBoundingClientRect().width.toFixed(1),
         sH: +n.querySelector('s').getBoundingClientRect().height.toFixed(1),
         uW: +n.querySelector('u').getBoundingClientRect().width.toFixed(1),
         uH: +n.querySelector('u').getBoundingClientRect().height.toFixed(1),
+        sSpan: sp && sp.span, sApex: sp && sp.apex, uApex: up && up.apex,
         cen: +(cb.bottom - (nb.top + nb.height / 2)).toFixed(1)
       };
     })
@@ -118,20 +132,26 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     ok(`A1 ${t}(${c.id}) 카드 높이 ${E.h}`, near(c.h, E.h, 1), c.h);
     ok(`A2 ${t}(${c.id}) 노치 ${E.ntcN}자리 — 개수는 상수가 아니라 «피치 × 카드 높이» 가 정한다`,
       c.ntc.length === E.ntcN, c.ntc.length + '자리');
-    ok(`A3 ${t}(${c.id}) 링 «s» 세로 = ${E.sH}  (7회차 — 문턱 스윕에서 ref 와 부호가 안 갈리는 값)`,
-      c.ntc.every(n => near(n.sH, E.sH, 1)), c.ntc.map(n => n.sH).join('/'));
+    /* ⚑ 923 3회차 이관 — 잣대만 바뀌었다(뜻은 7회차 그대로). 옛 항은 링 상자의 높이를 물었는데
+       3회차부터 그 상자는 노치 상자를 통째로 덮으므로(모양은 폴리곤) **폴리곤 바깥 곡선의 세로 스팬**
+       을 묻는다. 그것이 «그려질 노치 길이» 다 — 상자를 물면 늘 len+24 라 항이 늘 초록인 벙어리가 된다. */
+    ok(`A3 ${t}(${c.id}) 노치 폴리곤 세로 스팬 = ${E.sH}  (7회차 — 문턱 스윕에서 ref 와 부호가 안 갈리는 값)`,
+      c.ntc.every(n => near(n.sSpan, E.sH, 1)), c.ntc.map(n => n.sSpan).join('/'));
     /* ⚑ 923 2회차 이관 — 이 항은 **두 번째로 방향이 바뀐다**(333 처방 · 자리는 그대로 둔다).
        5회차 «두 형이 같은 80» → 833 8회차 «두 값 80/86» → 지금 «두 형이 같은 82».
        8회차를 되돌리는 것이 아니라 **자를 갈아 끼운 것**이다: 8회차의 근거(`scan667.py` 정수 자)는
        ref 두 형을 15 ↔ 16 화소로 읽는데 그 한 칸이 우리 2.06px 이라 두 형을 그보다 곱게 못 가른다.
        부분화소 자 셋이 ref 두 형을 31.4 언저리로 **같게** 읽는다 ⇒ 반지름 41 · 보이는 깊이 31. */
-    ok(`A4 ${t}(${c.id}) 링 «s» 가로 = ${2 * NTC_DEP[k]}  (반지름 ${NTC_DEP[k]} 의 두 배 · 중심이 카드 우변 위`
-      + ` ⇒ 보이는 깊이 ${NTC_DEP[k] - RING} = ref 두 형 31.4 — 부분화소 자 셋 일치)`,
-      c.ntc.every(n => near(n.sW, 2 * NTC_DEP[k], 1)), c.ntc.map(n => n.sW).join('/'));
-    /* 짝 항 — 상자·밝은 림도 같은 한 값에서 파생된다(값을 세 곳에 따로 적으면 여기가 빨개진다). */
-    ok(`A4b ${t}(${c.id}) 상자 폭 = 반지름 + ${RIM} · 밝은 림 «u» 가로 = 그 두 배 (셋이 «--ntc-d» 한 값 파생)`,
-      c.ntc.every(n => near(n.w, NTC_DEP[k] + RIM, 1) && near(n.uW, 2 * (NTC_DEP[k] + RIM), 1)),
-      c.ntc.map(n => n.w + '/' + n.uW).join(' '));
+    ok(`A4 ${t}(${c.id}) 검정 폴리곤 꼭지 = ${NTC_DEP[k]}  (카드 우변에서 가장 깊은 점`
+      + ` ⇒ 보이는 깊이 ${NTC_DEP[k] - RING} = ref 두 형 31.40·31.67 — 부분화소 자 셋 일치)`,
+      c.ntc.every(n => near(n.sApex, NTC_DEP[k], 0.1)), c.ntc.map(n => n.sApex).join('/'));
+    /* 짝 항 — 상자·밝은 림도 같은 한 값에서 파생된다(값을 세 곳에 따로 적으면 여기가 빨개진다).
+       ⚑ 923 3회차 — 림 상자는 «카드 우변 10px 안쪽» 이라 상자보다 10 좁고(833 10회차를 상자로 옮겼다),
+       림의 폴리곤 꼭지는 여전히 d+12 다. */
+    ok(`A4b ${t}(${c.id}) 상자 폭 = 반지름 + ${RIM} · 림 «u» 상자 = 그 −10 · 림 꼭지 = 반지름 + ${RIM} (넷이 «--ntc-d» 한 값 파생)`,
+      c.ntc.every(n => near(n.w, NTC_DEP[k] + RIM, 1) && near(n.uW, NTC_DEP[k] + RIM - 10, 1)
+        && near(n.uApex, NTC_DEP[k] + RIM, 0.1)),
+      c.ntc.map(n => n.w + '/' + n.uW + '/' + n.uApex).join(' '));
     ok(`A5 ${t}(${c.id}) 상자는 링보다 위·아래로 ${RIM} 씩 넓다 (밝은 림 «u» 의 호가 안 잘리게)`,
       c.ntc.every(n => near(n.h, E.sH + 2 * RIM, 1) && near(n.uH, E.sH + 2 * RIM, 1)),
       c.ntc.map(n => n.h + '/' + n.uH).join(' '));
@@ -317,7 +337,12 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
   const after = await page.evaluate(() => {
     const c1 = document.querySelector('.pvc.ban1'), c2 = document.querySelector('.pvc:not(.ban1)');
     /* R1 — 7회차 이전(«길이 = 피치의 절반» 을 배너형에도 쓴 상태)으로 되돌린다 */
-    c1.querySelectorAll('.ntc').forEach(n => { n.style.height = '94px'; n.querySelector('s').style.height = '70px'; });
+    /* ⚑ 923 3회차 — 길이는 이제 상자가 아니라 **폴리곤**이 들고 있다. 그래서 되돌림도 제품 자신의
+       함수로 «길이 70 짜리 폴리곤» 을 만들어 카드에 실어야 한다(상자만 줄이면 [A3] 이 안 움직인다). */
+    const rev = pvNtcPoly(70, NTC_DEP);
+    c1.style.setProperty('--ntc-ps', rev.ps);
+    c1.style.setProperty('--ntc-pu', rev.pu);
+    c1.querySelectorAll('.ntc').forEach(n => { n.style.height = '94px'; });
     /* R2 — 6회차 이전(«.art 는 마스크 밖의 형제») 으로 되돌린다 */
     c2.querySelector('.art').style.maskImage = 'none';
     c2.querySelector('.art').style.webkitMaskImage = 'none';
@@ -325,8 +350,10 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     c1.querySelector('.bg').style.backgroundImage =
       'conic-gradient(from 45deg,rgba(0,0,0,.088) 0 25%,#0000 0 50%,rgba(0,0,0,.088) 0 75%,#0000 0)';
     const g = e => getComputedStyle(e);
+    const rcp = getComputedStyle(c1.querySelector('.ntc>s')).clipPath;
+    const rys = [...rcp.matchAll(/(?:calc[(][^)]*[)]|100%|-?[\d.]+px)\s+(-?[\d.]+)px/g)].map(m => +m[1]);
     return {
-      sH: c1.querySelector('.ntc>s').getBoundingClientRect().height,
+      sH: rys.length ? +(Math.max(...rys) - Math.min(...rys)).toFixed(1) : null,
       ntcH: c1.querySelector('.ntc').getBoundingClientRect().height,
       artMask: g(c2.querySelector('.art')).maskImage,
       bgImg: g(c1.querySelector('.bg')).backgroundImage

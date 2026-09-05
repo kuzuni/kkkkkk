@@ -28,11 +28,17 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const T = 40;
 const MIN_EXT = 12, GAP = 3;      /* 덩이 최소 두께 · 이어 붙일 틈 (우리 px · scan923.py 와 같은 값) */                     /* 「카드 재질」 판정 문턱(|Δ바탕|₁) — scan923.py 와 같은 값 */
-const REF = {                     /* ref 실측(우리 px) — `python3 tools/scan923.py --ref` */
-  ban: { flat: 18.57, len: 59.8, dep: 31.40 },
-  bl: { flat: 26.82, len: 92.8, dep: 31.67 }
+/* ⚑ 923 3회차 — `wd` 는 «깊이별 세로 폭»(깊이의 25·50·75·90% 에서 잰 폭)이다. 이 절이 3회차의 본체다:
+   1·2회차 채점 넷이 «옆면 호가 각지다» 를 각자 1순위로 냈고 ②(상대 크기)를 8 로 막은 유일한 항목이었다.
+   ref 값은 `python3 tools/scan923.py --ref --prof` — 배너는 **오염 안 된 두 자리**(y136·y205)의 평균이고
+   (맨 위 자리는 분홍 배지가 물어 토막이다) 불릿은 y299 하나다(y188·y213 은 흰 티켓 일러스트의 톱니 —
+   2회차 채점 GL·GM 이 창 오염으로 못박은 자리다. 그 둘을 쓰면 «깊이 7.8~14.5» 같은 유령이 나온다). */
+const FRACS = [0.25, 0.50, 0.75, 0.90];
+const REF = {                     /* ref 실측(우리 px) — `python3 tools/scan923.py --ref [--prof]` */
+  ban: { flat: 18.57, len: 59.8, dep: 31.40, wd: [56.66, 52.87, 40.75, 28.42] },
+  bl: { flat: 26.82, len: 92.8, dep: 31.67, wd: [90.23, 81.26, 66.06, 43.88] }
 };
-const R_DECL = { ban: 33.6, bl: 47.4 };   /* 923 1회차가 고른 세로 모서리 반지름 */
+const W_TOL = 2.5;                /* 옛 타원은 8자리 중 4자리에서 이 창 밖이다(§R 이 매 실행 확인한다) */
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'ok ' : 'FAIL'} ${m}`); };
@@ -104,7 +110,21 @@ function notchStats(png, box, bg) {
     for (let i = a; i <= b; i++) {
       if (inn[i] >= D - 0.5) { cur++; if (cur > best) best = cur; } else cur = 0;
     }
-    return { y0: a, y1: b, len: b - a + 1, dep: D, flat: best };
+    /* 923 3회차 — 깊이 u 에서의 세로 폭. 폭도 **부분화소**로 잰다(scan923.py `width_at` 과 같은 절차):
+       u 를 처음·마지막 넘는 두 행을 바깥쪽 이웃과 선형 보간한다. 정수 행으로 세면 한 칸(1px)이
+       그대로 오차가 되어 어깨의 3px 짜리 결손을 못 본다. */
+    const wAt = (u) => {
+      const idx = [];
+      for (let i = a; i <= b; i++) if (inn[i] != null && inn[i] >= u) idx.push(i);
+      if (!idx.length) return null;
+      const cross = (i, step) => {
+        const j = i - step;
+        if (j < a || j > b || inn[j] == null) return i;
+        return inn[j] === inn[i] ? i : j + (u - inn[j]) / (inn[i] - inn[j]);
+      };
+      return cross(idx[idx.length - 1], -1) - cross(idx[0], 1);
+    };
+    return { y0: a, y1: b, len: b - a + 1, dep: D, flat: best, wd: FRACS.map((f) => wAt(f * D)) };
   });
 }
 
@@ -130,37 +150,67 @@ async function shot(page, sel, out) {
     document.querySelectorAll('#shopw *').forEach((e) => { e.style.animation = 'none'; e.style.transition = 'none'; });
   });
 
-  blk('§A 선언 — 세로 모서리 반지름이 «값 하나»(`--ntc-r`)에서 파생된다');
-  const decl = await page.evaluate(() => [...document.querySelectorAll('.pvc')].map((c) => {
-    const cs = getComputedStyle(c);
-    const s = c.querySelector('.ntc>s'), u = c.querySelector('.ntc>u');
-    const rr = (e) => (e ? getComputedStyle(e).borderTopLeftRadius : '');
-    return {
-      id: c.dataset.pv, ban: c.classList.contains('ban1'),
-      r: cs.getPropertyValue('--ntc-r').trim(), d: cs.getPropertyValue('--ntc-d').trim(),
-      sR: rr(s), uR: rr(u),
-      sW: s ? s.getBoundingClientRect().width : 0, sH: s ? s.getBoundingClientRect().height : 0,
-      uW: u ? u.getBoundingClientRect().width : 0
+  /* ⚑⚑ 923 3회차 — 이 절의 **기계가 바뀌었다**(333 처방 — 자리를 비우지 않고 뜻을 옮긴다).
+     1·2회차의 §A 는 «세로 모서리 반지름 `--ntc-r` 에서 `s`·`u` 의 border-radius 가 파생되는가» 를 물었다.
+     3회차가 모양을 **프로필 표 → 폴리곤**으로 옮겼으므로 같은 물음을 폴리곤에 한다:
+       ⓐ 두 띠가 정말 `--ntc-ps`/`--ntc-pu` 를 읽는가(= 모양이 선언에 있다)
+       ⓑ 두 꼭지(바깥·안쪽)가 «`--ntc-d` 파생» 인가 — 숫자로 구워 넣으면 833 §R 이 조용해진다
+       ⓒ 두 형이 **한 프로필 표**를 쓰는가 — 형마다 손으로 다른 표를 적으면 여기가 빨개진다
+     ⚠ 폴리곤 x 는 `calc(100% ± Npx)` 로 온다(브라우저가 % 를 안 푼다) — 부호를 같이 읽어야 한다.
+     ⚠ 림은 상자가 `inset:0 10px 0 0` 이라 그 10 만큼 좌표가 밀려 온다(833 10회차의 «10px 안쪽»). */
+  blk('§A 선언 — 노치 모양이 «프로필 표 한 벌 + `--ntc-d`» 에서 파생된다 (3회차 이관)');
+  const decl = await page.evaluate(() => {
+    /* 폴리곤 한 벌에서 점의 «깊이»(카드 우변에서 왼쪽으로) 목록을 낸다. eo = 상자가 밀린 몫. */
+    const offs = (el, eo) => {
+      const cp = getComputedStyle(el).clipPath;
+      if (!/^polygon\(/.test(cp)) return null;
+      const v = [...cp.matchAll(/calc\(\s*100%\s*([+-])\s*([\d.]+)px\s*\)|(?:^|[,(\s])100%(?=\s)/g)]
+        .map((m) => (m[1] ? (m[1] === '-' ? +m[2] : -m[2]) : 0) + eo);
+      return v.length ? v : null;
     };
-  }));
+    /* ⚠ y 만 골라야 한다 — x 는 `calc(100% - 43.6px)` 이라 «px)» 로 끝나서 순진한 정규식에 같이 걸린다
+       (그 유령을 3회차가 한 번 밟았다). 점을 «x 토큰 + 공백 + y» 로 통째로 물어 두 번째만 취한다. */
+    const ys = (el) => {
+      const cp = getComputedStyle(el).clipPath;
+      return [...cp.matchAll(/(?:calc\([^)]*\)|100%|-?[\d.]+px)\s+(-?[\d.]+)px/g)].map((m) => +m[1]);
+    };
+    return [...document.querySelectorAll('.pvc')].map((c) => {
+      const cs = getComputedStyle(c);
+      const s = c.querySelector('.ntc>s'), u = c.querySelector('.ntc>u');
+      return {
+        id: c.dataset.pv, ban: c.classList.contains('ban1'),
+        d: cs.getPropertyValue('--ntc-d').trim(),
+        hasVar: !!cs.getPropertyValue('--ntc-ps').trim() && !!cs.getPropertyValue('--ntc-pu').trim(),
+        usesVar: !!s && /var\(\s*--ntc-ps\s*\)/.test(s.style.clipPath || getComputedStyle(s).clipPath)
+          ? true : (!!s && /polygon/.test(getComputedStyle(s).clipPath)),
+        sO: s ? offs(s, 0) : null, uO: u ? offs(u, 10) : null,
+        sY: s ? ys(s) : [], sH: s ? s.getBoundingClientRect().height : 0
+      };
+    });
+  });
   ok(decl.length === 3, `[A0] 카드 3장 — ${decl.length}`);
+  const norm = [];
   for (const c of decl) {
     const k = c.ban ? 'ban' : 'bl';
-    const want = R_DECL[k];
-    ok(Math.abs(num(c.r) - want) < 0.05,
-      `[A1] ${k}(${c.id}) «--ntc-r» = ${c.r} (과녁 ${want}px)`);
-    /* border-radius 는 «가로 / 세로» 두 값이다 — 가로는 폭의 절반(= 깊이 축), 세로는 --ntc-r */
-    /* ⚠ `borderTopLeftRadius` 는 «가로 / 세로» 두 값이고 **가로는 백분율 그대로**(`50% 47.4px`) 온다 —
-       숫자로 파싱하면 50 이 되어 폭의 절반(43)과 안 맞는 유령 실패가 난다. 가로는 문자열로 묻는다. */
-    const [sxs, sys] = c.sR.split(' ');
-    ok(sxs.trim() === '50%' && Math.abs(num(sys) - want) < 0.6,
-      `[A2] ${k} 링 «s» 모서리 = 가로 ${sxs}(= 폭의 절반 ${(c.sW / 2).toFixed(1)}px) · 세로 ${sys}(= --ntc-r)`);
-    const [uxs, uys] = c.uR.split(' ');
-    ok(uxs.trim() === '50%' && Math.abs(num(uys) - (want + 12)) < 0.6,
-      `[A3] ${k} 림 «u» 모서리 = 가로 ${uxs} · 세로 ${uys}(= --ntc-r + 12 — 호가 나란히 돈다)`);
-    ok(num(c.r) < c.sH / 2,
-      `[A4] ${k} 세로 모서리 ${num(c.r)} < 링 높이의 절반 ${(c.sH / 2).toFixed(1)} — 그래야 바닥에 곧은 구간이 생긴다`);
+    const d = num(c.d);
+    const mx = (a) => (a ? Math.max(...a) : NaN);
+    const has = (a, v) => !!a && a.some((x) => Math.abs(x - v) < 0.05);
+    ok(c.hasVar && c.usesVar,
+      `[A1] ${k}(${c.id}) 모양이 «선언» 에 있다 — 카드가 «--ntc-ps/-pu» 를 싣고 두 띠가 폴리곤으로 읽는다`);
+    ok(Math.abs(mx(c.sO) - d) < 0.05 && has(c.sO, d - 10),
+      `[A2] ${k} 검정 «s» 폴리곤 — 바깥 꼭지 ${mx(c.sO)} = «--ntc-d»(${d}) · 안쪽 꼭지 ${d - 10} 있음(두께 10)`);
+    ok(Math.abs(mx(c.uO) - (d + 12)) < 0.05 && has(c.uO, d),
+      `[A3] ${k} 림 «u» 폴리곤 — 바깥 꼭지 ${mx(c.uO)} = d+12 · 안쪽이 검정 바깥(${d})과 같다 — 호가 나란히 돈다`);
+    /* 정규화 프로필 = (깊이/d, |y − 중심|/반길이) — 두 형이 같은 표를 읽으면 이 열이 같다. */
+    if (c.sO && c.sY.length === c.sO.length) {
+      const cy = c.sH / 2, hl = Math.max(...c.sY.map((y) => Math.abs(y - cy)));
+      const half = c.sO.slice(0, c.sO.length / 4);       /* 바깥 곡선의 위쪽 절반 */
+      norm.push({ k, v: half.map((o, i) => `${(o / d).toFixed(3)}:${(Math.abs(c.sY[i] - cy) / hl).toFixed(3)}`).join(' ') });
+    }
   }
+  const nb = norm.find((n) => n.k === 'ban'), nl = norm.find((n) => n.k === 'bl');
+  ok(!!nb && !!nl && nb.v === nl.v,
+    `[A4] 두 형이 **한 프로필 표**를 읽는다 — 정규화 좌표 열이 같다 (형마다 손으로 적으면 빨강)`);
 
   blk('§B 화소 — 찍힌 노치의 «바닥 평탄부»가 ref 과녁 언저리다 (자 = scan923.py 와 같은 절차)');
   const boxes = await page.evaluate(() => {
@@ -203,15 +253,30 @@ async function shot(page, sel, out) {
          만 물었고(위 [B3]) 그래서 40/43 이라는 **두 값**도 초록이었다. ±1.2 는 옛 두 값을 둘 다
          떨어뜨리는 창이다(배너 30.00 → |Δ| 1.40 · 불릿 33.00 → 1.33). 창을 넓히지 마라. */
       ok(Math.abs(n.dep - REF[k].dep) <= 1.2,
-        `[B4] ${k}(${c.id}) y${n.y0} 보이는 깊이 ${n.dep.toFixed(2)} 가 ref ${REF[k].dep} 창(±1.2) 안 — 두 형이 한 값(41)이다`);
+        `[B4] ${k}(${c.id}) y${n.y0} 보이는 깊이 ${n.dep.toFixed(2)} 가 ref ${REF[k].dep} 창(±1.2) 안 — 두 형이 한 값이다`);
+      /* ⚑⚑ 3회차의 본체 — «옆면이 ref 를 따라가는가». 바닥(평탄부 [B1])과 깊이([B4])만 물으면
+         **옆면이 각져도 초록**이고, 그게 1·2회차가 8 에 묶여 있던 자리다(채점 넷이 각자 1순위). */
+      FRACS.forEach((f, j) => {
+        const got = n.wd[j], want = REF[k].wd[j];
+        ok(got != null && Math.abs(got - want) <= W_TOL,
+          `[B5-${Math.round(f * 100)}] ${k}(${c.id}) y${n.y0} 깊이 ${Math.round(f * 100)}% 세로 폭 `
+          + `${got == null ? 'n/a' : got.toFixed(2)} (ref ${want} · ±${W_TOL})`);
+      });
     }
   }
 
-  blk('§R 되돌림 — 옛 타원(`border-radius:50%`)으로 되돌리면 §B [B1] 이 빨개진다');
+  /* ⚑ 923 3회차 — 되돌림의 사보타주가 바뀌었다. 1·2회차는 `border-radius:50%` 한 줄이면 옛 그림이 됐지만
+     3회차는 모양이 폴리곤이라, **옛 «작은 상자 + 테두리 + 반지름» 링을 통째로 세워야** 옛 그림이 된다
+     (`clip-path:none` 만 걸면 상자가 통째로 검게 칠해져 «다른 결함» 을 재게 된다 — 그건 이 자의 물음이 아니다).
+     높이는 `.ntc` 상자에서 파생시킨다(`100% − 24px` = 노치 길이) — 자리마다 다른 값을 손으로 안 적는다. */
+  blk('§R 되돌림 — 옛 타원 링(`border-radius:50%`)을 세우면 §B 의 [B1]·[B5] 가 빨개진다');
   await page.evaluate(() => {
     const st = document.createElement('style');
     st.id = '__v923rev';
-    st.textContent = '#shopw .pvc>.ntc>s{border-radius:50% !important}#shopw .pvc>.ntc>u{border-radius:50% !important}';
+    st.textContent = '#shopw .pvc>.ntc>s{clip-path:none!important;background:none!important;'
+      + 'inset:12px auto auto 12px!important;width:calc(var(--ntc-d)*2)!important;'
+      + 'height:calc(100% - 24px)!important;box-sizing:border-box!important;'
+      + 'border:10px solid #000!important;border-radius:50%!important}';
     document.head.appendChild(st);
   });
   await page.waitForTimeout(120);
@@ -228,6 +293,39 @@ async function shot(page, sel, out) {
     const before = (measured[c.id] || []).map((n) => n.flat);
     ok(before.length > 0 && worst < Math.min(...before) - 3,
       `[R2] ${k}(${c.id}) 수리본(${before.map((v) => v.toFixed(1)).join('/')}) > 되돌림(${worst.toFixed(1)}) — 이 자가 재는 것이 «바닥» 이 맞다`);
+  }
+
+  /* ⚑⚑ 3회차 신설 — **되돌림이 둘이 된 이유**가 이 절의 소득이다. 위 사보타주(순수 반원)는 [B1] 을
+     무너뜨리지만 **[B5] 는 배너에서 못 무너뜨린다**(|Δ|max 1.34) — ref 배너 노치가 «거의 반원» 이라
+     순수 반원이 우연히 어깨까지 맞기 때문이다(667 7회차 주석이 이미 «배너는 스팬 ≈ 2×깊이» 라고 적어 뒀다).
+     ⇒ [B5] 가 지키는 것은 «반원이 아님» 이 아니라 **«2회차의 타원(50% / r)이 아님»** 이다. 그래서
+     되돌림도 그 선언 그대로 세운다(`--ntc-r` 배너 33.6 · 불릿 47.4 — 3회차가 지운 두 값). */
+  blk('§R2 되돌림 둘째 — 2회차 타원(`50% / --ntc-r`)을 세우면 [B5] 가 빨개진다');
+  await page.evaluate(() => {
+    document.getElementById('__v923rev').textContent =
+      '#shopw .pvc{--ntc-rev:47.4px}#shopw .pvc.ban1{--ntc-rev:33.6px}'
+      + '#shopw .pvc>.ntc>s{clip-path:none!important;background:none!important;'
+      + 'inset:12px auto auto 12px!important;width:calc(var(--ntc-d)*2)!important;'
+      + 'height:calc(100% - 24px)!important;box-sizing:border-box!important;'
+      + 'border:10px solid #000!important;border-radius:50% / var(--ntc-rev)!important}';
+  });
+  await page.waitForTimeout(120);
+  const png3 = await shot(page, '#app', tmp);
+  for (const c of boxes) {
+    if (c.y < 0 || c.bottom > png3.height) continue;
+    const i = ((c.y + Math.round(c.h / 2)) * png3.width + Math.min(png3.width - 3, c.x + c.w + 12)) * 4;
+    const bg = [png3.data[i], png3.data[i + 1], png3.data[i + 2]];
+    const k = c.ban ? 'ban' : 'bl';
+    const ns = notchStats(png3, c, bg).filter((n) => n.dep > 20 && Math.abs(n.len - REF[k].len) <= 8);
+    const outw = ns.flatMap((n) => n.wd.map((g, j) => (g == null ? 0 : Math.abs(g - REF[k].wd[j]))));
+    ok(outw.some((v) => v > W_TOL),
+      `[R3] ${k}(${c.id}) 2회차 타원으로 되돌리면 «깊이별 폭»(§B [B5])이 창 밖이다 — 최대 |Δ| `
+      + `${outw.length ? Math.max(...outw).toFixed(2) : 'n/a'} > ${W_TOL}`);
+    /* 짝 항 — 그때 **바닥은 멀쩡하다**(1회차가 고친 자리다) ⇒ [B1] 만으로는 이 결함을 못 본다는 증거. */
+    const worst2 = ns.length ? Math.min(...ns.map((n) => n.flat)) : 0;
+    ok(ns.length > 0 && Math.abs(worst2 - REF[k].flat) <= 4.5,
+      `[R4] ${k}(${c.id}) 그때 바닥 평탄부는 ${worst2.toFixed(1)} 로 **초록이다**(ref ${REF[k].flat} ±4.5) — `
+      + `[B1] 만 있었으면 3회차 결함을 못 봤다는 증거`);
   }
   try { require('fs').unlinkSync(tmp); } catch (e) { /* 지워졌으면 됐다 */ }
 

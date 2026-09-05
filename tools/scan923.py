@@ -138,6 +138,43 @@ def notch_stats(prof, straight, i0, i1, k):
                 y0=i0, y1=i1, length=(i1 - i0 + 1) * k)
 
 
+# ── 3회차 신설 — «깊이별 세로 폭» 표 (2회차 채점 GL·GM 의 1순위가 이 축이다) ────────
+#   2회차 채점이 «옆면 호가 각지다» 를 ②(상대 크기) 를 8 로 막은 유일한 항목으로 냈고,
+#   둘 다 «깊이 25/50/75/90% 에서의 세로 폭» 표로 적었다. 그 표를 자 안으로 들여온다 —
+#   회차마다 손으로 다시 만들면 «자·문턱·창» 이 회차마다 달라져 값이 못 이어진다(885 교훈).
+#   ⚠ 폭도 **부분화소**로 잰다: 깊이 u 를 처음/마지막 넘는 두 행을 이웃 행과 선형 보간한다.
+
+
+def width_at(prof, straight, i0, i1, k, u):
+    """깊이 u(우리 px) 에서의 세로 폭(우리 px). 못 재면 None."""
+    ys = [i for i in range(i0, i1 + 1) if prof[i] is not None]
+    if not ys:
+        return None
+    dep = {i: (straight - prof[i]) * k for i in ys}
+    inside = [i for i in ys if dep[i] >= u]
+    if not inside:
+        return None
+    lo, hi = min(inside), max(inside)
+
+    def cross(i, step):
+        """행 i 에서 바깥쪽(step 방향) 이웃과의 사이에서 깊이 u 를 지나는 자리."""
+        j = i - step
+        if j not in dep:
+            return float(i)
+        a, b = dep[j], dep[i]
+        if b == a:
+            return float(i)
+        return j + (u - a) / (b - a)
+
+    return (cross(hi, -1) - cross(lo, 1)) * k
+
+
+def wprofile(prof, straight, i0, i1, k, fracs=(0.25, 0.50, 0.75, 0.90)):
+    st = notch_stats(prof, straight, i0, i1, k)
+    D = st['D']
+    return [(f, width_at(prof, straight, i0, i1, k, f * D)) for f in fracs]
+
+
 # ── ② «마지막 알약 아랫변 ↔ 리본1 윗변» 틈 (923 1회차 신설 · 등재문 ②) ──────────
 #   같은 절차를 ref 와 우리에게 쓴다: 알약 가로 구간의 **행 중앙값** 밝기로
 #   「알약 채움(어둡다) → 카드 몸통(중간) → 리본 검정 테(가장 어둡다)」 를 가르고,
@@ -202,6 +239,11 @@ def scan(a, y0, y1, x0, x1, bg, k, t, label):
         verdict = '반원' if st['R'] >= st['D'] - 0.6 else '스타디움(바닥 곧음)'
         print(f'    {n + 1:2d}  {s:4d}..{e:4d}  {st["length"]:8.1f} {st["D"]:8.2f}'
               f' {st["flat"]:9.2f} {st["R"]:8.2f} {st["R"] - st["D"]:6.2f}   {verdict}')
+        if '--prof' in sys.argv:
+            wp = wprofile(prof, straight, s, e, k)
+            cells = '  '.join(f'{int(f * 100):3d}% {("  n/a" if w is None else f"{w:6.2f}")}'
+                              for f, w in wp)
+            print(f'        깊이별 폭(우리px) — {cells}   평탄부 {st["flat"]:.2f}')
         out.append(st)
     return out
 

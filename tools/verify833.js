@@ -150,12 +150,27 @@ const DUMP = `(() => {
       h: +artE.getBoundingClientRect().height.toFixed(1) } : null;
     const hdbBot = hdbE ? +(hdbE.getBoundingClientRect().bottom - c.getBoundingClientRect().top).toFixed(1) : null;
     const ntcD = num(getComputedStyle(c).getPropertyValue('--ntc-d'));
+    /* ⚑ 923 3회차 — 모양이 «상자 + border-radius» 에서 **폴리곤**으로 옮겨졌다. 그래서 «그려진 값» 은
+       이제 상자 폭이 아니라 폴리곤의 꼭지 깊이다. eo = 상자가 카드 우변에서 밀린 몫(림은 10). */
+    const ntcOff = (el, eo) => {
+      const cp = getComputedStyle(el).clipPath;
+      if (cp.indexOf('polygon') !== 0) return null;
+      /* ⚠ 이 함수는 문자열로 옮겨져 브라우저에서 다시 컴파일된다 — 정규식에 «괄호 이스케이프» 를 쓰면
+         옮기는 길에서 깨진다(3회차에 한 번 밟았다). 괄호는 문자 클래스로 적는다. */
+      const v = [...cp.matchAll(/calc[(]\\s*100%\\s*([+-])\\s*([\\d.]+)px\\s*[)]/g)]
+        .map((m) => (m[1] === '-' ? +m[2] : -m[2]) + eo);
+      return v.length ? v : null;
+    };
     const ntc = [...c.querySelectorAll('.ntc')].map((n) => {
       const sq = n.querySelector('s'), uq = n.querySelector('u');
+      const so = ntcOff(sq, 0), uo = ntcOff(uq, 10);
+      const mx = (a) => (a ? +Math.max(...a).toFixed(2) : null);
+      /* 안쪽 꼭지 = «바깥 꼭지 − 띠 두께» 인지 물으려면 그 값이 점 목록에 실제로 있어야 한다 */
+      const inner = (a, t) => (a ? a.some((x) => Math.abs(x - (Math.max(...a) - t)) < 0.05) : false);
       return { w: +n.getBoundingClientRect().width.toFixed(2),
         sW: +sq.getBoundingClientRect().width.toFixed(2),
-        sBorder: num(getComputedStyle(sq).borderTopWidth),
-        uW: +uq.getBoundingClientRect().width.toFixed(2) };
+        uW: +uq.getBoundingClientRect().width.toFixed(2),
+        sOut: mx(so), uOut: mx(uo), sIn10: inner(so, 10), uIn12: inner(uo, 12) };
     });
     return { id: c.dataset.pv, ban, card: cr, bdg: bb, bdgBorder: bw, lines, bdgLn, hdb, pil, ntcD, ntc, art, hdbBot,
       frBorder: fr ? num(getComputedStyle(fr).borderTopWidth) : 0, rbs,
@@ -622,23 +637,31 @@ const DUMP = `(() => {
      내려앉는다 — d 41.4·41.5 → 31.0 · 42 → 32.0 실측) **41**(보이는 깊이 31.0)로 잡았다.
      ⚠ **길이·피치·앵커는 여전히 형마다 두 값이다** — 그 셋은 부분화소 자로도 갈린다
      (ref 노치 길이 배너 59.8 ↔ 불릿 92.8). 이 절이 접은 것은 **깊이 하나뿐**이다. */
-  const NDEP = 41, NRING = 10, NRIM = 12, REFDEP = 31.4;
+  /* ⚑⚑ 923 3회차 — 이 절의 **잣대가 바뀌었다**(333 처방 — 뜻은 그대로, 재는 법만 옮긴다).
+     모양이 «작은 상자 + border-radius» 에서 **폴리곤**으로 갔으므로 «그려진 값» 은 상자 폭이 아니라
+     폴리곤의 꼭지 깊이다. 지키는 것은 8회차와 같은 셋이다: ⓐ 그려진 깊이가 선언과 같다 ⓑ 상자·검정·림
+     **셋이 «--ntc-d» 한 값에서 파생된다** ⓒ 링 두께 10·림 두께 12 가 불변이다.
+     ⚑ 깊이도 41 → **41.65** 로 옮겼다 — 폴리곤은 상자 폭 반올림에 안 매이므로 2회차가 «그릴 수 있는
+     것은 정수뿐» 이라며 남긴 잔차(−0.49px)가 사라진다(3회차 실측 보이는 깊이 배너 31.46 · 불릿 31.51). */
+  const NDEP = 41.65, NRING = 10, NRIM = 12, REFDEP = 31.5;
   for (const c of cards) {
     const t = c.ban ? '배너' : '불릿';
-    ok(Math.abs(c.ntcD - NDEP) < 0.6,
-      `[12-a] ${t}(${c.id}) «--ntc-d» = ${NDEP}  ⇒ 보이는 깊이 ${NDEP - NRING} (ref 두 형 다 ${REFDEP})`,
+    ok(Math.abs(c.ntcD - NDEP) < 0.3,
+      `[12-a] ${t}(${c.id}) «--ntc-d» = ${NDEP}  ⇒ 보이는 깊이 ${NDEP - NRING} (ref 두 형 31.40·31.67)`,
       String(c.ntcD));
-    ok(c.ntc.length > 0 && c.ntc.every(n => Math.abs(n.sW - 2 * NDEP) < 1),
-      `[12-b] ${t}(${c.id}) 링 «s» 실측 가로 = ${2 * NDEP} (선언이 아니라 그려진 값)`,
-      c.ntc.map(n => n.sW).join('/'));
-    /* 짝 항 — 세 폭이 한 값에서 파생되지 않으면(손으로 따로 적으면) 여기가 빨개진다. */
+    ok(c.ntc.length > 0 && c.ntc.every(n => n.sOut != null && Math.abs(n.sOut - c.ntcD) < 0.05 && n.sIn10),
+      `[12-b] ${t}(${c.id}) 검정 «s» 폴리곤 바깥 꼭지 = d (선언이 아니라 그려질 모양이 낸 값) · 안쪽 = d−10`,
+      c.ntc.map(n => `${n.sOut}/${n.sIn10}`).join(' '));
+    /* 짝 항 — 셋이 한 값에서 파생되지 않으면(손으로 따로 적으면) 여기가 빨개진다.
+       상자는 여전히 `calc(var(--ntc-d) + 12px)` 이고, 두 띠는 그 상자를 덮되 림만 10px 안쪽이다. */
     ok(c.ntc.every(n => Math.abs(n.w - (c.ntcD + NRIM)) < 1
-      && Math.abs(n.uW - 2 * (c.ntcD + NRIM)) < 1 && Math.abs(n.sW - 2 * c.ntcD) < 1),
-      `[12-c] ${t}(${c.id}) 상자 = d+${NRIM} · «s» = 2d · «u» = 2(d+${NRIM}) — 셋이 «--ntc-d» 파생`,
-      c.ntc.map(n => `${n.w}/${n.sW}/${n.uW}`).join(' '));
-    ok(c.ntc.every(n => Math.abs(n.sBorder - NRING) < 0.6),
-      `[12-d] ${t}(${c.id}) 링 두께 ${NRING} 불변 — 보이는 깊이는 «반지름 − 이 두께» 다`,
-      c.ntc.map(n => n.sBorder).join('/'));
+      && Math.abs(n.sW - n.w) < 1 && Math.abs(n.uW - (n.w - 10)) < 1
+      && n.uOut != null && Math.abs(n.uOut - (c.ntcD + NRIM)) < 0.05),
+      `[12-c] ${t}(${c.id}) 상자 = d+${NRIM} · «s» = 상자 · «u» = 상자−10 · 림 꼭지 = d+${NRIM} — 넷이 «--ntc-d» 파생`,
+      c.ntc.map(n => `${n.w}/${n.sW}/${n.uW}/${n.uOut}`).join(' '));
+    ok(c.ntc.every(n => n.sIn10 && n.uIn12),
+      `[12-d] ${t}(${c.id}) 링 두께 ${NRING} · 림 두께 ${NRIM} 불변 — 폴리곤 두 꼭지의 차가 그 값이다`,
+      c.ntc.map(n => `${n.sIn10}/${n.uIn12}`).join(' '));
   }
   const banD = cards.filter(c => c.ban).map(c => c.ntcD);
   const blD = cards.filter(c => !c.ban).map(c => c.ntcD);
@@ -728,21 +751,19 @@ const DUMP = `(() => {
   const rim = await page.evaluate(() => {
     const c = document.querySelector('.pvc.ban1'), cb = c.getBoundingClientRect();
     const u = c.querySelector('.ntc>u'), ub = u.getBoundingClientRect();
+    /* ⚑ 923 3회차 — 자르는 자리가 `clip-path:inset()` 에서 **상자**(`inset:0 10px 0 0`)로 옮겨졌다:
+       모양 쪽 clip-path 를 폴리곤이 쓰므로 한 요소에 둘을 걸 수 없다. 뜻도 잣대도 그대로 —
+       림이 실제로 칠해지는 오른쪽 끝은 이제 «상자의 우변» 이다(상자 밖은 배경이 안 칠해진다). */
     const cp = getComputedStyle(u).clipPath;
-    /* ⚠ computed 값이 `calc(50% + 10px)` 그대로 남는다(브라우저가 안 푼다) — 두 꼴을 다 받는다.
-       % 는 **상자 폭 기준**이라 여기서 푼다(50% = 상자 폭의 절반 = 카드 우변). */
-    let right = null;
-    const mPx = cp.match(/inset\(\s*[\d.]+px\s+([\d.]+)px/);
-    const mCa = cp.match(/inset\(\s*[\d.]+px\s+calc\(\s*([\d.]+)%\s*\+\s*([\d.]+)px/);
-    if (mPx) right = +mPx[1];
-    else if (mCa) right = ub.width * (+mCa[1]) / 100 + (+mCa[2]);
-    return { cp, right, uL: ub.left - cb.left, uW: ub.width,
+    const cut = ub.right - cb.left;
+    return { cp, cut, isPoly: cp.indexOf('polygon') === 0, rightInset: +(cb.right - ub.right).toFixed(2),
       cardW: cb.width, frBorder: parseFloat(getComputedStyle(c.querySelector('.fr')).borderRightWidth) };
   });
-  ok(rim.right !== null, '[15-a] 밝은 림에 clip-path 가 선언돼 있다', rim.cp);
-  if (rim.right !== null) {
-    /* 잘린 뒤 림의 오른쪽 끝(카드-로컬) = 림 상자 좌단 + 폭 − inset-right */
-    const cut = rim.uL + rim.uW - rim.right;
+  ok(rim.isPoly && Math.abs(rim.rightInset - 10) < 0.6,
+    '[15-a] 밝은 림이 카드 우변에서 «상자로» 10px 잘려 있다 (모양은 폴리곤이 쓴다 — 923 3회차 이관)',
+    `${rim.rightInset} · ${rim.cp.slice(0, 40)}…`);
+  {
+    const cut = rim.cut;
     ok(cut <= rim.cardW - rim.frBorder + 0.5,
       `[15-b] 잘린 림의 오른쪽 끝이 검정 열(카드 우변 −${rim.frBorder}) 왼쪽이다 — 림은 검정 «안쪽» 부품이다`,
       `${p2(cut)} ≤ ${p2(rim.cardW - rim.frBorder)}`);
@@ -1064,17 +1085,22 @@ const DUMP = `(() => {
     document.head.appendChild(st);
     return [...document.querySelectorAll('.pvc')].filter(c => !c.classList.contains('ban1')).map((c) => {
       const n = c.querySelector('.ntc');
+      const s = n.querySelector('s');
+      /* 923 3회차 — «그려진 깊이» 는 폴리곤 꼭지다(상자 폭이 아니다). 그 꼭지가 CSS 변수를 따라가는지가
+         이 되돌림이 묻는 전부다 — 숫자로 구워 넣었으면 여기가 41.65 로 남아 빨개진다. */
+      const off = [...getComputedStyle(s).clipPath.matchAll(/calc[(]\s*100%\s*-\s*([\d.]+)px\s*[)]/g)]
+        .map(m => +m[1]);
       return { d: parseFloat(getComputedStyle(c).getPropertyValue('--ntc-d')),
         w: +n.getBoundingClientRect().width.toFixed(2),
-        sW: +n.querySelector('s').getBoundingClientRect().width.toFixed(2),
+        sApex: off.length ? +Math.max(...off).toFixed(2) : null,
         uW: +n.querySelector('u').getBoundingClientRect().width.toFixed(2) };
     });
   });
-  ok(back11.length > 0 && back11.every(c => Math.abs(c.sW - 80) < 1),
-    '[R11] 불릿 깊이를 40 으로 되돌리면 §12 [12-b] 가 빨개진다 (보이는 깊이가 31 → 30 으로 얕아진다)',
-    back11.map(c => c.sW).join('/'));
-  ok(back11.every(c => Math.abs(c.w - 52) < 1 && Math.abs(c.uW - 104) < 1),
-    '[R11b] 그때 상자·밝은 림도 **같이** 되돌아간다 — 세 폭이 한 값 파생이라는 증거',
+  ok(back11.length > 0 && back11.every(c => c.sApex != null && Math.abs(c.sApex - 40) < 0.05),
+    '[R11] 불릿 깊이를 40 으로 되돌리면 §12 [12-b] 가 빨개진다 (검정 폴리곤 꼭지가 41.65 → 40 으로 얕아진다)',
+    back11.map(c => c.sApex).join('/'));
+  ok(back11.every(c => Math.abs(c.w - 52) < 1 && Math.abs(c.uW - 42) < 1),
+    '[R11b] 그때 상자·밝은 림도 **같이** 되돌아간다 — 넷이 한 값 파생이라는 증거',
     back11.map(c => `${c.w}/${c.uW}`).join(' '));
   /* ⚑ 923 2회차 — 뒤집힌 [12-e] 의 되돌림 시험이다. 이 사보타주는 **불릿만** 40 으로 밀므로
      두 형이 다시 갈린다 ⇒ [12-e] 의 술어(|불릿 − 배너| < 0.6)가 그 순간 거짓이어야 한다.
