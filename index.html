@@ -7455,16 +7455,46 @@
     height:calc(30px * var(--rwc,1));z-index:1;pointer-events:none;
     background:linear-gradient(180deg,rgba(132,116,85,.62) 0 5px,rgba(5,5,3,.54) 5px 10px,
       rgba(86,72,52,.42) 10px 24px,rgba(124,108,79,.54) 24px 28px,rgba(4,4,3,.50) 28px 30px)}
+  /* ── 926 — **상인방이 띠1 의 압축을 clearance 와 나눠 진다**(`--rw-lnk`). ──────────
+     띠1(패널 상단 ↓ 아치 정점)은 `--rw-gt` 첫째 인자가 정하는 **94 상수**(= 20 금테 + 66 상인방
+     + 8 clearance)라 1600 에서 129.3 → 94 로 눌리는데, 그 안의 20 과 66 이 **프레임 불변**이라
+     압축을 **clearance 혼자** 뒤집어썼다 — 잔존율이 다른 띠 0.599~0.639 인데 clearance 만
+     **0.190**(칠 자로는 0.320·0.370)이었다. 채점 2인(EW·EX)이 각자 독립으로 «이 화면에서 가장
+     심하게 눌린 띠» 로 짚은 자리다(879 8회차 → 926 등재 · 뿌리는 879 9회차 §57).
+     ⚑ **k 는 손 상수가 아니라 «남는 자리를 둘이 같은 비로 나눈다» 는 항등식이다**:
+         재원 pool = gt − av − lt   (띠1 에서 금테 회피 lt 를 뺀 나머지 = 상인방 + clearance)
+         k = min(1, pool / 108)     (108 = 294 상인방 앵커 − 186 av 상한 = 긴 프레임의 pool)
+       1600 pool 74 ⇒ k = 0.6852 — 상인방 66 → **45.2** · clearance 8 → **28.8**
+       (둘의 잔존율이 **0.685 로 같아진다**). 긴 네 프레임은 pool = 108 이라 k = 1,
+       **한 픽셀도 안 움직인다**(`verify926` [3] · `verify879` [3] 규약).
+     ⚠ **띠1 총량(94)은 한 글자도 안 건드린다** — `--rw-gt` 의 94 를 올리는 길은 879 9회차가
+       벽 **1.7px**(요구의 5.1%)로 닫았고, 그 1.7px 조차 **가장 눌린 띠4**에서 뺏는 거래다
+       (`verify879` [2b]·[2b2] 가 그 자리를 지킨다 — 이 회차는 그 둘을 안 건드린다).
+     ⚠ **«칠을 상자 끝까지 늘린다» 는 방향이 반대다**(879 §55·§57) — 칠이 상자보다 10.7px
+       짧아서 눈에 보이는 간극이 상자 간극보다 **큰** 것이고, 늘리면 간극이 되레 줄어든다.
+     ⚠ **잘라 내는 것이 아니다** — 12회차가 «남는 자리에 맞춰 높이를 줄이다» 13px 잘려
+       13회차가 «네 프레임 전부 66 온전히» 로 되돌린 자리다. 그래서 몰딩 6층·까치발을
+       **같은 k 로 함께** 옮겨 단면 비를 한 픽셀도 안 바꾼다(356 등방 · 879 배수 바 선례).
+     ⚠ `--rw-lnk` 는 **JS 가 얹는 순수한 수**다(`rwLintelFit()`) — `--rw-av` 사슬 끝에 `100%` 가
+       있어 CSS 로 이 비를 그라디언트 정지점에 넣으면 그 `100%` 가 **그라디언트 선**으로
+       해석돼 무너진다(879 8회차가 `transform:scale()` 에서 실제로 겪은 함정).
+     되돌림: `rwLintelFit()` 호출을 지우면 폴백 1 이 이겨 926 이전(상인방 66 고정)이다. */
   .rw-lintel{left:0;right:0;top:var(--rw-lt);
-    height:calc(66px * var(--rwc,1));z-index:1;pointer-events:none;
+    height:calc(66px * var(--rwc,1) * var(--rw-lnk,1));z-index:1;pointer-events:none;
     transform:scale(var(--rwc,1));transform-origin:50% 0;
-    background:linear-gradient(180deg,rgba(128,112,82,.60) 0 5px,rgba(6,6,4,.52) 5px 11px,
-      rgba(84,70,50,.40) 11px 54px,rgba(120,105,76,.52) 54px 59px,rgba(5,5,3,.52) 59px 64px,
-      rgba(0,0,0,0) 64px 66px)}
-  /* 상인방 좌우 끝의 «까치발» — 전폭 띠만 두면 켜 줄눈과 구분이 안 된다 */
-  .rw-lintel::before,.rw-lintel::after{content:'';position:absolute;top:-12px;width:30px;height:78px;
+    background:linear-gradient(180deg,rgba(128,112,82,.60) 0 calc(5px * var(--rw-lnk,1)),
+      rgba(6,6,4,.52) calc(5px * var(--rw-lnk,1)) calc(11px * var(--rw-lnk,1)),
+      rgba(84,70,50,.40) calc(11px * var(--rw-lnk,1)) calc(54px * var(--rw-lnk,1)),
+      rgba(120,105,76,.52) calc(54px * var(--rw-lnk,1)) calc(59px * var(--rw-lnk,1)),
+      rgba(5,5,3,.52) calc(59px * var(--rw-lnk,1)) calc(64px * var(--rw-lnk,1)),
+      rgba(0,0,0,0) calc(64px * var(--rw-lnk,1)) calc(66px * var(--rw-lnk,1)))}
+  /* 상인방 좌우 끝의 «까치발» — 전폭 띠만 두면 켜 줄눈과 구분이 안 된다
+     (926 — 띠와 **같은 k 로 등방** 축소한다. 폭까지 같이 줄이는 것이 356 규약이다.) */
+  .rw-lintel::before,.rw-lintel::after{content:'';position:absolute;
+    top:calc(-12px * var(--rw-lnk,1));width:calc(30px * var(--rw-lnk,1));
+    height:calc(78px * var(--rw-lnk,1));
     background:linear-gradient(180deg,rgba(100,87,64,.34),rgba(60,50,36,.20) 70%,rgba(0,0,0,0));
-    box-shadow:inset 0 0 0 3px rgba(8,7,5,.26)}
+    box-shadow:inset 0 0 0 calc(3px * var(--rw-lnk,1)) rgba(8,7,5,.26)}
   .rw-lintel::before{left:196px}
   .rw-lintel::after{right:196px}
   /* 유물 슬롯 151² ×10 (3·4·3) — 브론즈 공통 프레임, 내부는 슬롯별 radial 글로우 */
@@ -20523,6 +20553,37 @@ function rwFit(){
   const s = Math.min(1, avail / RW_CONTENT_H);
   el.style.setProperty('--rwc', s > 0 ? s.toFixed(5) : '0');
   rwMulFit(s);
+  rwLintelFit();
+}
+/* ── 926 — 상인방이 띠1 의 압축을 clearance 와 «같은 비로» 나눠 지게 하는 수 한 개 ──────
+   k = min(1, pool / 108) · pool = gt − av − lt (CSS 주석 `.rw-lintel` 과 한 벌).
+   ⚑ **식을 옮겨 적지 않고 그려진 상자에서 되잰다** — 바로 위 `rwMulFit()` 이 CSS 예산의
+     JS 사본인데 그 사본은 지금 1600 에서 tt 464.4(제품 445.4) · av 146.5(제품 133.1) 로
+     **늙어 있다**(제품 `--rw-av` 의 182 를 174 로 들고 있다 · `verify926` [5] 가 그 갈림을
+     상시로 잰다 · §R2 가 «사본을 쓰면 k 가 틀린다» 를 사본으로 못박는다).
+     늙은 사본에 항을 하나 더 얹으면 그 갈림이 상인방까지 옮는다 ⇒ 자 막대 한 개로
+     **제품 자신에게 묻는다**(probe879b·probe926 이 쓰는 것과 같은 자).
+   ⚠ 퍼센트 함정은 여기서 이미 풀려 있다 — 자 막대의 `height` 는 **길이 문맥**이라
+     `--rw-av` 사슬 끝의 `100%` 가 패널 높이로 제대로 풀린다(무너지는 것은 `scale()`·
+     그라디언트 정지점 쪽이다 · 879 1회차 [K1]).
+   ⚠ 패널이 아직 안 그려졌으면(팝업이 닫혀 있어 높이 0) **아무것도 안 얹는다** —
+     0 을 얹으면 상인방이 통째로 사라진다(12회차가 겪은 그림). 그 경우 폴백 1 이 이기고,
+     `openRelw()` 가 열면서 `rwFit()` 을 다시 부르므로 값은 그때 들어온다. */
+function rwLintelFit(){
+  const el = $('relw'); if(!el) return;
+  const panel = el.querySelector('.rw-bowl') || el.querySelector('.rw-panel');
+  if(!panel || !panel.getBoundingClientRect().height) return;
+  const r = document.createElement('div');
+  r.style.cssText = 'position:absolute;left:-9999px;top:0;width:1px;pointer-events:none';
+  panel.appendChild(r);
+  const px = (expr) => { r.style.height = expr; return r.getBoundingClientRect().height; };
+  const rwc = px('calc(1000px * var(--rwc,1))') / 1000;
+  const pool = px('var(--rw-gt)') - px('var(--rw-av)') - px('var(--rw-lt)');
+  r.remove();
+  const full = 108 * rwc;                /* 108 = 294(상인방 앵커) − 186(av 상한) = 긴 프레임 pool */
+  if(!(full > 0) || !(pool > 0)) return;
+  const k = Math.min(1, pool / full);
+  el.style.setProperty('--rw-lnk', k > 0 ? k.toFixed(4) : '1');
 }
 /* ── 879 1회차 [K1] — 배수 바를 «니치가 담을 수 있는 만큼» 으로 (CSS 주석 `--rw-mbs` 와 한 벌) ──
    왜 JS 인가: 배율은 `--rw-av` 에서 나오는데 그 사슬 끝에 `100%` 가 있고,
@@ -35754,6 +35815,10 @@ function openRelw(){
   renderRelw();
   rwFit();                       /* 100 — 열 때도 갱신(리사이즈 없이 바로 열리는 경로 대비) */
   $('relw').classList.add('on');
+  /* 926 — 상인방 비는 **그려진 상자**에서 재므로 «켜고 나서» 한 번 더 부른다.
+     위 `rwFit()` 은 아직 `.on` 이 없어 패널 높이가 0 이고, 그 자리에서는 아무것도 안 얹는다
+     (0 을 얹으면 상인방이 사라진다 — 12회차의 그림). 리사이즈 경로는 rwFit 안의 호출이 받는다. */
+  rwLintelFit();
 }
 /* 700 — 닫으면 배수가 ×1 로 돌아간다(713 §5 와 같은 규약 · 세이브 축이 없다).
    되돌리려면 이 한 줄(`relMul = 1; renderRwMulBar();`)만 지우면 «세션 내 유지» 가 된다. */

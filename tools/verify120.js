@@ -154,6 +154,17 @@ const inter = (a, b) => {
           rwGof = (gp.getBoundingClientRect().top - gEl0.getBoundingClientRect().top) / sc;
           gp.remove();
         }
+        /* 926 — 상인방이 띠1 의 압축을 clearance 와 나눠 지는 비(`--rw-lnk`).
+           같은 이유로 커스텀 속성이 아니라 **그려진 자 막대**에서 잰다(위 gof 와 같은 처방). */
+        let rwLnk = 1;
+        const pnl0 = relw.querySelector('.rw-bowl') || relw.querySelector('.rw-panel');
+        if (pnl0) {
+          const lp = document.createElement('div');
+          lp.style.cssText = 'position:absolute;left:-9999px;top:0;width:1px;height:calc(1000px * var(--rw-lnk,1))';
+          pnl0.appendChild(lp);
+          rwLnk = lp.getBoundingClientRect().height / (1000 * sc);
+          lp.remove();
+        }
 
         let hitBad = 0; const hitWho = [];
         for (const c of tabbar.children) {
@@ -171,6 +182,7 @@ const inter = (a, b) => {
           panel: q('.rw-panel'), bowl: q('.rw-bowl'), bg: q('.rw-bg'), frame: q('.rw-frame'),
           fcbl: q('.rw-fc.bl'), fcbr: q('.rw-fc.br'),
           gof: rwGof,   /* 879 5회차 — 격자만 아치 안에서 위로 옮긴 양(긴 네 프레임은 0) */
+          lnk: rwLnk,   /* 926 — 상인방 세로의 비(긴 네 프레임은 정확히 1) */
           grid: q('.rw-grid'), mid: q('.rw-mid'), floor: q('.rw-floor'), basin: q('.rw-basin'), cost: q('.rw-cost'), cap: q('.rw-cap'),
           lintel: q('.rw-lintel'), ground: q('.rw-ground'), steps: q('.rw-steps'),
           floorEl: q('.rw-floor'),
@@ -580,9 +592,21 @@ const inter = (a, b) => {
          `r.grid.t` 로 정점을 잡으면 **아치가 같이 올라간 것처럼** 보여 상인방과 겹쳐 읽힌다
          (화소 자로는 여유 +18 로 그대로다 — probe879 [2]). 설계 상변으로 되돌려서 잡는다. */
       const apex = r.grid.t + (r.gof || 0) - av;
-      ck(`[${H}] ② 상인방 66px 온전 · 패널 안 20px 이상(금테 내측 회피) · 아치 정점 위`,
-        r.lintel.t >= P.t + 20 - 0.6 && Math.abs(r.lintel.h - 66) < 0.6 && r.lintel.b <= apex + 0.6,
-        `상인방 ${r.lintel.t.toFixed(1)}..${r.lintel.b.toFixed(1)} (h ${r.lintel.h.toFixed(1)}) · 아치 정점 ${apex.toFixed(1)} · 패널 상단 여백 ${(r.lintel.t - P.t).toFixed(1)}`);
+      /* ⚑ 926 이관 — «66 온전» 의 **뜻은 «잘리지 않는다»** 이지 «어느 프레임에서나 66» 이 아니다.
+         926 이 1600 에서 상인방에게 띠1 의 압축을 나눠 지웠다(66 → 66 × `--rw-lnk`, k = pool/108).
+         그래서 상수 66 을 **설계 세로 66 × lnk** 로 갈아 끼우고, 이 항이 지키던 것(그리다 만
+         13px 잘림)은 그대로 남긴다 — 잘리면 그려진 h 가 설계값과 어긋나므로 여기서 빨개진다.
+         ⚠ 이 항을 «h ≥ 40» 같은 헐거운 부등식으로 바꾸지 마라 — 12회차의 잘림이 그 밑을 통과한다.
+         ⚠ 긴 네 프레임의 «정확히 66» 은 [②b] 가 따로 못박는다(k 가 긴 쪽으로 새면 그 항이 빨개진다).
+         잔존율 배분 자체(k = pool/108 이 옳은 수인가)는 926 의 몫이다 — `verify926` [1]·[2]. */
+      ck(`[${H}] ② 상인방이 **설계 세로 그대로 그려진다**(66 × lnk ${r.lnk.toFixed(4)} = ${(66 * r.lnk).toFixed(1)}px · 잘림 0) · 패널 안 20px 이상(금테 내측 회피) · 아치 정점 위`,
+        r.lintel.t >= P.t + 20 - 0.6 && Math.abs(r.lintel.h - 66 * r.lnk) < 0.6 && r.lintel.b <= apex + 0.6,
+        `상인방 ${r.lintel.t.toFixed(1)}..${r.lintel.b.toFixed(1)} (h ${r.lintel.h.toFixed(1)} · 설계 ${(66 * r.lnk).toFixed(1)}) · 아치 정점 ${apex.toFixed(1)} · 패널 상단 여백 ${(r.lintel.t - P.t).toFixed(1)}`);
+      /* 926 신설 — 위 항이 «66» 을 놓아 준 대가로 **긴 네 프레임이 66 인 것**을 여기서 못박는다.
+         (926 은 1600 한 장만 건드린다 — 879 [3] 과 같은 규약.) */
+      ck(`[${H}] ②b 긴 네 프레임의 상인방은 **정확히 66px**(lnk = 1) · 1600 만 압축을 나눠 진다`,
+        H === 1600 ? r.lnk < 1 : Math.abs(r.lnk - 1) < 1e-3 && Math.abs(r.lintel.h - 66) < 0.6,
+        `lnk ${r.lnk.toFixed(4)} · h ${r.lintel.h.toFixed(1)}`);
       /* 13회차 신설 — «바닥이 실제로 존재한다». 1600 에서 0px 이던 것이 이 게이트다.
          16회차 — 문턱을 «계단 한 단(84)» 이 아니라 **«바닥 27px»** 로 바꾼다. 1600 은 아치 다리에
          84px 을 내주고 계단을 억제했으므로(비평가 4명이 두 회차에 걸쳐 요구한 방향) 계단 한 단을
