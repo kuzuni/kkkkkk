@@ -35,8 +35,9 @@ const ok = (msg, cond, detail) => {
 /* ⚑ 3회차 — `scan667b.py` 가 R 에서 빠졌다(얇은 축 넷이 전부 부분 화소다 · §6).
    래칫은 «늘면 빨강» 이므로 **줄어든 것도 여기서 다시 적어야** 지나간다 — 그 자리가 이 줄이다. */
 /* ⚑ 4회차 — `probe866.py` 가 R 에서 빠졌다(알약 바깥·속 여덟 모서리가 전부 부분 화소다 · §7). */
-const RED = ['scan885b.py', 'scan885e.py', 'scan887.py'];
-const FIXED = ['scan667b.py', 'probe866.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
+/* ⚑ 5회차 — `scan885b.py` 가 R 에서 빠졌다(글리프 덩이의 모서리가 전부 부분 화소다 · §8). */
+const RED = ['scan885e.py', 'scan887.py'];
+const FIXED = ['scan667b.py', 'probe866.py', 'scan885b.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
 /* ⚑ 942 1회차 — `probe409g.py` 가 B 에서 빠졌다(`--diag` 를 «이웃 두 층에 비례로 나누는» 자로 갈아 끼웠다 ·
    자는 `tools/verify942.js`). 주홍 래칫도 «줄어든 것을 여기 다시 적어야» 지나간다 — 그 자리가 이 줄이다. */
 const FIXED942 = ['probe409g.py'];
@@ -259,6 +260,71 @@ console.log('\n[7] 4회차 수리 — `probe866.py` 알약 «테» (바깥 − �
         return Number.isFinite(med) && Number.isFinite(cap)
           && cap > med + 1.0 && Math.abs(med - rn[0]) <= 0.35;
       })(), sweep);
+  }
+}
+
+/* ── [8] 5회차 수리 — `scan885b.py` 글리프 «틈» ─────────────────────────────
+   ref 절만 돌린다(`--ref-only`) — 우리 쪽은 캡처가 있어야 하고 캡처는 커밋 금지 자산이다.
+   같은 규약을 §5(`scan667b`)·§7(`probe866`)이 이미 쓰고 있다. */
+console.log('\n[8] 5회차 수리 — `scan885b.py` 윗줄 글리프 «틈» 이 격자에서 풀렸는가');
+{
+  const { py } = require('./pydep937');
+  const run = (extra) => String(py(['tools/scan885b.py', '--glyph', '--ref-only', ...extra],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  let oldOut, newOut;
+  try { oldOut = run(['--int']); newOut = run([]); } catch (e) {
+    if (e && e.status === 2) console.log('  SKIP [8] 파이썬 의존 없음 — pip3 install pillow numpy');
+    else throw e;
+  }
+  if (oldOut && newOut) {
+    const K = P.K;
+    /* 문턱 90 줄(885 3회차가 결론을 낸 그 단)의 «틈 합 (a b c d)» 을 낱개로 뽑는다. */
+    const gaps = (o) => {
+      const seg = o.split('문턱 90')[1] || '';
+      const m = (seg.split('문턱 110')[0] || '').match(/틈 합 \*\*[0-9.]+\*\* \(([^)]+)\)/);
+      return m ? m[1].trim().split(/\s+/).map(Number) : [];
+    };
+    const glyphs = (o) => {
+      const seg = o.split('문턱 90')[1] || '';
+      const m = (seg.split('문턱 110')[0] || '').match(/글리프 폭 합 \*\*[0-9.]+\*\* \(([^)]+)\)/);
+      return m ? m[1].trim().split(/\s+/).map(Number) : [];
+    };
+    const total = (o) => {
+      const seg = o.split('문턱 90')[1] || '';
+      const m = (seg.split('문턱 110')[0] || '').match(/총 bbox ([0-9.]+)/);
+      return m ? +m[1] : NaN;
+    };
+    /* 출력이 소수 두 자리(0.005 우리 px = 0.0024 ref px)라 ÷K 반올림 여유는 0.005 면 넉넉하다. */
+    const isMulK = (v) => Math.abs(v / K - Math.round(v / K)) < 5e-3;
+    const og = gaps(oldOut), ng = gaps(newOut);
+    ok('[8-a] ⚑ 옛 자의 ref «틈» 넷은 **전부 K 의 배수** — 참값 2~5 ref px 인 축이 격자에 통째로 잠겨 있었다 (지문)',
+      og.length === 4 && og.every(isMulK), og.join(' ') + ` (÷K ${og.map((v) => (v / K).toFixed(2)).join(' ')})`);
+    ok('[8-b] 부분 화소 자의 «틈» 은 K 의 배수가 아니다 (넷 중 3 이상) — 이제 이 축이 표현된다',
+      ng.length === 4 && ng.filter((v) => !isMulK(v)).length >= 3,
+      ng.join(' ') + ` (÷K ${ng.map((v) => (v / K).toFixed(2)).join(' ')})`);
+    ok('[8-c] «틈» 넷이 옛 값에서 ±1.0 **ref px** 안이다 — 정의가 안 바뀌었다(걸음만 곱아졌다)',
+      ng.length === og.length && ng.every((v, i) => Math.abs(v - og[i]) / K <= 1.0),
+      ng.map((v, i) => ((v - og[i]) / K).toFixed(2)).join(' '));
+    /* ⚑ 장부(`probe932` fix 칸)가 요구한 항등식 — 모서리 좌표로 적으므로 **정의상** 닫힌다.
+       이 항이 없으면 «글리프를 줄여 틈을 늘리는» 무른 수리가 통과한다. */
+    const closes = (o) => {
+      const g = glyphs(o), p = gaps(o), t = total(o);
+      return g.length === 5 && p.length === 4 && Number.isFinite(t)
+        && Math.abs(g.reduce((a, b) => a + b, 0) + p.reduce((a, b) => a + b, 0) - t) <= 0.15;
+    };
+    ok('[8-d] ★ «글리프 폭 합 + 틈 합 = 총 bbox» 가 두 걸음에서 다 닫힌다 (장부가 요구한 항등식)',
+      closes(oldOut) && closes(newOut),
+      `옛 ${total(oldOut).toFixed(1)} · 새 ${total(newOut).toFixed(1)}`);
+    /* ⚑ 무르게 풀지 않았다는 증거 — §5-d 와 같은 꼴이다. 문턱을 한 칸도 안 흔들었으므로
+       «덩이(창)» 는 두 걸음에서 한 글자도 안 다르다. 부분 화소는 그 창의 모서리를 미는 데만 쓴다. */
+    const wins = (t) => t.split('\n').filter((l) => l.includes('창(정수)')).join('\n');
+    ok('[8-e] ⚑ **덩이(창)는 두 걸음에서 한 글자도 안 다르다** — 부분 화소가 «문턱을 무르게 하는 일» 이 아님을 못박는다',
+      wins(oldOut).length > 0 && wins(oldOut) === wins(newOut), `${wins(newOut).split('\n').length}줄`);
+    /* 되돌림 — `--int` 가 885 3회차가 근거로 쓴 옛 수(틈 6.2 ×4 · 글리프 합 130.0)를 그대로 되살린다. */
+    ok('[8-f] ⚑ `--int` 는 885 3회차가 근거로 쓴 옛 수(틈 6.2 ×4 · 글리프 합 130.0)를 그대로 되살린다 — 되돌림이 가능하다',
+      og.length === 4 && og.every((v) => Math.abs(v - 3 * K) < 0.02)
+      && Math.abs(glyphs(oldOut).reduce((a, b) => a + b, 0) - 63 * K) < 0.05,
+      og.join(' '));
   }
 }
 
