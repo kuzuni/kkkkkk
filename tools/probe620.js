@@ -10,7 +10,11 @@
  *   [3] poison 을 **첫 종으로** K회 재면(굳기 전 창) 옛 초기화도 새 초기화와 같은 값을 준다
  *       = 47% 이탈은 620 의 수리가 만든 것이 아니라 원래 그 자리에 있던 값이다.
  */
-const { chromium } = require('playwright');
+/* 작업 931 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(925 가 화소 자 넷에 한 것과 같다).
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
+   사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
@@ -26,12 +30,7 @@ const ok = (b, name, detail) => {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) {
-    const p = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
-    if (!fs.existsSync(p)) throw e;
-    browser = await chromium.launch({ executablePath: p });
-  }
+  browser = await launch(chromium);   /* 931 — 실행 파일 폴백까지 사슬이 맡는다 */
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   await page.goto(URL);

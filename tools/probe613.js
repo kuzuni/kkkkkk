@@ -1,14 +1,11 @@
 /* probe613 — 613·614 실동작 재현: 직접 지불 · 헤더 표시 · 구 세이브 pts 이관 · 회수 부재 */
-const { chromium } = require('playwright');
-/* smoke.js 와 같은 폴백 — 번들 브라우저가 없으면 /opt/pw-browsers/chromium 을 쓴다 */
-function launchOpts(){
-  const fs = require('fs');
-  const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean);
-  for (const p of cands) { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (e) {} }
-  return {};
-}
+/* 작업 931 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(925 가 화소 자 넷에 한 것과 같다).
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
+   사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 (async () => {
-  let b; try { b = await chromium.launch(); } catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); } const p = await b.newPage({ viewport:{width:540,height:1140} });
+  const b = await launch(chromium);   /* 931 — 폴백까지 사슬이 맡는다 */ const p = await b.newPage({ viewport:{width:540,height:1140} });
   const errs=[]; p.on('pageerror', e=>errs.push('PAGEERROR: '+e.message));
   p.on('console', m=>{ if(m.type()==='error') errs.push('CONSOLE: '+m.text()); });
   await p.goto('file://'+process.cwd()+'/index.html'); await p.waitForTimeout(1200);

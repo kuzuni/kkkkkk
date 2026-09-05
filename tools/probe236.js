@@ -13,17 +13,16 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { chromium } = require('playwright');
+/* 작업 931 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(925 가 화소 자 넷에 한 것과 같다).
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
+   사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
-function launchOpts() {
-  for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean))
-    try { if (fs.existsSync(p)) return { executablePath: p }; } catch (_) {}
-  return {};
-}
 
 (async () => {
-  const br = await chromium.launch(launchOpts());
+  const br = await launch(chromium);
   const ctx = await br.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const pg = await ctx.newPage();
   const errs = [];

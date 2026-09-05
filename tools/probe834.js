@@ -16,16 +16,11 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { chromium } = (() => {
-  try { return require('playwright'); } catch (_) {}
-  const os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 를 찾을 수 없다'); process.exit(2);
-})();
+/* 작업 931 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(925 가 화소 자 넷에 한 것과 같다).
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
+   사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const PRE = process.argv.includes('--pre');
@@ -35,11 +30,6 @@ const ok = (m, cond, detail) => {
   else { fail++; console.log('  ✗ ' + m + (detail ? '  — ' + detail : '')); }
 };
 
-function launchOpts(){
-  for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean))
-    { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (_) {} }
-  return {};
-}
 
 /* 20 의 칩 라벨 — id 가 붙었으면 그것으로, 아니면 마크업 자리(`.spc-rib>b>i`)로 읽는다.
    ⚠ 두 갈래를 다 두는 이유: 이 자는 «수리 전» 도 재야 하고, 수리 전에는 id 가 없다. */
@@ -47,7 +37,7 @@ const CHIP20 = '#specw .spc-rib > b > i';
 const CHIP19 = '#pfTtl';
 
 (async () => {
-  const browser = await chromium.launch(Object.assign({ args: ['--no-sandbox'] }, launchOpts()));
+  const browser = await launch(chromium, { args: ['--no-sandbox'] });
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
