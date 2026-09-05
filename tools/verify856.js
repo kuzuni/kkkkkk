@@ -647,6 +647,124 @@ async function measure(browser, url) {
                         '  최소 ' + rr[0].toFixed(3) + '  최대 ' + rr[rr.length - 1].toFixed(3) +
                         '  코어0 ' + zero + '화소');
           }
+          /* ⚑⚑ 9회차 진단 — «가는 단면과 굵은 단면이 **그림의 어느 자리**인가».
+             8회차가 «폭 축은 실재하되 폭의 매끄러운 함수가 아니다»(c 가 종마다 8배 · lance 옆모습이
+             단조 아님)로 닫으면서 남긴 물음이 이것이다. 같은 종의 두 구간은 **같은 그림의 다른 부분**
+             이므로(arrow 의 촉 ↔ 자루) 구간 차의 임자가 «폭» 이 아니라 **자리의 생김새**(끝단·굽이)
+             일 수 있다.
+             ⚠ **자를 새로 만들지 않는다(402)** — `dump` 와 `bank` 는 `spread()` 의 **같은 루프에서
+             같은 화소마다 한 번씩** 담기므로 자리끼리 짝이 맞는다(그래서 길이가 같은지부터 묻는다).
+             여기서 하는 일은 이미 잰 표본을 [B13] 이 묶는 축(획 폭 구간)으로 **다시 묶는 것**뿐이고,
+             폭·비는 [B13]·[B14] 가 읽는 그 칸(`bank[2]`·`bank[3]`)을 그대로 읽는다. */
+          if (q.bank && q.bank.length === s.length) {
+            const binOf = w => (w >= B13_LO && w < B13_HI) ? Math.floor((w - B13_LO) / B13_W) + 1 : 0;
+            const pts = s.map((v, i) => ({ x: v[0], y: v[1], w: q.bank[i][2], ra: q.bank[i][3],
+                                           b: binOf(q.bank[i][2]) }));
+            /* 끝단성 — 마루를 8이웃 그래프로 보고 «이웃 ≤1» 인 화소(끝)에서 몇 걸음인지 BFS.
+               좌표는 위에서 이미 담긴 것이고 새로 재는 화소가 없다. */
+            const key = (x, y) => x + ',' + y;
+            const at = new Map(pts.map(p => [key(p.x, p.y), p]));
+            for (const p of pts) {
+              let n = 0;
+              for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
+                if ((dx || dy) && at.has(key(p.x + dx, p.y + dy))) n++;
+              p.nb = n;
+            }
+            const q0 = pts.filter(p => p.nb <= 1);
+            for (const p of pts) p.d = q0.includes(p) ? 0 : Infinity;
+            let front = q0.slice();
+            for (let step = 1; front.length; step++) {
+              const nx = [];
+              for (const p of front) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                if (!dx && !dy) continue;
+                const t = at.get(key(p.x + dx, p.y + dy));
+                if (t && t.d > step) { t.d = step; nx.push(t); }
+              }
+              front = nx;
+            }
+            console.log('  [889 9회차] 같은 표본을 **[B13] 구간**으로 색칠 — 숫자 = 구간번호' +
+                        '(1 = 획 ' + B13_LO + '~' + (B13_LO + B13_W) + ' · 이후 ' + B13_W + 'px 씩) · ' +
+                        '- = 구간 밖 · · = 마루 아님');
+            const acc2 = Array.from({ length: H }, () => Array.from({ length: W }, () => []));
+            for (const p of pts) acc2[Math.floor((p.y - y0) / sc)][Math.floor((p.x - x0) / sc)].push(p.b);
+            for (let i = 0; i < H; i++) {
+              let line = '  ';
+              for (let j = 0; j < W; j++) {
+                const c = acc2[i][j];
+                if (!c.length) { line += '·'; continue; }
+                const t = c.slice().sort((a, b) => a - b)[Math.floor(0.5 * (c.length - 1))];
+                line += t ? String(t) : '-';
+              }
+              console.log(line);
+            }
+            const md = a => { const t = a.slice().sort((x, y) => x - y); return t[Math.floor(0.5 * (t.length - 1))]; };
+            console.log('  구간별 자리 — 중심(x,y) · 상자 · 끝단거리(마루 «이웃≤1» 에서 몇 걸음) · 이웃수');
+            for (let b = 1; b <= Math.ceil((B13_HI - B13_LO) / B13_W); b++) {
+              const c = pts.filter(p => p.b === b);
+              if (c.length < 4) continue;
+              const cx = c.reduce((a, p) => a + p.x, 0) / c.length, cy = c.reduce((a, p) => a + p.y, 0) / c.length;
+              const bx0 = Math.min(...c.map(p => p.x)), bx1 = Math.max(...c.map(p => p.x));
+              const by0 = Math.min(...c.map(p => p.y)), by1 = Math.max(...c.map(p => p.y));
+              console.log('    구간' + b + ' 획 ' + (B13_LO + (b - 1) * B13_W) + '~' + (B13_LO + b * B13_W) +
+                          '  n=' + String(c.length).padStart(4) +
+                          '  비 중앙 ' + md(c.map(p => p.ra)).toFixed(3) +
+                          '  코어 중앙 ' + md(c.map(p => p.w * p.ra)).toFixed(2) +
+                          '  중심 (' + cx.toFixed(1) + ',' + cy.toFixed(1) + ')' +
+                          '  상자 ' + (bx1 - bx0 + 1) + '×' + (by1 - by0 + 1) +
+                          '  끝단거리 중앙 ' + String(md(c.map(p => p.d))).padStart(3) +
+                          '  이웃 중앙 ' + md(c.map(p => p.nb)));
+            }
+            /* ⚑⚑ 9회차 — 등재문 자신의 주장(«이진 마스크로 굽는 한 ③층 폭은 **화소 격자에 앉는다**»)을
+               같은 표본에게 직접 묻는다. 격자에 앉으면 코어 두께가 어떤 걸음 s 의 배수에 몰리므로
+               `|코어/s − 반올림|` 의 평균이 0 에 가깝고, 안 앉으면 고른 분포의 기댓값 **0.25** 에 붙는다.
+               걸음을 훑어 가장 잘 맞는 s 와 그 잔차를 찍는다(판정 밖 · 표본은 위와 같은 것 그대로). */
+            const cores = pts.map(p => p.w * p.ra).filter(v => v > 0);
+            if (cores.length >= 20) {
+              const fit = v => {
+                let best = null;
+                for (let s = 0.30; s <= 3.001; s += 0.01) {
+                  const res = v.reduce((a, x) => { const t = x / s; return a + Math.abs(t - Math.round(t)); }, 0) / v.length;
+                  if (!best || res < best.res) best = { s, res };
+                }
+                return best;
+              };
+              const best = fit(cores);
+              /* ⚠⚠ **이 자는 널 없이 읽으면 자기 답을 만든다** — 한 값에 몰린 분포는 격자와
+                 아무 상관이 없어도 «그 최빈값을 나누는 걸음» 에서 잔차가 낮게 나온다(고른 분포의
+                 0.250 과 견주면 무엇이든 «격자» 로 읽힌다). 그래서 **같은 평균·같은 흩어짐의
+                 격자 아닌 단봉 분포**(정규)를 만들어 같은 자로 재고, 실측이 그 널 아래로
+                 내려갈 때만 격자라고 말한다. 난수는 씨앗 고정 LCG 라 판이 흔들리지 않는다. */
+              const mu = cores.reduce((a, b) => a + b, 0) / cores.length;
+              const sd = Math.sqrt(cores.reduce((a, b) => a + (b - mu) * (b - mu), 0) / cores.length) || 0.01;
+              let sdv = 20260905;
+              const rnd = () => (sdv = (sdv * 1103515245 + 12345) % 2147483648) / 2147483648;
+              const nulls = [];
+              for (let k = 0; k < 9; k++) {
+                const v = [];
+                for (let i = 0; i < cores.length; i++) {
+                  let u = 0; while (!u) u = rnd();
+                  v.push(mu + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()));
+                }
+                nulls.push(fit(v).res);
+              }
+              nulls.sort((a, b) => a - b);
+              const nullMd = nulls[4], nullLo = nulls[0];
+              const hist = {};
+              for (const v of cores) { const k = (Math.round(v * 4) / 4).toFixed(2); hist[k] = (hist[k] || 0) + 1; }
+              const top = Object.keys(hist).sort((a, b) => hist[b] - hist[a]).slice(0, 8);
+              console.log('  격자 시험 — 코어 두께가 어떤 걸음의 배수에 앉는가');
+              console.log('    최적 걸음 ' + best.s.toFixed(2) + '로컬px · 잔차 ' + best.res.toFixed(3) +
+                          ' · 표본 ' + cores.length +
+                          '  ↔ 널(같은 평균 ' + mu.toFixed(2) + ' · 같은 흩어짐 ' + sd.toFixed(2) +
+                          ' 의 격자 아닌 단봉) 중앙 ' + nullMd.toFixed(3) + ' · 최소 ' + nullLo.toFixed(3) +
+                          '  ⇒ ' + (best.res < nullLo ? '격자에 앉는다(널 아래)' : '격자 근거 없음(널 안)'));
+              console.log('    많이 나온 두께(0.25 눈금) — ' +
+                          top.map(k => k + '×' + hist[k]).join(' · '));
+            }
+          } else {
+            console.log('  [889 9회차] ⚠ dump ↔ bank 자리 짝이 안 맞는다(' +
+                        s.length + ' ↔ ' + ((q.bank || []).length) + ') — 구간별 자리는 안 찍는다');
+          }
           console.log('');
         }
       }
