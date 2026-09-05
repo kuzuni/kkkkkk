@@ -46,9 +46,12 @@ const RED0 = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py', 'scan8
    자는 `tools/verify942.js`). 주홍 래칫도 «줄어든 것을 여기 다시 적어야» 지나간다 — 그 자리가 이 줄이다. */
 /* ⚑ 942 2회차 — `probe409c.py` 가 B 에서 빠졌다(열별 «검정 화소 수» 를 **K 층 두께의 합** 으로 ·
    `probe409g.runs_from` 을 부른다 — 사본 0). 자는 `tools/verify942.js` §7. */
-const FIXED942 = ['probe409g.py', 'probe409c.py'];
+/* ⚛ 942 3회차 — `probe409i.py` 가 B 에서 빠졌다(층 두께를 승자독식 런에서 «층 질량 분배» 로 ·
+   그 자가 처방으로 들고 있던 `cov_ray` 자신이 «사이 색 S» 로 새던 것까지 같이 닫았다).
+   자는 `tools/verify942.js` §8. */
+const FIXED942 = ['probe409g.py', 'probe409c.py', 'probe409i.py'];
 const BRK = ['probe352.py', 'probe384.py', 'probe409.py', 'probe409f.py',
-  'probe409i.py', 'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
+  'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
 
 /* ⚠ 선별기의 `frac` 신호는 **관용구 이름**만 본다. 면역 판정의 근거는 그보다 넓다 —
    커버리지 적분(`r_cov`)·색 사영 교차(`_cross`)처럼 이름이 다른 사본이 있다.

@@ -234,52 +234,67 @@ def runs_from(cols, mode='cov', step=0.5):
     return [(seq[i], w[i]) for i in range(len(seq))]
 
 
+def phys_cols(widths=((('S'), 3.0), ('K', 7.0), ('D', 4.0), ('B', 7.0)), sig=1.1, step=0.5):
+    """**합성 판 두 장의 표본 색줄** — {'cap': [색…], 'ref': [색…]}.
+
+    ⚑ 942 3회차가 여기를 뺐다 — `probe409i` 도 **같은 판**으로 자기 자(층 두께 · `cov_from`)를
+       재야 하는데, 판을 그리는 셈이 둘이면 그때부터 «두 재현» 이 된다(402 «사본을 지운다»).
+       `physics()` 는 이 줄을 받아 `runs_from` 으로 재기만 한다."""
+    out = {}
+    for who, blur in (('cap', False), ('ref', True)):
+        out[who] = _phys_sample(widths, sig, step, blur)
+    return out
+
+
 def physics(widths=((('S'), 3.0), ('K', 7.0), ('D', 4.0), ('B', 7.0)), sig=1.1, step=0.5):
     """**합성 재현** — 같은 참값 층더미를 «칼같은 판»(cap = PNG)과 «번진 판»(ref = JPEG)으로
        그려 두 모드로 잰다. 화소도 브라우저도 안 쓴다.
        돌려주는 것: {mode: {'cap': [...], 'ref': [...]}} · 층은 참값과 같은 차례."""
+    cols = phys_cols(widths, sig, step)
+    out = {}
+    for mode in ('int', 'cov'):
+        out[mode] = {who: runs_from(cols[who], mode=mode, step=step) for who in cols}
+    return out
+
+
+def _phys_sample(widths, sig, step, blur):
+    """`physics` 가 그리는 그 판의 표본 색줄 한 벌 — **판을 그리는 셈은 이 아래 하나뿐이다.**"""
+    total = sum(w for _, w in widths)
+    cols, x = [], 0.0
+    while x <= total - 1e-9:
+        cols.append(_phys_px(widths, sig, x + step / 2.0, blur))
+        x += step
+    return cols
+
+
+def _phys_px(widths, sig, x, blur):
+    """참값 층더미의 한 점 — 번짐(σ)은 정규화 가우시안(ref = JPEG 의 경사면)."""
     import math as _m
     col = dict(PAL)
-    # 참값 경계 — 층더미를 0.1px 격자에 그린 뒤 걸음 step 으로 표본한다.
     edges, acc = [], 0.0
     for ch, w in widths:
         edges.append((acc, acc + w, ch))
         acc += w
-    total = acc
 
-    def truth(x):
-        if x < 0.0:
-            return col[edges[0][2]]          # 더미 밖은 «같은 층이 이어진다» — 끝의 가짜 경사면을 안 만든다
+    def truth(u):
+        if u < 0.0:
+            return col[edges[0][2]]      # 더미 밖은 «같은 층이 이어진다» — 끝의 가짜 경사면을 안 만든다
         for a, b, ch in edges:
-            if a <= x < b:
+            if a <= u < b:
                 return col[ch]
         return col[edges[-1][2]]
 
-    def sample(x, blur):
-        if not blur:
-            return truth(x)
-        # 가우시안 번짐 — ref(JPEG) 의 경사면. 정규화한 커널로 참값을 흐린다.
-        num, den = [0.0, 0.0, 0.0], 0.0
-        u = -3.0 * sig
-        while u <= 3.0 * sig + 1e-9:
-            wgt = _m.exp(-0.5 * (u / sig) ** 2)
-            c = truth(x + u)
-            for k in range(3):
-                num[k] += wgt * c[k]
-            den += wgt
-            u += 0.1
-        return tuple(int(round(num[k] / den)) for k in range(3))
-
-    out = {}
-    for mode in ('int', 'cov'):
-        out[mode] = {}
-        for who, blur in (('cap', False), ('ref', True)):
-            cols, x = [], 0.0
-            while x <= total - 1e-9:
-                cols.append(sample(x + step / 2.0, blur))
-                x += step
-            out[mode][who] = runs_from(cols, mode=mode, step=step)
-    return out
+    if not blur:
+        return truth(x)
+    num, den, u = [0.0, 0.0, 0.0], 0.0, -3.0 * sig
+    while u <= 3.0 * sig + 1e-9:
+        wgt = _m.exp(-0.5 * (u / sig) ** 2)
+        c = truth(x + u)
+        for k in range(3):
+            num[k] += wgt * c[k]
+        den += wgt
+        u += 0.1
+    return tuple(int(round(num[k] / den)) for k in range(3))
 
 
 def fmt_runs(rs):

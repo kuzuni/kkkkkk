@@ -172,12 +172,12 @@ console.log('\n[6] 장부 — 932 전수에서 이 자가 B → 면역으로 옮
   const row = rows.find((r) => r.file === 'probe409g.py');
   ok('[6-a] 장부에 있고 판정이 **면역(S)** 이다', row && row.verdict === 'S', row ? row.verdict : '없음');
   const brk = rows.filter((r) => r.verdict === 'B').map((r) => r.file);
-  ok('[6-b] 주홍(B)이 **9개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c`)',
-    brk.length === 9 && !brk.includes('probe409g.py') && !brk.includes('probe409c.py'),
-    `${brk.length}개`);
+  ok('[6-b] 주홍(B)이 **8개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c` · 3회차 `probe409i`)',
+    brk.length === 8 && !brk.includes('probe409g.py') && !brk.includes('probe409c.py')
+    && !brk.includes('probe409i.py'), `${brk.length}개`);
   const v932 = fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8');
-  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **두 이름**을 들고 있다)',
-    /const FIXED942 = \['probe409g\.py', 'probe409c\.py'\]/.test(v932) && /\[2-h\]/.test(v932));
+  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **세 이름**을 들고 있다)',
+    /const FIXED942 = \['probe409g\.py', 'probe409c\.py', 'probe409i\.py'\]/.test(v932) && /\[2-h\]/.test(v932));
 }
 
 /* ── [7] 2회차 — `probe409c.py` (열별 «검정 화소 수» → K 층 두께의 합) ─────── */
@@ -244,6 +244,127 @@ console.log('\n[7] 2회차 — `probe409c.py` 열별 «검정» 이 격자에서
     /if __name__ == '__main__':/.test(gsrc));
   ok('[7-p] 캡처 없이도 돈다 — 커밋 금지 자산(96-*.png)을 전제하지 않는다',
     /os\.path\.exists\(capf\)/.test(src) && /캡처 없음/.test(src));
+}
+
+/* ── [8] 3회차 — `probe409i.py` (층 두께 + 자기가 처방으로 들고 있던 `cov_ray`) ───── */
+console.log('\n[8] 3회차 — `probe409i.py` 두 축이 격자에서 풀렸는가 (층 자 0.5px · 덮개 자 0.25px)');
+{
+  const runI = (extra) => String(py(['tools/probe409i.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  const phI = runI(['--physics']);
+  const thI = runI(['--physics-thin']);
+  /* ⓐ(층 자)와 ⓑ(덮개 자)가 같은 «int cap …» 꼴이라 절부터 가른다. */
+  const part = (out, which) => {
+    const i = out.indexOf('ⓑ');
+    return which === 'a' ? out.slice(0, i < 0 ? out.length : i) : out.slice(i < 0 ? 0 : i);
+  };
+  const row8 = (out, mode, who) => {
+    const line = out.split('\n').find((l) => new RegExp(`^\\s*${mode}\\s+${who}\\s`).test(l));
+    if (!line) return null;
+    const toks = line.trim().split(/\s+/).slice(2);
+    const ls = [];
+    for (const t of toks) {
+      if (t === '합') break;
+      ls.push([t[0], parseFloat(t.slice(1))]);
+    }
+    const m = line.match(/합\s+([0-9.]+)/);
+    return { ls, sum: m ? parseFloat(m[1]) : NaN, get: (c) => (ls.find((l) => l[0] === c) || [c, 0])[1] };
+  };
+  const A = (mode, who) => row8(part(phI, 'a'), mode, who);
+  const B = (mode, who) => row8(part(phI, 'b'), mode, who);
+  const Bt = (mode, who) => row8(part(thI, 'b'), mode, who);
+  const At = (mode, who) => row8(part(thI, 'a'), mode, who);
+  /* ⚠ 층 개수가 다르면 **즉사가 아니라 무한대**다 — 되돌린 사본에서 이 자가 스택 트레이스로
+     죽으면 점수 줄이 안 나와 스윕이 «빨강» 이 아니라 «없는 자» 로 지나간다(913·278 처방). */
+  const dmax = (x, y) => (!x || !y || x.ls.length !== y.ls.length ? Infinity
+    : Math.max(...x.ls.map((l, i) => Math.abs(l[1] - y.ls[i][1]))));
+
+  const aiC = A('int', 'cap'), aiR = A('int', 'ref');
+  const acC = A('cov', 'cap'), acR = A('cov', 'ref');
+  ok('[8-a] 두 자 모두 **칼같은 판에서는 참값 그대로**(S3 K7 D4 B7) — 결함은 자의 편향이 아니라 «번짐» 이다',
+    aiC && acC && aiC.ls.length === 4 && acC.ls.length === 4
+    && aiC.ls.every(([c, v], i) => c === 'SKDB'[i] && Math.abs(v - [3, 7, 4, 7][i]) < 1e-9)
+    && acC.ls.every(([c, v], i) => c === 'SKDB'[i] && Math.abs(v - [3, 7, 4, 7][i]) < 1e-9),
+    aiC ? aiC.ls.map((l) => l[0] + l[1]).join(' ') : '못 읽음');
+  ok('[8-b] ⚑ 층 자 — **옛 자는 번진 판에서 없는 층을 만든다**(4 → 6) · D 가 −2.0px',
+    aiR && aiR.ls.length > aiC.ls.length && Math.abs(aiR.get('D') - 4) >= 1.0,
+    aiR ? `${aiC.ls.length} → ${aiR.ls.length} · D${aiR.get('D')}` : '못 읽음');
+  ok('[8-c] ⚑ 새 층 자는 참값의 차례를 되찾고 두 판 사이 |Δ| ≤ 0.30 px',
+    acR && acR.ls.length === 4 && acR.ls.every(([c], i) => c === 'SKDB'[i]) && dmax(acR, acC) <= 0.30,
+    acR ? `${acR.ls.map((l) => l[0] + l[1].toFixed(2)).join(' ')} · Δ${dmax(acR, acC).toFixed(2)}` : '못 읽음');
+  /* 헛초록 방지 — 위 세 항이 «못 읽어서» 지나가면 안 된다. */
+  ok('[8-c2] 그 판정이 실제 값 위에 서 있다 (네 줄을 다 읽었다)',
+    [aiC, aiR, acC, acR].every((r) => r && r.ls.length >= 3),
+    [aiC, aiR, acC, acR].map((r) => (r ? r.ls.length : 'x')).join('/'));
+
+  /* ⚑⚑ 이 자 고유의 결함 — 처방으로 들고 있던 `cov_ray` 자신이 «사이 색» 으로 샜다.
+     S(43,35,26)가 K(0,0,0)↔D(65,49,34) 사이라 검정 경사면의 몫이 없는 S 층으로 간다. */
+  const biC = B('int', 'cap'), biR = B('int', 'ref');
+  const bcC = B('cov', 'cap'), bcR = B('cov', 'ref');
+  ok('[8-d] ⚑⚑ 덮개 자 — **옛 `cov_ray` 는 없는 S 층으로 샌다**(cap 3.00 → ref 4.93) · 같은 자리에서 D 가 절반 넘게 사라진다',
+    biR && biC && biR.get('S') - biC.get('S') >= 1.0 && biR.get('D') <= biC.get('D') * 0.6,
+    biR ? `S ${biC.get('S').toFixed(2)} → ${biR.get('S').toFixed(2)} · D ${biC.get('D').toFixed(2)} → ${biR.get('D').toFixed(2)}` : '못 읽음');
+  ok('[8-e] ⚑ 새 덮개 자는 그 새는 자리가 없다 (S |Δ| ≤ 0.20 · 층 전체 |Δ| ≤ 0.30)',
+    bcR && Math.abs(bcR.get('S') - bcC.get('S')) <= 0.20
+    && ['K', 'B', 'D', 'S'].every((c) => Math.abs(bcR.get(c) - bcC.get(c)) <= 0.30),
+    bcR ? `S ${bcR.get('S').toFixed(2)} · D ${bcR.get('D').toFixed(2)} (참값 4.00)` : '못 읽음');
+
+  /* 덫 — 진짜로 얇은 D 2.0(= K·B 의 «사이 색»)이 접기에 안 먹히는가. */
+  const tiR = Bt('int', 'ref'), tcR = Bt('cov', 'ref'), tcC = Bt('cov', 'cap');
+  ok('[8-f] ⚑ 덫(K7 **D2** B7) — 옛 덮개 자는 D 를 0.79 로 잘라 먹고(−60%) 없는 S·F 를 만든다',
+    tiR && tiR.get('D') <= 1.0 && (tiR.get('S') > 0.5 || tiR.get('F') > 0.5),
+    tiR ? tiR.ls.map((l) => l[0] + l[1].toFixed(2)).join(' ') : '못 읽음');
+  ok('[8-g] 같은 자리에서 **새 자는 진짜 얇은 층을 안 먹는다**(D ≥ 1.4 · 참값 2.0 의 ±0.5 안)',
+    tcR && tcR.get('D') >= 1.4 && Math.abs(tcR.get('D') - 2.0) <= 0.5,
+    tcR ? `D${tcR.get('D').toFixed(2)} (칼같은 판 ${tcC.get('D').toFixed(2)})` : '못 읽음');
+  /* ⚠ 남은 자리는 «못 고친 것» 이 아니라 분해 한계다(942 1회차 [2-d] 와 같은 자리) — 항으로 세운다. */
+  const atR = At('cov', 'ref');
+  ok('[8-h] ⚑ 그 더미에서 층 자가 남기는 1px 경사면 하나는 **일부러 안 접었다** — 더 무르게 하면 진짜 1px 층과 못 가른다',
+    atR && atR.ls.length >= 3, atR ? `${atR.ls.length}층 · ${atR.ls.map((l) => l[0]).join('')}` : '못 읽음');
+  ok('[8-i] 보존 — 두 축·두 모드의 층 두께 **합**이 전부 같다(21.00 = 기둥 전체) — «더 재지» 도 «덜 재지» 도 않았다',
+    [aiC, aiR, acC, acR, biC, biR, bcC, bcR].every((r) => r && Math.abs(r.sum - 21.0) < 1e-9),
+    [aiR, bcR].map((r) => r.sum.toFixed(2)).join(' / '));
+
+  /* 지문 — ref 실측(캡처 없이 ref 절만 돌아도 된다). */
+  const band = (out) => (out.match(/띠 [KBFDRS][0-9]+\.[0-9]+/g) || []).map((t) => parseFloat(t.slice(3)));
+  const oldT = runI(['--int']), newT = runI([]);
+  const oldV = band(oldT), newV = band(newT);
+  const onGrid = (v) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6;
+  ok('[8-j] 자가 ref 아래 두 코너를 두 자로 다 읽는다 (12 띠)', oldV.length >= 12 && newV.length >= 12,
+    `${oldV.length} ↔ ${newV.length} 띠`);
+  ok('[8-k] ⚑ **옛 자의 값은 예외 없이 0.5 의 배수다** — 승자독식 런의 지문',
+    oldV.length > 0 && oldV.every(onGrid), `${oldV.length}개 전부`);
+  ok('[8-l] 새 자는 그 격자에서 풀린다 (절반 넘게 비배수)',
+    newV.filter((v) => !onGrid(v)).length > newV.length / 2,
+    `${newV.filter((v) => !onGrid(v)).length}/${newV.length}`);
+  ok('[8-m] 두 자의 값이 ±1.5px 안이다 — **정의가 안 바뀌었다**(걸음만 곱아졌다)',
+    oldV.length === newV.length && oldV.every((v, k) => Math.abs(v - newV[k]) <= 1.5),
+    `최대 ${Math.max(...oldV.map((v, k) => Math.abs(v - newV[k]))).toFixed(2)} px`);
+  /* ⚑⚑ 가장 짧은 «안 건드렸다» 증거 — 두 모드의 **클래스 글자줄이 글자까지 같다**.
+     표본 자리도 분류도 창도 그대로이고 바뀐 것은 그 줄을 두께로 바꾸는 셈뿐이다. */
+  const strs = (out) => out.split('\n').filter((l) => /(상자|형상)앵커/.test(l))
+    .map((l) => l.replace(/띠 .*/, '').trim());
+  ok('[8-n] ⚑⚑ 두 모드의 **클래스 글자줄이 완전히 같다** — 표본 자리·분류·창을 한 칸도 안 건드렸다',
+    strs(oldT).length >= 12 && JSON.stringify(strs(oldT)) === JSON.stringify(strs(newT)),
+    `${strs(oldT).length}줄`);
+
+  /* 불변 — 문턱·팔레트·윤곽 자·옛 자 + 사본 0. */
+  const src = fs.readFileSync(path.join(TOOLS, 'probe409i.py'), 'utf8');
+  ok('[8-o] 문턱·분류가 그대로다 (`EDGE_T = 45` · `cls()` 최근접 팔레트 6색)',
+    /EDGE_T\s*=\s*45\b/.test(src) && /def cls\(c\)/.test(src)
+    && (src.match(/\('[KBFDRS]', \(/g) || []).length === 6);
+  ok('[8-p] 윤곽 자는 처음부터 부분 화소였고 그대로다 (`cross`·`thru`·`outer_edge`·`inner_edge` 의 문턱 교차 보간)',
+    /f = \(pv - EDGE_T\) \/ \(pv - v\)/.test(src) && /def find_box/.test(src) && /def contour/.test(src));
+  ok('[8-q] ⚑ **옛 자가 살아 있다**(`--int`) — 지문을 매 실행 다시 찍을 수 있다',
+    /MODE = 'int' if '--int' in a else 'cov'/.test(src) && /if \(mode or MODE\) == 'int'/.test(src));
+  ok('[8-r] ⚑ **사본을 안 만들었다** — 942 1회차의 알맹이와 합성 판을 그대로 부른다',
+    /from probe409g import runs_from, phys_cols as g_phys_cols/.test(src)
+    && !/def runs_from/.test(src) && !/def phys_cols/.test(src));
+  const gsrc = fs.readFileSync(path.join(TOOLS, 'probe409g.py'), 'utf8');
+  ok('[8-s] 합성 판을 그리는 셈도 저장소에 하나뿐이다 (`physics` 가 `phys_cols` 를 부른다)',
+    /cols = phys_cols\(widths, sig, step\)/.test(gsrc) && (gsrc.match(/def _phys_px/g) || []).length === 1);
+  ok('[8-t] 캡처 없이도 돈다 — 커밋 금지 자산(96-*.png)을 전제하지 않는다',
+    /def has_cap/.test(src) && /캡처 없음/.test(src) && !/'cap': Image\.open\(CAP7\)\.convert\('RGB'\)\.load\(\)/.test(src));
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */

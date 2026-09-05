@@ -16,13 +16,28 @@
 #      그것은 2차항이다(45° 에서 1px 의 가로 오차 → 시작점 0.7px, 이 자는 그중 세로 몫만 없앤다가
 #      아니라 **광선 위 거리**를 형상에서 다시 잡으므로 둘 다 상쇄된다).
 #
+# ⚑⚑ **942 3회차(2026-09-05) — 층 두께를 승자독식 런에서 «층 질량 분배» 로 갈아 끼웠다.**
+#   932 전수가 이 자를 갈래 **B**(번짐 비대칭)로 적었고, 그 근거가 **이 파일 자신의 주석**이었다 —
+#   `cov_ray()` 가 «같은 7px 띠가 ref 6.0 / cap 7.0» 이라고 결함을 실측해 적어 두고도
+#   정작 **층 두께**(`gate_layers`·`norm_layers`)는 최근접 런으로 세고 있었다(값이 언제나 0.5 배수).
+#   ⇒ 표본 자리·각도·보폭·문턱·분류는 **한 칸도 안 건드리고** 층 두께만
+#     `probe409g.runs_from`(942 1회차의 알맹이)으로 낸다 — 새 알고리즘도 사본도 없다.
+#   ⚑ `cov_ray` 도 같이 고쳤다 — 그 자는 몫을 «가장 가까운 **두 팔레트 색**» 에 나누는데
+#     이 팔레트는 `S` 가 `K`↔`D` **사이에** 있어 검정 경사면의 몫이 **없는 S 층으로 샌다**
+#     (942 1회차가 «베끼지 마라» 로 남긴 그 자리다). 이제 **차례가 정한 이웃 층**에만 나눈다.
+#   옛 자는 `--int` 로 그대로 산다(지문: 값이 0.5 배수 · cov 는 사이 색으로 샌다).
+#
 # 사용:
 #   python3 tools/probe409i.py                  ref ↔ cap 아래 코너 45/60/75°(+ 위 코너 참고)
 #   python3 tools/probe409i.py --img <png>      임의 캡처 한 장을 cap 상자로 읽는다
 #   python3 tools/probe409i.py --ref-curve      `verify462` [3] 에 넣을 ref 곡선만 찍는다
+#   python3 tools/probe409i.py --physics        합성 재현 — 그림도 브라우저도 안 쓴다(942 3회차)
+#   python3 tools/probe409i.py --int            옛 자(승자독식 런 · 사이 색으로 새는 cov)
 import math
+import os
 import sys
 from pydep937 import Image
+from probe409g import runs_from, phys_cols as g_phys_cols
 
 REF7, CAP7 = 'docs/ref/07-스킬-팝업.jpg', 'docs/review/96-full-hero.png'
 # 스캔 **출발점**일 뿐이다 — 진짜 상자는 `find_box` 가 그림에서 잰다.
@@ -72,7 +87,7 @@ def fmt(s, step=0.5):
 
 
 def layers(s, step=0.5):
-    """클래스 런을 순서대로 [(글자, 폭), …] 로."""
+    """클래스 런을 순서대로 [(글자, 폭), …] 로 — **옛 자**(승자독식: 표본 하나가 통째로 한 층에)."""
     o = []
     for ch in s:
         if o and o[-1][0] == ch:
@@ -80,6 +95,33 @@ def layers(s, step=0.5):
         else:
             o.append([ch, step])
     return [(c, n) for c, n in o]
+
+
+MODE = 'cov'        # 942 3회차 — `--int` 면 옛 자(승자독식 런)가 그대로 돈다
+
+
+class Ray(str):
+    """광선 한 줄 — **클래스 글자줄이면서** 그것을 만든 표본 색을 `.cols` 로 함께 든다.
+
+    ⚑ 왜 문자열의 하위형인가 — 호출부(`fmt`·`gate_layers`·`norm_layers`·인쇄)를 **한 줄도**
+       안 고치고 층 두께만 부분 화소로 낼 수 있다. 글자줄 자체는 옛 자와 **글자까지 같다**
+       (분류 `cls()` 도 표본 자리도 안 건드렸다는 뜻이고, `--int` 가 그것을 매 실행 다시 찍는다)."""
+
+    def __new__(cls_, chars, cols):
+        o = super().__new__(cls_, chars)
+        o.cols = cols
+        return o
+
+
+def runs(s, step=0.5, mode=None):
+    """층 [(글자, 두께)] — 새 자는 942 1회차의 알맹이(`probe409g.runs_from`)를 그대로 부른다.
+
+    ⚠ 표본 색을 못 들고 온 줄(옛 호출부가 만든 순수 문자열)은 옛 셈으로 돌아간다 —
+       «자가 조용히 달라지는» 자리를 안 만들기 위해서다."""
+    cols = getattr(s, 'cols', None)
+    if (mode or MODE) == 'int' or not cols:
+        return layers(s, step)
+    return runs_from(cols, mode='cov', step=step)
 
 
 def geom(bx, by, corner, deg, w=W, h=H):
@@ -159,11 +201,13 @@ def find_box(px, bx, by, span=14.0):
 def ray_box(px, bx, by, corner, deg, inn=22.0, step=0.5):
     """probe409e.ray / verify409·verify462 와 **같은 규칙**(상자 앵커) — 대조용."""
     cx, cy, ux, uy = geom(bx, by, corner, deg)
-    out, d = '', 0.0
+    out, cols, d = '', [], 0.0
     while d <= inn + 1e-9:
-        out += cls(px[int(round(cx + ux * (R - d))), int(round(cy + uy * (R - d)))])
+        c = px[int(round(cx + ux * (R - d))), int(round(cy + uy * (R - d)))]
+        cols.append(c)
+        out += cls(c)
         d += step
-    return out
+    return Ray(out, cols)
 
 
 def ray_shape(px, box, corner, deg, inn=24.0, step=0.5):
@@ -171,11 +215,13 @@ def ray_shape(px, box, corner, deg, inn=24.0, step=0.5):
        다른 것은 상자가 «넘겨받은 값» 이 아니라 `find_box` 가 **그림에서 잰 값** 이라는 것뿐이다."""
     x0, y0, w, h = box
     cx, cy, ux, uy = geom(x0, y0, corner, deg, w, h)
-    out, d = '', 0.0
+    out, cols, d = '', [], 0.0
     while d <= inn + 1e-9:
-        out += cls(px[int(round(cx + ux * (R - d))), int(round(cy + uy * (R - d)))])
+        c = px[int(round(cx + ux * (R - d))), int(round(cy + uy * (R - d)))]
+        cols.append(c)
+        out += cls(c)
         d += step
-    return out
+    return Ray(out, cols)
 
 
 def diag(px, box, corner, inn=24.0, step=0.5):
@@ -194,18 +240,21 @@ def diag(px, box, corner, inn=24.0, step=0.5):
     d = cross(px, ox, oy, sx2, sy2, 28.0)
     if d is None:
         return None
-    out, s = '', 0.0
+    out, cols, s = '', [], 0.0
     while s <= inn + 1e-9:
         t = (d + s) / math.sqrt(2.0)
-        out += cls(px[int(round(ox + sx * t)), int(round(oy + sy * t))])
+        c = px[int(round(ox + sx * t)), int(round(oy + sy * t))]
+        cols.append(c)
+        out += cls(c)
         s += step
-    return out
+    return Ray(out, cols)
 
 
 def gate_layers(s):
     """`verify462.layers` 와 **글자까지 같은 규칙** — 검정 링 → 그 뒤 첫 실런(<2.0 은 AA 로 건너뜀)
-       → 그 다음 실런. 게이트가 [2][3] 에서 보는 그 값이다."""
-    rs = layers(s)
+       → 그 다음 실런. 게이트가 [2][3] 에서 보는 그 값이다.
+       ⚑ 942 3회차 — **고른 층은 그대로고 그 두께만** 부분 화소다(`runs`)."""
+    rs = runs(s)
     i = 0
     while i < len(rs) and rs[i][0] != 'K':
         i += 1
@@ -224,6 +273,27 @@ def gate_layers(s):
 DEGS = (45, 60, 75)
 
 
+def has_cap(pathname=None):
+    """⚠ 캡처(`docs/review/96-*.png`)는 **커밋 금지 자산**이라 없는 클론이 정상이다 —
+       없으면 즉사하지 말고 ref 절만 돈다(409g·409c 선례 · 942 2회차 ⓖ)."""
+    return os.path.exists(pathname or CAP7)
+
+
+def warn_no_cap(pathname=None):
+    print('  ⚠ 캡처 없음(%s) — ref 절만 돈다. 만들려면 `node tools/cap96.js`.\n'
+          % (pathname or CAP7))
+
+
+def default_imgs():
+    """훑기 절들의 기본 그림 짝 — 캡처가 없으면 ref 만."""
+    out = {'ref': (REF7, BOX['ref'])}
+    if has_cap():
+        out['cap'] = (CAP7, BOX['cap'])
+    else:
+        warn_no_cap()
+    return out
+
+
 def read(px, bx, by, tag=None):
     """한 그림의 아래 두 코너를 **두 자로** 읽는다 → {(corner,deg): (상자앵커, 형상앵커)}"""
     b2 = find_box(px, bx, by)
@@ -237,18 +307,26 @@ def read(px, bx, by, tag=None):
 
 
 def table(quiet=False):
-    ims = {'ref': Image.open(REF7).convert('RGB'), 'cap': Image.open(CAP7).convert('RGB')}
+    ims = {'ref': Image.open(REF7).convert('RGB')}
+    if has_cap():
+        ims['cap'] = Image.open(CAP7).convert('RGB')
+    who_all = tuple(w for w in ('ref', 'cap') if w in ims)
     res, boxes = {}, {}
-    for who in ('ref', 'cap'):
+    for who in who_all:
         px = ims[who].load()
         bx, by = BOX[who]
         res[who], boxes[who] = read(px, bx, by)
     if quiet:
         return res, boxes
     print('══ 409-i — 형상 앵커 광선 (상자를 넘겨받지 않고 **그림에서 잰다**) ══')
-    print('   K 검정 · B 베벨#634F37 · F 채움#4B3E2D · D 바닥띠#413122 · R 셸림 · S 셸바닥\n')
+    print('   K 검정 · B 베벨#634F37 · F 채움#4B3E2D · D 바닥띠#413122 · R 셸림 · S 셸바닥')
+    print('   자   %s\n' % ('**옛 승자독식 런**(--int · 값이 언제나 0.5 배수 — 942 3회차가 갈아 끼운 자리)'
+                            if MODE == 'int' else
+                            '층 질량 분배(942 3회차 — `probe409g.runs_from`)'))
+    if 'cap' not in ims:
+        warn_no_cap()
     print('  [상자] 손으로 적은 값 ↔ 네 변 직선 스캔이 돌려준 값')
-    for who in ('ref', 'cap'):
+    for who in who_all:
         bx, by = BOX[who]
         b2 = boxes[who]
         print('    %-3s  손 (%d, %d, %d×%d)   그림 (%.2f, %.2f, %.2f×%.2f)   Δ (%+.2f, %+.2f)'
@@ -257,12 +335,12 @@ def table(quiet=False):
     for corner in ('BL', 'BR'):
         print('  %s' % corner)
         for dg in DEGS:
-            for who in ('ref', 'cap'):
+            for who in who_all:
                 sb, ss = res[who][(corner, dg)]
                 _, ab, _ = gate_layers(sb)
                 _, asx, _ = gate_layers(ss)
-                print('    %-3s %2d°  상자앵커 %-40s  띠 %s%.1f' % (who, dg, fmt(sb), ab[0], ab[1]))
-                print('    %-3s %2d°  형상앵커 %-40s  띠 %s%.1f' % ('', dg, fmt(ss), asx[0], asx[1]))
+                print('    %-3s %2d°  상자앵커 %-40s  띠 %s%.2f' % (who, dg, fmt(sb), ab[0], ab[1]))
+                print('    %-3s %2d°  형상앵커 %-40s  띠 %s%.2f' % ('', dg, fmt(ss), asx[0], asx[1]))
             print('')
     return res, boxes
 
@@ -270,14 +348,17 @@ def table(quiet=False):
 def ref_curve():
     """`verify462` [3] 에 넣을 ref 곡선 — 형상 앵커로 BL·BR 를 재어 평균."""
     res, boxes = table(quiet=True)
+    cap = 'cap' in res
     print('══ 409-i/ref-curve — `verify462` [3] REF_DARK 재측정 (§25-7 의 첫 일) ══\n')
-    print('  상자(그림에서 잰 값)  ref %.2f,%.2f %.2f×%.2f   cap %.2f,%.2f %.2f×%.2f\n'
-          % (tuple(boxes['ref']) + tuple(boxes['cap'])))
+    print('  상자(그림에서 잰 값)  ref %.2f,%.2f %.2f×%.2f   cap %s\n'
+          % (tuple(boxes['ref']) + ('%.2f,%.2f %.2f×%.2f' % tuple(boxes['cap']) if cap else '없음',)))
+    if not cap:
+        warn_no_cap()
     print('  각도 │  ref BL   ref BR   **ref 평균**  │  cap BL   cap BR   cap 평균')
     outs = []
     for dg in DEGS:
         row = {}
-        for who in ('ref', 'cap'):
+        for who in [w for w in ('ref', 'cap') if w in res]:
             vs = []
             for corner in ('BL', 'BR'):
                 _, ss = res[who][(corner, dg)]
@@ -286,9 +367,10 @@ def ref_curve():
             row[who] = vs
         m = sum(row['ref']) / 2.0
         outs.append(m)
-        print('  %2d°  │  %5.1f    %5.1f    **%5.2f**   │  %5.1f    %5.1f    %5.2f'
+        cv = row.get('cap', [float('nan')] * 2)
+        print('  %2d°  │  %5.2f    %5.2f    **%5.2f**   │  %5.2f    %5.2f    %5.2f'
               % (dg, row['ref'][0], row['ref'][1], m,
-                 row['cap'][0], row['cap'][1], sum(row['cap']) / 2.0))
+                 cv[0], cv[1], sum(cv) / 2.0))
     print('\n  ⇒ 형상 앵커 REF_DARK = [%s]' % ', '.join('%.2f' % v for v in outs))
     print('     (현행 게이트의 상자 앵커 곡선 = 2.5 / 3.75 / 5.0)')
     return outs
@@ -304,7 +386,7 @@ def img_read(pathname):
         for dg in DEGS:
             ss = ray_shape(px, b2, corner, dg)
             _, a, b = gate_layers(ss)
-            print('  %-3s %2d°  %-40s  띠 %s%.1f  뒤 %s%.1f'
+            print('  %-3s %2d°  %-40s  띠 %s%.2f  뒤 %s%.2f'
                   % (corner, dg, fmt(ss), a[0], a[1], b[0], b[1]))
 
 
@@ -535,11 +617,13 @@ def ray_normal(px, frame, fit, theta, inn=24.0, out0=10.0, step=0.5):
         return None, None
     a, b = fit[0], fit[1]
     P, N = ellipse_normal(frame, a, b, theta)
-    out, d = '', -out0
+    out, cols, d = '', [], -out0
     while d <= inn + 1e-9:
-        out += cls(px[int(round(P[0] - N[0] * d)), int(round(P[1] - N[1] * d))])
+        c = px[int(round(P[0] - N[0] * d)), int(round(P[1] - N[1] * d))]
+        cols.append(c)
+        out += cls(c)
         d += step
-    return out, P
+    return Ray(out, cols), P
 
 
 def norm_layers(s, out0=10.0, step=0.5):
@@ -550,8 +634,9 @@ def norm_layers(s, out0=10.0, step=0.5):
        첫 K 를 잡으면 그 뒤 «1층» 이 알약 링 자신이 되어 표가 통째로 한 칸 밀린다.
     ② **K 바로 뒤의 S 런은 건너뛴다.** `S`(#2B231A)는 셸 바닥색이지 알약 층이 아니고,
        ref 는 JPEG 이라 검정↔띠 경계에 1~2px 이 그 색으로 번진다(cap 에는 없다).
-       이것을 안 건너뛰면 ref 75° 가 «1층 = S 2.0» 으로 읽혀 ref 만 −2px 손해를 본다."""
-    rs = layers(s, step)
+       이것을 안 건너뛰면 ref 75° 가 «1층 = S 2.0» 으로 읽혀 ref 만 −2px 손해를 본다.
+    ⚑ 942 3회차 — ①② 규칙도 창(`out0`)도 그대로고 **두께만** 부분 화소다(`runs`)."""
+    rs = runs(s, step)
     anchor = out0 + 1.5
     i, d, best = 0, 0.0, None
     for i in range(len(rs)):
@@ -575,7 +660,7 @@ def norm_layers(s, out0=10.0, step=0.5):
 
 def normal_table(imgs=None):
     """ref ↔ cap 을 **법선 자**로 나란히 — §26-8 ⓪."""
-    ims = imgs or {'ref': (REF7, BOX['ref']), 'cap': (CAP7, BOX['cap'])}
+    ims = imgs or default_imgs()
     print('══ 409-i/normal — **법선 자** (윤곽을 그림에서 잡고 그 국소 법선 위에서만 읽는다) ══')
     print('   K 검정 · B 베벨#634F37 · F 채움#4B3E2D · D 바닥띠#413122 · R 셸림 · S 셸바닥')
     print('   θ 0° = 바깥 가로 · 90° = 바깥 세로 (옛 광선 자와 같은 각도 규약)\n')
@@ -587,20 +672,21 @@ def normal_table(imgs=None):
         print('  %-3s 상자 (%.2f, %.2f, %.2f×%.2f)' % ((who,) + tuple(box)))
     print('')
     res = {}
+    who_all = tuple(w for w in ('ref', 'cap') if w in data)
     print('  [코너 타원] 윤곽에 맞춘 a(가로)×b(세로) — 우리 CSS 는 `30px / 33px` 이다')
     for corner in ('BL', 'BR', 'TL', 'TR'):
         row = []
-        for who in ('ref', 'cap'):
+        for who in who_all:
             px, box = data[who]
             frame, samples = contour(px, box, corner)
             fit = fit_ellipse(samples)
             res[(who, corner, 'fit')] = (frame, fit)
             row.append('%s %.2f×%.2f (잔차 %.2f · n%d)' % ((who,) + tuple(fit)) if fit else who + ' —')
-        print('    %-3s  %s   %s' % (corner, row[0], row[1]))
+        print('    %-3s  %s' % (corner, '   '.join(row)))
     print('')
     for corner in ('BL', 'BR', 'TL', 'TR'):
         print('  %s' % corner)
-        for who in ('ref', 'cap'):
+        for who in who_all:
             px, box = data[who]
             frame, fit = res[(who, corner, 'fit')]
             for th in DEGS:
@@ -610,7 +696,7 @@ def normal_table(imgs=None):
                     continue
                 k, a, b = norm_layers(s)
                 res[(who, corner, th)] = (k, a, b)
-                print('    %-3s %2d°  %-42s  K%.1f  %s%.1f  %s%.1f'
+                print('    %-3s %2d°  %-42s  K%.2f  %s%.2f  %s%.2f'
                       % (who, th, fmt(s), k, a[0], a[1], b[0], b[1]))
         print('')
     return res
@@ -653,25 +739,43 @@ def cov_ray(px, frame, fit, theta, inn=26.0, out0=8.0, step=0.25):
         return None
     a, b = fit[0], fit[1]
     P, N = ellipse_normal(frame, a, b, theta)
-    acc, d = {}, -out0
+    cols, d = [], -out0
     while d <= inn + 1e-9:
-        c = px[int(round(P[0] - N[0] * d)), int(round(P[1] - N[1] * d))]
-        ds = sorted(((sum((int(c[k]) - rc[k]) ** 2 for k in range(3)), ch, rc)
-                     for ch, rc in PAL))
-        (_, c1, p1), (_, c2, p2) = ds[0], ds[1]
-        vv = [p2[k] - p1[k] for k in range(3)]
-        den = sum(v * v for v in vv)
-        t = 0.0 if den == 0 else sum((int(c[k]) - p1[k]) * vv[k] for k in range(3)) / den
-        t = 0.0 if t < 0 else (1.0 if t > 1 else t)
-        acc[c1] = acc.get(c1, 0.0) + (1.0 - t) * step
-        acc[c2] = acc.get(c2, 0.0) + t * step
+        cols.append(px[int(round(P[0] - N[0] * d)), int(round(P[1] - N[1] * d))])
         d += step
+    return cov_from(cols, step)
+
+
+def cov_from(cols, step=0.25, mode=None):
+    """표본 색줄 → {클래스: 두께}. `cov_ray` 의 알맹이(그림 없이도 돌릴 수 있게 뺐다).
+
+    ⚑⚑ **942 3회차 — 옛 셈은 «사이 색» 으로 샜다.** 몫을 «가장 가까운 **두 팔레트 색**» 에
+       나누면 이 팔레트에서는 `S`(43,35,26)가 `K`(0,0,0)↔`D`(65,49,34) **사이에** 있어
+       검정↔바닥띠 경사면의 몫이 통째로 **없는 S 층**으로 간다(942 1회차가 이 자를 지목하며
+       «베끼지 마라» 라고 남긴 자리다). ⇒ **차례가 정한 이웃 층**에만 나눈다(`runs_from` ③).
+    옛 셈은 `--int`(mode='int') 로 그대로 산다."""
+    if (mode or MODE) == 'int':
+        acc = {}
+        for c in cols:
+            ds = sorted(((sum((int(c[k]) - rc[k]) ** 2 for k in range(3)), ch, rc)
+                         for ch, rc in PAL))
+            (_, c1, p1), (_, c2, p2) = ds[0], ds[1]
+            vv = [p2[k] - p1[k] for k in range(3)]
+            den = sum(v * v for v in vv)
+            t = 0.0 if den == 0 else sum((int(c[k]) - p1[k]) * vv[k] for k in range(3)) / den
+            t = 0.0 if t < 0 else (1.0 if t > 1 else t)
+            acc[c1] = acc.get(c1, 0.0) + (1.0 - t) * step
+            acc[c2] = acc.get(c2, 0.0) + t * step
+        return acc
+    acc = {}
+    for ch, w in runs_from(cols, mode='cov', step=step):
+        acc[ch] = acc.get(ch, 0.0) + w
     return acc
 
 
 def cov_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL', 'TR')):
     """커버리지 적분으로 아래 코너의 **D**(어두운 띠) · 위 코너의 **B**(베벨) 곡선을 훑는다."""
-    ims = imgs or {'ref': (REF7, BOX['ref']), 'cap': (CAP7, BOX['cap'])}
+    ims = imgs or default_imgs()
     names = list(ims)
     data = {}
     for who, (pathname, bxy) in ims.items():
@@ -706,7 +810,7 @@ def cov_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL', '
 def normal_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL', 'TR')):
     """법선 자를 **각도로 훑는다** — 두 비평가가 «감쇠 곡선이 틀렸다» 고 한 그 곡선을 직접 본다.
        세 각(45/60/75)만으로는 곡선의 모양을 못 본다(직선부 90° 가 기준선이다)."""
-    ims = imgs or {'ref': (REF7, BOX['ref']), 'cap': (CAP7, BOX['cap'])}
+    ims = imgs or default_imgs()
     data = {}
     for who, (pathname, bxy) in ims.items():
         px = Image.open(pathname).convert('RGB').load()
@@ -734,8 +838,68 @@ def normal_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL'
         print('')
 
 
+def physics_i(thin=False, sig=1.1):
+    """**합성 재현(942 3회차)** — 그림도 브라우저도 안 쓴다. 판은 `probe409g.phys_cols` 가 그리고
+       (셈은 저장소에 하나뿐이다) 재는 것은 **이 자의 두 축**이다:
+         ⓐ 층 자   `runs`(걸음 0.5) — `gate_layers`·`norm_layers` 가 읽는 그 층.
+         ⓑ 덮개 자 `cov_from`(걸음 0.25) — `cov_ray` 의 알맹이.
+       ⓑ 의 옛 셈이 이 자 고유의 결함이다 — `S`(43,35,26)가 `K`↔`D` **사이**라
+       검정 경사면의 몫이 **없는 S 층**으로 샌다."""
+    stack = (('K', 7.0), ('D', 2.0), ('B', 7.0)) if thin else \
+            (('S', 3.0), ('K', 7.0), ('D', 4.0), ('B', 7.0))
+    print('══ 409-i/physics — 같은 참값 층더미를 «칼같은 판(cap)» ↔ «번진 판(ref)» 으로 그려 두 자로 잰다 ══')
+    print('   참값  %s · 번짐 σ %.1fpx\n' % (' '.join('%s%.2f' % (c, w) for c, w in stack), sig))
+
+    print(' ⓐ 층 자 — 걸음 0.5px (`runs` · gate_layers/norm_layers 가 읽는 그 층)')
+    print('   %-6s %-8s %s' % ('자', '판', '층'))
+    cols5 = g_phys_cols(stack, sig, 0.5)
+    got = {}
+    for mode in ('int', 'cov'):
+        for who in ('cap', 'ref'):
+            ray = Ray(''.join(cls(c) for c in cols5[who]), cols5[who])
+            rs = runs(ray, 0.5, mode)
+            got[(mode, who)] = rs
+            print('   %-6s %-8s %-46s 합 %.2f'
+                  % (mode, who, ' '.join('%s%.2f' % (c, n) for c, n in rs),
+                     sum(n for _, n in rs)))
+    print('')
+    for mode in ('int', 'cov'):
+        rr, cc = got[(mode, 'ref')], got[(mode, 'cap')]
+        if len(rr) != len(cc):
+            print('   %-6s 판 사이 **층 개수가 다르다** (%d ↔ %d) — 번짐이 없는 층을 만들었다'
+                  % (mode, len(rr), len(cc)))
+        else:
+            print('   %-6s 판 사이 최대 |Δ| = %.2f px'
+                  % (mode, max(abs(x[1] - y[1]) for x, y in zip(rr, cc))))
+
+    print('\n ⓑ 덮개 자 — 걸음 0.25px (`cov_from` · cov_ray 의 알맹이)')
+    print('   ⚑ 옛 셈은 «가장 가까운 두 팔레트 색» 에 나눈다 — S 가 K↔D 사이라 검정 경사면이 S 로 샌다')
+    cols4 = g_phys_cols(stack, sig, 0.25)
+    print('   %-6s %-8s %s' % ('자', '판', '{클래스: 두께}'))
+    for mode in ('int', 'cov'):
+        for who in ('cap', 'ref'):
+            acc = cov_from(cols4[who], 0.25, mode)
+            keys = [c for c, _ in PAL if acc.get(c, 0.0) > 1e-9]
+            print('   %-6s %-8s %s   합 %.2f'
+                  % (mode, who, ' '.join('%s%.2f' % (c, acc[c]) for c in keys), sum(acc.values())))
+    print('')
+    for mode in ('int', 'cov'):
+        r = cov_from(cols4['ref'], 0.25, mode)
+        c = cov_from(cols4['cap'], 0.25, mode)
+        ks = set(list(r) + list(c))
+        print('   %-6s 판 사이 최대 |Δ| = %.2f px  (샌 층 S: cap %.2f → ref %.2f)'
+              % (mode, max(abs(r.get(k, 0.0) - c.get(k, 0.0)) for k in ks),
+                 c.get('S', 0.0), r.get('S', 0.0)))
+    return got
+
+
 def main():
+    global MODE
     a = sys.argv[1:]
+    MODE = 'int' if '--int' in a else 'cov'
+    if '--physics' in a or '--physics-thin' in a:
+        physics_i('--physics-thin' in a)
+        return 0
     if '--sweep' in a or '--cov' in a:
         ims = None
         if '--img' in a:
