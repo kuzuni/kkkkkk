@@ -16,7 +16,8 @@
  *                  + 그려진 칠 하변의 **상인방 안 상대 위치**가 프레임 불변(화소).
  *   [5] 띠1 불변 — 94 는 한 글자도 안 건드렸다(`verify879` [2b2] 와 같은 자리를 이 번호도 잰다).
  *   §R  되돌림   — lnk 를 1 로 되돌리면 [2] 가 빨개진다(무르게 푼 수리가 아님을 사본으로).
- *   §R2 사본 함정 — 늙은 JS 사본(`rwMulFit` 의 av 174)으로 k 를 구하면 **틀린 수**가 나온다.
+ *   §R2 사본 함정 — 손으로 옮겨 적은 예산 사본(늙은 av 174)으로 k 를 구하면 **틀린 수**가 나온다.
+ *                  (등재 당시 그 사본은 `rwMulFit()` 안에 살아 있었다 — **940 이 지웠다**.)
  *
  * 127 — 브라우저 해석 tools/pwlaunch.js · 913 — pngjs tools/png913.js.
  */
@@ -206,7 +207,16 @@ async function paintBottom(browser, H, o) {
   ok(Math.abs(back.apexT - r[1600].apexT) < 0.5,
     '§R2 되돌린 사본에서도 **띠1 은 94 로 같다** — 이 회차가 띠1 총량이 아니라 그 안의 배분만 움직였음을 사본이 못박는다',
     '되돌린 띠1 ' + back.apexT.toFixed(2) + ' ↔ 제품 ' + r[1600].apexT.toFixed(2));
-  /* §R3 — «늙은 사본으로 k 를 구하면 틀린다»(rwMulFit 의 av 174 ↔ 제품 182 · 940 등재) */
+  /* §R3 — «손으로 옮겨 적은 예산 사본으로 k 를 구하면 틀린다».
+     ⚑ **940 이관** — 이 항이 등재됐을 때 그 사본은 `rwMulFit()` 안에 **살아 있었고**(av 의 182 를
+     174 로 들고 있었다) 이 항의 이름이 그 함수를 지목했다. 940 이 그 사본을 지우고 `rwMulFit()`
+     도 `rwRuler` 로 제품에게 묻게 옮겼으므로 **제품에는 이제 이 사본이 한 줄도 없다** —
+     그래서 이름을 함수에서 떼고 «사본이라는 방법» 을 지목하도록 갈아 끼웠다.
+     자리를 비우지 않은 이유: 이 항이 지키는 것은 «누가 늙었나» 가 아니라
+     **«왜 자 막대인가»**(사본은 CSS 를 안 읽어 제품이 움직여도 안 따라온다) 이고, 그 근거는
+     940 뒤에도 그대로 참이다. 사본은 이제 이 자와 `verify940` 안에만 표본으로 남았다.
+     ⚠ 여기 남은 174 는 **제품과 한 벌이 아니다** — 일부러 늙힌 표본이라 제품이 182 를 또 옮겨도
+     따라가지 마라(따라가면 이 항이 «틀린 사본» 을 잃고 헛초록이 된다). */
   const { ctx, page } = await open(browser, 1600, '');
   const copy = await page.evaluate(() => {
     const s = +getComputedStyle(document.getElementById('relw')).getPropertyValue('--rwc') || 1;
@@ -217,8 +227,8 @@ async function paintBottom(browser, H, o) {
   });
   await ctx.close();
   ok(Math.abs(copy.av - r[1600].pool) > 5 && Math.abs(r[1600].lnk - Math.min(1, r[1600].pool / POOL_FULL)) < 5e-4,
-    '§R3 ★ `rwMulFit()` 의 **늙은 JS 사본**(av 의 182 를 174 로 들고 있다 · tt ' + copy.tt.toFixed(1)
-      + ' ↔ 제품 실측)으로는 이 k 를 못 구한다 — 그래서 `rwLintelFit()` 은 사본이 아니라 **자 막대로 제품에게 묻는다**(갈림 자체는 940 으로 등재)',
+    '§R3 ★ **손으로 옮겨 적은 예산 사본**(늙은 av — 182 를 174 로 든 표본 · tt ' + copy.tt.toFixed(1)
+      + ' ↔ 제품 실측)으로는 이 k 를 못 구한다 — 그래서 `rwLintelFit()` 은 사본이 아니라 **자 막대로 제품에게 묻는다**(940 이 `rwMulFit()` 도 같은 자로 옮겨 제품의 사본은 0줄이 됐다)',
     '사본 av ' + copy.av.toFixed(2) + ' · 제품 pool ' + r[1600].pool.toFixed(2)
       + ' · 얹힌 lnk ' + r[1600].lnk.toFixed(4));
 

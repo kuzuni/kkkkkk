@@ -20588,7 +20588,8 @@ function rwFit(){
   const avail = frameH - RW_TOP - RW_BOT - RW_PCB;     /* = .rw-panel 높이 */
   const s = Math.min(1, avail / RW_CONTENT_H);
   el.style.setProperty('--rwc', s > 0 ? s.toFixed(5) : '0');
-  rwMulFit(s);
+  /* 940 — 둘 다 «그려진 상자» 에서 되잰다(더는 예산 사본이 아니다) ⇒ `--rwc` 를 얹은 **뒤**에 부른다. */
+  rwMulFit();
   rwLintelFit();
 }
 /* ── 926 — 상인방이 띠1 의 압축을 clearance 와 «같은 비로» 나눠 지게 하는 수 한 개 ──────
@@ -20608,17 +20609,34 @@ function rwFit(){
 /* 926 2회차 — 몰딩 선 하한 4px(= 벽 켜 줄눈 어두운선 3 + 1) · 가장 얇은 몰딩 선 5px.
    ⚠ 선언은 함수 «앞» 에 둔다 — `const` 는 TDZ 라 뒤에 두면 이른 호출이 죽는다. */
 const MOLD_MIN = 4, MOLD_THIN = 5;
-function rwLintelFit(){
-  const el = $('relw'); if(!el) return;
+/* ── 940 — **자 막대를 부품으로 뽑았다.** 926 이 만든 «제품에게 직접 묻는 자» 는 그 회차엔
+   부르는 곳이 하나(`rwLintelFit`)뿐이라 함수 안에 있었는데, 940 이 `rwMulFit()` 의 **JS 예산
+   사본을 버리고** 같은 자로 갈아타면서 부르는 곳이 둘이 됐다. 사본을 지우는 것이 이 작업이므로
+   자를 또 한 벌 적는 것은 같은 결함을 다른 이름으로 되풀이하는 짓이다(402 «사본을 지운다»).
+   ⚠ 패널이 아직 안 그려졌으면(팝업이 닫혀 높이 0) **`null` 을 돌려준다** — 그 자리에서는
+     아무것도 안 얹는 것이 답이고(0 을 얹으면 상인방이 사라진다 · 926 12회차의 그림),
+     `openRelw()` 가 `.on` 을 붙인 뒤 다시 부른다.
+   ⚠ 퍼센트 함정은 여기서 풀린다 — 자 막대의 `height` 는 **길이 문맥**이라 `--rw-av`/`--rw-gt`
+     사슬 끝의 `100%`(--rw-sp)가 패널 높이로 제대로 풀린다(무너지는 것은 `scale()`·
+     그라디언트 정지점 쪽이다 · 879 1회차 [K1]). */
+function rwRuler(fn){
+  const el = $('relw'); if(!el) return null;
   const panel = el.querySelector('.rw-bowl') || el.querySelector('.rw-panel');
-  if(!panel || !panel.getBoundingClientRect().height) return;
+  if(!panel || !panel.getBoundingClientRect().height) return null;
   const r = document.createElement('div');
   r.style.cssText = 'position:absolute;left:-9999px;top:0;width:1px;pointer-events:none';
   panel.appendChild(r);
   const px = (expr) => { r.style.height = expr; return r.getBoundingClientRect().height; };
-  const rwc = px('calc(1000px * var(--rwc,1))') / 1000;
-  const pool = px('var(--rw-gt)') - px('var(--rw-av)') - px('var(--rw-lt)');
-  r.remove();
+  try { return fn(px, el); } finally { r.remove(); }
+}
+function rwLintelFit(){
+  const m = rwRuler((px) => ({
+    rwc: px('calc(1000px * var(--rwc,1))') / 1000,
+    pool: px('var(--rw-gt)') - px('var(--rw-av)') - px('var(--rw-lt)'),
+  }));
+  if(!m) return;
+  const el = $('relw');
+  const { rwc, pool } = m;
   const full = 108 * rwc;                /* 108 = 294(상인방 앵커) − 186(av 상한) = 긴 프레임 pool */
   if(!(full > 0) || !(pool > 0)) return;
   const k = Math.min(1, pool / full);
@@ -20689,20 +20707,31 @@ const RW_MB_H = 98, RW_MB_PED = 16, RW_MB_SEAT = 0, RW_MB_FL = RW_MB_PED - RW_MB
 /* 셸 높이 · 받침이 지면선 위로 나온 몫 · 얹힘 깊이 · 니치가 아래에 남기는 몫 · 격자 행 간 ·
    격자 상자가 마지막 슬롯 아래로 더 무는 꼬리(CSS px — 그려진 18.25 ÷ 격자 배율 .985) ·
    상자 하변에서 재는 예약(= 그려진 목표 «행 간 ×1.5» − 꼬리) */
-function rwMulFit(s){
-  const el = $('relw'); if(!el) return;
-  const panelH = frameH - RW_TOP - RW_BOT - RW_PCB;
-  const bowlH = Math.min(panelH, 1527 * s);          /* 859 — 그릇 캡 */
-  /* ⚑ 813 10회차 — **여기 박혀 있던 «24(g3)» 가 늙었다.** g3 는 이제 상수가 아니라
-     짧은 프레임에서 압축되는 어파인 clamp 다(제품 `--rw-g3` · 하한 17 · 상한 24).
-     이 함수는 CSS 예산의 **JS 사본**이라 같은 식을 써야 하고, 안 고치면 니치가 실제보다
-     작게 계산돼 배수 바 배율이 덜 자란다(`verify879` [1] 이 «그려진 니치» 와 대조해 잡는다). */
-  const sp = bowlH - 830 * s;                        /* = CSS --rw-sp */
-  const g3 = Math.min(24 * s, Math.max(17 * s, sp * 0.033 + 1.9 * s));
-  const tt = bowlH - (88 + 12 + 226) * s - g3 - 516 * s;
-  const av = Math.min(186 * s, (tt - 174 * s) / 2, tt - 285 * s);
-  const m = Math.min(1, (av / s - RW_MB_FL - RW_MB_GAP) / RW_MB_H);
-  el.style.setProperty('--rw-mbs', m > 0 ? m.toFixed(4) : '1');
+/* ── 940 — **CSS 예산의 JS 사본을 지웠다.** ────────────────────────────────────
+   여기 있던 다섯 줄(bowlH · sp · g3 · tt · av)은 제품 `--rw-av` 사슬을 손으로 옮겨 적은
+   **사본**이었고, 사본은 늙는다 — 879 7회차가 «아래 예약 174 → **182**» 로 제품을 옮길 때
+   이 사본만 안 따라와 1600 에서 av 139.10(제품 실측 135.09)을 들고 있었다. 그 전에는
+   813 10회차가 같은 자리의 «24(g3)» 가 늙은 것을 고쳤다 — **같은 자리가 두 번 늙었다.**
+   ⚑ 이 갈림이 지금까지 무해했던 것은 배율이 다섯 프레임 전부 `min()` 의 **1 에 붙어**
+     틀린 av 가 결과를 안 바꿨기 때문이다(`verify879` §R2). 즉 «맞아서» 가 아니라 «안 물려서»
+     조용했던 것이고, 사본을 다시 쓰는 회차가 오면 그때 틀린 수를 얹는다(926 이 상인방 비를
+     얹을 때 바로 이 자리에 섰고, 사본을 **안 쓰는 길**로 비켜갔다).
+   ⇒ 식을 옮겨 적지 않고 **자 막대 하나로 제품에게 묻는다**(`rwRuler` — 926 `rwLintelFit()` 과
+     같은 자). 이제 제품이 예산을 옮기면 배율이 **따라온다** — `verify940` §R 이 그것을 못박는다
+     (제품 `--rw-av` 를 덮으면 배율이 따라오고, 사본으로 되돌린 자리에서는 안 따라온다).
+   ⚠ 남은 상수 `RW_MB_*` 는 사본이 아니다 — 바 자신의 기하(셸 98 · 받침 몫 · 예약)라
+     제품 CSS 에 같은 값이 또 있는 것이 아니다. `verify879` [1] 이 그 넷을 그려진 것과 대조한다.
+   되돌림: 아래 두 줄을 지운 8회차 자리는 `#rwMulBar` 의 scale 에서 `* var(--rw-mbs,1)` 을 빼는 것이고,
+     **사본 시절로** 되돌리려면 위 다섯 줄을 되살리면 된다(그 자리에서 `verify940` §R 이 빨개진다). */
+function rwMulFit(){
+  const m = rwRuler((px) => ({
+    rwc: px('calc(1000px * var(--rwc,1))') / 1000,
+    av: px('var(--rw-av)'),
+  }));
+  if(!m || !(m.rwc > 0)) return;
+  const av = m.av / m.rwc;                           /* 그려진 니치를 CSS px 으로 */
+  const k = Math.min(1, (av - RW_MB_FL - RW_MB_GAP) / RW_MB_H);
+  $('relw').style.setProperty('--rw-mbs', k > 0 ? k.toFixed(4) : '1');
 }
 
 /* 전투 캔버스: 논리 좌표계는 기존 540 기준을 그대로 두고 ctx 를 SC배 확대해 1080 프레임을 채운다.
@@ -35860,7 +35889,11 @@ function openRelw(){
   $('relw').classList.add('on');
   /* 926 — 상인방 비는 **그려진 상자**에서 재므로 «켜고 나서» 한 번 더 부른다.
      위 `rwFit()` 은 아직 `.on` 이 없어 패널 높이가 0 이고, 그 자리에서는 아무것도 안 얹는다
-     (0 을 얹으면 상인방이 사라진다 — 12회차의 그림). 리사이즈 경로는 rwFit 안의 호출이 받는다. */
+     (0 을 얹으면 상인방이 사라진다 — 12회차의 그림). 리사이즈 경로는 rwFit 안의 호출이 받는다.
+     ⚑ 940 — **배수 바 배율도 이제 같은 처지다.** 예산 사본을 버리고 자로 되재게 되면서
+       닫힌 팝업에서는 못 재므로, 926 이 상인방에 해 둔 이 «켜고 나서 한 번 더» 를 같이 탄다.
+       (안 부르면 폴백 `var(--rw-mbs,1)` = 1 이 이겨 8회차 자리로 돌아간다.) */
+  rwMulFit();
   rwLintelFit();
 }
 /* 700 — 닫으면 배수가 ×1 로 돌아간다(713 §5 와 같은 규약 · 세이브 축이 없다).
