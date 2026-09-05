@@ -136,13 +136,38 @@ def line_metrics(a, ymask, bmask, deg, cut):
     return out
 
 
-def stroke_thk(a, bmask, ymask, th, uu, vv, sel_pts):
-    """잉크 위·아래 «밖으로 나온 검정» 길이 — u 를 따라 한 칸씩 나가며 센다.
+def _bilin(a, y, x):
+    """빨강 채널 겹선형 표본 — 정수 격자 밖이면 nan."""
+    H, W = a.shape[:2]
+    if not (0 <= y <= H - 1.001 and 0 <= x <= W - 1.001):
+        return float('nan')
+    y0, x0 = int(y), int(x)
+    fy, fx = y - y0, x - x0
+    r = a[..., 0]
+    return float((r[y0, x0] * (1 - fx) + r[y0, x0 + 1] * fx) * (1 - fy)
+                 + (r[y0 + 1, x0] * (1 - fx) + r[y0 + 1, x0 + 1] * fx) * fy)
 
-    v 를 1px 칸으로 묶고, 칸마다 그 줄 잉크의 u 최소·최대에서 각각 바깥으로 걸어
-    검정이 끊길 때까지의 길이를 잰다. 칸별 두 값의 **중앙값**을 돌려준다.
+
+R_MID = 125.0     # 빨강 중간값 — 노랑(255)·분홍(244) ↔ 검정(0) 을 가르는 한 문턱
+STEP = 0.1        # 걸음 (px)
+
+
+def stroke_thk(a, bmask, ymask, th, uu, vv, sel_pts):
+    """잉크 밖으로 나온 «검정 획» 길이 — u 를 따라 **부분 화소**로 잰다.
+
+    ⚠⚠ **1회차의 자는 여기서 틀렸다(2회차 수리).** 옛 판은 «검정 화소를 한 칸씩 세는» 정수
+    걸음이라 **값이 언제나 정수**였고, ref 는 우리보다 K=2.0628 배 작아 그 바닥깎기가
+    **우리 px 로 2.06 씩** 손해였다. 실제로 1회차가 «ref» 라고 적은 2.063 · 4.126 은
+    정수 **1 · 2 에 K 를 곱한 값** 그대로다(비평 GI 가 숫자만 보고 짚었고, GH 는
+    «ref 의 얇은 안티에일리어스를 깎아 먹는다» 로 같은 곳을 짚었다). ⇒ 그 바닥값 위에서
+    «아랫줄 획 +45%» 가 나왔고 **7 → 5px 과교정**을 낳았다.
+
+    ⇒ 이제 **빨강 채널 한 문턱의 교차점**을 선형 보간으로 찾는다 — 노랑(r 255)·분홍(r 244) 은
+    둘 다 높고 검정(r 0)만 낮으므로, 잉크에서 밖으로 걸으며
+      ① r 이 R_MID 아래로 내려가는 자리 = 노랑 → 검정 경계
+      ② 그 뒤 r 이 R_MID 위로 올라가는 자리 = 검정 → 분홍 경계
+    두 교차점 사이가 «밖으로 나온 검정» 이다. 해상도에 안 걸리므로 ref 와 우리가 같은 자다.
     """
-    H, W = bmask.shape
     cu, su = np.cos(th), np.sin(th)
     tops, bots = [], []
     vb = np.round(vv).astype(int)
@@ -153,20 +178,21 @@ def stroke_thk(a, bmask, ymask, th, uu, vv, sel_pts):
         for sgn, bag in ((-1, tops), (+1, bots)):
             i = np.argmin(uu[m]) if sgn < 0 else np.argmax(uu[m])
             py, px = sel_pts[m][i]
-            n = 0
-            while n < 30:
-                n += 1
-                yy = int(round(py + sgn * n * cu))
-                xx = int(round(px - sgn * n * su))
-                if not (0 <= yy < H and 0 <= xx < W):
-                    n -= 1
+            t, prev, t_in, t_out = 0.0, None, None, None
+            while t < 12.0:
+                t += STEP
+                r = _bilin(a, py + sgn * t * cu, px - sgn * t * su)
+                if r != r:
                     break
-                if ymask[yy, xx]:
-                    continue
-                if not bmask[yy, xx]:
-                    n -= 1
-                    break
-            bag.append(n)
+                if prev is not None:
+                    if t_in is None and prev >= R_MID > r:
+                        t_in = t - STEP * (R_MID - r) / max(prev - r, 1e-6)
+                    elif t_in is not None and prev < R_MID <= r:
+                        t_out = t - STEP * (r - R_MID) / max(r - prev, 1e-6)
+                        break
+                prev = r
+            if t_in is not None and t_out is not None:
+                bag.append(t_out - t_in)
     return (float(np.median(tops)) if tops else float('nan'),
             float(np.median(bots)) if bots else float('nan'))
 

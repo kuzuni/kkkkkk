@@ -131,18 +131,31 @@ function measure(png, geo) {
   ok(Math.abs(rat - 1) <= 0.06,
     `[A3] 아랫줄 «두께 ÷ 길이» 종횡이 ref 와 ±6% 안 — 등방으로 줄였다(356 규약)`, `${rat.toFixed(3)}`);
 
-  /* ── §B 검정 획 ───────────────────────────────────────────────────── */
-  blk('§B 검정 획 — ref 는 아랫줄이 윗줄의 «절반» 이다');
-  ok(Math.abs(pc(m.our_s_lo, m.ref_s_lo)) <= 12,
-    `[B1] 아랫줄 검정 획(밖으로 나온 몫)이 ref ±12% 안 (수리 전 +45.4%)`,
+  /* ── §B 검정 획 ─────────────────────────────────────────────────────
+     ⚠⚠ **이 절은 2회차가 통째로 다시 썼다.** 1회차는 «아랫줄 획 +45.4% ⇒ 7 → 5px» 로 판정했는데
+     그 근거가 **자의 결함**이었다 — 획 걸음이 정수라 ref(우리보다 K=2.0628 배 작다)에서 값이
+     **2.06 씩 바닥으로 깎였다**(1회차의 ref 2.063·4.126 = 정수 1·2 × K). 비평 GH·GI 가 각자
+     다른 자로 같은 곳을 짚었고, 자를 부분 화소로 고치자 ref 아랫줄이 **3.73** 이 되어
+     필요한 선언이 **6.99 ≈ 7** — 원래 값 — 로 나왔다. ⇒ 5 를 7 로 되돌렸다. */
+  blk('§B 검정 획 — 2회차가 자를 부분 화소로 고치고 1회차의 과교정을 되돌렸다');
+  ok(Math.abs(pc(m.our_s_lo, m.ref_s_lo)) <= 10,
+    `[B1] 아랫줄 검정 획(밖으로 나온 몫)이 ref ±10% 안 (1회차 5px 일 때 −28.3%)`,
     `ref ${m.ref_s_lo} ↔ 우리 ${m.our_s_lo} (${pc(m.our_s_lo, m.ref_s_lo).toFixed(1)}%)`);
-  ok(Math.abs(pc(m.our_s_up, m.ref_s_up)) <= 12,
-    `[B2] 윗줄 검정 획은 **안 건드렸다** — 여전히 ref ±12% 안`,
+  /* ⚑⚑ **자가 정수로 세지 않는다는 것 자체를 항으로 세운다.** 이것이 1회차를 틀리게 한 결함이고,
+     누가 걸음을 되돌리면(정수 세기) ref 값이 다시 K 의 배수로 굳어 이 항이 먼저 빨개진다.
+     ⚠ «K 의 배수와 충분히 떨어져 있는가» 로 묻는다 — 값 자체를 적으면 자를 못 지킨다. */
+  const near = (x) => Math.abs(x / 2.0628 - Math.round(x / 2.0628));
+  ok(near(m.ref_s_lo) > 0.08 && near(m.ref_s_up) > 0.08,
+    `[B2] 자가 ref 획을 **정수 화소로 세지 않는다** — 두 값이 K 의 배수에서 떨어져 있다 (1회차 결함의 되돌림 시험)`,
+    `아래 ${m.ref_s_lo}(÷K=${(m.ref_s_lo / 2.0628).toFixed(3)}) · 위 ${m.ref_s_up}(÷K=${(m.ref_s_up / 2.0628).toFixed(3)})`);
+  /* ⚑ **윗줄 획 잔차는 «닫았다» 고 적지 않는다 — 자가 갈렸다.**
+     GH «ref 6.54 ↔ 우리 6.58 = 맞다» · GI «ref 4.7~5.2 ↔ 우리 4.0~4.2 = −15%» ·
+     895 2회차 자 «ref 5.39 ↔ 우리 4.30 = −20.3%». 셋 중 둘이 «가늘다» 지만 크기가 갈리고,
+     윗줄 획은 `verify833` [1-k] 가 «8 불변» 으로 못박은 선언이라 **한 회차의 자로 못 옮긴다.**
+     ⇒ 잔차를 **양성으로** 등재해 둔다(932). 누가 윗줄 획을 조용히 옮기면 이 항이 먼저 짖는다. */
+  ok(pc(m.our_s_up, m.ref_s_up) >= -30 && pc(m.our_s_up, m.ref_s_up) <= -8,
+    `[B3] 윗줄 획 잔차가 **−8~−30% 에 그대로 있다** (932 등재 — 자 셋이 갈렸다: GH «맞다» / GI −15% / 이 자 −20%)`,
     `ref ${m.ref_s_up} ↔ 우리 ${m.our_s_up} (${pc(m.our_s_up, m.ref_s_up).toFixed(1)}%)`);
-  /* ⚑ 값이 아니라 **관계**를 묻는 항 — 두 줄 획이 한 값으로 접히면(8/8 · 7/7) 빨갛다. */
-  const sr = (m.our_s_lo / m.our_s_up) / (m.ref_s_lo / m.ref_s_up);
-  ok(Math.abs(sr - 1) <= 0.15,
-    `[B3] «아랫줄 획 ÷ 윗줄 획» 비가 ref 와 같다 — 두 줄을 한 값으로 접으면 빨강`, `${sr.toFixed(3)}`);
 
   /* ── §C 아랫줄을 줄인 대가 ──────────────────────────────────────────
      크기를 줄이면 그 줄의 잉크가 상자 안에서 위로 뜬다 — 그래서 [1-o] 의 상자 값이 따라왔다.
@@ -164,7 +177,7 @@ function measure(png, geo) {
         져서 **한 픽셀도 안 먹고 시험이 조용히 초록**이 된다(885 4회차가 실제로 진 함정). */
   blk('§R 되돌림 시험 — 옛 값으로 돌리면 빨개지는가');
   const gR = await shot(page, path.join(dir, 'rev.png'),
-    '#shopw .pvc>.bdg>b{font-size:36px;-webkit-text-stroke:7px #000;top:102.175px}');
+    '#shopw .pvc>.bdg>b{font-size:36px;-webkit-text-stroke:5px #000;top:102.175px}');
   const r = measure(path.join(dir, 'rev.png'), gR);
   ok(pc(r.our_t_lo, r.ref_t_lo) > 10,
     `[R1] fs 를 36 으로 되돌리면 아랫줄 두께가 다시 +10% 넘게 커진다`,
@@ -172,16 +185,16 @@ function measure(png, geo) {
   ok(pc(r.our_l_lo, r.ref_l_lo) > 8,
     `[R2] 같은 되돌림에서 길이도 같이 커진다 — 두 축이 한 손잡이에 매달려 있다는 증거`,
     `${pc(r.our_l_lo, r.ref_l_lo).toFixed(1)}%`);
-  ok(pc(r.our_s_lo, r.ref_s_lo) > 25,
-    `[R3] 획을 7 로 되돌리면 검정 획이 다시 +25% 넘게 두꺼워진다`,
+  ok(pc(r.our_s_lo, r.ref_s_lo) < -15,
+    `[R3] 획을 **1회차의 5px** 로 내리면 검정 획이 다시 −15% 넘게 얇아진다 (1회차 과교정의 되돌림 시험)`,
     `${pc(r.our_s_lo, r.ref_s_lo).toFixed(1)}%`);
   /* ⚑ **획만 되돌리는 시험** — fs 와 획이 서로를 가리지 않는다는 것(둘은 독립 손잡이다).
      `paint-order:stroke fill` 이라 획은 노랑 «채움» 을 안 건드린다 ⇒ 두께는 초록이어야 한다. */
   const gR2 = await shot(page, path.join(dir, 'rev2.png'),
-    '#shopw .pvc>.bdg>b{-webkit-text-stroke:7px #000}');
+    '#shopw .pvc>.bdg>b{-webkit-text-stroke:5px #000}');
   const r2 = measure(path.join(dir, 'rev2.png'), gR2);
-  ok(pc(r2.our_s_lo, r2.ref_s_lo) > 25 && Math.abs(pc(r2.our_t_lo, r2.ref_t_lo)) <= 4,
-    `[R4] 획**만** 되돌리면 §B 만 빨갛고 §A 는 초록 — 두 손잡이가 서로를 안 가린다`,
+  ok(pc(r2.our_s_lo, r2.ref_s_lo) < -15 && Math.abs(pc(r2.our_t_lo, r2.ref_t_lo)) <= 4,
+    `[R4] 획**만** 옮기면 §B 만 빨갛고 §A 는 초록 — 두 손잡이가 서로를 안 가린다 (\`paint-order:stroke fill\` 이라 획은 노랑 채움을 안 건드린다)`,
     `획 ${pc(r2.our_s_lo, r2.ref_s_lo).toFixed(1)}% · 두께 ${pc(r2.our_t_lo, r2.ref_t_lo).toFixed(1)}%`);
   /* ⚑ **세로 배율로 좇았으면 어땠는가** — 등재문 후보 ⓑ 를 실제로 그려 [A2]·[A3] 이 무는지 본다.
      ⓑ 는 두께만 맞추고 길이를 안 건드리므로 종횡이 깨진다(356 «확대는 등방» 의 반대편). */
