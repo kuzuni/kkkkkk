@@ -29,18 +29,28 @@
  *                 1px 갈리던 것이 이 항의 플레이키였다. 정수 쪽은 [C-big-q] 가 «갈림 ≤ 1px» 로
  *                 따로 지킨다 · 되돌림 짝은 [R4])
  *   [D] 방향   — 출발이 «알약·보유 표시», 도착이 호스트. 거리 단조 감소(획득의 반대)
+ *                (⚑ 906 이관 — `[D-*-o]` 는 «창 끝까지 **살아남은 알들**의 처음 반경 → 끝 반경» 을
+ *                 견준다. 종전에는 «첫 표본 **전원** 평균 → 창 끝 **생존자** 평균» 이라 두 끝값의
+ *                 집합이 달라 이동과 표본 구성이 섞였고, 멀리 간 알이 먼저 죽으면 **아무도 안
+ *                 모였는데** 평균이 내려가 빨개졌다(수리 전 14회에 1회). 문턱은 한 칸도 안 넓혔다 —
+ *                 판정 한 벌은 `tools/dspread906.js` · 되돌림 짝은 [R5]·[R6] · 재현은 `probe906`)
  *   [E] 금액   — `fxPay` «−n» 0건 · 488 훈련 사다리 «−n» 0건 · 알약 «움푹» 1건(43회차 유지)
  *   [F] 518    — 같은 씬에서 «획득 방향» 노드(알약으로 가는 비행·`+n`·딤 위 복제)는 0
  *   [G] 상한   — `#fxl` 최고 동시 노드 < FXMAX (543 규약 — 드롭 0)
  *   [R] 되돌림 — (678 이관) 660 이 세운 «버튼 아이콘 버스트» 를 무력화하면 화폐 아이콘 0 ·
  *                종전 앰버 스파크는 그대로다 · (898 신설 [R3]) `FX_CIC_SC` 를 1 로 되돌린 **제품
  *                사본**에서 단련 알이 지금 판의 상한에 못 닿는다 = [C-big-f] 가 무른 항이 아니다 ·
- *                (902 신설 [R4]) 같은 상자·같은 사슬에 배수만 0.8 을 넣으면 [C-big] 이 빨개진다
+ *                (902 신설 [R4]) 같은 상자·같은 사슬에 배수만 0.8 을 넣으면 [C-big] 이 빨개진다 ·
+ *                (906 신설 [R5]·[R6] — 짝) 실측 궤적을 산수로 되돌린다: 알이 안 움직이고 멀리 간
+ *                절반만 죽은 사본은 옛 자만 빨갛고 **새 자는 초록**([R5] — 구성 축이 실제로 걷혔다) ·
+ *                소실 없이 모두 발원 쪽으로 모인 사본은 **새 자도 빨강**([R6] — 문턱을 넓힌 것이 아니다)
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
+/* ⚑ 906 — [D-*-o] 의 판정 한 벌. `probe906` 이 **같은 모듈**을 쓴다(402 사본 금지) */
+const { spread, TOL: DTOL } = require('./dspread906');
 
 const SRC = path.resolve(__dirname, '../index.html');
 let pass = 0, fail = 0;
@@ -192,7 +202,7 @@ const INSTALL = () => {
     await p.mouse.down();
     /* 궤적 — 40ms 격자로 알갱이 무리 중심과 호스트 중심 사이 거리를 잰다 */
     const traj = p.evaluate(s => new Promise(res => {
-      const out = []; const t0 = performance.now(); let wave = null;
+      const out = []; const t0 = performance.now(); let wave = null, ids = null;
       const iv = setInterval(() => {
         const h = document.querySelector(s.host);
         /* ⚑ 660 이관 — 거리의 기준점을 **호스트 중심 → 발원(강화 버튼) 중심**으로 옮겼다.
@@ -219,8 +229,15 @@ const INSTALL = () => {
            «한 무리만 따라간다»(619 17회차)는 여기서 **더 중요해졌다** — 660 은 틱마다 독립으로
            스폰하고 세대가 겹치므로(주인 «겹침 허용»), 전부 모으면 무리 중심이 늘 버튼 중심에
            눌러앉아 [D-o] 가 아무것도 못 묻는다. 첫 무리만 따라가면 그 무리의 «퍼짐» 이 그대로 읽힌다. */
+        /* ⚑⚑ 906 — 첫 무리를 굳힐 때 **알마다 번호를 매긴다.** 종전에는 집합만 굳혀서 창 끝의
+           평균을 «첫 표본 **전원**» 의 평균에 댔는데, 창 안에서 알이 죽으면 두 끝값의 **집합이
+           달라진다** — 아무도 안 모였는데 평균이 내려간다(멀리 간 알이 먼저 죽는다:
+           `probe906` [D2] 실측 소실 알 86.2px vs 생존자 71.5px). 번호가 있어야 아래 [D-*-o] 가
+           «창 끝까지 살아남은 알들의 **처음** 반경» 을 되찾아 같은 집합끼리 견줄 수 있다. */
         let live = [...document.querySelectorAll('#fxl .fx-cic')];
-        if (!wave && live.length) wave = new Set(live);       /* 첫 무리를 굳힌다 */
+        if (!wave && live.length) {                           /* 첫 무리를 굳힌다 */
+          wave = new Set(live); ids = new Map(); live.forEach((n, i) => ids.set(n, i));
+        }
         if (wave) live = live.filter(n => wave.has(n));
         /* ⚑⚑ 898 — 크기 자를 **둘로 갈랐다.** `getBoundingClientRect` 는 `@keyframes fxSpark` 의
            위상을 타서(알이 태어나 커졌다 사그라든다) «최대» 가 표본 위상 운에 흔들린다 —
@@ -232,7 +249,8 @@ const INSTALL = () => {
           const im = n.querySelector('img.cic');
           const ir = im ? im.getBoundingClientRect() : r;
           const gsv = parseFloat(getComputedStyle(n).getPropertyValue('--fxgs')) || 1;
-          return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: ir.width, h: ir.height,
+          return { i: ids ? ids.get(n) : -1,
+                   x: r.x + r.width / 2, y: r.y + r.height / 2, w: ir.width, h: ir.height,
                    wn: (im ? im.offsetWidth : n.offsetWidth) * gsv, on: n.offsetWidth };
         });
         if (g.length && hr) {
@@ -248,6 +266,9 @@ const INSTALL = () => {
           const fr = fxRect(bh);
           out.push({ t: Math.round(performance.now() - t0), n: g.length,
                      d: g.reduce((a, q) => a + Math.hypot(q.x - ox, q.y - oy), 0) / g.length,
+                     /* ⚑ 906 — **알마다** 반경을 같이 남긴다(위 번호와 짝). 평균 `d` 는 지우지 않는다:
+                        [D-*-o] 의 보고 줄과 [D-*-s] 가 계속 읽고, 906 은 «무엇을 견주는가» 만 바꿨다. */
+                     r: g.map(q => ({ i: q.i, d: Math.hypot(q.x - ox, q.y - oy) })),
                      cx, cy, w: Math.max(...g.map(q => q.w)),
                      wnx: Math.max(...g.map(q => q.wn)), wnm: Math.min(...g.map(q => q.wn)),
                      onx: Math.max(...g.map(q => q.on)), onm: Math.min(...g.map(q => q.on)),
@@ -455,6 +476,7 @@ const INSTALL = () => {
        ① 그 비행이 **한 건도 안 난다**(폐지의 직접 단언)
        ② 지금의 방향은 «버튼 **밖으로** 퍼진다» 다(버스트의 뜻 — 안으로 모이면 그것이 비행이다) */
   console.log('\n[D] 방향 — 660: «버튼에서 바깥으로 퍼진다» (583 의 «알약 → 카드» 비행은 폐지)');
+  const DSP = {};                          /* ⚑ 906 — 자리별 퍼짐 판정. 아래 [R5]·[R6] 이 이 표본을 다시 굴린다 */
   for (const s of SITES) {
     const r = R[s.k]; if (!r) continue;
     const fly = r.G.add.filter(a => /\bfx-spd\b/.test(a.cls));
@@ -462,12 +484,25 @@ const INSTALL = () => {
        '[D-' + s.k + '] ★ ' + s.n + ' — «알약·보유 표시 → 버튼» 비행(`.fx-spd`)이 **0건**(658·660 폐지)',
        fly.length + '건');
     if (!r.tr.length) { ok(false, '[D-' + s.k + '-s] 궤적 표본이 있다'); continue; }
-    const d0 = r.tr[0].d, d1 = r.tr[r.tr.length - 1].d;
-    console.log('  · ' + s.n + ' — 발원에서 평균 반경 ' + n1(d0) + ' → ' + n1(d1) + 'px');
-    ok(d1 >= d0 - 2,
-       '[D-' + s.k + '-o] ★ 버스트가 발원(강화 버튼)에서 **밖으로** 퍼진다 — 평균 반경이 안 줄어든다'
-       + '(줄면 그것이 폐지된 «버튼으로 모이는» 비행이다)',
-       n1(d0) + ' → ' + n1(d1) + 'px');
+    /* ⚑⚑ 906 — **견주는 두 값을 같은 집합에서 낸다.** 종전에는 «첫 표본 전원 평균 → 창 끝 생존자
+       평균» 이라 한 값에 축이 둘 섞였다(① 이동 ② 창 안에서 누가 죽었는가). 660 의 알은 수명이
+       제각각이고 **멀리 간 알이 먼저 죽으므로**, 아무도 안 모였는데 평균이 내려가는 창이 생긴다 —
+       그것이 이 항의 플레이키(수리 전 트리 14회에 1회 · [D-temper-o] 31.1 → 24.1px)였다.
+       ⇒ 창 끝까지 **살아남은 알만** 골라 그 알들의 처음 반경(`d0s`)과 끝 반경을 견준다.
+       ⚠ 문턱(2px)은 한 칸도 안 넓혔다 — 넓히는 것은 반려 조항(334·796)이고, 넓히면 «버스트가
+         버튼으로 모여도 초록» 이 되어 658·660 폐지 축이 통째로 풀린다. 바뀐 것은 **집합**이다.
+         그 사실은 아래 [R5](소실만 시킨 사본은 초록)·[R6](수렴 사본은 빨강)이 짝으로 못박고,
+         `probe906` [D3]·[D4] 가 재현 쪽에서 같은 것을 못박는다.
+       판정 한 벌은 `tools/dspread906.js` 하나다 — 자와 재현이 **같은 자**를 쓴다(402 사본 금지). */
+    const sp = spread(r.tr);
+    console.log('  · ' + s.n + ' — 발원에서 평균 반경 ' + n1(sp.d0) + ' → ' + n1(sp.d1) + 'px'
+      + '  |  같은 집합(생존 ' + sp.surv + '/' + sp.tot + '알): ' + n1(sp.d0s) + ' → ' + n1(sp.d1s) + 'px');
+    ok(sp.ok,
+       '[D-' + s.k + '-o] ★ 버스트가 발원(강화 버튼)에서 **밖으로** 퍼진다 — 창 끝까지 살아남은 **같은 알들**의'
+       + ' 반경이 안 줄어든다(줄면 그것이 폐지된 «버튼으로 모이는» 비행이다)',
+       n1(sp.d0s) + ' → ' + n1(sp.d1s) + 'px · 생존 ' + sp.surv + '/' + sp.tot + '알(소실 ' + sp.lost
+       + ') · 안으로 온 알 ' + sp.inward + ' · 전원 기준이었다면 ' + n1(sp.d0) + ' → ' + n1(sp.d1) + 'px');
+    DSP[s.k] = sp;
   }
   /* ⚑ 660 — 종전 [D-pill](«출발 자리가 골드 알약 그 자체») 은 `fxSpendFrom` 을 직접 불러
      그 함수의 계약을 물었다. 658·660 이 그 축을 폐지했고 그 함수는 소비처가 0 이라 675 가
@@ -618,6 +653,40 @@ const INSTALL = () => {
     ok(ks.length === SITES.length && red.length > 0,
        '[R4] ★ 같은 상자·같은 사슬에 `FX_CIC_SC` 만 **0.8** 로 넣으면 [C-big] 이 실제로 빨개진다 — 허용 0 이 «이미 참인 것» 이 아니다',
        rows.map(r => r.k + ' ' + n1(r.ic) + '/' + n1(r.pl)).join(' · ') + ' · 역전 ' + (red.map(r => r.k).join('·') || '없음'));
+  }
+
+  /* ⚑⚑ 906 신설 — [R5]·[R6] «집합» 되돌림 시험 (짝으로 세운다).
+     [D-*-o] 가 906 에서 «같은 집합끼리» 로 옮겨 갔으므로, 그것이 **문턱을 넓혀 지나간 것이 아님**을
+     못박아야 한다(334·796 반려 조항). 902 [R4] 와 같은 수법이다 — 브라우저를 다시 안 띄우고
+     **실측 표본을 산수로 되돌린다**(재는 대상이 «자의 판정» 이므로 판정에 먹일 표본을 짜는 것이
+     정확히 같은 시험이다). 둘이 짝이라야 뜻이 산다:
+       [R5] 알을 **한 픽셀도 안 움직이고** 멀리 간 알만 지운 사본 → 옛 자는 빨갛고 **새 자는 초록**
+            (= 수리가 실제로 구성 축을 걷어냈다. 안 걷혔으면 이 항이 빨갛다)
+       [R6] 소실 없이 모든 알을 발원 쪽으로 되돌린 사본 → **새 자도 빨강**
+            (= «버튼으로 모이면 빨강» 이라는 658·660 폐지 축이 그대로 살아 있다) */
+  {
+    const kk = SITES.map(s => s.k).filter(k => R[k] && R[k].tr && R[k].tr.length >= 2
+      && R[k].tr[0].r && R[k].tr[0].r.length >= 4);
+    if (!kk.length) { ok(false, '[R5] 되돌릴 궤적 표본이 있다'); }
+    else {
+      const k = kk.sort((a, b2) => R[b2].tr[0].r.length - R[a].tr[0].r.length)[0];
+      const A = R[k].tr[0].r;
+      const byFar = [...A].sort((x, y) => y.d - x.d);
+      const keep = byFar.slice(Math.ceil(byFar.length / 2));       /* 멀리 간 절반이 죽었다 */
+      const cens = spread([{ t: 0, r: A }, { t: 720, r: keep.map(x => ({ i: x.i, d: x.d })) }]);
+      ok(!cens.okOld && cens.ok,
+         '[R5] ★ 알이 **한 픽셀도 안 움직이고** 멀리 간 절반만 죽은 사본 — 옛 자(전원 → 생존자)는 빨갛고'
+         + ' **새 자(같은 집합)는 초록**이다 = 906 이 걷어낸 것이 «구성» 축임을 이 자리가 직접 증명한다',
+         k + ' · 옛 ' + n1(cens.d0) + ' → ' + n1(cens.d1) + 'px(' + (cens.okOld ? '초록' : '빨강') + ')'
+         + ' · 새 ' + n1(cens.d0s) + ' → ' + n1(cens.d1s) + 'px(' + (cens.ok ? '초록' : '빨강') + ')'
+         + ' · ' + A.length + '알 → ' + keep.length + '알');
+      const conv = spread([{ t: 0, r: A }, { t: 720, r: A.map(x => ({ i: x.i, d: x.d * 0.5 })) }]);
+      ok(!conv.ok,
+         '[R6] ★ 소실 없이 모든 알을 발원 쪽으로 되돌린 사본은 **새 자로도 빨갛다** — 문턱을 넓힌 수리가'
+         + ' 아니다(334·796 · «버튼으로 모이면 빨강» 이 살아 있다)',
+         k + ' · 새 ' + n1(conv.d0s) + ' → ' + n1(conv.d1s) + 'px · 문턱 ' + DTOL + 'px · '
+         + (conv.ok ? '초록(=반려)' : '빨강'));
+    }
   }
 
   console.log('\n콘솔 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
