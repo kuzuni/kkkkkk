@@ -112,6 +112,23 @@ const OLD_BOOTSTRAP =
   ok('[2d] «무관» 으로 새는 자가 없다 — 화소를 재면 브라우저를 띄운다', byKind('none') === 0,
     px.filter(f => classifyFile(T(f)) === 'none').join(' ') || '0개');
 
+  /* 작업 931 — 여집합까지 넓힌다.
+     925 의 [2] 는 «화소를 재는 자» 만 센다. 그 여집합 44 는 화소를 안 재서 918/922 걷개도 907 깃발도
+     안 걸리지만 **291 정착·731 소실 차단기는 화소와 무관한 장치**라, 사슬 밖에 서 있으면 그 둘을 못 받는다.
+     931 이 그 44 를 «어느 장치가 실제로 뜻을 갖는가» 로 갈라 갈래별로 들이고 있다(`probe931`).
+     ⚠ **늦은 require 여야 한다** — `probe931` 이 이 파일의 `classifyFile` 을 쓰므로 맨 위에서 부르면
+       순환이 되어 `module.exports` 가 아직 안 붙은 사본을 집는다. 이 자리는 exports 뒤라 안전하다. */
+  const { census: census931 } = require('./probe931');
+  const rest931 = census931();
+  const done931 = ['A', 'C', 'D'];                     /* 931 1회차가 들인 갈래 */
+  const left = rest931.filter(r => done931.includes(r.branch));
+  console.log('  931 여집합 — 남은 사슬 밖 ' + rest931.length + ' (갈래 ' +
+    [...new Set(rest931.map(r => r.branch))].sort().join('·') + ')');
+  ok('[2e] 931 이 들인 갈래(A·C·D)에 «사슬 밖» 이 한 자도 없다 — 여집합도 같은 규칙으로 센다',
+    left.length === 0, left.map(r => r.file).join(' ') || '어긋남 0');
+  ok('[2f] 여집합에 918/922 걷개·907 깃발이 걸리는 자는 0 — 그래서 이 둘은 «화소를 재는 자» 문제였다',
+    rest931.every(r => !r.d918 && !r.d907));
+
   /* ---------------- [3] 925 가 갈아 끼운 넷 ---------------- */
   console.log('\n[3] 넷 — 등재문이 이름으로 적어 둔 그 자리');
   for (const f of SWAPPED) {

@@ -1,0 +1,38 @@
+{
+ "runs": 3,
+ "par": 1,
+ "files": [
+  "verify59.js"
+ ],
+ "all": {
+  "verify59.js": [
+   {
+    "file": "verify59.js",
+    "code": 0,
+    "ms": 689955,
+    "verdict": "V59 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| after | 30 | 3000 | 0.0% | 0.9% | 0.20 | 479px | |  | V59 PASS"
+   },
+   {
+    "file": "verify59.js",
+    "code": 0,
+    "ms": 692378,
+    "verdict": "V59 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| after | 30 | 3000 | 0.0% | 1.9% | 0.20 | 551px | |  | V59 PASS"
+   },
+   {
+    "file": "verify59.js",
+    "code": 0,
+    "ms": 687297,
+    "verdict": "V59 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| after | 30 | 3000 | 0.0% | 1.1% | 0.20 | 477px | |  | V59 PASS"
+   }
+  ]
+ }
+}

@@ -120,14 +120,25 @@ try {
 
   /* ---------------- [3] 들인 자 ---------------- */
   console.log('\n[3] 들인 자 ' + SWAPPED.length + ' — 사슬을 지나고 자기 사본이 없다');
-  const noCopy = [], noChain = [];
+  const noCopy = [], noChain = [], aliased = [], badAlias = [];
+  /* ⚠ 이름이 부딪히는 자가 셋 있다 — `probe695`·`probe791`·`probe794` 는 **자기** `const launch` 를
+     이미 갖고 있어 사슬의 `launch` 를 그대로 들이면 재선언으로 즉사한다(1회차에 `fix931 --dry` 의
+     문법 검사가 실물 전에 잡았다). 그 셋만 `pwLaunch` 로 들여온다.
+     ⇒ 게이트는 별명을 «허용» 하는 데서 멈추지 않고 **별명의 이유까지** 못박는다:
+        자기 `launch` 가 없는데 별명을 쓰면 그건 그냥 딴 이름이라 빨갛다. */
+  const RE_OWN_LAUNCH = /\b(?:const|let|var)\s+launch\s*=|function\s+launch\s*\(/;
   for (const f of SWAPPED) {
     const src = fs.readFileSync(T(f), 'utf8');
-    if (!(/\blaunch\(chromium/.test(src) && /require\((['"])\.\/pwlaunch\1\)/.test(src))) noChain.push(f);
+    const alias = /\bpwLaunch\(chromium/.test(src);
+    if (alias) aliased.push(f);
+    if (alias && !RE_OWN_LAUNCH.test(src)) badAlias.push(f);   /* 이유 없는 별명 */
+    if (!((/\blaunch\(chromium/.test(src) || alias) && /require\((['"])\.\/pwlaunch\1\)/.test(src))) noChain.push(f);
     /* 자기 사본 셋 — 직접 launch · 실행 파일 후보 · npx 사다리 */
     if (/chromium\.launch\(/.test(src) || /PW_CHROMIUM/.test(src) || /'_npx'/.test(src)) noCopy.push(f);
   }
-  ok('[3a] 전부 `launch(chromium…)` 로 띄운다', noChain.length === 0, noChain.join(' ') || '어긋남 0');
+  ok('[3a] 전부 사슬의 launch 로 띄운다 (별명 포함)', noChain.length === 0, noChain.join(' ') || '어긋남 0');
+  ok('[3a2] 별명 `pwLaunch` 를 쓴 자는 **자기 `launch` 가 있어서** 그런 것이다 (이유 없는 별명 0)',
+    badAlias.length === 0, '별명 ' + aliased.length + '자: ' + (aliased.join(' ') || '없음'));
   ok('[3b] 자기 사본(직접 launch · `PW_CHROMIUM` 후보 · npx 사다리)이 한 자도 없다',
     noCopy.length === 0, noCopy.join(' ') || '어긋남 0');
   ok('[3c] 죽은 `launchOpts()` 가 남지 않았다',
