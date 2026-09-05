@@ -16,16 +16,11 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { chromium } = (() => {
-  try { return require('playwright'); } catch (_) {}
-  const os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 없음'); process.exit(2);
-})();
+/* 작업 925 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(같은 말을 손으로 적고 있었다).
+   사슬을 안 지나면 뒤에 걸린 장치를 하나도 못 받는다 — 291 정착 · 731 소실 차단기 ·
+   907 판 결정성 깃발 · 918/922 껍데기 걷개. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const SHOTS = path.resolve(__dirname, '..', 'docs', 'shots');
@@ -33,16 +28,8 @@ const fails = [];
 const fail = (m) => { fails.push(m); console.log('  ✗ ' + m); };
 const ok = (m) => console.log('  ✓ ' + m);
 
-function launchOpts(){
-  const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean);
-  for (const p of cands) { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (e) {} }
-  return {};
-}
-
 (async () => {
-  let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  const browser = await launch(chromium);   /* 925 — 실행 파일 폴백까지 사슬이 맡는다 */
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

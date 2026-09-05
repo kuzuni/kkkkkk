@@ -18,16 +18,13 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { chromium } = (() => {
-  try { return require('playwright'); } catch (_) {}
-  const os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 없음'); process.exit(2);
-})();
+/* 작업 925 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다.
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 의 것과 같은 말인데,
+   사슬을 안 지나면 그 뒤에 걸린 장치를 **하나도** 못 받는다(291 정착 · 731 소실 차단기 ·
+   907 판 결정성 깃발 · 918/922 껍데기 걷개). 918/922 가 조건을 아무리 넓혀도 이 자는
+   안 걸리던 자리다 — 규칙이 아니라 부트스트랩이 빠져 있었다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 let pass = 0, fail = 0;
@@ -38,13 +35,7 @@ const ok = (b, name, detail) => {
 
 (async () => {
   const args = ['--allow-file-access-from-files'];
-  let browser;
-  try { browser = await chromium.launch({ args }); }
-  catch (e) {
-    const p = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
-    if (!fs.existsSync(p)) throw e;
-    browser = await chromium.launch({ executablePath: p, args });
-  }
+  const browser = await launch(chromium, { args });   /* 925 — 폴백까지 사슬이 맡는다 */
   const bctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await bctx.newPage();
   const errs = [];
