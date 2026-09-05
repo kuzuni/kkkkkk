@@ -15334,11 +15334,23 @@
      이 이동은 정오표 한 줄로 족하다 — `docs/measure/265-룰렛글씨.md` §정오표. */
   #rouSkip{width:fit-content;margin:14px 0 0 auto}
   /* ⚑ 699 — 28 보스전 HUD 의 «연출 스킵». 자리는 액션 버튼(#bossGv 283..363 · #bossRt 294..376) **아래**
-     20px 띠를 두고 396..452 이고, 좌우는 `left:0;right:0` + `justify-content:center` 로 화면 중앙이다
+     20px 띠를 두고 396..452 이고, 좌우는 `left:0;right:0` + **auto 마진**으로 화면 중앙이다
      (버튼 두 개의 중심 x540 과 같은 축 — 39·40 레퍼런스의 버튼 중심선이다).
      ⚠ 기존 요소 좌표는 한 칸도 안 건드린다 — 절대배치라 #stinfo·#bossTm·#bossHp·.bbtn 전부 Δ0px.
-     ⚠ 표시 전용 HUD(#stinfo·#bossHp)와 달리 이건 **누르는 것**이라 pointer-events 를 살려 둔다. */
-  #bossSkip{position:absolute;left:0;right:0;top:396px;justify-content:center;z-index:5;display:none}
+     ⚠ 표시 전용 HUD(#stinfo·#bossHp)와 달리 이건 **누르는 것**이라 pointer-events 를 살려 둔다.
+     ⚑ 959 — 그래서 **상자가 잉크만 해야 한다.** 699 는 가운데 정렬을 `justify-content:center` 로
+       잡았는데, 그러면 상자는 여전히 프레임 **전폭 1080**(잉크는 239.4)이라 좌우 **421.3 / 419.3px**
+       의 투명 여백이 그 y 띠를 통째로 덮는다 — 이 토글은 `pointer-events` 가 살아 있는 것이라
+       그 여백이 **탭을 먹는다**. 실측(`probe959`): 좌측 사이드 «퀘스트» 칸 중심(95, 501)의
+       최상위가 `div#bossSkip.sm-sk.sh` 이고, 그 칸을 탭하면 퀘스트 팝업 대신 **«연출 스킵» 설정이
+       뒤집힌다**(사용자가 지시한 적 없는 변경). `verify74` 「사이드 아이콘」 191/200 이 그것이다.
+       ⇒ 정렬 손잡이를 «남는 자리를 가운데로»(justify-content) 에서 **«상자를 잉크만큼»**(fit-content)
+         + auto 마진으로 바꾼다. 같은 부품의 다른 호스트 `#rouSkip` 이 이미 그 꼴이다(선례가 안에 있다).
+       ⚠ `left:50%` + `translateX(-50%)` 는 **오답이다** — `.sm-sk:active{transform:scale(.96)}` 가
+         같은 속성을 덮어써서 누르는 순간 토글이 오른쪽으로 튄다(손잡이 둘이 한 속성을 다툰다).
+       ⚠ z 를 내려 사이드를 위로 올리는 길(ⓑ)도 오답이다 — 가려짐이 «어느 칸이 위냐» 로 바뀔 뿐
+         투명 여백은 그대로 남아 그 띠의 **빈 곳** 탭이 계속 설정을 뒤집는다. */
+  #bossSkip{position:absolute;left:0;right:0;top:396px;width:fit-content;margin-inline:auto;z-index:5;display:none}
   #bossSkip.sh{display:flex}
   /* 라벨 — 패널 면(#2A2835) 위라 흰색은 세다. 320 이 남긴 «남색 상자 위 밝은 크림» 토큰과 같은 색을 쓴다. */
   .sm-sk>i{font-size:30px;line-height:56px;color:#EADCC6;--fat:#EADCC6;--fatw:.5px;transform:scaleX(.96)}
