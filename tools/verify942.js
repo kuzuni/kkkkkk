@@ -172,11 +172,78 @@ console.log('\n[6] 장부 — 932 전수에서 이 자가 B → 면역으로 옮
   const row = rows.find((r) => r.file === 'probe409g.py');
   ok('[6-a] 장부에 있고 판정이 **면역(S)** 이다', row && row.verdict === 'S', row ? row.verdict : '없음');
   const brk = rows.filter((r) => r.verdict === 'B').map((r) => r.file);
-  ok('[6-b] 주홍(B)이 **10개**로 줄었다 — 942 가 남긴 자리(1회차에 하나를 닫았다)',
-    brk.length === 10 && !brk.includes('probe409g.py'), `${brk.length}개`);
+  ok('[6-b] 주홍(B)이 **9개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c`)',
+    brk.length === 9 && !brk.includes('probe409g.py') && !brk.includes('probe409c.py'),
+    `${brk.length}개`);
   const v932 = fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8');
-  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 이름을 들고 있다)',
-    /const FIXED942 = \['probe409g\.py'\]/.test(v932) && /\[2-h\]/.test(v932));
+  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **두 이름**을 들고 있다)',
+    /const FIXED942 = \['probe409g\.py', 'probe409c\.py'\]/.test(v932) && /\[2-h\]/.test(v932));
+}
+
+/* ── [7] 2회차 — `probe409c.py` (열별 «검정 화소 수» → K 층 두께의 합) ─────── */
+console.log('\n[7] 2회차 — `probe409c.py` 열별 «검정» 이 격자에서 풀렸는가 (판정값 0~7px · ±1px = ±14%)');
+{
+  const runC = (extra) => String(py(['tools/probe409c.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  /* «K7.0   int   7.00   6.00   -1.00  (-14.3%)  20.00» 한 줄 */
+  const ph = runC(['--physics']);
+  const row = (kw, mode) => {
+    const m = ph.split('\n').find((l) => new RegExp(`^\\s*K${kw}\\s+${mode}\\s`).test(l));
+    if (!m) return null;
+    const n = m.trim().split(/\s+/);
+    return { cap: parseFloat(n[2]), ref: parseFloat(n[3]), d: parseFloat(n[4]), sum: parseFloat(n[6]) };
+  };
+  const i7 = row('7\\.0', 'int'), c7 = row('7\\.0', 'cov');
+  const i2 = row('2\\.0', 'int'), c2 = row('2\\.0', 'cov');
+
+  ok('[7-a] 두 자 모두 **칼같은 판에서는 참값 그대로** — 결함은 자의 편향이 아니라 «번짐» 이다',
+    i7 && c7 && Math.abs(i7.cap - 7) < 1e-9 && Math.abs(c7.cap - 7) < 1e-9,
+    i7 ? `int ${i7.cap} · cov ${c7.cap}` : '못 읽음');
+  ok('[7-b] ⚑ **옛 자는 번진 판만 정확히 1.00px 를 잃는다**(K7 = −14.3%) — 1:1 인데도 ref 가 얇다',
+    i7 && Math.abs(i7.d + 1.0) < 1e-9, i7 ? `${i7.cap} → ${i7.ref}` : '못 읽음');
+  ok('[7-c] ⚑⚑ 새 자는 두 판 사이 |Δ| ≤ 0.30 px — 번짐 비대칭이 사라졌다',
+    c7 && Math.abs(c7.d) <= 0.30, c7 ? `${c7.d.toFixed(2)} px` : '못 읽음');
+  /* ⚠ 덫 — 참값이 얇을수록 옛 자의 비가 커진다. 접기가 무르면 여기서 층이 통째로 사라진다. */
+  ok('[7-d] ⚑ 덫 — 참값 K2.0 에서 옛 자는 **−50%**(1.00px 만 남는다)',
+    i2 && Math.abs(i2.d + 1.0) < 1e-9 && i2.ref <= 1.0, i2 ? `${i2.cap} → ${i2.ref}` : '못 읽음');
+  ok('[7-e] 같은 자리에서 새 자는 **진짜 얇은 층을 안 먹는다** (|Δ| ≤ 0.30 · 참값의 ±20% 안)',
+    c2 && Math.abs(c2.d) <= 0.30 && Math.abs(c2.ref - 2.0) <= 0.4,
+    c2 ? `${c2.ref.toFixed(2)} (참값 2.00)` : '못 읽음');
+  ok('[7-f] 보존 — 층 두께의 **합**이 창(기둥 전체)과 같다 — 새 자는 «더 재지» 도 «덜 재지» 도 않는다',
+    c7 && i7 && Math.abs(c7.sum - i7.sum) < 1e-9 && Math.abs(c7.sum - 20.0) < 1e-9,
+    c7 ? `${c7.sum}` : '못 읽음');
+
+  /* 지문 — ref 실측. 캡처가 없어도 돈다(ref 절만). */
+  const vals = (out) => (out.match(/검정\s+((?:\s*-?\d+\.\d+)+)/g) || [])
+    .join(' ').replace(/검정/g, ' ').trim().split(/\s+/).map(parseFloat);
+  const oldV = vals(runC(['--int'])), newV = vals(runC([]));
+  const isInt = (v) => Math.abs(v - Math.round(v)) < 1e-9;
+  ok('[7-g] 자가 ref 두 코너를 다 읽는다 (열 40개)', oldV.length >= 40 && newV.length >= 40,
+    `${oldV.length} ↔ ${newV.length} 열`);
+  ok('[7-h] ⚑ **옛 자의 값은 예외 없이 정수다** — 불리언 세기의 지문',
+    oldV.length > 0 && oldV.every(isInt), `${oldV.length}개 전부`);
+  ok('[7-i] 새 자는 그 격자에서 풀린다 (0 이 아닌 값의 절반 넘게 비정수)',
+    (() => { const nz = newV.filter((v) => v > 0); return nz.filter((v) => !isInt(v)).length > nz.length / 2; })(),
+    `${newV.filter((v) => v > 0 && !isInt(v)).length}/${newV.filter((v) => v > 0).length}`);
+  ok('[7-j] 두 자의 값이 ±1.5px 안이다 — **정의가 안 바뀌었다**(걸음만 곱아졌다)',
+    oldV.length === newV.length && oldV.every((v, k) => Math.abs(v - newV[k]) <= 1.5),
+    `최대 ${Math.max(...oldV.map((v, k) => Math.abs(v - newV[k]))).toFixed(2)} px`);
+
+  /* 불변 — 창·팔레트·분류·옛 자를 한 칸도 안 건드렸다 + 사본을 안 만들었다. */
+  const src = fs.readFileSync(path.join(TOOLS, 'probe409c.py'), 'utf8');
+  ok('[7-k] 창이 그대로다 (`span=20` · 바닥값 열 `dx 45`)',
+    /span=20/.test(src) && /col_black\(px, l, t, 45, top, mode=mode\)/.test(src));
+  ok('[7-l] 분류가 그대로다 (`cls()` = 최근접 팔레트 · PAL 6색)',
+    /def cls\(c\)/.test(src) && (src.match(/\('[KBFDRS]', \(/g) || []).length === 6);
+  ok('[7-m] ⚑ **옛 자가 살아 있다**(`--int`) — 지문을 매 실행 다시 찍을 수 있다',
+    /mode = 'int' if '--int' in a else 'cov'/.test(src) && /if mode == 'int':/.test(src));
+  ok('[7-n] ⚑ **사본을 안 만들었다** — 942 1회차의 알맹이를 그대로 부른다(`probe409g.runs_from`)',
+    /from probe409g import runs_from, physics/.test(src) && !/def runs_from/.test(src));
+  const gsrc = fs.readFileSync(path.join(TOOLS, 'probe409g.py'), 'utf8');
+  ok('[7-o] 그 부름이 남의 자를 안 돌린다 (`probe409g` 가 `__main__` 가드를 든다)',
+    /if __name__ == '__main__':/.test(gsrc));
+  ok('[7-p] 캡처 없이도 돈다 — 커밋 금지 자산(96-*.png)을 전제하지 않는다',
+    /os\.path\.exists\(capf\)/.test(src) && /캡처 없음/.test(src));
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */

@@ -41,8 +41,10 @@ const RED = ['scan887.py'];
 const FIXED = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
 /* ⚑ 942 1회차 — `probe409g.py` 가 B 에서 빠졌다(`--diag` 를 «이웃 두 층에 비례로 나누는» 자로 갈아 끼웠다 ·
    자는 `tools/verify942.js`). 주홍 래칫도 «줄어든 것을 여기 다시 적어야» 지나간다 — 그 자리가 이 줄이다. */
-const FIXED942 = ['probe409g.py'];
-const BRK = ['probe352.py', 'probe384.py', 'probe409.py', 'probe409c.py', 'probe409f.py',
+/* ⚑ 942 2회차 — `probe409c.py` 가 B 에서 빠졌다(열별 «검정 화소 수» 를 **K 층 두께의 합** 으로 ·
+   `probe409g.runs_from` 을 부른다 — 사본 0). 자는 `tools/verify942.js` §7. */
+const FIXED942 = ['probe409g.py', 'probe409c.py'];
+const BRK = ['probe352.py', 'probe384.py', 'probe409.py', 'probe409f.py',
   'probe409i.py', 'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
 
 /* ⚠ 선별기의 `frac` 신호는 **관용구 이름**만 본다. 면역 판정의 근거는 그보다 넓다 —

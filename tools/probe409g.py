@@ -381,4 +381,8 @@ def main():
             print('    %s  %s' % (who, fmt_runs(rs)))
 
 
-main()
+# ⚑ 942 2회차 — **부를 수 있게 문만 달았다.** 이 파일의 알맹이(`runs_from`·`physics`)를
+#    `probe409c.py` 가 그대로 쓴다(사본을 만들지 않는다 — 402 «사본을 지운다»).
+#    가드가 없으면 `import probe409g` 가 이 `main()` 을 실행해 버린다. 셈·문턱·출력은 한 글자도 안 바뀐다.
+if __name__ == '__main__':
+    main()
