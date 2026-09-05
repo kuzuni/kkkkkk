@@ -11,7 +11,7 @@
    ref(측정표 61 §글리프 열, 1080 기준 1:1): `[`714-723 · `미`727-750 · `션`755-778 ·
    `-`785-797 · 숫자… · `]`863-873 → 어간 4 · 5 · 7 · 6 · … · 4. */
 const path = require('path');
-const { PNG } = require('pngjs');
+const PNG = require('./png913').PNG();   /* 913 — 없으면 «pngjs 없음» + 코드 2 (옛 require 는 스택 트레이스 + 코드 1) */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 

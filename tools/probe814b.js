@@ -23,7 +23,7 @@ const os = require('os');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const PNG = require('pngjs').PNG;
+const PNG = require('./png913').PNG();   /* 913 — 없으면 «pngjs 없음» + 코드 2 (옛 require 는 스택 트레이스 + 코드 1) */
 
 const ROOT = path.resolve(__dirname, '..');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'probe814b-'));

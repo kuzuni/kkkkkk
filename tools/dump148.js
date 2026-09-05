@@ -1,7 +1,7 @@
 /* 작업 148 — L1 «[미션-n]» 의 열별 잉크 화소 수를 그대로 찍어 융착 지점을 눈이 아니라 수로 본다.
    실행: node tools/dump148.js ["<b> <s> <i> <em> <u좌> <u우>"] */
 const path = require('path');
-const { PNG } = require('pngjs');
+const PNG = require('./png913').PNG();   /* 913 — 없으면 «pngjs 없음» + 코드 2 (옛 require 는 스택 트레이스 + 코드 1) */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 

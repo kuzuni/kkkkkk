@@ -641,7 +641,16 @@
 - **push 전 `node tools/smoke.js` 는 필수 게이트다(2026-08-25).** `SMOKE PASS` 가 아니면 push 하지 않는다 — 자동 플레이·팝업 전부 열기·
   NaN/undefined 검출·화면비 4종 프레임/시트 잘림을 본다. 실패하면 원인을 고쳐 다시 PASS 시킨 뒤 push. 남의 구간이 원인이면
   그 구간을 건드리지 말고 PROGRESS 비고에 «smoke 실패: …» 로 남기고 lock 을 풀고 종료한다.
-  준비: `node tools/smoke.js` 가 playwright 를 못 찾으면 `npm i --no-save playwright && npx playwright install chromium` 후 재실행.
+  준비(모듈이 없다는 말이 나오면 — «playwright 없음» 이든 **«pngjs 없음»** 이든 한 줄이다):
+  **`npm i --no-save playwright pngjs`** 후 재실행. ⚠⚠ **반드시 «한 번에» 부른다(2026-09-05, 작업 913).**
+  이 저장소는 `package.json` 이 없어 `--no-save` 를 **따로 두 번 부르면 뒤 호출이 앞 패키지를 지운다** —
+  `npm i --no-save pngjs` 한 줄이 방금 깐 playwright 를 «removed 2 packages» 로 날린다(그 반대도 같다).
+  이 사실은 LESSONS 에 이미 **세 번** 적혀 있었는데 이 «준비» 줄만 playwright 를 홀로 적고 있어
+  **교훈이 계속 다시 배워졌다** — `tools/verify878.js` 가 그 탓에 `Cannot find module 'pngjs'` 로
+  1초 즉사하고도 점수 줄이 없어 스윕에 «빨강» 이 아니라 **«없는 자»** 로 지나갔다(등재 913 · 의존을 심으니 8/8 PASS).
+  pngjs 를 부르는 자는 17개다(`grep -rl pngjs tools/`). 이제 그 자들은 모듈이 없으면
+  스택 트레이스 대신 **«pngjs 없음 — …» 한 줄 + 종료 코드 2**(110 `pw()` 와 같은 말투)로 답한다(`tools/png913.js`).
+  `npx playwright install chromium` 은 이 환경에서 다운로드가 막혀 실패한다 — 브라우저는 `/opt/pw-browsers` 에 이미 있고 `pwlaunch` 가 찾아 쓴다.
   새 팝업·탭·오버레이를 만들면 **smoke.js 의 오프너 목록·시트 id 목록에 추가**하는 것까지가 그 작업의 범위다.
 - 저장 구조를 바꾸면 세이브 마이그레이션 또는 KEY 버전을 올린다.
 - main 에 push 하면 GitHub Pages(https://kuzuni.github.io/kkkkkk/)로 자동 배포된다. 깨진 상태를 push 하지 마라.

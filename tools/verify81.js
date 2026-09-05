@@ -12,7 +12,7 @@ const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
-const { PNG } = require('pngjs');
+const PNG = require('./png913').PNG();   /* 913 — 없으면 «pngjs 없음» + 코드 2 (옛 require 는 스택 트레이스 + 코드 1) */
 
 let pass = 0, fail = 0;
 const ck = (name, ok, info) => {

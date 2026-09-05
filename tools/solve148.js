@@ -13,7 +13,7 @@
         → 어간 4 · 5 · 4 · 4 · 2
    `미`·`션` 사이는 같은 `<i>` 안이라 margin 이 아니라 `letter-spacing` 으로 민다. */
 const path = require('path');
-const { PNG } = require('pngjs');
+const PNG = require('./png913').PNG();   /* 913 — 없으면 «pngjs 없음» + 코드 2 (옛 require 는 스택 트레이스 + 코드 1) */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 

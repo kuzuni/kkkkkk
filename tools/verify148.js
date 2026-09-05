@@ -6,7 +6,7 @@
    ① 어간이 전부 양수(=융착 없음) ② 어간이 ref 값 ±2 ③ 총 잉크 폭이 ref ±4 를 동시에 본다.
    계측 방법은 `tools/solve148.js` 와 같다(형제 `visibility:hidden` + 기준컷 차분). */
 const path = require('path');
-const { PNG } = require('pngjs');
+const PNG = require('./png913').PNG();   /* 913 — 없으면 «pngjs 없음» + 코드 2 (옛 require 는 스택 트레이스 + 코드 1) */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 

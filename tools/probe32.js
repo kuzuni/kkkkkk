@@ -9,7 +9,7 @@
    실행: node tools/probe32.js [캡처파일]   */
 const fs = require('fs');
 const path = require('path');
-const { PNG } = require('pngjs');
+const PNG = require('./png913').PNG();   /* 913 — 없으면 «pngjs 없음» + 코드 2 (옛 require 는 스택 트레이스 + 코드 1) */
 
 const OFF = 60;                                   /* 하단 앵커 변환 상수 */
 const capPath = path.resolve(__dirname, '..', process.argv[2] || 'docs/review/32-r1.png');
