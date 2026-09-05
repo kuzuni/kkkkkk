@@ -19,7 +19,7 @@
 import os
 import sys
 
-from pydep937 import Image                            # 937 — 없으면 «한 줄 + 코드 2»
+from pydep937 import Image, fail                      # 937 — 없으면 «한 줄 + 코드 2» · 939 — 못 재면 코드 3
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -34,6 +34,13 @@ def lum(p):
 
 
 def scan(path):
+    # ⚑ 949(곁다리 · 923 처방) — 캡처 PNG 는 **커밋 금지 자산**이라 «기본 캡처가 없다» 가 정상이다.
+    #   그런데 이 자는 그것을 `FileNotFoundError` + 코드 1 로 냈다 — 스윕이 «빨강» 이 아니라
+    #   «없는 자» 로 지나가는 얼굴이다(913·937). 939 사전대로 **코드 3 + 한 줄**로 답한다.
+    if not os.path.exists(path):
+        fail('scan813d: 캡처가 없다 — %s' % path,
+             '`node tools/cap89.js %s --full` 로 먼저 찍거나, 잴 png 를 인자로 줘라'
+             % (path if path not in DEFAULT else 'docs/shots/949-89-2280.png'))
     im = Image.open(path).convert('RGB')
     W, H = im.size
     px = im.load()

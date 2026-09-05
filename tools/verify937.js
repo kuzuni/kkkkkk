@@ -135,7 +135,11 @@ ok(/scan885e/.test(routine) && /synth99/.test(routine),
 /* ⚑ 939 이관 — 같은 이유로 두 자가 더 면제다. `verify939`·`probe939` 는 **자식의 종료 코드 자체**가
    측정 대상이라(2 인가 3 인가) py() 로 부르면 그 순간 같이 죽어 한 항도 못 찍는다.
    ⚠ 면제는 «python3 를 직접 불러도 되는 자» 가 아니라 «그 약속을 재는 자» 뿐이다 — 늘리지 마라. */
-const EXEMPT = new Set(['verify937.js', 'verify939.js', 'probe939.js']);
+/* ⚑ 949 이관 — 같은 이유로 둘이 더 면제다. `verify949`·`probe949` 는 «그 자가 **어떤 코드로 죽는가**»
+   (1 = 스택 트레이스 즉사 ↔ 3 = 말이 있는 자기 실패)가 곧 측정 대상이라, py() 로 부르면
+   그 순간 부모가 같이 죽어 «없는 자» 를 재는 항을 한 줄도 못 찍는다.
+   ⚠ 면제는 여전히 «그 약속을 재는 자» 뿐이다 — python3 를 편하게 부르려는 자를 여기 넣지 마라. */
+const EXEMPT = new Set(['verify937.js', 'verify939.js', 'probe939.js', 'verify949.js', 'probe949.js']);
 const jsFiles = fs.readdirSync(T).filter((f) => f.endsWith('.js') && f !== 'pydep937.js' && !EXEMPT.has(f));
 const rawSpawn = [];
 const viaPy = [];
