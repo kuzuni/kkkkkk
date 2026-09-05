@@ -34,9 +34,13 @@ const MIN_EXT = 12, GAP = 3;      /* 덩이 최소 두께 · 이어 붙일 틈 (
    (맨 위 자리는 분홍 배지가 물어 토막이다) 불릿은 y299 하나다(y188·y213 은 흰 티켓 일러스트의 톱니 —
    2회차 채점 GL·GM 이 창 오염으로 못박은 자리다. 그 둘을 쓰면 «깊이 7.8~14.5» 같은 유령이 나온다). */
 const FRACS = [0.25, 0.50, 0.75, 0.90];
+/* ⚑⚑ 4회차 — **과녁을 전부 다시 쟀다.** 3회차 채점 2인(GN·GO)이 각자 «문턱 자는 ref 를 얇게 읽는다»
+   를 찾아냈고(942 «번짐 편향» 계열), `scan923.py` 의 경계 읽기를 **덮개 적분**으로 갈아 세 자가
+   0.2px 안에서 만났다(ref 배너 곧은변 GN 485.587 ↔ 이 자 485.63). 아래는 그 자의 값이다 —
+   ⚠ 옛 문턱 자의 값과 섞어 쓰지 마라(불릿 길이 92.8 ↔ 97.0 처럼 2~4px 씩 다르다). */
 const REF = {                     /* ref 실측(우리 px) — `python3 tools/scan923.py --ref [--prof]` */
-  ban: { flat: 18.57, len: 59.8, dep: 31.40, wd: [56.66, 52.87, 40.75, 28.42] },
-  bl: { flat: 26.82, len: 92.8, dep: 31.67, wd: [90.23, 81.26, 66.06, 43.88] }
+  ban: { flat: 17.54, len: 59.8, dep: 31.79, wd: [57.53, 50.80, 38.95, 26.17] },
+  bl: { flat: 24.75, len: 97.0, dep: 32.11, wd: [92.61, 82.36, 63.89, 42.26] }
 };
 const W_TOL = 2.5;                /* 옛 타원은 8자리 중 4자리에서 이 창 밖이다(§R 이 매 실행 확인한다) */
 
@@ -75,9 +79,23 @@ function rowOuter(px, W, y, x0, x1, bg) {
     x = left;
   }
   if (last < 0) return null;
-  if (last + 1 >= d.length) return x0 + last + 0.5;
-  const a = d[last], b = d[last + 1];
-  return x0 + last + 0.5 + (a === b ? 0 : (a - T) / (a - b));
+  /* ⚑⚑ 4회차 — «문턱 50% 교차» → **덮개 적분**(scan923.py 와 같은 절차 · 3회차 채점 2인이 세운 자).
+     경계 화소는 «검정 외곽선 ↔ 바탕» 두 색의 섞임뿐이므로 α = |p − bg|₁ / |검정 − bg|₁ 가 곧 덮개다.
+     ⚠ 분모는 **그 자리에서 가장 검은 화소**로 잡는다 — `d` 의 최댓값을 쓰면 «몸통(크림)» 이 잡혀
+     경계가 4px 안으로 밀린다(4회차에 한 번 밟았다). */
+  let full = 0;
+  for (let x = Math.max(0, last - 6); x <= last; x++) {
+    const i2 = (y * W + x0 + x) * 4;
+    const lum = px[i2] + px[i2 + 1] + px[i2 + 2];
+    if (full === 0 || lum < full.lum) full = { lum, d: d[x] };
+  }
+  const fd = full ? full.d : 0;
+  if (!fd) return x0 + last + 0.5;
+  let xs = last;
+  while (xs > 0 && d[xs] < 0.95 * fd) xs--;
+  let acc = 0;
+  for (let x = xs + 1; x < Math.min(d.length, last + 4); x++) acc += Math.min(1, Math.max(0, d[x] / fd));
+  return x0 + xs + 0.5 + acc;
 }
 
 function notchStats(png, box, bg) {
@@ -113,14 +131,20 @@ function notchStats(png, box, bg) {
     /* 923 3회차 — 깊이 u 에서의 세로 폭. 폭도 **부분화소**로 잰다(scan923.py `width_at` 과 같은 절차):
        u 를 처음·마지막 넘는 두 행을 바깥쪽 이웃과 선형 보간한다. 정수 행으로 세면 한 칸(1px)이
        그대로 오차가 되어 어깨의 3px 짜리 결손을 못 본다. */
+    /* ⚑⚑ 4회차 — 3회차 채점 2인(GN·GO)이 **각자** 이 함수의 결함 둘을 찾아냈다(scan923.py 쪽과 같은 둘):
+       ⓐ 아래쪽 끝의 **부호** — `j + t` 가 아니라 `j + t*step` 이다(폭이 최대 2행 부풀고, 1행의 실물
+          길이가 그림마다 달라 **ref 가 두 배 더 부푸는 비대칭 편향**이 된다) ·
+       ⓑ **창** — 이웃을 노치 안(`[a,b]`)에서만 찾아 입구 쪽 교차가 경계에 물리면 잘렸다. */
+    const MG = 3;
     const wAt = (u) => {
       const idx = [];
       for (let i = a; i <= b; i++) if (inn[i] != null && inn[i] >= u) idx.push(i);
       if (!idx.length) return null;
+      const lo2 = Math.max(0, a - MG), hi2 = Math.min(inn.length - 1, b + MG);
       const cross = (i, step) => {
         const j = i - step;
-        if (j < a || j > b || inn[j] == null) return i;
-        return inn[j] === inn[i] ? i : j + (u - inn[j]) / (inn[i] - inn[j]);
+        if (j < lo2 || j > hi2 || inn[j] == null) return i;
+        return inn[j] === inn[i] ? i : j + step * ((u - inn[j]) / (inn[i] - inn[j]));
       };
       return cross(idx[idx.length - 1], -1) - cross(idx[0], 1);
     };
@@ -201,16 +225,27 @@ async function shot(page, sel, out) {
       `[A2] ${k} 검정 «s» 폴리곤 — 바깥 꼭지 ${mx(c.sO)} = «--ntc-d»(${d}) · 안쪽 꼭지 ${d - 10} 있음(두께 10)`);
     ok(Math.abs(mx(c.uO) - (d + 12)) < 0.05 && has(c.uO, d),
       `[A3] ${k} 림 «u» 폴리곤 — 바깥 꼭지 ${mx(c.uO)} = d+12 · 안쪽이 검정 바깥(${d})과 같다 — 호가 나란히 돈다`);
-    /* 정규화 프로필 = (깊이/d, |y − 중심|/반길이) — 두 형이 같은 표를 읽으면 이 열이 같다. */
+    /* 정규화 프로필 = (깊이/d, |y − 중심|/반길이). f 격자와 v 열을 갈라 담는다 — 4회차부터
+       **격자는 공유하고 값은 형마다 다르다**(아래 [A4]·[A4b]). */
     if (c.sO && c.sY.length === c.sO.length) {
       const cy = c.sH / 2, hl = Math.max(...c.sY.map((y) => Math.abs(y - cy)));
       const half = c.sO.slice(0, c.sO.length / 4);       /* 바깥 곡선의 위쪽 절반 */
-      norm.push({ k, v: half.map((o, i) => `${(o / d).toFixed(3)}:${(Math.abs(c.sY[i] - cy) / hl).toFixed(3)}`).join(' ') });
+      norm.push({ k,
+        f: half.map((o) => (o / d).toFixed(3)).join(' '),
+        v: half.map((o, i) => (Math.abs(c.sY[i] - cy) / hl).toFixed(3)).join(' ') });
     }
   }
+  /* ⚑⚑ 4회차 — 이 항의 **방향이 뒤집혔다**(333 처방 — 자리를 비우지 않는다).
+     3회차는 «두 형이 한 표» 를 물었는데, 3회차 채점 2인이 각자의 자로 그 표가 두 형을 **반대 방향**으로
+     틀리게 한다는 것을 냈다(배너 +1.8~2.0 넓다 ↔ 불릿 −2.8~3.1 좁다). 근거는 새것이 아니다 —
+     **667 7회차가 이미 «두 형의 스캘럽 모양이 다르다»** 고 적어 뒀다(ref 배너는 거의 반원 · 불릿은 납작한 호).
+     ⇒ 지금 묻는 것은 «규약이 하나인가»(격자 공유)와 «모양이 정말 갈려 있는가»(값이 다름) 둘이다. */
   const nb = norm.find((n) => n.k === 'ban'), nl = norm.find((n) => n.k === 'bl');
-  ok(!!nb && !!nl && nb.v === nl.v,
-    `[A4] 두 형이 **한 프로필 표**를 읽는다 — 정규화 좌표 열이 같다 (형마다 손으로 적으면 빨강)`);
+  ok(!!nb && !!nl && nb.f === nl.f,
+    `[A4] 두 형이 **같은 f 격자**를 쓴다 — 표는 형마다지만 규약은 하나다 (격자를 손으로 갈라 적으면 빨강)`);
+  ok(!!nb && !!nl && nb.v !== nl.v,
+    `[A4b] 두 형의 v 열이 **다르다** — ref 두 형의 스캘럽 모양이 다르다(667 7회차 · 3회차 채점 2인 실측). `
+    + `한 표로 되돌리면 한쪽이 반드시 틀린다`);
 
   blk('§B 화소 — 찍힌 노치의 «바닥 평탄부»가 ref 과녁 언저리다 (자 = scan923.py 와 같은 절차)');
   const boxes = await page.evaluate(() => {
@@ -311,6 +346,7 @@ async function shot(page, sel, out) {
   });
   await page.waitForTimeout(120);
   const png3 = await shot(page, '#app', tmp);
+  const r4 = [];
   for (const c of boxes) {
     if (c.y < 0 || c.bottom > png3.height) continue;
     const i = ((c.y + Math.round(c.h / 2)) * png3.width + Math.min(png3.width - 3, c.x + c.w + 12)) * 4;
@@ -321,12 +357,20 @@ async function shot(page, sel, out) {
     ok(outw.some((v) => v > W_TOL),
       `[R3] ${k}(${c.id}) 2회차 타원으로 되돌리면 «깊이별 폭»(§B [B5])이 창 밖이다 — 최대 |Δ| `
       + `${outw.length ? Math.max(...outw).toFixed(2) : 'n/a'} > ${W_TOL}`);
-    /* 짝 항 — 그때 **바닥은 멀쩡하다**(1회차가 고친 자리다) ⇒ [B1] 만으로는 이 결함을 못 본다는 증거. */
+    /* 짝 자료 — 그때 바닥([B1])은 초록인가. 한 형에서라도 «바닥 초록 + 폭 빨강» 이면 [B5] 가
+       [B1] 로 대체될 수 없다는 증거다(아래 [R4]). */
     const worst2 = ns.length ? Math.min(...ns.map((n) => n.flat)) : 0;
-    ok(ns.length > 0 && Math.abs(worst2 - REF[k].flat) <= 4.5,
-      `[R4] ${k}(${c.id}) 그때 바닥 평탄부는 ${worst2.toFixed(1)} 로 **초록이다**(ref ${REF[k].flat} ±4.5) — `
-      + `[B1] 만 있었으면 3회차 결함을 못 봤다는 증거`);
+    r4.push({ k, id: c.id, flatOk: ns.length > 0 && Math.abs(worst2 - REF[k].flat) <= 4.5,
+      wdBad: outw.some((v) => v > W_TOL), flat: worst2 });
   }
+  /* ⚑ 4회차 정정 — 3회차는 이 항을 **형마다** 걸었다가 빨개졌다. 자를 덮개 적분으로 갈고 나니
+     2회차 타원은 **불릿형에서는 바닥까지** 무너뜨린다(평탄부 32.0 ↔ ref 24.75). 배너형에서는
+     여전히 «바닥 초록 + 폭 빨강» 이다 ⇒ 주장은 «모든 형에서» 가 아니라 **«적어도 한 형에서»** 다.
+     그 한 자리가 있는 한 [B5] 는 [B1] 로 대체되지 않는다. */
+  ok(r4.some((r) => r.flatOk && r.wdBad),
+    `[R4] 적어도 한 형에서 «바닥([B1])은 초록인데 깊이별 폭([B5])은 빨강» 이다 — [B5] 가 [B1] 로 `
+    + `대체되지 않는다는 증거 · ${r4.map((r) => `${r.k}:${r.flat.toFixed(1)}${r.flatOk ? '초록' : '빨강'}/`
+      + `${r.wdBad ? '폭빨강' : '폭초록'}`).join(' ')}`);
   try { require('fs').unlinkSync(tmp); } catch (e) { /* 지워졌으면 됐다 */ }
 
   blk('§Z 콘솔');

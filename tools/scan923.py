@@ -49,6 +49,7 @@ def runs(vals, minlen=1):
     return out
 
 
+COV = '--nocov' not in sys.argv    # 4회차: 덮개 적분이 기본(--nocov 로 옛 문턱 자)
 MIN_EXT_OUR = 12.0                # «카드 재질» 로 인정할 최소 덩이 두께(**우리 px** — ref 에서는 /K)
 GAP_OUR = 3.0                     # 덩이를 이어 붙일 수 있는 틈(우리 px · ref 1.45px) — 아래 ⚑
 
@@ -95,6 +96,29 @@ def outer_x(row, bg, t, k=1.0):
         x = left
     if i is None:
         return None
+    if COV:
+        # ⚑⚑ 4회차 — «문턱 50% 교차» 대신 **덮개 적분**(3회차 채점 GN·GO 가 각자 세운 자 · 942 처방).
+        #   문턱 자는 **하드 에지에서 한쪽으로 치우친다**(우리 곧은변 참값 1017.50 ↔ 문턱 자 1017.95).
+        #   ref 는 JPEG 라 경사면이 넓고 우리 렌더는 칼같아서, 그 치우침이 **두 그림에서 다르게** 걸린다
+        #   ⇒ «ref 만 얇게 읽힌다»(942 등재). 경계 화소는 «검정 ↔ 바탕» 두 색의 섞임뿐이므로
+        #   α = |p − bg|₁ / |검정 − bg|₁ 가 곧 **부분화소 덮개**다. 꽉 찬 마지막 화소부터 α 를 더한다.
+        # ⚠ 분모는 «그 자리에서 가장 검은 화소 ↔ 바탕» 이다 — `d` 의 최댓값을 쓰면 안 된다.
+        #   바탕이 어둡고(54,54,63) 카드 몸통은 크림이라 **몸통의 |Δ바탕|₁(≈579)이 검정의 것(≈171)보다
+        #   세 배 크다** ⇒ 최댓값으로 나누면 «꽉 찬 화소» 가 몸통까지 밀려 경계가 4px 안으로 들어간다
+        #   (4회차에 한 번 밟았다).
+        w0 = max(0, i - 6)
+        seg = row[w0:i + 1]
+        blk = seg[int(np.argmin(seg.sum(1)))]
+        full = float(np.abs(blk - np.array(bg)).sum())
+        if full <= 0:
+            return i + 0.5
+        xs = i
+        while xs > 0 and d[xs] < 0.95 * full:
+            xs -= 1
+        acc = 0.0
+        for x in range(xs + 1, min(len(d), i + 4)):
+            acc += min(1.0, max(0.0, d[x] / full))
+        return xs + 0.5 + acc
     if i + 1 >= len(d):
         return i + 0.5
     a, b = d[i], d[i + 1]
@@ -145,26 +169,48 @@ def notch_stats(prof, straight, i0, i1, k):
 #   ⚠ 폭도 **부분화소**로 잰다: 깊이 u 를 처음/마지막 넘는 두 행을 이웃 행과 선형 보간한다.
 
 
-def width_at(prof, straight, i0, i1, k, u):
-    """깊이 u(우리 px) 에서의 세로 폭(우리 px). 못 재면 None."""
+MARGIN = 3        # 노치 «밖» 으로 몇 행까지 이웃을 빌려 오는가 (4회차 ⓑ — 아래)
+
+
+def width_at(prof, straight, i0, i1, k, u, margin=MARGIN):
+    """깊이 u(우리 px) 에서의 세로 폭(우리 px). 못 재면 None.
+
+    ⚑⚑ **3회차 채점 2인(GN·GO)이 이 함수의 결함 둘을 각자 찾아냈다 — 4회차가 고쳤다.**
+    ⓐ **부호** — 아래쪽 끝은 `j = i+1`(노치 밖)에서 `i` 쪽으로 «올라와야» 하는데 `j + t` 로
+       **내려가고** 있었다. 폭이 최대 2행 부풀고, **1행의 실물 길이가 그림마다 다르므로**
+       (ref 1행 = 2.0628 우리px · 우리 1행 = 1 우리px) **ref 쪽이 두 배 더 부푸는 비대칭 편향**이다
+       = «우리가 ref 보다 넓다» 를 키우고 «좁다» 를 감춘다. 3회차 `NTC_PROF` 가 이 값으로 만들어졌고,
+       그래서 불릿형이 −2.8~3.1px **과교정**됐다(4회차 채점 표 참조).
+    ⓑ **창** — 이웃을 `[i0, i1]`(= 깊이 ≥ 6 인 행) 안에서만 찾아, 입구 쪽 교차가 그 경계에 물리면
+       보간을 못 하고 **행 경계로 잘렸다**(ref 불릿 25% 가 92.85 → 90.23 으로 읽혔다 — 자 둘이
+       독립으로 92.85 를 냈다). ⇒ 노치 바깥 `margin` 행까지 **이웃만** 빌린다
+       (안쪽 판정은 여전히 `[i0, i1]` 이라 옆 노치를 물지 않는다).
+    """
     ys = [i for i in range(i0, i1 + 1) if prof[i] is not None]
     if not ys:
         return None
     dep = {i: (straight - prof[i]) * k for i in ys}
+    lo_n, hi_n = max(0, i0 - margin), min(len(prof) - 1, i1 + margin)
+    nb = {i: (straight - prof[i]) * k for i in range(lo_n, hi_n + 1) if prof[i] is not None}
     inside = [i for i in ys if dep[i] >= u]
     if not inside:
         return None
     lo, hi = min(inside), max(inside)
 
     def cross(i, step):
-        """행 i 에서 바깥쪽(step 방향) 이웃과의 사이에서 깊이 u 를 지나는 자리."""
+        """행 i 에서 바깥쪽(step 방향) 이웃과의 사이에서 깊이 u 를 지나는 자리.
+
+        step = +1 이면 이웃은 위(j = i−1) · step = −1 이면 아래(j = i+1) 다. 어느 쪽이든
+        «j 에서 i 로 t 만큼 간 자리» 이므로 부호는 `j + t*step` 이다(ⓐ 가 여기서 틀렸다).
+        """
         j = i - step
-        if j not in dep:
+        if j not in nb:
             return float(i)
-        a, b = dep[j], dep[i]
+        a, b = nb[j], nb[i]
         if b == a:
             return float(i)
-        return j + (u - a) / (b - a)
+        t = (u - a) / (b - a)
+        return j + t * step
 
     return (cross(hi, -1) - cross(lo, 1)) * k
 

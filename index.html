@@ -37111,18 +37111,33 @@ const NTC_LEN   = { ban: 81, bl: 114 };           /* 노치 세로 길이. bl 11
    ⚠ **바닥(f=1)은 1회차가 이미 맞춘 자리**라 거의 안 움직였다 — 옮긴 것은 f 0.4~0.95 의 어깨다.
    ⚠ 되돌리려면 이 표를 지우고 `NTC_R = {ban:33.6, bl:47.4}` + `border-radius:50% / var(--ntc-r)` 를
    되살린다(`verify923` §R 이 그 사본으로 [B*] 가 빨개지는지 매 실행 확인한다). */
-const NTC_PROF = [[0, 1], [.10, .991], [.20, .970], [.30, .940], [.40, .902], [.50, .853],
-                  [.60, .790], [.70, .715], [.75, .673], [.80, .615], [.85, .545],
-                  [.90, .458], [.95, .372], [.98, .293], [1, .255]];
+/* ⚑⚑ **4회차 — 표가 «형마다 한 벌» 이 됐다.** 3회차는 두 형에 한 표를 썼는데, 3회차 채점 2인이
+   **각자의 자로** 그 표가 두 형을 반대 방향으로 틀리게 한다는 것을 냈다(GN·GO Δ 가 0.1px 안에서 일치):
+     배너는 깊이 75·90% 에서 **+1.8~2.0 넓고** · 불릿은 25·50% 에서 **−2.8~3.1 좁다**(과교정).
+   ⚑ 근거는 이 회차에 새로 생긴 것이 아니다 — **667 7회차가 이미 «두 형의 스캘럽 모양이 다르다»**
+   (ref 배너는 거의 반원 · 불릿은 납작한 호)라고 적고 길이를 형마다 갈라 뒀다. 3회차의 «한 표» 가
+   그 관측과 어긋나 있었고, 두 자가 그 어긋남을 값으로 찍은 것이다.
+   ⚠ 그래서 `verify923` [A4]«두 형이 한 표» 는 **방향을 뒤집어 이관**했다(333 처방) — 이제 그 항은
+   «두 형이 **같은 f 격자**를 쓰고 값만 다르다»(규약은 하나 · 모양은 ref 를 따른다)를 묻는다.
+   과녁은 3회차 채점 2인의 합의값이다(GN CUE 자 · GO 언믹싱 자 — 서로 0.3px 안). ⚠ 그 둘을 쓴 이유는
+   `scan923.py --ref` 가 **ref 를 2px 안팎 얇게 읽기 때문**이다(942 «번짐 편향» 계열 — 4회차 §3 에 등재). */
+const NTC_PROF = {
+  ban: [[0, 1], [.10, .988], [.20, .968], [.30, .938], [.40, .895], [.50, .837],
+        [.60, .771], [.70, .696], [.75, .641], [.80, .585], [.85, .518],
+        [.90, .432], [.95, .358], [.98, .300], [1, .262]],
+  bl:  [[0, 1], [.10, 1], [.20, .995], [.30, .975], [.40, .938], [.50, .881],
+        [.60, .820], [.70, .740], [.75, .685], [.80, .625], [.85, .550],
+        [.90, .455], [.95, .348], [.98, .270], [1, .235]]
+};
 /* 노치 한 자리의 «반쪽 곡선» 을 폴리곤 점으로 낸다 — 위 끝(카드 우변)에서 바닥을 돌아 아래 끝까지.
    x 는 **`var(--ntc-d)` 에서 파생**시킨다(833 §12 «셋이 한 값에서 파생» · §R 이 그 파생을 되돌림으로
    시험한다 — 숫자로 구워 넣으면 그 자가 조용히 초록이 된다). y 는 그 자리의 길이라 px 로 적는다.
    dk = 이 곡선의 최대 깊이 ÷ `--ntc-d`(구멍 안쪽 (d−10)/d · 검정 바깥 1 · 림 바깥 (d+12)/d). */
-function ntcHalf(dk, hl, cy, eo){
+function ntcHalf(pf, dk, hl, cy, eo){
   const pt = (f, s) => 'calc(100% + ' + eo + 'px - ' + (f * dk).toFixed(4) + '*var(--ntc-d)) '
     + (cy + s * hl).toFixed(2) + 'px';
-  return NTC_PROF.map(([f, v]) => pt(f, -v)).concat(
-         NTC_PROF.slice().reverse().map(([f, v]) => pt(f, v)));
+  return pf.map(([f, v]) => pt(f, -v)).concat(
+         pf.slice().reverse().map(([f, v]) => pt(f, v)));
 }
 /* 두 곡선 사이의 띠(= 링의 왼쪽 절반 — 오른쪽 절반은 `.ntc{overflow:hidden}` 이 자른다).
    ⚠ 띠는 끝에서 «0 두께로 오므라들지» 않는다 — 두 곡선의 끝점이 카드 우변 위에서 세로로
@@ -37133,10 +37148,10 @@ const ntcBand = (o, i) => 'polygon(' + o.concat(i.slice().reverse()).join(',') +
      · 림  `u` = 바깥 곡선(깊이 d+12 · 길이 len+24) ↔ 검정 바깥 곡선 사이
    림의 `eo=10` 은 «림만 카드 우변 10px 안쪽에서 자른다»(833 10회차)를 상자로 옮긴 것이다 —
    `u` 의 상자가 `inset:0 10px 0 0` 이라 `100%` 가 그만큼 짧고, 그 몫을 좌표에서 되돌린다. */
-function pvNtcPoly(len, d){
-  const cy = (len + 24) / 2;
-  return { ps: ntcBand(ntcHalf(1, len / 2, cy, 0), ntcHalf((d - 10) / d, (len - 20) / 2, cy, 0)),
-           pu: ntcBand(ntcHalf((d + 12) / d, (len + 24) / 2, cy, 10), ntcHalf(1, len / 2, cy, 10)) };
+function pvNtcPoly(len, d, k){
+  const cy = (len + 24) / 2, pf = NTC_PROF[k] || NTC_PROF.bl;
+  return { ps: ntcBand(ntcHalf(pf, 1, len / 2, cy, 0), ntcHalf(pf, (d - 10) / d, (len - 20) / 2, cy, 0)),
+           pu: ntcBand(ntcHalf(pf, (d + 12) / d, (len + 24) / 2, cy, 10), ntcHalf(pf, 1, len / 2, cy, 10)) };
 }
 function pvNotches(p, H){
   const k = p.ban ? 'ban' : 'bl', pitch = NTC_PITCH[k], len = NTC_LEN[k], out = [];
@@ -37245,7 +37260,7 @@ function renderPassPage(list){
        ⚑ 923 2회차 — 깊이는 **형에 안 갈린다**(위 `NTC_DEP` 주석 — ref 두 형이 같다). */
     const cardH = pvCardH(p), ntc = pvNotches(p, cardH), ndep = NTC_DEP;
     /* 923 3회차 — 한 카드의 노치는 길이가 다 같으므로(`pvNotches`) 띠 둘도 **카드에 한 번만** 싣는다. */
-    const npol = pvNtcPoly(ntc[0].len, ndep);
+    const npol = pvNtcPoly(ntc[0].len, ndep, p.ban ? 'ban' : 'bl');
     h += '<div class="pvc p' + p.pal + (p.ban ? ' ban1' : '') + (own ? ' own' : '') + '"'
       /* `--pvc-h` = 카드 높이를 «값 하나» 로 둔다 — `height` 도 이 변수를 읽고, 일러스트 자리
          `.art` 의 `mask-size` 도 이 변수를 읽는다(667 6회차 · 높이를 두 번 적지 않는다). */

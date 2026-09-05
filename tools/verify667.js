@@ -339,7 +339,7 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
     /* R1 — 7회차 이전(«길이 = 피치의 절반» 을 배너형에도 쓴 상태)으로 되돌린다 */
     /* ⚑ 923 3회차 — 길이는 이제 상자가 아니라 **폴리곤**이 들고 있다. 그래서 되돌림도 제품 자신의
        함수로 «길이 70 짜리 폴리곤» 을 만들어 카드에 실어야 한다(상자만 줄이면 [A3] 이 안 움직인다). */
-    const rev = pvNtcPoly(70, NTC_DEP);
+    const rev = pvNtcPoly(70, NTC_DEP, 'ban');
     c1.style.setProperty('--ntc-ps', rev.ps);
     c1.style.setProperty('--ntc-pu', rev.pu);
     c1.querySelectorAll('.ntc').forEach(n => { n.style.height = '94px'; });
