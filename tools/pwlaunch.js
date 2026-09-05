@@ -86,8 +86,15 @@ const { armBrowser } = require('./settle291');
    예외는 그대로 다시 던지므로 자의 흐름은 한 줄도 안 바뀐다 — 바뀌는 것은 «마감» 뿐이다.
    되돌림 스위치: `EVGUARD=0`(끔) · `EVGUARD=report`(적기만). 근거는 `tools/evguard731.js` 머리말. */
 const evguard = require('./evguard731');
+/* 작업 918 — 같은 자리에 «껍데기가 측정 창을 덮는다» 걷개도 건다.
+   914 가 `verify463` 에서 뿌리를 찍었다: 게임 루프를 세우지 않는 자는 자동 전투가 진 순간
+   `#defw`(inset:0 · z39)에 측정 창을 통째로 덮여 «4회 중 1회 빨강» 이 된다. 907 판별기(①∧②)를
+   갖춘 자 34 중 걷개를 손으로 건 자는 3 뿐이었다 — 31곳에 흩어 적으면 빠진 자리를 아무도 안 센다.
+   제품 경로(`openDefeat`)는 그대로 불리고 껍데기만 칠해지기 전에 걷는다(판정 0글자).
+   되돌림 스위치: `PW_SHELL918=0`(끔) · `report`(세기만). 근거는 `tools/shell918.js` 머리말. */
+const shell918 = require('./shell918');
 
-const arm = b => evguard.armBrowser(armBrowser(b));
+const arm = b => shell918.armBrowser(evguard.armBrowser(armBrowser(b)));
 
 /* 작업 907 — «판 결정성» 깃발을 한곳에서 판다.
    903 이 `verify432` 에서 뿌리를 찍었다: 한 페이지에서 스타일 태그를 갈아 끼우며 여러 판을 찍는 자는
