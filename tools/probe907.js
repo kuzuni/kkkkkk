@@ -34,62 +34,11 @@ const val = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] 
 
 /* ─────────────────────────── 1. 정적 스캔 ─────────────────────────── */
 
-/* 주석은 «묻는 말» 이 아니라 «적어 둔 말» 이라 조건 판정에서 뺀다 —
-   머리말에 `addStyleTag` 를 설명으로 적어 둔 자가 여럿이다. */
-function stripComments(s) {
-  return s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ');
-}
-
-const RE_ADD = /addStyleTag|createElement\((['"`])style\1/;
-const RE_RM = /\.remove\(\)|removeChild|textContent\s*=\s*['"`]{2}/;
-/* 두 버퍼를 같은 첨자로 비교하는 자리 — 이름은 자마다 다르므로 «모양» 으로 잡는다. */
-const RE_CMP = [
-  /Math\.abs\(\s*([A-Za-z_$][\w$]*)\s*\[[^\]]{1,40}\]\s*-\s*([A-Za-z_$][\w$]*)\s*\[/,
-  /([A-Za-z_$][\w$]*)\.data\[[^\]]{1,40}\][^;\n]{0,60}?([A-Za-z_$][\w$]*)\.data\[/,
-  /\bdiffBox\b|\bdiffPx\b|\bdiffMask\b|\bdiffRows\b|\bpxDiff\b/,
-];
-/* 문턱 — 차분을 «재는 자리 근처» 의 비교 우변이다. 변수 이름은 자마다 다르므로(`d`·`dd`·`dl`·
-   `dif`·이름 없는 식) 이름으로 찾지 않고 **차분 줄에서 ±4줄 창** 안의 `> X` / `>= X` 를 모은다.
-   X 가 식별자면 같은 파일의 `const X = 숫자` 로 한 번 푼다(`const D = 40;` 꼴이 흔하다).
-   ⚠ 이름으로 찾던 첫 판은 `verify675`(`D = 40`)·`verify463`(`tol`)을 통째로 놓쳤다. */
-const RE_THR = /(?:>|>=)\s*([A-Za-z_$][\w$]*|\d+(?:\.\d+)?)/g;
-
-function thresholdsNear(s) {
-  const lines = s.split('\n');
-  const consts = {};
-  let cm;
-  const RE_CONST = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(\d+(?:\.\d+)?)\s*[;,]/g;
-  while ((cm = RE_CONST.exec(s))) consts[cm[1]] = +cm[2];
-  const out = [];
-  lines.forEach((ln, i) => {
-    if (!RE_CMP.some(r => r.test(ln))) return;
-    const win = lines.slice(Math.max(0, i - 4), i + 5).join('\n');
-    let m;
-    RE_THR.lastIndex = 0;
-    while ((m = RE_THR.exec(win))) {
-      const v = /^\d/.test(m[1]) ? +m[1] : consts[m[1]];
-      if (v !== undefined && Number.isFinite(v)) out.push(v);
-    }
-  });
-  return out;
-}
-
-function classify(file) {
-  const raw = fs.readFileSync(path.join(TOOLS, file), 'utf8');
-  const s = stripComments(raw);
-  const add = RE_ADD.test(s);
-  const rm = RE_RM.test(s);
-  const cmp = RE_CMP.some(r => r.test(s));
-  const thr = thresholdsNear(s);
-  const small = thr.length ? Math.min(...thr) <= 64 : false;
-  const shots = (s.match(/\.screenshot\(/g) || []).length;
-  const flagged = /disable-partial-raster/.test(s) || /\bdet\(/.test(s);
-  /* ⚠ **③ 은 배제 조건으로 쓰지 않는다.** 문턱은 자마다 이름·자리가 달라(기본 인자 `tol = 8` ·
-     멀리 선언된 `const D = 40` · 이름 없는 식) 정적으로는 절반쯤만 풀린다 — 못 푼 것을 «큰 문턱» 으로
-     읽으면 **노출된 자를 조용히 뺀다**. 대상은 ①∧② 로 잡고 ③ 은 **풀린 값을 적기만** 한다
-     (실측 결과 ①∧② 를 갖춘 자의 문턱은 예외 없이 몇 단위였다 — `docs/review/907-*.md` §1 표). */
-  return { file, add, rm, cmp, thr, small, shots, flagged, hit: add && rm && cmp };
-}
+/* 조건 셋의 «정의» 는 `tools/raster907.js` 한곳에 있다 — `pwlaunch.launch()`(깃발을 켜는 쪽)와
+   이 자(세는 쪽)와 `verify907`(약속을 지키는 쪽)이 **같은 판별기**를 읽어야 «자는 대상이라는데
+   깃발은 안 켜지는» 갈림이 안 생긴다. */
+const { classify: classifyFile } = require('./raster907');
+const classify = f => classifyFile(f, TOOLS);
 
 function scan() {
   const files = fs.readdirSync(TOOLS).filter(f => /^verify.*\.js$/.test(f)).sort();
@@ -128,6 +77,10 @@ function runOnce(gate, nopr) {
       { env, maxBuffer: 1 << 26, timeout: 15 * 60e3 }, (err, so, se) => {
         const out = String(so || '') + String(se || '');
         const m = out.match(/([A-Z0-9]+)\s+(\d+)\/(\d+)/);
+        /* 진행을 stderr 로 흘린다 — 90회짜리 스윕이 «끝날 때까지 아무것도 안 보이는» 것이
+           그 자체로 다음 세션의 함정이다(이 자를 처음 돌린 907 1회차가 그랬다). */
+        process.stderr.write('    · ' + gate + ' ' + (err ? 'RED ' : 'ok  ')
+          + (m ? m[2] + '/' + m[3] : '—') + ' ' + ((Date.now() - t0) / 1000).toFixed(0) + 's\n');
         res({
           code: err ? (err.code === undefined ? 1 : err.code) : 0,
           score: m ? m[2] + '/' + m[3] : '—',
@@ -171,6 +124,11 @@ async function count(gates, runs, nopr, jobs) {
   });
   return summary;
 }
+
+module.exports = { classify, scan, count, runOnce };
+
+/* 다른 자가 `require` 로 스캐너만 빌려 쓴다(`verify907` [3]) — 그때는 본체를 돌리지 않는다. */
+if (require.main !== module) return;
 
 (async () => {
   const gatesArg = val('--gates', '');

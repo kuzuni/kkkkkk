@@ -91,13 +91,28 @@ const arm = b => evguard.armBrowser(armBrowser(b));
 
 /* 작업 907 — «판 결정성» 깃발을 한곳에서 판다.
    903 이 `verify432` 에서 뿌리를 찍었다: 한 페이지에서 스타일 태그를 갈아 끼우며 여러 판을 찍는 자는
-   **부분 리라스터(타일 재사용)** 에 노출돼 같은 화면이 «±1~19 단위 두 얼굴» 을 갖는다. 처방은 깃발
-   `--disable-partial-raster` 한 줄인데, 그것을 자마다 손으로 적으면 **빠져도 아무도 모른다**(903 §5).
-   ⇒ 상수 하나(`DET_ARGS`)로 이름을 주고, 자는 `launch(chromium, det({ … }))` 로 부른다.
-   - `det(opts)` — 기존 opts 의 args 뒤에 깃발을 «중복 없이» 붙여 돌려준다(opts 없으면 새로 만든다).
-   - `PW_NOPR=1` — 이 자를 안 고치고도 깃발을 켠다(A/B 세기용 · `tools/probe907.js` 가 쓴다).
-   - `PW_NOPR=0` — 자가 `det()` 로 박아 둔 깃발까지 **끈다**(되돌림 시험 · 깃발이 빠진 세상 재현).
-   되돌림 스위치가 양방향인 이유는 «깃발이 실제로 축을 죽이는가» 를 같은 자로 두 번 물어야 하기 때문이다. */
+   Chromium 의 **부분 리라스터(타일 재사용)** 에 노출돼 같은 화면이 «±1~19 단위 두 얼굴» 을 갖는다
+   (`verify432` 는 그 탓에 무보정 20회 중 9회 빨갰다). 처방은 깃발 `--disable-partial-raster` 한 줄이다.
+
+   ⚑ **왜 자마다 적지 않고 여기인가** — 903 이 처방을 `verify432` 안에 손으로 적으면서 스스로 적어 둔
+   위험이 «다음에 깃발이 빠져도 조용히 흔들린다» 였다. 조건 셋(① 태그 교체 ② 화소 차분 ③ 몇 단위 문턱)을
+   갖춘 게이트는 907 착수 시점에 **16개**이고 앞으로도 는다 — 16곳에 흩어 적으면 **빠진 자리를 아무도 안 센다.**
+   ⇒ 291 정착 장치·731 소실 차단기와 **같은 자리**로 옮긴다.
+
+   ⚠ **다만 «entry 가 verify 면 전부» 는 아니다.** 291·731 은 무엇을 하든 안전한 장치지만 이건 **라스터
+   경로를 바꾼다** — 게이트 200여 개의 값이 부분 리라스터 아래에서 굳었을 가능성을 907 한 세션이 전수로
+   반증할 수는 없다(1회씩만 돌려도 한 시간이 넘는다). ⇒ 켜는 대상을 **조건을 실제로 갖춘 자**로 좁힌다:
+   `raster907.qualifies(entry)` 가 entry 파일 자신을 읽어 ①∧② 를 본다. 조건을 갖춘 게이트가 새로 생기면
+   **자동으로 켜지고**(아무도 못 잊는다), 조건 밖 게이트의 세상은 **한 칸도 안 바뀐다**(907 이 실측으로
+   확인한 16개 = 정확히 켜지는 집합). 캡처 하네스(`cap*.js`)는 조건을 갖춰도 안 켠다 — 연출을 한복판에서
+   80~100ms 간격으로 찍는 자들이라 라스터 경로를 바꿀 이유가 없다(291 이 같은 이유로 같은 선을 그었다).
+
+   손잡이 셋:
+   - `det(opts)`   — entry 와 무관하게 깃발을 «중복 없이» 붙인다(게이트가 아닌 자가 결정성을 원할 때).
+   - `PW_NOPR=1`   — entry 조건을 무시하고 켠다(A/B 세기용 · `tools/probe907.js` 가 쓴다).
+   - `PW_NOPR=0`   — 자가 `det()` 로 박아 둔 깃발까지 **끈다**(되돌림 시험 — `verify907` [R] 이 이걸로
+                     «깃발이 빠진 세상» 을 재현해 [2] 가 헛초록이 아님을 못박는다).
+   약속을 이름으로 지키는 자는 `tools/verify907.js` 다. */
 const DET_ARGS = ['--disable-partial-raster'];
 
 function det(opts) {
@@ -107,19 +122,32 @@ function det(opts) {
   return o;
 }
 
-/* 환경변수는 마지막에 적용된다 — 자가 무엇을 적었든 A/B 는 환경이 이긴다. */
-function envArgs(opts) {
-  const v = process.env.PW_NOPR;
-  if (v === undefined || v === '') return opts;
+/* 깃발을 켤 것인가 — 환경변수가 entry 규칙을 이긴다(양방향). */
+const raster907 = require('./raster907');
+
+function detEnabled(ctx) {
+  const env = (ctx && ctx.env) || process.env;
+  const v = env.PW_NOPR;
+  if (v === '0' || v === 'off') return false;
+  if (v === '1' || v === 'on') return true;
+  const full = String((ctx && ctx.entry) !== undefined ? ctx.entry : (process.argv[1] || ''));
+  const base = full.replace(/\\/g, '/').split('/').pop();
+  if (!/^verify.*\.js$/.test(base)) return false;   /* 게이트만 — cap*·probe* 는 `det()` 로 골라 쓴다 */
+  return raster907.qualifies(full.includes('/') || full.includes('\\')
+    ? full : require('path').join(__dirname, base));
+}
+
+/* 순수 함수 — `verify907` [1] 이 브라우저 없이 이 규칙을 묻는다. */
+function resolveArgs(opts, ctx) {
   const o = Object.assign({}, opts || {});
   o.args = (o.args || []).slice();
-  if (v === '0') o.args = o.args.filter(a => !DET_ARGS.includes(a));
-  else for (const a of DET_ARGS) if (!o.args.includes(a)) o.args.push(a);
+  if (detEnabled(ctx)) { for (const a of DET_ARGS) if (!o.args.includes(a)) o.args.push(a); }
+  else o.args = o.args.filter(a => !DET_ARGS.includes(a));
   return o;
 }
 
 async function launch(chromium, opts) {
-  const o = envArgs(opts);
+  const o = resolveArgs(opts);
   try { return arm(await chromium.launch(o)); } catch (e) {
     const exe = findExecutable();
     if (!exe) throw e;
@@ -128,4 +156,4 @@ async function launch(chromium, opts) {
   }
 }
 
-module.exports = { pw, launch, findExecutable, det, DET_ARGS };
+module.exports = { pw, launch, findExecutable, det, resolveArgs, detEnabled, DET_ARGS };
