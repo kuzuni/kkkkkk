@@ -1,0 +1,1095 @@
+{
+ "runs": 3,
+ "par": 7,
+ "files": [
+  "bisect236.js",
+  "fnchk186.js",
+  "probe227.js",
+  "probe236.js",
+  "probe305.js",
+  "probe472.js",
+  "probe481.js",
+  "probe504.js",
+  "probe552.js",
+  "probe562.js",
+  "probe613.js",
+  "probe620.js",
+  "probe622.js",
+  "probe636.js",
+  "probe680.js",
+  "probe695.js",
+  "probe722.js",
+  "probe766.js",
+  "probe779.js",
+  "probe783.js",
+  "probe784.js",
+  "probe791.js",
+  "probe794.js",
+  "probe834.js",
+  "verify108.js",
+  "verify59.js",
+  "verify66.js"
+ ],
+ "all": {
+  "bisect236.js": [
+   {
+    "file": "bisect236.js",
+    "code": 0,
+    "ms": 17281,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "WORKTREE\tGREEN\tmax 675\tup 320\t900ms 320\t3900ms 320\tΔ 0\t관성끝 -1ms\terr 0"
+   },
+   {
+    "file": "bisect236.js",
+    "code": 0,
+    "ms": 15706,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "WORKTREE\tGREEN\tmax 675\tup 320\t900ms 320\t3900ms 320\tΔ 0\t관성끝 -1ms\terr 0"
+   },
+   {
+    "file": "bisect236.js",
+    "code": 0,
+    "ms": 18492,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "WORKTREE\tGREEN\tmax 675\tup 320\t900ms 320\t3900ms 320\tΔ 0\t관성끝 -1ms\terr 0"
+   }
+  ],
+  "fnchk186.js": [
+   {
+    "file": "fnchk186.js",
+    "code": 1,
+    "ms": 12056,
+    "scores": [
+     "36/36",
+     "11/12"
+    ],
+    "pass": false,
+    "fail": true,
+    "tail": "| 11 | 전 과정 콘솔 | 에러 0건 | 0건 | ✔ | |  | FNCHK186 FAIL — 11/12"
+   },
+   {
+    "file": "fnchk186.js",
+    "code": 1,
+    "ms": 13290,
+    "scores": [
+     "36/36",
+     "11/12"
+    ],
+    "pass": false,
+    "fail": true,
+    "tail": "| 11 | 전 과정 콘솔 | 에러 0건 | 0건 | ✔ | |  | FNCHK186 FAIL — 11/12"
+   },
+   {
+    "file": "fnchk186.js",
+    "code": 1,
+    "ms": 13881,
+    "scores": [
+     "36/36",
+     "11/12"
+    ],
+    "pass": false,
+    "fail": true,
+    "tail": "| 11 | 전 과정 콘솔 | 에러 0건 | 0건 | ✔ | |  | FNCHK186 FAIL — 11/12"
+   }
+  ],
+  "probe227.js": [
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 45933,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "    직전 프레임 공백: [{\"t\":6828,\"d\":855},{\"t\":7129,\"d\":301}] | --- run 3: fxFly 10건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 17건 (최대 1914ms)"
+   },
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 56579,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "    직전 프레임 공백: [{\"t\":4168,\"d\":182},{\"t\":4538,\"d\":253},{\"t\":4911,\"d\":302},{\"t\":5151,\"d\":160},{\"t\":5434,\"d\":284},{\"t\":5624,\"d\":190}] | --- run 3: fxFly 6건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 13건 (최대 4100ms)"
+   },
+   {
+    "file": "probe227.js",
+    "code": 0,
+    "ms": 48377,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "    프레임 공백 12건 (최대 3617ms) | --- run 3: fxFly 7건 · 비전투 묶음 0건 · #fxl 노드 0개 |     프레임 공백 12건 (최대 3679ms)"
+   }
+  ],
+  "probe236.js": [
+   {
+    "file": "probe236.js",
+    "code": 0,
+    "ms": 16810,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "  관성(glide)이 살아 있던 마지막 프레임 t=(없음)ms |   궤적 단조 증가(되돌아감 없음): YES |   콘솔 에러 0건"
+   },
+   {
+    "file": "probe236.js",
+    "code": 0,
+    "ms": 17780,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "  관성(glide)이 살아 있던 마지막 프레임 t=3366ms |   궤적 단조 증가(되돌아감 없음): YES |   콘솔 에러 0건"
+   },
+   {
+    "file": "probe236.js",
+    "code": 0,
+    "ms": 16504,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "  관성(glide)이 살아 있던 마지막 프레임 t=(없음)ms |   궤적 단조 증가(되돌아감 없음): YES |   콘솔 에러 0건"
+   }
+  ],
+  "probe305.js": [
+   {
+    "file": "probe305.js",
+    "code": 1,
+    "ms": 68562,
+    "scores": [],
+    "pass": true,
+    "fail": true,
+    "tail": "gap 분포: 최소 0.6ms · 최대 1.5ms · 제품의 관성 창 90ms |  | PROBE305 FAIL — 10회 중 1회"
+   },
+   {
+    "file": "probe305.js",
+    "code": 0,
+    "ms": 67598,
+    "scores": [
+     "10/10"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "gap 분포: 최소 0.5ms · 최대 8.7ms · 제품의 관성 창 90ms |  | PROBE305 PASS — 10/10"
+   },
+   {
+    "file": "probe305.js",
+    "code": 1,
+    "ms": 64849,
+    "scores": [],
+    "pass": true,
+    "fail": true,
+    "tail": "gap 분포: 최소 0.6ms · 최대 133.8ms · 제품의 관성 창 90ms |  | PROBE305 FAIL — 10회 중 1회"
+   }
+  ],
+  "probe472.js": [
+   {
+    "file": "probe472.js",
+    "code": 0,
+    "ms": 4908,
+    "scores": [
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS ⓔ 콘솔 에러 0건 — 없음 |  | PASS 12/12"
+   },
+   {
+    "file": "probe472.js",
+    "code": 0,
+    "ms": 5849,
+    "scores": [
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS ⓔ 콘솔 에러 0건 — 없음 |  | PASS 12/12"
+   },
+   {
+    "file": "probe472.js",
+    "code": 0,
+    "ms": 6985,
+    "scores": [
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS ⓔ 콘솔 에러 0건 — 없음 |  | PASS 12/12"
+   }
+  ],
+  "probe481.js": [
+   {
+    "file": "probe481.js",
+    "code": 1,
+    "ms": 7563,
+    "scores": [
+     "6/7"
+    ],
+    "pass": true,
+    "fail": true,
+    "tail": "PASS ⓔ 콘솔 에러 0건 — 0 |  | PROBE481 6/7"
+   },
+   {
+    "file": "probe481.js",
+    "code": 1,
+    "ms": 6408,
+    "scores": [
+     "6/7"
+    ],
+    "pass": true,
+    "fail": true,
+    "tail": "PASS ⓔ 콘솔 에러 0건 — 0 |  | PROBE481 6/7"
+   },
+   {
+    "file": "probe481.js",
+    "code": 1,
+    "ms": 7277,
+    "scores": [
+     "6/7"
+    ],
+    "pass": true,
+    "fail": true,
+    "tail": "PASS ⓔ 콘솔 에러 0건 — 0 |  | PROBE481 6/7"
+   }
+  ],
+  "probe504.js": [
+   {
+    "file": "probe504.js",
+    "code": 0,
+    "ms": 131303,
+    "scores": [
+     "17/8",
+     "08/6",
+     "20/11",
+     "60/50",
+     "13/27",
+     "15/15"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 15/15"
+   },
+   {
+    "file": "probe504.js",
+    "code": 0,
+    "ms": 126443,
+    "scores": [
+     "6/12",
+     "12/13",
+     "30/95",
+     "56/50",
+     "25/27",
+     "15/15"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 15/15"
+   },
+   {
+    "file": "probe504.js",
+    "code": 0,
+    "ms": 113028,
+    "scores": [
+     "12/1",
+     "5/2",
+     "12/4",
+     "30/20",
+     "24/27",
+     "15/15"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 15/15"
+   }
+  ],
+  "probe552.js": [
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 65653,
+    "scores": [
+     "1/6",
+     "1/6",
+     "1/6",
+     "1/6",
+     "1/6",
+     "10/10"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 65615,
+    "scores": [
+     "1/6",
+     "1/6",
+     "1/6",
+     "1/6",
+     "1/6",
+     "10/10"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 65762,
+    "scores": [
+     "1/6",
+     "1/6",
+     "1/6",
+     "1/6",
+     "1/6",
+     "10/10"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   }
+  ],
+  "probe562.js": [
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 127838,
+    "scores": [
+     "6/6"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(12550ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   },
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 126527,
+    "scores": [
+     "6/6"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(15534ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   },
+   {
+    "file": "probe562.js",
+    "code": 0,
+    "ms": 122406,
+    "scores": [
+     "6/6"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 가드를 빼면 같은 제스처(15328ms)가 click 1건 — 수리가 실제로 그것을 막고 있다 |  | PROBE562 PASS — 6/6"
+   }
+  ],
+  "probe613.js": [
+   {
+    "file": "probe613.js",
+    "code": 0,
+    "ms": 6193,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": " } | } | errors: []"
+   },
+   {
+    "file": "probe613.js",
+    "code": 0,
+    "ms": 8464,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": " } | } | errors: []"
+   },
+   {
+    "file": "probe613.js",
+    "code": 0,
+    "ms": 8644,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": " } | } | errors: []"
+   }
+  ],
+  "probe620.js": [
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 22496,
+    "scores": [
+     "88/16",
+     "63/16",
+     "13/16",
+     "25/15",
+     "88/16",
+     "8/8"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 45% |  | PROBE620 8/8 PASS"
+   },
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 29139,
+    "scores": [
+     "13/14",
+     "88/16",
+     "38/16",
+     "13/16",
+     "38/12",
+     "8/8"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 47% |  | PROBE620 8/8 PASS"
+   },
+   {
+    "file": "probe620.js",
+    "code": 0,
+    "ms": 23642,
+    "scores": [
+     "5/17",
+     "75/12",
+     "75/16",
+     "38/15",
+     "75/17",
+     "8/8"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [3-c] 그런데 둘 다 선언(29.36)에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(622 로 등재) — 이탈 46% |  | PROBE620 8/8 PASS"
+   }
+  ],
+  "probe622.js": [
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 45714,
+    "scores": [
+     "56/9",
+     "67/10",
+     "78/9",
+     "67/10",
+     "08/18",
+     "20/20"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   },
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 50554,
+    "scores": [
+     "44/10",
+     "11/10",
+     "78/10",
+     "44/8",
+     "08/18",
+     "20/20"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   },
+   {
+    "file": "probe622.js",
+    "code": 0,
+    "ms": 40827,
+    "scores": [
+     "56/9",
+     "56/8",
+     "78/9",
+     "44/7",
+     "08/18",
+     "20/20"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [Z] 콘솔 에러 0건 — 없음 |  | PROBE622 20/20 PASS"
+   }
+  ],
+  "probe636.js": [
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 196411,
+    "scores": [
+     "541/590",
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   },
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 216095,
+    "scores": [
+     "541/590",
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   },
+   {
+    "file": "probe636.js",
+    "code": 0,
+    "ms": 190688,
+    "scores": [
+     "541/590",
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ok   [2-f] pageerror 0 건 |  | PROBE636 12/12 PASS"
+   }
+  ],
+  "probe680.js": [
+   {
+    "file": "probe680.js",
+    "code": 0,
+    "ms": 53948,
+    "scores": [
+     "63/15",
+     "63/17",
+     "13/12",
+     "25/16",
+     "88/16",
+     "19/19"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 19/19"
+   },
+   {
+    "file": "probe680.js",
+    "code": 0,
+    "ms": 44932,
+    "scores": [
+     "15/15",
+     "63/15",
+     "63/15",
+     "5/15",
+     "88/15",
+     "19/19"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 19/19"
+   },
+   {
+    "file": "probe680.js",
+    "code": 0,
+    "ms": 59886,
+    "scores": [
+     "17/17",
+     "13/16",
+     "25/15",
+     "63/16",
+     "19/19"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 19/19"
+   }
+  ],
+  "probe695.js": [
+   {
+    "file": "probe695.js",
+    "code": 0,
+    "ms": 47539,
+    "scores": [
+     "76/2",
+     "10/9",
+     "88/10",
+     "4/9",
+     "04/9",
+     "23/23"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 23/23"
+   },
+   {
+    "file": "probe695.js",
+    "code": 0,
+    "ms": 52398,
+    "scores": [
+     "12/3",
+     "10/9",
+     "52/10",
+     "88/9",
+     "56/9",
+     "23/23"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 23/23"
+   },
+   {
+    "file": "probe695.js",
+    "code": 0,
+    "ms": 45030,
+    "scores": [
+     "8/2",
+     "84/10",
+     "44/10",
+     "64/9",
+     "12/9",
+     "23/23"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 23/23"
+   }
+  ],
+  "probe722.js": [
+   {
+    "file": "probe722.js",
+    "code": 0,
+    "ms": 119714,
+    "scores": [
+     "27/17",
+     "09/15",
+     "27/12",
+     "00/9",
+     "1/4",
+     "23/23"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 23/23"
+   },
+   {
+    "file": "probe722.js",
+    "code": 0,
+    "ms": 186221,
+    "scores": [
+     "36/15",
+     "54/11",
+     "46/9",
+     "00/9",
+     "1/4",
+     "23/23"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 23/23"
+   },
+   {
+    "file": "probe722.js",
+    "code": 0,
+    "ms": 175367,
+    "scores": [
+     "36/12",
+     "09/14",
+     "18/9",
+     "09/8",
+     "1/4",
+     "23/23"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 23/23"
+   }
+  ],
+  "probe766.js": [
+   {
+    "file": "probe766.js",
+    "code": 0,
+    "ms": 161853,
+    "scores": [
+     "25/22",
+     "26/18",
+     "20/19",
+     "0/17",
+     "0/17",
+     "13/13"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS R 장면만 되돌리면 같은 자가 다시 밴드 가장자리에 붙는다(되돌림) — 최소 여유 옛 0 → 새 5 · 밴드 밖 옛 0/17회 · 새 0/17회 |  | PASS 13/13"
+   },
+   {
+    "file": "probe766.js",
+    "code": 0,
+    "ms": 156501,
+    "scores": [
+     "17/26",
+     "26/20",
+     "16/23",
+     "2/17",
+     "0/17",
+     "13/13"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS R 장면만 되돌리면 같은 자가 다시 밴드 가장자리에 붙는다(되돌림) — 최소 여유 옛 -1 → 새 4 · 밴드 밖 옛 2/17회 · 새 0/17회 |  | PASS 13/13"
+   },
+   {
+    "file": "probe766.js",
+    "code": 1,
+    "ms": 157845,
+    "scores": [
+     "17/23",
+     "23/20",
+     "23/22",
+     "0/17",
+     "0/17",
+     "11/13"
+    ],
+    "pass": true,
+    "fail": true,
+    "tail": "PASS R 장면만 되돌리면 같은 자가 다시 밴드 가장자리에 붙는다(되돌림) — 최소 여유 옛 0 → 새 5 · 밴드 밖 옛 0/17회 · 새 0/17회 |  | FAIL 11/13"
+   }
+  ],
+  "probe779.js": [
+   {
+    "file": "probe779.js",
+    "code": 1,
+    "ms": 110811,
+    "scores": [
+     "208/987",
+     "1584/1844",
+     "18/18",
+     "7/8"
+    ],
+    "pass": true,
+    "fail": true,
+    "tail": "PASS R 한 마리를 **죽이지 않고** 지우면 새 항등식이 곧바로 깨진다(값을 밴드에 맞춘 것이 아니다) — 49,49,49 ≠ 50 |  | FAIL 7/8"
+   },
+   {
+    "file": "probe779.js",
+    "code": 1,
+    "ms": 106918,
+    "scores": [
+     "323/719",
+     "1158/1531",
+     "18/18",
+     "7/8"
+    ],
+    "pass": true,
+    "fail": true,
+    "tail": "PASS R 한 마리를 **죽이지 않고** 지우면 새 항등식이 곧바로 깨진다(값을 밴드에 맞춘 것이 아니다) — 49,49,49 ≠ 50 |  | FAIL 7/8"
+   },
+   {
+    "file": "probe779.js",
+    "code": 0,
+    "ms": 101776,
+    "scores": [
+     "348/953",
+     "1038/1304",
+     "18/18",
+     "8/8"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS R 한 마리를 **죽이지 않고** 지우면 새 항등식이 곧바로 깨진다(값을 밴드에 맞춘 것이 아니다) — 49,49,49 ≠ 50 |  | PASS 8/8"
+   }
+  ],
+  "probe783.js": [
+   {
+    "file": "probe783.js",
+    "code": 0,
+    "ms": 163210,
+    "scores": [
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 12/12"
+   },
+   {
+    "file": "probe783.js",
+    "code": 0,
+    "ms": 173673,
+    "scores": [
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 12/12"
+   },
+   {
+    "file": "probe783.js",
+    "code": 0,
+    "ms": 166152,
+    "scores": [
+     "12/12"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 12/12"
+   }
+  ],
+  "probe784.js": [
+   {
+    "file": "probe784.js",
+    "code": 0,
+    "ms": 40140,
+    "scores": [
+     "38/16",
+     "38/16",
+     "16/16",
+     "16/16",
+     "16/16",
+     "18/18"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 18/18"
+   },
+   {
+    "file": "probe784.js",
+    "code": 0,
+    "ms": 36190,
+    "scores": [
+     "38/16",
+     "38/16",
+     "16/16",
+     "16/16",
+     "16/16",
+     "18/18"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 18/18"
+   },
+   {
+    "file": "probe784.js",
+    "code": 0,
+    "ms": 40412,
+    "scores": [
+     "38/16",
+     "38/16",
+     "16/16",
+     "16/16",
+     "16/16",
+     "18/18"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 18/18"
+   }
+  ],
+  "probe791.js": [
+   {
+    "file": "probe791.js",
+    "code": 0,
+    "ms": 58859,
+    "scores": [
+     "25/3",
+     "11/11"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS 6 첫 처방 기각 — «양방향 shakeSep 의 min» 은 **넓게 나온 쪽 구름이 판정을 쥔다**(같은 실측에서 ×0.74) · 두 폭의 평균을 널로 쓰면 ×1.76 — 고정 장면 `orbit` 실측 — 오늘 폭 0.92 ↔ 504 트리 폭 3.08 |  | PASS 11/11"
+   },
+   {
+    "file": "probe791.js",
+    "code": 0,
+    "ms": 60880,
+    "scores": [
+     "25/3",
+     "11/11"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS 6 첫 처방 기각 — «양방향 shakeSep 의 min» 은 **넓게 나온 쪽 구름이 판정을 쥔다**(같은 실측에서 ×0.74) · 두 폭의 평균을 널로 쓰면 ×1.76 — 고정 장면 `orbit` 실측 — 오늘 폭 0.92 ↔ 504 트리 폭 3.08 |  | PASS 11/11"
+   },
+   {
+    "file": "probe791.js",
+    "code": 0,
+    "ms": 59223,
+    "scores": [
+     "25/3",
+     "11/11"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS 6 첫 처방 기각 — «양방향 shakeSep 의 min» 은 **넓게 나온 쪽 구름이 판정을 쥔다**(같은 실측에서 ×0.74) · 두 폭의 평균을 널로 쓰면 ×1.76 — 고정 장면 `orbit` 실측 — 오늘 폭 0.92 ↔ 504 트리 폭 3.08 |  | PASS 11/11"
+   }
+  ],
+  "probe794.js": [
+   {
+    "file": "probe794.js",
+    "code": 0,
+    "ms": 19852,
+    "scores": [
+     "1/1",
+     "14/14"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 14/14"
+   },
+   {
+    "file": "probe794.js",
+    "code": 0,
+    "ms": 14269,
+    "scores": [
+     "1/1",
+     "14/14"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 14/14"
+   },
+   {
+    "file": "probe794.js",
+    "code": 0,
+    "ms": 22013,
+    "scores": [
+     "1/1",
+     "14/14"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 14/14"
+   }
+  ],
+  "probe834.js": [
+   {
+    "file": "probe834.js",
+    "code": 0,
+    "ms": 8566,
+    "scores": [
+     "11/11"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [5a] 에러 0건  — 없음 |  | PROBE834 11/11 PASS"
+   },
+   {
+    "file": "probe834.js",
+    "code": 0,
+    "ms": 6285,
+    "scores": [
+     "11/11"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [5a] 에러 0건  — 없음 |  | PROBE834 11/11 PASS"
+   },
+   {
+    "file": "probe834.js",
+    "code": 0,
+    "ms": 5965,
+    "scores": [
+     "11/11"
+    ],
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [5a] 에러 0건  — 없음 |  | PROBE834 11/11 PASS"
+   }
+  ],
+  "verify108.js": [
+   {
+    "file": "verify108.js",
+    "code": 1,
+    "ms": 105046,
+    "scores": [
+     "27/31"
+    ],
+    "pass": false,
+    "fail": true,
+    "tail": "  ✗ [R] 되돌림 — 손으로 박은 등방 리터럴을 주입하면 잡힌다(541 «표 값을 손으로 곱하지 마라») |  | VERIFY108 27/31 — FAIL"
+   },
+   {
+    "file": "verify108.js",
+    "code": 1,
+    "ms": 115951,
+    "scores": [
+     "27/31"
+    ],
+    "pass": false,
+    "fail": true,
+    "tail": "  ✗ [R] 되돌림 — 손으로 박은 등방 리터럴을 주입하면 잡힌다(541 «표 값을 손으로 곱하지 마라») |  | VERIFY108 27/31 — FAIL"
+   },
+   {
+    "file": "verify108.js",
+    "code": 1,
+    "ms": 109903,
+    "scores": [
+     "27/31"
+    ],
+    "pass": false,
+    "fail": true,
+    "tail": "  ✗ [R] 되돌림 — 손으로 박은 등방 리터럴을 주입하면 잡힌다(541 «표 값을 손으로 곱하지 마라») |  | VERIFY108 27/31 — FAIL"
+   }
+  ],
+  "verify59.js": [
+   {
+    "file": "verify59.js",
+    "code": "TIMEOUT",
+    "ms": 300021,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "[i] 번들 브라우저 없음 → /opt/pw-browsers/chromium | [·] after · stage 1 · 5분 시뮬 …"
+   },
+   {
+    "file": "verify59.js",
+    "code": "TIMEOUT",
+    "ms": 300017,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "[i] 번들 브라우저 없음 → /opt/pw-browsers/chromium | [·] after · stage 1 · 5분 시뮬 …"
+   },
+   {
+    "file": "verify59.js",
+    "code": "TIMEOUT",
+    "ms": 300089,
+    "scores": [],
+    "pass": false,
+    "fail": false,
+    "tail": "[i] 번들 브라우저 없음 → /opt/pw-browsers/chromium | [·] after · stage 1 · 5분 시뮬 …"
+   }
+  ],
+  "verify66.js": [
+   {
+    "file": "verify66.js",
+    "code": 0,
+    "ms": 108371,
+    "scores": [],
+    "pass": true,
+    "fail": false,
+    "tail": "| after | 30 | 286 | 84px | 94px | 3.8s | 79px | **0.0%** | 109 | 148 | 4 | 1회 | 12.6% | 90.2% | 317px | 226px/s | 214px/s | 230px/s | 29회 | |  | V66 PASS"
+   },
+   {
+    "file": "verify66.js",
+    "code": 0,
+    "ms": 111359,
+    "scores": [],
+    "pass": true,
+    "fail": false,
+    "tail": "| after | 30 | 286 | 84px | 94px | 3.7s | 79px | **0.0%** | 91 | 167 | 4 | 1회 | 13.7% | 90.9% | 322px | 222px/s | 214px/s | 230px/s | 29회 | |  | V66 PASS"
+   },
+   {
+    "file": "verify66.js",
+    "code": 0,
+    "ms": 100627,
+    "scores": [],
+    "pass": true,
+    "fail": false,
+    "tail": "| after | 30 | 286 | 84px | 94px | 3.8s | 78px | **0.0%** | 90 | 167 | 4 | 1회 | 13.0% | 90.2% | 331px | 222px/s | 213px/s | 230px/s | 29회 | |  | V66 PASS"
+   }
+  ]
+ }
+}
