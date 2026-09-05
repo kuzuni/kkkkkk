@@ -16,6 +16,7 @@
 #   ⓑ 안내문 잉크 상·하변 = 크림/탠골드 2줄 글자의 칠해지는 자리
 #   ⓒ 패널 안쪽 하변 = 금테의 **안쪽** 첫 행(금테 자신은 제외)
 # 출력은 «위 : 아래 : 아래/위» 와 ref(1.00) 대비.
+import os
 import sys
 
 try:
@@ -23,6 +24,8 @@ try:
 except ImportError:
     print('scan813d: Pillow 없음 — `pip install pillow` 후 다시 돌려라', file=sys.stderr)
     sys.exit(1)
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 DEFAULT = ['docs/shots/754-r7-89-2280.png']
 INK_TH = 110        # 안내문 글자 잉크 ↔ 배경 문턱 (scan813c 와 같은 값)
@@ -91,14 +94,21 @@ def scan(path):
                 cur = 0
         if run >= RUN_MIN and run >= best[0]:
             best = (run, y)                            # «최장 줄» = 사다리꼴 아랫변
-    base_bot = best[1]
-    return dict(path=path, base_bot=base_bot, run=best[0], ink_top=ink_top, ink_bot=ink_bot,
+    base_u1 = best[1]
+    # ── ⚑⚑ 905 — 위 끝점도 **한 곳**(scan887)에서 읽는다 ──
+    #    U1(«최장 밝은 줄»)은 우리 캡처에서 밑판 검은 외곽선 바로 **위**(−2px · 다섯 프레임 전부)를
+    #    짚는데 레퍼런스에서는 **아래**(+2px)를 짚는다 — 부호가 뒤집히면 같은 물체가 아니다.
+    #    아래 끝점(ⓒ 조립체 최상단)과 같은 걷개로 맞춘 U3 이 약속의 자다. U1 은 대조용으로 남긴다.
+    from scan887 import find_base_u3
+    base_bot = find_base_u3(px, W, ink_top)
+    return dict(path=path, base_bot=base_bot, base_u1=base_u1, run=best[0],
+                ink_top=ink_top, ink_bot=ink_bot,
                 inner_bottom=inner_bottom, gold=gold_bottom)
 
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('-')] or DEFAULT
-    print('SCAN813D — 안내문 위:아래 여백을 «우리 렌더의 화소» 로 (ref 과녁 0.90 — 887 정정)\n')
+    print('SCAN813D — 안내문 위:아래 여백을 «우리 렌더의 화소» 로 (ref 과녁 0.750 — 905 정정)\n')
     bad = 0
     for p in args:
         r = scan(p)
@@ -107,11 +117,12 @@ def main():
         up = r['ink_top'] - r['base_bot']
         dn = r['inner_bottom'] - r['ink_bot']
         ratio = dn / up if up else 0
-        mark = 'OK' if 0.82 <= ratio <= 1.00 else '❌'   # 과녁 0.90 ± 레퍼런스 한 눈금(±10%)
+        mark = 'OK' if 0.67 <= ratio <= 0.83 else '❌'   # 과녁 0.750 ± 레퍼런스 한 눈금(±11%)
         print(f"  {p}")
         print(f"    받침 밑판 아랫변 y{r['base_bot']} (연속 {r['run']}px) · 잉크 {r['ink_top']}..{r['ink_bot']}"
               f" · 테두리 조립체 최상단 y{r['inner_bottom']}(금테 띠 하단 y{r['gold']})")
-        print(f"    위 = {up}px · 아래 = {dn}px · 아래/위 = {ratio:.3f}  [{mark}]  (ref 0.90)\n")
+        print(f"    위 = {up}px · 아래 = {dn}px · 아래/위 = {ratio:.3f}  [{mark}]  (ref 0.750"
+              f" · 옛 자 U1 y{r['base_u1']} 부호 {r['base_u1'] - r['base_bot']:+d})\n")
         if mark == '❌':
             bad += 1
     print('요약 — ' + ('전부 과녁 대역 안' if not bad else f'{bad}건이 대역 밖'))

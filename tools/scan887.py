@@ -21,6 +21,24 @@
 #
 #   위   = 받침 밑판 외곽선 최하단 → 안내문 첫 줄 **잉크** 상변
 #   아래 = 안내문 마지막 줄 **잉크** 하변 → 패널 하단 «테두리»
+#
+# ── ⚑⚑ 905 — 위 끝점도 같은 병이었다 (2026-09-05) ────────────────────────────
+# 887 은 **아래** 끝점에서 «띠 «안» 을 가리키는 자는 두 쪽에서 서로 다른 것을 훔친다» 를
+# 가렸는데, **위** 끝점(`find_base_u1`)은 손대지 않았다. 그 자는 «잉크 위 창에서 가장 긴
+# 밝은 가로줄» 인데, 두 그림에서 **밑판 검은 외곽선의 반대편**을 가리킨다:
+#   · 우리 캡처 — 밑판이 아래로 넓어지는 사다리꼴이라 최장 줄이 외곽선 **바로 위**(−2px)
+#   · 레퍼런스 — 좌우 여백 띠가 아래로 갈수록 어두워져(y624 37 → y638 11) «옆보다 밝다» 가
+#     외곽선 **아래 그림자 구간**에서 이겨 최장 줄이 외곽선 **아래**(+2px)
+# 부호가 뒤집힌다 = **같은 물체를 안 가리킨다**(다섯 프레임 전부 −2 · 레퍼런스 +2).
+# 그리고 887 이 «문턱 90/110/140 에서 안 움직인다» 고 적은 것은 위 끝점에 대해서는 **공문**이다 —
+# 그 문턱은 `find_ink` 의 것이고 `find_base_u1` 은 그 값을 아예 안 받는다. 자기 손잡이
+# (옆 대비 +d)를 흔들면 레퍼런스에서 **628 / 629 / 617 / 못 찾음**으로 움직인다.
+#
+# ⇒ 위 끝점의 약속의 자는 **U3** 이다 — 887 §3-2 가 이미 말로 적어 둔 정의
+#   («위 물체의 마지막 칠해진 행»)를 그대로 구현한 것이고, 아래 끝점(테두리 조립체 최상단
+#   = «아래 물체의 첫 칠해진 행»)과 **같은 걷개**를 쓴다. 자를 두 곳에 두지 않는다.
+#     ref y627 · 우리 y1975(2280) ⇒ **레퍼런스 확정값 = 0.750**(위 12 : 아래 9 ref px)
+#   문턱 8~12 × 폭 0.5~8% 어디서도 두 그림 다 한 자리도 안 움직인다(`verify905` [3]).
 #          ⚑ 이 «테두리» 가 갈림의 전부다. 아래에서 위로 올라오며 만나는 것은 셋이다:
 #            B1  금테 띠의 **아래쪽 안**(현행 scan813c/scan813d — 아래에서 처음 만난 밝은 줄의 한 행 위)
 #            B2  금테 띠의 **첫 행**(띠의 위쪽 경계)
@@ -45,6 +63,11 @@ REF = 'docs/ref/89-유물-팝업.png'
 REF_W = 486.0                 # 813·859 가 쓴 것과 같은 크롭 폭
 FRAME_W = 1080.0
 TH_SWEEP = (90, 110, 140)
+# 905 — «칠해진 행» 의 정의. 문턱 12 는 find_border 가 이미 쓰던 «검정에 가까운 줄» 과 같은 값이다
+# (두 끝점이 같은 어둠을 뜻해야 한다). 폭은 절대 px 가 아니라 **비율**이다 — 486 과 1080 을 한
+# 규약으로 재려면 상수를 쓰면 안 된다(A1 2차 라운드 교훈).
+DARK_TH = 12
+DARK_FRAC = 0.02
 
 
 def lum(p):
@@ -130,8 +153,38 @@ def find_ink(px, W, y_from, th):
     return ink_top, ink_bot
 
 
-def find_base(px, W, ink_top):
-    """받침 밑판 외곽선의 **최하단** — 잉크 위 창에서 «가장 긴 밝은 가로줄».
+def painted_row(px, W, y, th=DARK_TH, frac=DARK_FRAC):
+    """이 행에 «그려진 것»(절대 어둠)이 있는가 — 905 의 «칠해진 행» 판정.
+
+    ⚠ 옆(여백 띠) 대비가 아니라 **절대 어둠**이다. 레퍼런스의 좌우 여백 띠는 이 구간에서
+      아래로 갈수록 어두워지므로(y624 37 → y638 11) 대비 자는 배경 기울기를 물체로 읽는다.
+    """
+    x1, x2 = int(W * 0.28), int(W * 0.74)
+    need = max(1.0, (x2 - x1) * frac)
+    return sum(1 for x in range(x1, x2) if lum(px[x, y]) < th) >= need
+
+
+def find_base_u3(px, W, ink_top, th=DARK_TH, frac=DARK_FRAC):
+    """**905 의 약속의 자** — 위 물체(받침 밑판)의 **마지막 칠해진 행**.
+
+    잉크 상변에서 위로 올라오며 ① 글자 자신의 검은 획을 지나고 ② 여백을 지난 뒤
+    처음 만나는 «칠해진 행» 이다. 아래 끝점(`find_border` 의 조립체 최상단 = «아래 물체의
+    첫 칠해진 행»)과 **같은 걷개·같은 어둠**이라 두 끝점이 같은 뜻을 갖는다(887 §3-2).
+    """
+    lim = int(W * 0.09)                       # ref 43 · 프레임 97 — 이 창을 넘으면 랜드마크가 아니다
+    y, n = ink_top - 1, 0
+    while y > 0 and painted_row(px, W, y, th, frac) and n < lim:   # ① 글자의 검은 획
+        y -= 1; n += 1
+    n = 0
+    while y > 0 and not painted_row(px, W, y, th, frac) and n < lim:  # ② 여백
+        y -= 1; n += 1
+    return y
+
+
+def find_base_u1(px, W, ink_top, d=12):
+    """⛔ **옛 자(U1)** — 905 가 기각했다. 자리를 비우지 않고 대조용으로 남긴다(333 처방).
+
+    받침 밑판 외곽선의 «최하단» 을 «잉크 위 창에서 가장 긴 밝은 가로줄» 로 잡는다.
 
     밑판은 원근이 있는 사다리꼴이라 최장 줄이 곧 아랫변이다(scan813c 규약).
     배경 기준선은 같은 행의 좌우 여백 띠에서 뽑는다(스톤 텍스처가 문턱 하나로는 안 갈린다).
@@ -139,6 +192,8 @@ def find_base(px, W, ink_top):
     side = list(range(int(W * 0.04), int(W * 0.14))) + list(range(int(W * 0.86), int(W * 0.96)))
     cx1, cx2 = int(W * 0.28), int(W * 0.74)
     run_min = int(W * 0.115)                  # ref 56 · 프레임 124 — 밑판 그림자는 이보다 짧다
+    # ⚑ 905 — `d`(옆 대비 문턱)가 **이 자의 진짜 손잡이**다. 887 이 흔든 90/110/140 은
+    #   `find_ink` 것이라 여기 한 줄도 안 닿는다. d 를 흔들면 레퍼런스가 628/629/617/못 찾음이다.
     # ⚠ 창을 넓히면 **사발**(밑판보다 넓다)이 «최장 줄» 을 가져간다 — 813 의 두 자와 같은 폭으로 좁힌다
     #   (scan813d 는 프레임 90px = 8.3%W · scan813c 는 ref 40px = 8.2%W).
     best = (0, None)
@@ -146,7 +201,7 @@ def find_base(px, W, ink_top):
         base = sum(lum(px[x, y]) for x in side) / len(side)
         run = cur = 0
         for x in range(cx1, cx2):
-            if lum(px[x, y]) - base > 12:
+            if lum(px[x, y]) - base > d:
                 cur += 1
                 run = max(run, cur)
             else:
@@ -169,15 +224,41 @@ def measure(path, native_w):
         ink_top, ink_bot = find_ink(px, W, b['dark_top'] - 1, th)
         if ink_top is None:
             continue
-        base, run = find_base(px, W, ink_top)
+        base1, run = find_base_u1(px, W, ink_top)
+        base = find_base_u3(px, W, ink_top)              # 905 — 약속의 자
         if base is None:
             continue
         up = ink_top - base
+        up1 = (ink_top - base1) if base1 is not None else None
         ends = dict(B1=b['gold_bot'] - 1, B2=b['gold_top'], B3=b['dark_top'])
-        out['th'][th] = dict(ink_top=ink_top, ink_bot=ink_bot, base=base, run=run, up=up,
+        out['th'][th] = dict(ink_top=ink_top, ink_bot=ink_bot, base=base, base_u1=base1,
+                             run=run, up=up, up_u1=up1,
                              down={n: v - ink_bot for n, v in ends.items()},
-                             ratio={n: round((v - ink_bot) / up, 3) for n, v in ends.items()})
+                             ratio={n: round((v - ink_bot) / up, 3) for n, v in ends.items()},
+                             ratio_u1=({n: round((v - ink_bot) / up1, 3) for n, v in ends.items()}
+                                       if up1 else None))
     return out
+
+
+def sweep(path, native_w):
+    """905 — **두 자를 각자의 손잡이로** 흔든다. 흔들리는 자는 약속을 못 맡는다."""
+    im = Image.open(path).convert('RGB')
+    W, H = im.size
+    px = im.load()
+    b = find_border(px, W, H)
+    if not b:
+        return None
+    ink_top, _ = find_ink(px, W, b['dark_top'] - 1, 110)
+    if ink_top is None:
+        return None
+    u1 = {d: find_base_u1(px, W, ink_top, d)[0] for d in (4, 6, 8, 10, 12, 14, 16, 20, 25, 30)}
+    u3 = {}
+    for th in (8, 10, 12, 15, 18, 25):
+        for fr in (0.005, 0.01, 0.02, 0.04, 0.08):
+            u3[f'{th}/{fr}'] = find_base_u3(px, W, ink_top, th, fr)
+    core = [v for k, v in u3.items() if int(k.split('/')[0]) <= 12]
+    return dict(path=path, ink_top=ink_top, u1=u1, u3=u3,
+                u1_span=len(set(u1.values())), u3_core_span=len(set(core)))
 
 
 def fmt(r):
@@ -187,7 +268,8 @@ def fmt(r):
           f" (띠 두께 {b['gold_bot'] - b['gold_top'] + 1}px)")
     for th, d in r['th'].items():
         up_f = d['up'] * r['k']
-        print(f"    [문턱 {th}] 밑판 아랫변 y{d['base']}(연속 {d['run']}px) · 잉크 {d['ink_top']}..{d['ink_bot']}"
+        sign = '' if d['base_u1'] is None else f"(U1 y{d['base_u1']} · 부호 {d['base_u1'] - d['base']:+d})"
+        print(f"    [문턱 {th}] 밑판 마지막 칠해진 행 y{d['base']} {sign} · 잉크 {d['ink_top']}..{d['ink_bot']}"
               f" · 위 {d['up']}px = {up_f:.1f} 프레임px")
         for n, label in (('B1', '금테 띠 «안»(현행 813 자)'), ('B2', '금테 띠 첫 행'),
                          ('B3', '어두운 안쪽 선 첫 행')):
@@ -201,6 +283,23 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith('-')]
     shots = args or sorted(glob.glob('docs/shots/*-89-*.png'))
     shots = [s for s in shots if 'strip' not in s]
+    if '--sweep' in sys.argv:
+        # 905 — 두 자를 각자의 손잡이로 흔든다
+        out = dict(ref=sweep(REF, REF_W), caps=[])
+        for s in shots:
+            v = sweep(s, FRAME_W)
+            if v:
+                out['caps'].append(v)
+        if '--json' in sys.argv:
+            print(json.dumps(out, ensure_ascii=False, indent=1))
+            return 0
+        for r in [out['ref']] + out['caps']:
+            print(f"  {r['path']} (잉크 상변 y{r['ink_top']})")
+            print(f"    U1 옆대비 d 4~30      → {sorted(set(str(v) for v in r['u1'].values()))}"
+                  f"  ({r['u1_span']} 가지)")
+            core = sorted(set(v for k, v in r['u3'].items() if int(k.split('/')[0]) <= 12))
+            print(f"    U3 문턱 8~12 × 폭 .5~8% → {core}  ({r['u3_core_span']} 가지)")
+        return 0
     print('SCAN887 — 안내문 위:아래 여백의 «자» 를 정하는 자 (레퍼런스와 캡처를 한 규약으로)\n')
     ref = measure(REF, REF_W)
     if not ref:
@@ -221,7 +320,7 @@ def main():
         print(json.dumps(dict(ref=ref, caps=caps), ensure_ascii=False, indent=1))
         return 0
     # ── 요약 — 끝점 선택이 답을 얼마나 흔드는가 ──
-    print('■ 끝점 선택이 흔드는 폭 (문턱 110 · 아래/위)')
+    print('■ 끝점 선택이 흔드는 폭 (문턱 110 · 아래/위 · 위 끝점 = U3)')
     th = 110
     print(f"    {'':22}{'레퍼런스':>10}{'우리(2280)':>12}{'차이':>10}")
     ours = next((c for c in caps if '2280' in c['path']), caps[0] if caps else None)
@@ -230,8 +329,22 @@ def main():
         cc = ours['th'][th]['ratio'][n] if ours else 0
         print(f"    {n} {label:<19}{rr:>10.3f}{cc:>12.3f}{(cc - rr) / rr * 100:>9.1f}%")
     print()
-    print('  ⚑ 레퍼런스 한 눈금 = 프레임 %.2f px 다 — 위·아래가 각 9~10 ref px 이므로' % (FRAME_W / REF_W))
-    print('    ±1 눈금이 비를 ±10% 흔든다. 이보다 좁은 대역은 레퍼런스가 감당 못 하는 정밀도다.')
+    # ── 905 — 위 끝점을 옛 자(U1)로 잡으면 어떻게 되는가 ──
+    print('■ 905 — 위 끝점의 두 자 (문턱 110)')
+    print(f"    {'':22}{'레퍼런스':>10}{'우리(2280)':>12}")
+    ru, cu = ref['th'][th], (ours['th'][th] if ours else None)
+    print(f"    {'U3 마지막 칠해진 행':<19}{ru['base']:>10}{(cu['base'] if cu else 0):>12}")
+    print(f"    {'U1 가장 긴 밝은 줄':<19}{ru['base_u1']:>10}{(cu['base_u1'] if cu else 0):>12}")
+    print(f"    {'U1 − U3 (부호)':<19}{ru['base_u1'] - ru['base']:>+10}"
+          f"{((cu['base_u1'] - cu['base']) if cu else 0):>+12}"
+          "   ← 부호가 뒤집히면 두 그림에서 다른 물체를 가리킨 것이다")
+    print(f"    {'B3 아래/위 (U1 로)':<19}{ru['ratio_u1']['B3']:>10.3f}"
+          f"{(cu['ratio_u1']['B3'] if cu else 0):>12.3f}")
+    print(f"    {'B1 아래/위 (U1 로 = 옛 규약 한 벌)':<0}  {ru['ratio_u1']['B1']:.3f}"
+          f" ↔ {(cu['ratio_u1']['B1'] if cu else 0):.3f}")
+    print()
+    print('  ⚑ 레퍼런스 한 눈금 = 프레임 %.2f px 다 — 위 12 · 아래 9 ref px 이므로' % (FRAME_W / REF_W))
+    print('    ±1 눈금이 비를 ±11% 흔든다. 이보다 좁은 대역은 레퍼런스가 감당 못 하는 정밀도다.')
     return 0
 
 

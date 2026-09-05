@@ -37,10 +37,16 @@ const BASE = 2280;
    레퍼런스의 위·아래는 각 9~10 **ref px** 이고 한 눈금이 프레임 2.22px 다. ±1 눈금이 비를
    ±10% 흔들므로 **그보다 좁은 대역은 레퍼런스가 감당 못 하는 정밀도**다(7회차의 0.92~1.08 은
    틀린 과녁을 담은, 근거보다 좁은 대역이었다). */
-const REF_RATIO = 0.90;
-const BAND = [0.82, 1.00];
-/* `verify813` [3] 이 쓰는 거울 상수 — 화소 − 상자. 여기 [5] 가 실측으로 지킨다. */
-const MIRROR = { up: 3, dn: -3, tol: 1.2 };
+/* ⚑⚑ 905 이관 — **위 끝점의 자가 바뀌어 과녁이 0.90 → 0.750 으로 옮겨졌다.**
+   887 은 아래 끝점만 «칠해진 행» 규약으로 세우고 위 끝점은 옛 자(U1 = 가장 긴 밝은 가로줄)에
+   두었는데, 그 자가 두 그림에서 밑판 외곽선의 **반대편**을 짚고 있었다(우리 −2px · ref +2px).
+   위도 같은 걷개로 재면 레퍼런스는 위 12 : 아래 9 ref px 다. 상세 `docs/review/905-안내문위끝점자.md`.
+   대역도 같은 방법으로 다시 뽑았다 — ±1 눈금이 (9±1)/12 = 0.667~0.833 · 9/(12±1) = 0.692~0.818. */
+const REF_RATIO = 0.750;
+const BAND = [0.67, 0.83];
+/* `verify813` [3] 이 쓰는 거울 상수 — 화소 − 상자. 여기 [5] 가 실측으로 지킨다.
+   905 — 위 끝점이 2px 내려오면서 위 거울이 +3 → **+0.7** 이 됐다(아래는 그대로 −2.6). */
+const MIRROR = { up: 0.7, dn: -3, tol: 1.2 };
 
 let pass = 0, fail = 0;
 const ok = (cond, title, got) => {
@@ -132,12 +138,14 @@ const MEASURE = () => {
       `최대 진폭 ${m.toFixed(3)} (ref ${rt(ref, 'B3').toFixed(3)} · 캡처 ${rt(caps[0], 'B3').toFixed(3)})`);
   }
 
-  /* ── [4] 확정값 — 레퍼런스는 **0.90** 이다(옛 1.00 은 띠 «안» 을 경계로 잡은 값) ── */
+  /* ── [4] 확정값 — 레퍼런스는 **0.750** 이다 ──
+     905 이관: 옛 규약 «한 벌»(위 U1 + 아래 금테 띠 «안»)은 같은 그림에서 1.000 을 낸다.
+     두 착시가 **비만 상쇄**해 1.00 으로 읽히던 것이 이 값이다(887 이 아래를, 905 가 위를 걷었다). */
   {
-    const v = rt(ref, 'B3'), old = rt(ref, 'B1');
+    const v = rt(ref, 'B3'), old = ref.th[TH].ratio_u1.B1;
     ok(Math.abs(v - REF_RATIO) < 0.005 && Math.abs(old - 1.00) < 0.005,
-      '[4] 레퍼런스 확정값 = **0.90**(위 10 : 아래 9 ref px) · 같은 그림에서 옛 규약은 1.00 을 낸다',
-      `조립체 최상단 ${v.toFixed(3)} · 금테 띠 «안» ${old.toFixed(3)} · 위 ${ref.th[TH].up} : 아래 ${ref.th[TH].down.B3} ref px`);
+      '[4] 레퍼런스 확정값 = **0.750**(위 12 : 아래 9 ref px) · 같은 그림에서 옛 규약 한 벌(U1 + 띠 «안»)은 1.00 을 낸다',
+      `조립체 최상단 ${v.toFixed(3)} · 옛 규약 한 벌 ${old.toFixed(3)} · 위 ${ref.th[TH].up} : 아래 ${ref.th[TH].down.B3} ref px`);
   }
 
   /* ── [5] 짝 항 — `verify813` [3] 의 거울 상수가 실제 화소와 맞는가 ──
@@ -164,9 +172,9 @@ const MEASURE = () => {
   {
     const vals = caps.map(c => rt(c, 'B3'));
     ok(vals.every(v => v >= BAND[0] && v <= BAND[1]),
-      `[6] 제품의 **화소** 아래/위 비가 과녁 0.90(대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
+      `[6] 제품의 **화소** 아래/위 비가 과녁 0.750(대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
       caps.map((c, i) => path.basename(c.path).replace(/^887-|\.png$/g, '') + ':' + vals[i].toFixed(3)).join(' · ') +
-      ' · 887 전(.5 분할)은 0.760 이었다');
+      ' · 905 전(.4737·T+2.57)은 1.000 이었다');
   }
 
   /* ── [R] 되돌림 — **제품을 887 이전(.5 분할)으로 되돌린 사본**에 두 규약을 다 대 본다 ──
@@ -181,7 +189,7 @@ const MEASURE = () => {
     /* ⚠ 813 10회차 — 제품의 분할이 «비례 .551» 에서 «어파인(.4737·T + 2.57)» 으로 바뀌었다.
        거울 오프셋이 절대량이라 총량이 프레임마다 다르면 비례 계수로는 화소 비가 샌다(1600 0.810).
        되돌림 대상 문자열만 옮긴다 — 사본이 만드는 세계(7회차 .5)는 그대로다. */
-    const NEW = 'var(--rw-g3)) * .4737 + 2.57px * var(--rwc,1)));', OLD = 'var(--rw-g3)) * .5));';
+    const NEW = 'var(--rw-g3)) * .4286 + 1.21px * var(--rwc,1)));', OLD = 'var(--rw-g3)) * .5));';
     const neg = path.join(ROOT, `.v887-neg-${process.pid}.html`);
     let rOld = null, rNew = null, note = '';
     if (!src.includes(NEW)) {
@@ -204,14 +212,20 @@ const MEASURE = () => {
       const o = execFileSync('python3', [path.join(__dirname, 'scan887.py'), '--json', shot],
         { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
       const negScan = JSON.parse(o.slice(o.indexOf('{'))).caps[0];
-      rOld = negScan.th[TH].ratio.B1;
+      /* ⚑ 905 이관 — «옛 규약» 은 이제 **한 벌**(위 U1 + 아래 금테 띠 «안»)이다.
+         887 세대가 «두 착시가 비만 상쇄한다» 고 적은 그 짝이고, 그래야 이 항이
+         887 이 실제로 본 그림(ref 1.000 ↔ 옛 제품 0.96)을 그대로 재현한다. */
+      rOld = negScan.th[TH].ratio_u1.B1;
       rNew = negScan.th[TH].ratio.B3;
     }
-    const dOld = rOld == null ? null : Math.abs(rOld - rt(ref, 'B1')) / rt(ref, 'B1') * 100;
+    const refOld = ref.th[TH].ratio_u1.B1;
+    const dOld = rOld == null ? null : Math.abs(rOld - refOld) / refOld * 100;
     const dNew = rNew == null ? null : Math.abs(rNew - rt(ref, 'B3')) / rt(ref, 'B3') * 100;
-    ok(rOld != null && dOld < 6 && dNew > 12,
-      '[R] **887 이전(.5)으로 되돌린 사본** — 옛 규약으로는 ref 와 4% 안(결함 안 보임) · 새 규약으로는 15% 차(결함)',
-      note || `옛 규약 ref ${rt(ref, 'B1').toFixed(3)} ↔ 옛 제품 ${rOld.toFixed(3)} (차 ${dOld.toFixed(1)}%) · ` +
+    /* 905 — 문턱 12 → 9. 위 끝점이 정정되며 «새 규약» 쪽 차가 15.6% → 10.1% 로 줄었다
+       (그 대신 905 자신의 되돌림 시험이 33% 를 낸다 — `verify905` [R]). */
+    ok(rOld != null && dOld < 6 && dNew > 9,
+      '[R] **887 이전(.5)으로 되돌린 사본** — 옛 규약 한 벌로는 ref 와 4% 안(결함 안 보임) · 새 규약으로는 10% 차(결함)',
+      note || `옛 규약 한 벌 ref ${refOld.toFixed(3)} ↔ 옛 제품 ${rOld.toFixed(3)} (차 ${dOld.toFixed(1)}%) · ` +
       `새 규약 ref ${rt(ref, 'B3').toFixed(3)} ↔ 옛 제품 ${rNew.toFixed(3)} (차 ${dNew.toFixed(1)}%)`);
   }
 

@@ -23,6 +23,7 @@
 #   깔려 있어 문턱 하나로는 못 가른다. 그래서 같은 행의 **좌우 여백 띠**(물체가 없는 자리)를
 #   그 행의 배경 기준선으로 삼아 «중앙 띠가 배경보다 얼마나 밝은가» 로 묻고, 그 초과가
 #   가로로 **길게 이어지는 줄**만 외곽선으로 인정한다. 밑판 아래의 그림자는 길이가 짧아 탈락한다.
+import os
 import sys
 
 try:
@@ -30,6 +31,8 @@ try:
 except ImportError:                                   # 자가 환경 때문에 죽지 않게
     print('scan813c: Pillow 없음 — `pip install pillow` 후 다시 돌려라', file=sys.stderr)
     sys.exit(1)
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 REF = 'docs/ref/89-유물-팝업.png'
 K = 1080 / 486.0            # 크롭 폭 → 프레임 폭 환산(859·813 이 쓴 것과 같은 상수)
@@ -108,27 +111,39 @@ def main():
     plate_top = min(edges)[0]
     plate_bot = max(e[0] for e in edges if e[1] == max(x[1] for x in edges))
 
-    above, below = ink_top - plate_bot, inner - ink_bot
+    # ── ⚑⚑ 905 — 위 끝점을 **한 곳**(scan887)에서 읽는다 ──
+    #    `plate_bot`(가장 긴 밝은 줄 = U1)은 이 그림에서 밑판 검은 외곽선의 **아래**(+2px)를
+    #    짚는다 — 좌우 여백 띠가 아래로 갈수록 어두워져(y624 37 → y638 11) «옆보다 밝다» 가
+    #    그림자 구간에서 이기기 때문이다. 우리 캡처에서는 같은 자가 외곽선 **위**(−2px)를
+    #    짚으므로 **두 그림에서 다른 물체**를 잰다. 아래 끝점(ⓒ)과 같은 걷개(«칠해진 행»)로
+    #    맞춘 것이 U3 이고, 그 값이 이 자의 답이다. U1 은 대조용으로 계속 찍는다(333 처방).
+    from scan887 import find_base_u3
+    base_u3 = find_base_u3(px, W, ink_top)
+
+    above, below = ink_top - base_u3, inner - ink_bot
+    above_u1 = ink_top - plate_bot
     ratio = below / above
 
     print('SCAN813C — 안내문 위:아래 여백의 «세 번째 자» (레퍼런스 %s · %dx%d)' % (REF, W, H))
     print()
-    print('  [ⓐ] 받침 밑판 — 윗변 y%d · **아랫변 y%d**(가로 연속 %dpx = 최장)'
-          % (plate_top, plate_bot, max(x[1] for x in edges)))
-    print('       ⇒ 밑판은 아래로 넓어지는 사다리꼴이다(원근) — 최장 줄이 곧 아랫변.')
+    print('  [ⓐ] 받침 밑판 — **마지막 칠해진 행 y%d**(905 · U3) · 옛 자 U1 «최장 밝은 줄» y%d (부호 %+d)'
+          % (base_u3, plate_bot, plate_bot - base_u3))
+    print('       ⇒ 우리 캡처에서 같은 U1 은 외곽선 **위**(−2)를 짚는다 — 부호가 뒤집히면 다른 물체다.')
     print('  [ⓑ] 안내문 잉크 — 상변 y%d · 하변 y%d (2줄)' % (ink_top, ink_bot))
     print('  [ⓒ] 패널 안쪽 하변 — y%d = 테두리 조립체 최상단 (어두운 안쪽 선 y%d..%d · 금테 띠 y%d..%d)'
           % (inner, b['dark_top'], b['gold_top'] - 1, b['gold_top'], b['gold_bot']))
     print()
-    print('  위(수반 하변 → 잉크 상변)   = %2d ref px  = **%.1f** 프레임 px' % (above, above * K))
+    print('  위(밑판 마지막 칠해진 행 → 잉크 상변) = %2d ref px = **%.1f** 프레임 px  (U1 로는 %d)'
+          % (above, above * K, above_u1))
     print('  아래(잉크 하변 → 금테 안쪽) = %2d ref px  = **%.1f** 프레임 px' % (below, below * K))
     print('  아래/위 = **%.2f**' % ratio)
     print()
-    print('  대조 — 1회차 CF·CG 0.58~0.62 · 5회차 CP 0.75 · CQ 0.82 · 6·7회차 CR·CS 1.00 · **887 확정 0.90**')
+    print('  대조 — 1회차 CF·CG 0.58~0.62 · 5회차 CP 0.75 · CQ 0.82 · 6·7회차 CR·CS 1.00 ·')
+    print('         887 0.90(아래 끝점만 정정) · **905 확정 0.750**(위 끝점까지 같은 걷개로)')
     print('  ⚑ 887 재정정 — 7회차의 1.00 은 경계를 **금테 띠 «안»** 으로 잡은 값이다. 띠 두께가')
     print('    레퍼런스 2px ↔ 우리 캡처 5px 이라 그 규약은 두 쪽에서 서로 다른 것을 잰다(거짓 일치).')
-    print('    테두리 조립체 최상단으로 맞추면 **위 10 : 아래 9 = 0.90** 이고, 같은 자를 우리 캡처에')
-    print('    대면 **0.76** 이다(`tools/scan887.py` · `tools/scan813d.py`).')
+    print('    테두리 조립체 최상단으로 맞추면 아래가 9 ref px 다. 905 가 위 끝점까지 같은 걷개로')
+    print('    맞추자 위가 10 → **12** 가 됐고 ⇒ **위 12 : 아래 9 = 0.750**(`tools/scan887.py`).')
     print('  ⇒ 1회차의 0.58~0.62 는 밑판 아랫변이 아니라 밑판 **안쪽**(y%d~%d 대)을 수반 하변으로' % (plate_top, plate_bot - 2))
     print('    읽은 값이다(그 자리로 재면 위 14~17 ref px) — 그 갈림은 5회차 쪽으로 닫혔다.')
 
