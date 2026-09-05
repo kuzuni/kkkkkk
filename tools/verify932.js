@@ -37,8 +37,11 @@ const ok = (msg, cond, detail) => {
 /* ⚑ 4회차 — `probe866.py` 가 R 에서 빠졌다(알약 바깥·속 여덟 모서리가 전부 부분 화소다 · §7). */
 const RED = ['scan885b.py', 'scan885e.py', 'scan887.py'];
 const FIXED = ['scan667b.py', 'probe866.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
+/* ⚑ 942 1회차 — `probe409g.py` 가 B 에서 빠졌다(`--diag` 를 «이웃 두 층에 비례로 나누는» 자로 갈아 끼웠다 ·
+   자는 `tools/verify942.js`). 주홍 래칫도 «줄어든 것을 여기 다시 적어야» 지나간다 — 그 자리가 이 줄이다. */
+const FIXED942 = ['probe409g.py'];
 const BRK = ['probe352.py', 'probe384.py', 'probe409.py', 'probe409c.py', 'probe409f.py',
-  'probe409g.py', 'probe409i.py', 'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
+  'probe409i.py', 'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
 
 /* ⚠ 선별기의 `frac` 신호는 **관용구 이름**만 본다. 면역 판정의 근거는 그보다 넓다 —
    커버리지 적분(`r_cov`)·색 사영 교차(`_cross`)처럼 이름이 다른 사본이 있다.
@@ -88,6 +91,10 @@ console.log('\n[2] 전수 — 미판정 0 · 판정 무효 0 · 빨강 래칫');
     brk.length === BRK.length && brk.every(f => BRK.includes(f)),
     `${brk.length}개`);
   const S = by('S');
+  /* 줄어드는 쪽은 늘어나는 쪽보다 조용해서 위험하다 — 942 가 갈아 끼운 자를 이름으로 들고 있는다. */
+  ok('[2-h] 주홍이 «비어서» 줄어든 것이 아니다 — 942 가 갈아 끼운 자가 이름으로 있고 이제 면역이다',
+    FIXED942.length > 0 && FIXED942.every(f => !BRK.includes(f) && S.includes(f)),
+    FIXED942.join(' '));
   const bad = S.filter(f => !FRAC_DEEP.test(fs.readFileSync(path.join(TOOLS, f), 'utf8')));
   ok('[2-g] 면역으로 적은 자는 **소스에 실제로** 부분 화소 코드를 든다 (선별기 신호가 아니라 이 자가 직접 본다)',
     S.length > 0 && bad.length === 0, bad.length ? bad.join(' ') : `${S.length}개`);

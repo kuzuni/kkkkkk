@@ -1,0 +1,201 @@
+/* 게이트 942 — «번짐 비대칭»(②ⓑ) 을 갈아 끼운 자리를 지킨다 · 1회차 = `tools/probe409g.py`
+ *
+ *   node tools/verify942.js
+ *
+ * 무엇을 지키는가 —
+ *   932 가 «정수로 세는 자» 전수를 닫으며 갈래를 둘로 갈랐다. R(축척 비대칭)은 932 가 잡고,
+ *   **B(번짐 비대칭 · 1:1 이라 작다 · 11자)** 를 이 번호로 넘겼다. 1:1 인데도 ref 만 다르게 읽히는
+ *   까닭은 ref 가 **JPEG 사진**이라 층 경계가 2~3px 번지고 우리 캡처는 칼같기 때문이다.
+ *
+ *   1회차가 고른 자는 `probe409g.py --diag` 다 — **부르는 노드 게이트가 하나도 없어**(주석에서만
+ *   이름이 오르내린다) 남의 못박힌 수를 안 흔들고, 파일 자신이 «--edge·--apex 는 문턱 교차 보간인데
+ *   --diag 만 최근접 런» 이라 **같은 파일 안에서 자가 갈려** 있었다.
+ *
+ *   ⚑⚑ **재현이 등재문보다 한 겹 아래를 찍었다** — 결함은 «값이 0.5 격자에 굳는다» 가 아니라
+ *      **«번진 판에서 없는 층이 생긴다»** 였다. 두 층 사이 경사면이 **그 사이에 있는 세 번째
+ *      팔레트 색**(K↔D 의 S · D↔B 의 F)으로 «이겨» 버린다(승자독식). 합성 재현:
+ *      참값 `S3 K7 D4 B7` 이 번진 판에서 옛 자로 `S3.00 K6.50 S1.50 D2.00 F1.50 B6.50` — 층이 4 → 6 이고
+ *      **K 는 −0.5 · D 는 −2.0** 이다. 0.5 격자는 그 결함의 **겉모습**이었다.
+ *
+ * 절 —
+ *   [1] 물리   — 같은 참값 층더미를 «칼같은 판 ↔ 번진 판» 으로 그려 두 자로 잰다(그림·브라우저 0).
+ *   [2] 덫     — **진짜로 얇은 층이 안 먹히는가**(접기가 무르지 않다는 증거).
+ *   [3] 지문   — ref 실측에서 옛 자는 0.5 의 배수로 굳고 새 자는 그 격자에서 풀린다.
+ *   [4] 보존   — 층 두께의 **합**이 두 모드에서 같다(창·걸음·문턱을 한 칸도 안 건드렸다).
+ *   [5] 불변   — 문턱·분류·시작점이 소스에서 그대로다 + 옛 자가 `--int` 로 살아 있다.
+ *   [6] 장부   — 932 전수에서 이 자가 **B → 면역**으로 옮겨졌고 주홍 래칫이 11 → 10 이다.
+ *   [R] 되돌림 — 옛 자로 되돌리면 [1] 이 즉시 빨개진다(그 문턱을 옛 자가 못 넘는다).
+ *
+ * ⚠ 캡처(`docs/review/96-*.png`)가 없어도 돈다 — [3] 은 ref 절만 읽는다.
+ */
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const { py } = require('./pydep937');
+const P = require('./probe932');
+
+const TOOLS = __dirname;
+const ROOT = path.resolve(TOOLS, '..');
+let pass = 0, fail = 0;
+const ok = (msg, cond, detail) => {
+  cond ? pass++ : fail++;
+  console.log('  ' + (cond ? 'PASS' : 'FAIL') + ' ' + msg + (detail ? ' — ' + detail : ''));
+};
+
+const run = (extra) => String(py(['tools/probe409g.py', ...extra],
+  { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+
+/* «int cap  S3.00 K7.00 …» 한 줄을 [[클래스, 폭], …] 로 */
+const layers = (out, mode, who) => {
+  const line = out.split('\n').find((l) => new RegExp(`^\\s*${mode}\\s+${who}\\s`).test(l));
+  if (!line) return null;
+  return (line.trim().split(/\s+/).slice(2))
+    .map((tok) => [tok[0], parseFloat(tok.slice(1))]);
+};
+const sum = (ls) => ls.reduce((a, b) => a + b[1], 0);
+const maxDelta = (a, b) => (a.length !== b.length ? null
+  : Math.max(...a.map((v, i) => Math.abs(v[1] - b[i][1]))));
+
+let phys, thin;
+try {
+  phys = run(['--physics']);
+  thin = run(['--physics-thin']);
+} catch (e) {
+  if (e && (e.status === 2 || e.status === 3)) {
+    console.log('  SKIP 전 절 — 파이썬 의존 없음 · pip3 install pillow numpy');
+    process.exit(0);
+  }
+  throw e;
+}
+
+/* ── [1] 물리 ─────────────────────────────────────────────────────────── */
+console.log('\n[1] 물리 — 같은 참값 층더미를 «칼같은 판(cap)» 과 «번진 판(ref)» 으로 (참값 S3 K7 D4 B7)');
+{
+  const iC = layers(phys, 'int', 'cap'), iR = layers(phys, 'int', 'ref');
+  const cC = layers(phys, 'cov', 'cap'), cR = layers(phys, 'cov', 'ref');
+  ok('[1-a] 두 자 모두 **칼같은 판에서는 참값 그대로** 읽는다 — 결함은 자의 편향이 아니라 «번짐» 이다',
+    iC.length === 4 && cC.length === 4
+    && iC.every(([c, v], i) => c === 'SKDB'[i] && Math.abs(v - [3, 7, 4, 7][i]) < 1e-9)
+    && cC.every(([c, v], i) => c === 'SKDB'[i] && Math.abs(v - [3, 7, 4, 7][i]) < 1e-9),
+    `int ${iC.map((l) => l.join('')).join(' ')} · cov ${cC.map((l) => l.join('')).join(' ')}`);
+
+  /* ⚑ 결함의 본체 — 번진 판에서 «없는 층» 이 생긴다. */
+  ok('[1-b] ⚑ **옛 자는 번진 판에서 없는 층을 만든다**(4 → 6) — 경사면이 사이 색으로 이긴다',
+    iR.length > iC.length, `${iC.length} → ${iR.length} · ${iR.map((l) => l.join('')).join(' ')}`);
+  ok('[1-c] 옛 자는 그 자리에서 층 두께를 **1px 넘게** 잃는다(K −0.5 · D −2.0)',
+    Math.abs((iR.find((l) => l[0] === 'D') || [0, 4])[1] - 4) >= 1.0,
+    iR.filter((l) => 'KD'.includes(l[0])).map((l) => l.join('')).join(' '));
+
+  ok('[1-d] ⚑ **새 자는 번진 판에서도 참값의 차례를 되찾는다**(층 4개 · 같은 글자)',
+    cR.length === 4 && cR.every(([c], i) => c === 'SKDB'[i]),
+    cR.map((l) => l[0] + l[1].toFixed(2)).join(' '));
+  const d = maxDelta(cR, cC);
+  ok('[1-e] ⚑⚑ 두 판 사이 최대 |Δ| ≤ 0.30 px — **번짐 비대칭이 사라졌다**',
+    d !== null && d <= 0.30, `${d === null ? '층 개수 불일치' : d.toFixed(2) + ' px'}`);
+  const dInt = maxDelta(iR, iC);
+  ok('[1-f] 같은 자리에서 **옛 자는 그 문턱을 못 넘는다**(층 개수부터 다르다) — 결함의 크기',
+    dInt === null || dInt > 0.30, dInt === null ? '층 개수 불일치(6 ↔ 4)' : `${dInt.toFixed(2)} px`);
+}
+
+/* ── [2] 덫 — 접기가 무르면 진짜 층이 사라진다 ────────────────────────── */
+console.log('\n[2] 덫 — 참값 K7 **D2** B7 (D 는 K·B 의 «사이 색» = 접기의 덫)');
+{
+  const cR = layers(thin, 'cov', 'ref'), iR = layers(thin, 'int', 'ref');
+  const dNew = cR.filter((l) => l[0] === 'D');
+  ok('[2-a] ⚑ **진짜 얇은 층 D 가 안 먹힌다** — «t 가 훑는가» 조건이 경사면과 층을 가른다',
+    dNew.length >= 1 && dNew[0][1] >= 1.4, cR.map((l) => l[0] + l[1].toFixed(2)).join(' '));
+  ok('[2-b] 그 D 는 참값 2.0 에서 ±0.6 px 안이다 (접기가 층을 «깎지» 도 않았다)',
+    dNew.length >= 1 && Math.abs(dNew[0][1] - 2.0) <= 0.6, dNew.map((l) => l[1].toFixed(2)).join(' '));
+  const dOld = iR.filter((l) => l[0] === 'D').map((l) => l[1]);
+  ok('[2-c] 같은 자리에서 **옛 자는 D 를 0.5 로 잘라 먹었다**(−75%) — 이 항이 결함의 크기다',
+    dOld.length > 0 && Math.min(...dOld) <= 1.0, iR.map((l) => l.join('')).join(' '));
+  /* ⚠ 남은 한 자리는 «못 고친 것» 이 아니라 분해 한계다 — 표본 2개(1.0px)짜리 경사면은
+     t 훑음이 문턱 아래라 안 접힌다. 더 무르게 하면 **진짜 1px 층**과 못 가른다. 그 판정을 항으로 세운다. */
+  ok('[2-d] ⚑ 남은 1px 경사면 하나는 **일부러 안 접었다** — 더 무르게 하면 진짜 1px 층과 못 가른다(σ 1.1px 에서는 같은 그림)',
+    cR.length >= 4, `${cR.length}층 · ${cR.map((l) => l[0]).join('')}`);
+}
+
+/* ── [3] 지문 — ref 실측 ──────────────────────────────────────────────── */
+console.log('\n[3] 지문 — ref(`docs/ref/07-스킬-팝업.jpg`) 실측 · 옛 자는 0.5 격자에 굳는다');
+{
+  const oldOut = run(['--diag', '--int']);
+  const newOut = run(['--diag']);
+  const vals = (out) => (out.match(/\b[KBFDRS][0-9]+\.[0-9]+/g) || [])
+    .filter((t) => /^[KBFDRS]/.test(t)).map((t) => parseFloat(t.slice(1)));
+  const oldV = vals(oldOut), newV = vals(newOut);
+  const onGrid = (v) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6;
+  ok('[3-a] 자가 ref 네 코너를 다 읽는다', oldV.length >= 18 && newV.length >= 18,
+    `${oldV.length} ↔ ${newV.length} 층`);
+  ok('[3-b] ⚑ **옛 자의 값은 예외 없이 0.5 의 배수다** — 걸음이 값을 격자에 가둔 지문',
+    oldV.length > 0 && oldV.every(onGrid), `${oldV.length}개 전부`);
+  ok('[3-c] 새 자는 그 격자에서 풀린다 (절반 넘게 비배수)',
+    newV.filter((v) => !onGrid(v)).length >= newV.length / 2,
+    `${newV.filter((v) => !onGrid(v)).length}/${newV.length}`);
+  ok('[3-d] ⚑ 새 자가 ref 왼아래 코너에서 «전부 7» 규약을 되찾는다 (K·D·B 가 7·4·7 부근)',
+    /ref\s+S[0-9.]+ K[67]\.[0-9]+ D[34]\.[0-9]+ B[67]\.[0-9]+/.test(newOut),
+    (newOut.split('\n').find((l) => /^\s+ref\s+S/.test(l)) || '').trim());
+}
+
+/* ── [4] 보존 — 창·걸음·문턱을 한 칸도 안 건드렸다 ───────────────────── */
+console.log('\n[4] 보존 — 층 두께의 **합**이 두 모드에서 같다 (질량 보존)');
+{
+  const both = (out) => out.split('\n').filter((l) => /^\s+(ref|cap)\s+[KBFDRS]/.test(l))
+    .map((l) => l.trim().split(/\s+/).slice(1)
+      .reduce((a, t) => a + parseFloat(t.slice(1)), 0));
+  const so = both(run(['--diag', '--int'])), sn = both(run(['--diag']));
+  ok('[4-a] 판·코너마다 합이 같다 (|Δ| ≤ 0.01 px) — 새 자는 «더 재지» 도 «덜 재지» 도 않는다',
+    so.length > 0 && so.length === sn.length && so.every((v, i) => Math.abs(v - sn[i]) <= 0.01),
+    so.map((v, i) => (sn[i] - v).toFixed(3)).join(' '));
+  ok('[4-b] 그 합이 창(꼭짓점 → 안쪽 22px)과 같다 — 창이 안 움직였다',
+    so.every((v) => Math.abs(v - 22.5) < 1e-6), `${so[0]} px`);
+}
+
+/* ── [5] 불변 — 문턱·분류·시작점 ─────────────────────────────────────── */
+console.log('\n[5] 불변 — 옛 자를 «무르게 푼» 것이 아니다');
+{
+  const src = fs.readFileSync(path.join(TOOLS, 'probe409g.py'), 'utf8');
+  ok('[5-a] 문턱이 그대로다 (`EDGE_T = 45`)', /EDGE_T\s*=\s*45\b/.test(src));
+  ok('[5-b] 분류가 그대로다 (`cls()` = 최근접 팔레트 · PAL 6색)',
+    /def cls\(c\)/.test(src) && (src.match(/\('[KBFDRS]', \(/g) || []).length === 6);
+  ok('[5-c] 시작점이 그대로다 (`apex()` 문턱 교차 보간 · 걸음 0.5)',
+    /d = apex\(px, bx, by, corner, span\)/.test(src) && /step = 0\.5/.test(src));
+  ok('[5-d] ⚑ **옛 자가 살아 있다**(`--int`) — 지문을 매 실행 다시 찍을 수 있다(§3·§R 의 근거)',
+    /mode = 'int' if '--int' in a else 'cov'/.test(src) && /if mode == 'int':/.test(src));
+  ok('[5-e] 접기 문턱 셋이 이름으로 적혀 있다 (PH_W · PH_D · **PH_T**)',
+    /PH_W\s*=/.test(src) && /PH_D\s*=/.test(src) && /PH_T\s*=/.test(src));
+}
+
+/* ── [6] 장부 — 932 전수와 맞물린다 ──────────────────────────────────── */
+console.log('\n[6] 장부 — 932 전수에서 이 자가 B → 면역으로 옮겨졌다');
+{
+  const rows = P.census();
+  const row = rows.find((r) => r.file === 'probe409g.py');
+  ok('[6-a] 장부에 있고 판정이 **면역(S)** 이다', row && row.verdict === 'S', row ? row.verdict : '없음');
+  const brk = rows.filter((r) => r.verdict === 'B').map((r) => r.file);
+  ok('[6-b] 주홍(B)이 **10개**로 줄었다 — 942 가 남긴 자리(1회차에 하나를 닫았다)',
+    brk.length === 10 && !brk.includes('probe409g.py'), `${brk.length}개`);
+  const v932 = fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8');
+  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 이름을 들고 있다)',
+    /const FIXED942 = \['probe409g\.py'\]/.test(v932) && /\[2-h\]/.test(v932));
+}
+
+/* ── [R] 되돌림 ───────────────────────────────────────────────────────── */
+console.log('\n[R] 되돌림 — 옛 자로 되돌리면 [1] 이 즉시 빨개진다');
+{
+  const iR = layers(phys, 'int', 'ref'), iC = layers(phys, 'int', 'cap');
+  const cR = layers(phys, 'cov', 'ref');
+  ok('[R1] 옛 자는 [1-d] 를 못 넘는다 (번진 판의 층 차례가 참값과 다르다)',
+    !(iR.length === iC.length && iR.every(([c], i) => c === iC[i][0])),
+    `${iR.map((l) => l[0]).join('')} ↔ ${iC.map((l) => l[0]).join('')}`);
+  ok('[R2] 옛 자는 [3-b] 지문을 되돌려 낸다 (합성 판에서도 값이 0.5 배수다)',
+    iR.every(([, v]) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6), iR.map((l) => l[1]).join(' '));
+  ok('[R3] 새 자는 그 지문이 **없다** (같은 합성 판에서 비배수가 나온다)',
+    cR.some(([, v]) => Math.abs(v * 2 - Math.round(v * 2)) > 1e-6),
+    cR.map((l) => l[1].toFixed(2)).join(' '));
+  /* 헛초록 방지 — 이 절이 «잴 것이 없어서» 초록이면 안 된다. */
+  ok('[R4] 두 자가 실제로 다른 값을 낸다 (사본이 아니다)',
+    JSON.stringify(iR) !== JSON.stringify(cR));
+}
+
+console.log(`\nVERIFY942 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);
+process.exit(fail ? 1 : 0);
