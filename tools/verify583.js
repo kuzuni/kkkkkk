@@ -24,13 +24,18 @@
  *   [C-big]   — 주인 지시 «알갱이 크기 더 크게» 의 살아 있는 몸 = `FX_CIC_SC`
  *                (아이콘 알이 구슬보다 작지 않다 · 가둠이 안 무는 자리에서는 실제로 더 크다.
  *                 종전 «절대 34px 초과» 는 838 `fitK` 이후 산술적으로 못 넘는 값이라 갈아 끼웠다)
+ *                (⚑ 902 이관 — «작지 않다» 는 **정수 양자화를 뺀 사슬**에 허용 0 으로 묻는다.
+ *                 아이콘 갈래에만 `Math.round` 가 한 번 더 있어 대수적으로 같은 값이 정수로만
+ *                 1px 갈리던 것이 이 항의 플레이키였다. 정수 쪽은 [C-big-q] 가 «갈림 ≤ 1px» 로
+ *                 따로 지킨다 · 되돌림 짝은 [R4])
  *   [D] 방향   — 출발이 «알약·보유 표시», 도착이 호스트. 거리 단조 감소(획득의 반대)
  *   [E] 금액   — `fxPay` «−n» 0건 · 488 훈련 사다리 «−n» 0건 · 알약 «움푹» 1건(43회차 유지)
  *   [F] 518    — 같은 씬에서 «획득 방향» 노드(알약으로 가는 비행·`+n`·딤 위 복제)는 0
  *   [G] 상한   — `#fxl` 최고 동시 노드 < FXMAX (543 규약 — 드롭 0)
  *   [R] 되돌림 — (678 이관) 660 이 세운 «버튼 아이콘 버스트» 를 무력화하면 화폐 아이콘 0 ·
  *                종전 앰버 스파크는 그대로다 · (898 신설 [R3]) `FX_CIC_SC` 를 1 로 되돌린 **제품
- *                사본**에서 단련 알이 지금 판의 상한에 못 닿는다 = [C-big-f] 가 무른 항이 아니다
+ *                사본**에서 단련 알이 지금 판의 상한에 못 닿는다 = [C-big-f] 가 무른 항이 아니다 ·
+ *                (902 신설 [R4]) 같은 상자·같은 사슬에 배수만 0.8 을 넣으면 [C-big] 이 빨개진다
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -323,23 +328,39 @@ const INSTALL = () => {
     if (!box.length) { ok(false, '[C-' + s.k + '-ax] 눌린 순간의 발원 상자 표본이 있다'); continue; }
     /* 눌림 연출이 상자를 흔들므로(×1.02) 표본의 **양 끝**으로 구간을 감싼다 — 한 순간의 값으로
        못을 박으면 그 2% 가 곧바로 «알 1px» 오차가 된다(위 AX 머리말 · 344 계열 플레이키 방지). */
-    const mk = q => {
+    /* ⚑ 902 — `cic` 를 밖에서 넣을 수 있게 열어 뒀다(기본값 = 제품이 신고한 `FX_CIC_SC`).
+       아래 §R4 되돌림 시험이 **같은 사슬 한 벌**로 «배수를 1 아래로 내리면 빨개진다» 를 굴린다 —
+       사슬을 두 번 적으면 그 사본이 곧 다음 부패다(402 «사본을 지운다»). */
+    const mk = (q, cic) => {
+      const CIC = (cic === undefined ? K.CIC_SC : cic);
       const hsc = Math.min(Math.max(Math.sqrt(q.w * q.h) / 410, 1), K.DMAX / K.SZMAX);
       const cap = Math.max(K.SZMIN, a.fits * Math.min(q.w, q.h));   /* «버튼이 허용하는 만큼»(660·838) */
-      const fitIC = Math.min(1, cap / Math.max(1, K.SZMAX * hsc * a.szs * K.CIC_SC));
+      const fitIC = Math.min(1, cap / Math.max(1, K.SZMAX * hsc * a.szs * CIC));
       const fitPl = Math.min(1, cap / Math.max(1, K.SZMAX * hsc * a.szs));  /* 같은 자리의 «구슬» 갈래 */
       /* 구슬 눈금 v(24~34) 하나가 낳는 **바깥 알 폭** — 제품의 두 번 반올림까지 그대로 따라간다 */
+      /* ⚑⚑ 902 이관 — 같은 사슬의 **정수를 굳히지 않은** 짝(`icX`·`plX`)을 같이 낸다.
+         아래 [C-big] 이 두 갈래를 견주는 항인데, 아이콘 갈래에만 `Math.round` 가 **한 번 더**
+         있어서(`* K.CIC_SC` 를 따로 굳힌다) 가둠이 무는 자리에서는 대수적으로 같은 값이
+         정수로만 1px 갈린다 — 그것이 902 가 재현한 플레이키의 전부다(`probe902` [2]·[3]:
+         눌림 진폭 ±10% 구간의 train 14.2% · rune 18.6% 가 «아이콘 = 구슬 − 1» 이고,
+         `Math.round` 를 빼면 세 자리 전부 역전 **0/5003**). ⇒ 뜻(«역전 금지»)은 반올림 없는
+         쪽에 대고 묻고, 정수 쪽은 «갈림이 양자화 한 칸을 안 넘는가» 로 따로 묻는다. */
       return { hsc, cap, fitIC, fitPl,
-               ic: v => Math.max(K.SZMIN, Math.round(Math.round(Math.round(v * hsc * a.szs) * K.CIC_SC) * fitIC)),
-               pl: v => Math.max(K.SZMIN, Math.round(Math.round(v * hsc * a.szs) * fitPl)) };
+               ic: v => Math.max(K.SZMIN, Math.round(Math.round(Math.round(v * hsc * a.szs) * CIC) * fitIC)),
+               pl: v => Math.max(K.SZMIN, Math.round(Math.round(v * hsc * a.szs) * fitPl)),
+               icX: v => Math.max(K.SZMIN, v * hsc * a.szs * CIC * fitIC),
+               plX: v => Math.max(K.SZMIN, v * hsc * a.szs * fitPl) };
     };
+    const bx = box.reduce((m, x) => (Math.min(x.bw, x.bh) > Math.min(m.w, m.h) ? { w: x.bw, h: x.bh } : m),
+                          { w: box[0].bw, h: box[0].bh });          /* §R4 가 다시 굴릴 상자 */
     const sm = mk(box.reduce((m, x) => (Math.min(x.bw, x.bh) < Math.min(m.w, m.h) ? { w: x.bw, h: x.bh } : m),
                              { w: box[0].bw, h: box[0].bh }));      /* 가장 작게 눌린 순간 */
-    const bg = mk(box.reduce((m, x) => (Math.min(x.bw, x.bh) > Math.min(m.w, m.h) ? { w: x.bw, h: x.bh } : m),
-                             { w: box[0].bw, h: box[0].bh }));      /* 가장 크게 부푼 순간 */
+    const bg = mk(bx);                                              /* 가장 크게 부푼 순간 */
     const lo = sm.ic(24), hi = bg.ic(34);
     CH[s.k] = { cap: bg.cap, fitIC: bg.fitIC, fitPl: bg.fitPl, gs,
-                icHi: bg.ic(34), plHi: bg.pl(34), lo, hi, hi31: sm.ic(31) };
+                icHi: bg.ic(34), plHi: bg.pl(34), icX: bg.icX(34), plX: bg.plX(34),
+                rev: cic => mk(bx, cic),                            /* §R4 되돌림 시험이 쓴다 */
+                lo, hi, hi31: sm.ic(31) };
     const all = r.tr.filter(x => Number.isFinite(x.onx));
     const got = Math.max(...all.map(x => x.onx), 0), gotMin = Math.min(...all.map(x => x.onm), 1e9);
     /* ① 계약 — 알이 «버튼이 허용하는 만큼» 을 **안 넘는다**(838 `fitK` 의 뜻) · 제품이 선언한
@@ -391,13 +412,33 @@ const INSTALL = () => {
          ⓑ 가둠이 안 무는 자리(단련 `fitK(구슬)` = 1)에서는 **실제로 더 크다**
        ⓑ 가 없으면 «`FX_CIC_SC` 를 1 로 만들어도 초록» 이 된다(334) — 아래 §R3 가 그것을 못박는다.
      ⚑ 상쇄 자체가 옳은가는 이 자의 물음이 아니다 — **900 으로 등재**했다(주인 축). */
+  /* ⚑⚑ 902 이관 — **이 항은 «자가 같은 값을 두 자로 쟀다» 로 플레이키했다**(무변경 트리 5회에 2회 빨강).
+     `probe902` 가 갈래를 갈랐다: ⓐ 제품이 흔들린다 = **기각**(반올림 없는 사슬은 세 자리 전부 역전
+     0/5003) · ⓑ 자의 정수 양자화 = **확인**(눌림 진폭 구간의 train 14.2% · rune 18.6% 가 «−1px»,
+     그리고 **한 번도 −1px 을 넘지 않는다**). 뿌리는 산수 하나다 — 가둠이 무는 자리에서 두 갈래는
+       ic = round(round(u·CIC_SC)·fitIC) · pl = round(u·fitPl) · fitIC = fitPl / CIC_SC
+     라 **대수적으로 같은 식**인데, 아이콘 쪽만 안쪽 반올림을 한 번 더 돌아 그 잔차(≤0.5)가
+     `fitIC` 배로 옮겨 붙는다 ⇒ 갈림은 구조적으로 **0 아니면 −1** 이다.
+     ⚠ **문턱을 넓혀 풀지 않았다**(334·796 반려 규약) — 오히려 **좁혔다**:
+       종전은 정수에 ±0.5 를 주고 물었고, 지금은 ⓐ 반올림 없는 사슬에 **0 을 주고**(아래 [C-big])
+       ⓑ 정수 쪽은 «갈림이 양자화 **한 칸**을 안 넘는가» 라는 **새 항**으로 따로 묻는다([C-big-q]).
+       ⇒ 실수 역전은 종전보다 **엄하게** 잡히고, 2px 이상 벌어지는 정수 역전도 그대로 빨개진다.
+     ⚠ 같이 흔들린 `[D-train-o]` 는 **다른 병**이다 — `probe902` [D1]·[D2] 가 갈랐다(그쪽은 «어느
+       입자를 보고 있는가» 축이고 이 항은 입자를 한 알도 안 본다). **903 으로 등재**했다. */
   {
     const ks = SITES.map(s => s.k).filter(k => CH[k]);
-    const bad = ks.filter(k => CH[k].icHi < CH[k].plHi - 0.5);
+    const bad = ks.filter(k => CH[k].icX < CH[k].plX - 1e-9);
     ok(ks.length === SITES.length && bad.length === 0,
-       '[C-big] ★ 주인 지시 «알갱이 크기 더 크게» — 아이콘 알이 같은 자리의 «구슬» 보다 **작지 않다**',
-       ks.map(k => k + ' ' + n1(CH[k].icHi) + '/' + n1(CH[k].plHi)).join(' · ')
+       '[C-big] ★ 주인 지시 «알갱이 크기 더 크게» — 아이콘 알이 같은 자리의 «구슬» 보다 **작지 않다**(정수 양자화를 뺀 사슬 · 허용 0)',
+       ks.map(k => k + ' ' + n1(CH[k].icX) + '/' + n1(CH[k].plX)).join(' · ')
        + (bad.length ? ' · 역전 ' + bad.join('·') : ''));
+    /* 정수 쪽 — 자리를 비우지 않는다(333). 위 항이 실수로 옮겨 갔다고 «제품이 실제로 굳히는 정수»
+       를 아무도 안 보면, 사슬에 반올림이 **또** 끼어들어 2px·3px 로 벌어져도 조용하다. */
+    const q2 = ks.filter(k => CH[k].icHi < CH[k].plHi - 1);
+    ok(ks.length === SITES.length && q2.length === 0,
+       '[C-big-q] ★ 정수로 굳은 두 값의 갈림이 **양자화 한 칸(1px)** 을 안 넘는다 — 넘으면 그것은 반올림이 아니라 사슬이 갈린 것이다',
+       ks.map(k => k + ' ' + n1(CH[k].icHi) + '/' + n1(CH[k].plHi)).join(' · ')
+       + (q2.length ? ' · 한 칸 초과 ' + q2.join('·') : ''));
     const free = ks.filter(k => CH[k].fitPl >= 0.999);           /* 가둠이 «구슬» 을 안 무는 자리 */
     ok(free.length > 0 && free.every(k => CH[k].icHi > CH[k].plHi + 0.5),
        '[C-big-f] ★ 가둠이 안 무는 자리에서는 `FX_CIC_SC` 가 실제로 알을 키운다(583 이 산 몸)',
@@ -559,6 +600,24 @@ const INSTALL = () => {
          '되돌린 판 최대 ' + n1(revMax) + 'px < 지금 판 상한 ' + n1(CH.temper.icHi)
          + 'px (구슬 상한 ' + n1(CH.temper.plHi) + 'px)');
     }
+  }
+
+  /* ⚑⚑ 902 신설 — [R4] «배수를 1 아래로» 되돌림 시험.
+     [C-big] 이 902 에서 «반올림 없는 사슬 · 허용 0» 으로 옮겨 갔으므로, 그것이 **무르게 푼 수리가
+     아님**을 짝으로 못박는다(334). [R3] 은 `FX_CIC_SC = 1` 로 되돌려 [C-big-f](가둠이 안 무는
+     자리)를 겨누는데, `1` 은 [C-big] 의 «작지 않다» 를 **등호로 통과**시키므로 그 항은 못 건드린다.
+     ⇒ 같은 상자·같은 사슬을 그대로 두고 **배수만 0.8** 로 넣어 다시 굴린다. 브라우저를 다시 안 띄우는
+       것이 요점이다 — 재는 대상이 «자의 산수» 이므로 산수로 되돌리는 것이 정확히 같은 시험이다.
+     기대: 가둠이 안 무는 자리(단련)에서 아이콘 갈래가 구슬 아래로 내려간다 = [C-big] 이 실제로 빨개진다.
+     ⚠ 가둠이 무는 자리(훈련·룬)는 배수를 어떻게 넣어도 상쇄돼 값이 안 변한다 — 그 사실 자체가
+       [C-big] 이 «전 자리 역전 금지» 이고 [C-big-f] 가 «자유 자리 확대» 인 이유다(900 이 굳힌 판정). */
+  {
+    const ks = SITES.map(s => s.k).filter(k => CH[k] && CH[k].rev);
+    const rows = ks.map(k => { const c = CH[k].rev(0.8); return { k, ic: c.icX(34), pl: c.plX(34) }; });
+    const red = rows.filter(r => r.ic < r.pl - 1e-9);
+    ok(ks.length === SITES.length && red.length > 0,
+       '[R4] ★ 같은 상자·같은 사슬에 `FX_CIC_SC` 만 **0.8** 로 넣으면 [C-big] 이 실제로 빨개진다 — 허용 0 이 «이미 참인 것» 이 아니다',
+       rows.map(r => r.k + ' ' + n1(r.ic) + '/' + n1(r.pl)).join(' · ') + ' · 역전 ' + (red.map(r => r.k).join('·') || '없음'));
   }
 
   console.log('\n콘솔 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
