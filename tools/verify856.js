@@ -133,6 +133,27 @@ const b14bands = (out, useIds, col) => {
   }).sort((a, b) => b.band - a.band);
 };
 
+/* ⚑⚑ 10회차 — **[B14] 를 «비» 가 아니라 «코어» 로 읽는 자**. 9회차가 [B14] 의 정체를
+   «기울기 부족 + 절편 과잉» 으로 갈랐으므로, 규격(`코어 = K·획`)을 직접 물으려면 종별로
+   그 직선의 **기울기**를 내면 된다. 표본·자리·묶음은 [B13]·[B14] 와 **한 벌**이다
+   (`b13bands` 의 `by` 를 그대로 읽는다 — 사본 금지 402). 최소제곱 한 줄이 전부다. */
+const coreSlope = (out, useIds, col) => {
+  const bySp = {};
+  for (const b of b13bands(out, useIds, col === undefined ? 2 : col)) for (const e of b.by) {
+    if (e[1] < B13_N) continue;
+    const w = b.lo + B13_W / 2;                 /* 구간 가운데 획 폭(로컬px) */
+    (bySp[e[0]] = bySp[e[0]] || []).push([w, w * e[2]]);   /* [획, 코어 = 획 × 비] */
+  }
+  return Object.keys(bySp).filter(k => bySp[k].length >= 2).map(k => {
+    const v = bySp[k], n = v.length;
+    const mx = v.reduce((a, e) => a + e[0], 0) / n, my = v.reduce((a, e) => a + e[1], 0) / n;
+    let sxy = 0, sxx = 0;
+    for (const [x, y] of v) { sxy += (x - mx) * (y - my); sxx += (x - mx) * (x - mx); }
+    const a = sxx > 0 ? sxy / sxx : 0;
+    return { sp: k, a, c: my - a * mx, bins: n, pts: v };
+  }).sort((p, q) => p.a - q.a);
+};
+
 /* `--spread <종>` — 그 종의 **주 마루 화소마다** «본체 두께 · 코어 두께 · 비» 를 그대로 찍는다.
    판정에는 아무 영향이 없다(진단 전용 · 8회차가 [B12] `ice` 의 불균질이 **어느 자리**에서 오는지
    찍으려고 세웠다 — 7회차 «남은 문제» 1번). */
@@ -761,6 +782,61 @@ async function measure(browser, url) {
               console.log('    많이 나온 두께(0.25 눈금) — ' +
                           top.map(k => k + '×' + hist[k]).join(' · '));
             }
+            /* ⚑⚑ 10회차 — 9회차 지도가 «구간 = 그림의 다른 부분» 을 보여 준 뒤 남는 물음은
+               «그 두 부분이 무엇으로 다른가» 다. arrow 는 대각 날개 ↔ **가로** 자루, gale 은
+               깃 ↔ **세로** 활이라 첫 후보가 **마루의 기울기**(축 정렬 ↔ 대각)다 — 굽기의 거리밭도
+               자의 거리밭도 격자 위에서 도는 것이라 45° 에서 축과 다르게 앉을 수 있다.
+               기울기는 **이미 담긴 좌표**에서 낸다(자를 새로 만들지 않는다 — 402): 반경 2 안의
+               마루 이웃 오프셋의 2차 모멘트에서 주축 각을 구하고, 축 대칭이라 0~45° 로 접는다. */
+            for (const p of pts) {
+              let sxx = 0, syy = 0, sxy = 0, n = 0;
+              for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+                if (!dx && !dy) continue;
+                if (!at.has(key(p.x + dx, p.y + dy))) continue;
+                sxx += dx * dx; syy += dy * dy; sxy += dx * dy; n++;
+              }
+              if (n < 2) { p.ang = -1; continue; }
+              const th = (Math.atan2(2 * sxy, sxx - syy) / 2) * 180 / Math.PI;
+              const f = ((th % 90) + 90) % 90;            /* 0~90 — 격자는 90° 주기다 */
+              p.ang = f > 45 ? 90 - f : f;                /* 0 = 축 정렬 · 45 = 대각 */
+            }
+            const angBins = [[0, 15], [15, 30], [30, 45.1]];
+            const oriRows = [];
+            for (const [lo, hi] of angBins) {
+              const c = pts.filter(p => p.ang >= lo && p.ang < hi);
+              if (c.length < 10) continue;
+              oriRows.push([lo, hi, c.length, md(c.map(p => p.ra)), md(c.map(p => p.w))]);
+            }
+            if (oriRows.length >= 2) {
+              const rr = oriRows.map(e => e[3]);
+              console.log('  마루 기울기별(축 정렬 0° ↔ 대각 45°) — 규격은 «비가 기울기에 무관» 이다');
+              for (const [lo, hi, n, ra, w] of oriRows)
+                console.log('    ' + String(Math.round(lo)).padStart(2) + '~' + String(Math.round(hi)).padEnd(3) +
+                            '°  n=' + String(n).padStart(4) + '  비 중앙 ' + ra.toFixed(3) +
+                            '  획 중앙 ' + w.toFixed(2) + '  코어 ' + (ra * w).toFixed(2));
+              console.log('    ⇒ 밴드 ' + (Math.max(...rr) / Math.min(...rr)).toFixed(3) + '배');
+            }
+            /* ⚑⚑ 10회차 — **교차표**. 위의 두 축(획 폭 · 마루 기울기)은 서로 얽혀 있어서
+               («arrow 의 대각 날개는 가로 자루보다 가늘다») 한 축씩 보면 상대 축의 몫을 제 것으로
+               읽는다 — [B14] 가 «종만 고정하면 폭 축만 남는다» 고 믿고 있는 자리가 정확히 여기다.
+               ⇒ 두 축을 같이 잘라 **한 칸 안에서** 상대 축을 고정한 채로 견준다. */
+            {
+              const wB = [], seen = {};
+              for (const p of pts) if (p.b) seen[p.b] = 1;
+              for (const k of Object.keys(seen).sort()) wB.push(+k);
+              if (wB.length >= 1) {
+                console.log('  교차표 «획 구간 × 마루 기울기» — 칸값 = 비 중앙(n) · 한 칸 안에서는 상대 축이 고정이다');
+                console.log('        ' + angBins.map(a => ('  ' + Math.round(a[0]) + '~' + Math.round(a[1]) + '°').padStart(14)).join(''));
+                for (const b of wB) {
+                  let line = '    획' + String(B13_LO + (b - 1) * B13_W).padStart(2) + '~ ';
+                  for (const [lo, hi] of angBins) {
+                    const c = pts.filter(p => p.b === b && p.ang >= lo && p.ang < hi);
+                    line += (c.length < 10 ? '—' : md(c.map(p => p.ra)).toFixed(3) + '(' + c.length + ')').padStart(14);
+                  }
+                  console.log(line);
+                }
+              }
+            }
           } else {
             console.log('  [889 9회차] ⚠ dump ↔ bank 자리 짝이 안 맞는다(' +
                         s.length + ' ↔ ' + ((q.bank || []).length) + ') — 구간별 자리는 안 찍는다');
@@ -927,6 +1003,19 @@ async function measure(browser, url) {
             nz.map(e => e[2]).sort((a, b) => a - b)[Math.floor(0.5 * (nz.length - 1))].toFixed(3) +
             '  (같은 표본을 [B14] 는 ' + (sp14.length ? sp14[0].band.toFixed(3) : '—') + '배로 읽는다)');
         }
+      }
+      /* ⚑⚑ 10회차 — 규격을 **직접** 묻는 줄. 규격은 «코어 = K·획» 이므로 종별 직선의 기울기가
+         곧 실현된 K 다. 9회차가 [B14] 의 정체를 이 둘(기울기·절편)로 갈랐으므로 여기서부터는
+         «비 가 한 밴드인가» 대신 «기울기가 K 인가» 를 읽으면 된다.
+         ⚠ 아직 **판정이 아니라 진단**이다 — 기울기의 **잡음 바닥을 안 쟀다**(8회차 교훈 5:
+           바닥 없는 축은 래칫을 걸 자리를 못 정한다). 바닥을 잰 회차가 이 줄을 판정으로 올려라. */
+      {
+        const sl = coreSlope(r.out, strokeIds);
+        if (sl.length) console.log('  [진단·889 10회차] 규격 직접 — 종별 «코어 = a·획 + c» 의 a (규격 K = ' +
+          K + ')\n    ' + sl.map(e => e.sp + ' a=' + e.a.toFixed(3) + ' c=' + e.c.toFixed(2) +
+          '(' + e.bins + '구간)').join(' · ') +
+          '\n    ⇒ a 의 폭 ' + sl[0].a.toFixed(3) + ' ~ ' + sl[sl.length - 1].a.toFixed(3) +
+          ' · 중앙 ' + sl.map(e => e.a).sort((a, b) => a - b)[Math.floor(0.5 * (sl.length - 1))].toFixed(3));
       }
       const spr = (r.out.sprites || []).slice().sort((a, b) => a[1] - b[1]);
       console.log('  [진단] 구운 스프라이트 자체의 코어 폭(로컬px · 합성/근백색 문턱 이전)');
