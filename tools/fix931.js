@@ -78,8 +78,11 @@ const LAUNCH_RULES = [
   /* 2b) catch 가 `launchOpts()` 로 만든 o 를 그대로 넘기는 꼴 */
   { re: /try \{ (\w+) = await chromium\.launch\(\); \}\s*\n\s*catch \(e?\) \{[\s\S]{0,400}?\1 = await chromium\.launch\(o\);\s*\n\s*\}/g,
     to: (m, v) => v + ' = await launch(chromium);   /* 931 — 실행 파일 폴백까지 사슬이 맡는다 */' },
-  /* 3) return 꼴 — try { return await chromium.launch(); } catch { … return chromium.launch({ executablePath: p }); } */
-  { re: /try \{ return await chromium\.launch\(\); \}\s*\n\s*catch \(e?\) \{[\s\S]{0,400}?return chromium\.launch\(\{ executablePath: \w+ \}\);\s*\n\s*\}/g,
+  /* 3) return 꼴 — try { return await chromium.launch(); } catch { … return [await] chromium.launch({ executablePath: p }); }
+        ⚠ `await` 는 선택이다(2026-09-05, 2회차) — `verify105` 만 `return await …` 로 적어 놓아
+        규칙 3 이 «launch 꼴 모름» 으로 비켜 갔고, 갈래 B 16자 중 그 한 자만 사슬 밖에 남을 뻔했다.
+        같은 꼴에 토큰 하나가 더 붙은 것뿐이라 규칙을 새로 세우지 않고 이 한 자리를 넓힌다. */
+  { re: /try \{ return await chromium\.launch\(\); \}\s*\n\s*catch \(e?\) \{[\s\S]{0,400}?return (?:await )?chromium\.launch\(\{ executablePath: \w+ \}\);\s*\n\s*\}/g,
     to: () => 'return await launch(chromium);   /* 931 — 실행 파일 폴백까지 사슬이 맡는다 */' },
   /* 4) 옵션을 launchOpts() 로만 만들던 한 줄 */
   { re: /await chromium\.launch\(launchOpts\(\)\)/g,

@@ -30,16 +30,11 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { chromium } = (() => {
-  try { return require('playwright'); } catch (_) {}
-  const os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 를 찾을 수 없다'); process.exit(2);
-})();
+/* 작업 931 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(925 가 화소 자 넷에 한 것과 같다).
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
+   사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 let pass = 0, fail = 0;
@@ -49,11 +44,6 @@ const ok = (m, cond, detail) => {
 };
 const eq = (m, got, want) => ok(m + ' = ' + JSON.stringify(got) + (got === want ? '' : ' (기대 ' + JSON.stringify(want) + ')'), got === want);
 
-function launchOpts(){
-  for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean))
-    { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (_) {} }
-  return {};
-}
 
 /* 기대값은 **여기서 다시 적는다** — 제품 함수를 불러 비교하면 식이 통째로 틀려도 초록이 된다
    (LESSONS 333-③). 주인 문면의 수열을 손으로 옮긴 표가 이 게이트의 유일한 정답지다. */
@@ -81,7 +71,7 @@ const rows = page => page.evaluate(() => [...document.querySelectorAll('#mbox .q
 })));
 
 (async () => {
-  const browser = await chromium.launch(Object.assign({ args: ['--no-sandbox'] }, launchOpts()));
+  const browser = await launch(chromium, { args: ['--no-sandbox'] });
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

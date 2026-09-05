@@ -44,10 +44,17 @@ const SWAPPED = [
   'verify108.js', 'verify59.js', 'verify66.js',
   /* D — 장치가 지금은 무의미하다(evaluate 없음). 사슬에 넣는 값은 «다음에 쓰면 자동으로 받는다» 다 */
   'probe784.js', 'probe791.js', 'probe794.js',
+  /* B — verify* + 250ms 이상 대기. **291 정착이 실제로 도는 유일한 갈래**(2회차에 들였다) */
+  'verify105.js', 'verify183.js', 'verify186.js', 'verify260.js', 'verify326.js', 'verify472.js',
+  'verify481.js', 'verify484.js', 'verify485.js', 'verify504.js', 'verify799.js', 'verify800.js',
+  'verify834.js', 'verify85.js', 'verify88.js', 'verify95.js',
+  /* E — push 게이트. 지시서 [6] 이 «맨 마지막» 이라 적어 둔 그 한 자(2회차) */
+  'smoke.js',
 ];
 
-/* 아직 안 들인 갈래 — 다음 회차 몫. 여기 이름이 줄면 [2b] 가 저절로 조여진다. */
-const PENDING_BRANCHES = ['B', 'E'];
+/* 아직 안 들인 갈래 — 다음 회차 몫. 여기 이름이 줄면 [2b] 가 저절로 조여진다.
+   2회차에 B·E 를 들여 **비었다** — 이제 [2b] 는 «사슬 밖이 한 자도 없다» 와 같은 말이다. */
+const PENDING_BRANCHES = [];
 
 let pass = 0, fail = 0;
 const ok = (msg, cond, detail) => {
@@ -108,9 +115,9 @@ try {
   const cnt = b => rest.filter(r => r.branch === b).length;
   console.log('  남은 사슬 밖 ' + rest.length + ' = A ' + cnt('A') + ' + B ' + cnt('B') +
     ' + C ' + cnt('C') + ' + D ' + cnt('D') + ' + E ' + cnt('E'));
-  ok('[2a] 갈래 A·C·D 에 «사슬 밖» 이 한 자도 없다',
-    cnt('A') + cnt('C') + cnt('D') === 0,
-    rest.filter(r => 'ACD'.includes(r.branch)).map(r => r.file).join(' ') || '어긋남 0');
+  ok('[2a] 들인 갈래에 «사슬 밖» 이 한 자도 없다 (2회차에 B·E 가 들어와 A~E 전부다)',
+    rest.filter(r => !PENDING_BRANCHES.includes(r.branch)).length === 0,
+    rest.filter(r => !PENDING_BRANCHES.includes(r.branch)).map(r => r.file).join(' ') || '어긋남 0');
   ok('[2b] 남은 것은 아직 안 들인 갈래뿐이다 (B·E 이하 — 그 갈래가 0 이 돼도 참이다)',
     rest.every(r => PENDING_BRANCHES.includes(r.branch)),
     rest.map(r => r.branch).sort().join('') || '남은 것 0');
@@ -147,7 +154,7 @@ try {
 
   /* ---------------- [4] 장치 ---------------- */
   console.log('\n[4] 장치 — 사슬을 지나면 실제로 받는다');
-  ok('[4a] 731 차단기는 entry 를 안 본다 — 들인 27자가 전부 받는다',
+  ok('[4a] 731 차단기는 entry 를 안 본다 — 들인 44자가 전부 받는다',
     typeof require('./evguard731').armBrowser === 'function');
   const aFiles = SWAPPED.filter(f => /^(probe|bisect|fnchk)/.test(f));
   ok('[4b] 갈래 A·D 는 entry 가 verify 가 아니라 291 이 안 붙는다 (자의 세상이 안 바뀐다)',
@@ -156,6 +163,13 @@ try {
     ['verify108.js', 'verify59.js', 'verify66.js'].every(f => devices(f).d291 === false));
   ok('[4d] 291 의 관문은 `settle291.enabled()` 와 같은 규칙이다 (사본을 안 적었다)',
     /verify/.test(settle291.enabled.toString()) && settle291.CAP_MS === 1500);
+  /* 2회차 — 갈래 B 는 «장치가 실제로 도는» 유일한 갈래다. 여기가 초록이라는 것이
+     이 회차의 전후 대조(5회씩)가 **잴 것이 있었다**는 뜻이다(A·C·D 는 291 이 안 돌아 잴 것이 없었다). */
+  const bFiles = SWAPPED.filter(f => /^verify/.test(f) && devices(f).d291);
+  ok('[4e] 갈래 B 16자는 verify* + 250ms 이상 대기라 **291 이 실제로 돈다**',
+    bFiles.length === 16, bFiles.length + '자');
+  ok('[4f] `smoke.js`(갈래 E)는 entry 가 verify* 가 아니라 291 이 안 붙는다 — 받는 장치는 731 뿐',
+    devices('smoke.js').d291 === false && devices('smoke.js').d731 === true);
 
   /* ---------------- [5] 걷개 ---------------- */
   console.log('\n[5] 걷개 — 918/922 도 907 도 이 44 에는 안 걸린다');

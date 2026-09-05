@@ -120,11 +120,13 @@ const OLD_BOOTSTRAP =
        순환이 되어 `module.exports` 가 아직 안 붙은 사본을 집는다. 이 자리는 exports 뒤라 안전하다. */
   const { census: census931 } = require('./probe931');
   const rest931 = census931();
-  const done931 = ['A', 'C', 'D'];                     /* 931 1회차가 들인 갈래 */
+  /* 931 1회차 A·C·D → **2회차에 B·E 까지** 들였다. 갈래가 다섯뿐이므로 이 목록은 이제
+     «여집합 44 가 통째로 사슬 안» 과 같은 말이고, 새 자가 사슬 밖에 서면 여기가 곧바로 빨개진다. */
+  const done931 = ['A', 'B', 'C', 'D', 'E'];
   const left = rest931.filter(r => done931.includes(r.branch));
   console.log('  931 여집합 — 남은 사슬 밖 ' + rest931.length + ' (갈래 ' +
     [...new Set(rest931.map(r => r.branch))].sort().join('·') + ')');
-  ok('[2e] 931 이 들인 갈래(A·C·D)에 «사슬 밖» 이 한 자도 없다 — 여집합도 같은 규칙으로 센다',
+  ok('[2e] 931 이 들인 갈래(A~E 전부)에 «사슬 밖» 이 한 자도 없다 — 여집합도 같은 규칙으로 센다',
     left.length === 0, left.map(r => r.file).join(' ') || '어긋남 0');
   ok('[2f] 여집합에 918/922 걷개·907 깃발이 걸리는 자는 0 — 그래서 이 둘은 «화소를 재는 자» 문제였다',
     rest931.every(r => !r.d918 && !r.d907));

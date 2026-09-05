@@ -13,18 +13,11 @@
  * 참고: 비평(점수)은 이 스크립트가 하지 않는다. 이건 «깨졌나» 만 본다.
  */
 const path = require('path');
-const { chromium } = (() => {
-  /* 1) 저장소/전역에서 resolve  2) 안 되면 npx 캐시(리눅스 ~/.npm/_npx, 윈도 %LOCALAPPDATA%/npm-cache/_npx)에서 찾기 */
-  try { return require('playwright'); } catch (_) {}
-  const fs = require('fs'), os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 를 찾을 수 없다 — `npm i -D playwright && npx playwright install chromium` 후 재실행');
-  process.exit(2);
-})();
+/* 작업 931 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(925 가 화소 자 넷에 한 것과 같다).
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
+   사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const SECS = Number(process.env.SMOKE_SECS || 20);
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
@@ -102,15 +95,6 @@ async function appInside(page) {
   });
 }
 
-/* 번들 브라우저를 못 찾는 환경(클라우드 러너는 /opt/pw-browsers 에 미리 깔려 있고
-   playwright 버전이 올라가면 기대 경로가 어긋난다) 대비 — 있으면 그걸 쓴다.
-   PW_CHROMIUM 으로 강제 지정도 가능. */
-function launchOpts(){
-  const fs = require('fs');
-  const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean);
-  for (const p of cands) { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (e) {} }
-  return {};
-}
 
 /* ---------- 0. 정적 문법 — 브라우저를 띄우기 전에 본다 ----------
    CSS 의 «닫히지 않은 / 이미 닫힌» 주석은 **브라우저가 조용히 삼킨다**: 콘솔 에러도 없고
@@ -156,13 +140,7 @@ if (process.argv.includes('--selftest')) {
 (async () => {
   staticSyntax();
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) {
-    const o = launchOpts();
-    if (!o.executablePath) throw e;
-    console.log('[i] 번들 브라우저 없음 → ' + o.executablePath + ' 사용');
-    browser = await chromium.launch(o);
-  }
+  browser = await launch(chromium);   /* 931 — 실행 파일 폴백까지 사슬이 맡는다 */
   try {
     /* ---------- 1. 로드 + 자동 플레이 ---------- */
     section(`[1] 로드 + 자동 플레이 ${SECS}s (1080×2280 · 9:19 기준)`);

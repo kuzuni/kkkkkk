@@ -18,16 +18,11 @@
  */
 const path = require('path');
 const fs = require('fs');
-const { chromium } = (() => {
-  try { return require('playwright'); } catch (_) {}
-  const os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 없음'); process.exit(2);
-})();
+/* 작업 931 — 부트스트랩을 공용 사슬(`pwlaunch`)로 갈아 끼웠다(925 가 화소 자 넷에 한 것과 같다).
+   여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
+   사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 let pass = 0, fail = 0;
@@ -38,12 +33,7 @@ const ok = (b, name, detail) => {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) {
-    const p = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
-    if (!fs.existsSync(p)) throw e;
-    browser = await chromium.launch({ executablePath: p });
-  }
+  browser = await launch(chromium);   /* 931 — 실행 파일 폴백까지 사슬이 맡는다 */
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

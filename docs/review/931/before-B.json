@@ -1,0 +1,777 @@
+{
+ "runs": 5,
+ "par": 7,
+ "env": {},
+ "files": [
+  "verify105.js",
+  "verify183.js",
+  "verify186.js",
+  "verify260.js",
+  "verify326.js",
+  "verify472.js",
+  "verify481.js",
+  "verify484.js",
+  "verify485.js",
+  "verify504.js",
+  "verify799.js",
+  "verify800.js",
+  "verify834.js",
+  "verify85.js",
+  "verify88.js",
+  "verify95.js"
+ ],
+ "all": {
+  "verify105.js": [
+   {
+    "file": "verify105.js",
+    "code": 0,
+    "ms": 57691,
+    "verdict": "VERIFY105 PASS — 32/32",
+    "pass": true,
+    "fail": false,
+    "tail": "  · 스테이지 자동 진행 · 자동 사냥/시전 · 자동 이동(59) · 자동 부활 · 자동 저장 ... 유지(지시대로) |  | VERIFY105 PASS — 32/32"
+   },
+   {
+    "file": "verify105.js",
+    "code": 0,
+    "ms": 49866,
+    "verdict": "VERIFY105 PASS — 32/32",
+    "pass": true,
+    "fail": false,
+    "tail": "  · 스테이지 자동 진행 · 자동 사냥/시전 · 자동 이동(59) · 자동 부활 · 자동 저장 ... 유지(지시대로) |  | VERIFY105 PASS — 32/32"
+   },
+   {
+    "file": "verify105.js",
+    "code": 0,
+    "ms": 52271,
+    "verdict": "VERIFY105 PASS — 32/32",
+    "pass": true,
+    "fail": false,
+    "tail": "  · 스테이지 자동 진행 · 자동 사냥/시전 · 자동 이동(59) · 자동 부활 · 자동 저장 ... 유지(지시대로) |  | VERIFY105 PASS — 32/32"
+   },
+   {
+    "file": "verify105.js",
+    "code": 0,
+    "ms": 53328,
+    "verdict": "VERIFY105 PASS — 32/32",
+    "pass": true,
+    "fail": false,
+    "tail": "  · 스테이지 자동 진행 · 자동 사냥/시전 · 자동 이동(59) · 자동 부활 · 자동 저장 ... 유지(지시대로) |  | VERIFY105 PASS — 32/32"
+   },
+   {
+    "file": "verify105.js",
+    "code": 0,
+    "ms": 51710,
+    "verdict": "VERIFY105 PASS — 32/32",
+    "pass": true,
+    "fail": false,
+    "tail": "  · 스테이지 자동 진행 · 자동 사냥/시전 · 자동 이동(59) · 자동 부활 · 자동 저장 ... 유지(지시대로) |  | VERIFY105 PASS — 32/32"
+   }
+  ],
+  "verify183.js": [
+   {
+    "file": "verify183.js",
+    "code": 0,
+    "ms": 22400,
+    "verdict": "VERIFY183 PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY183 PASS 27/27"
+   },
+   {
+    "file": "verify183.js",
+    "code": 0,
+    "ms": 15786,
+    "verdict": "VERIFY183 PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY183 PASS 27/27"
+   },
+   {
+    "file": "verify183.js",
+    "code": 0,
+    "ms": 15818,
+    "verdict": "VERIFY183 PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY183 PASS 27/27"
+   },
+   {
+    "file": "verify183.js",
+    "code": 0,
+    "ms": 14093,
+    "verdict": "VERIFY183 PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY183 PASS 27/27"
+   },
+   {
+    "file": "verify183.js",
+    "code": 0,
+    "ms": 14479,
+    "verdict": "VERIFY183 PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY183 PASS 27/27"
+   }
+  ],
+  "verify186.js": [
+   {
+    "file": "verify186.js",
+    "code": 0,
+    "ms": 14374,
+    "verdict": "VERIFY186 PASS — 37/37",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS H1 콘솔 에러 0건 |  | VERIFY186 PASS — 37/37"
+   },
+   {
+    "file": "verify186.js",
+    "code": 0,
+    "ms": 8404,
+    "verdict": "VERIFY186 PASS — 37/37",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS H1 콘솔 에러 0건 |  | VERIFY186 PASS — 37/37"
+   },
+   {
+    "file": "verify186.js",
+    "code": 0,
+    "ms": 7666,
+    "verdict": "VERIFY186 PASS — 37/37",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS H1 콘솔 에러 0건 |  | VERIFY186 PASS — 37/37"
+   },
+   {
+    "file": "verify186.js",
+    "code": 0,
+    "ms": 8723,
+    "verdict": "VERIFY186 PASS — 37/37",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS H1 콘솔 에러 0건 |  | VERIFY186 PASS — 37/37"
+   },
+   {
+    "file": "verify186.js",
+    "code": 0,
+    "ms": 7659,
+    "verdict": "VERIFY186 PASS — 37/37",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS H1 콘솔 에러 0건 |  | VERIFY186 PASS — 37/37"
+   }
+  ],
+  "verify260.js": [
+   {
+    "file": "verify260.js",
+    "code": 0,
+    "ms": 12367,
+    "verdict": "VERIFY260 24/24 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY260 24/24 PASS"
+   },
+   {
+    "file": "verify260.js",
+    "code": 0,
+    "ms": 6935,
+    "verdict": "VERIFY260 24/24 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY260 24/24 PASS"
+   },
+   {
+    "file": "verify260.js",
+    "code": 0,
+    "ms": 7048,
+    "verdict": "VERIFY260 24/24 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY260 24/24 PASS"
+   },
+   {
+    "file": "verify260.js",
+    "code": 0,
+    "ms": 4292,
+    "verdict": "VERIFY260 24/24 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY260 24/24 PASS"
+   },
+   {
+    "file": "verify260.js",
+    "code": 0,
+    "ms": 6073,
+    "verdict": "VERIFY260 24/24 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY260 24/24 PASS"
+   }
+  ],
+  "verify326.js": [
+   {
+    "file": "verify326.js",
+    "code": 0,
+    "ms": 30629,
+    "verdict": "VERIFY326 PASS 91/91",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY326 PASS 91/91"
+   },
+   {
+    "file": "verify326.js",
+    "code": 0,
+    "ms": 26416,
+    "verdict": "VERIFY326 PASS 91/91",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY326 PASS 91/91"
+   },
+   {
+    "file": "verify326.js",
+    "code": 0,
+    "ms": 23609,
+    "verdict": "VERIFY326 PASS 91/91",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY326 PASS 91/91"
+   },
+   {
+    "file": "verify326.js",
+    "code": 0,
+    "ms": 23301,
+    "verdict": "VERIFY326 PASS 91/91",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY326 PASS 91/91"
+   },
+   {
+    "file": "verify326.js",
+    "code": 0,
+    "ms": 23339,
+    "verdict": "VERIFY326 PASS 91/91",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   콘솔 error / pageerror 0건 |  | VERIFY326 PASS 91/91"
+   }
+  ],
+  "verify472.js": [
+   {
+    "file": "verify472.js",
+    "code": 0,
+    "ms": 16110,
+    "verdict": "PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 27/27"
+   },
+   {
+    "file": "verify472.js",
+    "code": 0,
+    "ms": 5864,
+    "verdict": "PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 27/27"
+   },
+   {
+    "file": "verify472.js",
+    "code": 0,
+    "ms": 7521,
+    "verdict": "PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 27/27"
+   },
+   {
+    "file": "verify472.js",
+    "code": 0,
+    "ms": 5830,
+    "verdict": "PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 27/27"
+   },
+   {
+    "file": "verify472.js",
+    "code": 0,
+    "ms": 6868,
+    "verdict": "PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 27/27"
+   }
+  ],
+  "verify481.js": [
+   {
+    "file": "verify481.js",
+    "code": 0,
+    "ms": 20051,
+    "verdict": "VERIFY481 33/33 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY481 33/33 PASS"
+   },
+   {
+    "file": "verify481.js",
+    "code": 0,
+    "ms": 17299,
+    "verdict": "VERIFY481 33/33 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY481 33/33 PASS"
+   },
+   {
+    "file": "verify481.js",
+    "code": 0,
+    "ms": 12646,
+    "verdict": "VERIFY481 33/33 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY481 33/33 PASS"
+   },
+   {
+    "file": "verify481.js",
+    "code": 0,
+    "ms": 16616,
+    "verdict": "VERIFY481 33/33 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY481 33/33 PASS"
+   },
+   {
+    "file": "verify481.js",
+    "code": 0,
+    "ms": 14726,
+    "verdict": "VERIFY481 33/33 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS G1 콘솔 에러 0건 — 0건 |  | VERIFY481 33/33 PASS"
+   }
+  ],
+  "verify484.js": [
+   {
+    "file": "verify484.js",
+    "code": 0,
+    "ms": 15246,
+    "verdict": "PASS 16/16",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 16/16"
+   },
+   {
+    "file": "verify484.js",
+    "code": 0,
+    "ms": 12745,
+    "verdict": "PASS 16/16",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 16/16"
+   },
+   {
+    "file": "verify484.js",
+    "code": 0,
+    "ms": 12876,
+    "verdict": "PASS 16/16",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 16/16"
+   },
+   {
+    "file": "verify484.js",
+    "code": 0,
+    "ms": 13280,
+    "verdict": "PASS 16/16",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 16/16"
+   },
+   {
+    "file": "verify484.js",
+    "code": 0,
+    "ms": 13948,
+    "verdict": "PASS 16/16",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 16/16"
+   }
+  ],
+  "verify485.js": [
+   {
+    "file": "verify485.js",
+    "code": 1,
+    "ms": 11380,
+    "verdict": "FAIL 25/27",
+    "pass": true,
+    "fail": true,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | FAIL 25/27"
+   },
+   {
+    "file": "verify485.js",
+    "code": 1,
+    "ms": 8127,
+    "verdict": "FAIL 25/27",
+    "pass": true,
+    "fail": true,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | FAIL 25/27"
+   },
+   {
+    "file": "verify485.js",
+    "code": 1,
+    "ms": 7724,
+    "verdict": "FAIL 25/27",
+    "pass": true,
+    "fail": true,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | FAIL 25/27"
+   },
+   {
+    "file": "verify485.js",
+    "code": 0,
+    "ms": 7774,
+    "verdict": "PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 27/27"
+   },
+   {
+    "file": "verify485.js",
+    "code": 0,
+    "ms": 9315,
+    "verdict": "PASS 27/27",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS Z 콘솔 에러 0건 — 없음 |  | PASS 27/27"
+   }
+  ],
+  "verify504.js": [
+   {
+    "file": "verify504.js",
+    "code": 0,
+    "ms": 26813,
+    "verdict": "PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)",
+    "pass": true,
+    "fail": false,
+    "tail": "    ⚠ 여기 찍힌 실측을 선언에 옮겨 적지 마라 — 값·계수는 199 몫이다(`probe695` §3·§5). |  | PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)"
+   },
+   {
+    "file": "verify504.js",
+    "code": 0,
+    "ms": 26481,
+    "verdict": "PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)",
+    "pass": true,
+    "fail": false,
+    "tail": "    ⚠ 여기 찍힌 실측을 선언에 옮겨 적지 마라 — 값·계수는 199 몫이다(`probe695` §3·§5). |  | PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)"
+   },
+   {
+    "file": "verify504.js",
+    "code": 0,
+    "ms": 26188,
+    "verdict": "PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)",
+    "pass": true,
+    "fail": false,
+    "tail": "    ⚠ 여기 찍힌 실측을 선언에 옮겨 적지 마라 — 값·계수는 199 몫이다(`probe695` §3·§5). |  | PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)"
+   },
+   {
+    "file": "verify504.js",
+    "code": 0,
+    "ms": 25223,
+    "verdict": "PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)",
+    "pass": true,
+    "fail": false,
+    "tail": "    ⚠ 여기 찍힌 실측을 선언에 옮겨 적지 마라 — 값·계수는 199 몫이다(`probe695` §3·§5). |  | PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)"
+   },
+   {
+    "file": "verify504.js",
+    "code": 0,
+    "ms": 24945,
+    "verdict": "PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)",
+    "pass": true,
+    "fail": false,
+    "tail": "    ⚠ 여기 찍힌 실측을 선언에 옮겨 적지 마라 — 값·계수는 199 몫이다(`probe695` §3·§5). |  | PASS 15/15 · ⏸1 → 199 대기 · ⏸3 → 접촉(눈금 미적용 · 695)"
+   }
+  ],
+  "verify799.js": [
+   {
+    "file": "verify799.js",
+    "code": 0,
+    "ms": 16166,
+    "verdict": "VERIFY799 58/58 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY799  58/58  PASS"
+   },
+   {
+    "file": "verify799.js",
+    "code": 0,
+    "ms": 15563,
+    "verdict": "VERIFY799 58/58 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY799  58/58  PASS"
+   },
+   {
+    "file": "verify799.js",
+    "code": 0,
+    "ms": 13652,
+    "verdict": "VERIFY799 58/58 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY799  58/58  PASS"
+   },
+   {
+    "file": "verify799.js",
+    "code": 0,
+    "ms": 13995,
+    "verdict": "VERIFY799 58/58 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY799  58/58  PASS"
+   },
+   {
+    "file": "verify799.js",
+    "code": 0,
+    "ms": 15914,
+    "verdict": "VERIFY799 58/58 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY799  58/58  PASS"
+   }
+  ],
+  "verify800.js": [
+   {
+    "file": "verify800.js",
+    "code": 0,
+    "ms": 10113,
+    "verdict": "VERIFY800 27/27 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY800  27/27  PASS"
+   },
+   {
+    "file": "verify800.js",
+    "code": 0,
+    "ms": 9037,
+    "verdict": "VERIFY800 27/27 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY800  27/27  PASS"
+   },
+   {
+    "file": "verify800.js",
+    "code": 0,
+    "ms": 9853,
+    "verdict": "VERIFY800 27/27 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY800  27/27  PASS"
+   },
+   {
+    "file": "verify800.js",
+    "code": 0,
+    "ms": 8579,
+    "verdict": "VERIFY800 27/27 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY800  27/27  PASS"
+   },
+   {
+    "file": "verify800.js",
+    "code": 0,
+    "ms": 11455,
+    "verdict": "VERIFY800 27/27 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓   에러 0건 |  | VERIFY800  27/27  PASS"
+   }
+  ],
+  "verify834.js": [
+   {
+    "file": "verify834.js",
+    "code": 0,
+    "ms": 7199,
+    "verdict": "VERIFY834 29/29 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [G1] 에러 0건  — 없음 |  | VERIFY834 29/29 PASS"
+   },
+   {
+    "file": "verify834.js",
+    "code": 0,
+    "ms": 10469,
+    "verdict": "VERIFY834 29/29 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [G1] 에러 0건  — 없음 |  | VERIFY834 29/29 PASS"
+   },
+   {
+    "file": "verify834.js",
+    "code": 0,
+    "ms": 7918,
+    "verdict": "VERIFY834 29/29 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [G1] 에러 0건  — 없음 |  | VERIFY834 29/29 PASS"
+   },
+   {
+    "file": "verify834.js",
+    "code": 0,
+    "ms": 8807,
+    "verdict": "VERIFY834 29/29 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [G1] 에러 0건  — 없음 |  | VERIFY834 29/29 PASS"
+   },
+   {
+    "file": "verify834.js",
+    "code": 0,
+    "ms": 7453,
+    "verdict": "VERIFY834 29/29 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ [G1] 에러 0건  — 없음 |  | VERIFY834 29/29 PASS"
+   }
+  ],
+  "verify85.js": [
+   {
+    "file": "verify85.js",
+    "code": 0,
+    "ms": 7239,
+    "verdict": "VERIFY85 PASS — 42/42",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS K1 콘솔 에러 0건 |  | VERIFY85 PASS — 42/42"
+   },
+   {
+    "file": "verify85.js",
+    "code": 0,
+    "ms": 8728,
+    "verdict": "VERIFY85 PASS — 42/42",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS K1 콘솔 에러 0건 |  | VERIFY85 PASS — 42/42"
+   },
+   {
+    "file": "verify85.js",
+    "code": 0,
+    "ms": 7534,
+    "verdict": "VERIFY85 PASS — 42/42",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS K1 콘솔 에러 0건 |  | VERIFY85 PASS — 42/42"
+   },
+   {
+    "file": "verify85.js",
+    "code": 0,
+    "ms": 8602,
+    "verdict": "VERIFY85 PASS — 42/42",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS K1 콘솔 에러 0건 |  | VERIFY85 PASS — 42/42"
+   },
+   {
+    "file": "verify85.js",
+    "code": 0,
+    "ms": 9384,
+    "verdict": "VERIFY85 PASS — 42/42",
+    "pass": true,
+    "fail": false,
+    "tail": "PASS K1 콘솔 에러 0건 |  | VERIFY85 PASS — 42/42"
+   }
+  ],
+  "verify88.js": [
+   {
+    "file": "verify88.js",
+    "code": 0,
+    "ms": 11144,
+    "verdict": "VERIFY88 PASS — 25/25",
+    "pass": true,
+    "fail": false,
+    "tail": "    atk ×3.00 · hp ×2.00 · regen ×1.40 · 전스탯 ×1.20 이 88 로 제거됨(보상 없음 — 밸런스 재측정 항목). |  | VERIFY88 PASS — 25/25"
+   },
+   {
+    "file": "verify88.js",
+    "code": 0,
+    "ms": 10654,
+    "verdict": "VERIFY88 PASS — 25/25",
+    "pass": true,
+    "fail": false,
+    "tail": "    atk ×3.00 · hp ×2.00 · regen ×1.40 · 전스탯 ×1.20 이 88 로 제거됨(보상 없음 — 밸런스 재측정 항목). |  | VERIFY88 PASS — 25/25"
+   },
+   {
+    "file": "verify88.js",
+    "code": 0,
+    "ms": 10208,
+    "verdict": "VERIFY88 PASS — 25/25",
+    "pass": true,
+    "fail": false,
+    "tail": "    atk ×3.00 · hp ×2.00 · regen ×1.40 · 전스탯 ×1.20 이 88 로 제거됨(보상 없음 — 밸런스 재측정 항목). |  | VERIFY88 PASS — 25/25"
+   },
+   {
+    "file": "verify88.js",
+    "code": 0,
+    "ms": 10731,
+    "verdict": "VERIFY88 PASS — 25/25",
+    "pass": true,
+    "fail": false,
+    "tail": "    atk ×3.00 · hp ×2.00 · regen ×1.40 · 전스탯 ×1.20 이 88 로 제거됨(보상 없음 — 밸런스 재측정 항목). |  | VERIFY88 PASS — 25/25"
+   },
+   {
+    "file": "verify88.js",
+    "code": 0,
+    "ms": 10916,
+    "verdict": "VERIFY88 PASS — 25/25",
+    "pass": true,
+    "fail": false,
+    "tail": "    atk ×3.00 · hp ×2.00 · regen ×1.40 · 전스탯 ×1.20 이 88 로 제거됨(보상 없음 — 밸런스 재측정 항목). |  | VERIFY88 PASS — 25/25"
+   }
+  ],
+  "verify95.js": [
+   {
+    "file": "verify95.js",
+    "code": 0,
+    "ms": 115853,
+    "verdict": "VERIFY95 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| 34 축복 | `#blsw` | 0 | — | — | 해당없음 | |  | VERIFY95 PASS"
+   },
+   {
+    "file": "verify95.js",
+    "code": 0,
+    "ms": 112547,
+    "verdict": "VERIFY95 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| 34 축복 | `#blsw` | 0 | — | — | 해당없음 | |  | VERIFY95 PASS"
+   },
+   {
+    "file": "verify95.js",
+    "code": 0,
+    "ms": 113327,
+    "verdict": "VERIFY95 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| 34 축복 | `#blsw` | 0 | — | — | 해당없음 | |  | VERIFY95 PASS"
+   },
+   {
+    "file": "verify95.js",
+    "code": 0,
+    "ms": 115498,
+    "verdict": "VERIFY95 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| 34 축복 | `#blsw` | 0 | — | — | 해당없음 | |  | VERIFY95 PASS"
+   },
+   {
+    "file": "verify95.js",
+    "code": 0,
+    "ms": 115105,
+    "verdict": "VERIFY95 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "| 34 축복 | `#blsw` | 0 | — | — | 해당없음 | |  | VERIFY95 PASS"
+   }
+  ]
+ }
+}
