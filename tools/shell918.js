@@ -146,13 +146,39 @@ async function collect(page) {
   } catch (_) { return null; }
 }
 
+/* ⚠ **자마다 «끝나는 법» 이 다르다** — `verify462`(411행)처럼 `process.exit()` 를 `finally` 앞에서
+   부르는 자는 `browser.close()` 가 **영영 안 불린다**(1회차 실측: 장부 30줄 중 12줄이 그렇게 비었다).
+   그래서 장부는 «닫힐 때 한 번» 이 아니라 **2초마다 떠 두고, 프로세스가 끝날 때 마지막 장을 동기로**
+   적는다. 폴링은 `SHELL918_LOG` 가 있을 때만 돈다(게이트의 세상은 그대로다). */
+const pending = new Map();
+const entryName = () => String(process.argv[1] || '').replace(/\\/g, '/').split('/').pop();
+let exitHooked = false;
+function hookExit() {
+  if (exitHooked) return;
+  exitHooked = true;
+  const write = () => {
+    const f = logPath();
+    if (!f) return;
+    for (const st of pending.values()) {
+      try { fs.appendFileSync(f, JSON.stringify(st) + '\n'); } catch (_) {}
+    }
+    pending.clear();
+  };
+  process.on('exit', write);
+  /* 상한 시간에 걸려 밖에서 끊기는 자도 마지막 장은 남긴다(`probe918 --scan` 은 SIGTERM 을 먼저 준다).
+     이 손잡이는 `SHELL918_LOG` 가 있을 때만 걸리므로 게이트가 그냥 도는 세상에는 없다. */
+  process.on('SIGTERM', () => { write(); process.exit(143); });
+}
+
 async function flush(page) {
   const f = logPath();
   if (!f || !page || page.__shell918done) return;
   page.__shell918done = true;
-  const st = await collect(page);
+  if (page.__shell918poll) { clearInterval(page.__shell918poll); page.__shell918poll = null; }
+  const st = (await collect(page)) || pending.get(page);
+  pending.delete(page);
   if (!st) return;
-  st.entry = String(process.argv[1] || '').replace(/\\/g, '/').split('/').pop();
+  st.entry = entryName();
   try { fs.appendFileSync(f, JSON.stringify(st) + '\n'); } catch (_) {}
 }
 
@@ -167,8 +193,17 @@ async function arm(page, ctx) {
   } catch (_) { /* 이미 네비게이션이 시작됐으면 심을 자리가 없다 */ return page; }
   page.shell918 = () => collect(page);
   if (logPath()) {
+    hookExit();
     const origClose = page.close.bind(page);
     page.close = async (...a) => { await flush(page); return origClose(...a); };
+    page.__shell918poll = setInterval(() => {
+      collect(page).then(st => {
+        if (!st || page.__shell918done) return;
+        st.entry = entryName();
+        pending.set(page, st);
+      }).catch(() => {});
+    }, 2000);
+    if (page.__shell918poll.unref) page.__shell918poll.unref();
   }
   return page;
 }
@@ -186,6 +221,15 @@ function armBrowser(browser, ctx) {
   browser.newContext = async (...a) => {
     const c = await origNewCtx(...a);
     wrapNewPage(c);
+    /* 자마다 «닫는 자리» 가 다르다 — `ctx.close()` 로 닫는 자(`probe879` 95~141행)의 판은
+       브라우저가 닫힐 때 이미 사라져 있어서, 여기서 안 걷으면 장부에 **한 줄도 안 남는다**. */
+    if (logPath()) {
+      const cc = c.close.bind(c);
+      c.close = async (...b) => {
+        for (const p of c.pages()) { try { await flush(p); } catch (_) {} }
+        return cc(...b);
+      };
+    }
     return c;
   };
   if (logPath()) {

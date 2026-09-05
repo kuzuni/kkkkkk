@@ -176,7 +176,12 @@ async function scan() {
           cwd: ROOT, stdio: 'ignore',
           env: Object.assign({}, process.env, { PW_SHELL918: 'report', SHELL918_LOG: LOG }),
         });
-        const t = setTimeout(() => { try { ch.kill('SIGKILL'); } catch (_) {} }, LIMIT);
+        /* 상한에 걸려도 **장부의 마지막 장은 받는다** — SIGTERM 을 먼저 주고(shell918 이 그 신호에
+           떠 있던 장을 적는다) 5초 뒤에야 SIGKILL 한다. */
+        const t = setTimeout(() => {
+          try { ch.kill('SIGTERM'); } catch (_) {}
+          setTimeout(() => { try { ch.kill('SIGKILL'); } catch (_) {} }, 5000);
+        }, LIMIT);
         ch.on('exit', c2 => { clearTimeout(t); res(c2); });
         ch.on('error', () => { clearTimeout(t); res(-1); });
       });
