@@ -41,10 +41,43 @@ RUN_TOP, PERSIST = 60, 8
 RUN_MIN = 60
 DARK_TH = 25
 PILL_RGB = (0x19, 0x16, 0x14)
+PILL_TOL = 6                                       # 속 판정 — `inside()` 가 쓰던 값 그대로
+SUB = '--int' not in sys.argv                      # 932 4회차: 부분 화소가 기본(--int 로 옛 정수 자)
 
 
 def lum(p):
     return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
+
+
+def pill_d(p):
+    """«속(#191614) 인가» 의 투영 — `inside()` 가 쓰는 것과 **같은 판정**을 수로 낸다
+       (채널별 절대차의 최댓값 · 문턱 PILL_TOL). `inside(x,y) ⟺ pill_d(p) <= PILL_TOL`."""
+    return max(abs(p[i] - PILL_RGB[i]) for i in range(3))
+
+
+def _cross(v_in, v_out, th):
+    """마지막 «안» 화소(v_in)와 첫 «밖» 화소(v_out) 사이에서 문턱 th 를 지나는 자리 —
+       안 화소 중심에서 **밖으로 몇 칸**인가(0..1). 못 가르면 None.
+
+    ⚑⚑ 932 4회차 — **정의는 한 글자도 안 바꾸고 걸음만 정수에서 부분 화소로 간다.**
+      선례는 이 저장소 안에 둘 있다: `scan667b.edge_sub`(932 3회차) · `scan667b.left_edge`(2회차).
+      둘 다 «같은 투영·같은 문턱의 교차점 선형 보간» 이고, 여기도 그대로다 —
+      바깥 모서리는 `lum` 과 `DARK_TH`, 속 모서리는 `pill_d` 와 `PILL_TOL` 로,
+      **`edge()` 의 국면 걸음(904 수리)과 `inside()` 의 판정은 손대지 않는다.**
+
+    ⚠ 왜 «두께 자체» 를 적분(ⓑ)하지 않는가 — 이 자의 얇은 축(테)은 두께를 직접 재는 것이
+      아니라 **두 모서리의 차**(바깥 117 − 속 113)다. 932 1회차 물리표의 마지막 줄과
+      3회차 ⓚ 가 그 자리를 갈라 두었다: ⓑ 는 두께 축, ⓐ 는 경계 위치 축.
+      소속도·질량으로 갈면 베벨(속과 테 사이의 밝은 한두 칸)을 반쯤 세게 되어
+      **재는 것이 바뀐다**(2회차가 금판에서 +10%, 3회차가 +13% 로 밟은 그 자리).
+
+    ⚠ 남는 «번짐» 비대칭(ref 는 JPEG 라 경사면이 넓어 문턱 자가 ref 를 얇게 읽는다)은
+      이 번호의 몫이 아니다 — **942** 로 따로 등재돼 있다. 여기서 없애는 것은 **격자**뿐이다.
+    """
+    if v_out == v_in:
+        return None
+    f = (th - v_in) / float(v_out - v_in)
+    return min(1.0, max(0.0, f))
 
 
 def bg_of(px, y, strips):
@@ -113,8 +146,7 @@ def measure_bowl(px, band, strips, y0, y1, cap_y):
 
 def measure_pill(px, band, y0, y1):
     def inside(x, y):
-        p = px[x, y]
-        return all(abs(p[i] - PILL_RGB[i]) <= 6 for i in range(3))
+        return pill_d(px[x, y]) <= PILL_TOL
 
     best = (0, None, None)
     for y in range(y0, y1):
@@ -170,9 +202,27 @@ def measure_pill(px, band, y0, y1):
                 else:
                     break
         return outer if phase == 'c' else inner
+    def out_f(x, y, dx, dy, val, th):
+        """마지막 «안» 화소 (x,y) 에서 바깥(dx,dy) 쪽 부분 화소 여유(0..1) — 932 4회차.
+           `--int` 면 옛 정수 자 그대로 0.5(= 화소 바깥 면)를 준다."""
+        if not SUB:
+            return 0.5
+        try:
+            f = _cross(val(px[x, y]), val(px[x + dx, y + dy]), th)
+        except IndexError:
+            return 0.5
+        return 0.5 if f is None else f
+
     l, r = edge(-1, 0, cx, sy)[0], edge(1, 0, cx, sy)[0]
     vx = l + 10                     # 세로는 «아이콘·숫자 잉크» 를 피해 왼쪽 끝 안쪽에서 잰다
     t, b = edge(0, -1, vx, sy)[1], edge(0, 1, vx, sy)[1]
+    # ⚑ 932 4회차 — 바깥 네 모서리를 **같은 lum·같은 DARK_TH** 의 교차점으로 민다.
+    #   `edge()` 의 국면 걸음(904 수리)은 한 글자도 안 바뀐다 — 그 걸음이 준 화소에서
+    #   «어디서 문턱을 지나는가» 만 더 묻는다.
+    fl = out_f(l, sy, -1, 0, lum, DARK_TH)
+    fr = out_f(r, sy, +1, 0, lum, DARK_TH)
+    ft = out_f(vx, t, 0, -1, lum, DARK_TH)
+    fb = out_f(vx, b, 0, +1, lum, DARK_TH)
     # ⚑ **주 눈금은 «속»(평평한 #191614 칠) 이다** — 두 그림이 같은 색을 쓰고 경계가 한 겹뿐이라
     #   마스크가 갈릴 자리가 없다. 바깥(검정 테두리) 은 아래쪽에서 돌기둥 그늘과 붙어 ±2px 흔들린다.
     iy0, iy1 = sy, sy
@@ -187,8 +237,14 @@ def measure_pill(px, band, y0, y1):
     iy = (iy0 + iy1) // 2
     ins = [x for x in range(int(band[0]), int(band[1])) if inside(x, iy)]
     ix0, ix1 = (min(ins), max(ins)) if ins else (sx, sx + w - 1)
-    return {'l': l, 'r': r, 't': t, 'b': b, 'w': r - l + 1, 'h': b - t + 1,
-            'iw': ix1 - ix0 + 1, 'ih': iy1 - iy0 + 1, 'run': w}
+    # ⚑ 932 4회차 — 속 네 모서리도 **같은 `inside` 판정**(pill_d ≤ PILL_TOL)의 교차점으로.
+    gl = out_f(ix0, iy, -1, 0, pill_d, PILL_TOL)
+    gr = out_f(ix1, iy, +1, 0, pill_d, PILL_TOL)
+    gt = out_f(vx, iy0, 0, -1, pill_d, PILL_TOL)
+    gb = out_f(vx, iy1, 0, +1, pill_d, PILL_TOL)
+    return {'l': l, 'r': r, 't': t, 'b': b,
+            'w': (r + fr) - (l - fl), 'h': (b + fb) - (t - ft),
+            'iw': (ix1 + gr) - (ix0 - gl), 'ih': (iy1 + gb) - (iy0 - gt), 'run': w}
 
 
 def side_bands(px, pill, y1):
@@ -201,6 +257,61 @@ def side_bands(px, pill, y1):
     return out
 
 
+def ring_sweep(px, q):
+    """[945 근거] «세로 테» 를 알약 열마다 다시 잰다 — 창이 둥근 캡을 가로지르는가.
+
+    ⚑⚑ 932 4회차 — 부분 화소로 갈고 나니 테가 **가로 2.31 · 세로 2.65** 로 갈렸다.
+      `measure_pill` 은 세로를 `vx = l + 10` **한 열**에서 재는데, 알약은 이름 그대로
+      알약(둥근 캡)이라 그 열은 이미 캡의 어깨 위다 — 거기서는 세로 자가 테를 **비스듬히**
+      가로질러 두껍게 읽는다. 평평한 가운데 열에서는 가로와 같은 값이 나온다.
+    ⇒ 904 의 «테는 등방 2» 판정은 **살아 있다.** 이 회차가 `verify866` 의 과녁을 안 옮긴 이유이고,
+      창을 옮기는 것은 «재는 것을 바꾸는» 일이라(3회차 규칙 2) **945** 로 따로 등재했다.
+    """
+    l, r, t, b = q['l'], q['r'], q['t'], q['b']
+
+    def at(vx):
+        ys = [y for y in range(t, b + 1) if pill_d(px[vx, y]) <= PILL_TOL]
+        if not ys:
+            return None
+        iy0, iy1 = min(ys), max(ys)
+
+        def walk(y, step):
+            phase, bright, outer = 'a', 0, y
+            for _ in range(200):
+                y += step
+                dark = lum(px[vx, y]) < DARK_TH
+                if phase == 'a':
+                    if not dark:
+                        phase, bright = 'b', 1
+                elif phase == 'b':
+                    if dark:
+                        phase, outer = 'c', y
+                    else:
+                        bright += 1
+                        if bright > 2:
+                            return None
+                else:
+                    if dark:
+                        outer = y
+                    else:
+                        break
+            return outer if phase == 'c' else None
+
+        ot, ob = walk(iy0, -1), walk(iy1, 1)
+        if ot is None or ob is None:
+            return None
+        f = lambda y, s: (_cross(lum(px[vx, y]), lum(px[vx, y + s]), DARK_TH) or 0.5)
+        g = lambda y, s: (_cross(pill_d(px[vx, y]), pill_d(px[vx, y + s]), PILL_TOL) or 0.5)
+        outer_h = (ob + f(ob, 1)) - (ot - f(ot, -1))
+        inner_h = (iy1 + g(iy1, 1)) - (iy0 - g(iy0, -1))
+        return (outer_h - inner_h) / 2
+
+    w = r - l
+    mids = [v for v in (at(l + o) for o in range(int(w * .18), int(w * .82))) if v is not None]
+    caps = [v for v in (at(l + o) for o in list(range(3, 8)) + list(range(w - 7, w - 2))) if v is not None]
+    return mids, caps
+
+
 def main():
     a = sys.argv[1:]
     cap = a[a.index('--cap') + 1] if '--cap' in a else None
@@ -211,6 +322,17 @@ def main():
     rb = measure_bowl(rp, (150, 340), strips, 505, 640, 639)
     rq = measure_pill(rp, (170, 320), 585, 625)
 
+    if '--ring-sweep' in a:
+        mids, caps = ring_sweep(rp, rq)
+        med = sorted(mids)[len(mids) // 2]
+        print('RING-SWEEP — 세로 테를 열마다 (ref px · 창 vx = l+10 이 어디에 놓이는가)')
+        print('  가운데 중앙값 %.2f · 최소 %.2f · 최대 %.2f  (평평한 구간 %d열 — 최대는 숫자 잉크가'
+              ' 속 판정을 끊는 열이다)' % (med, min(mids), max(mids), len(mids)))
+        print('  캡 최대 %.2f  (둥근 끝 %d열)' % (max(caps), len(caps)))
+        print('  가로 테 %.2f · `measure_pill` 의 세로 테 %.2f (창 vx = l+10)'
+              % ((rq['w'] - rq['iw']) / 2, (rq['h'] - rq['ih']) / 2))
+        return
+
     print('PROBE866 — 89 유물 소환 부품 치수 (자 하나로 ref ↔ 우리)')
     print()
     print('  [ref] %s (486x687 크롭 · k = %.4f)' % (REF, K))
@@ -218,10 +340,14 @@ def main():
           % (rb['top'], rb['bot'], rb['h'], rb['h'] * K))
     print('    ⓒ 림 폭 %d ref px = %.1f · ⓓ 발 폭 %d ref px = %.1f'
           % (rb['rim'], rb['rim'] * K, rb['foot'], rb['foot'] * K))
-    print('    ⓔ 알약 **속**(평평한 #191614 칠) %dx%d ref px = **%.1fx%.1f 프레임 px**  ← 주 눈금'
+    print('    ⓔ 알약 **속**(평평한 #191614 칠) %.2fx%.2f ref px = **%.1fx%.1f 프레임 px**  ← 주 눈금'
           % (rq['iw'], rq['ih'], rq['iw'] * K, rq['ih'] * K))
-    print('       (참고) 검정 테두리 바깥 x%d..%d · y%d..%d = %dx%d ref px = %.1fx%.1f'
+    print('       (참고) 검정 테두리 바깥 x%d..%d · y%d..%d = %.2fx%.2f ref px = %.1fx%.1f'
           % (rq['l'], rq['r'], rq['t'], rq['b'], rq['w'], rq['h'], rq['w'] * K, rq['h'] * K))
+    print('       테(속→바깥) 가로 %.2f · 세로 %.2f ref px = %.2f · %.2f 프레임 px  %s'
+          % ((rq['w'] - rq['iw']) / 2, (rq['h'] - rq['ih']) / 2,
+             (rq['w'] - rq['iw']) / 2 * K, (rq['h'] - rq['ih']) / 2 * K,
+             '(부분 화소)' if SUB else '(옛 정수 걸음 — --int)'))
     for x, a0, b0, d in side_bands(rp, rq, 640):
         print('       [검산] x%d 의 밝은 띠 y%d..%d — 알약 하변보다 **%+d행**  ⇒ %s'
               % (x, a0, b0, d, '알약 아님(뒤 돌기둥)' if d > 2 else '알약의 일부'))
@@ -242,21 +368,51 @@ def main():
     oq = diff_box(cp, nq, (ox + c['x'] - 24, oy + c['y'] - 24,
                            ox + c['x'] + c['w'] + 24, oy + c['y'] + c['h'] + 24))
     # 알약 속 — 차분 상자 안에서 평평한 #191614 칠의 가로·세로 최장 연속
+    # ⚑ 932 4회차 — **우리 쪽도 같이 부분 화소로 간다.** 안 그러면 ref 만 격자에서 풀리고
+    #   우리는 정수에 갇힌 채 ×2.2222 로 견주게 되어 **새 비대칭**이 생긴다(장부의 fix 칸).
+    #   최장 연속을 찾는 판정(`ins`)·창은 한 글자도 안 바뀐다 — 이긴 구간의 **양 끝만** 민다.
     def flat(px_, box):
         def ins(x, y):
-            p = px_[x, y]
-            return all(abs(p[i] - PILL_RGB[i]) <= 6 for i in range(3))
-        wid = hei = 0
-        for y in range(box['top'], box['bot'] + 1):
-            cur = 0
-            for x in range(box['l'], box['r'] + 1):
-                cur = cur + 1 if ins(x, y) else 0
-                wid = max(wid, cur)
-        for x in range(box['l'], box['r'] + 1):
-            cur = 0
-            for y in range(box['top'], box['bot'] + 1):
-                cur = cur + 1 if ins(x, y) else 0
-                hei = max(hei, cur)
+            return pill_d(px_[x, y]) <= PILL_TOL
+
+        def best_line(fixed, lo, hi, horiz):
+            """한 줄에서 가장 긴 `ins` 연속을 (길이, 시작, 끝) 로."""
+            bl, bs, be, cur = 0, None, None, None
+            for i in range(lo, hi + 1):
+                x, y = (i, fixed) if horiz else (fixed, i)
+                if ins(x, y):
+                    if cur is None:
+                        cur = i
+                    if i - cur + 1 > bl:
+                        bl, bs, be = i - cur + 1, cur, i
+                else:
+                    cur = None
+            return bl, bs, be
+
+        def span(fixed, lo, hi, horiz):
+            bl, bs, be = best_line(fixed, lo, hi, horiz)
+            if not bl:
+                return 0.0
+            if not SUB:
+                return float(bl)
+
+            def at(i):
+                return (i, fixed) if horiz else (fixed, i)
+
+            def f_out(i, step):
+                try:
+                    v0, v1 = pill_d(px_[at(i)]), pill_d(px_[at(i + step)])
+                except IndexError:
+                    return 0.5
+                f = _cross(v0, v1, PILL_TOL)
+                return 0.5 if f is None else f
+
+            return (be + f_out(be, 1)) - (bs - f_out(bs, -1))
+
+        wid = max(span(y, box['l'], box['r'], True)
+                  for y in range(box['top'], box['bot'] + 1))
+        hei = max(span(x, box['top'], box['bot'], False)
+                  for x in range(box['l'], box['r'] + 1))
         return wid, hei
     iw, ih = flat(cp, oq)
 
@@ -269,7 +425,7 @@ def main():
     print('    ⓒ 최대(림) 폭 **%d** (ref %.1f · Δ %+.1f%%) · ⓓ 발 폭 **%d** (ref %.1f · Δ %+.1f%%)'
           % (ob['w'], rb['rim'] * K, d(ob['w'], rb['rim'] * K),
              ob['foot'], rb['foot'] * K, d(ob['foot'], rb['foot'] * K)))
-    print('    ⓔ 알약 속 **%dx%d** (ref %.1fx%.1f · Δ 폭 %+.1f%% · 세로 %+.1f%%)'
+    print('    ⓔ 알약 속 **%.2fx%.2f** (ref %.1fx%.1f · Δ 폭 %+.1f%% · 세로 %+.1f%%)'
           % (iw, ih, rq['iw'] * K, rq['ih'] * K, d(iw, rq['iw'] * K), d(ih, rq['ih'] * K)))
     print('       바깥 **%dx%d** (ref %.1fx%.1f · Δ 폭 %+.1f%% · 세로 %+.1f%%)'
           % (oq['w'], oq['h'], rq['w'] * K, rq['h'] * K,

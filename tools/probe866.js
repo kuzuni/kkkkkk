@@ -91,7 +91,11 @@ const GEO = path.join(os.tmpdir(), 'probe866-geo.json');
   await show('.rw-cost');
   await b.close();
   if (errs.length) { console.log('PAGE ERRORS:'); errs.forEach((e) => console.log('  ' + e)); }
-  const r = py([path.join(__dirname, 'probe866.py'), '--cap', OUT, '--geo', GEO],
+  /* ⚑ 932 4회차 — 남은 인자를 파이썬 자에 그대로 넘긴다(`--int` 로 옛 정수 걸음을
+     **같은 캡처 위에서** 다시 재기 위해서다. 캡처는 이 자가 만들고 바로 지우므로
+     밖에서 따로 물릴 수가 없었다 — 옛 자와의 대조가 재현 불가능했던 자리). */
+  const extra = process.argv.slice(2).filter((a) => a !== '--keep');
+  const r = py([path.join(__dirname, 'probe866.py'), '--cap', OUT, '--geo', GEO, ...extra],
     { cwd: ROOT, encoding: 'utf-8' });
   process.stdout.write(r);
   if (!KEEP) {

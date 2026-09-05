@@ -23,6 +23,7 @@ const path = require('path');
 const P = require('./probe932');
 
 const TOOLS = __dirname;
+const ROOT = path.resolve(__dirname, '..');   /* 932 4회차 §7 — 파이썬 자를 저장소 뿌리에서 부른다 */
 let pass = 0, fail = 0;
 const ok = (msg, cond, detail) => {
   cond ? pass++ : fail++;
@@ -33,8 +34,9 @@ const ok = (msg, cond, detail) => {
    R = 축척 비대칭(②ⓐ · 895 와 같은 얼굴) · B = 번짐 비대칭(②ⓑ · 1:1 · 942 로 등재) */
 /* ⚑ 3회차 — `scan667b.py` 가 R 에서 빠졌다(얇은 축 넷이 전부 부분 화소다 · §6).
    래칫은 «늘면 빨강» 이므로 **줄어든 것도 여기서 다시 적어야** 지나간다 — 그 자리가 이 줄이다. */
-const RED = ['probe866.py', 'scan885b.py', 'scan885e.py', 'scan887.py'];
-const FIXED = ['scan667b.py'];         /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
+/* ⚑ 4회차 — `probe866.py` 가 R 에서 빠졌다(알약 바깥·속 여덟 모서리가 전부 부분 화소다 · §7). */
+const RED = ['scan885b.py', 'scan885e.py', 'scan887.py'];
+const FIXED = ['scan667b.py', 'probe866.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
 const BRK = ['probe352.py', 'probe384.py', 'probe409.py', 'probe409c.py', 'probe409f.py',
   'probe409g.py', 'probe409i.py', 'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
 
@@ -186,6 +188,70 @@ console.log('\n[5] 수리 — `scan667b.py` 의 리본 좌단이 부분 화소�
       wid.length >= 8 && wid.every((v) => Number.isInteger(v)), wid.join(' '));
     ok('[6-e] 이 번호가 실제로 갈아 끼운 자가 있다 (래칫이 «비어서» 줄어든 것이 아니다)',
       FIXED.length > 0 && FIXED.every((f) => !RED.includes(f)), FIXED.join(' '));
+  }
+}
+
+/* ── [7] 4회차 수리 — `probe866.py` (알약 바깥·속 여덟 모서리) ──────────────
+   ⚠ ref 절만 돌린다(`--cap` 없이) — 우리 쪽은 캡처가 있어야 하고, 캡처는 커밋 금지 자산이다.
+   같은 규약을 §5 가 `--ref-only` 로 이미 쓰고 있다. */
+console.log('\n[7] 4회차 수리 — `probe866.py` 알약 «테» (바깥 − 속) 가 격자에서 풀렸는가');
+{
+  const { py } = require('./pydep937');
+  let oldOut, newOut;
+  try {
+    oldOut = String(py(['tools/probe866.py', '--int'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+    newOut = String(py(['tools/probe866.py'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  } catch (e) {
+    if (e && e.status === 2) console.log('  SKIP [7] 파이썬 의존 없음 — pip3 install pillow numpy');
+    else throw e;
+  }
+  if (oldOut && newOut) {
+    /* «속 AxB» 와 «바깥 AxB» 네 수 + 테 두 수를 문자열이 아니라 **수**로 뽑는다. */
+    const four = (o) => {
+      const a = o.match(/평평한 #191614 칠\) ([0-9.]+)x([0-9.]+) ref px/);
+      const b = o.match(/검정 테두리 바깥 x\d+\.\.\d+ · y\d+\.\.\d+ = ([0-9.]+)x([0-9.]+) ref px/);
+      return a && b ? [+a[1], +a[2], +b[1], +b[2]] : [];
+    };
+    const ring = (o) => {
+      const m = o.match(/테\(속→바깥\) 가로 ([0-9.]+) · 세로 ([0-9.]+) ref px/);
+      return m ? [+m[1], +m[2]] : [];
+    };
+    const oo = four(oldOut), nn = four(newOut);
+    const isInt = (v) => Math.abs(v - Math.round(v)) < 1e-9;
+    ok('[7-a] ⚑ 옛 자의 알약 네 치수는 **전부 정수 ref px** — ×K(2.2222) 되기 전에 이미 격자에 굳어 있었다 (지문)',
+      oo.length === 4 && oo.every(isInt), oo.join(' '));
+    ok('[7-b] 부분 화소 자는 넷 다 정수가 아니다 — 이제 이 축들이 표현된다',
+      nn.length === 4 && nn.every((v) => !isInt(v)), nn.join(' '));
+    ok('[7-c] 넷 다 옛 값에서 ±1.0 ref px 안이다 — 정의가 안 바뀌었다(걸음만 곱아졌다)',
+      nn.length === 4 && nn.every((v, i) => Math.abs(v - oo[i]) <= 1.0),
+      nn.map((v, i) => (v - oo[i]).toFixed(2)).join(' '));
+    /* ⚑ 되돌림 — `--int` 가 **옛 값을 한 글자도 안 틀리고** 되살린다. 이 항이 없으면
+       «새 자가 옛 자와 다르다» 만 남고 «옛 자를 그대로 재현할 수 있다» 가 사라진다. */
+    ok('[7-d] ⚑ `--int` 는 904 가 못박은 옛 값(117×24 · 113×20)을 그대로 되살린다 — 되돌림이 가능하다',
+      oo.length === 4 && oo[0] === 113 && oo[1] === 20 && oo[2] === 117 && oo[3] === 24, oo.join(' '));
+    const ro = ring(oldOut), rn = ring(newOut);
+    ok('[7-e] ⚑ 옛 자의 «테» 는 가로·세로가 **둘 다 정확히 2** — 904 의 «등방 2» 는 이 격자 위에서 나온 값이다',
+      ro.length === 2 && ro[0] === 2 && ro[1] === 2, ro.join(' / '));
+    /* ⚠⚠ 이 회차가 `verify866` 의 과녁을 **안 옮긴 이유**를 자가 들고 있는다.
+       부분 화소 자는 테를 가로 2.31 · 세로 2.65 로 가르는데, 그 «세로» 는
+       `measure_pill` 이 세로를 재는 열 `vx = l + 10` 이 알약의 **둥근 캡**을 가로지르기 때문이다
+       (평평한 가운데 열에서는 2.14~2.28 로 가로와 같다 — 4회차 열 스윕 실측).
+       ⇒ 904 의 «등방» 판정은 **살아 있고**, 과녁을 이 값으로 옮기면 캡 인공물을 제품에 굽게 된다.
+       창을 옮기는 것은 «재는 것을 바꾸는» 일이라 별도 번호(945)로 등재했다. */
+    ok('[7-f] ⚑ 부분 화소 테는 «세로 > 가로» 로 갈린다 — 다음 자리(945)가 여기서 시작한다',
+      rn.length === 2 && rn[1] > rn[0] && rn[1] - rn[0] > 0.2, rn.join(' / '));
+    let sweep = '';
+    ok('[7-g] ★ 그 갈림이 **창의 인공물**임을 자가 스스로 보인다 — 세로를 재는 열이 둥근 캡 위다 (평평한 열에서는 가로와 같다)',
+      (() => {
+        /* 같은 ref 를 열마다 다시 재서 «캡 ↔ 가운데» 를 가른다 — 945 의 근거를 매 실행 다시 찍는다. */
+        const s = String(py(['tools/probe866.py', '--ring-sweep'], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+        const med = +(s.match(/가운데 중앙값 ([0-9.]+)/) || [])[1];
+        const cap = +(s.match(/캡 최대 ([0-9.]+)/) || [])[1];
+        sweep = `가운데 중앙값 ${med} ↔ 캡 ${cap} (가로 ${rn[0]})`;
+        /* 캡은 가운데보다 한 눈금 넘게 두껍고, 가운데는 **가로 테와 같은 수**다 = 등방. */
+        return Number.isFinite(med) && Number.isFinite(cap)
+          && cap > med + 1.0 && Math.abs(med - rn[0]) <= 0.35;
+      })(), sweep);
   }
 }
 
