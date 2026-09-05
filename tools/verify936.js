@@ -39,8 +39,10 @@ const PINNED = ['probe710.js', 'probe792.js', 'probe864.js', 'probe865.js',
                 'size541lib.js', 'verify710.js', 'verify792.js', 'verify864.js'];
 /* 928 이 이미 고쳐 둔 자 — 같은 조건을 같은 이름으로 지킨다. */
 const PINNED_928 = ['verify856.js', 'probe928.js'];
-/* 예외 — 상자가 «플레이어 자신의 그림» 이라 못박으면 재는 것이 사라지는 자(파일에 이유가 있다). */
-const EXEMPT = ['probe523.js', 'verify79.js'];
+/* 예외 — 상자가 «플레이어 자신의 그림» 이라 못박으면 재는 것이 사라지는 자(파일에 이유가 있다).
+   943 이 `probe943.js` 를 보탰다 — `verify79` [E-R4] 의 표본 고르기를 재는 자라 상자도 같은 텍셀이고,
+   게다가 **셰이크가 살아 있는 판**이 곧 표본이라 못박으면 재려던 것이 사라진다(그 파일 서두에 이유). */
+const EXEMPT = ['probe523.js', 'probe943.js', 'verify79.js'];
 
 console.log('VERIFY936 — 측정 상자를 움직이는 상태에 매단 자 인구\n');
 
@@ -57,7 +59,7 @@ ok(rows.filter(r => r.pixel).length >= 12,
 /* ── [2] 예외 래칫 ── */
 const exNames = rows.filter(r => r.raw && r.exempt).map(r => r.file).sort();
 ok(exNames.join(',') === EXEMPT.join(','),
-   '[2a] 선언된 예외는 둘뿐이고 이름이 같다 — [' + exNames.join(' · ') + ']');
+   '[2a] 선언된 예외는 ' + EXEMPT.length + '뿐이고 이름이 같다 — [' + exNames.join(' · ') + ']');
 ok(exNames.every(n => (pin.classify(n, TOOLS).reason || '').length >= 20),
    '[2b] 예외마다 **이유가 파일 안에** 있다 (자동 승인이 아니라 적어 둔 말이다)');
 
