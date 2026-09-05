@@ -158,8 +158,16 @@ const ok = (b, name, detail) => {
     S.own[p.id] = { l: 1 };
     showItem(p.id);
     /* 60 쥬시 열림 연출(scale)이 끝난 뒤에 재야 한다 — 120ms 에 재면 690×267 처럼 «연출 중» 크기가
-       잡혀 Δ0 판정이 거짓으로 빨개진다(350·345 계열 함정). */
-    await new Promise(r => setTimeout(r, 400));
+       잡혀 Δ0 판정이 거짓으로 빨개진다(350·345 계열 함정).
+       ⚑ 950 — **그 «뒤» 를 시계로 세던 것이 이 자의 병이었다.** 고정 400ms 는 `jzBoxIn`(.22s ·
+       .92 → 1.02 → 1) 곡선 위 아무 데나 떨어진다: par 7 부하에서 14회 중 **5회 빨강**이었고
+       값은 690×267(×0.920) · 751×290 · 754×292 로 **한 배율이 가로·세로에 같이** 걸렸다.
+       ⚠ 이 블록은 대기를 **페이지 안**에서 하므로 291 정착 훅(`page.waitForTimeout` 을 감싼다)이
+       한 번도 안 지난다(353 구멍) — 게다가 그 훅의 필터 `/^jz(Pg|Sheet)/` 는 `jzBoxIn` 을
+       **애초에 안 본다**(950 이 찾은 두 번째 구멍). ⇒ 공용 §box(`settle291.js` QUIET_SRC)를 부른다.
+       되돌림: `PW_SETTLEBOX=0` 이면 아래 폴백(= 종전 고정 400ms)이 그대로 산다. */
+    if (window.settleBox && !window.__settleBoxOff) await window.settleBox();
+    else await new Promise(r => setTimeout(r, 400));
     const box = document.querySelector('#modal .sk-db');
     const pEl = box ? box.querySelector('p') : null;
     const html = pEl ? pEl.innerHTML : '';

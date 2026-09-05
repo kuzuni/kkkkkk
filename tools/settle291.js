@@ -77,6 +77,43 @@ const IN_PAGE_SRC = `(cap) => { const t0 = performance.now(); const lim = (cap |
       .then(() => step(n + P.length)); };
   return step(0); }`;
 
+/* ---- §box (작업 950) — «가운데 다이얼로그» 개폐 연출 정착 ----
+   위 §in-page 사다리로는 **못 닫는 창이 하나 더** 있다. 두 가지가 겹친 자리다:
+     ⓐ **필터가 이름으로 갈라 놓았다.** 훅·§in-page 는 `/^jz(Pg|Sheet)/` 만 본다 —
+        전체화면 페이지와 바닥 시트다. 가운데 다이얼로그는 `jzBoxIn`(`.jz-o.jz-dlg>*`, .22s)이라
+        그 정규식에 **안 걸린다.** 그래서 `settle291()` 을 불러도 상자 연출은 그냥 지나간다.
+     ⓑ **사다리가 «부를 때 pending 이 0 이면 곧바로 끝낸다»** 라서, 연출이 **다음 프레임에
+        붙는** 자리의 창은 못 닫는다(764 가 `verify429` 에서 실측했다).
+   ⇒ «**두 프레임 연속으로 돌 것이 없을 때만** 끝낸다» 로 세운다. 상한은 291 과 같은 1500ms —
+     어떤 이유로든 `finished` 가 안 오면 자를 멈추지 않고 지나간다.
+
+   ⚠ **훅(`/^jz(Pg|Sheet)/`)을 넓혀서 풀지 않았다** — 764 가 적어 둔 이유 그대로다: 그 필터는
+     `page.waitForTimeout` 훅으로 게이트 44개를 전부 지나가는데, 64·262·107 처럼 **시간 자체를
+     재는** 자는 rAF 두 프레임이 얹히면 문턱을 넘는다(위 PENDING_SRC 주석). 그래서 §box 는
+     **부르는 자만 지나가는** 별도 부품이고, 훅은 한 글자도 안 건드렸다.
+
+   왜 `jzBoxIn` 한 프레임이 «값이 틀렸다» 로 읽히나(950 위상 스윕 — 부하 없이 결정적):
+     0~60ms **690×267**(0% `scale:.92`) · 100ms 737×285 · 150ms 750×290 · 200~220ms **764×295**
+     (62% `scale:1.02`) · 260ms~ 750×290. 고정 대기는 이 곡선 위 아무 데나 떨어진다 —
+     한 배율이 가로·세로에 **같이** 걸리므로 «자리가 틀렸다» 가 아니라 «한 프레임을 읽었다» 다.
+
+   되돌림 스위치는 `PW_SETTLEBOX=0`(`window.__settleBoxOff`) — 켜면 §box 는 기다리지 않고
+   즉시 0 을 돌려주므로 부르는 자의 폴백(= 종전 고정 대기)이 그대로 산다. 291 의 `PW_SETTLE`
+   과 **가르는 이유**: 931·946 의 전후 대조가 `PW_SETTLE=0` 으로 «장치 없는 세상» 을 만드는데,
+   거기에 §box 까지 묶이면 그 대조가 이 부품의 회귀까지 같이 뒤집는다. */
+const QUIET_SRC = `(pat, cap) => { const lim = (cap | 0) || ${CAP_MS}; const t0 = performance.now();
+  const re = new RegExp(pat || '^jzBox');
+  const pend = () => (document.getAnimations ? document.getAnimations() : [])
+    .filter(a => re.test(a.animationName || '') && a.playState !== 'finished');
+  const step = (quiet, n) => {
+    if (window.__settleBoxOff) return Promise.resolve(n);
+    if (quiet >= 2 || performance.now() - t0 > lim) return Promise.resolve(n);
+    const P = pend();
+    return (P.length ? Promise.all(P.map(a => a.finished.catch(() => 0))) : Promise.resolve())
+      .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))
+      .then(() => step(P.length ? 0 : quiet + 1, n + P.length)); };
+  return step(0, 0); }`;
+
 function enabled() {
   const v = process.env.PW_SETTLE;
   if (v === '0' || v === 'off') return false;
@@ -95,10 +132,18 @@ async function arm(page) {
   /* 353 — 페이지 안에서 부를 수 있는 본체를 심는다. 정의만 올리므로 안 부르면 무해하다. */
   try {
     await page.addInitScript(
-      ({ src, off }) => { window.__settle291off = off; window.settle291 = (cap) => eval(src)(cap); },
+      ({ src, quiet, off, boxOff }) => {
+        window.__settle291off = off; window.settle291 = (cap) => eval(src)(cap);
+        /* 950 §box — 이름 패턴을 받는 일반형 하나와, 가장 흔한 자리(가운데 다이얼로그) 별칭 하나 */
+        window.__settleBoxOff = boxOff;
+        window.settleAnim291 = (pat, cap) => eval(quiet)(pat, cap);
+        window.settleBox = (cap) => eval(quiet)('^jzBox', cap);
+      },
       /* ⚠ 여기는 `enabled()`(= entry 가 verify 인가) 를 안 본다 — 이 본체는 **부르는 게이트만**
          지나가므로 연출 캡처 하네스(`cap*.js`)에는 애초에 영향이 없다. 끄는 것은 되돌림 스위치뿐이다. */
-      { src: IN_PAGE_SRC, off: process.env.PW_SETTLE === '0' || process.env.PW_SETTLE === 'off' },
+      { src: IN_PAGE_SRC, quiet: QUIET_SRC,
+        off: process.env.PW_SETTLE === '0' || process.env.PW_SETTLE === 'off',
+        boxOff: process.env.PW_SETTLEBOX === '0' || process.env.PW_SETTLEBOX === 'off' },
     );
   } catch (_) { /* 이미 네비게이션이 시작됐으면 심을 자리가 없다 — 훅만으로 간다 */ }
   page.settle291 = async () => {
@@ -137,4 +182,4 @@ function armBrowser(browser) {
   return browser;
 }
 
-module.exports = { SETTLE_SRC, IN_PAGE_SRC, arm, armBrowser, enabled, CAP_MS, MIN_WAIT };
+module.exports = { SETTLE_SRC, IN_PAGE_SRC, QUIET_SRC, arm, armBrowser, enabled, CAP_MS, MIN_WAIT };
