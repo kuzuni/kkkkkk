@@ -35,6 +35,7 @@ import sys
 import json
 
 from pydep937 import Image                            # 937 — 없으면 «한 줄 + 코드 2»
+from pydep937 import fail                             # 939 — 입력이 없는 것은 코드 3(2 는 환경 전용)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REF = os.path.join(ROOT, 'docs', 'ref', '89-유물-팝업.png')
@@ -95,8 +96,7 @@ def wh(b):
 def main():
     as_json = '--json' in sys.argv
     if not os.path.exists(SHOT):
-        print(f'scan892: 캡처가 없다 — 먼저 `node tools/probe892.js` 를 돌려라 ({SHOT})', file=sys.stderr)
-        sys.exit(2)
+        fail(f'scan892: 캡처가 없다 ({SHOT})', '먼저 `node tools/probe892.js` 를 돌려라')
 
     ref_im = Image.open(REF).convert('RGB')
     ref = ref_im.load()

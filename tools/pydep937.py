@@ -36,11 +36,30 @@
    (`scipy`·`soundfile`)을 상시 준비 줄에서 빼고 **부딪히는 자리에서 한 줄로** 깔게 할 수 있다.
 
 약속을 이름으로 지키는 자는 `tools/verify937.js` 다.
+
+⚑ **939 — 종료 코드는 한 가지만 가리켜야 한다.** 937 이 코드 2 를 «환경에 없음» 으로 못 박은 뒤,
+   자기 실패(측정 실패·사용법)에도 `sys.exit(2)` 를 쓰던 자 셋(`scan885e`·`scan122`·`scan892`)이
+   그 신호를 둘로 갈라 놓고 있었다 — 그 자를 `py()` 로 부르면 **«측정이 안 됐다» 가
+   «환경에 없음» 으로 읽힌다**(913 이 경계한 «진짜 오류를 환경 탓으로 삼킨다» 의 얼굴 그대로).
+   ⇒ 사전을 여기 한 벌로 둔다(아래 `EX_*`). 자는 자기 실패를 **코드 3** 으로 낸다.
+
+       0 = 통과 · 1 = 오류/FAIL(게이트 판정 포함)
+       2 = 환경에 없음 — **이 부트스트랩만** 낸다
+       3 = 자가 못 쟀다(측정 실패 · 사용법 · 입력 없음) — 자가 낸다
+
+   ⚠ 코드 3 도 «조용히» 죽으면 안 된다 — `fail()` 은 **무엇이 안 됐는지 + 할 일**을 stderr 에
+     한 줄로 적는다(937-② 의 세 번째 축 = «할 일» 은 자리마다 다르다).
 """
 import importlib
 import sys
 
 PIP = 'pip3 install pillow numpy'
+
+#  ⚑ 939 — 종료 코드 사전(위 도크 참조). 노드 쪽 짝은 `tools/pydep937.js` 의 EX_ENV·EX_SELF 다.
+EX_OK = 0
+EX_ERR = 1
+EX_ENV = 2       # 환경에 없음 — need() 만 낸다
+EX_SELF = 3      # 자가 못 쟀다(측정 실패·사용법) — 자가 낸다
 
 #  ⚑ 938 — «할 일» 은 모듈마다 다르다. 상시 준비 줄(PIP)로 낫는 것은 numpy·pillow 뿐이고,
 #     그 줄을 무거운 두 의존에 물려 주면 워커는 **적힌 대로 해도 자가 계속 죽는** 자리에 선다
@@ -75,6 +94,17 @@ def need(mod, label=None, todo=PIP):
         sys.stderr.write('%s 없음 — %s\n' % (label or mod, todo))
         sys.stderr.flush()
         raise SystemExit(2)
+
+
+def fail(what, todo=None, code=EX_SELF):
+    """939 — «자가 못 쟀다» 를 한 줄로 적고 코드 3 으로 끝낸다.
+
+    코드 2 를 쓰면 그 자를 부른 노드가 «환경에 없음» 으로 읽어 스윕이 «없는 자» 로 지나간다.
+    `todo` 는 **이 자리에서 실제로 해야 할 일**이다(상시 준비 줄을 답으로 주지 마라 — 938-③).
+    """
+    sys.stderr.write('%s%s\n' % (what, (' — ' + todo) if todo else ''))
+    sys.stderr.flush()
+    raise SystemExit(code)
 
 
 def available(name):

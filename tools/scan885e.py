@@ -33,6 +33,10 @@
     python3 tools/scan885e.py --cap <캡처> --dump      # 창·마스크 화소 수까지
     python3 tools/scan885e.py --cap <캡처> --gate      # 비 과녁 판정 (종료 코드 0/1)
 
+종료 코드(939 사전 — `tools/pydep937.py`): 0 통과 · 1 FAIL · **2 = 환경에 없음(부트스트랩만)** ·
+**3 = 이 자가 못 쟀다**(★ 창 자동 탐색 실패). ⚠ 옛 판은 3 자리에도 2 를 썼다 — 그러면 이 자를
+`py()` 로 부른 노드가 «측정이 안 됐다» 를 **«환경에 없음»** 으로 읽어 스윕이 «없는 자» 로 지나간다.
+
 되돌림 시험은 이 자가 겸한다 — 수리 전 판(6회차 이전 `-webkit-text-stroke:6px`, 마이터)에 `--gate` 를
 걸면 **빨갛다**(실측 1.529~1.647 / 1.515~1.606). 수리 후 판은 1.235 / 1.242 로 초록이다.
 """
@@ -42,6 +46,7 @@ import sys
 from pydep937 import np
 from pydep937 import Image
 from pydep937 import ndimage      # 938 — 날 `from scipy import ndimage` 는 코드 1 로 즉사했다
+from pydep937 import fail         # 939 — «자가 못 쟀다» 는 코드 3(2 는 «환경에 없음» 전용)
 
 REF = 'docs/ref/151-이용권-카드.png'
 K = 2.0628                     # 우리 px = ref px × K (측정표 §9)
@@ -218,8 +223,8 @@ def main():
         a = np.array(Image.open(args.cap).convert('RGB'))
         stars = find_cap_stars(a)
         if len(stars) < 3:
-            print('!! ★ 를 %d 개밖에 못 찾았다' % len(stars))
-            sys.exit(2)
+            fail('!! ★ 를 %d 개밖에 못 찾았다(창 자동 탐색 실패) — %s' % (len(stars), args.cap),
+                 '10 이용권 카드가 열린 캡처인지 보고 다시 찍어라(`node tools/probe885.js`)')
         sys.exit(0 if gate(args.cap, [(s[0], s[1], s[2], s[3]) for s in stars]) else 1)
 
     ref_rows = run(REF, REF_STARS, PAD_REF, GOLD_STEPS, BLK_STEPS_REF, RMAX_REF,
@@ -228,8 +233,8 @@ def main():
     a = np.array(Image.open(args.cap).convert('RGB'))
     stars = find_cap_stars(a)
     if len(stars) < 3:
-        print('!! 우리 캡처에서 ★ 를 %d 개밖에 못 찾았다 — 창 자동 탐색 실패' % len(stars))
-        sys.exit(2)
+        fail('!! 우리 캡처에서 ★ 를 %d 개밖에 못 찾았다 — 창 자동 탐색 실패(%s)' % (len(stars), args.cap),
+             '10 이용권 카드가 열린 캡처인지 보고 다시 찍어라(`node tools/probe885.js`)')
     cap_rows = run(args.cap, [(s[0], s[1], s[2], s[3]) for s in stars],
                    int(round(PAD_REF * K)), GOLD_STEPS, BLK_STEPS_CAP, RMAX_REF * K,
                    'cap  %s' % args.cap, args.dump)

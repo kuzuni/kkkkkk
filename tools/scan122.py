@@ -19,6 +19,7 @@ UI-REFERENCE §122 체크리스트의 미완 항목:
 """
 import sys
 from pydep937 import Image
+from pydep937 import fail         # 939 — 사용법 오류는 코드 3(2 는 «환경에 없음» 전용)
 
 THR = 6      # 채널 차 임계
 G = 8        # 격자 (8px)
@@ -110,8 +111,8 @@ if __name__ == '__main__':
         elif args[0] == '--box':          # x,y,w,h — 이 구역만 센다(탭바·HUD 등 남의 구간 제외용)
             box = [int(v) for v in args[1].split(',')]; args = args[2:]
         else:
-            print('알 수 없는 옵션 ' + args[0]); sys.exit(2)
+            fail('알 수 없는 옵션 ' + args[0], '쓰는 법은 `python3 tools/scan122.py` 를 인자 없이 부르면 나온다')
     if not args:
         print(__doc__)
-        sys.exit(2)
+        fail('프레임 png 를 하나도 안 줬다', '위 «실행» 줄대로 프레임 목록을 인자로 줘라')
     main(args, top, box)

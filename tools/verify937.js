@@ -100,6 +100,17 @@ ok(oldGuard.length === 0, '[B5] «Pillow 없음 → sys.exit(1)» 옛 가드 0�
    (oldGuard.length ? oldGuard.map((p) => path.basename(p)).join(', ') : '0건') +
    ' (코드 1 은 «오류», 환경 없음은 코드 2 여야 «없는 자» 와 갈린다)');
 
+/* ⚑ 939 이관 — 937 이 코드 2 에 준 뜻은 «환경에 없음» **하나**다. 자기 실패(측정 실패·사용법)에
+   같은 코드를 쓰는 자가 있으면 [R1] 이 초록이어도 그 신호는 둘을 가리킨다 — 그 자를 py() 로 부르는
+   순간 «측정이 안 됐다» 가 «환경에 없음» 으로 읽힌다(913 이 경계한 반대 사고). 자세한 판정·되돌림
+   시험은 `tools/verify939.js` 가 갖고, 여기서는 **937 의 약속이 아직 참인가**만 한 항으로 묻는다. */
+const SELF2 = /(^|[^\w.])(sys\.exit|exit)\(\s*2\s*\)|raise\s+SystemExit\(\s*2\s*\)/;
+const selfTwo = pyFiles.filter((p) =>
+  fs.readFileSync(p, 'utf8').split('\n').filter((l) => !/^\s*#/.test(l)).some((l) => SELF2.test(l)))
+  .map((p) => path.relative(ROOT, p));
+ok(selfTwo.length === 0, '[B8] ★ 939 이관 — 코드 2 를 «자기 실패» 로 쓰는 파이썬 자 0건 — ' +
+   (selfTwo.length ? selfTwo.join(', ') : '0건') + ' (자기 실패는 코드 3 = pydep937.fail())');
+
 /* ---------- [C] 지시서 [6] «준비» 절 ---------- */
 const routine = fs.readFileSync(path.join(ROOT, 'docs', 'ROUTINE.md'), 'utf8');
 ok(/pip3 install pillow numpy/.test(routine),
@@ -121,7 +132,10 @@ ok(/scan885e/.test(routine) && /synth99/.test(routine),
 /* ---------- [D] 노드 쪽 짝 ---------- */
 /* 이 자 자신은 면제다 — 약속을 **재려면** 날 spawn 으로 자식의 종료 코드를 직접 봐야 한다.
    py() 로 부르면 그 순간 이 자가 코드 2 로 같이 죽어 [R1]~[R5] 를 한 항도 못 찍는다. */
-const EXEMPT = new Set(['verify937.js']);
+/* ⚑ 939 이관 — 같은 이유로 두 자가 더 면제다. `verify939`·`probe939` 는 **자식의 종료 코드 자체**가
+   측정 대상이라(2 인가 3 인가) py() 로 부르면 그 순간 같이 죽어 한 항도 못 찍는다.
+   ⚠ 면제는 «python3 를 직접 불러도 되는 자» 가 아니라 «그 약속을 재는 자» 뿐이다 — 늘리지 마라. */
+const EXEMPT = new Set(['verify937.js', 'verify939.js', 'probe939.js']);
 const jsFiles = fs.readdirSync(T).filter((f) => f.endsWith('.js') && f !== 'pydep937.js' && !EXEMPT.has(f));
 const rawSpawn = [];
 const viaPy = [];
