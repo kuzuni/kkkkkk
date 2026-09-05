@@ -170,10 +170,53 @@ def bg_of(px, y, strips):
     return v[len(v) // 2]
 
 
-def diff_box(pa, pb, win, th=8):
+def cov_f(val, i, step, th):
+    """[947] 차분 마스크의 «마지막 안» 화소에서 **바깥으로** 민 부분 화소 (−0.5 … +0.5).
+       `val(i)` = 그 자리의 차분 · `i` = 마지막 «안» 화소 · `step` = 바깥 방향(±1).
+
+    ⚠⚠ **여기에는 `_cross` 를 못 쓴다 — 차분 경계는 램프가 아니라 계단이다.**
+      바깥 화소의 차분은 «조금 다름» 이 아니라 **정확히 0**(두 사본이 같은 화소다)이라
+      «문턱을 어디서 지나는가» 를 물을 이웃이 없다. 그 자리에 `_cross` 를 얹으면
+      f = 1 − th/dv 가 되어 **경계 화소가 진할수록 더 밖으로 민다** — 소속도의 거의 반대다
+      (947 1회차 재현: 진한 아래끝 0.744 · 옅은 좌끝 0.227 · 폭 262 → 261.69 · 세로 55 → 55.43).
+      ⇒ 등재문 처방 ⓐ(«`flat()` 과 같은 `_cross`»)는 **재현이 기각**했다.
+
+    ⇒ 차분 마스크에서 부분 화소를 얻는 축은 **소속도** 하나다. 경계 화소의 차분은
+      그 화소가 부품에 덮인 넓이에 비례하므로 (숨긴 사본이 곧 배경이라 대비가 상쇄된다)
+
+          α = dv(경계) / dv(안쪽 이웃)          # 안쪽 이웃 = 가득 찬 화소
+
+      이고, 가장자리는 그 화소를 **안쪽부터** α 만큼 채운다 ⇒ 중심에서 밖으로 **α − 0.5**.
+      α = 1(가득) 이면 +0.5 = 옛 정수 걸음 그대로라 `--int` 와 이어진다(가장 나쁜 경우가 옛 값).
+    ⚠ 안쪽 이웃은 **세 칸까지의 중앙값**이다 — 속에는 아이콘·숫자 잉크가 있어 한 칸은
+      대비가 0 으로 꺼질 수 있다(실측: 알약 아래끝 안쪽 y1950 의 차분이 0.0).
+    ⚠ 남는 «어느 문턱에서 경계로 치는가» 비대칭(ref 는 JPEG 램프 위 lum=25, 우리는 소속도 0.5)은
+      이 번호의 몫이 아니다 — **942** 로 따로 등재돼 있다. 여기서 없애는 것은 **격자**뿐이다.
+    """
+    if not SUB:
+        return 0.5
+    try:
+        v = val(i)
+        ins = [u for u in (val(i - step * k) for k in (1, 2, 3)) if u > th]
+    except IndexError:
+        return 0.5
+    if not ins:
+        return 0.5
+    c = med(ins)
+    return (min(1.0, v / c) - 0.5) if c > 0 else 0.5
+
+
+def diff_box(pa, pb, win, th=8, sub=False):
     """우리 렌더는 **차분**으로 잰다 — 부품을 `visibility:hidden` 으로 한 번 더 찍어
        달라진 화소가 곧 그 부품의 잉크다. 문턱·배경 추정이 아예 없어 마스크가 갈릴 자리가 없다.
-       (레퍼런스는 그런 사본을 못 만드니 위의 문턱 자를 쓰고, 그 자는 `scan813c` 와 값이 같다.)"""
+       (레퍼런스는 그런 사본을 못 만드니 위의 문턱 자를 쓰고, 그 자는 `scan813c` 와 값이 같다.)
+
+    ⚑ [947] `sub=True` 면 **정수 상자는 그대로 두고** 부분 화소 폭·세로(`ws`·`hs`)를 더 얹는다.
+      정의는 정수 쪽과 한 글자도 다르지 않다 — 폭은 «행마다의 span 중 최대», 세로는 «상자 높이» —
+      이긴 자리의 **양 끝만** `cov_f` 로 민다(932 4회차가 `flat()` 에 한 것과 같은 꼴).
+      ⇒ `--int` 면 `cov_f` 가 0.5 를 주므로 `ws`·`hs` 는 정수 `w`·`h` 와 **정확히 같다**.
+    ⚠ **부르는 쪽이 고른다** — 짝인 ref 자가 정수로 세는 자리(수반: `best_run`·행 수)는
+      `sub` 없이 부른다. 한쪽만 부분 화소로 갈면 거기에 **새 비대칭**이 생긴다(932 4회차 교훈)."""
     x0, y0, x1, y1 = [int(v) for v in win]
     rows = {}
     for y in range(y0, y1):
@@ -183,10 +226,34 @@ def diff_box(pa, pb, win, th=8):
     if not rows:
         return None
     ys = sorted(rows)
-    return {'top': ys[0], 'bot': ys[-1], 'h': ys[-1] - ys[0] + 1,
-            'w': max(r[2] for r in rows.values()),
-            'foot': rows[ys[-1]][2],
-            'l': min(r[0] for r in rows.values()), 'r': max(r[1] for r in rows.values())}
+    box = {'top': ys[0], 'bot': ys[-1], 'h': ys[-1] - ys[0] + 1,
+           'w': max(r[2] for r in rows.values()),
+           'foot': rows[ys[-1]][2],
+           'l': min(r[0] for r in rows.values()), 'r': max(r[1] for r in rows.values())}
+    if not sub:
+        return box
+
+    def dv(x, y):
+        return abs(lum(pa[x, y]) - lum(pb[x, y]))
+
+    def span(y):
+        a, z, _ = rows[y]
+        row = lambda i: dv(i, y)                                      # noqa: E731
+        return (z + cov_f(row, z, +1, th)) - (a - cov_f(row, a, -1, th))
+
+    def edge_f(y, step):
+        """상자의 위·아래 끝 — **945 규약 그대로 평평한 구간(`v_band`)의 중앙값**으로 민다.
+           ⚠ 최댓값·단일 열은 못 쓴다: 끝 행의 양 끝은 둥근 어깨라 **안쪽 이웃도 덜 덮여**
+             α 가 1 로 잘린다(실측 — 위 행 256열 중 250열이 0.302 인데 코너 네 열만 1.00).
+             945 가 세로 테에서 그만둔 그 자리이고, 여기서도 답은 «거기서 재지 않는 것» 이다."""
+        a, z, _ = rows[y]
+        fs = [cov_f(lambda j: dv(x, j), y, step, th)
+              for x in v_band(a, z) if dv(x, y) > th]
+        return med(fs) if fs else 0.5
+
+    box['ws'] = max(span(y) for y in rows)
+    box['hs'] = (ys[-1] + edge_f(ys[-1], +1)) - (ys[0] - edge_f(ys[0], -1))
+    return box
 
 
 def best_run(px, y, band, bg):
@@ -407,10 +474,14 @@ def main():
     nb = Image.open(cap.replace('.png', '-nostone.png')).convert('RGB').load()
     nq = Image.open(cap.replace('.png', '-nocost.png')).convert('RGB').load()
     b, c = geo['basin'], geo['cost']
+    # ⚑ [947] 수반(ⓐⓑⓒⓓ)은 **정수 자 그대로** 부른다 — 짝인 ref 쪽 `measure_bowl` 도
+    #   행 수·`best_run` 의 화소 «개수» 라 양쪽이 같은 격자다. 여기만 부분 화소로 갈면
+    #   그때 새 비대칭이 생긴다(932 4회차 교훈 — 갈림은 한쪽만 갈 때 생긴다).
     ob = diff_box(cp, nb, (ox + b['x'] - 30, oy + b['y'] - 30,
                            ox + b['x'] + b['w'] + 30, oy + b['y'] + b['h'] + 30))
+    # ⚑ [947] 알약 **바깥**은 짝인 ref(`measure_pill`)가 부분 화소라 여기도 부분 화소로 잰다.
     oq = diff_box(cp, nq, (ox + c['x'] - 24, oy + c['y'] - 24,
-                           ox + c['x'] + c['w'] + 24, oy + c['y'] + c['h'] + 24))
+                           ox + c['x'] + c['w'] + 24, oy + c['y'] + c['h'] + 24), sub=True)
     # 알약 속 — 차분 상자 안에서 평평한 #191614 칠의 가로·세로 최장 연속
     # ⚑ 932 4회차 — **우리 쪽도 같이 부분 화소로 간다.** 안 그러면 ref 만 격자에서 풀리고
     #   우리는 정수에 갇힌 채 ×2.2222 로 견주게 되어 **새 비대칭**이 생긴다(장부의 fix 칸).
@@ -471,9 +542,11 @@ def main():
              ob['foot'], rb['foot'] * K, d(ob['foot'], rb['foot'] * K)))
     print('    ⓔ 알약 속 **%.2fx%.2f** (ref %.1fx%.1f · Δ 폭 %+.1f%% · 세로 %+.1f%%)'
           % (iw, ih, rq['iw'] * K, rq['ih'] * K, d(iw, rq['iw'] * K), d(ih, rq['ih'] * K)))
-    print('       바깥 **%dx%d** (ref %.1fx%.1f · Δ 폭 %+.1f%% · 세로 %+.1f%%)'
-          % (oq['w'], oq['h'], rq['w'] * K, rq['h'] * K,
-             d(oq['w'], rq['w'] * K), d(oq['h'], rq['h'] * K)))
+    print('       바깥 **%.2fx%.2f** (ref %.1fx%.1f · Δ 폭 %+.1f%% · 세로 %+.1f%%)  %s'
+          % (oq['ws'], oq['hs'], rq['w'] * K, rq['h'] * K,
+             d(oq['ws'], rq['w'] * K), d(oq['hs'], rq['h'] * K),
+             '(부분 화소 — 소속도)' if SUB else '(옛 정수 걸음 — --int)'))
+    print('          [수반 ⓐⓑⓒⓓ 는 정수 자다 — ref 쪽도 행 수·화소 개수라 같은 격자다 · 947]')
 
     if geo.get('bar') and geo.get('rows'):
         bar, rows = geo['bar'], geo['rows']
