@@ -22,6 +22,12 @@
  *        (9회차 E1·E4 가 «불변» 을 본 이유). `--minr 0.30` 으로 비율 갈래에 올려도 연속폭만
  *        3.04 → 2.45 로 줄고 **켠 화소는 4.00 그대로**다 — 문턱이 설 눈금이 격자에 없다.
  *
+ * ⚑⚑ 889 4회차 — **위 [P4] 문단은 «이진 굽기» 위에서만 참이었다.** 889 1회차가 굽기를 덮인 몫
+ *   (`cv = clamp(dT − t + 0.5, 0, 1)`)으로 바꾼 뒤로 «켠 몫» 이 소수 화소로 앉으므로 `--minr` 이
+ *   다시 손잡이가 된다(gale 켠 몫 4.04 → 3.45). 그래서 4회차가 바닥을 **굽는화소 한 칸**
+ *   (`SPEC_MINR = 0.5/HALO_SS`)으로 다시 적었고 [B13] 이 1.46 → **1.33** 으로 내려왔다.
+ *   [P4] 는 그 자리에서 **방향을 뒤집어** 이관됐다(아래 판정부 주석이 본문).
+ *
  * 어떻게 — **제품의 `specSprite` 를 런타임에 복제해 덤프 한 덩이만 끼운다.**
  *   `specSprite.toString()` 을 받아 `if(!hit) throw` 바로 앞에 넣고 전역 간접 eval 로 다시 만들어
  *   `window.specSprite` 에 꽂는다. 제품 소스는 **0줄** 바뀌고, 사본은 매 실행 제품에서 뜨므로
@@ -232,7 +238,7 @@ let USE = SRC, TMP = null, OVTXT = '';
       for (const q of rows) csv.push([r.id, r.sh, q.d.toFixed(4), q.hh.toFixed(4), q.hm.toFixed(4),
                                       q.t.toFixed(4), q.br, q.rat.toFixed(4), q.ratQ.toFixed(4),
                                       q.cw, q.strokeB.toFixed(3)].join(','));
-      tab.push({ id: r.id, n: r.n, brc: brc,
+      tab.push({ id: r.id, n: r.n, brc: brc, sB: sB,
                  hhErr: Math.max.apply(null, rows.map(q => Math.abs(q.hh - q.d))),
                  rat: med(rows.map(q => q.rat)), ratD: med(rows.map(q => q.ratD)),
                  ratQ: med(rows.map(q => q.ratQ)),
@@ -287,10 +293,28 @@ let USE = SRC, TMP = null, OVTXT = '';
         '남은 몫은 **문턱 밭**이다(종별 |굳은 − 연속| 최악 ' +
         (strokeIds.length ? Math.max.apply(null, strokeIds.map(t => Math.abs(t.ratQ - t.rat))).toFixed(3) : '—') + ')')) bad++;
 
+    /* ⚑⚑ 889 4회차 **이관**(333 처방 — 자리를 비우지 않고 **방향만** 뒤집는다).
+       옛 [P4] 는 «`gale` 은 minR 갈래다» 를 단언했고, 그 사실이 [B13] 상단의 정체였다:
+       획 6~9 구간은 표본 **372개가 전부 minR 갈래**라 그 구간의 비 0.434 는 결손이 아니라
+       **바닥이 규격을 덮어쓴 값**이었다(같은 구간의 lance·multi 도 같은 값 — 종이 아니라 폭이 축이다).
+       4회차가 바닥을 «굽는화소 한 칸»(`SPEC_MINR = 0.5/HALO_SS`)으로 다시 적어 그 종이
+       **비율 갈래로 내려왔다** ⇒ 묻는 것을 둘로 바꾼다:
+         ⓐ 바닥이 **오늘 어느 획 종도 안 덮어쓴다**(minR 갈래 0표본) ·
+         ⓑ 그런데도 바닥은 **죽지 않았다** — 바닥이 비율을 이기는 획 폭 `2·minR/K` 가
+            0 보다 크고 오늘 가장 가는 종보다 가늘다. ⓑ 가 없으면 이 항은 «상수를 0 으로
+            만들어도 초록» 이 되어 바닥이 조용히 사라진다(399·333 이 못박은 자리).
+       ⚠ 되돌림 대조는 **옛 바닥 0.38 로컬px** 이다 — 같은 표본에 대면 `gale` 은 다시 minR 갈래다.
+         (제품 상수의 사본이 아니라 «되돌리면 이렇게 된다» 를 못박는 역사값이다.) */
     const g = tab.find(t => t.id === 'gale');
-    if (!ok(!!g && (g.brc.minR || 0) > (g.brc.ratio || 0),
-        '[P4] `gale` 은 **`minR` 갈래**다 — minR ' + (g ? (g.brc.minR || 0) : '—') + ' / ratio ' +
-        (g ? (g.brc.ratio || 0) : '—') + ' (그래서 `SPEC_K` 를 양쪽으로 흔든 9회차 E1·E4 가 이 종을 못 움직였다)')) bad++;
+    const wBind = 2 * minR / K;                     /* 바닥이 비율을 이기는 획 폭(굽는px) */
+    const thin  = strokeIds.length ? Math.min.apply(null, strokeIds.map(t => t.sB)) : 0;
+    const nMinR = strokeIds.reduce((a, t) => a + (t.brc.minR || 0), 0);
+    const OLD_MINR = 0.38 * SS;                     /* 856 9회차까지의 바닥 — 되돌림 대조 */
+    const gOld = !!g && K * (g.sB / 2) < OLD_MINR;
+    if (!ok(nMinR === 0 && wBind > 0 && thin > 0 && wBind < thin && gOld,
+        '[P4] 바닥은 **어느 획 종도 안 덮어쓴다** — minR 갈래 ' + nMinR + '표본 · 바닥이 이기는 획 폭 ' +
+        wBind.toFixed(2) + ' < 가장 가는 종 ' + thin.toFixed(2) + '굽는px(바닥은 살아 있다) · ' +
+        '되돌림: 옛 바닥 0.38 로컬px 이면 `gale` 은 다시 minR 갈래 = ' + gOld)) bad++;
 
     const gap = strokeIds.map(t => t.wQ - t.wGeo);
     const gmin = Math.min.apply(null, gap), gmax = Math.max.apply(null, gap);

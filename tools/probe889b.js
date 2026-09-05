@@ -207,13 +207,38 @@ const SRC = path.resolve(__dirname, '..', 'index.html');
        위 끝이 무근 몫인 이유는 무근 화소가 «없던 자리를 켜는» 것이고, 아래 끝이 0 인 이유는
        그 화소가 원래 거기 있던 **부분 덮임**(0~1)을 대신 차지해 그만큼은 상쇄되기 때문이다.
        ⇒ 무근이 0 이면 구간이 [0, 0] 으로 닫히므로 **수리 뒤에도 같은 항이 참**이다. */
-    const lo = ids.map(t => (t.bake - t.geo) + 0.05), hi = ids.map((t, i) => t.rootCv + 0.05 - (t.bake - t.geo));
-    ok(ids.length >= 8 && Math.min.apply(null, lo) >= 0 && Math.min.apply(null, hi) >= 0,
-       '[Q1] ⚑ 넓어진 몫은 전부 무근 화소가 켠 것이다 — `0 ≤ 굳은폭 − 기하폭 ≤ 무근 몫` ' +
-       ids.length + '종. 차 ' + Math.min.apply(null, gap).toFixed(2) + '~' +
+    /* ⚑⚑ 889 4회차 **정정** — 위 문장은 **2회차의 제 수리가 들어간 순간 거짓이 됐고, 그 뒤로
+       이 항은 계속 빨갰다**(오늘 origin/main 에서 내 변경 **없이** 재현했다: slash 차 0.40 ↔ 무근 0.00 ·
+       ice 1.38 ↔ 0.00). 2회차 review 의 «4/4 PASS» 는 **수리 전** 트리에서 받은 값이고, 같은 회차가
+       «남은 문제 1» 에 적어 둔 잔차(`제몫폭 − 기하폭`: arrow·gale·lance **0.00** ↔ ice 1.07 · boomer 1.05)가
+       바로 이 항이 못 담는 몫이다 — 적어 두고도 항을 안 고쳤다.
+       ⚑ 4회차가 그 잔차의 정체를 갈랐다: **자의 기울기 몫**이다. 이 자는 단면을 «가로지르는 **축**»
+         으로 뜨는데, 축에 나란한 종(gale·arrow·lance)은 잔차가 **정확히 0.000** 이고 기울어진 종만
+         `1/cos θ` 만큼 길게 잰다(ice 1.20 = 33° · boomer 1.25 = 37° · curve 1.12 · whirl 1.09 · slash 1.07).
+         곧 제품이 넓힌 것이 아니라 **비스듬한 획을 축으로 자른 몫**이다.
+       ⇒ 항을 비우지 않고 **둘로 가른다**(333 처방): [Q1] 은 원래 문장을 **축에 나란한 종에서**
+         그대로 묻고(거기서는 등식이 정확히 선다), 기울기 몫의 상한은 [Q5] 가 격자에서 유도해 묻는다. */
+    const perp = ids.filter(t => t.geo > 0 && t.own <= 1.01 * t.geo);
+    const q1e = perp.map(t => Math.abs(t.bake - t.geo - t.rootCv));
+    ok(perp.length >= 3 && Math.max.apply(null, q1e) <= 0.05,
+       '[Q1] ⚑ **축에 나란한** 종에서 넓어진 몫은 전부 무근 화소가 켠 것이다 — ' +
+       '`굳은폭 − 기하폭 = 무근 몫` ' + perp.length + '종(' + perp.map(t => t.id).join('·') + ') · ' +
+       '최악 어긋남 ' + Math.max.apply(null, q1e).toFixed(3) + ' ≤ 0.05 ' +
+       '(전 ' + ids.length + '종 차 ' + Math.min.apply(null, gap).toFixed(2) + '~' +
        Math.max.apply(null, gap).toFixed(2) + '화소 · 무근 몫 ' +
        Math.min.apply(null, ids.map(t => t.rootCv)).toFixed(2) + '~' +
-       Math.max.apply(null, ids.map(t => t.rootCv)).toFixed(2));
+       Math.max.apply(null, ids.map(t => t.rootCv)).toFixed(2) + ')');
+
+    /* [Q5] ⚑ 889 4회차 신설 — **잔차의 상한은 격자에서 나온다**(손으로 고른 문턱이 아니다).
+       곧은 띠를 **축으로** 자르면 그 단면은 수직 단면보다 정확히 `1/cos θ` 배 길고, 축이 둘이라
+       θ 는 45° 를 못 넘는다 ⇒ 잔차의 상한은 **√2**다. 아래로는 0(축으로 자르면 짧아질 수 없다).
+       ⇒ `기하폭 ≤ 제몫폭 ≤ √2 · 기하폭`. 제품이 코어를 기울기 몫 **너머로** 넓히면 이 항이 짖는다. */
+    const ob = ids.filter(t => t.geo > 0).map(t => t.own / t.geo);
+    ok(ob.length >= 8 && Math.min.apply(null, ob) >= 1 - 0.02 &&
+       Math.max.apply(null, ob) <= Math.SQRT2 + 0.02,
+       '[Q5] 무근을 뺀 잔차는 **자의 기울기 몫**이다 — 제몫폭 ÷ 기하폭 ' +
+       Math.min.apply(null, ob).toFixed(3) + '~' + Math.max.apply(null, ob).toFixed(3) +
+       ' 이 [1, √2] 안(축으로 자른 단면의 구조적 상한 · 축에 나란한 종은 정확히 1.000)');
 
     /* [Q2] — 무근 화소는 «거리와 무관하게 꽉 찬다». 문턱이 제 거리를 따라 내려가 `dT − t` 가
        갈래 상수(`K·dT` 또는 `minR`)로 굳으므로 얼마나 바깥이든 cv 가 1 에 붙는다.
