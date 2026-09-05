@@ -25,7 +25,8 @@ const PNG = require('./png913').PNG();
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
-const T = 40;                     /* 「카드 재질」 판정 문턱(|Δ바탕|₁) — scan923.py 와 같은 값 */
+const T = 40;
+const MIN_EXT = 12, GAP = 3;      /* 덩이 최소 두께 · 이어 붙일 틈 (우리 px · scan923.py 와 같은 값) */                     /* 「카드 재질」 판정 문턱(|Δ바탕|₁) — scan923.py 와 같은 값 */
 const REF = {                     /* ref 실측(우리 px) — `python3 tools/scan923.py --ref` */
   ban: { flat: 18.57, len: 59.8, dep: 31.44 },
   bl: { flat: 26.82, len: 92.8, dep: 31.96 }
@@ -45,8 +46,27 @@ function rowOuter(px, W, y, x0, x1, bg) {
     const i = (y * W + x) * 4;
     d.push(Math.abs(px[i] - bg[0]) + Math.abs(px[i + 1] - bg[1]) + Math.abs(px[i + 2] - bg[2]));
   }
+  /* ⚑ 923 1회차 채점 GJ 관측 ㉮ — 노치 «안» 에 떠 있는 배경 장식(회색 점 ≈7px)을 물면 바닥이
+     10px 로 잘못 읽힌다. 그래서 «오른쪽 끝 화소» 가 아니라 **카드 몸통에 이어진 덩이**의 끝을 쓴다 —
+     GAP 이하의 틈은 이어 붙이고 두께 MIN_EXT 이상인 첫 덩이에서 멈춘다(`tools/scan923.py` 와 같은 절차).
+     ⚠ 틈을 이어 붙이는 것이 핵심이다 — 그 자는 ref 도 재는데 ref 검정 외곽선은 4 ref px 뿐이고
+     안쪽 경계에서 |Δ바탕|₁ 가 한 화소 26 까지 떨어져 몸통과 끊겨 보인다(자 쪽 주석 참조). */
   let last = -1;
-  for (let k = d.length - 1; k >= 0; k--) if (d[k] > T) { last = k; break; }
+  let x = d.length - 1;
+  while (x >= 0) {
+    if (d[x] <= T) { x--; continue; }
+    const e = x;
+    let left = x;
+    while (left >= 0) {
+      if (d[left] > T) { left--; continue; }
+      let j = left;
+      while (j >= 0 && d[j] <= T) j--;
+      if (left - j <= GAP && j >= 0) { left = j; continue; }
+      break;
+    }
+    if (e - left >= MIN_EXT) { last = e; break; }
+    x = left;
+  }
   if (last < 0) return null;
   if (last + 1 >= d.length) return x0 + last + 0.5;
   const a = d[last], b = d[last + 1];

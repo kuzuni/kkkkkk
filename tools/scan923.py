@@ -49,27 +49,62 @@ def runs(vals, minlen=1):
     return out
 
 
-def outer_x(row, bg, t):
+MIN_EXT_OUR = 12.0                # «카드 재질» 로 인정할 최소 덩이 두께(**우리 px** — ref 에서는 /K)
+GAP_OUR = 3.0                     # 덩이를 이어 붙일 수 있는 틈(우리 px · ref 1.45px) — 아래 ⚑
+
+
+def outer_x(row, bg, t, k=1.0):
     """행에서 «카드 재질» 의 오른쪽 바깥 모서리를 **부분화소**로 낸다.
 
-    d(x) = |row[x] − bg|₁ 가 오른쪽에서 왼쪽으로 오며 t 를 처음 넘는 자리.
-    화소 중심 기준 선형 보간 — 넘는 화소가 없으면 None.
+    d(x) = |row[x] − bg|₁ 가 오른쪽에서 왼쪽으로 오며 t 를 처음 넘는 자리. 화소 중심 기준 선형 보간.
+
+    ⚑ **923 1회차 채점 GJ 관측 ㉮ — 노치 «안» 에 떠 있는 배경 장식(회색 점 ≈7 우리px)을 물면
+    바닥이 10px 로 잘못 읽힌다**(그 자리가 브리핑 §1 표의 «19.0 / 17.0» 뒷값이었다). 그래서 «오른쪽 끝
+    화소» 가 아니라 **카드 몸통에 이어진 덩이**의 오른쪽 끝을 쓴다 — 오른쪽에서 왼쪽으로 오며 덩이를
+    모으되 **GAP 이하의 틈은 이어 붙이고**, 두께가 MIN_EXT 이상인 첫 덩이에서 멈춘다.
+    ⚠ **틈을 이어 붙이는 것이 핵심**이다 — ref 카드의 검정 외곽선은 4 ref px 뿐이고 그 안쪽 경계에서
+    |Δ바탕|₁ 가 한 화소 26 까지 떨어져(예: 파랑 카드 y120 의 x481) **몸통과 끊겨 보인다**.
+    이어 붙이지 않으면 ref 의 곧은 변이 2px 안쪽으로 잘못 잡혀 깊이가 통째로 +3px 어긋난다(1회차 실측).
+    길이·틈은 문턱과 같은 규약으로 **«우리 px» 한 단위**로 주고 ref 에서는 /K 로 환산한다.
     """
     d = np.abs(row - np.array(bg)).sum(1).astype(float)
-    nz = np.where(d > t)[0]
-    if not len(nz):
+    hit = d > t
+    min_ext, gap = MIN_EXT_OUR / k, GAP_OUR / k
+    i = None
+    x = len(d) - 1
+    while x >= 0:
+        if not hit[x]:
+            x -= 1
+            continue
+        e = x                      # 덩이의 오른쪽 끝
+        left = x
+        while left >= 0:
+            if hit[left]:
+                left -= 1
+                continue
+            j = left               # 틈의 시작
+            while j >= 0 and not hit[j]:
+                j -= 1
+            if left - j <= gap and j >= 0:
+                left = j           # 틈이 좁으면 건너뛰어 이어 붙인다
+                continue
+            break
+        if e - left >= min_ext:
+            i = e
+            break
+        x = left
+    if i is None:
         return None
-    i = int(nz[-1])
     if i + 1 >= len(d):
         return i + 0.5
-    a, b = d[i], d[i + 1]          # a > t >= b
+    a, b = d[i], d[i + 1]
     if a == b:
         return i + 0.5
     return (i + 0.5) + (a - t) / (a - b)
 
 
-def profile(a, y0, y1, x0, x1, bg, t):
-    return [outer_x(a[y, x0:x1], bg, t) for y in range(y0, y1)]
+def profile(a, y0, y1, x0, x1, bg, t, k=1.0):
+    return [outer_x(a[y, x0:x1], bg, t, k) for y in range(y0, y1)]
 
 
 def fit_circle(pts):
@@ -139,7 +174,7 @@ def gap_pill_ribbon(img, x0, x1, y0, y1, k, label):
 
 
 def scan(a, y0, y1, x0, x1, bg, k, t, label):
-    prof = profile(a, y0, y1, x0, x1, bg, t)
+    prof = profile(a, y0, y1, x0, x1, bg, t, k)
     vals = [p for p in prof if p is not None]
     if not vals:
         print(f'-- {label}: 프로파일 없음')
