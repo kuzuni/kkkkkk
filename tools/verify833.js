@@ -226,8 +226,11 @@ const DUMP = `(() => {
     ok(ln.every(l => Math.abs(l.ls - ln[0].ls) < 0.01),
       `[1-f] ${c.id} 두 줄이 **한 값**을 쓴다 (833 [13-d] — 줄마다 손으로 다른 값을 적지 마라)`,
       ln.map(l => p2(l.ls)).join(' · '));
-    ok(ln.every(l => Math.abs(l.ls - 2.9) <= 0.05),
-      `[1-g] ${c.id} letter-spacing = 2.9 (수리 전 0 = 틈 합 11.0 ↔ ref 24.8)`, ln.map(l => p2(l.ls)).join(' · '));
+    /* ⚑ 885 7회차 — 2.9 → **5.2**. 6회차 채점 EY 가 **낱자 피치**를 처음 쟀다(ref 33.35 ↔ 우리 31.05 = −6.9%)
+       ⇒ 피치 +2.30px = 자간 +2.30. 3회차의 «틈 합 11.0 ↔ ref 24.8» 은 그 방향의 첫 절반이었다.
+       ⚠ 글리프 배율은 여전히 1 이다([1-h]) — 낱자 종횡 −10% 는 서체 모양이고 지시서 [3] 이 감점에서 뺀 자리다. */
+    ok(ln.every(l => Math.abs(l.ls - 5.2) <= 0.05),
+      `[1-g] ${c.id} letter-spacing = 5.2 (3회차 0 → 2.9 → 7회차 5.2 = 낱자 피치 ref 33.35 에 맞춘 값)`, ln.map(l => p2(l.ls)).join(' · '));
     ok(ln.every(l => Math.abs(l.sx - 1) <= 0.005 && Math.abs(l.sy - 1) <= 0.005),
       `[1-h] ${c.id} **가로·세로 배율이 둘 다 1** — 글리프 자체는 안 건드렸다 (이미 ref 폭 +1.5% 였다)`,
       ln.map(l => `${p2(l.sx)}×${p2(l.sy)}`).join(' · '));
@@ -273,8 +276,15 @@ const DUMP = `(() => {
        ref 는 «빈 띠»(두 줄 잉크 사이 빈 구간) 10.6~10.7 이고, 우리 잉크 두께가 ref 보다 두꺼워
        (윗줄 +10% · 아랫줄 +19% — **895 로 등재한 남은 축**) 중심 거리로 맞추면 글자가 붙는다.
        ⇒ 과녁은 **빈 띠**이고 그때 상자 값이 48/95.75 = 중심 거리 43.75 다. */
-    ok(ln.length === 2 && Math.abs((ln[1].top + ln[1].lh / 2) - (ln[0].top + ln[0].lh / 2) - 43.75) <= 0.3,
-      `[1-o] ${c.id} 두 줄 중심 거리 43.75 (수리 전 46 — ref «빈 띠» 10.65 에 맞춘 값)`,
+    /* ⚑⚑ 885 7회차 — **43.75 → 38.80.** 4회차는 과녁을 «빈 띠»(10.65)로 잡았는데, 6회차 채점 2인이
+       **중심 거리를 직접** 재서 둘 다 +11% 를 냈다(EX ref 38.34~38.77 ↔ 우리 42.97~43.03 · EY 38.8 ↔ 43.09).
+       셋째 자로 4회차 자신의 도구(`tools/scan885c.py`)를 다시 돌리니 **ref cen 38.5 · base 35.8** 이고
+       수리 후 우리가 **38.0 / 36.3**(Δ −1.2% / +1.5%) 이다 — 세 자가 같은 쪽이다.
+       ⚠ «빈 띠» 논거를 버린 것이 아니라 **그 잔차의 뿌리가 895(배지 잉크 두께 +10%/+19%)** 라는 뜻이다.
+       중심 거리를 ref 에 맞추면 우리 빈 띠는 잉크가 두꺼운 만큼 ref 보다 좁아진다 — 그 몫은 895 가 닫는다.
+       (7회차의 회전 프로파일 자는 ref 에서도 빈 띠를 0 으로 읽어 이 축을 가르지 못했다 — 관측으로만 남긴다.) */
+    ok(ln.length === 2 && Math.abs((ln[1].top + ln[1].lh / 2) - (ln[0].top + ln[0].lh / 2) - 38.8) <= 0.3,
+      `[1-o] ${c.id} 두 줄 중심 거리 38.8 (4회차 43.75 — ref 직접 실측 cen 38.5 에 맞춘 값 · 잔여 빈 띠는 895)`,
       `${p2((ln[1].top + ln[1].lh / 2) - (ln[0].top + ln[0].lh / 2))}`);
   }
 
@@ -690,52 +700,97 @@ const DUMP = `(() => {
       `${p2(cut)} ↔ ${p2(rim.cardW - rim.frBorder)}`);
   }
 
-  blk('§16 ★ 불릿의 검정 획은 «원반 팽창» 이다 — 마이터 창이 안 뻗는다 (885 6회차 · 5회차 채점 2인 일치)');
-  /* ⚑ 5회차 채점 EV(+57~64%)·EW(+21~35%)가 «★ 검정 획이 두껍다» 로 일치했는데 **크기가 2배 갈렸다.**
-     6회차 셋째 자(`tools/scan885e.py` — 금색을 원본으로 깐 거리장)가 갈린 이유를 찍었다:
-     **몸통은 맞고(p50 −3% · p75 −3%) 꼬리만 어긋난다(p90 +46% · p95 +75% · max +89%)** —
-     `-webkit-text-stroke` 의 **마이터 조인**이 5각 별 꼭짓점에서 창처럼 뻗은 것이다.
-     ⚠ `stroke-linejoin:round` 는 Chromium 의 text-stroke 에 **안 물린다**(실측 — 넣은 판과 안 넣은 판의
-     분위가 소수점까지 같다). 그래서 처방은 «획을 얇게» 가 아니라 **원반 팽창 링**이다(`.cbox i` 선례).
-     ⚑ 이 절이 지키는 것은 세 가지다:
-       ⓐ 마이터 획이 **없다**(다시 넣으면 꼬리가 돌아온다) ⓑ 링이 **등방**(356 규약)이고 반지름이 3.5 ·
-       ⓒ 방향이 **16 이상**(적으면 꼭짓점에 톱니 구멍이 생겨 «원반» 이 아니게 된다).
-     ⚠ 화소 과녁(«실루엣 ÷ 금색» = ref 1.176/1.231 · 문턱 사다리 네 단에서 불변)은
-     `scan885e.py` 가 소유한다 — 이 자는 그 값을 만드는 **선언**을 지킨다. */
+  blk('§16 ★ 불릿은 «금색 별 + 거리장 링» 두 겹 폴리곤이다 — 마이터 창이 안 뻗는다 (885 7회차 · 6회차 채점 2인 일치)');
+  /* ⚑ 6회차까지 이 절은 «원반 팽창 text-shadow 링» 의 선언을 지켰다. 7회차가 그 자리를 **이관한다**(333 처방) —
+     6회차 채점 2인(EX·EY)이 «획 두께는 맞다»([41])로 모으고 결손을 **«별이 뾰족한 것»** 으로 갈랐기 때문이다
+     (안/바깥 반지름비 ref 0.591 ↔ 우리 0.420 · 등주비 Q ref 0.4605 ↔ 우리 0.2993 · 금색 면적 −40%).
+     ★ 가 **서체 글리프**인 한 r/R 은 값이 아니므로 두 겹 **폴리곤**으로 옮겼고, 링도 글리프 전용 text-shadow 에서
+     **거리장 오프셋 폴리곤**(`tools/starpoly885.py` — 볼록 꼭짓점 호 · 오목 꼭짓점 교점)으로 옮겼다.
+     ⚑ **지키는 것은 6회차와 같은 셋이다. 자리를 비우지 않았다:**
+       ⓐ 마이터 획이 **없다** — 이제 «링이 금색에서 d 보다 멀리 안 뻗는다» 로 잰다(옛 [16-b] 의 뜻).
+       ⓑ 링이 **등방**(356 규약)이고 두께가 **3.1** — 옛 [16-d]·[16-e] 의 뜻 그대로, 잣대만 폴리곤이다.
+       ⓒ 표본이 **16 이상**이고 이웃 사이가 1.3px 미만 — 옛 [16-c]·[16-g].
+     ⚠ 화소 과녁(«실루엣 ÷ 금색» = ref 1.176/1.231)은 여전히 `scan885e.py` 가 소유한다.
+     ⚠ 별의 **형**(r/R = 0.591)은 아래 [16-h] 가 지킨다 — 6회차 채점 2인이 값까지 적은 축이다. */
   const star = await page.evaluate(() => {
     const s = document.querySelector('.pvc>.pvl>.pvb>s');
     if (!s) return null;
     const cs = getComputedStyle(s);
-    const ts = cs.textShadow || '';
-    /* «Xpx Ypx 0px rgb(0,0,0)» 꼴을 전부 뽑아 반지름을 잰다(색이 앞에 오는 브라우저도 있다). */
-    const offs = [...ts.matchAll(/(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px/g)]
-      .map(m => ({ x: +m[1], y: +m[2], blur: +m[3] }));
-    return { stroke: parseFloat(cs.webkitTextStrokeWidth) || 0, n: offs.length,
-      r: offs.map(o => +Math.hypot(o.x, o.y).toFixed(3)),
-      blur: offs.map(o => o.blur), txt: s.textContent.trim() };
+    const num = v => parseFloat(v) || 0;
+    const poly = (cp, w, h, ox, oy) => {
+      const m = /polygon\(([^)]*)\)/.exec(cp || '');
+      if (!m) return [];
+      return m[1].split(',').map(pt => {
+        const [a, b] = pt.trim().split(/\s+/);
+        const f = (v, size) => (String(v).endsWith('%') ? parseFloat(v) / 100 * size : parseFloat(v));
+        return { x: ox + f(a, w), y: oy + f(b, h) };
+      });
+    };
+    const cb = getComputedStyle(s, '::before'), ca = getComputedStyle(s, '::after');
+    const sw = num(cs.width), sh = num(cs.height);
+    const bw = num(cb.width) || sw, bh = num(cb.height) || sh;
+    const aw = num(ca.width), ah = num(ca.height);
+    return {
+      stroke: parseFloat(cs.webkitTextStrokeWidth) || 0,
+      shadow: (cs.textShadow || 'none'),
+      fs: num(cs.fontSize), txt: s.textContent.trim(),
+      ring: poly(cb.clipPath, bw, bh, num(cb.left), num(cb.top)),
+      gold: poly(ca.clipPath, aw, ah, num(ca.left), num(ca.top)),
+      gw: aw, gh: ah, sw, sh,
+      filt: (cb.filter || 'none') + '|' + (ca.filter || 'none'),
+    };
   });
   ok(!!star && star.txt === '★', '[16-a] ★ 불릿 표본을 잡았다', star ? star.txt : '없음');
   if (star) {
-    ok(star.stroke < 0.01,
-      '[16-b] `-webkit-text-stroke` 가 **0** 이다 — 마이터 조인이 남아 있으면 꼭짓점에서 창이 뻗는다 (p95 +75%)',
-      `${p2(star.stroke)}px`);
-    ok(star.n >= 16,
-      '[16-c] 링 방향이 **16 이상** — 적으면 꼭짓점에 톱니 구멍이 생겨 «원반» 이 아니다',
-      `${star.n} 방향`);
-    const rmin = Math.min(...star.r), rmax = Math.max(...star.r);
-    ok(star.n > 0 && rmax - rmin < 0.05,
-      '[16-d] 모든 방향의 반지름이 **한 값** = 등방이다 (356 규약 — 타원 링 금지)',
-      `${p2(rmin)} ~ ${p2(rmax)}`);
-    ok(star.n > 0 && Math.abs(rmax - 3.1) < 0.15,
-      '[16-e] 반지름 3.1 — **ref 링/변 실측 그대로다**(1.50 ref-px × K = 3.09 · 여유에 맞춰 고른 값이 아니다)',
-      p2(rmax));
-    ok(star.blur.every(b => b < 0.01),
-      '[16-f] 흐림 0 — 흐리면 링이 «두께» 가 아니라 «그림자» 가 되어 자가 못 잰다',
-      star.blur.map(p2).join('/'));
-    /* 방향 수만 채우고 한쪽에 몰리면 링이 안 닫힌다 — 이웃 사이 «호 길이» 로 본다. */
-    ok(star.n > 0 && (2 * Math.PI * rmax / star.n) < 1.3,
-      '[16-g] 이웃 방향 사이 호 길이 < 1.3px — 그래야 곧은 변에서 링이 이어진다',
-      `${p2(2 * Math.PI * rmax / Math.max(star.n, 1))}px`);
+    /* 링 점마다 «금색 별 윤곽까지의 최단 거리» — 이것이 곧 링 두께다(중심도 방향도 안 고른다). */
+    const dseg = (px, py, ax, ay, bx, by) => {
+      const ex = bx - ax, ey = by - ay, L2 = ex * ex + ey * ey || 1;
+      const t = Math.max(0, Math.min(1, ((px - ax) * ex + (py - ay) * ey) / L2));
+      return Math.hypot(px - (ax + t * ex), py - (ay + t * ey));
+    };
+    const G = star.gold, R = star.ring;
+    const dists = R.map(p => Math.min(...G.map((g, i) => {
+      const q = G[(i + 1) % G.length];
+      return dseg(p.x, p.y, g.x, g.y, q.x, q.y);
+    })));
+    const dmin = dists.length ? Math.min(...dists) : NaN;
+    const dmax = dists.length ? Math.max(...dists) : NaN;
+    ok(star.stroke < 0.01 && star.shadow === 'none' && star.fs < 0.01,
+      '[16-b] 글리프가 **한 획도 안 그려진다** — text-stroke 0 · text-shadow 없음 · font-size 0 (그림은 폴리곤 두 겹뿐)',
+      `${p2(star.stroke)}px · ${star.shadow} · ${p2(star.fs)}px`);
+    ok(R.length >= 16 && G.length === 10,
+      '[16-c] 링 표본이 **16 이상**이고 금색은 5각 별(10점) — 적으면 꼭짓점에 톱니 구멍이 생겨 «원반» 이 아니다',
+      `링 ${R.length}점 · 금색 ${G.length}점`);
+    ok(dists.length > 0 && dmax - dmin < 0.05,
+      '[16-d] 링 두께가 **한 값** = 등방이다 (356 규약 — 별을 «확대» 하면 반지름에 비례해 두꺼워져 여기서 갈린다)',
+      `${p2(dmin)} ~ ${p2(dmax)}`);
+    ok(dists.length > 0 && Math.abs(dmax - 3.1) < 0.15,
+      '[16-e] 링 두께 3.1 — **ref 링/변 실측 그대로다**(1.50 ref-px × K = 3.09 · 6회차 §16 승계)',
+      p2(dmax));
+    ok(star.filt === 'none|none',
+      '[16-f] 흐림·필터 0 — 흐리면 링이 «두께» 가 아니라 «그림자» 가 되어 자가 못 잰다', star.filt);
+    let arc = 0;
+    for (let i = 0; i < R.length; i++) {
+      const a = R[i], b = R[(i + 1) % R.length];
+      const seg = Math.hypot(b.x - a.x, b.y - a.y);
+      if (seg < 2.0) arc = Math.max(arc, seg);      /* 곧은 «변» 은 빼고 «호» 구간만 본다 */
+    }
+    ok(arc > 0 && arc < 1.3,
+      '[16-g] 이웃 호 길이 < 1.3px — 그래야 꼭짓점의 둥근 조인이 화소보다 촘촘하다', `${p2(arc)}px`);
+    /* ⚑ 7회차 신설 — 별의 «형». 6회차 채점 2인이 값까지 적은 축이라 선언으로 못박는다.
+       금색 폴리곤의 짝수 점은 바깥 꼭짓점 · 홀수 점은 안 꼭짓점이므로 반지름비가 곧 r/R 이다. */
+    if (G.length === 10) {
+      const cx = G.reduce((s2, p) => s2 + p.x, 0) / 10, cy = G.reduce((s2, p) => s2 + p.y, 0) / 10;
+      const rad = G.map(p => Math.hypot(p.x - cx, p.y - cy));
+      const Ro = (rad[0] + rad[2] + rad[4] + rad[6] + rad[8]) / 5;
+      const ri = (rad[1] + rad[3] + rad[5] + rad[7] + rad[9]) / 5;
+      ok(Math.abs(ri / Ro - 0.591) < 0.01,
+        '[16-h] 안/바깥 반지름비 = **0.591** (6회차 채점 EY 의 ref 실측 · 수리 전 글리프는 0.420 이었다)',
+        p2(ri / Ro));
+      ok(Math.abs(star.gw - 34.90) < 0.5 && Math.abs(star.gh - 33.20) < 0.5,
+        '[16-i] 금색 상자 34.90 × 33.20 — [34]«★ bbox 는 맞다» 를 형을 바꾸면서도 지켰다 (ref 35.1 × 33.0)',
+        `${p2(star.gw)} × ${p2(star.gh)}`);
+    }
   }
 
   blk('§17 리본 크림 캡의 «크림/빨강 경계» 는 기울어 있다 (885 6회차 · 5회차 채점 2인 일치 2순위)');
@@ -858,8 +913,8 @@ const DUMP = `(() => {
   });
   ok(backB.every(b => b.ls === 0),
     '[R16] 배지 글자 사이를 0 으로 되돌리면 §1-2 [1-g] 가 빨개진다', backB.map(b => p2(b.ls)).join(' / '));
-  ok(backB.every(b => Math.abs((b.nowAdv - b.backAdv) - b.n * 2.9) <= 1.0),
-    '[R16b] 그때 advance 가 **글자 수 × 2.9 만큼** 줄어든다 — 그림이 바뀐다는 증거이자 «배율이 아니라 글자 사이» 라는 증거',
+  ok(backB.every(b => Math.abs((b.nowAdv - b.backAdv) - b.n * 5.2) <= 1.0),
+    '[R16b] 그때 advance 가 **글자 수 × 5.2 만큼** 줄어든다 — 그림이 바뀐다는 증거이자 «배율이 아니라 글자 사이» 라는 증거',
     backB.map(b => `${b.n}자 ${p2(b.backAdv)} → ${p2(b.nowAdv)} (Δ${p2(b.nowAdv - b.backAdv)})`).join(' / '));
   const back5 = await page.evaluate(() => {
     const st = document.createElement('style');
@@ -988,9 +1043,9 @@ const DUMP = `(() => {
     });
     return out;
   });
-  /* 강체 예측: dx = −d·sin15 = −11.32 · dy = d·cos15 = 42.26 (d = 43.75). */
-  ok(now17.length > 0 && now17.every(o => Math.abs(o.dx + 11.32) <= 0.4 && Math.abs(o.dy - 42.26) <= 0.4),
-    '[R17b] 원복하면 두 줄 어긋남이 **강체 예측**(dx −11.32 · dy 42.26 = d 43.75 를 15° 돌린 값)과 같다',
+  /* 강체 예측: dx = −d·sin15 = −10.04 · dy = d·cos15 = 37.48 (d = 38.8 — 885 7회차가 43.75 에서 옮겼다). */
+  ok(now17.length > 0 && now17.every(o => Math.abs(o.dx + 10.04) <= 0.4 && Math.abs(o.dy - 37.48) <= 0.4),
+    '[R17b] 원복하면 두 줄 어긋남이 **강체 예측**(dx −10.04 · dy 37.48 = d 38.8 을 15° 돌린 값)과 같다',
     now17.map(o => `dx ${o.dx} · dy ${o.dy}`).join(' / '));
 
   /* ⚑ [R12] — 8회차가 실제로 진 그 함정을 못박는다. 값을 되돌리는 시험이 아니라
