@@ -669,10 +669,23 @@ const INSTALL = () => {
       && R[k].tr[0].r && R[k].tr[0].r.length >= 4);
     if (!kk.length) { ok(false, '[R5] 되돌릴 궤적 표본이 있다'); }
     else {
-      const k = kk.sort((a, b2) => R[b2].tr[0].r.length - R[a].tr[0].r.length)[0];
+      /* 되돌림의 여유가 가장 큰 창을 고른다 — «멀리 간 절반이 죽었을 때 옛 자가 보는 하락» 이
+         곧 이 시험의 진폭이다. 알 수가 아니라 **그 하락**으로 고르는 것이 요점이다(알이 많아도
+         반경이 고르게 뭉쳐 있으면 하락이 작아 시험이 무뎌진다 — 그때는 [R5b] 가 말한다). */
+      const drop = a => { const A0 = R[a].tr[0].r, f = [...A0].sort((x, y) => y.d - x.d);
+        const kp = f.slice(Math.ceil(f.length / 2));
+        return A0.reduce((s, x) => s + x.d, 0) / A0.length - kp.reduce((s, x) => s + x.d, 0) / kp.length; };
+      const k = kk.sort((a, b2) => drop(b2) - drop(a))[0];
       const A = R[k].tr[0].r;
       const byFar = [...A].sort((x, y) => y.d - x.d);
       const keep = byFar.slice(Math.ceil(byFar.length / 2));       /* 멀리 간 절반이 죽었다 */
+      /* ⚠ 시험이 **무디지 않은지**를 먼저 못박는다 — 첫 무리의 반경이 문턱 폭 안에 뭉쳐 있으면
+         «멀리 간 절반을 지워도» 옛 자가 안 빨개져 [R5] 가 «이미 참인 것» 을 묻게 된다.
+         그 경우는 자의 결함이 아니라 표본이 얇은 것이므로 **따로** 말한다(항을 뭉치면 원인이 섞인다). */
+      const sprd = Math.max(...A.map(x => x.d)) - Math.min(...A.map(x => x.d));
+      ok(sprd > 2 * DTOL,
+         '[R5b] 첫 무리의 반경이 문턱 폭보다 넓게 흩어져 있다 — 아래 [R5] 가 «이미 참인 것» 을 묻지 않는다',
+         k + ' · 반경 폭 ' + n1(sprd) + 'px > ' + (2 * DTOL) + 'px · ' + A.length + '알');
       const cens = spread([{ t: 0, r: A }, { t: 720, r: keep.map(x => ({ i: x.i, d: x.d })) }]);
       ok(!cens.okOld && cens.ok,
          '[R5] ★ 알이 **한 픽셀도 안 움직이고** 멀리 간 절반만 죽은 사본 — 옛 자(전원 → 생존자)는 빨갛고'
