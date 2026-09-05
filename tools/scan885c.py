@@ -43,6 +43,34 @@ def yel_mask(a, t):
     return (np.minimum(R, G) - B >= t) & (R > 140) & (G > 110)
 
 
+def _gap(u, share=0.12):
+    """u 에서 «잉크가 한 점도 없는» 가장 두꺼운 띠 — 양쪽에 share 이상 남는 것만 센다.
+
+    돌려주는 값은 (띠 두께, 그 한가운데). 두 줄이 안 갈리는 각에서는 (0, nan) 이다.
+    (895 1회차 신설 — `tools/scan895.py` 와 같은 축이다.)
+    """
+    lo, hi = float(u.min()), float(u.max())
+    bins = np.arange(np.floor(lo), np.ceil(hi) + 1.0, 1.0)
+    if len(bins) < 3:
+        return 0.0, float('nan')
+    cnt, edges = np.histogram(u, bins=bins)
+    best = (0.0, float('nan'))
+    i = 0
+    while i < len(cnt):
+        if cnt[i] != 0:
+            i += 1
+            continue
+        j = i
+        while j < len(cnt) and cnt[j] == 0:
+            j += 1
+        if cnt[:i].sum() >= share * len(u) and cnt[j:].sum() >= share * len(u):
+            g = float(edges[j] - edges[i])
+            if g > best[0]:
+                best = (g, float((edges[i] + edges[j]) / 2))
+        i = j
+    return best
+
+
 def two_line(pts, deg_lo=-30.0, deg_hi=30.0, step=0.25):
     """점구름을 «평행한 두 줄» 로 보고 (각도, 무게중심 거리, 아랫변 거리, 분리도) 를 낸다.
 
@@ -85,12 +113,27 @@ def two_line(pts, deg_lo=-30.0, deg_hi=30.0, step=0.25):
         #   실제로 1판이 −30°(스윕 끝)에서 굳었다. ⇒ **총분산으로 정규화**한 Otsu η 를 쓴다.
         var = float(np.var(u))
         sep = float(between[i] / var) if var > 1e-9 else -1.0
-        if best is None or sep > best[0]:
-            best = (sep, d, mids[i], u.copy())
+        # ⚑⚑ 895 1회차 이관 — **η 만으로는 여전히 달아난다.** 아랫줄을 줄여 빈 띠가 넓어지자
+        #    이 자가 **−24.8°**(참값 +15.0°)에서 굳어 cen 을 +46% 로 읽었다. η 는 «덩이 사이 거리
+        #    ÷ 퍼짐» 이라 한 덩이를 아무 데서나 갈라도 커질 수 있고, 두 덩이 크기가 갈리면 그 쪽이 이긴다.
+        #    ⇒ **잉크가 한 점도 없는 «빈 띠» 의 두께**를 1순위 목적함수로 올린다(두 줄이 실제로
+        #    갈리는 각에서만 생기므로 가짜 분할이 원리적으로 못 이긴다). η 는 동점을 깨는 데만 쓴다.
+        #    ⚠ ref 값은 이 교체로 한 칸도 안 변한다(+15.0/+14.5° · cen 38.5 · base 35.8) — 895 1회차 대조.
+        gap, gcut = _gap(u, share=0.12)
+        if gap > 0:
+            sep = None
+            key = (gap, float(between[i] / var) if var > 1e-9 else -1.0)
+            cut_use = gcut
+        else:
+            key = (0.0, sep)
+            cut_use = mids[i]
+        if best is None or key > best[0]:
+            best = (key, d, cut_use, u.copy())
         d += step
     if best is None:
         return None
-    sep, deg, cut, u = best
+    key, deg, cut, u = best
+    sep = key[1]   # 분리도는 «동점 깨기» 로 밀렸다(895 1회차) — 진단용으로만 남긴다
     a, b = u[u <= cut], u[u > cut]
     if len(a) < 10 or len(b) < 10:
         return None
