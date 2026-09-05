@@ -41,8 +41,10 @@ const PINNED = ['probe710.js', 'probe792.js', 'probe864.js', 'probe865.js',
 const PINNED_928 = ['verify856.js', 'probe928.js'];
 /* 예외 — 상자가 «플레이어 자신의 그림» 이라 못박으면 재는 것이 사라지는 자(파일에 이유가 있다).
    943 이 `probe943.js` 를 보탰다 — `verify79` [E-R4] 의 표본 고르기를 재는 자라 상자도 같은 텍셀이고,
-   게다가 **셰이크가 살아 있는 판**이 곧 표본이라 못박으면 재려던 것이 사라진다(그 파일 서두에 이유). */
-const EXEMPT = ['probe523.js', 'probe943.js', 'verify79.js'];
+   게다가 **셰이크가 살아 있는 판**이 곧 표본이라 못박으면 재려던 것이 사라진다(그 파일 서두에 이유).
+   944 가 `probe944.js` 를 보탰다 — `probe929` [2]·[6] 의 축을 재는 자라 상자가 같은 텍셀이고
+   [5] 가 셰이크 살아 있는 판을 표본으로 쓴다(그 파일 서두에 이유). */
+const EXEMPT = ['probe523.js', 'probe943.js', 'probe944.js', 'verify79.js'];
 
 console.log('VERIFY936 — 측정 상자를 움직이는 상태에 매단 자 인구\n');
 
