@@ -179,7 +179,16 @@ def scan(a, y0, y1, x0, x1, bg, k, t, label):
     if not vals:
         print(f'-- {label}: 프로파일 없음')
         return []
-    straight = float(np.median([v for v in vals if v >= np.percentile(vals, 60)]))
+    # ⚑ 923 1회차 채점 GK 지적 — «상위 40% 의 중앙값» 은 **곧은 변보다 오른쪽에 있는 부품**에 진다.
+    # ref 불릿 카드 창에는 분홍 배지가 x=498 까지 삐져나와 곧은변이 486.26 → 486.88 로 부풀었고,
+    # 그 0.62 ref px 가 «ref 두 형의 깊이 차 0.52 우리px» 라는 **유령**을 통째로 만들었다
+    # (GK 가 노치 없는 행만 골라 재니 ref 두 형의 차는 **0.01 우리px** 이다).
+    # ⇒ 곧은 변은 **최빈값**으로 잡는다 — 노치(왼쪽으로 벗어남)도 배지(오른쪽으로 벗어남)도
+    #   «몇 행 안 되는 소수» 라 최빈 구간을 못 흔든다. 0.25px 격자로 세고 그 봉우리 ±0.5px 안에서 중앙값.
+    q = np.round(np.array(vals) * 4) / 4
+    peak = float(np.bincount(((q - q.min()) * 4).astype(int)).argmax()) / 4 + float(q.min())
+    near = [v for v in vals if abs(v - peak) <= 0.5]
+    straight = float(np.median(near)) if near else float(np.median(vals))
     tol_img = TOL_OUR / k
     idx = [i for i, p in enumerate(prof) if p is not None and straight - p >= tol_img]
     ns = [r for r in runs(idx, minlen=4)]
