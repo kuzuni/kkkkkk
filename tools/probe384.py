@@ -13,7 +13,7 @@
 #
 # 사용:  python3 tools/probe384.py            (07 만)
 #        python3 tools/probe384.py --all      (07 + 03)
-from PIL import Image
+from pydep937 import Image
 import sys
 
 REF7, CAP7 = 'docs/ref/07-스킬-팝업.jpg', 'docs/review/96-full-hero.png'

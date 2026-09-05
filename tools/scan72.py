@@ -17,7 +17,7 @@ scan72.py — 72 «03 던전 카드 우측 썸네일» 레퍼런스 픽셀 스�
 """
 import sys
 from collections import Counter
-from PIL import Image
+from pydep937 import Image
 
 IMG = 'docs/ref/03-던전-팝업.jpg'
 im = Image.open(IMG).convert('RGB')

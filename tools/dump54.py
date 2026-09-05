@@ -2,7 +2,7 @@
 사용: python3 tools/dump54.py <이미지> <off> <y> <x0> <x1> [step]
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 im = Image.open(sys.argv[1]).convert('RGB')
 px = im.load()

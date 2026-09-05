@@ -15,7 +15,7 @@
 # 사용:  node tools/syn409b.js && python3 tools/probe409h.py
 import math
 import sys
-from PIL import Image
+from pydep937 import Image
 
 SYN = 'docs/review/409-syn3.png'
 # 대조군 상자 — syn409b.js 와 같은 값.

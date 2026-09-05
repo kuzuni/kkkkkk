@@ -14,7 +14,7 @@
 #   python3 tools/cmp02.py dark <x0> <refY0> <x1> <refY1> [--max 60]     어두운 잉크 bbox
 #   python3 tools/cmp02.py hue  <x0> <refY0> <x1> <refY1> <hex> [--tol 40]  색 마스크 bbox
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF = 'docs/ref/02-기본-메인-화면.jpg'
 CAP = 'docs/review/02-r4.png'

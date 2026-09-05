@@ -5,7 +5,7 @@
 # 세로 변환: cap_y = ref_y - 84 · 가로 1:1
 # 사용: python3 s20b.py [cap경로]
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF = 'docs/ref/20-프로필-팝업-플레이어-스펙-정보.jpg'
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/20-r10a.png'

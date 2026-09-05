@@ -14,8 +14,8 @@
 실행: python3 tools/ink13.py [캡처경로]
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/13-상점-팝업-재화-탭.jpg'
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/13-r6.png'

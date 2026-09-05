@@ -10,8 +10,8 @@
 #   A4 자체 경고 «비평가가 갈리면 직접 재고, well + 2×링대 = 외경 으로 검산하라».
 #   70-④ 두께는 «순색 코어» 끼리 비교(레퍼런스 JPEG 는 경계마다 AA 가 붙는다) — 임계값을 흔들어 본다.
 import sys
-from PIL import Image
-import numpy as np
+from pydep937 import Image
+from pydep937 import np
 
 R = sys.argv[1] if len(sys.argv) > 1 else '6'
 DY = 60

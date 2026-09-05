@@ -9,8 +9,8 @@
 세로 변환은 «frame y = ref y − 84» 하나뿐이라, 창도 그렇게 옮겨 잡는다.
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/36-패스-출석패스.jpg'
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/36-r2.png'

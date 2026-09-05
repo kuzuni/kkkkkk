@@ -2,8 +2,8 @@
 #   python3 tools/scanA4b.py [회차]
 # scanA4.py 와 같은 좌표 규약(cap y = ref y − 60).
 import sys
-from PIL import Image
-import numpy as np
+from pydep937 import Image
+from pydep937 import np
 
 R = sys.argv[1] if len(sys.argv) > 1 else '6'
 DY = 60

@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
+const { py } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
 let pass = 0, fail = 0;
@@ -146,7 +147,7 @@ async function settleGold(page) {
       return png;
     };
     const root = path.resolve(__dirname, '..');
-    const nd = (a, b) => parseInt(execSync(`python3 ${path.join(root, 'pxdiff41.py')} ${a} ${b}`,
+    const nd = (a, b) => parseInt(py([path.join(root, 'pxdiff41.py'), a, b],
       { cwd: root }).toString().trim().split(' ')[0], 10);
     const p1 = path.join(os.tmpdir(), 'probe534.e1.png'), p2 = path.join(os.tmpdir(), 'probe534.e2.png');
     fs.writeFileSync(p1, await shot(SRC)); fs.writeFileSync(p2, await shot(SRC));

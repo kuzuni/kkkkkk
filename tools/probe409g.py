@@ -17,7 +17,7 @@
 # 사용:  python3 tools/probe409g.py --edge|--apex|--diag [--corner BL]
 import sys
 import math
-from PIL import Image
+from pydep937 import Image
 
 REF7, CAP7 = 'docs/ref/07-스킬-팝업.jpg', 'docs/review/96-full-hero.png'
 # 알약 상자 — probe409e/f 와 같은 값(352 §3·§10 · 7회차 §16-1 정정).

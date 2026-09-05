@@ -2,7 +2,7 @@
 사용: python3 tools/col54.py <이미지> <off> <x> <y0> <y1> [th]
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 im = Image.open(sys.argv[1]).convert('RGB')
 px = im.load()

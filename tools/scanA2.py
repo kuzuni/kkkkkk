@@ -13,7 +13,7 @@ capA2.js 가 뜬 4장의 차분으로 «순수 잉크 bbox» 를 낸다.
   라벨    = full     − labeloff  (알림닷 상태가 같은 장끼리 뺀다)
 """
 import sys, os, json
-from PIL import Image
+from pydep937 import Image
 
 R = sys.argv[1] if len(sys.argv) > 1 else '4'
 D = os.path.join(os.path.dirname(__file__), '..', 'docs', 'review')

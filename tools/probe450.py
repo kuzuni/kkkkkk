@@ -15,7 +15,7 @@
 #   좌표계: 서브탭 바는 하단 앵커(335 정오표) — cap_y = ref_y − 60. 가로는 1:1.
 #
 # 사용:  python3 tools/probe450.py     (캡처는 먼저 `node tools/cap96.js`)
-from PIL import Image
+from pydep937 import Image
 import statistics as st
 
 OFF = 60

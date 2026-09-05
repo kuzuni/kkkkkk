@@ -9,7 +9,7 @@
 #
 # 좌표계 — 카드 리스트는 **상단 앵커**다(335 «앵커가 둘» 정오표): cap_y = ref_y − 84.
 #          (서브탭 바·앱 탭바만 −60 이다. 여기서는 쓰지 않는다.)
-from PIL import Image
+from pydep937 import Image
 import sys
 
 REF = 'docs/ref/03-던전-팝업.jpg'

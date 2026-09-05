@@ -3,7 +3,7 @@
 bg 는 (bgx,bgy) 화소색으로 잡는다. off = 이미지 y − 프레임 y.
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 im = Image.open(sys.argv[1]).convert('RGB')
 px = im.load()

@@ -7,7 +7,7 @@
 #
 # 실행: python3 tools/p58ar.py <디렉터리>
 import sys, os, glob
-from PIL import Image
+from pydep937 import Image
 
 d = sys.argv[1] if len(sys.argv) > 1 else '.p58ar'
 

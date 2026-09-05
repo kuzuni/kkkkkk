@@ -22,7 +22,7 @@
 #   python3 tools/probe409i.py --ref-curve      `verify462` [3] 에 넣을 ref 곡선만 찍는다
 import math
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF7, CAP7 = 'docs/ref/07-스킬-팝업.jpg', 'docs/review/96-full-hero.png'
 # 스캔 **출발점**일 뿐이다 — 진짜 상자는 `find_box` 가 그림에서 잰다.

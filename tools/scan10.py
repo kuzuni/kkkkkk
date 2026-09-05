@@ -12,8 +12,8 @@
   python3 tools/scan10.py docs/review/10-r4.jpg --capcard 50,166
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 cap_path = 'docs/review/10-r3.jpg'
 cap_card = (50, 163)

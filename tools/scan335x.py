@@ -6,7 +6,7 @@
 #
 #   바 세로 중심: ref y=2069 / cap y=2009 (하단 앵커 −60). 그 높이에서 좌→우로 훑으며
 #   «페이지 바탕(#26211B lum≈33) → 검정 테두리(lum<12) → 바 안쪽(lum>45)» 전이를 찾는다.
-from PIL import Image
+from pydep937 import Image
 import sys
 
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/335-r0.png'

@@ -9,8 +9,8 @@
 #
 # 좌표: cap y = ref y − 60 (바닥 앵커 구간. scanA4.py 머리말 참고)
 import sys
-from PIL import Image
-import numpy as np
+from pydep937 import Image
+from pydep937 import np
 
 R = sys.argv[1] if len(sys.argv) > 1 else '8'
 DY = 60

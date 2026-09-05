@@ -11,7 +11,7 @@
 #   python3 tools/cmp53.py bbox <x0> <refY0> <x1> <refY1> <hex> <tol>   색 마스크 bbox
 #   python3 tools/cmp53.py ink  <x0> <refY0> <x1> <refY1> <minlum>      밝은 잉크 bbox
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF = 'docs/ref/53-가방팝업.jpg'
 CAP = 'docs/review/53-r3.png'

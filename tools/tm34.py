@@ -10,8 +10,8 @@
 사용: python3 tools/tm34.py [--cap <png>] [--split <x>]
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/34-축복-버프팝업.jpg'
 CAP = 'docs/review/34-r14.png'

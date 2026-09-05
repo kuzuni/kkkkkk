@@ -9,7 +9,7 @@
 #
 # 자물쇠 몸통은 «세로로 굵은 흰 덩어리»(열별 흰 픽셀 ≥ 18), 글자 잉크는 그보다 얇다.
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF = 'docs/ref/19-프로필-팝업.jpg'
 CARD_W, CARD_H = 350, 77

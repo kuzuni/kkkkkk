@@ -22,8 +22,8 @@
 import json
 import sys
 
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/151-이용권-카드.png'
 K = 2.0628                      # ref 카드 폭 474.12 → 우리 978 (측정표 §9)

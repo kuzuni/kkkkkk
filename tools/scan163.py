@@ -9,7 +9,7 @@
    그 프레임에만 있는 것(캐릭터 + 그림자)만 남긴다.
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 THR = 30          # 배경 플레이트 대비 채널 합 차이(0~765)
 

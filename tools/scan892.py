@@ -34,11 +34,7 @@ import os
 import sys
 import json
 
-try:
-    from PIL import Image
-except ImportError:
-    print('scan892: Pillow 없음 — `pip install pillow` 후 다시 돌려라', file=sys.stderr)
-    sys.exit(1)
+from pydep937 import Image                            # 937 — 없으면 «한 줄 + 코드 2»
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REF = os.path.join(ROOT, 'docs', 'ref', '89-유물-팝업.png')

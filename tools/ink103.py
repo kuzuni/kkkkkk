@@ -8,7 +8,7 @@
 사용: python3 tools/ink103.py docs/review/103-r3.png
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 PATH = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/103-r3.png'
 im = Image.open(PATH).convert('RGB')

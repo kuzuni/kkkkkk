@@ -24,6 +24,7 @@
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
+const { py: py937 } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -48,7 +49,7 @@ const ok = (cond, title, got) => {
   cond ? pass++ : fail++;
 };
 
-const py = (args) => execFileSync('python3', [path.join(__dirname, 'scan887.py'), ...args],
+const py = (args) => py937([path.join(__dirname, 'scan887.py'), ...args],
   { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const json = (out) => JSON.parse(out.slice(out.indexOf('{')));
 

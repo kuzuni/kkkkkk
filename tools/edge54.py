@@ -5,7 +5,7 @@
 출력: 각 행의 경계 x 목록(왼쪽→오른쪽, «상승/하강» 표시)
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 args = [a for a in sys.argv[1:] if not a.startswith('--')]
 TH = 12

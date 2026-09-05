@@ -13,7 +13,7 @@
 #
 # 결과: docs/review/621-r<n>-<자리>-strip.png (쉼 · 한 사이클 6위상 · 뗌 뒤)
 import sys, os, json
-from PIL import Image, ImageDraw
+from pydep937 import Image, ImageDraw
 
 R = sys.argv[1] if len(sys.argv) > 1 else '2'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'docs', 'review')

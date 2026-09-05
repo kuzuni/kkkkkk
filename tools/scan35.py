@@ -17,8 +17,8 @@ G 와 H 가 같은 요소를 다른 값으로 준 것이 4건 있었다:
     바 안쪽 상대 위치(«바 본체 상단에서 몇 px») 로 비교하면 이 차이가 사라진다.
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/35-패스-스테이지패스.jpg'
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/35-r4.png'

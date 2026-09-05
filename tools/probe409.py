@@ -13,7 +13,7 @@
 #   좌표계·표본은 probe384.py 와 같다(07 스킬 시트 · 하단 앵커 cap_y = ref_y − 60).
 #
 # 사용:  python3 tools/probe409.py
-from PIL import Image
+from pydep937 import Image
 import math
 
 REF7, CAP7 = 'docs/ref/07-스킬-팝업.jpg', 'docs/review/96-full-hero.png'

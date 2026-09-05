@@ -5,7 +5,7 @@
 사용: python3 tools/scan12.py docs/review/12-84-r1.png [y0 y1]
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 p = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/12-84-r1.png'
 y0 = int(sys.argv[2]) if len(sys.argv) > 3 else 1960

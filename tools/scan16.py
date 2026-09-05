@@ -5,7 +5,7 @@
 #   python3 tools/scan16.py ink <이미지> x0 y0 x1 y1   → 밝은(흰 코어) 픽셀 bbox + 픽셀비
 # 좌표는 이미지 원좌표. ref(1080x2340) ↔ cap(1080x2280) 대응은 «cap_y = ref_y − 84».
 import sys
-from PIL import Image
+from pydep937 import Image
 
 def lum(p): return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
 

@@ -1,5 +1,5 @@
 import sys
-from PIL import Image
+from pydep937 import Image
 im=Image.open(sys.argv[1]).convert('RGB');px=im.load(); off=int(sys.argv[2])
 def L(c): return 0.299*c[0]+0.587*c[1]+0.114*c[2]
 def brown(c): return c[0]>c[1]>c[2] and c[0]-c[2]>20

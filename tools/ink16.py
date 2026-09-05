@@ -2,7 +2,7 @@
 #   python3 tools/ink16.py <캡처파일> [창이름...]
 # 창 좌표는 캡처(1080x2280) 기준. ref 는 y+84 로 같은 창을 본다.
 import sys
-from PIL import Image
+from pydep937 import Image
 REF = 'docs/ref/16-유물-세부-팝업.jpg'
 WINS = {
   'title':   (280, 675, 800, 745),

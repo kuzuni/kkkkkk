@@ -15,7 +15,7 @@
 #
 # 좌표: 알약 자신의 윤곽(= 셸 검정의 **안쪽** 변)에서 안으로 읽는다. 우리 캡처에서는 `.stab.on`
 # 상자의 변이 곧 그 자리이므로 probe449.js 의 d=0 과 같은 뜻이 된다.
-from PIL import Image
+from pydep937 import Image
 import math
 import sys
 

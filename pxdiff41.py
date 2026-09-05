@@ -1,6 +1,8 @@
 # .png 두 장 픽셀 대조. 인자: a b [x0 y0 x1 y1] ... (제외 박스 여러 개 가능)
+import os
 import sys
-from PIL import Image
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tools'))
+from pydep937 import Image                            # 937 — 없으면 «한 줄 + 코드 2»
 a = Image.open(sys.argv[1]).convert('RGB').load()
 b = Image.open(sys.argv[2]).convert('RGB').load()
 W, H = Image.open(sys.argv[1]).size

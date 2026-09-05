@@ -6,7 +6,7 @@
 `all`       = 화면 전체(원판만 마스크) — 회전 중 화면에서 움직이는 것 전부.
 """
 import glob, os, sys
-from PIL import Image
+from pydep937 import Image
 
 SHOTS = sorted(glob.glob(os.path.join(os.path.dirname(__file__), '..', 'docs', 'shots', '181-f*.png')))
 RLT = (210, 768, 870, 1429)          # .rlt 원판 컨테이너 (pix181.js 실측)

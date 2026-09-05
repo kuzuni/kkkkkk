@@ -10,8 +10,8 @@ DOM 박스로는 못 본다 — 실제로 찍힌 **잉크 bbox** 를 봐야 한�
 실행: python3 tools/ink151.py docs/review/151-r2.png
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/151-r2.png'
 a = np.asarray(Image.open(SRC).convert('RGB')).astype(int)

@@ -9,7 +9,7 @@
 #
 # 사용:
 #   python3 tools/scan337.py [캡처경로]
-from PIL import Image
+from pydep937 import Image
 import sys
 
 REF = 'docs/ref/03-던전-팝업.jpg'

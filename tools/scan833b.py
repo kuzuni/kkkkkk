@@ -21,8 +21,8 @@ import os
 import sys
 import importlib.util
 
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 _spec = importlib.util.spec_from_file_location(
     's833', os.path.join(os.path.dirname(__file__), 'scan833.py'))

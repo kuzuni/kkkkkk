@@ -15,8 +15,8 @@ ref 를 읽을 때만 자동으로 +84 한다. 두 이미지를 같은 숫자로
 환경변수 CAP 로 캡처 경로 지정 (기본 docs/review/34-r11.png).
 """
 import sys, os
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF_PATH = 'docs/ref/34-축복-버프팝업.jpg'
 CAP_PATH = os.environ.get('CAP', 'docs/review/34-r11.png')

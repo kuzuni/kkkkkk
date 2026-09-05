@@ -24,6 +24,7 @@
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
+const { py } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -55,7 +56,7 @@ const ok = (cond, title, got) => {
 };
 
 function scan() {
-  const out = execFileSync('python3', [path.join(__dirname, 'scan887.py'), '--json',
+  const out = py([path.join(__dirname, 'scan887.py'), '--json',
     ...FRAMES.map(H => path.join(OUT, `887-${H}.png`))],
     { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   return JSON.parse(out.slice(out.indexOf('{')));
@@ -209,7 +210,7 @@ const MEASURE = () => {
       await (el || page).screenshot({ path: shot });
       await ctx.close(); await b2.close();
       fs.unlinkSync(neg);
-      const o = execFileSync('python3', [path.join(__dirname, 'scan887.py'), '--json', shot],
+      const o = py([path.join(__dirname, 'scan887.py'), '--json', shot],
         { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
       const negScan = JSON.parse(o.slice(o.indexOf('{'))).caps[0];
       /* ⚑ 905 이관 — «옛 규약» 은 이제 **한 벌**(위 U1 + 아래 금테 띠 «안»)이다.

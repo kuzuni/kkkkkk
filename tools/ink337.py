@@ -7,7 +7,7 @@
 # 양쪽에 다 있으므로 서체 차이가 안 끼어드는 유일한 표본이다. 03 «던전» 도 같은 문자열이다.
 #
 # 좌표계: 서브탭 바는 **하단 앵커** — cap_y = ref_y − 60 (335 정오표).
-from PIL import Image
+from pydep937 import Image
 
 OFF = 60
 

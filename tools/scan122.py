@@ -18,7 +18,7 @@ UI-REFERENCE §122 체크리스트의 미완 항목:
       python3 tools/scan122.py --top 6 docs/review/122-r12-coin-1.png ...
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 THR = 6      # 채널 차 임계
 G = 8        # 격자 (8px)

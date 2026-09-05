@@ -1,5 +1,5 @@
 import sys
-from PIL import Image
+from pydep937 import Image
 im = Image.open('docs/ref/53-가방팝업.jpg').convert('RGB')
 W,H = im.size
 px = im.load()

@@ -30,6 +30,7 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { execFileSync } = require('child_process');
+const { py } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -68,7 +69,7 @@ async function shot(page, out, css) {
 function measure(png, geo) {
   const gj = png.replace(/\.png$/, '.json');
   fs.writeFileSync(gj, JSON.stringify(geo));
-  const out = execFileSync('python3', ['tools/scan895.py', '--cap', path.relative(ROOT, png),
+  const out = py(['tools/scan895.py', '--cap', path.relative(ROOT, png),
     '--geo', path.relative(ROOT, gj), '--json'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 24 });
   const line = out.split('\n').find((l) => l.startsWith('JSON '));
   if (!line) throw new Error('scan895 가 JSON 을 못 냈다:\n' + out);

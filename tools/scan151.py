@@ -11,8 +11,8 @@
 실행: python3 tools/scan151.py [--map] [--card 1|2]
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 SRC = 'docs/ref/151-이용권-카드.png'
 a = np.asarray(Image.open(SRC).convert('RGB')).astype(int)

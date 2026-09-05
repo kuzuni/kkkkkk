@@ -21,8 +21,8 @@ ref·cap 에 **같은 창 높이·같은 마스크·같은 코드**를 쓰므로
 환경변수 CAP 로 캡처 경로 지정 (기본 docs/review/34-r14.png).
 """
 import sys, os
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF_PATH = 'docs/ref/34-축복-버프팝업.jpg'
 CAP_PATH = os.environ.get('CAP', 'docs/review/34-r14.png')

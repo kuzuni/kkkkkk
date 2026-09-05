@@ -30,8 +30,8 @@ ref 와 우리에게 **같은 자**로 묻는다.
 import json
 import sys
 
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/151-이용권-카드.png'
 K = 2.0628  # ref px → 우리 px

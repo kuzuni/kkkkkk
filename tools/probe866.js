@@ -12,6 +12,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { py } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -90,7 +91,7 @@ const GEO = path.join(os.tmpdir(), 'probe866-geo.json');
   await show('.rw-cost');
   await b.close();
   if (errs.length) { console.log('PAGE ERRORS:'); errs.forEach((e) => console.log('  ' + e)); }
-  const r = execFileSync('python3', [path.join(__dirname, 'probe866.py'), '--cap', OUT, '--geo', GEO],
+  const r = py([path.join(__dirname, 'probe866.py'), '--cap', OUT, '--geo', GEO],
     { cwd: ROOT, encoding: 'utf-8' });
   process.stdout.write(r);
   if (!KEEP) {

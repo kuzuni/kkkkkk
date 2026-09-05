@@ -22,7 +22,7 @@ import json
 import re
 import sys
 
-from PIL import Image
+from pydep937 import Image
 
 SRC = 'assets/atlas-data.js'
 ALPHA = 40          # 이 값 이상이면 잉크

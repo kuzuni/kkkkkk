@@ -14,7 +14,7 @@ artbox72.py — 던전 카드 «우측 일러스트» bbox 를 레퍼런스·캡
 텍스트 오염을 피하려고 판정 영역은 x 660~1022 로 제한한다.
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF = 'docs/ref/03-던전-팝업.jpg'
 TOPS_REF = [241, 601, 961, 1321, 1681]

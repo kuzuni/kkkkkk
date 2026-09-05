@@ -3,7 +3,7 @@
 금색 판정: R>210 · G>150 · B<150 · R>B+80 (ref #FCC745~#FFDC62 · 우리 #FFDC62)
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 im = Image.open(sys.argv[1]).convert('RGB')
 px = im.load()

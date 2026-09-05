@@ -11,7 +11,7 @@
 # index.html 의 AU_GAIN 이 0.25~0.35(지시서 ④) 안에 떨어지도록 파일 자체는
 # 창RMS −15.5 dBFS(= −26 + 20log10(1/0.30)) · 피크 ≤ −1 dBFS 로 굽는다.
 import argparse, os, math
-import numpy as np
+from pydep937 import np
 import soundfile as sf
 
 SR = 44100

@@ -15,7 +15,7 @@ scan56.py — 56 절전 모드 «잉크 bbox» 스캐너 겸 대조기.
 모든 y 는 **프레임 좌표**(= 레퍼런스 y − 84)로 출력한다.
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF = 'docs/ref/56-절전모드.jpg'
 

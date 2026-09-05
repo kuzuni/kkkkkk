@@ -39,8 +39,8 @@
 import argparse
 import sys
 
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 from scipy import ndimage
 
 REF = 'docs/ref/151-이용권-카드.png'

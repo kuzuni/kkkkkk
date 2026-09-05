@@ -19,7 +19,7 @@ import sys
 import math
 import json
 
-from PIL import Image
+from pydep937 import Image
 
 REF7 = 'docs/ref/07-스킬-팝업.jpg'
 CAP7 = 'docs/review/96-full-hero.png'

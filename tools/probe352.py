@@ -12,7 +12,7 @@
 #   JPEG AA 한 줄이 양쪽에 붙어 ref 테두리가 6 인데 **8 로 읽힌다**(ⓑ 의 정체).
 #
 # 사용:  python3 tools/probe352.py
-from PIL import Image
+from pydep937 import Image
 import math
 
 OFF = 60

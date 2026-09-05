@@ -14,8 +14,8 @@ fs 를 맞춰 놓았으므로 웹폰트 교체 뒤의 실제 잉크를 다시 �
 실행: python3 tools/inkA3.py [캡처경로]      (기본 docs/review/A3-r6.png)
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/02-기본-메인-화면.jpg'
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/A3-r6.png'

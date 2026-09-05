@@ -12,7 +12,7 @@
 #   python3 tools/scan12r.py [캡처경로] --json     → tools/verify12.js 용 JSON
 import json
 import sys
-from PIL import Image
+from pydep937 import Image
 
 REF = 'docs/ref/12-소환-결과-팝업.jpg'
 

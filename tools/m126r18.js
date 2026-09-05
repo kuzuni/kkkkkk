@@ -11,6 +11,7 @@
  */
 const path = require('path'), fs = require('fs'), os = require('os');
 const { execFileSync } = require('child_process');
+const { py } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -20,8 +21,9 @@ const OUT = fs.mkdtempSync(path.join(os.tmpdir(), 'm126r18-'));
 const PAD = 14;
 
 const PY = `
-import sys, json
-from PIL import Image
+import sys, json, os
+sys.path.insert(0, ${JSON.stringify(__dirname)})
+from pydep937 import Image                            # 937 — 없으면 «한 줄 + 코드 2»
 fn, mode = sys.argv[1], sys.argv[2]
 im = Image.open(fn).convert("RGB"); px = im.load(); W, H = im.size
 def lum(p): return 0.299*p[0] + 0.587*p[1] + 0.114*p[2]
@@ -88,7 +90,7 @@ if mode == "rim":
 function measure(png, mode, a, b) {
   const args = ['-c', PY, png, mode];
   if (a !== undefined) args.push(String(a), String(b));
-  return JSON.parse(execFileSync('python3', args, { encoding: 'utf8' }));
+  return JSON.parse(py(args, { encoding: 'utf8' }));
 }
 
 (async () => {

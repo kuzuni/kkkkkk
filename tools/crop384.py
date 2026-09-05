@@ -5,7 +5,7 @@
 #   1:1 창만 주면 두 그림 다 «그냥 알약» 으로 보인다.
 #
 #   python3 tools/crop384.py  →  docs/review/384-07-{ref,cap}.png · 384-07-{ref,cap}-corner.png
-from PIL import Image
+from pydep937 import Image
 
 OFF = 60
 PAD_T, PAD_B = 46, 46

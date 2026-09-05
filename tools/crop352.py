@@ -4,7 +4,7 @@
 #   ref 를 하단 앵커(−60)만큼 미리 밀어 **같은 창**으로 잘라 준다 — 두 장을 겹쳐 보면 바로 대조된다.
 #
 #   python3 tools/crop352.py   →  docs/review/352-{03,07}-{ref,cap}.png
-from PIL import Image
+from pydep937 import Image
 
 OFF = 60
 PAD_T, PAD_B = 46, 46          # 바 위·아래 여백 (탭바·시트 바닥과의 관계까지 보이게)

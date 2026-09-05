@@ -20,7 +20,7 @@
 (레퍼런스 콘텐츠 2256 과 프레임 2280 의 24px 을 전투 캔버스가 흡수 — LESSONS 02-1).
 """
 import sys, os, json
-from PIL import Image
+from pydep937 import Image
 
 R = sys.argv[1] if len(sys.argv) > 1 else '1'
 ARG = sys.argv[2:]

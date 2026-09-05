@@ -9,8 +9,8 @@
 사용: python3 tools/hl34.py [cap경로]
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/34-r17.png'
 

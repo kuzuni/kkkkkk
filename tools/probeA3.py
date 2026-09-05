@@ -11,8 +11,8 @@ inkA3.py 는 글자·아이콘의 **잉크** 를 재고, 이쪽은 그 글자를
 실행: python3 tools/probeA3.py [캡처경로]     (기본 docs/review/A3-r6.png)
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 REF = 'docs/ref/02-기본-메인-화면.jpg'
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/A3-r6.png'

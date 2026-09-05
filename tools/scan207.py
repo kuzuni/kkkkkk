@@ -11,8 +11,8 @@ DOM 상자(probe207)가 가운데라도, SVG 안에서 그림이 치우쳐 있�
 실행: python3 tools/scan207.py docs/review/207-r1.png
 """
 import sys
-import numpy as np
-from PIL import Image
+from pydep937 import np
+from pydep937 import Image
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/207-r1.png'
 a = np.asarray(Image.open(SRC).convert('RGB')).astype(int)

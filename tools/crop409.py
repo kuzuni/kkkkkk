@@ -9,7 +9,7 @@
 #     → docs/review/409-07-{ref,cap}.png        1:1 바 전체
 #       docs/review/409-07-{ref,cap}-bl.png     좌하 코너 4배
 #       docs/review/409-07-{ref,cap}-tl.png     좌상 코너 4배
-from PIL import Image
+from pydep937 import Image
 
 OFF = 60
 PAD_T, PAD_B = 46, 46

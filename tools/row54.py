@@ -6,7 +6,7 @@
 채널차 합 > TH 인 화소를 «단상» 으로 본다. 인접 구간은 3px 이하 틈이면 붙인다.
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 im = Image.open(sys.argv[1]).convert('RGB')
 px = im.load()

@@ -105,8 +105,11 @@ function gapRows(px, x, panelBot) {
     if (decode) return decode(buf);
     const f = path.join(os.tmpdir(), 'v747-' + process.pid + '.png');
     fs.writeFileSync(f, buf);
-    const out = execFileSync('python3', ['-c',
-      'import sys;from PIL import Image;im=Image.open(sys.argv[1]).convert("RGB");' +
+    /* 937 — 폴백의 폴백까지 없을 때(pngjs 도 PIL 도 없다) 스택 트레이스로 죽지 않게:
+       파이썬 쪽 부트스트랩을 거쳐 «pillow 없음 — …» 한 줄 + 코드 2 로 답하고, py() 가 그것을 옮긴다. */
+    const out = require('./pydep937').py(['-c',
+      'import sys;sys.path.insert(0,' + JSON.stringify(__dirname) + ');from pydep937 import Image;' +
+      'im=Image.open(sys.argv[1]).convert("RGB");' +
       'print(im.width, im.height);sys.stdout.write(" ".join(str(v) for p in im.getdata() for v in p))',
       f], { encoding: 'utf8', maxBuffer: 1 << 30 });
     const nl = out.indexOf('\n');

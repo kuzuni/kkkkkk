@@ -23,7 +23,7 @@ scan70.py — 70 출석보상 팝업 레퍼런스 픽셀 스캐너
 """
 import sys, math, signal
 from collections import Counter
-from PIL import Image
+from pydep937 import Image
 
 # `| head` 로 잘라 볼 때 BrokenPipe 트레이스백이 뜨지 않게
 try: signal.signal(signal.SIGPIPE, signal.SIG_DFL)

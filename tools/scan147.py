@@ -20,7 +20,7 @@ TH 를 낮춰 그 구간을 캐릭터로 세지 마라(147 등재의 «오독» 
   off = 이미지 y - 프레임 y (레퍼런스 1080x2340 = 84, 캡처 1080x2280 = 0)
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 # 측정표 54 §3 — 단상별 x 구간과 윗면 y (프레임 좌표)
 PODIUMS = [

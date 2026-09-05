@@ -2,7 +2,7 @@
 # 전투 캔버스 영역(y 340~1760)에서 밝은 픽셀(휘도>150)·채도 높은 픽셀 수를 세어
 # «연출이 몇 프레임에 실제로 보이는가» 를 수치로 만든다. 사용: python3 tools/scan114.py <회차>
 import sys, glob, os
-from PIL import Image
+from pydep937 import Image
 R = sys.argv[1] if len(sys.argv) > 1 else '1'
 root = os.path.join(os.path.dirname(__file__), '..', 'docs', 'review')
 for scene in ['trail', 'impact', 'boom', 'bolt']:

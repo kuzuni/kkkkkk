@@ -26,11 +26,7 @@
 import os
 import sys
 
-try:
-    from PIL import Image
-except ImportError:                                   # 자가 환경 때문에 죽지 않게
-    print('scan813c: Pillow 없음 — `pip install pillow` 후 다시 돌려라', file=sys.stderr)
-    sys.exit(1)
+from pydep937 import Image                            # 937 — 없으면 «한 줄 + 코드 2»
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

@@ -16,6 +16,7 @@ const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
+const { py } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 
 const CAP = 'docs/review/12-84-verify.png';
 const T = {
@@ -71,7 +72,7 @@ const ok = (n, got, want, tol) => {
   await b.close();
 
   /* 닫기 잉크는 픽셀 스캔(PIL) — 레이아웃 박스가 아니라 «잉크» 기준이라야 ref 와 같은 잣대다 */
-  const scan = execFileSync('python3', [path.resolve(__dirname, 'scan12.py'), CAP], { encoding: 'utf8' });
+  const scan = py([path.resolve(__dirname, 'scan12.py'), CAP], { encoding: 'utf8' });
   const m = scan.match(/ink bbox: x (\d+)~(\d+) \(w (\d+), cx ([\d.]+)\)\s+y (\d+)~(\d+) \(h (\d+)\)/);
   if (!m) { console.log(scan); console.log('FAIL: 닫기 잉크를 못 찾음'); process.exit(1); }
   const ink = { x0: +m[1], x1: +m[2], w: +m[3], cx: +m[4], y0: +m[5], y1: +m[6], h: +m[7] };

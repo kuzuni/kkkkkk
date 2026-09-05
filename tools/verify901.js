@@ -38,9 +38,17 @@ const ok = (b, name, detail) => {
   b ? pass++ : fail++;
 };
 
+const { HINT_RE } = require('./pydep937');   // 937 — «없음» 은 빨강이 아니라 «환경에 없음»(코드 2)
 const run = (a, opts) => {
   const r = spawnSync(a[0], a.slice(1), { cwd: ROOT, encoding: 'utf8', timeout: 300000, ...opts });
-  return { code: r.status, out: (r.stdout || '') + (r.stderr || '') };
+  const out = (r.stdout || '') + (r.stderr || '');
+  /* 파이썬 자가 «<모듈> 없음 — pip3 install …»(코드 2)로 답했으면 이 자의 판정이 아니다 —
+     빨강으로 세면 «환경» 을 «제품 결함» 으로 적는 것이 된다(937 · 913 선례). */
+  if (r.status === 2 && HINT_RE.test(out)) {
+    console.error((out.split('\n').map((l) => l.trim()).find((l) => HINT_RE.test(l)) || '').trim());
+    process.exit(2);
+  }
+  return { code: r.status, out };
 };
 
 /* ─────────────────────────── [A] 도구 ─────────────────────────── */

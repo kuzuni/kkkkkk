@@ -10,7 +10,7 @@
 #   흡수된다(LESSONS 63-4). 실측으로도 슬롯 하단 ref 2133 ↔ cap 2073, 탭바 상단 ref 2159 ↔ cap 2100
 #   으로 **Δ60** 이 일정하다. → cap y = ref y − 60.
 import sys
-from PIL import Image
+from pydep937 import Image
 
 r = sys.argv[1] if len(sys.argv) > 1 else '6'
 DY = 60                                    # ref y - DY = cap y  (바닥 앵커 구간)

@@ -1,5 +1,5 @@
 import sys
-from PIL import Image
+from pydep937 import Image
 import os
 im = Image.open(os.environ.get("IMG","docs/ref/55-설정팝업.jpg")).convert("RGB")
 W,H = im.size

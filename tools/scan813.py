@@ -15,7 +15,7 @@
 #   · 행 고유색 수(uniq)
 # 를 내고, 위 상인방 하변 ~ 바 상변 구간을 «비교 대상 두 구간» 과 나란히 놓는다.
 import sys
-from PIL import Image
+from pydep937 import Image
 
 SHOTS = {
     1600: 'docs/shots/754-813r1a-89-1600.png',

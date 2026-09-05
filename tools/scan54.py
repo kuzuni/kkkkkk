@@ -22,7 +22,7 @@ LESSONS 22-① «가림 없는 열의 세로 연속 높이로 재라» 를 쓰�
         축 방향 자기상관으로 워터마크 타일 주기 탐색 (pmin..pmax 주기 중 최적)
 """
 import sys
-from PIL import Image
+from pydep937 import Image
 
 img = sys.argv[1]
 im = Image.open(img).convert('RGB')

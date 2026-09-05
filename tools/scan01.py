@@ -10,7 +10,7 @@
 #   70-④ 두께는 «순색 코어» 끼리 비교(레퍼런스 JPEG 는 경계마다 AA 가 붙는다).
 #   36-④ⓐ 노란 글자는 min(RGB) 로 안 잡힌다 — R·G 만 본다.
 import sys
-from PIL import Image
+from pydep937 import Image
 
 CAP = sys.argv[1] if len(sys.argv) > 1 else 'docs/review/01-r5.png'
 REF = 'docs/ref/01-오프라인보상-팝업.jpg'
