@@ -92,6 +92,7 @@ async function run(browser, H, css) {
       return eval('(' + SNAP + ')')();
     }, { m, SNAP: SNAP.toString() });
     await page.waitForTimeout(60);
+    if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
   }
   return { ctx, page, snaps };
 }

@@ -60,6 +60,7 @@ const boot = async (browser, h) => {
     markDirty(); openTrain(); setTrSub('temper'); renderTrain();
   });
   await page.waitForTimeout(120);
+  if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
   return { ctx, page, errs };
 };
 

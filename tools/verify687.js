@@ -56,6 +56,7 @@ const boot = async (browser, h) => {
     markDirty(); openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
   });
   await page.waitForTimeout(120);
+  if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
 
   /* ══ [1] 전제 ═══════════════════════════════════════════════════════════ */
   console.log('[1] 전제 — 룬 탭 · 헤더 실재');

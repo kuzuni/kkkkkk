@@ -321,6 +321,7 @@ const NOW = () => Date.now();
     /* 진짜 포인터 클릭 — 위임(`[data-bless]`)을 그대로 탄다(LESSONS 65-②) */
     await page.click('#blsC_atk');
     await page.waitForTimeout(120);      /* 22 와 달리 지연 재렌더가 없다 — 즉시여야 한다 */
+    if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
     const st = await state(page);
     ok(sig(st) === '00 11 11', '누른 칸만 즉시 소등 · 나머지 두 칸 유지', sig(st));
     ok(isCol(st.out[0].tmBg, BROWN), '누른 칸 알약이 즉시 갈색으로', st.out[0].tmBg);
@@ -344,6 +345,7 @@ const NOW = () => Date.now();
     /* 두 번 눌러도 시간이 덧붙지 않는다(기존 계약) */
     await page.click('#blsC_atk');
     await page.waitForTimeout(100);
+    if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
     const twice = await page.evaluate(() => Number(S.bless.exp.atk) || 0);
     ok(twice === after.exp, '이미 켜진 칸을 또 눌러도 시간이 안 덧붙는다', String(twice - after.exp));
     ok(errs.length === 0, '[D] 콘솔 에러 0', errs.join(' | ') || '없음');

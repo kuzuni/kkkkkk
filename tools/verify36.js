@@ -65,6 +65,7 @@ const openAttTab = async (page) => {
 
     await page.evaluate(() => { document.getElementById('psList').scrollTop = 0; });
     await page.waitForTimeout(200);
+    if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
     const g = await page.evaluate(() => {
       const r = (s) => { const e = document.querySelector(s); if (!e) return null;
         const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };

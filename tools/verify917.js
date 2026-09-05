@@ -69,6 +69,7 @@ async function openRw(browser, H, css) {
   if (css) await page.addStyleTag({ content: css });
   await page.evaluate(() => { S.relic = 1e9; openRelw(); });
   await page.waitForTimeout(200);
+  if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
   return { ctx, page };
 }
 

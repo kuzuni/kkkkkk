@@ -80,6 +80,7 @@ const openCoin = page => page.evaluate(() => {
   /* ================= [B] 표기 ================= */
   await openCoin(page);
   await page.waitForTimeout(200);
+  if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
   const B = await page.evaluate(() => {
     const cards = [];
     document.querySelectorAll('#shopList .cn-cd.dia').forEach(cd => {

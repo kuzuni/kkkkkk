@@ -308,6 +308,7 @@ const SEED = (light) => {
     const info = await open(page, `openRank()`, '.rk-list');
     await drag(page, info.x, info.y, -200);              /* #dsbar 는 첫 드래그 때 만들어진다 */
     await page.waitForTimeout(200);
+    if (page.settle291) await page.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
     section('[G] 레이아웃 중립 — 스크롤바 거터');
     const g = await page.evaluate((sels) => {
       const out = [];

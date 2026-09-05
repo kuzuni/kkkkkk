@@ -319,6 +319,7 @@ async function launchAny(){
   /* 카드 4장 캡처 (지시 검증항목 — docs/review/76-r1-shop.png) */
   await p.evaluate(() => { Object.assign(S, DEF()); closeModal && closeModal(); openShopPage(); renderShopPage(); });
   await p.waitForTimeout(200);
+  if (p.settle291) await p.settle291();   /* 921 — 여는 동작 뒤 <250ms 대기라 291 훅이 구조적으로 안 돈다(915 선례) */
   await p.screenshot({ path: path.resolve(__dirname, '../docs/review/76-r1-shop.png') });
 
   await b.close();
