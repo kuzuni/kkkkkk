@@ -1,0 +1,105 @@
+{
+ "runs": 5,
+ "par": 2,
+ "env": {},
+ "files": [
+  "probe552.js",
+  "probe552pre931.js"
+ ],
+ "all": {
+  "probe552.js": [
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 51774,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 51662,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 51765,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 51780,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552.js",
+    "code": 0,
+    "ms": 51960,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   }
+  ],
+  "probe552pre931.js": [
+   {
+    "file": "probe552pre931.js",
+    "code": 0,
+    "ms": 51697,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552pre931.js",
+    "code": 0,
+    "ms": 51605,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552pre931.js",
+    "code": 0,
+    "ms": 51630,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552pre931.js",
+    "code": 0,
+    "ms": 51790,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   },
+   {
+    "file": "probe552pre931.js",
+    "code": 0,
+    "ms": 51896,
+    "verdict": "PROBE552 PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "이 실행에서는 [B] 델타가 한 번도 안 빨갰다(오염이 확률적이라 표본을 늘려라). |  | PROBE552 PASS"
+   }
+  ]
+ }
+}

@@ -36,6 +36,11 @@ const RUNS = +arg('runs', 5);
 const PAR = +arg('par', 5);
 const OUT = arg('out', '');
 const TIMEOUT = +arg('timeout', 600) * 1000;
+/* 되돌림 스위치를 실어 «장치 없는 세상» 을 같은 트리에서 재현한다 —
+   `--env EVGUARD=0` (731 끔) · `--env PW_SETTLE=0` (291 끔). 925-① 이 쓴 그 대조다. */
+const ENV = Object.fromEntries(process.argv
+  .map((a, i) => (a === '--env' ? process.argv[i + 1] : null)).filter(Boolean)
+  .map(kv => { const j = kv.indexOf('='); return [kv.slice(0, j), kv.slice(j + 1)]; }));
 
 let FILES;
 if (arg('files', '')) FILES = arg('files', '').split(',').map(s => s.trim()).filter(Boolean);
@@ -58,7 +63,8 @@ function verdictLine(out) {
 function once(file) {
   return new Promise(res => {
     const t0 = Date.now();
-    const p = spawn(process.execPath, [path.join(TOOLS, file)], { cwd: ROOT });
+    const p = spawn(process.execPath, [path.join(TOOLS, file)],
+      { cwd: ROOT, env: Object.assign({}, process.env, ENV) });
     let out = '';
     let killed = false;
     const timer = setTimeout(() => { killed = true; p.kill('SIGKILL'); }, TIMEOUT);
@@ -117,7 +123,7 @@ async function pool(jobs, par) {
 
   if (OUT) {
     fs.mkdirSync(path.dirname(path.resolve(ROOT, OUT)), { recursive: true });
-    fs.writeFileSync(path.resolve(ROOT, OUT), JSON.stringify({ runs: RUNS, par: PAR, files: FILES, all }, null, 1));
+    fs.writeFileSync(path.resolve(ROOT, OUT), JSON.stringify({ runs: RUNS, par: PAR, env: ENV, files: FILES, all }, null, 1));
     console.log('  → ' + OUT);
   }
 })();

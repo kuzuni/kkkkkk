@@ -1,0 +1,38 @@
+{
+ "runs": 3,
+ "par": 1,
+ "files": [
+  "bisect236.js"
+ ],
+ "all": {
+  "bisect236.js": [
+   {
+    "file": "bisect236.js",
+    "code": 0,
+    "ms": 9606,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "[i] 번들 브라우저 없음 → /opt/pw-browsers/chromium 사용 | WORKTREE\tRED \tmax 675\tup 314\t900ms 488\t3900ms 489\tΔ 1\t관성끝 951ms\terr 0"
+   },
+   {
+    "file": "bisect236.js",
+    "code": 0,
+    "ms": 9553,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "[i] 번들 브라우저 없음 → /opt/pw-browsers/chromium 사용 | WORKTREE\tGREEN\tmax 675\tup 314\t900ms 484\t3900ms 484\tΔ 0\t관성끝 922ms\terr 0"
+   },
+   {
+    "file": "bisect236.js",
+    "code": 0,
+    "ms": 9523,
+    "verdict": "(판정 줄 없음)",
+    "pass": false,
+    "fail": false,
+    "tail": "[i] 번들 브라우저 없음 → /opt/pw-browsers/chromium 사용 | WORKTREE\tRED \tmax 675\tup 316\t900ms 490\t3900ms 492\tΔ 2\t관성끝 965ms\terr 0"
+   }
+  ]
+ }
+}
