@@ -257,7 +257,23 @@ def sweep(path, native_w):
         for fr in (0.005, 0.01, 0.02, 0.04, 0.08):
             u3[f'{th}/{fr}'] = find_base_u3(px, W, ink_top, th, fr)
     core = [v for k, v in u3.items() if int(k.split('/')[0]) <= 12]
-    return dict(path=path, ink_top=ink_top, u1=u1, u3=u3,
+    # 887 이 실제로 흔든 것 — **잉크** 문턱. 이 축에서는 두 자가 **둘 다** 안 움직인다
+    # (그래서 그 시험은 위 끝점의 두 자를 못 가른다 — `verify905` [2]).
+    ink_axis = {}
+    for t in TH_SWEEP:
+        it, _ = find_ink(px, W, b['dark_top'] - 1, t)
+        ink_axis[t] = dict(ink_top=it,
+                           u1=(find_base_u1(px, W, it)[0] if it else None),
+                           u3=(find_base_u3(px, W, it) if it else None))
+    # 같은 물체인가 — U3 행은 «칠해진 행» 이고 그 **바로 아래**부터 여백이 이어진다
+    y3 = find_base_u3(px, W, ink_top)
+    clear = 0
+    y = y3 + 1
+    while y < ink_top and not painted_row(px, W, y):
+        clear += 1; y += 1
+    return dict(path=path, ink_top=ink_top, u1=u1, u3=u3, u3_row=y3,
+                u3_painted=painted_row(px, W, y3), u3_below_clear=clear,
+                ink_axis=ink_axis,
                 u1_span=len(set(u1.values())), u3_core_span=len(set(core)))
 
 
