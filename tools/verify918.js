@@ -81,9 +81,19 @@ const defwOn = page => page.evaluate(() => {
     c.manual.every(f => !shell918.qualifies(T(f))), c.manual.join(' '));
   ok('[1d] 껍데기를 이름으로 말하는 자는 규칙이 안 켠다', c.self.every(f => !shell918.qualifies(T(f))),
     c.self.join(' '));
-  ok('[1e] 조건(①∧②) 밖의 자는 안 켠다 — 세상이 한 칸도 안 바뀐다',
-    !shell918.qualifies(T('verify540.js')) && !shell918.qualifies(T('verify96.js')),
-    'verify540 · verify96');
+  /* ⚑ 922 이관 — 입구가 둘이 되면서 이 항의 표본을 갈아 끼웠다. `verify540` 은 922 뒤에도 초록이지만
+     그 이유가 «①∧② 밖» 이 아니라 «껍데기를 이름으로 말한다(`RE_SELF`)» 로 바뀌었다 —
+     이유가 바뀐 표본을 그대로 두면 이 항은 «조건 밖» 을 안 묻는 헛초록이 된다(333 처방).
+     ⇒ 두 입구 **모두**의 밖에 있는 자(`verify96` — 화소를 안 잰다)로 묻고, 540 자리는
+     «이름으로 빠진다» 를 [1d] 옆에서 따로 말한다. */
+  ok('[1e] 두 입구(①∧② · 화소를 잰다) 밖의 자는 안 켠다 — 세상이 한 칸도 안 바뀐다',
+    !shell918.qualifies(T('verify96.js'))
+    && !raster907.classifySource(fs.readFileSync(T('verify96.js'), 'utf8'), 'verify96.js').hit
+    && !shell918.RE_PX.test(raster907.stripComments(fs.readFileSync(T('verify96.js'), 'utf8'))),
+    'verify96 — hit 아님 · 화소 안 잼');
+  ok('[1e2] `verify540`(걷개 규약 자신)은 **이름으로** 빠진다 (922 뒤 이유가 바뀐 자리)',
+    !shell918.qualifies(T('verify540.js'))
+    && shell918.RE_SELF.test(raster907.stripComments(fs.readFileSync(T('verify540.js'), 'utf8'))));
   ok('[1f] `cap*.js`(연출 캡처 하네스)는 조건을 갖춰도 안 켠다 — 907 이 그은 선과 같다',
     !shell918.qualifies(T('cap01.js')));
   ok('[1g] 손으로 적은 이름 배열이 없다 (조건이 늘면 자동으로 따라온다)',

@@ -32,8 +32,17 @@
  * (이것은 «절반만 풀리는 정적 조건» 이 아니다 — 껍데기를 재거나 여는 자는 그 이름을 **반드시**
  *  적는다. 907 교훈 ③ 이 경계한 것은 «문턱» 처럼 정적으로 못 푸는 값이었다.)
  *
+ * # 조건은 «재는 방법» 이 아니라 «재는가» 다 (작업 922 — 918 §6 의 여집합 261)
+ * 918 은 조건을 907 판별기(①∧②)에서 물려받았는데 **그것은 부분 리라스터의 조건이지 딤의 조건이 아니다.**
+ * 딤은 `inset:0 · z39 · rgba(0,0,0,.62)` 라 스타일을 갈아 끼우든 말든 **화소를 읽는 자를 전부** 어둡게 만든다.
+ * 918 착수 시점 실측: `verify*`/`probe*` 1,108개 중 ①∧② 는 34, 그 여집합에서 **화소를 재는 자가 261**이고
+ * 그 261 은 걷개 밖에 있었다. ⇒ 922 가 조건에 «화소를 잰다»(`RE_PX` — 캡처 한 장 또는 화소 배열 한 번)를
+ * **또 하나의 입구**로 더한다(918 의 ①∧② 는 그대로 남는다 · 빼는 규칙 `RE_SELF` 도 그대로 둘에 다 걸린다).
+ * 노출의 실측·전수 세기는 `tools/probe922.js`(`--scan`), 약속은 `tools/verify922.js` 가 이름으로 지킨다.
+ *
  * # 손잡이
  *  - `PW_SHELL918=0|off`   — 통째로 끈다(되돌림 시험 — `verify918` [R] 이 이걸로 «걷개 없는 세상» 을 짓는다).
+ *  - `PW_SHELL918_PX=0`    — **922 가 넓힌 입구만** 되돌린다(918 이 쓰던 ①∧② 만 남는다 · `verify922` [R]).
  *  - `PW_SHELL918=report`  — **걷지 않고 세기만** 한다(노출 갈래 세기 — `probe918` 이 이걸로 31개를 돈다).
  *                            이 모드에서만 rAF 를 감싸 «루프가 살아 있나» 도 같이 적는다.
  *  - `PW_SHELL918=1|on`    — entry 조건을 무시하고 켠다.
@@ -51,22 +60,33 @@ const { SHELL_IDS } = require('./closers540');
 /* 껍데기를 이름으로 말하는 자 — 스스로 정한다(위 머리말 §대상에서 빼는 자) */
 const RE_SELF = /\bdefw\b|openDefeat|playerDied/;
 
-/* entry 파일이 자동 걷개 대상인가 — 순수 함수(브라우저 없이 `verify918` [1] 이 이 규칙을 묻는다) */
+/* 작업 922 — **화소를 재는 자**. 918 이 물려받은 조건(907 의 ①∧②)은 «부분 리라스터» 의 조건이지
+   딤의 조건이 아니다 — 딤은 `inset:0 · z39 · rgba(0,0,0,.62)` 라 스타일을 갈아 끼우든 말든
+   **화소를 읽는 모든 자**를 어둡게 만든다. 그래서 조건은 «재는 방법» 이 아니라 «재는가» 로 넓힌다.
+   918 과 같은 꼴로 **모양이 아니라 이름**으로 묻는다(캡처 한 장 · 화소 배열 한 번). */
+const RE_PX = /\.screenshot\(|getImageData/;
+
+/* entry 파일이 자동 걷개 대상인가 — 순수 함수(브라우저 없이 `verify918` [1]·`verify922` [1] 이 이 규칙을 묻는다) */
 const cache = new Map();
-function qualifies(entryPath) {
+function qualifies(entryPath, env) {
   const p = String(entryPath || '');
   if (!p) return false;
-  if (cache.has(p)) return cache.get(p);
+  const e = env || process.env;
+  /* 922 되돌림 손잡이 — `PW_SHELL918_PX=0` 이면 918 이 쓰던 조건(①∧②)만 남는다. */
+  const px = !(e.PW_SHELL918_PX === '0' || e.PW_SHELL918_PX === 'off');
+  const key = (px ? '1:' : '0:') + p;
+  if (cache.has(key)) return cache.get(key);
   let v = false;
   try {
     const src = fs.readFileSync(p, 'utf8');
     const base = path.basename(p);
+    const bare = raster907.stripComments(src);
     /* 907 과 같은 선 — 연출 캡처 하네스(`cap*.js`)는 조건을 갖춰도 안 건다 */
     v = /^(verify|probe).*\.js$/.test(base)
-      && raster907.classifySource(src, base).hit
-      && !RE_SELF.test(raster907.stripComments(src));
+      && (raster907.classifySource(src, base).hit || (px && RE_PX.test(bare)))
+      && !RE_SELF.test(bare);
   } catch (_) { v = false; }
-  cache.set(p, v);
+  cache.set(key, v);
   return v;
 }
 
@@ -80,7 +100,7 @@ function mode(ctx) {
   const full = String((ctx && ctx.entry) !== undefined ? ctx.entry : (process.argv[1] || ''));
   if (!full) return 'off';
   const p = (full.includes('/') || full.includes('\\')) ? full : path.join(__dirname, full);
-  return qualifies(p) ? 'sweep' : 'off';
+  return qualifies(p, env) ? 'sweep' : 'off';
 }
 
 /* 페이지 안에서 도는 본체 — 껍데기가 `on` 이 되는 순간을 보고, sweep 이면 그 자리에서 걷는다. */
@@ -242,4 +262,4 @@ function armBrowser(browser, ctx) {
   return browser;
 }
 
-module.exports = { IN_PAGE_SRC, RE_SELF, SHELL_IDS, qualifies, mode, arm, armBrowser, collect, flush };
+module.exports = { IN_PAGE_SRC, RE_SELF, RE_PX, SHELL_IDS, qualifies, mode, arm, armBrowser, collect, flush };
