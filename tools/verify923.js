@@ -198,7 +198,12 @@ async function shot(page, sel, out) {
       ok(Math.abs(n.len - REF[k].len) <= 4.0,
         `[B2] ${k}(${c.id}) y${n.y0} 노치 길이 ${n.len.toFixed(1)} (ref ${REF[k].len} · ±4.0 — 바닥을 펴면서 길이가 안 늘었다)`);
       ok(Math.abs(n.dep - (num(decl.find((d) => d.id === c.id).d) - 10)) <= 1.0,
-        `[B3] ${k}(${c.id}) y${n.y0} 보이는 깊이 ${n.dep.toFixed(2)} = «--ntc-d − 링 두께 10» (923 은 깊이를 안 건드렸다 — [20])`);
+        `[B3] ${k}(${c.id}) y${n.y0} 보이는 깊이 ${n.dep.toFixed(2)} = «--ntc-d − 링 두께 10»`);
+      /* ⚑ 923 2회차 — 깊이를 **ref 화소에 직접** 매단다. 1회차까지 이 자리는 «선언과 그림이 같은가»
+         만 물었고(위 [B3]) 그래서 40/43 이라는 **두 값**도 초록이었다. ±1.2 는 옛 두 값을 둘 다
+         떨어뜨리는 창이다(배너 30.00 → |Δ| 1.40 · 불릿 33.00 → 1.33). 창을 넓히지 마라. */
+      ok(Math.abs(n.dep - REF[k].dep) <= 1.2,
+        `[B4] ${k}(${c.id}) y${n.y0} 보이는 깊이 ${n.dep.toFixed(2)} 가 ref ${REF[k].dep} 창(±1.2) 안 — 두 형이 한 값(41)이다`);
     }
   }
 
