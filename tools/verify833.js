@@ -738,6 +738,43 @@ const DUMP = `(() => {
       `${p2(2 * Math.PI * rmax / Math.max(star.n, 1))}px`);
   }
 
+  blk('§17 리본 크림 캡의 «크림/빨강 경계» 는 기울어 있다 (885 6회차 · 5회차 채점 2인 일치 2순위)');
+  /* ⚑ 338 규칙대로 처방 전에 재현했고 **등재문(«캡 폭 −14%»)의 축을 정정했다** — 같은 자로
+     ref 네 리본을 전부 재니 **중간 높이 폭은 이미 Δ0.00** 이다(ref 중 10.67 ref px × K = 22.00 ↔ 우리 22.00).
+     EV 의 −14% 는 ref 를 중간보다 «위» 에서 잰 값이고(12.46 ref px = 25.7 우리px), 잔차의 전부가 기울기였다:
+       ref  위 25.42 · 중 22.00 · 아래 17.53 (기울기 7.89)   ↔   수리 전 우리 21.4 / 22.0 / 21.4 (기울기 **0.00**)
+       수리 후 우리 25.23 / 21.67 / 17.23 (기울기 8.00)  ⇒ 세 자리 전부 Δ ≤ 0.34
+     ⇒ 손잡이는 «폭» 이 아니라 **clip 으로 아래를 깎는 것**이고, 중간 폭 22.0 을 붙박는 항등식이
+     `width − clip/2 = 22.0` 이다(27.10 − 5.10 = 22.00). 이 절이 그 항등식을 지킨다 —
+     둘 중 하나만 손대면 5회차까지 맞아 있던 중간 폭이 조용히 깨진다.
+     ⚠ **좌단은 이 절이 안 건드린다** — 자에 따라 갈리는 자리로 896 에 등재돼 있다. */
+  const caps = await page.evaluate(() => [...document.querySelectorAll('.pvc>.rb')].map((rb) => {
+    const cs = getComputedStyle(rb, '::before');
+    const nums = [...(cs.clipPath || '').matchAll(/(-?[\d.]+)px/g)].map(m => +m[1]);
+    return { w: parseFloat(cs.width), clip: cs.clipPath || '', nums,
+      cls: rb.className, left: parseFloat(cs.left) };
+  }));
+  ok(caps.length >= 4, '[17-a] 리본 캡 표본 4개 이상', `${caps.length}개`);
+  for (const c of caps) {
+    /* clip 은 polygon(0 0, 100% 0, calc(100% − Npx) 100%, 0 100%) — 유일한 px 값이 기울기다. */
+    const slant = c.nums.length ? Math.max(...c.nums) : 0;
+    ok(/polygon/.test(c.clip) && Math.abs(slant - 10.2) < 0.15,
+      `[17-b] ${c.cls} 아래에서 깎는 폭 = 10.20 (ref 기울기 7.89 ↔ 우리 8.00 을 주는 값)`,
+      `${p2(slant)} · ${c.clip.slice(0, 60)}`);
+    ok(Math.abs(c.w - 27.1) < 0.15,
+      `[17-c] ${c.cls} 캡 상자 폭 = 27.10`, `${p2(c.w)}px`);
+    ok(Math.abs((c.w - slant / 2) - 22.0) < 0.2,
+      `[17-d] ${c.cls} **중간 높이 폭 = 22.00** — ref 중 10.67 ref px × K 와 Δ0.00 인 닫힌 값 (width − clip/2)`,
+      `${p2(c.w)} − ${p2(slant / 2)} = ${p2(c.w - slant / 2)}`);
+  }
+  const slants = caps.map(c => (c.nums.length ? Math.max(...c.nums) : 0));
+  ok(slants.every(v => Math.abs(v - slants[0]) < 0.01),
+    '[17-e] 네 리본이 **한 값**을 쓴다 — 줄마다 손으로 다른 기울기를 적으면 빨강',
+    slants.map(p2).join('/'));
+  ok(caps.every(c => Math.abs(c.left - caps[0].left) < 0.01),
+    '[17-f] 좌단도 네 줄 한 값 — 이 절이 좌단을 **안 건드렸다**는 증거 (896 자 갈림 자리)',
+    caps.map(c => p2(c.left)).join('/'));
+
   blk('§R 되돌림 시험 — 수리 전 값을 넣으면 빨개진다');
   /* ⚑ 5회차 이관 — 되돌림 표본을 **178×178** 에서 **172×184**(4회차 상자)로 갈았다.
      178×178 은 이제 종횡이 1.006 이라 새 ref(1.000)와 «같은» 쪽이라 [R2] 가 아무것도 안 잡는다 —
