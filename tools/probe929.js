@@ -16,7 +16,7 @@
  *
  * 검사 항목:
  *   [1] 재현 — 현행 식으로 전역 표본을 읽으면 Δ 가 크게 빨갛다(무변경 트리에서 상시)
- *   [2] ⓐ 확인 — 제품 식(`scale` 포함)으로 역산하면 같은 표본이 Δ ≤ 3
+ *   [2] ⓐ 확인 — 제품 식(`scale` 포함)으로 역산하면 표본 텍셀이 맞는다(944: 판이 아니라 **텍셀**을 센다)
  *   [3] ⓐ 산식 — 어긋난 장치px 이 표본마다 다르고 `(lx0+u+0.5)·(scale−1)·SC` 예측과 ±1px 안에서 맞는다
  *   [4] ⓐ 기계 — 「어긋남 0」 인 텍셀은 열 하나뿐이다(= verify79 [E] 가 어떤 판에서 초록이 되는 이유)
  *   [5] ⓑ 기각 — 빨간 표본을 «한 틱 전» 좌표로 읽어도 안 닫힌다(지연 가설 기각)
@@ -79,17 +79,51 @@ const shot = (page, prev, inject) => page.evaluate(([prevSt, inj]) => new Promis
       if (dxp < 0 || dyp < 0 || dxp >= cvs.width || dyp >= cvs.height) return null;
       return { d: ctx.getImageData(dxp, dyp, 1, 1).data, x: dxp, y: dyp };
     };
+    /* ⚠ dmax 는 **160 표본의 최댓값**이라 얹힌 그림 한 텍셀이 판 전체를 빨갛게 만든다(944).
+       그래서 «맞은 텍셀 수»(hit) 를 같이 낸다 — 판정은 이쪽으로 한다. */
     const measure = (pxw, pyw, flipv, ox, oy, sc) => {
-      let dmax = 0, n = 0;
+      let dmax = 0, n = 0, hit = 0;
       for (const [u, v, col] of flat) {
         const r = read(pxw, pyw, flipv, ox, oy, sc, u, v);
         if (!r) continue;
-        const d = dif(r.d, col); if (d > dmax) dmax = d; n++;
+        const d = dif(r.d, col); if (d > dmax) dmax = d; n++; if (d <= 3) hit++;
       }
-      return { dmax, n };
+      return { dmax, n, hit };
     };
 
     const [oxR, oyR] = recomp(cam.x, cam.y);
+
+    /* [6] 판별 표본(943 이관 · 944) — «흔들린 판» 을 오프셋 크기(옛 축 `|dOx| >= 2` 장치px)로 고르면
+       «되계산 표본이 실제로 달라지는가» 를 안 묻는 것이라 밀린 자리가 평평한 색 안에 떨어진 판에서
+       `dProdRe = 0` 이 나와 `injRed < injN` 을 만든다(944 실측: 흔들린 판 3 중 되계산이 빨간 판 2).
+       ⇒ 되계산이 읽게 될 자리(u+ru, v+rv)의 아틀라스 3×3 이 **전부 불투명이고 원색과 Δ>3** 인
+       표본만 «반드시 다른 색을 읽는» 표본이다. 그런 표본이 0 인 프레임은 아예 판이 아니다. */
+    const px3 = (x, y) => {
+      if (x < 0 || y < 0 || x >= fr[2] || y >= fr[3]) return null;
+      const o = (y * fr[2] + x) * 4;
+      return td[o + 3] < 255 ? null : [td[o], td[o + 1], td[o + 2]];
+    };
+    const ru = Math.round((player.flip ? -1 : 1) * (oxR - camOx) / SCALE);
+    const rv = Math.round((oyR - camOy) / SCALE);
+    const disc = [];
+    for (const [u, v, col] of flat) {
+      let d0 = true;
+      for (let j = -1; j <= 1 && d0; j++) for (let i = -1; i <= 1; i++) {
+        const q = px3(u + ru + i, v + rv + j);
+        if (!q || dif(q, col) <= 3) { d0 = false; break; }
+      }
+      if (d0) disc.push([u, v, col]);
+      if (disc.length >= 40) break;
+    }
+    const discMax = (ox, oy) => {
+      let m = 0;
+      for (const [u, v, col] of disc) {
+        const r = read(player.x, player.y, player.flip, ox, oy, SCALE, u, v);
+        if (r) m = Math.max(m, dif(r.d, col));
+      }
+      return m;
+    };
+
     const cur = measure(player.x, player.y, player.flip, oxR, oyR, 1);                 /* 현행 식(scale 없음) */
     const prod = measure(player.x, player.y, player.flip, camOx, camOy, SCALE);        /* 제품 식 + 발표된 오프셋 */
     const prodRe = measure(player.x, player.y, player.flip, oxR, oyR, SCALE);          /* 제품 식 + 되계산 오프셋 */
@@ -109,6 +143,8 @@ const shot = (page, prev, inject) => page.evaluate(([prevSt, inj]) => new Promis
     const uZero = -lx0 - 0.5;
     res({
       dCur: cur.dmax, dProd: prod.dmax, dProdRe: prodRe.dmax, dLag: lag ? lag.dmax : null, n: cur.n,
+      hCur: cur.hit, hProd: prod.hit, nCur: cur.n, nProd: prod.n,
+      nDisc: disc.length, dPubD: disc.length ? discMax(camOx, camOy) : null, dReD: disc.length ? discMax(oxR, oyR) : null,
       shake: +cam.shake.toFixed(3), dOx: +((camOx - oxR) * SC).toFixed(2), dOy: +((camOy - oyR) * SC).toFixed(2),
       hit: player.hitFx > 0, SC, SCALE, uZero: +uZero.toFixed(2), fw: fr[2], fh: fr[3], per,
       st: { px: player.x, py: player.y, flip: !!player.flip, cx: cam.x, cy: cam.y }
@@ -129,7 +165,8 @@ const shot = (page, prev, inject) => page.evaluate(([prevSt, inj]) => new Promis
 
   const rows = [];
   let prev = null;
-  for (let i = 0; i < 24 && rows.length < 12; i++) {
+  /* 표본 판 12 → 20(944 · 943 [E-R4] 12→24 선례) — 판당 60ms 라 값이 싸고 pooled 비율의 분산이 줄어든다 */
+  for (let i = 0; i < 40 && rows.length < 20; i++) {
     const r = await shot(page, prev, null);
     if (r && !r.hit) { rows.push(r); prev = r.st; }
     await page.waitForTimeout(60);
@@ -138,21 +175,31 @@ const shot = (page, prev, inject) => page.evaluate(([prevSt, inj]) => new Promis
 
   console.log(`프레임 ${rows.length}개 · 표본/프레임 ${rows[0].n} · 그리기 배율 PLAYER_DRAW_SC=${rows[0].SCALE} · SC=${rows[0].SC}`);
   rows.slice(0, 8).forEach(r => console.log(
-    `  Δ현행(scale 없음)=${String(r.dCur).padStart(3)} · Δ제품식+camOx=${String(r.dProd).padStart(3)} · Δ제품식+되계산=${String(r.dProdRe).padStart(3)} · Δ한틱전=${r.dLag === null ? ' -' : r.dLag} · shake=${r.shake} · camOx−되계산=${r.dOx}px`));
+    `  Δ현행(scale 없음)=${String(r.dCur).padStart(3)} · Δ제품식+camOx=${String(r.dProd).padStart(3)} · Δ제품식+되계산=${String(r.dProdRe).padStart(3)} · Δ한틱전=${r.dLag === null ? ' -' : r.dLag} · 텍셀일치 제품 ${String(r.hProd).padStart(3)}/${r.nProd} ↔ 현행 ${String(r.hCur).padStart(3)}/${r.nCur} · shake=${r.shake} · camOx−되계산=${r.dOx}px`));
 
   /* [1] 재현 */
   const curMax = Math.max(...rows.map(r => r.dCur));
   ok(rows.every(r => r.dCur > 3), '1 재현 — 현행 식(scale 없음)으로 전역 표본을 읽으면 전 프레임이 빨갛다',
     'Δmax=' + curMax + ' · 프레임 ' + rows.length + '개 전부');
 
-  /* [2] ⓐ 확인 — «닫히는 판이 있는가» 로 묻는다. 스킬·적 그림이 플레이어 위에 얹히는 프레임이 섞이므로
-     (아래 실측에서도 12판 중 1~2판) 판정은 판별로 세우고 **다수판 + 최솟값 0** 을 요구한다.
-     현행 식은 그 반대다 — 한 판도 못 닫는다([1]). */
+  /* [2] ⓐ 확인 — **분모를 텍셀로 옮겼다(944).** 스킬·적 그림이 플레이어 위에 얹히는 것은 «판» 이 아니라
+     «텍셀» 단위 현상인데 옛 축은 판별 `dmax`(160 표본의 **최댓값**)로 물어서 **159/160 이 맞은 판도 «못 닫은 판»**
+     으로 셌다 — 그 판 수의 비율에 «≥ 60%» 를 걸어 두니 얹힘이 한두 판만 늘어도 색이 바뀐다(실측 6~11/12).
+     ⇒ 판을 세지 말고 **텍셀을 모아 세고**(pooled), «완벽한 판이 있는가»(Δ=0)로 정확성을 못박는다.
+     ⚠ **무르게 푼 것이 아니다** — «여러 판이 텍셀 하나까지 완벽하고(Δ=0) 표본 텍셀의 3/4 이상이 정확히 맞는다» 는
+     «판의 60% 가 닫힌다» 보다 강한 주장이고, 두 벌의 텍셀 일치율은 겹치지 않는다
+     (실측 30판: 제품 식 0.544~1.000 · 현행 식 0.114~0.388 · 20판 pooled 은 제품 0.918~0.985 ↔ 현행 0.236~0.286).
+     문턱은 그 사이 빈 구간에 세웠다 — 어느 항도 실측에서 10 이상 떨어져 있다(옛 축은 1판 차이였다). */
   const prodMin = Math.min(...rows.map(r => r.dProd));
-  const prodClosed = rows.filter(r => r.dProd <= 3).length;
-  ok(prodMin === 0 && prodClosed >= Math.ceil(rows.length * 0.6) && !rows.some(r => r.dCur <= 3),
-    '2 ⓐ 확인 — 제품 식(`scale` 포함)은 판 다수를 Δ=0 으로 닫고 현행 식은 한 판도 못 닫는다',
-    '닫힌 판 ' + prodClosed + '/' + rows.length + ' · Δmin=' + prodMin + ' · 현행 식으로 닫힌 판 ' + rows.filter(r => r.dCur <= 3).length);
+  const prodPerfect = rows.filter(r => r.dProd === 0).length;
+  const sum = (a, f) => a.reduce((s, r) => s + f(r), 0);
+  const paProd = sum(rows, r => r.hProd) / sum(rows, r => r.nProd);
+  const paCur = sum(rows, r => r.hCur) / sum(rows, r => r.nCur);
+  ok(prodMin === 0 && prodPerfect >= 3 && paProd >= 0.75 && paCur <= 0.50 && !rows.some(r => r.dCur <= 3),
+    '2 ⓐ 확인 — 제품 식(`scale` 포함)은 표본 텍셀을 정확히 맞히고(≥75%) 현행 식은 한 판도 못 닫는다',
+    '텍셀 일치 제품 ' + (paProd * 100).toFixed(1) + '% ↔ 현행 ' + (paCur * 100).toFixed(1) + '%' +
+    ' · Δ=0 인 판 ' + prodPerfect + '/' + rows.length + ' · Δmin=' + prodMin +
+    ' · 현행 식으로 닫힌 판 ' + rows.filter(r => r.dCur <= 3).length);
 
   /* [3] ⓐ 산식 — 어긋남이 표본마다 다르고 예측과 맞는다 */
   const per = rows[0].per;
@@ -172,22 +219,26 @@ const shot = (page, prev, inject) => page.evaluate(([prevSt, inj]) => new Promis
   ok(lagRows.length > 0 && lagFixed === 0, '5 ⓑ 기각 — «한 틱 전» 좌표로 읽어도 안 닫힌다(지연 가설 기각)',
     '닫힌 프레임 ' + lagFixed + '/' + lagRows.length + ' · Δ ' + lagRows.map(r => r.dLag).slice(0, 6).join(','));
 
-  /* [6] ⓒ 주입 — 셰이크를 켜면 되계산 오프셋이 빨개지고 발표된 camOx 는 초록이다 */
+  /* [6] ⓒ 주입 — 셰이크를 켜면 되계산 오프셋이 빨개지고 발표된 camOx 는 초록이다.
+     ⚠ 판을 고르는 축은 «흔들렸다»(`|dOx| >= 2`)가 아니라 «판별 표본이 있다»(`nDisc > 0`)다 — 943 이관(944).
+     ⚑ 무르게 푼 것이 아니다: 제품이 셰이크를 발표값에 안 실으면 `ru = rv = 0` 이 되고 표본 자신이
+     «3×3 이 평평» 하므로 판별 표본은 **구조적으로 0** ⇒ 판이 하나도 안 서서 이 항은 빨개진다. */
   let inj = null, injN = 0, injRed = 0;
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 24; i++) {
     const r = await shot(page, null, { shake: 12 });
-    if (r && !r.hit && Math.abs(r.dOx) >= 2) {             /* 실제로 흔들린 프레임만 */
-      injN++; if (r.dProdRe > 3) injRed++;
-      if (!inj || r.dProd < inj.dProd) inj = r;            /* 얹힘 판을 피해 «가장 잘 닫히는 판» 을 고른다([2] 와 같은 이유) */
-      if (inj.dProd === 0 && injN >= 3) break;
+    if (r && !r.hit && r.nDisc > 0) {                      /* 되계산이 «다른 색을 읽을 수밖에 없는» 프레임만(943) */
+      injN++; if (r.dReD > 3) injRed++;
+      if (!inj || r.dPubD < inj.dPubD) inj = r;            /* 얹힘 판을 피해 «가장 잘 닫히는 판» 을 고른다([2] 와 같은 이유) */
+      if (inj.dPubD === 0 && injN >= 3) break;
     }
     await page.waitForTimeout(40);
   }
-  ok(!!inj && inj.dProd <= 3 && injN > 0 && injRed === injN,
+  ok(!!inj && inj.dPubD <= 3 && injN > 0 && injRed === injN,
     '6 ⓒ 주입 — 셰이크가 도는 프레임에서 되계산 `ox` 는 빨갛고 제품이 발표한 `camOx` 는 초록이다',
-    inj ? ('흔들린 판 ' + injN + '개 · 그중 되계산이 빨간 판 ' + injRed + ' · 최선 판 shake=' + inj.shake +
-           ' · camOx−되계산=' + inj.dOx + 'px · Δ발표=' + inj.dProd + ' · Δ되계산=' + inj.dProdRe)
-        : '흔들린 프레임을 못 잡았다');
+    inj ? ('판별 판 ' + injN + '개 · 그중 되계산이 빨간 판 ' + injRed + ' · 판별 표본 ' + inj.nDisc +
+           '개 · 최선 판 shake=' + inj.shake + ' · camOx−되계산=' + inj.dOx + 'px · Δ발표=' + inj.dPubD +
+           ' · Δ되계산=' + inj.dReD)
+        : '판별 표본이 있는 프레임을 못 잡았다(셰이크가 발표값에 안 실린다)');
 
   ok(errs.length === 0, '7 콘솔/페이지 에러 0건', errs.slice(0, 2).join(' | '));
 
