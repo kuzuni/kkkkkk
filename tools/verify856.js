@@ -217,6 +217,20 @@ async function measure(browser, url) {
     }
 
     putFoe(); clearFx();
+    /* ⚑⚑ 928 — **플레이어도 못박는다.** 855 가 주사위를 고정하면서 «측정 상자가 플레이어 자리에
+       매달려 있다» 를 이미 적어 뒀는데, 못박은 것은 **적 한 쪽뿐**이었다(`foe.x = 300 - ox`).
+       남은 쪽은 벽시계를 탄다 — `page.goto` 뒤 `waitForTimeout(1100)` 동안 **제품의 제 루프가**
+       그때그때 다른 프레임 수·다른 dt 로 돌아 플레이어를 옮겨 놓는다(주사위와 무관하다).
+       `probe928` 실측: 무보정 프로세스 4판에서 `player.x` = 952.6 / 974.3 / 965.7 / 957.0 이라
+       측정 상자가 판마다 **20px 넘게** 움직였고, 그 자리의 **바탕**(플레이어 오라 가장자리·바닥)이
+       같이 바뀌어 층 분해(`al = 1 − d2/d1`)의 가장자리 화소가 뒤집혔다.
+       ⇒ `flask` 마루 덮임이 0.745 ~ 0.919 로 흔들리고 8회에 1회 [B11] 이 빨갰다(등재 928).
+       못박으면 **바탕·17종 화소가 판을 넘어 비트 단위로 같다**(`probe928 --pin` 지문 4판 동일).
+       ⚠ 자리는 제품의 «집»(`spawnStage()` 가 쓰는 `WORLD.w/2, WORLD.h/2`)이다 — 자에 좌표를
+         손으로 적으면 그것이 곧 사본이다(402). 여기 뒤로는 `step()` 이 없으므로 다시 밀리지 않는다.
+       ⚠ **재는 것은 한 칸도 안 바뀐다** — 발은 여전히 상자 한복판(`CX − ox`)에 놓이고 문턱·창·
+         마루 찾기는 그대로다. 바뀌는 것은 «어느 자리에서 재는가» 뿐이다. */
+    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
     const CX = Math.round(player.x + ox + 180), CY = Math.round(player.y + oy - 22), R = 60;
     const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
     const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);
