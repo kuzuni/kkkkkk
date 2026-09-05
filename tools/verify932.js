@@ -49,8 +49,10 @@ const RED0 = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py', 'scan8
 /* ⚛ 942 3회차 — `probe409i.py` 가 B 에서 빠졌다(층 두께를 승자독식 런에서 «층 질량 분배» 로 ·
    그 자가 처방으로 들고 있던 `cov_ray` 자신이 «사이 색 S» 로 새던 것까지 같이 닫았다).
    자는 `tools/verify942.js` §8. */
-const FIXED942 = ['probe409g.py', 'probe409c.py', 'probe409i.py'];
-const BRK = ['probe352.py', 'probe384.py', 'probe409.py', 'probe409f.py',
+/* ⚛ 942 4회차 — `probe409f.py` 가 B 에서 빠졌다(기둥 윗끝을 정수 while 걷기에서
+   문턱 교차 보간으로 · 옛 자가 두 판을 한 화소 갈라 놓던 자리). 자는 `tools/verify942.js` §9. */
+const FIXED942 = ['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py'];
+const BRK = ['probe352.py', 'probe384.py', 'probe409.py',
   'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
 
 /* ⚠ 선별기의 `frac` 신호는 **관용구 이름**만 본다. 면역 판정의 근거는 그보다 넓다 —

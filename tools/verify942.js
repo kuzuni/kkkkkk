@@ -172,12 +172,13 @@ console.log('\n[6] 장부 — 932 전수에서 이 자가 B → 면역으로 옮
   const row = rows.find((r) => r.file === 'probe409g.py');
   ok('[6-a] 장부에 있고 판정이 **면역(S)** 이다', row && row.verdict === 'S', row ? row.verdict : '없음');
   const brk = rows.filter((r) => r.verdict === 'B').map((r) => r.file);
-  ok('[6-b] 주홍(B)이 **8개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c` · 3회차 `probe409i`)',
-    brk.length === 8 && !brk.includes('probe409g.py') && !brk.includes('probe409c.py')
-    && !brk.includes('probe409i.py'), `${brk.length}개`);
+  ok('[6-b] 주홍(B)이 **7개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c` · 3회차 `probe409i` · 4회차 `probe409f`)',
+    brk.length === 7 && !['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py']
+      .some((f) => brk.includes(f)), `${brk.length}개`);
   const v932 = fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8');
-  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **세 이름**을 들고 있다)',
-    /const FIXED942 = \['probe409g\.py', 'probe409c\.py', 'probe409i\.py'\]/.test(v932) && /\[2-h\]/.test(v932));
+  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **네 이름**을 들고 있다)',
+    /const FIXED942 = \['probe409g\.py', 'probe409c\.py', 'probe409i\.py', 'probe409f\.py'\]/.test(v932)
+    && /\[2-h\]/.test(v932));
 }
 
 /* ── [7] 2회차 — `probe409c.py` (열별 «검정 화소 수» → K 층 두께의 합) ─────── */
@@ -365,6 +366,73 @@ console.log('\n[8] 3회차 — `probe409i.py` 두 축이 격자에서 풀렸는�
     /cols = phys_cols\(widths, sig, step\)/.test(gsrc) && (gsrc.match(/def _phys_px/g) || []).length === 1);
   ok('[8-t] 캡처 없이도 돈다 — 커밋 금지 자산(96-*.png)을 전제하지 않는다',
     /def has_cap/.test(src) && /캡처 없음/.test(src) && !/'cap': Image\.open\(CAP7\)\.convert\('RGB'\)\.load\(\)/.test(src));
+}
+
+/* ── [9] 4회차 — `probe409f.py` (기둥 윗끝 «정수 while 걷기» → 문턱 교차 보간) ───── */
+console.log('\n[9] 4회차 — `probe409f.py` 어깨(기둥 윗끝)가 정수 격자에서 풀렸는가 (판정값 0~9px)');
+{
+  const runF = (extra) => String(py(['tools/probe409f.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  const phF = runF(['--physics']);
+  /* «   6.55     int        7.00     6.00    -1.00» 한 줄 */
+  const prow = phF.split('\n').map((l) => l.trim().split(/\s+/))
+    .filter((t) => t.length >= 5 && /^[0-9.]+$/.test(t[0]) && /^(int|cross)$/.test(t[1]))
+    .map((t) => ({ top: parseFloat(t[0]), mode: t[1], cap: parseFloat(t[2]), ref: parseFloat(t[3]) }));
+  const byMode = (m) => prow.filter((r) => r.mode === m);
+  const errRef = (m) => Math.max(...byMode(m).map((r) => Math.abs(r.ref - r.top)));
+  const errCap = (m) => Math.max(...byMode(m).map((r) => Math.abs(r.cap - r.top)));
+  const gap = (m) => Math.max(...byMode(m).map((r) => Math.abs(r.ref - r.cap)));
+  ok('[9-a] 재현이 참 윗끝 여섯 자리를 두 자로 다 읽었다 (합성 · 그림도 브라우저도 안 쓴다)',
+    byMode('int').length >= 5 && byMode('cross').length === byMode('int').length,
+    `${byMode('int').length}자리 × 2자`);
+  ok('[9-b] ⚑⚑ **옛 자는 번진 판만 한 화소 통째로 어긋난다**(참 윗끝 6.55·6.60 에서 cap 7.00 ↔ ref 6.00) — 1:1 인데도 ref 만 얇다',
+    Math.abs(gap('int') - 1.0) < 1e-9, `판 사이 최대 편차 ${gap('int').toFixed(2)} px`);
+  ok('[9-c] ⚑ 새 자는 그 편차를 절반 아래로 줄이고 **번진 판을 참값의 ±0.25px 로** 읽는다(옛 자 0.60)',
+    gap('cross') <= 0.60 && errRef('cross') <= 0.25 && errRef('int') >= 0.5,
+    `편차 ${gap('cross').toFixed(2)} · ref 오차 ${errRef('cross').toFixed(2)} ↔ ${errRef('int').toFixed(2)}`);
+  /* ⚠ 남은 편차는 «못 고친 것» 이 아니라 **칼같은 판에는 부분 화소 정보가 없다**는 원리다 —
+     경계가 계단이면 어느 자로 재도 ±0.5 다. 그것을 항으로 세워 «무르게 풀었다» 와 구분한다. */
+  ok('[9-d] ⚑ 남은 편차는 칼같은 판의 원리적 한계다 — 두 자의 **cap 오차가 사실상 같다**(|Δ| ≤ 0.10)',
+    Math.abs(errCap('cross') - errCap('int')) <= 0.10,
+    `cap 오차 int ${errCap('int').toFixed(2)} ↔ cross ${errCap('cross').toFixed(2)}`);
+  /* ⚑ 좌표 규약 — 표본은 화소 «중심» 에서 오므로 교차 자리에 +0.5 를 더해야 옛 자와 같은 공간이다.
+     빼먹으면 칼같은 판이 참값보다 언제나 0.5 작게 나온다(이 항이 그것을 잡는다). */
+  const at6 = byMode('cross').find((r) => Math.abs(r.top - 6.0) < 1e-9);
+  ok('[9-e] 좌표 규약이 옛 자와 같다 — 참 윗끝 6.00 을 칼같은 판이 6.00±0.10 으로 읽는다(+0.5 를 빼먹으면 5.46 이다)',
+    at6 && Math.abs(at6.cap - 6.0) <= 0.10, at6 ? at6.cap.toFixed(2) : '못 읽음');
+
+  /* 지문 — ref 실측(캡처 없이 ref 절만 돌아도 된다). */
+  const shoulders = (out) => out.split('\n').map((l) => l.trim().split(/\s+/))
+    .filter((t) => t.length >= 3 && /^[0-9]+$/.test(t[0]) && /^-?[0-9.]+$/.test(t[1]))
+    .map((t) => parseFloat(t[1]));
+  const oldS = shoulders(runF(['--int'])), newS = shoulders(runF([]));
+  const isInt = (v) => Math.abs(v - Math.round(v)) < 1e-9;
+  ok('[9-f] 자가 ref 열 26개를 다 읽는다', oldS.length >= 20 && newS.length === oldS.length,
+    `${oldS.length} ↔ ${newS.length} 열`);
+  ok('[9-g] ⚑ **옛 자의 값은 예외 없이 정수다** — 정수 while 걷기의 지문',
+    oldS.length > 0 && oldS.every(isInt), `${oldS.length}개 전부`);
+  ok('[9-h] 새 자는 그 격자에서 풀린다 (절반 넘게 비정수)',
+    newS.filter((v) => !isInt(v)).length > newS.length / 2,
+    `${newS.filter((v) => !isInt(v)).length}/${newS.length}`);
+  ok('[9-i] 두 자의 값이 ±1.0px 안이다 — **정의가 안 바뀌었다**(걸음만 곱아졌다)',
+    oldS.every((v, k) => Math.abs(v - newS[k]) <= 1.0),
+    `최대 ${Math.max(...oldS.map((v, k) => Math.abs(v - newS[k]))).toFixed(2)} px`);
+
+  /* 불변 — 문턱·탐침 행·기준선 열·상자 + 사본 0. */
+  const src = fs.readFileSync(path.join(TOOLS, 'probe409f.py'), 'utf8');
+  ok('[9-j] 문턱·탐침 행이 그대로다 (`DARK_MAX = 42` · `PROBE_Y = 88`)',
+    /DARK_MAX = 42\b/.test(src) && /PROBE_Y = 88\b/.test(src));
+  ok('[9-k] 기준선 열과 상자가 그대로다 (직선부 x=39 · `BOX` 손 값 · 창 x0 14 · x1 40)',
+    /top_of_column\(px, bx, by, 39, PROBE_Y\)/.test(src)
+    && /BOX = \{'ref': \(292, 2027\), 'cap': \(291, 1967\)\}/.test(src)
+    && /opt\('--x0', 14\), opt\('--x1', 40\)/.test(src));
+  ok('[9-l] ⚑ **옛 자가 살아 있다**(`--int`) — 지문을 매 실행 다시 찍을 수 있다',
+    /MODE = 'int' if '--int' in a else 'cross'/.test(src) && /if \(mode or MODE\) == 'int'/.test(src));
+  ok('[9-m] ⚑ **사본을 안 만들었다** — 합성 판은 `probe409g.phys_cols` 가 그린다(번짐 셈 0줄)',
+    /from probe409g import phys_cols as g_phys_cols/.test(src) && !/def phys_cols/.test(src)
+    && !/exp\(-0\.5/.test(src));
+  ok('[9-n] 캡처 없이도 돈다 — 커밋 금지 자산(96-*.png)을 전제하지 않는다',
+    /os\.path\.exists\(CAP7\)/.test(src) && /캡처 없음/.test(src));
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */
