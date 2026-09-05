@@ -439,11 +439,23 @@ console.log('\n[10] 7회차 수리 — `scan887.py` 가 정수 걸음에서 풀�
   ok('[10-c] `dark_top`(B3)은 여섯 장 전부 Δ 0.000 — 아래 끝점은 원래 격자 위에 앉아 있었다',
     dtd.every((d) => Math.abs(d) < 5e-3), dtd.map((d) => d.toFixed(3)).join(' · '));
 
+  /* ⚑ 953 — 이 물음은 **둘**이다: ref 쪽은 저장소 안 그림이라 언제나 재지고, 우리 쪽은
+     캡처 다섯 장이 있어야 재진다. 한 항에 묶여 있던 탓에 **캡처가 없는 클론**(= 커밋 금지
+     자산이라 없는 것이 정상)에서 «우리 값 없음» 이 빨강으로 나왔다(출력 오른쪽이 빈 채).
+     짝인 [10-e] 는 같은 조건을 이미 SKIP 으로 내고 있었다 — 그 규약을 여기에도 맞춘다.
+     ⚠ 무르게 하는 것이 아니다: 캡처가 있으면 [10-d2] 는 그대로 판정하고, 잉크가 안 밀리면
+     빨개진다(자는 `tools/verify953.js` §3·§4 가 그 예민함을 실측으로 못박는다). */
   const dIt = (r) => r.th['110'].sub.ink_top - r.th['110'].ink_top;
-  const okIt = C.length > 0;
-  ok('[10-d] 움직인 것은 잉크다 — 우리 `ink_top` 은 **한 행 통째**(−0.98)이고 ref 는 −0.07 뿐이다',
-    okIt && Math.abs(dIt(R)) < 0.2 && C.every((c) => Math.abs(dIt(c) + 0.981) < 0.05),
-    `ref ${dIt(R).toFixed(3)} ↔ 우리 ${C.map((c) => dIt(c).toFixed(3)).join(' ')}`);
+  ok('[10-d] 위 끝점의 ref 는 거의 격자 위였다 — ref `ink_top` 은 −0.07 뿐이다',
+    Math.abs(dIt(R)) < 0.2, `ref ${dIt(R).toFixed(3)}`);
+  if (C.length) {
+    ok('[10-d2] 움직인 것은 잉크다 — 우리 `ink_top` 은 **한 행 통째**(−0.98)다',
+      C.every((c) => Math.abs(dIt(c) + 0.981) < 0.05),
+      `ref ${dIt(R).toFixed(3)} ↔ 우리 ${C.map((c) => dIt(c).toFixed(3)).join(' ')}`);
+  } else {
+    console.log('  SKIP [10-d2] 우리 `ink_top` 은 캡처가 있어야 잰다(지금 0장)'
+      + ' — node tools/verify887.js 가 찍는다');
+  }
 
   /* 1600 은 정수 자에서 «혼자 어긋난 칸»(0.714)이었다 — 부분 화소로는 ref 에 가장 가깝다. */
   const rat = (r, key) => (key === 'int' ? r.th['110'].ratio.B3 : r.th['110'].sub.ratio.B3);
@@ -468,10 +480,15 @@ console.log('\n[10] 7회차 수리 — `scan887.py` 가 정수 걸음에서 풀�
   /* 6회차 [9-g] 와 같은 규율 — 자를 갈아 과녁을 무르게 하거나 조인 것이 아니다. */
   const BAND = [0.67, 0.83], TGT_INT = 0.750;
   const inB = (v) => v >= BAND[0] && v <= BAND[1];
+  /* ⚑ 953 곁다리 — 옛 조건 `C.length === 0 || (…)` 은 캡처가 없으면 **과녁 항까지** 통째로
+     건너뛰어 초록이었다(ref 0.750 은 캡처 없이도 재진다 — 헛초록). 캡처 의존은 `C.every` 가
+     빈 배열에서 참인 것으로 이미 갈리므로, 과녁 항을 밖으로 꺼내 **언제나** 판정한다. */
   ok('[10-g] 제품은 두 판정에서 다 통과한다 (과녁·대역은 한 자도 안 옮겼다 — 재수립은 별도 등재다)',
-    C.length === 0 || (C.every((c) => inB(rat(c, 'int'))) && C.every((c) => inB(rat(c, 'sub')))
-      && Math.abs(rat(R, 'int') - TGT_INT) < 1e-6),
-    `정수 ${C.map((c) => rat(c, 'int').toFixed(3)).join(' ')} · 부분화소 ${C.map((c) => rat(c, 'sub').toFixed(4)).join(' ')}`
+    Math.abs(rat(R, 'int') - TGT_INT) < 1e-6
+    && C.every((c) => inB(rat(c, 'int'))) && C.every((c) => inB(rat(c, 'sub'))),
+    `ref 과녁 ${rat(R, 'int').toFixed(3)} (${TGT_INT})`
+    + ` · 정수 ${C.length ? C.map((c) => rat(c, 'int').toFixed(3)).join(' ') : '—(캡처 0장)'}`
+    + ` · 부분화소 ${C.length ? C.map((c) => rat(c, 'sub').toFixed(4)).join(' ') : '—'}`
     + ` · 대역 ${BAND[0]}~${BAND[1]}`);
 }
 
