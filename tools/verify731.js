@@ -38,12 +38,22 @@ const yes = (n, got, d) => R.push({ n: n + (d !== undefined && d !== '' ? ' — 
 const eq = (n, got, want) => R.push({ n, got: String(got), want: String(want), pass: String(got) === String(want) });
 
 const tmps = [];
+/* 951 — 사본 청소는 «마지막 줄» 이 아니라 종료 훅에 건다. 위 `sub()` 처럼 도중에 죽는 길이
+   생겼는데 청소가 본문 끝에만 있으면 `.v731-*` 가 tools/ 에 남는다(다음 실행이 그것을 본다). */
+process.on('exit', () => { for (const p of tmps) { try { fs.unlinkSync(p); } catch (_) {} } });
 function tmp(tag, body, ext) {
   const p = path.join(TOOLS, '.v731-' + tag + '-' + process.pid + (ext || '.js'));
   fs.writeFileSync(p, body);
   tmps.push(p);
   return p;
 }
+/* 951 — `String.replace` 는 못 찾아도 **조용하다**. 사본을 만드는 치환은 전부 이 문을 지난다:
+   찾는 문자열이 없으면 «조용한 no-op» 대신 그 자리에서 죽는다(무엇이 안 맞는지 이름으로 말한다). */
+function sub(src, needle, repl, label) {
+  if (!src.includes(needle)) throw new Error('[951] 치환 실패 — 찾는 문자열이 없다: ' + label + ' :: ' + needle);
+  return src.split(needle).join(repl);
+}
+
 function run(file, env) {
   try {
     return { code: 0, out: execFileSync(process.execPath, [file], {
@@ -140,19 +150,36 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
   yes('[E4] 신고된 예외는 마감 블록에 안 실린다', !/EVGUARD 731 — 삼켜진/.test(p319.out));
 
   /* ---------- [R] 되돌림 시험 ---------- */
-  /* 배선 한 줄을 뺀 `pwlaunch` 사본으로 [C] 를 다시 돌린다 — 조용한 초록으로 **되돌아가야** 한다.
-     (안 되돌아가면 [C6] 의 빨강은 차단기가 아니라 다른 것 덕분이라는 뜻이다) */
-  const pwOff = tmp('pwl', psrc.replace(/const arm = b => evguard\.armBrowser\(armBrowser\(b\)\);/,
-                                        'const arm = b => armBrowser(b); /* 731 배선 제거(되돌림 시험) */'));
-  yes('[R1] 사본에서 배선이 실제로 빠졌다', !/evguard\.armBrowser\(armBrowser/.test(fs.readFileSync(pwOff, 'utf8')));
-  const fRev = tmp('rev', fixture('__NO_SUCH_GLOBAL_731__').replace("require('./pwlaunch')",
-                                  "require('./" + path.basename(pwOff) + "')"));
+  /* 배선을 뺀 `pwlaunch` 로 [C] 를 다시 돌린다 — 조용한 초록으로 **되돌아가야** 한다.
+     (안 되돌아가면 [C6] 의 빨강은 차단기가 아니라 다른 것 덕분이라는 뜻이다)
+
+     ⚑ 951(2026-09-05) — 여기는 배선을 «정규식으로 그 한 줄을 지워» 뺐다. 918 이 같은 자리에서
+     `arm` 을 한 겹 더 감싸자(`shell918.armBrowser(evguard.armBrowser(armBrowser(b)))`) 자가 들고 있던
+     **문자열 상수**가 안 맞게 됐고, `String.replace` 는 **못 찾아도 조용하다** — 사본이 «배선 그대로»
+     인 채로 [R1]~[R3] 만 빨개졌다(33/36). 상수를 새 줄로 갱신하는 것은 다음에 또 누가 감싸면 같은
+     얼굴로 조용해지는 길이라 안 골랐다. ⇒ **줄을 지우는 대신 부품을 갈아 끼운다** — `evguard731` 을
+     require 캐시에서 가짜로 바꾼 뒤 `pwlaunch` 를 부른다. `arm` 이 몇 겹으로 감싸이든 배선은 걷힌다.
+     그리고 «갈아 끼운 것이 정말 그 자리에서 불렸는가» 를 표식 파일로 **단언**한다([R1]):
+     배선이 통째로 사라지면 표식이 안 생겨 [R1] 이 빨개진다(= 조용한 no-op 이 안 된다). */
+  const MARK = path.join(TOOLS, '.v731-armed-' + process.pid + '.txt');
+  tmps.push(MARK);
+  try { fs.unlinkSync(MARK); } catch (_) {}
+  const pwOff = tmp('pwl', `'use strict';
+/* 731 배선 제거(되돌림 시험) — 줄을 지우지 않고 부품 자체를 가짜로 갈아 끼운다(verify731 §R). */
+const fs = require('fs');
+const real = require('./evguard731');
+require.cache[require.resolve('./evguard731')].exports = Object.assign({}, real, {
+  armBrowser: b => { fs.appendFileSync(${JSON.stringify(MARK)}, 'armed\\n'); return b; },
+});
+module.exports = require('./pwlaunch');
+`);
+  const fRev = tmp('rev', sub(fixture('__NO_SUCH_GLOBAL_731__'), "require('./pwlaunch')",
+                              "require('./" + path.basename(pwOff) + "')", '사본 자 → 배선 뺀 pwlaunch'));
   const rev = run(fRev, { EVGUARD: '' });
+  yes('[R1] 갈아 끼운 부품이 **그 자리에서** 불렸다(= 배선이 실제로 걷혔다)', fs.existsSync(MARK));
   eq('[R2] 배선을 빼면 종료 코드가 0 으로 되돌아간다', rev.code, 0);
   yes('[R3] 배선을 빼면 ⚠ 줄도 사라진다', !/⚠/.test(rev.out));
   yes('[R4] 그리고 그 절은 여전히 조용히 비어 있다(= 병 그대로)', !/\[절\]/.test(rev.out));
-
-  for (const p of tmps) { try { fs.unlinkSync(p); } catch (_) {} }
 
   let pass = 0;
   for (const r of R) {
