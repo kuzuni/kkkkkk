@@ -27,6 +27,12 @@
 #                      건너뛰어 세로를 24 → 26 으로 읽었고, 속 «폭» 을 bbox 가 아니라 최장 연속으로
 #                      재서 113 → 111 로 읽었다. 두 오차가 «테 3 ref px» 를 만들어 제품이 4.5+2.2 로
 #                      두꺼워졌다. 지금 값은 **바깥 117×24 · 속 113×20 · 테 등방 2** 다.
+#                      ⚑ **945 가 «세로를 어디서 재는가» 를 고쳤다** — 옛 창은 `vx = l + 10`
+#                      한 열이고 그 열은 둥근 캡의 어깨 위다(캡 반지름 ≈ 12 · 바깥 폭 117).
+#                      부분 화소로 갈고 나서야 그 인공물이 드러났다(테 가로 2.31 ↔ 세로 2.65) —
+#                      정수 격자는 캡 4.9 와 가운데 2.2 를 **둘 다 2** 로 뭉갰다. 이제 세로는
+#                      **평평한 구간(`v_band` = 바깥 폭 18~82%) 열들의 중앙값**이고, 짝인 자
+#                      `probe904.js` 의 `phase` 걸음(씨앗 행 span 전체)과 같은 자리를 본다.
 #
 # 환산은 813·859 가 쓴 것과 같은 k = 1080 / 486 (ref 크롭 폭 → 프레임 폭).
 import json
@@ -78,6 +84,81 @@ def _cross(v_in, v_out, th):
         return None
     f = (th - v_in) / float(v_out - v_in)
     return min(1.0, max(0.0, f))
+
+
+def out_f(px, x, y, dx, dy, val, th):
+    """마지막 «안» 화소 (x,y) 에서 바깥(dx,dy) 쪽 부분 화소 여유(0..1) — 932 4회차.
+       `--int` 면 옛 정수 자 그대로 0.5(= 화소 바깥 면)를 준다."""
+    if not SUB:
+        return 0.5
+    try:
+        f = _cross(val(px[x, y]), val(px[x + dx, y + dy]), th)
+    except IndexError:
+        return 0.5
+    return 0.5 if f is None else f
+
+
+def v_band(l, r):
+    """[945] 세로를 재는 창 — 알약의 **평평한 가운데 구간**(바깥 폭의 18~82%).
+
+    ⚑⚑ 945 — 옛 창은 `vx = l + 10` **한 열**이었고 그 열은 둥근 캡의 어깨 위다.
+      알약 바깥 폭이 117 ref px 인데 캡 반지름이 12 안팎이라 l+10 은 이미 기울기 위이고,
+      거기서 세로 자는 테를 **비스듬히** 가로지른다(같은 두께를 더 긴 선분으로 잰다) —
+      부분 화소로 갈고 나니 그 인공물이 테를 가로 2.31 ↔ 세로 2.65 로 갈랐다(932 4회차 관측).
+      ⚠ 옛 **정수** 자는 이것을 못 보여 줬다 — 격자가 캡(4.9)과 가운데(2.2)를 **둘 다 2** 로
+      뭉갰다. 그래서 904 의 «등방 2» 는 맞았고, 부분 화소가 창을 처음으로 드러낸 것이다.
+    ⚑ **짝인 자가 이미 이렇게 잰다** — `probe904.js` 의 `phase` 걸음은 세로를 씨앗 행 span
+      전체(`rowBand`/`rowEdge`)로 재지 한 열로 재지 않는다. 945 는 두 자의 창을 맞춘 것이다.
+    ⚠ 한 열이 아니라 **여러 열의 중앙값**인 이유 — 평평한 구간에도 숫자 잉크가 속 판정을
+      끊는 열이 섞여 있다(스윕 최대 2.81 · 바깥 최대 26.58). 최대·단일 열은 그걸 밟는다."""
+    w = r - l
+    return range(l + int(w * .18), l + int(w * .82))
+
+
+def col_v(px, vx, t, b):
+    """[945] 한 열에서 «바깥 세로»·«속 세로» — `measure_pill` 과 `ring_sweep` 이 **같이** 쓴다.
+       (402 «사본을 지운다» — 같은 걸음을 두 곳에 적으면 한쪽만 고쳐진다.)
+       걸음은 `measure_pill.edge()` 의 국면 셋과 같고(904 수리), 모서리는 `out_f` 로 민다."""
+    ys = [y for y in range(t, b + 1) if pill_d(px[vx, y]) <= PILL_TOL]
+    if not ys:
+        return None
+    iy0, iy1 = min(ys), max(ys)
+    if iy1 - iy0 < 5:                       # 속이 잉크로 통째로 끊긴 열
+        return None
+
+    def walk(y, step):
+        phase, bright, outer = 'a', 0, y
+        for _ in range(200):
+            y += step
+            dark = lum(px[vx, y]) < DARK_TH
+            if phase == 'a':
+                if not dark:
+                    phase, bright = 'b', 1
+            elif phase == 'b':
+                if dark:
+                    phase, outer = 'c', y
+                else:
+                    bright += 1
+                    if bright > 2:
+                        return None
+            else:
+                if dark:
+                    outer = y
+                else:
+                    break
+        return outer if phase == 'c' else None
+
+    ot, ob = walk(iy0, -1), walk(iy1, 1)
+    if ot is None or ob is None:
+        return None
+    oh = (ob + out_f(px, vx, ob, 0, +1, lum, DARK_TH)) - (ot - out_f(px, vx, ot, 0, -1, lum, DARK_TH))
+    ih = (iy1 + out_f(px, vx, iy1, 0, +1, pill_d, PILL_TOL)) - (iy0 - out_f(px, vx, iy0, 0, -1, pill_d, PILL_TOL))
+    return {'ot': ot, 'ob': ob, 'iy0': iy0, 'iy1': iy1, 'oh': oh, 'ih': ih, 'ring': (oh - ih) / 2}
+
+
+def med(v):
+    s = sorted(v)
+    return s[len(s) // 2]
 
 
 def bg_of(px, y, strips):
@@ -202,49 +283,46 @@ def measure_pill(px, band, y0, y1):
                 else:
                     break
         return outer if phase == 'c' else inner
-    def out_f(x, y, dx, dy, val, th):
-        """마지막 «안» 화소 (x,y) 에서 바깥(dx,dy) 쪽 부분 화소 여유(0..1) — 932 4회차.
-           `--int` 면 옛 정수 자 그대로 0.5(= 화소 바깥 면)를 준다."""
-        if not SUB:
-            return 0.5
-        try:
-            f = _cross(val(px[x, y]), val(px[x + dx, y + dy]), th)
-        except IndexError:
-            return 0.5
-        return 0.5 if f is None else f
-
     l, r = edge(-1, 0, cx, sy)[0], edge(1, 0, cx, sy)[0]
-    vx = l + 10                     # 세로는 «아이콘·숫자 잉크» 를 피해 왼쪽 끝 안쪽에서 잰다
-    t, b = edge(0, -1, vx, sy)[1], edge(0, 1, vx, sy)[1]
-    # ⚑ 932 4회차 — 바깥 네 모서리를 **같은 lum·같은 DARK_TH** 의 교차점으로 민다.
+    # ⚑ 932 4회차 — 바깥 두 모서리를 **같은 lum·같은 DARK_TH** 의 교차점으로 민다.
     #   `edge()` 의 국면 걸음(904 수리)은 한 글자도 안 바뀐다 — 그 걸음이 준 화소에서
     #   «어디서 문턱을 지나는가» 만 더 묻는다.
-    fl = out_f(l, sy, -1, 0, lum, DARK_TH)
-    fr = out_f(r, sy, +1, 0, lum, DARK_TH)
-    ft = out_f(vx, t, 0, -1, lum, DARK_TH)
-    fb = out_f(vx, b, 0, +1, lum, DARK_TH)
+    fl = out_f(px, l, sy, -1, 0, lum, DARK_TH)
+    fr = out_f(px, r, sy, +1, 0, lum, DARK_TH)
+    # ⚑⚑ 945 — 세로는 **한 열이 아니라 평평한 구간의 중앙값**이다(창은 `v_band`). 두 걸음이다:
+    #   ⓐ **경계 열** `bx = l + 10` — 행 범위 t..b 를 얻는 데만 쓴다. 이 열이 남은 이유는
+    #     옛 주석이 적어 둔 그것 그대로 «아이콘·숫자 잉크를 피한다» 이다(알약 한가운데 cx 는
+    #     숫자 획을 통째로 지나가 lum 192 로 밝고, 거기서 걸으면 국면 b 가 즉시 끝난다).
+    #     ⚠ **행 범위는 캡에서도 옳다** — 캡 열이 테를 비스듬히 읽는 것은 «두께» 이지 «어디까지가
+    #     알약인가» 가 아니어서, 정수 행으로는 캡도 가운데도 똑같이 y595..618(24행)이다.
+    #   ⓑ **재는 것**은 그 범위 안에서 `v_band` 열마다 `col_v` 로 잰 값들의 **중앙값**이다.
+    #     옛 자는 ⓐ 의 열에서 재기까지 해서 캡 인공물을 «세로 테» 로 들고 있었다(945 등재문).
+    bx = l + 10
+    t, b = edge(0, -1, bx, sy)[1], edge(0, 1, bx, sy)[1]
+    cols = [c for c in (col_v(px, vx, t, b) for vx in v_band(l, r)) if c]
+    if not cols:
+        return None
+    ph, pih = med([c['oh'] for c in cols]), med([c['ih'] for c in cols])
     # ⚑ **주 눈금은 «속»(평평한 #191614 칠) 이다** — 두 그림이 같은 색을 쓰고 경계가 한 겹뿐이라
     #   마스크가 갈릴 자리가 없다. 바깥(검정 테두리) 은 아래쪽에서 돌기둥 그늘과 붙어 ±2px 흔들린다.
-    iy0, iy1 = sy, sy
-    while inside(vx, iy0 - 1):
-        iy0 -= 1
-    while inside(vx, iy1 + 1):
-        iy1 += 1
     # ⚑ 904 — 속 «폭» 은 **최장 연속(w)이 아니라 bbox** 다. 알약 속에는 아이콘·숫자 잉크가
     #   있어 연속이 끊기므로 w 는 언제나 실제보다 좁다(111 vs 실측 113 = −1.8%). 그 −1.8% 가
     #   테 두께로 흡수돼 866 의 «테 3 ref px» 를 만든 나머지 절반이다(다른 절반은 edge() 의
     #   국면 누락). 가운데 행에서 **가장 바깥 속 화소**로 잰다 — `probe904.js` 와 같은 정의.
+    iy0, iy1 = sy, sy
+    while inside(bx, iy0 - 1):
+        iy0 -= 1
+    while inside(bx, iy1 + 1):
+        iy1 += 1
     iy = (iy0 + iy1) // 2
     ins = [x for x in range(int(band[0]), int(band[1])) if inside(x, iy)]
     ix0, ix1 = (min(ins), max(ins)) if ins else (sx, sx + w - 1)
-    # ⚑ 932 4회차 — 속 네 모서리도 **같은 `inside` 판정**(pill_d ≤ PILL_TOL)의 교차점으로.
-    gl = out_f(ix0, iy, -1, 0, pill_d, PILL_TOL)
-    gr = out_f(ix1, iy, +1, 0, pill_d, PILL_TOL)
-    gt = out_f(vx, iy0, 0, -1, pill_d, PILL_TOL)
-    gb = out_f(vx, iy1, 0, +1, pill_d, PILL_TOL)
+    # ⚑ 932 4회차 — 속 좌·우 모서리도 **같은 `inside` 판정**(pill_d ≤ PILL_TOL)의 교차점으로.
+    gl = out_f(px, ix0, iy, -1, 0, pill_d, PILL_TOL)
+    gr = out_f(px, ix1, iy, +1, 0, pill_d, PILL_TOL)
     return {'l': l, 'r': r, 't': t, 'b': b,
-            'w': (r + fr) - (l - fl), 'h': (b + fb) - (t - ft),
-            'iw': (ix1 + gr) - (ix0 - gl), 'ih': (iy1 + gb) - (iy0 - gt), 'run': w}
+            'w': (r + fr) - (l - fl), 'h': ph,
+            'iw': (ix1 + gr) - (ix0 - gl), 'ih': pih, 'run': w, 'vn': len(cols)}
 
 
 def side_bands(px, pill, y1):
@@ -264,50 +342,16 @@ def ring_sweep(px, q):
       `measure_pill` 은 세로를 `vx = l + 10` **한 열**에서 재는데, 알약은 이름 그대로
       알약(둥근 캡)이라 그 열은 이미 캡의 어깨 위다 — 거기서는 세로 자가 테를 **비스듬히**
       가로질러 두껍게 읽는다. 평평한 가운데 열에서는 가로와 같은 값이 나온다.
-    ⇒ 904 의 «테는 등방 2» 판정은 **살아 있다.** 이 회차가 `verify866` 의 과녁을 안 옮긴 이유이고,
+    ⇒ 904 의 «테는 등방 2» 판정은 **살아 있다.** 932 4회차가 `verify866` 의 과녁을 안 옮긴 이유이고,
       창을 옮기는 것은 «재는 것을 바꾸는» 일이라(3회차 규칙 2) **945** 로 따로 등재했다.
+    ⚑⚑ **945 가 그 창을 옮겼다** — `measure_pill` 의 세로는 이제 `v_band` 의 중앙값이라
+      이 스윕의 «가운데» 와 같은 자리를 본다. 이 함수는 그 근거를 **매 실행 다시 찍는** 자로 남는다
+      (캡이 여전히 두껍게 읽히는 것은 그림의 사실이고, 945 는 거기서 재기를 그만둔 것이다).
     """
     l, r, t, b = q['l'], q['r'], q['t'], q['b']
-
-    def at(vx):
-        ys = [y for y in range(t, b + 1) if pill_d(px[vx, y]) <= PILL_TOL]
-        if not ys:
-            return None
-        iy0, iy1 = min(ys), max(ys)
-
-        def walk(y, step):
-            phase, bright, outer = 'a', 0, y
-            for _ in range(200):
-                y += step
-                dark = lum(px[vx, y]) < DARK_TH
-                if phase == 'a':
-                    if not dark:
-                        phase, bright = 'b', 1
-                elif phase == 'b':
-                    if dark:
-                        phase, outer = 'c', y
-                    else:
-                        bright += 1
-                        if bright > 2:
-                            return None
-                else:
-                    if dark:
-                        outer = y
-                    else:
-                        break
-            return outer if phase == 'c' else None
-
-        ot, ob = walk(iy0, -1), walk(iy1, 1)
-        if ot is None or ob is None:
-            return None
-        f = lambda y, s: (_cross(lum(px[vx, y]), lum(px[vx, y + s]), DARK_TH) or 0.5)
-        g = lambda y, s: (_cross(pill_d(px[vx, y]), pill_d(px[vx, y + s]), PILL_TOL) or 0.5)
-        outer_h = (ob + f(ob, 1)) - (ot - f(ot, -1))
-        inner_h = (iy1 + g(iy1, 1)) - (iy0 - g(iy0, -1))
-        return (outer_h - inner_h) / 2
-
     w = r - l
-    mids = [v for v in (at(l + o) for o in range(int(w * .18), int(w * .82))) if v is not None]
+    at = lambda vx: (lambda c: c and c['ring'])(col_v(px, vx, t, b))
+    mids = [v for v in (at(vx) for vx in v_band(l, r)) if v is not None]
     caps = [v for v in (at(l + o) for o in list(range(3, 8)) + list(range(w - 7, w - 2))) if v is not None]
     return mids, caps
 
@@ -324,13 +368,13 @@ def main():
 
     if '--ring-sweep' in a:
         mids, caps = ring_sweep(rp, rq)
-        med = sorted(mids)[len(mids) // 2]
-        print('RING-SWEEP — 세로 테를 열마다 (ref px · 창 vx = l+10 이 어디에 놓이는가)')
+        m = med(mids)
+        print('RING-SWEEP — 세로 테를 열마다 (ref px · 창 `v_band` 가 어디에 놓이는가)')
         print('  가운데 중앙값 %.2f · 최소 %.2f · 최대 %.2f  (평평한 구간 %d열 — 최대는 숫자 잉크가'
-              ' 속 판정을 끊는 열이다)' % (med, min(mids), max(mids), len(mids)))
-        print('  캡 최대 %.2f  (둥근 끝 %d열)' % (max(caps), len(caps)))
-        print('  가로 테 %.2f · `measure_pill` 의 세로 테 %.2f (창 vx = l+10)'
-              % ((rq['w'] - rq['iw']) / 2, (rq['h'] - rq['ih']) / 2))
+              ' 속 판정을 끊는 열이다)' % (m, min(mids), max(mids), len(mids)))
+        print('  캡 최대 %.2f  (둥근 끝 %d열 — **945 는 여기서 재기를 그만뒀다**)' % (max(caps), len(caps)))
+        print('  가로 테 %.2f · `measure_pill` 의 세로 테 %.2f (창 = 평평한 구간 %d열의 중앙값 — 945)'
+              % ((rq['w'] - rq['iw']) / 2, (rq['h'] - rq['ih']) / 2, rq['vn']))
         return
 
     print('PROBE866 — 89 유물 소환 부품 치수 (자 하나로 ref ↔ 우리)')
