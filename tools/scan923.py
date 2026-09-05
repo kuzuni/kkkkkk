@@ -103,6 +103,41 @@ def notch_stats(prof, straight, i0, i1, k):
                 y0=i0, y1=i1, length=(i1 - i0 + 1) * k)
 
 
+# ── ② «마지막 알약 아랫변 ↔ 리본1 윗변» 틈 (923 1회차 신설 · 등재문 ②) ──────────
+#   같은 절차를 ref 와 우리에게 쓴다: 알약 가로 구간의 **행 중앙값** 밝기로
+#   「알약 채움(어둡다) → 카드 몸통(중간) → 리본 검정 테(가장 어둡다)」 를 가르고,
+#   두 경계를 **부분화소 50% 교차**로 잡아 그 차이를 «우리 px» 로 낸다.
+#   ⚠ 행 중앙값을 쓰는 이유 — 한 열로 재면 흰 글자·별표가 그 열을 지배한다(6회차 «오염된 창»).
+
+
+def gap_pill_ribbon(img, x0, x1, y0, y1, k, label):
+    """알약 아랫변 ↔ 리본1 윗변 틈. img = 밝기 배열 · [x0,x1) = 알약 가로 구간.
+
+    창(y0,y1)은 **마지막 알약 안에서 시작해 리본1 검정 테 안에서 끝나야** 한다 —
+    그래야 «채움 → 몸통 → 검정» 세 고원이 창 안에 한 번씩만 들어온다.
+    """
+    prof = [(y, float(np.median(img[y, x0:x1]))) for y in range(y0, y1)]
+    v = [p[1] for p in prof]
+    fill, body = v[0], max(v)
+    t_up, t_dn = (fill + body) / 2, body / 2
+    up = None
+    for i in range(len(v) - 1):
+        if v[i] < t_up <= v[i + 1]:
+            up = prof[i][0] + (t_up - v[i]) / (v[i + 1] - v[i]) + 0.5
+    dn = None
+    if up is not None:
+        for i in range(int(up) - y0, len(v) - 1):
+            if v[i] > t_dn >= v[i + 1]:
+                dn = prof[i][0] + (t_dn - v[i]) / (v[i + 1] - v[i]) + 0.5
+                break
+    if up is None or dn is None:
+        print(f'-- {label}: 경계를 못 찾았다 (창을 다시 잡아라 — 채움 {fill:.0f} · 몸통 {body:.0f})')
+        return None
+    print(f'-- {label}  알약 아랫변 {up:.2f} · 리본1 윗변 {dn:.2f} · '
+          f'틈 {(dn - up):.2f}(자기px) = **{(dn - up) * k:.2f} 우리px**  [채움 {fill:.0f} · 몸통 {body:.0f}]')
+    return (dn - up) * k
+
+
 def scan(a, y0, y1, x0, x1, bg, k, t, label):
     prof = profile(a, y0, y1, x0, x1, bg, t)
     vals = [p for p in prof if p is not None]
