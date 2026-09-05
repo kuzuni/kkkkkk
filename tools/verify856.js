@@ -674,6 +674,35 @@ async function measure(browser, url) {
         console.log('  [889] ⇒ 옛 자 밴드 ' + (cmn > 0 ? (cmx / cmn).toFixed(2) : '∞') + '배 (덮인 몫 ' +
                     (b13mn > 0 ? (b13mx / b13mn).toFixed(2) : '∞') + '배 = [B13] 판정값)');
       }
+      /* ⚑⚑ 889 5회차 진단(판정 밖) — **[B13] 의 남은 밴드가 «폭» 인가 «종 섞임» 인가.**
+         [B13] 은 «비는 획 폭에 무관» 을 묻는데 구간마다 **종 구성이 다르다**(6~9 는 97% 가 gale ·
+         12~15 는 52% 가 arrow). 그러면 구간 사이의 차가 폭 때문인지 종 때문인지 안 갈린다 —
+         [B10b] 가 이미 «종 사이» 축을 따로 재고 있으므로 두 축이 겹치면 [B13] 은 그 몫을 두 번 센다.
+         ⇒ 축을 둘로 나눠 나란히 찍는다(판정은 위 [B13] 그대로다 · 여기서 아무 것도 안 무르게 한다):
+           ⓐ **종을 고정하고 폭만** — 한 종의 구간별 중앙값 밴드(2구간 이상인 종만)
+           ⓑ **폭을 고정하고 종만** — 한 구간의 종별 중앙값 밴드
+         ⓐ 가 [B13] 보다 뚜렷이 낮으면 남은 밴드의 임자는 폭이 아니라 **구간의 종 구성**이다. */
+      {
+        const bySp = {};
+        for (const b of bandRows) for (const e of b.by) {
+          if (e[1] < B13_N) continue;                  /* 구간 문턱과 **같은** 표본 수를 쓴다 */
+          (bySp[e[0]] = bySp[e[0]] || []).push([b.lo, e[2], e[1]]);
+        }
+        const spBands = Object.keys(bySp).filter(k => bySp[k].length >= 2).map(k => {
+          const v = bySp[k].map(e => e[1]);
+          return [k, Math.max.apply(null, v) / Math.min.apply(null, v), bySp[k].length];
+        }).sort((a, b) => b[1] - a[1]);
+        const binBands = bandRows.map(b => {
+          const v = b.by.filter(e => e[1] >= B13_N).map(e => e[2]);
+          return v.length >= 2 ? [b.lo, Math.max.apply(null, v) / Math.min.apply(null, v), v.length] : null;
+        }).filter(Boolean).sort((a, b) => b[1] - a[1]);
+        if (spBands.length) console.log('  [진단·889 5회차] ⓐ 종을 고정하고 폭만 — ' +
+          spBands.map(e => e[0] + ' ' + e[1].toFixed(2) + '배(' + e[2] + '구간)').join(' · ') +
+          '  ⇒ 최악 ' + spBands[0][1].toFixed(2) + '배');
+        if (binBands.length) console.log('  [진단·889 5회차] ⓑ 폭을 고정하고 종만 — ' +
+          binBands.map(e => '획' + e[0] + '~ ' + e[1].toFixed(2) + '배(' + e[2] + '종)').join(' · ') +
+          '  ⇒ 최악 ' + binBands[0][1].toFixed(2) + '배');
+      }
       const spr = (r.out.sprites || []).slice().sort((a, b) => a[1] - b[1]);
       console.log('  [진단] 구운 스프라이트 자체의 코어 폭(로컬px · 합성/근백색 문턱 이전)');
       console.log('    ' + spr.map(e => e[0] + ' ' + e[1]).join(' · '));
