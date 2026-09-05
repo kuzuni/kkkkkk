@@ -34,6 +34,7 @@ const FRAMES = [1600, 1841, 1920, 2280, 2600];
 const LONG = [1841, 1920, 2280, 2600];
 const REF = 2280;
 const POOL_FULL = 108;          /* 294(상인방 앵커) − 186(av 상한) — 소스와 한 벌 */
+const MOLD_MIN = 4, MOLD_THIN = 5;   /* 2회차 — 몰딩 선 하한 · 가장 얇은 몰딩 선(제품 상수와 한 벌) */
 const LIN = 66;
 
 let pass = 0, fail = 0;
@@ -52,6 +53,7 @@ const MEASURE = `(() => {
   const sc = px('calc(1000px * var(--rwc,1))') / 1000;   /* 앱 프레임 배율 × --rwc */
   const av = px('var(--rw-av)'), gt = px('var(--rw-gt)'), lt = px('var(--rw-lt)');
   const lnk = px('calc(1000px * var(--rw-lnk,1))') / 1000 / sc;
+  const lnm = px('calc(1000px * var(--rw-lnm,1))') / 1000 / sc;
   ruler.remove();
   const L = q('#relw .rw-lintel').getBoundingClientRect();
   const bg = q('#relw .rw-bg');
@@ -63,7 +65,7 @@ const MEASURE = `(() => {
   ap.remove();
   const bef = getComputedStyle(q('#relw .rw-lintel'), '::before');
   return {
-    sc: r1(sc), lnk: Math.round(lnk * 1e4) / 1e4,
+    sc: r1(sc), lnk: Math.round(lnk * 1e4) / 1e4, lnm: Math.round(lnm * 1e4) / 1e4,
     pool: r1((gt - av - lt) / sc),                 /* 설계 px */
     linT: r1(L.top - pr.top), linB: r1(L.bottom - pr.top), linH: r1(L.height / sc),
     apexT, clr: r1((apexT - (L.bottom - pr.top)) / sc),
@@ -148,16 +150,36 @@ async function paintBottom(browser, H, o) {
 
   /* ── [4] «줄인다» 가 아니라 «같이 준다» ──────────────────────────────────── */
   const lin = SRC.slice(SRC.indexOf('.rw-lintel{'), SRC.indexOf('.rw-lintel::before{left:196px}'));
-  const stops = (lin.match(/calc\((?:-?\d+(?:\.\d+)?)px \* var\(--rw-lnk,1\)\)/g) || []).length;
-  ok(stops >= 14 && !/\b(?:5|11|54|59|64|66|78|30|12)px(?! \* var\(--rw-lnk)/.test(
-       lin.replace(/66px \* var\(--rwc,1\) \* var\(--rw-lnk,1\)/, '')),
-    '[4] ★ 몰딩 6층·까치발의 세로가 **전부 같은 k 를 문다**(소스) — 12회차가 «남는 자리에 맞춰 높이만» 줄이다 13px 잘려 13회차가 되돌린 자리다. 잘라 내는 것이 아니라 단면 비를 그대로 두고 같이 준다(356 등방)',
-    'var(--rw-lnk) 를 문 세로 길이 ' + stops + '개');
+  /* 2회차 이관 — 옛 [4] 는 «여섯 층이 **전부 lnk** 를 문다» 를 셌다. 2회차가 몰딩 선을 lnm 으로
+     갈랐으므로 그 셈은 더는 이 규약이 아니다. 지키려던 것(«잘라 내지 않는다 = 벌거벗은 상수가
+     하나도 안 남는다»)만 남기고 자를 그쪽으로 옮긴다 — 소스에 k·m 을 안 문 세로 상수가 남으면
+     그 층만 안 줄어 **잘린 것과 같은 그림**이 된다. 배분 규칙 자체는 [4d]·[4e] 가 잰다. */
+  /* ⚠ 주석을 먼저 걷어낸다 — 이 절의 주석은 «3px 로 내려앉았다» 처럼 **문제의 수를 인용**하므로
+     안 걷으면 자기 설명문이 자기를 빨갛게 만든다(2회차에 실제로 그랬다). */
+  const molded = (lin.match(/var\(--rw-ln[km],1\)/g) || []).length;
+  const naked = (lin.replace(/\/\*[\s\S]*?\*\//g, '')
+                    .replace(/66px \* var\(--rwc,1\) \* var\(--rw-lnk,1\)/, '')
+                    .match(/(?<![\w.])(?:5|6|11|12|54|59|64|66|78|30|3)px(?! \* var\(--rw-ln)/g) || []);
+  ok(molded >= 14 && naked.length === 0,
+    '[4] ★ 상인방 블록에 **k·m 을 안 문 세로 상수가 하나도 없다**(소스) — 12회차가 «남는 자리에 맞춰 높이만» 줄이다 13px 잘려 13회차가 되돌린 자리다. 한 층이라도 상수로 남으면 그 층만 안 줄어 잘린 것과 같은 그림이 된다',
+    'k·m 을 문 세로 길이 ' + molded + '개 · 벌거벗은 상수 ' + naked.length + '개'
+      + (naked.length ? ' (' + naked.join(',') + ')' : ''));
   ok(Math.abs(r[1600].befH / (78 * r[1600].lnk) - 1) < 0.03
      && Math.abs(r[1600].befW / (30 * r[1600].lnk) - 1) < 0.03,
     '[4b] 까치발도 **등방**(폭·높이 같은 k) — 세로만 줄이면 356 이 금지한 «비균등» 이다',
     '1600 까치발 ' + r[1600].befW.toFixed(1) + '×' + r[1600].befH.toFixed(1)
       + ' (기대 ' + (30 * r[1600].lnk).toFixed(1) + '×' + (78 * r[1600].lnk).toFixed(1) + ')');
+  /* 2회차 — 몰딩 선 하한(GL·GM 2인 독립 지적: 얇은 층 3px 이 줄눈 어두운선 3px 과 동률이 됐다) */
+  ok(FRAMES.every(H => Math.abs(r[H].lnm - Math.max(r[H].lnk, MOLD_MIN / MOLD_THIN)) < 5e-4),
+    '[4d] ★ `--rw-lnm` = **max(lnk, 4/5)** — 몰딩 선(5·6·5·5)과 꼬리(2)는 **하한 4px**(= 벽 켜 줄눈 어두운선 3 + 1)에 닿을 때까지만 같이 줄고 나머지는 몸통(43)이 흡수한다. 이 띠가 있는 이유가 «켜 줄눈보다 확실히 두꺼운 단 하나» 라 그 약속이 배율보다 먼저다(2회차 채점 2인 GL·GM 독립 일치)',
+    FRAMES.map(H => H + ':lnm ' + r[H].lnm.toFixed(4) + '(lnk ' + r[H].lnk.toFixed(4) + ')').join(' · '));
+  ok(Math.abs(5 * r[1600].lnm - 4) < 0.05 && 5 * r[1600].lnm >= MOLD_MIN - 0.05
+     && Math.abs((6 * r[1600].lnm) / (5 * r[1600].lnm) - 6 / 5) < 1e-6,
+    '[4e] ★ 1600 의 몰딩 선 = **4 / 4.8 / 4 / 4** — 얇은 층이 하한 4px 에 정확히 앉고 **층별 비 5:6:5:5 가 보존**된다(1회차의 균일 축소는 3 / 5 / 3 / 4 로 흩어져 하이라이트:그림자 비가 −28% 움직였다 · GM 실측)',
+    '가장 얇은 몰딩 ' + (5 * r[1600].lnm).toFixed(2) + 'px (줄눈 어두운선 3px 의 '
+      + ((5 * r[1600].lnm) / 3).toFixed(2) + '배) · 몸통 '
+      + (66 * r[1600].lnk - 23 * r[1600].lnm).toFixed(2) + 'px',
+  );
   const pb = {};
   for (const H of [1600, REF]) pb[H] = await paintBottom(browser, H, r[H]);
   const rel = (H) => (pb[H] - r[H].linT) / (r[H].linB - r[H].linT);
