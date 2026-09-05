@@ -119,7 +119,16 @@ const MEASURE = `(() => {
   const gtTop = r2(gp.getBoundingClientRect().top - p.t2);
   gp.remove();
   const gofRect = r2(gtTop - grid.t);
-  return { sc: Math.round(sc * 1e5) / 1e5,
+  /* ⚑ 879 9회차 — [8] 이 «gt 의 셋째 인자(아래 예약 139)가 1600 에서 안 문다» 를 재려면
+     세로 예산(rw-tt)이 필요하다. 커스텀 속성은 토큰이라 parseFloat 이 NaN 이므로(위 경고)
+     여기서도 **클론이 푼 상자**로 잰다. 단위는 rect px(= CSS px × 조상 배율) — av 와 같은 공간이다.
+     ⚠ 이 블록은 템플릿 리터럴 안이다 — **백틱 금지**(9회차에 또 한 번 밟았다). */
+  const tp = document.createElement('div');
+  tp.style.cssText = 'position:absolute;left:0;width:1px;height:var(--rw-tt)';
+  bg.appendChild(tp);
+  const ttR = r2(tp.getBoundingClientRect().height);
+  tp.remove();
+  return { sc: Math.round(sc * 1e5) / 1e5, ttR,
     gof: r2(gofRect / sc),
     av: r2(floor.t - grid.b - gofRect),
     archT, gridT: grid.t,
@@ -301,7 +310,11 @@ async function sweep(browser, mbsOverride, gofOverride, avOverride) {
 
   /* ── [6] ③ 은 «중첩» 이 아니다(probe879 §2 의 결론을 게이트로) ──────────── */
   ok(FRAMES.every(H => r[H].clear > 0),
-    '[6] ★ 들보 하변 ↔ 아치 정점(상자)이 **양수** — CU 의 «화소 −1px 중첩» 은 세 번째 자로 미재현(probe879 §2: 화소 여유 +18)',
+    /* ⚠ 9회차 문구 정정 — 옛 문구는 «probe879 §2: 화소 여유 +18» 을 근거로 들었는데 그 자는
+       지금 −80 을 찍는다(아치 잉크 상변을 10.2 = 패널 꼭대기로 잡아 **정점을 못 가린다**).
+       단언 자체는 상자 값이라 초록이 정당하고, 화소 근거는 926 의 2인 독립 실측
+       («상인방 칠 하변 ↓ 아치 정점 = 16px», 양수)으로 갈아 끼운다. 927 계열 — 이름과 재는 것. */
+    '[6] ★ 들보 하변 ↔ 아치 정점(상자)이 **양수** — CU 의 «화소 −1px 중첩» 은 미재현(화소 근거는 926 의 2인 실측 «칠 간극 16px»)',
     at('clear'));
 
   /* ── [7] 신설 — ⚑⚑ **이 회차가 누른 항을 묻는 항**(328~330 규약) ─────────────
@@ -329,6 +342,20 @@ async function sweep(browser, mbsOverride, gofOverride, avOverride) {
   ok([1841, 1920, 2280, 2600].every(H => r[H].gof < 0.01),
     '[7b] 긴 네 프레임의 `--rw-gof` 는 **정확히 0** — 879 는 1600 한 장만 건드린다(식이 av=186 에서 스스로 비껴간다)',
     FRAMES.map(H => H + ':' + r[H].gof.toFixed(2)).join(' · '));
+
+  /* ── [8] 신설(9회차) — **아래 예약은 1600 의 손잡이가 아니다** ────────────────
+     8회차 §55 ⓐ 가 «926 을 879 안에서 사려면 `--rw-gs`/받침 40(`--rw-gd`)/접합선 13 쪽의
+     재원» 이라고 적었다. 셋은 전부 `--rw-gt` 의 **셋째 인자**(`tt − av − 139`)와 `--rw-sh`
+     안의 그리기 오프셋인데, 1600 은 gt 가 **첫째 인자**(`av + 94`)를 고른다 — 셋째 인자는
+     그보다 50px 밑에 있어서 139 를 89 로 줄여도(계단 한 단을 통째로 반납해도) **아무것도 안 는다.**
+     `probe879b` [2] 가 여섯 갈래를 제품에 넣어 Δclr 0.00 을 찍었고, 이 항이 그 관측을 굳힌다.
+     ⚠ 문턱 40 은 «계단 한 단(84) 의 절반» 이다 — 예약을 절반만 반납해도 첫째 인자가 계속 이긴다는
+     뜻이라, 이 항이 초록인 한 §55 ⓐ 를 다시 열 이유가 없다.
+     긴 네 프레임은 반대로 셋째 인자가 이기므로(여유가 음수) **1600 한 장만** 묻는다. */
+  const slack = H => r[H].av + 94 * r[H].sc - (r[H].ttR - r[H].av - 139 * r[H].sc);
+  ok(slack(1600) >= 40 * r[1600].sc && [1841, 1920, 2280, 2600].every(H => slack(H) < 0),
+    '[8] ★ 1600 은 `--rw-gt` 의 **첫째 인자(av + 94)** 를 고르고 셋째 인자(아래 예약 139)는 40px 이상 밑에 있다 — 계단·받침 40·접합선 13 을 반납해도 아치 위 clearance 는 안 는다(9회차 §55 ⓐ 를 닫는 항 · probe879b [2] Δclr 0.00)',
+    FRAMES.map(H => H + ':' + (slack(H) >= 0 ? '첫째 승 · 여유 ' : '셋째 승 · ') + slack(H).toFixed(1)).join(' · '));
 
   /* ── §R 되돌림 ─────────────────────────────────────────────────────────── */
   /* ⚑ 4회차 — 제품이 이미 배율 1 이라 옛 §R(«1 로 올린다»)은 이제 **아무것도 안 묻는다.**
