@@ -28,8 +28,9 @@ let pass = 0, total = 0;
 const ok = (c, m) => { total++; if (c) { pass++; console.log('  ✓ ' + m); } else console.log('  ✗ ' + m); };
 
 console.log('=== verify937 — 파이썬 의존을 부르는 자가 «없는 자» 로 사라지지 않는다 ===');
-console.log('정의: 하드 import = `import numpy as np` / `from PIL import Image` 를 폴백 없이 부르는 자');
-console.log('      기대 응답 = «<모듈> 없음 — pip3 install pillow numpy» 한 줄 + 종료 코드 2\n');
+console.log('정의: 하드 import = `import numpy as np` / `from PIL import Image` / `from scipy import ndimage`');
+console.log('      / `import soundfile as sf` 를 폴백 없이 부르는 자 (뒤 둘은 938 이 더한 여집합)');
+console.log('      기대 응답 = «<모듈> 없음 — <그 모듈의 설치 명령>» 한 줄 + 종료 코드 2\n');
 
 /* ---------- [A] 공용 부트스트랩 ---------- */
 const bootPy = path.join(T, 'pydep937.py');
@@ -47,6 +48,17 @@ ok(/numpy 없음 — pip3 install pillow numpy/.test(api.stdout),
 ok(/pillow 없음 — pip3 install pillow numpy/.test(api.stdout),
    '[A5] pillow 쪽도 같은 한 줄이다(자가 어느 쪽을 부르든 워커가 읽을 문장은 하나)');
 
+/* ⚑ 938 — 말투는 하나여도 «할 일» 은 모듈마다 다르다. 조건부(무거운) 의존에 상시 준비 줄을 답으로
+   주면 워커는 «적힌 대로 해도 자가 계속 죽는» 자리에 선다(937-② 의 세 번째 축 = 할 일). */
+const api2 = pyq('import pydep937 as P;print(P.HINT["ndimage"], "|", P.HINT["sf"])');
+ok(/scipy 없음 — pip3 install scipy/.test(api2.stdout),
+   '[A7] ★ scipy 안내문이 **자기 설치 명령**을 적는다(«pip3 install pillow numpy» 가 아니다) — ' +
+   JSON.stringify((api2.stdout || '').trim()));
+ok(/soundfile 없음 — pip3 install soundfile/.test(api2.stdout),
+   '[A8] ★ soundfile 쪽도 자기 명령을 적는다');
+ok(!/ndimage[^\n]*pip3 install pillow numpy|sf[^\n]*pip3 install pillow numpy/.test(api2.stdout),
+   '[A9] 조건부 의존에 상시 준비 줄을 답으로 주지 않는다(적힌 대로 해도 안 낫는 처방 0건)');
+
 /* 지연 해석인가 — numpy 만 쓰는 자가 pillow 때문에 죽으면 안 된다(그 반대도 같다) */
 const lazy = pyq('import pydep937;print("imported")');
 ok(lazy.status === 0 && /imported/.test(lazy.stdout),
@@ -54,7 +66,9 @@ ok(lazy.status === 0 && /imported/.test(lazy.stdout),
 
 /* ---------- [B] 하드 import 0 ---------- */
 /* 주석·문자열 안의 인용은 세지 않는다 — 문서가 적어 둔 «옛 줄» 까지 위반으로 읽으면 자가 거짓말을 한다 */
-const HARD = /^\s*(import\s+numpy|from\s+PIL\s+import)\b/;
+/* ⚑ 938 — scipy·soundfile 을 더했다. 등재 938 이 지목한 여집합이고, 얼굴은 numpy·PIL 과 글자 그대로 같다
+   (`from scipy import ndimage` = 스택 트레이스 + 코드 1 + 점수 줄 0). */
+const HARD = /^\s*(import\s+numpy|from\s+PIL\s+import|import\s+scipy|from\s+scipy\s+import|import\s+soundfile|from\s+soundfile\s+import)\b/;
 const pyFiles = fs.readdirSync(T).filter((f) => f.endsWith('.py') && f !== 'pydep937.py')
   .map((f) => path.join(T, f));
 /* 루트의 자 중 tools 의 자가 실제로 부르는 것도 같은 사슬이다(probe534 → pxdiff41.py) */
@@ -68,13 +82,17 @@ for (const p of pyFiles) {
   if (lines.some((l) => HARD.test(l))) hard.push(path.relative(ROOT, p));
   if (/from\s+pydep937\s+import|import\s+pydep937/.test(src)) viaBoot.push(path.relative(ROOT, p));
 }
-ok(hard.length === 0, '[B1] ★ numpy·PIL 을 폴백 없이 하드 import 하는 자 0건 — ' +
+ok(hard.length === 0, '[B1] ★ numpy·PIL·scipy·soundfile 을 폴백 없이 하드 import 하는 자 0건 — ' +
    (hard.length ? hard.slice(0, 6).join(', ') + (hard.length > 6 ? ' 외 ' + (hard.length - 6) : '') : '0건'));
 ok(viaBoot.length >= 95, '[B2] 부트스트랩을 거쳐 부르는 자가 95개 이상 — ' + viaBoot.length + '개');
 ok(viaBoot.includes('tools/scan895.py'),
    '[B3] 등재가 지목한 scan895 가 그 안에 있다(즉사한 그 33행)');
 ok(viaBoot.includes('pxdiff41.py'),
    '[B4] 루트에 있어도 «자에게 불리는» pxdiff41 은 사슬 안이다(probe534 가 부른다)');
+ok(viaBoot.includes('tools/scan885e.py'),
+   '[B6] ★ 938 이 지목한 scan885e 가 사슬 안이다(옛 `from scipy import ndimage` 44행)');
+ok(viaBoot.includes('tools/synth99.py'),
+   '[B7] ★ 938 이 지목한 synth99 가 사슬 안이다(옛 `import soundfile as sf` 15행)');
 
 /* 옛 «코드 1» 가드가 남아 있으면 그 자는 여전히 «오류» 로 읽힌다 — 코드 2 와 구분이 안 된다 */
 const oldGuard = pyFiles.filter((p) => /Pillow 없음 —[^\n]*\n\s*sys\.exit\(1\)/.test(fs.readFileSync(p, 'utf8')));
@@ -93,6 +111,12 @@ ok(/numpy 없음|pillow 없음/.test(routine),
 /* pip 쪽에 npm 의 «따로 부르면 지운다» 함정을 잘못 옮겨 적지 않았는가(등재 937 의 ⚠) */
 ok(/pip[^\n]*«한 번에» 함정이 없다|나눠 깔아도/.test(routine),
    '[C4] pip 에는 «따로 부르면 앞을 지운다» 함정이 없다는 것을 밝힌다(913 의 경고를 그대로 옮기지 않았다)');
+/* ⚑ 938 — 상시 줄에 안 올린 의존은 «없는 셈» 이 아니라 «부딪히면 알려 준다» 로 적혀 있어야 한다.
+   937-④ 의 뜻: 반복되는 준비는 LESSONS 가 아니라 지시서의 그 줄에 적어야 멈춘다. */
+ok(/pip3 install scipy/.test(routine) && /pip3 install soundfile/.test(routine),
+   '[C5] ★ 지시서가 조건부 의존 둘의 설치 명령을 적는다(`pip3 install scipy` · `pip3 install soundfile`)');
+ok(/scan885e/.test(routine) && /synth99/.test(routine),
+   '[C6] 그 둘을 **어느 자가** 쓰는지까지 적는다(상시 줄에서 뺀 근거가 그 자리에 있다)');
 
 /* ---------- [D] 노드 쪽 짝 ---------- */
 /* 이 자 자신은 면제다 — 약속을 **재려면** 날 spawn 으로 자식의 종료 코드를 직접 봐야 한다.
@@ -156,8 +180,45 @@ const bad = spawnSync(process.execPath, ['-e',
 ok(bad.status === 1 && /Error|status/.test((bad.stderr || '')),
    '[R7] 코드 1(«오류»)은 그대로 던진다 — 환경 없음(2)만 옮긴다 · 실측 ' + bad.status);
 
+/* ---------- [R8]~[R11] 938 — 조건부 의존 둘도 같은 세상에서 재 본다 ----------
+   ⚠ 이 둘은 **numpy·PIL 뒤에** 온다(자의 import 순서). 그래서 위 `sand` 를 그대로 쓰면
+   언제나 «numpy 없음» 이 먼저 나와 scipy·soundfile 쪽을 한 번도 안 재게 된다 —
+   그 둘만 감춘 세상을 따로 세운다(자가 실제로 «자기 모듈» 을 짚는지가 이 항의 전부다). */
+const sand2 = fs.mkdtempSync(path.join(os.tmpdir(), 'v938-'));
+for (const m of ['scipy', 'soundfile']) {
+  fs.mkdirSync(path.join(sand2, m));
+  fs.writeFileSync(path.join(sand2, m, '__init__.py'), "raise ImportError('938 되돌림 시험 — 감춘 모듈')\n");
+}
+const hidden2 = { ...process.env, PYTHONPATH: sand2 + (process.env.PYTHONPATH ? ':' + process.env.PYTHONPATH : '') };
+const base = pyq('import numpy, PIL;print("base")');
+ok(base.status === 0,
+   '[R8] numpy·PIL 은 실제로 있다(그래야 scipy·soundfile 이 «먼저 죽는 것» 에 가려지지 않는다) — ' +
+   (base.status === 0 ? '있음' : '없음 · pip3 install pillow numpy'));
+
+const rSci = spawnSync('python3', [path.join(T, 'scan885e.py'), '--cap', path.join(ROOT, 'docs/ref/151-이용권-카드.png')],
+  { cwd: ROOT, encoding: 'utf8', env: hidden2 });
+ok(rSci.status === 2 && /scipy 없음 — pip3 install scipy/.test(rSci.stderr || '') &&
+   !/Traceback/.test((rSci.stderr || '') + (rSci.stdout || '')),
+   '[R9] ★ scipy 를 감추면 scan885e 가 «scipy 없음 — pip3 install scipy» 한 줄 + 코드 2 · 실측 ' + rSci.status +
+   ' ' + JSON.stringify(((rSci.stderr || '').trim().split('\n')[0] || '')));
+
+const rSnd = spawnSync('python3', [path.join(T, 'synth99.py'), '--out', path.join(os.tmpdir(), 'v938-out')],
+  { cwd: ROOT, encoding: 'utf8', env: hidden2 });
+ok(rSnd.status === 2 && /soundfile 없음 — pip3 install soundfile/.test(rSnd.stderr || '') &&
+   !/Traceback/.test((rSnd.stderr || '') + (rSnd.stdout || '')),
+   '[R10] ★ soundfile 을 감추면 synth99 가 «soundfile 없음 — pip3 install soundfile» 한 줄 + 코드 2 · 실측 ' + rSnd.status +
+   ' ' + JSON.stringify(((rSnd.stderr || '').trim().split('\n')[0] || '')));
+
+/* 감춘 것이 «다른 자» 까지 죽이면 지연 해석이 깨진 것이다 — scipy 가 없다고 PIL 만 쓰는 자가 죽으면 안 된다 */
+const other = spawnSync('python3', ['-c', 'from pydep937 import np, Image;print("ok")'],
+  { cwd: T, encoding: 'utf8', env: hidden2 });
+ok(other.status === 0 && /ok/.test(other.stdout || ''),
+   '[R11] 조건부 의존을 감춰도 numpy·PIL 만 쓰는 자는 멀쩡하다(PEP 562 지연 해석 · 조건부가 «상시» 가 되지 않았다)');
+
 try { fs.rmSync(sand, { recursive: true, force: true }); } catch (_) {}
-ok(!fs.existsSync(sand), '[R6] 되돌림 시험이 뒤를 치웠다(감춘 세상 삭제)');
+try { fs.rmSync(sand2, { recursive: true, force: true }); } catch (_) {}
+try { fs.rmSync(path.join(os.tmpdir(), 'v938-out'), { recursive: true, force: true }); } catch (_) {}
+ok(!fs.existsSync(sand) && !fs.existsSync(sand2), '[R6] 되돌림 시험이 뒤를 치웠다(감춘 세상 삭제)');
 
 console.log('\nVERIFY937 ' + pass + '/' + total + (pass === total ? ' PASS' : ' FAIL'));
 process.exit(pass === total ? 0 : 1);

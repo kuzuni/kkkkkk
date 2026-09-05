@@ -12,7 +12,7 @@
 # 창RMS −15.5 dBFS(= −26 + 20log10(1/0.30)) · 피크 ≤ −1 dBFS 로 굽는다.
 import argparse, os, math
 from pydep937 import np
-import soundfile as sf
+from pydep937 import sf      # 938 — 날 `import soundfile as sf` 는 코드 1 로 즉사했다
 
 SR = 44100
 WIN = 0.100                 # 98 과 같은 100ms 창

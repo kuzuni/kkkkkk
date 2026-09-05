@@ -21,6 +21,8 @@
     import numpy as np            →  from pydep937 import np
     from PIL import Image         →  from pydep937 import Image
     from PIL import Image, ImageDraw → from pydep937 import Image, ImageDraw
+    from scipy import ndimage     →  from pydep937 import ndimage      (938)
+    import soundfile as sf        →  from pydep937 import sf           (938)
 
 `tools/` 안에서 `python3 tools/<자>.py` 로 돌리면 sys.path[0] 이 `tools/` 라 그냥 import 된다.
 남이 **모듈로 import 하는 자**(`scan813e` 가 `scan887` 을 읽는다)도 안전하다 —
@@ -30,6 +32,8 @@
 ⚠ **913 의 «한 번에» 경고는 여기로 옮기지 마라.** `npm i --no-save` 는 `package.json` 이 없는
    이 저장소에서 따로 부르면 앞 패키지를 지우지만, `pip3 install` 은 그런 함정이 없다 —
    `pillow` 와 `numpy` 는 나눠 깔아도 안전하다(등재 937 의 ⚠ 그대로).
+   ⚑ **938 은 그 «나눠 깔아도 안전하다» 위에 서 있다** — 함정이 없으니 무거운 두 의존
+   (`scipy`·`soundfile`)을 상시 준비 줄에서 빼고 **부딪히는 자리에서 한 줄로** 깔게 할 수 있다.
 
 약속을 이름으로 지키는 자는 `tools/verify937.js` 다.
 """
@@ -37,6 +41,12 @@ import importlib
 import sys
 
 PIP = 'pip3 install pillow numpy'
+
+#  ⚑ 938 — «할 일» 은 모듈마다 다르다. 상시 준비 줄(PIP)로 낫는 것은 numpy·pillow 뿐이고,
+#     그 줄을 무거운 두 의존에 물려 주면 워커는 **적힌 대로 해도 자가 계속 죽는** 자리에 선다
+#     (사람이 읽을 문장과 기계가 읽을 코드를 같이 고치라는 937-② 의 세 번째 축 = «할 일» 이다).
+SCIPY = 'pip3 install scipy'          # tools/scan885e.py 만 쓴다(885 6회차 셋째 자)
+SNDF = 'pip3 install soundfile'       # tools/synth99.py 만 쓴다(99 시전음 합성기)
 
 #  이름 → (실제 모듈 경로, 사람이 부르는 이름, 할 일)
 _SPEC = {
@@ -47,6 +57,11 @@ _SPEC = {
     'ImageFont': ('PIL.ImageFont', 'pillow', PIP),
     'ImageChops': ('PIL.ImageChops', 'pillow', PIP),
     'ImageFilter': ('PIL.ImageFilter', 'pillow', PIP),
+    # ── 조건부(무거운) 의존 — 부르는 자가 한 자씩뿐이라 상시 준비 줄에 안 올린다(등재 938) ──
+    'ndimage':   ('scipy.ndimage', 'scipy',      SCIPY),
+    'scipy':     ('scipy',         'scipy',      SCIPY),
+    'sf':        ('soundfile',     'soundfile',  SNDF),
+    'soundfile': ('soundfile',     'soundfile',  SNDF),
 }
 
 HINT = {k: '%s 없음 — %s' % (v[1], v[2]) for k, v in _SPEC.items()}

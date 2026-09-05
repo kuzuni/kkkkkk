@@ -41,7 +41,7 @@ import sys
 
 from pydep937 import np
 from pydep937 import Image
-from scipy import ndimage
+from pydep937 import ndimage      # 938 — 날 `from scipy import ndimage` 는 코드 1 로 즉사했다
 
 REF = 'docs/ref/151-이용권-카드.png'
 K = 2.0628                     # 우리 px = ref px × K (측정표 §9)
