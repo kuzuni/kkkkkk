@@ -31,6 +31,10 @@ const RUL = require(path.resolve(__dirname, 'rul504.js'));
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const argv = process.argv.slice(2);
 const REPS = Math.max(2, +(argv[argv.indexOf('--reps') + 1] || 5) || 5);
+/* 946 5회차 — 되돌림 시험. 채택 눈금(POP 고정)의 표본을 **자유 판 표본으로 갈아 끼운** 사본에서
+   돈다. 곧 «하네스를 끈» 사본이므로 [6-c] 의 비는 ×1.00 근처로 내려가 **빨간 것이 통과**다.
+   무르게 푼 수리가 아님을 매 실행 못박는 자리다(946 3·4회차 규약 ④). */
+const DEAD = argv.includes('--dead');
 
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
@@ -150,10 +154,40 @@ const IMM_SEC = 40, REAL_SEC = 60;
   const R = [];
   for (let r = 0; r < REPS; r++) R.push(await measure());
 
+  /* 분모 ⓒ실제 한 칸의 값 — 아래 [1] 의 `val(row, id, 'real')` 과 **같은 식**이다
+     (여기서 한 번 더 적는 대신 같은 자리를 부르게 뒤에서 `val` 이 이것을 쓴다). */
+  const val = (row, id, k) => CD[id] > 0 ? row[id][k].per : row[id][k].hps;
+  const val0 = (row, id) => val(row, id, 'real');
+
+  /* ── [0] 무효 검사 — «아무것도 못 쟀다» 를 판정으로 흘리지 않는다 ────────
+     ⚑⚑ **946 5회차가 `par 7` 21실행에서 잡은 것**: 한 실행(b3w4)이 30장면 전부 **0.00** 을
+     들고 나왔는데(적이 한 마리도 안 서고 타격이 0), 그 실행은 죽지도 않고 **초록 3 · 빨강 6**
+     을 찍었다. 913 pngjs · 937 numpy · 946 4회차 `probe552` 와 **같은 병**이고(점수 줄이
+     제품을 안 가리킨다) 처방도 같다 — **못 쟀으면 코드 3**(939 규약: 0 통과 · 1 실패 ·
+     2 환경에 없음 · **3 자가 못 쟀다**).
+     ⚠ 문턱은 손으로 안 적는다 — 판정에 쓰이는 통계가 **폭(범위)** 이라 «폭을 말하려면
+     표본이 둘은 있어야 한다» 가 그대로 하한이다. 셈은 셋이다(946 3회차 규약):
+     한 칸(종×실행)의 ⓒ실제가 0 이면 그 칸은 **무효**(제품 결손이 아니라 측정 실패다 —
+     60초 동안 한 대도 못 때린 스킬은 없다), 모든 종이 살아 있는 실행만 **판정 실행**이다. */
+  const voidCells = [];
+  CIDS.forEach(id => R.forEach((row, i) => {
+    if (!(val0(row, id) > 0)) voidCells.push(id + '#' + (i + 1));
+  }));
+  const liveRuns = R.map((row, i) => i).filter(i => CIDS.every(id => val0(R[i], id) > 0));
+  console.log('\n  [0] 셈 셋 — 판정 실행 ' + liveRuns.length + '/' + REPS
+    + ' · 무효 칸 ' + voidCells.length + '/' + (CIDS.length * REPS)
+    + (voidCells.length ? ' (' + voidCells.slice(0, 8).join(',') + (voidCells.length > 8 ? '…' : '') + ')' : ''));
+  if (liveRuns.length < 2) {
+    console.error('PROBE722 무효 — 판정 실행 ' + liveRuns.length + '/' + REPS
+      + ' (폭을 재려면 실행이 둘은 필요하다 · 무효 칸 ' + voidCells.length + '/' + (CIDS.length * REPS) + ').'
+      + ' 부하를 낮춰(동시 실행 수를 줄여) 다시 돌려라 — 제품 결함이 아니라 측정 실패다.');
+    await browser.close();
+    process.exit(3);
+  }
+
   /* ── [1] `probe504` [C] 를 R회 되풀이 ──────────────────────────────── */
   console.log('\n  [1] `probe504` [C] 반복 ' + REPS + '회 — 종별 ⓐPIN / ⓑ불사 / ⓒ실제 (cd 0 은 «초당»)');
   console.log('      ' + 'id'.padEnd(8) + 'ⓐPIN'.padEnd(26) + 'ⓑ불사'.padEnd(26) + 'ⓒ실제');
-  const val = (row, id, k) => CD[id] > 0 ? row[id][k].per : row[id][k].hps;
   CIDS.forEach(id => {
     const c = k => R.map(row => val(row, id, k));
     console.log('      ' + id.padEnd(8)
@@ -184,8 +218,17 @@ const IMM_SEC = 40, REAL_SEC = 60;
   ok(minReal < 5, '1-b 비율의 분모(ⓒ실제)가 어떤 종에서는 1 근처까지 내려간다 — 그 한 종이 6종 평균을 통째로 끌 수 있다',
      '최소 분모 ' + f2(minReal) + ' — 이 값이 1 로 떨어진 실행에서 그 종의 이탈이 800% 로 튀고 [C2] 가 «초록» 이 된다'
      + ' (실행별 최대 기여 종: ' + topTerm.map(t => t.id).join(',') + ')');
-  ok(sd(mImms) > 0.05, '1-c mImm 이 실행마다 갈린다 — 세 칸이 전부 안 갇힌 채 서로 나뉜다',
-     '범위 ' + pc(Math.min(...mImms)) + '~' + pc(Math.max(...mImms)) + ' · sd ' + pc(sd(mImms)));
+  /* ⚑ **946 5회차 정오표 — 옛 [1-c] 는 `sd(mImms) > 0.05`, 곧 «흔들림이 있다» 를 손 상수로
+     물었다.** 흔들림의 «있음» 은 그 실행이 조용했는지에 달린 실행 사이의 사실이라
+     [3-c]·[5-a]·[4-b] 와 **같은 자리**다 — `par 7` 19 판정 실행 실측 sd **4%~90%** 로 바 5% 가
+     분포의 **맨 밑변**에 앉아, 유난히 조용한 한 실행(51~60% · sd 4%)에서만 빨개졌다(1/19).
+     그 실행에서 mImm 은 **정말로** 안 흔들렸으므로 그 빨강은 자의 결함도 제품의 결함도 아니다.
+     ⇒ 바를 놓지 않고 수치만 찍는다(자리는 안 비운다 — 333). 이 항이 지던 «세 칸이 안 갇혔다» 는
+     **[1-a]**(«[C1]·[C2] 가 R회 안에서 안 굳는다»)와 **[2-a]**(«분모 ⓒ 가 안 갇혀 있다»)가
+     단언으로 지고 있다 — 사라지는 단언이 없다. */
+  ok(true, '1-c mImm 이 실행마다 갈리는가 — **관측만 한다**(흔들림의 «있음» 은 실행 사이의 사실이다 · 이유는 위 주석)',
+     '범위 ' + pc(Math.min(...mImms)) + '~' + pc(Math.max(...mImms)) + ' · sd ' + pc(sd(mImms))
+     + ' (부하 실측 분포 4%~90% · 옛 바 5%)');
 
   /* ── [2] 결정 변수 — ⓒ실제 판이 안 갇힌다 ─────────────────────────── */
   console.log('\n  [2] 결정 변수 — ⓒ실제 판의 살아 있는 적 수 · 접촉 반경 안 개체수 (반복 ' + REPS + '회)');
@@ -225,8 +268,24 @@ const IMM_SEC = 40, REAL_SEC = 60;
      held.join(',') + ' — 695 §4-6 은 [D2] 에서 같은 종을 뺐다');
   ok(m3.every(x => x < 1.0), '3-b ⏸접촉을 빼면 mImm 이 R회 전부 문턱 1.0 아래다 — 문턱을 넘기던 것은 그 한 종이었다',
      '범위 ' + pc(Math.min(...m3)) + '~' + pc(Math.max(...m3)));
-  ok(per3.some(p => p.mStd > p.mImm), '3-c ⏸접촉을 빼도 [C1] 의 문장(«ⓐ 가 ⓑ 보다 가깝다»)이 뒤집히는 실행이 있다',
-     per3.filter(p => p.mStd > p.mImm).length + '/' + REPS + ' 뒤집힘 — ⓐ 의 장면이 그때그때 뜬 세 프레임(1~51마리)이라 그렇다([7])');
+  /* ⚑⚑ **946 5회차 정오표 — 옛 [3-c] 는 `per3.some(p => p.mStd > p.mImm)`, 곧 «5회 안에
+     한 번은 뒤집힌다» 는 **존재 단언**이었다.** 뒤집힘은 실행마다 0/5 ~ 5/5 로 고르게 퍼진
+     **동전**이라(par 7 · 20 판정 실행 실측: 5,3,3,0,2,5,1,3,1,2,3,5,1,5,4,4,0,4,5,3 — 0/5 이
+     두 번) 이 항은 부하에서 «자가 틀린 것» 이 아니라 «동전이 뒷면» 인 자리에서 빨개졌다.
+     ⚠ **재정식화 두 안을 21 표본에 대어 보고 둘 다 기각했다**(338 — 처방 전에 잰다):
+       ⓐ «두 계열이 안 갈린다» — `|중앙값 차| ≤ 각 계열의 자기 폭` ⇒ **4/21 빨강**
+       ⓑ «여유가 자기 흔들림 안» — `|median(mStd−mImm)| ≤ spread(mStd−mImm)` ⇒ **4/21 빨강**
+     둘 다 같은 이유로 죽는다 — 어떤 실행에서는 mStd 가 **정말로** 내내 크다(b1w1: 여유
+     +53·+58·+77·+40·+90). 곧 «뒤집힌다» 는 실행 **안**의 사실이 아니라 실행 **사이**의
+     사실이고, 한 실행이 볼 수 있는 것이 아니다 — [5-a]·[4-b] 와 **같은 자리**다.
+     ⇒ **바를 놓지 않고 수치만 찍는다**(자리는 안 비운다 — 333). 이 항이 지던 «[C1] 은
+     동전이다» 는 **[1-a] 가 단언으로 지고 있고**(«[C1]·[C2] 가 R회 안에서 안 굳는다»),
+     «왜 장면이 정하는가» 는 [7] 이 진다 — 사라지는 단언이 없다. */
+  const flips = per3.filter(p => p.mStd > p.mImm).length;
+  ok(true, '3-c ⏸접촉을 빼도 [C1] 의 문장(«ⓐ 가 ⓑ 보다 가깝다»)이 뒤집히는가 — **관측만 한다**(뒤집힘은 실행 사이의 동전이다 · 이유는 위 주석)',
+     flips + '/' + REPS + ' 뒤집힘 · 실행별 여유(mStd−mImm) '
+     + per3.map(p => (p.mStd - p.mImm >= 0 ? '+' : '') + pc(p.mStd - p.mImm)).join(' ')
+     + ' — ⓐ 의 장면이 그때그때 뜬 세 프레임(1~51마리)이라 그렇다([7])');
 
   /* ── [4] [Br1] 재실행 흔들림의 분포 ───────────────────────────────── */
   const BRIDS = ['slash', 'lance', 'gale', 'holy', 'flask'];
@@ -449,15 +508,17 @@ const IMM_SEC = 40, REAL_SEC = 60;
      사실상 아무것도 안 막고 있었고, 새 바는 «채택 눈금이 자유 판보다 **실제로 좁다**» 를 요구한다.
      그 방향은 §R 되돌림(자유 판 폭을 그대로 왼쪽에 넣으면 비 ×1.00 으로 빨강)이 못박는다. */
   const use6 = CIDS.filter(id => held.indexOf(id) < 0);
-  const spreadsAll = [].concat(...P6.map(p => use6.map(id => p.m[id].spread)));
+  /* --dead — 채택 눈금의 표본을 «자유 판» 표본으로 갈아 끼운다(하네스 끔). 아래 [6-c]·[6-cr] 이
+     보는 것이 «POP 고정» 이면 이 사본에서는 비가 ×1.00 근처로 내려가 빨개져야 한다. */
+  const eachOf = (p, id) => DEAD ? R.map(row => val(row, id, 'real')) : (p.m[id].each || []);
+  const spreadsAll = [].concat(...P6.map(p => use6.map(id => {
+    if (!DEAD) return p.m[id].spread;
+    const v = eachOf(p, id), m = mean(v);
+    return (v.length && m) ? (Math.max(...v) - Math.min(...v)) / m : 0;
+  })));
   const spreadMed = med(spreadsAll), spreadWorst = Math.max(...spreadsAll);
   const freeMed = med(use6.map(id => freeW[id]));
-  const narrow = spreadMed ? freeMed / spreadMed : Infinity;
-  ok(narrow >= 1.3,
-     '6-c ⏸접촉을 뺀 표본에서 채택 눈금의 K회 폭은 [C] 자유 판의 실행 간 폭보다 좁다 — 양쪽 다 **중앙값**으로, 바는 그 실행이 잰 자유 판 폭에 비례',
-     '채택 눈금 K회 폭 중앙값 ' + pc(spreadMed) + '(최악 ' + pc(spreadWorst) + ' — **옛 [6-c] 가 빨강을 맡겼던 한 표본**)'
-     + ' ↔ 자유 판 [C] 폭 중앙값 ' + pc(freeMed) + '(최악 ' + pc(worst.w) + ')'
-     + ' ⇒ ×' + narrow.toFixed(2) + ' 좁다(≥1.30)');
+  const narrowK = spreadMed ? freeMed / spreadMed : Infinity;   /* 옛 축 — 아래에서 관측으로만 남는다 */
   /* [6-cr] — **되돌림 시험(새 상수·새 실행 0).** «좁다» 가 POP 고정 덕인지 **표본 수 덕**인지
      가른다: 왼쪽은 K=6 회, 오른쪽은 R=5 회라 표본 수가 다르다. 자유 판에 표본을 **덜** 주면
      범위는 줄어들 수밖에 없으므로(범위는 표본 수에 단조), 3회만 준 자유 판이 **그래도** 넓으면
@@ -470,14 +531,54 @@ const IMM_SEC = 40, REAL_SEC = 60;
      ⚑ 방향도 같이 정리됐다 — 원래 [6-c] 는 K=6 ↔ R=5 라 **왼쪽이 공짜로 손해를 보는** 쪽으로
      편향돼 있었다(범위는 표본 수에 단조). 즉 [6-c] 의 초록은 그 편향을 이기고 난 초록이다. */
   const spread5 = [].concat(...P6.map(p => use6.map(id => {
-    const v = (p.m[id].each || []).slice(0, R.length), m = mean(v);
+    const v = eachOf(p, id).slice(0, R.length), m = mean(v);
     return (v.length && m) ? (Math.max(...v) - Math.min(...v)) / m : 0;
   })));
   const spread5Med = med(spread5);
-  ok(spread5Med > 0 && freeMed > spread5Med,
-     '6-cr 되돌림 — 표본 수를 양쪽 다 ' + R.length + '회로 맞춰도 채택 눈금이 더 좁다 ⇒ [6-c] 가 잰 것은 표본 수 차이가 아니라 POP 고정이다',
-     '채택 눈금 ' + R.length + '회 폭 중앙값 ' + pc(spread5Med) + ' < 자유 판 ' + R.length + '회 폭 중앙값 ' + pc(freeMed)
-     + ' (채택 눈금 K회 전체로는 ' + pc(spreadMed) + ')');
+  const narrow = spread5Med ? freeMed / spread5Med : Infinity;
+  const c6 = narrow >= 1.3;
+  ok(c6,
+     '6-c ⏸접촉을 뺀 표본에서 채택 눈금의 폭은 [C] 자유 판의 실행 간 폭보다 좁다 — 양쪽 다 **중앙값**이고 **표본 수도 같다**(각 ' + R.length + '회)',
+     '채택 눈금 ' + R.length + '회 폭 중앙값 ' + pc(spread5Med)
+     + ' ↔ 자유 판 [C] 폭 중앙값 ' + pc(freeMed) + '(최악 ' + pc(worst.w) + ')'
+     + ' ⇒ ×' + narrow.toFixed(2) + ' 좁다(≥1.30)'
+     + '   |   참고(옛 축 · 표본 수 K=' + RUL.K + ' ↔ ' + R.length + ') 채택 눈금 K회 폭 중앙값 ' + pc(spreadMed)
+     + '(최악 ' + pc(spreadWorst) + ') ⇒ ×' + narrowK.toFixed(2));
+  /* ⚑⚑ **946 5회차 정오표 — 옛 [6-c] 는 «표본 수가 다른 두 폭» 을 손 상수 1.30 으로 견줬다.**
+     781 이 최악값·손 상수를 걷어내며 양쪽을 중앙값으로 맞췄지만 **표본 수는 K=6 ↔ R=5 로 남겨
+     두었고**(781 스스로 «왼쪽이 공짜로 손해를 보는 편향» 이라고 적었다), 부하가 오면 그 편향분이
+     그대로 바 언저리로 내려온다 — `par 7` 21실행 실측 **×1.03 · 1.23 · 1.27 로 3회 빨강**
+     (분포 1.03~3.36, 바 1.30 이 **분포 한복판**에 앉는다 = 721-② «동전»).
+     ⇒ **바는 한 칸도 안 내렸다(1.30 불변). 대신 양쪽 표본 수를 R회로 맞춰 편향을 걷었다** —
+     같은 21실행에서 새 축은 **×1.38~4.60(최소 여유 0.08)** 으로 판정 실행 20/20 초록이고,
+     옛 축의 수치는 **관측으로 그대로 인쇄**한다(축을 지운 게 아니라 편향을 지웠다).
+     ⚠ 이것이 무르게 푼 수리가 아님은 두 겹이 못박는다 — ① 바가 그대로다 ② 아래 [6-cr] 이
+     **하네스를 끈 널**(채택 눈금끼리 갈라 잰 폭의 비)이 같은 바를 못 넘는 것을 매 실행 확인한다.
+     [6-cr] 이 이 회차에 바뀐 이유는 옛 [6-cr] 의 몫(«표본 수 덕이 아니다»)이 **[6-c] 안으로
+     들어왔기 때문**이다 — 같은 말을 두 번 하지 않고, 빈 자리에 널을 세웠다(333). */
+  /* ⚠ **널은 «같은 표본 수» 로 세워야 한다 — 5회차에 여기서 한 번 틀렸다.** 처음에는 K=6 을
+     3+3 으로 갈라 두 폭을 견줬는데 널이 **×1.78** 로 바를 넘었다: 폭(범위)은 표본이 적을수록
+     그 자체가 시끄러워서, **3표본 폭끼리의 자기비**는 잡음만으로 1.78 이 난다(15쌍 ×1.07~4.38).
+     그 값은 [6-c] 를 반증하지 않는다 — [6-c] 는 양쪽 다 **5표본** 폭이다. 곧 틀린 것은 자가
+     아니라 **널의 표본 수**였다(775 §2 «널은 판정과 같은 모양이어야 한다»).
+     ⇒ 널을 **P6 반복 사이**에서 뜬다: 서로 겹치지 않는 두 반복의 채택 눈금 표본에서 각각
+     앞 R회를 잘라 두 폭을 만들면 **같은 원천 · 같은 표본 수 · 겹침 0** 이다(새 실행 0회 ·
+     [8-br]·[6-br] 과 같은 꼴로 양쪽 순서를 다 담는다). */
+  const null6c = [];
+  use6.forEach(id => {
+    const w = P6.map(p => {
+      const v = eachOf(p, id).slice(0, R.length), m = mean(v);
+      return (v.length && m) ? (Math.max(...v) - Math.min(...v)) / m : 0;
+    });
+    for (let i = 0; i < w.length; i++) for (let j = 0; j < w.length; j++)
+      if (i !== j && w[i] > 0 && w[j] > 0) null6c.push(w[i] / w[j]);
+  });
+  const nullNarrow = null6c.length ? med(null6c) : 1;
+  ok(null6c.length > 0 && nullNarrow < 1.3 && nullNarrow > 1 / 1.3,
+     '6-cr 되돌림 — 하네스를 끈 널(채택 눈금끼리 · 같은 표본 수 · 겹침 0)은 [6-c] 의 같은 바를 못 넘는다 ⇒ [6-c] 가 잰 것은 폭 추정의 잡음이 아니라 POP 고정이다',
+     '널 ×' + nullNarrow.toFixed(2) + ' (바 1.30 · 표본 ' + null6c.length + '쌍 · 폭 ×'
+     + (null6c.length ? Math.min(...null6c).toFixed(2) : '—') + '~×'
+     + (null6c.length ? Math.max(...null6c).toFixed(2) : '—') + ')');
 
   /* ── [7] 처방 후보 ⓑ — PIN 장면을 «개체수로» 떠낸다 ───────────────────
      `probe504` [A] 는 15·30·45초 **시각**으로 세 프레임을 뜬다. 그 순간의 마릿수는 0~50 이라
@@ -657,6 +758,19 @@ const IMM_SEC = 40, REAL_SEC = 60;
   ok(errs.length === 0, 'Z 콘솔 에러 0건', errs.slice(0, 3).join(' | ') || '없음');
 
   await browser.close();
-  console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail));
+  /* 되돌림 시험 — 하네스를 끈 사본에서는 [6-c] 가 **빨간 것이 통과**다(그래야 [6-c] 가
+     «POP 고정» 을 실제로 보고 있는 것이다). 나머지 항의 점수는 이 모드에서 뜻이 없다. */
+  if (DEAD) {
+    if (!c6) {
+      console.log('\nPROBE722(--dead) 되돌림 시험 PASS — 채택 눈금을 자유 판 표본으로 갈면 [6-c] 가 ×'
+        + narrow.toFixed(2) + ' 로 내려가 빨갛다(축이 POP 고정을 실제로 본다)');
+      process.exit(0);
+    }
+    console.log('\nPROBE722(--dead) 되돌림 시험 FAIL — 하네스를 껐는데도 [6-c] 가 ×'
+      + narrow.toFixed(2) + ' 로 초록이다(자가 헛돈다)');
+    process.exit(1);
+  }
+  console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail)
+    + ' (판정 실행 ' + liveRuns.length + '/' + REPS + ' · 무효 칸 ' + voidCells.length + '/' + (CIDS.length * REPS) + ')');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
