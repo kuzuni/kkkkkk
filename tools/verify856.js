@@ -82,25 +82,33 @@ const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); c ? pass++ 
 const B13_LO = 6, B13_HI = 24, B13_W = 3;
 const B13_N  = 25;      /* 구간을 세려면 표본 이만큼 — 화소 몇 개짜리 구간은 안 센다 */
 /* `col` — 0 이면 옛 이진 자의 두 칸(획폭·비), 2 면 889 의 «덮인 몫» 두 칸이다(같은 표본·같은 자리). */
-const b13bands = (out, useIds, col) => {
+/* `opt` — 진단이 **더 촘촘한 눈금**으로 같은 표본을 물을 때만 준다(`{w, n}`). 판정은 언제나
+   기본값(B13_W · B13_N)으로 부르므로 이 손잡이가 판정을 무르게 할 길은 없다(889 8회차). */
+const b13bands = (out, useIds, col, opt) => {
   col = col || 0;
+  const BW = (opt && opt.w) || B13_W, BN = (opt && opt.n) || B13_N;
   const rowsOut = [];
-  for (let lo = B13_LO; lo < B13_HI; lo += B13_W) {
-    const hi = lo + B13_W, acc = [];
+  for (let lo = B13_LO; lo < B13_HI; lo += BW) {
+    const hi = lo + BW, acc = [];
     for (const i of useIds) for (const e of (out.rows[i].bank || [])) {
       const wS = e[col], ra = e[col + 1];
       if (wS >= lo && wS < hi) acc.push(ra);
     }
-    if (acc.length < B13_N) continue;
+    if (acc.length < BN) continue;
     acc.sort((a, b) => a - b);
     const md = acc[Math.floor(0.5 * (acc.length - 1))];
     /* 구간마다 «누가 얼마나 넣었는가» — 한 종이 구간을 통째로 끌고 가는지 본다(진단 전용). */
     const by = [];
+    const md50 = a => { const t = a.slice().sort((x, y) => x - y); return t[Math.floor(0.5 * (t.length - 1))]; };
     for (const i of useIds) {
       const v = (out.rows[i].bank || []).filter(e => e[col] >= lo && e[col] < hi).map(e => e[col + 1]);
       if (!v.length) continue;
-      v.sort((a, b) => a - b);
-      by.push([i, v.length, v[Math.floor(0.5 * (v.length - 1))]]);
+      /* ⚑ 889 8회차 — 뒤 두 칸은 **같은 구간을 짝/홀로 반씩 가른** 중앙값이다(bank 의 자리 순서).
+         같은 폭·같은 종의 두 반쪽이 서로 얼마나 어긋나는지가 곧 이 자의 **잡음 바닥**이고,
+         [B14] 의 밴드가 그 바닥 위에 있는지를 그것으로 가른다. 자리를 하나 더 재는 것이 아니라
+         이미 잰 표본을 둘로 나눈 것뿐이라 사본이 아니다(402). */
+      const ev = v.filter((_, k) => k % 2 === 0), od = v.filter((_, k) => k % 2 === 1);
+      by.push([i, v.length, md50(v), ev.length ? md50(ev) : 0, od.length ? md50(od) : 0]);
     }
     by.sort((a, b) => b[1] - a[1]);
     rowsOut.push({ lo, hi, n: acc.length, md, core: md * (lo + hi) / 2, by });
@@ -724,6 +732,83 @@ async function measure(browser, url) {
         if (binBands.length) console.log('  [진단·889 5회차] ⓑ 폭을 고정하고 종만 — ' +
           binBands.map(e => '획' + e[0] + '~ ' + e[1].toFixed(2) + '배(' + e[2] + '종)').join(' · ') +
           '  ⇒ 최악 ' + binBands[0][1].toFixed(2) + '배');
+      }
+      /* ⚑ 889 8회차 진단(판정 밖) — **[B14] 의 잔차가 «절대» 인가.**
+         `probe889b` [Q1] 이 축에 나란한 세 종(arrow·gale·lance)에서 «굳은폭 − 기하폭 = 무근 몫
+         = 정확히 1.00화소» 를 쟀다. 그 모형이 참이면 한 종의 구간별 비는
+             비(W) = K + c/W        (c = 폭에 무관한 절대 과잉 · 로컬px)
+         꼴이어야 하고, 두 구간이면 c 가 **닫힌 꼴로** 나온다:
+             c = (r1 − r2) ÷ (1/W1 − 1/W2)
+         ⇒ 종마다 c 를 뽑아 나란히 찍는다. c 가 종을 건너 한 값(≈1.0)이면 [B14] 의 임자는
+           **하나**이고 처방도 하나다(9회차). 종마다 다르면 «절대 과잉» 모형 자체가 기각이다.
+         ⚠ 판정은 위 [B14] 그대로다 — 이 줄은 아무것도 무르게 하지 않는다(출력 전용). */
+      {
+        const bySp = {};
+        for (const b of bandRows) for (const e of b.by) {
+          if (e[1] < B13_N) continue;
+          (bySp[e[0]] = bySp[e[0]] || []).push([(b.lo + b.hi) / 2, e[2]]);
+        }
+        const cs = [];
+        for (const k of Object.keys(bySp)) {
+          const v = bySp[k].slice().sort((a, b) => a[0] - b[0]);
+          if (v.length < 2) continue;
+          const est = [];
+          for (let a = 0; a < v.length; a++) for (let b = a + 1; b < v.length; b++) {
+            const dx = 1 / v[a][0] - 1 / v[b][0];
+            if (Math.abs(dx) > 1e-9) est.push((v[a][1] - v[b][1]) / dx);
+          }
+          const c = est.reduce((s, x) => s + x, 0) / est.length;
+          /* 같은 c 로 규격 K 를 되풀면 «그 종의 바닥 비» 가 나온다 — c 를 뺀 뒤 남는 상수항 */
+          const k0 = v.reduce((s, e) => s + (e[1] - c / e[0]), 0) / v.length;
+          cs.push([k, c, k0, v.length, v.map(e => e[0] + '→' + e[1].toFixed(3)).join(' ')]);
+        }
+        cs.sort((a, b) => b[1] - a[1]);
+        if (cs.length) {
+          console.log('  [진단·889 8회차] 절대 과잉 모형 «비 = K + c/W» — 종마다 c(로컬px)와 상수항');
+          for (const e of cs)
+            console.log('    ' + e[0].padEnd(9) + ' c = ' + e[1].toFixed(3) + 'px  상수항 ' + e[2].toFixed(3) +
+                        '  (' + e[3] + '구간 · ' + e[4] + ')');
+          const cv = cs.map(e => e[1]);
+          console.log('    ⇒ c 의 폭 ' + Math.min.apply(null, cv).toFixed(2) + '~' + Math.max.apply(null, cv).toFixed(2) +
+                      'px · 상수항의 폭 ' + Math.min.apply(null, cs.map(e => e[2])).toFixed(3) + '~' +
+                      Math.max.apply(null, cs.map(e => e[2])).toFixed(3) +
+                      '  (`probe889b` [Q1] 의 무근 한 겹 = 1.00px · 규격 K = ' + (r.out.K || '?') + ')');
+        }
+        /* ⚑ 두 구간뿐인 종에서 위 c 는 «두 점을 지나는 값» 이라 **모형의 시험이 아니다**
+           (모형을 기각하는 것은 종 사이의 불일치다). 곡선의 **모양**을 보려면 눈금이 더
+           촘촘해야 한다 ⇒ 같은 표본을 1.5px 눈금·문턱 12 로 다시 묶어 종별 옆모습을 찍는다.
+           ⚠ 판정([B13]·[B14])은 위에서 이미 기본 눈금으로 끝났다 — 이 줄은 출력 전용이다. */
+        const fine = b13bands(r.out, strokeIds, 2, { w: 1.5, n: 12 });
+        const bySpF = {};
+        for (const b of fine) for (const e of b.by) {
+          if (e[1] < 12) continue;
+          (bySpF[e[0]] = bySpF[e[0]] || []).push([(b.lo + b.hi) / 2, e[2], e[1]]);
+        }
+        const keys = Object.keys(bySpF).filter(k => bySpF[k].length >= 3);
+        if (keys.length) {
+          console.log('  [진단·889 8회차] 촘촘한 눈금(1.5px · 문턱 12) — 종별 «획 폭 → 비» 옆모습');
+          for (const k of keys) {
+            const v = bySpF[k].slice().sort((a, b) => a[0] - b[0]);
+            console.log('    ' + k.padEnd(9) + v.map(e => e[0].toFixed(1) + '→' + e[1].toFixed(3) + '(n' + e[2] + ')').join(' · '));
+          }
+        }
+        /* ⚑⚑ 889 8회차 — **[B14] 의 잡음 바닥**. 같은 종·**같은 구간**의 표본을 짝/홀로 반씩
+           갈라 두 중앙값의 비를 본다. 폭도 종도 같으므로 규격이 시키는 차는 **0** 이고,
+           여기 남는 것은 순수한 표본 흔들림이다. [B14] 의 1.16 이 이 바닥과 같은 크기면
+           그 축은 «아직 못 재고 있는 것» 이지 «제품이 어긋난 것» 이 아니다. */
+        {
+          const nz = [];
+          for (const b of bandRows) for (const e of b.by) {
+            if (e[1] < B13_N || !(e[3] > 0) || !(e[4] > 0)) continue;
+            nz.push([e[0], b.lo, Math.max(e[3], e[4]) / Math.min(e[3], e[4])]);
+          }
+          nz.sort((a, b) => b[2] - a[2]);
+          if (nz.length) console.log('  [진단·889 8회차] 잡음 바닥(같은 종·같은 구간을 짝/홀로 반) — ' +
+            nz.slice(0, 6).map(e => e[0] + '획' + e[1] + '~ ' + e[2].toFixed(3)).join(' · ') +
+            '  ⇒ 최악 ' + nz[0][2].toFixed(3) + '배 · 중앙 ' +
+            nz.map(e => e[2]).sort((a, b) => a - b)[Math.floor(0.5 * (nz.length - 1))].toFixed(3) +
+            '  (같은 표본을 [B14] 는 ' + (sp14.length ? sp14[0].band.toFixed(3) : '—') + '배로 읽는다)');
+        }
       }
       const spr = (r.out.sprites || []).slice().sort((a, b) => a[1] - b[1]);
       console.log('  [진단] 구운 스프라이트 자체의 코어 폭(로컬px · 합성/근백색 문턱 이전)');
