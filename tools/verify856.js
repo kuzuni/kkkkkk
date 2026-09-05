@@ -62,6 +62,16 @@ const SPREAD  = 1.5;  /* 목표(p90÷p50) — 2회차 CZ 가 ice 한 날에서 9
    ⚠ 목표에 닿기 전에 이 수를 올리지 마라 — 올리는 순간 두 비평가가 각자 손으로 잰 «획 8~12px
      에서 45~50%» 가 자에서 다시 안 보이게 된다. */
 const BAND13  = 1.55;
+/* [B14] **폭 축만** — 종을 고정하고 그 종의 구간별 중앙값이 한 밴드인가. 889 7회차 신설.
+   ⚑ 왜 [B13] 과 따로 서는가: 6회차가 [B13] 1.33 을 **폭 축 1.17 × 종 축 1.19** 의 곱으로
+     분해했다. 구간마다 종 구성이 다르므로([6~9] 은 97% 가 `gale`) [B13] 은 «종 사이» 몫을
+     [B10b] 에 이어 **두 번째로** 센다 ⇒ 폭 축만 혼자 재는 항을 하나 더 세운다(한 축 = 한 항).
+   ⚠ 이것은 [B13] 을 **무르게 하는 것이 아니다** — [B13] 은 1.55 그대로 서 있고, 이 항은
+     그보다 **좁은** 래칫을 하나 더 거는 것이다. 자를 갈아 끼워 밴드를 «적어 보이게» 하는 길
+     (6회차가 «자 흔들기» 로 안 간 그 길)과는 방향이 반대다.
+   ⚑ 이 수가 «자의 몫» 이 아님은 `tools/probe889d.js` 가 못박는다 — 규격을 정확히 지키는
+     합성 띠를 **이 자·이 묶음**으로 재면 여섯 구간이 전부 K = 0.350(잔차 0.0000 · 밴드 1.000)이다. */
+const BAND14  = 1.25; /* 7회차 실측 최악 1.17(arrow · gale 1.15 · lance 1.08). 목표는 1.0 — 닿기 전에 올리지 마라 */
 const RATCHET = 1.7;  /* 래칫(356 [B] 선례) — 8회차 실측 최악 1.68(stone · 3회차 2.21 · `ice` 2.00 → 1.14). 목표에 닿기 전에 올리지 마라 */   /* 한 종 안 «코어÷본체» p90÷p10 — 2회차 CZ 가 ice 에서 7.4배를 쟀다 */
 const COVER = 0.75;   /* 본체 마루 중 ③층이 덮은 몫 — «축에만 코어가 없다» 가 여기서 잡힌다 */
 
@@ -96,6 +106,23 @@ const b13bands = (out, useIds, col) => {
     rowsOut.push({ lo, hi, n: acc.length, md, core: md * (lo + hi) / 2, by });
   }
   return rowsOut;
+};
+
+/* [B14] 가 묶는 자리 — **종을 고정하고 폭만**. 5회차가 진단으로 세운 ⓐ 를 7회차가 판정으로
+   올린 것이고, 묶음은 `b13bands` 의 `by`(구간별 종별 중앙값)를 그대로 읽는다 —
+   재는 자리·가중·표본 문턱(`B13_N`)이 [B13]·[B12] 와 **한 벌**이다(사본 금지 — 402).
+   판정도 되돌림 시험도 이 함수 하나를 부른다. */
+const b14bands = (out, useIds, col) => {
+  const bySp = {};
+  for (const b of b13bands(out, useIds, col)) for (const e of b.by) {
+    if (e[1] < B13_N) continue;                 /* 구간 문턱과 **같은** 표본 수 */
+    (bySp[e[0]] = bySp[e[0]] || []).push([b.lo, e[2], e[1]]);
+  }
+  return Object.keys(bySp).filter(k => bySp[k].length >= 2).map(k => {
+    const v = bySp[k].map(e => e[1]);
+    const mx = Math.max.apply(null, v), mn = Math.min.apply(null, v);
+    return { sp: k, band: mn > 0 ? mx / mn : Infinity, bins: bySp[k].length, mx, mn };
+  }).sort((a, b) => b.band - a.band);
 };
 
 /* `--spread <종>` — 그 종의 **주 마루 화소마다** «본체 두께 · 코어 두께 · 비» 를 그대로 찍는다.
@@ -682,21 +709,16 @@ async function measure(browser, url) {
            ⓐ **종을 고정하고 폭만** — 한 종의 구간별 중앙값 밴드(2구간 이상인 종만)
            ⓑ **폭을 고정하고 종만** — 한 구간의 종별 중앙값 밴드
          ⓐ 가 [B13] 보다 뚜렷이 낮으면 남은 밴드의 임자는 폭이 아니라 **구간의 종 구성**이다. */
+      /* ⚑ 7회차 — ⓐ 는 이제 진단이 아니라 **판정 [B14]** 다(아래). 여기서는 그 값을 나란히
+         찍기만 하고, 재는 것은 판정과 **같은 함수**(`b14bands`)다 — 사본을 만들지 않는다. */
+      const sp14 = b14bands(r.out, strokeIds, 2);
       {
-        const bySp = {};
-        for (const b of bandRows) for (const e of b.by) {
-          if (e[1] < B13_N) continue;                  /* 구간 문턱과 **같은** 표본 수를 쓴다 */
-          (bySp[e[0]] = bySp[e[0]] || []).push([b.lo, e[2], e[1]]);
-        }
-        const spBands = Object.keys(bySp).filter(k => bySp[k].length >= 2).map(k => {
-          const v = bySp[k].map(e => e[1]);
-          return [k, Math.max.apply(null, v) / Math.min.apply(null, v), bySp[k].length];
-        }).sort((a, b) => b[1] - a[1]);
+        const spBands = sp14.map(e => [e.sp, e.band, e.bins]);
         const binBands = bandRows.map(b => {
           const v = b.by.filter(e => e[1] >= B13_N).map(e => e[2]);
           return v.length >= 2 ? [b.lo, Math.max.apply(null, v) / Math.min.apply(null, v), v.length] : null;
         }).filter(Boolean).sort((a, b) => b[1] - a[1]);
-        if (spBands.length) console.log('  [진단·889 5회차] ⓐ 종을 고정하고 폭만 — ' +
+        if (spBands.length) console.log('  [B14] ⓐ 종을 고정하고 폭만(판정) — ' +
           spBands.map(e => e[0] + ' ' + e[1].toFixed(2) + '배(' + e[2] + '구간)').join(' · ') +
           '  ⇒ 최악 ' + spBands[0][1].toFixed(2) + '배');
         if (binBands.length) console.log('  [진단·889 5회차] ⓑ 폭을 고정하고 종만 — ' +
@@ -712,6 +734,22 @@ async function measure(browser, url) {
          b13mx.toFixed(3) + ' ÷ 최소 ' + b13mn.toFixed(3) + ' = ' +
          (b13mn > 0 ? (b13mx / b13mn).toFixed(2) : '∞') + '배 ≤ ' + BAND13 +
          ' (8회차 실측 = 바닥 4.0px 이 세 구간을 덮어썼다)');
+
+      /* ⚑⚑ 889 7회차 신설 [B14] — **폭 축만**(종 고정). 위 [B13] 은 한 글자도 안 건드렸다.
+         6회차가 [B13] 1.33 = 폭 축 1.17 × 종 축 1.19 로 분해했고 종 축은 [B10b] 의 몫이다 ⇒
+         «비는 획 폭에 무관» 이라는 규격 문장의 **폭 쪽만** 혼자 재는 항을 하나 더 세운다.
+         ⚑ 7회차가 이 항을 세울 수 있게 된 근거: `tools/probe889d.js` 가 규격을 정확히 지키는
+           합성 띠를 **이 자·이 묶음**으로 재서 여섯 구간 전부 K = 0.350(밴드 1.000 · 잔차 0.0000)
+           을 받았다. 곧 여기 남는 1.17 은 **자의 바닥이 아니라 제품의 몫**이다 —
+           그것이 확인되기 전에는 이 축에 래칫을 걸 수 없었다(자의 몫이면 문턱이 자를 굳힌다). */
+      {
+        const worst = sp14.length ? sp14[0] : null;
+        ok(sp14.length >= 2 && worst && worst.band <= BAND14,
+           '[B14] **폭 축만** — 종을 고정하면 구간별 비가 한 밴드 · ' + sp14.length + '종 · 최악 ' +
+           (worst ? worst.sp + ' ' + worst.band.toFixed(2) + '배(' + worst.bins + '구간 · ' +
+            worst.mn.toFixed(3) + '~' + worst.mx.toFixed(3) + ')' : '—') +
+           ' ≤ ' + BAND14 + ' (자의 바닥은 1.000 — `probe889d` [D1])');
+      }
 
       /* ⚑⚑ 8회차 **이관**(333 처방) — 이 항은 «덩어리에서는 **상한이** 폭을 정한다» 를 전제로
          «폭 자체가 한 밴드» 를 물었다. 그 전제는 **반쪽폭을 넓게 읽던 자** 위에서만 참이었다 —
@@ -820,6 +858,16 @@ async function measure(browser, url) {
            '[R5] 코어를 끄면 [B13](획 폭 구간별 밴드)이 빨개진다 — ' + nb2.length + '구간 · 밴드 ' +
            (n2 > 0 ? (x2 / n2).toFixed(2) : '∞') + ' > ' + BAND13 +
            ' (값이 0 인 구간 ' + ms.filter(v => v <= 0).length + ')');
+        /* ⚑ 7회차 — **[B14] 의 되돌림 시험**(누른 항을 묻는 항을 한 줄 더 넣는다 — 328~330 교훈).
+           새 축을 세우면서 그 축이 «무엇을 켜도 초록» 이 아님을 같이 못박는다. 종별 손그림
+           하이라이트에서는 한 종의 구간별 중앙값이 한 밴드일 이유가 없다 — 구간 하나만 값을
+           갖고 나머지는 0 이라 밴드가 ∞ 거나, 애초에 «2구간 이상인 종» 이 둘이 안 된다.
+           ⚠ 판정과 **같은 함수**(`b14bands`)를 부른다 — 사본을 만들면 되돌림이 성립하지 않는다. */
+        const nb14 = b14bands(rn.out, sI, 2);
+        const w14 = nb14.length ? nb14[0].band : Infinity;
+        ok(!(nb14.length >= 2 && w14 <= BAND14),
+           '[R6] 코어를 끄면 [B14](폭 축)가 빨개진다 — 2구간 이상인 종 ' + nb14.length + '종 · 최악 밴드 ' +
+           (isFinite(w14) ? w14.toFixed(2) : '∞') + ' (초록이려면 2종 이상 · ' + BAND14 + ' 이하여야 한다)');
       }
       ok(bad.length >= 4 || (mn > 0 && mx / mn > BAND),
          '[R2] 코어를 끄면 [B10] 이 빨개진다 — 목표대 밖 ' + bad.length + '종 · 밴드 ' +
