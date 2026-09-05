@@ -8147,6 +8147,24 @@
     /* `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10px · 하변에서 150.5» 다 */
     --ntc-bg:radial-gradient(var(--ntc-d) 57px at calc(100% + 10px) calc(100% - 150px),#0000 98%,#000 100%)}
   .pvc.ban1{--ntc-d:40px}                                    /* 배너형 폴백 — ref 파랑 30.2 는 이미 맞다 */
+  /* ⚑ 923 1회차 — **노치 바닥은 «점» 이 아니라 «곧은 구간» 이다(ref 는 스타디움, 우리는 순수한 반원이었다).**
+     885 10회차 채점 3인(GD·GF·GG)이 일치했고 GG 가 문턱과 무관한 원리적 증거를 냈다 —
+     노치 옆면(깊이 30~80%)에 최소제곱 원을 맞추면 **ref 는 R_fit < 깊이 D** 라 원호로는 그릴 수 없다.
+     `tools/scan923.py`(셋째 자 · 부분화소 50% 교차 · ref 와 우리에게 같은 절차)로 재현한 값:
+       평탄부(깊이 ≥ 최대−0.5 · 우리px) — ref 배너 **18.57** ↔ 우리 6.00 · ref 불릿 **26.82** ↔ 우리 10.00
+       R_fit − D — ref 배너 **−3.2** · 불릿 **+21**(위 두 자리는 리본이 문 자리라 아래 표 참조) ↔ 우리 +0.6/+21
+     ⚑ **손잡이는 «깊이» 가 아니라 링의 세로 모서리 반지름이다** — 실루엣을 정하는 것은 링 `s` 의
+     **안쪽** 모서리이고(보이는 깊이 = d − 10 은 그대로), `border-radius:50%` 는 그 안쪽을 타원으로
+     못박아 바닥이 한 점이 된다. `50% / var(--ntc-r)` 로 바꾸면 세로 모서리만 짧아져
+     **좌변(= 노치 바닥)이 `len − 2r` 만큼 곧아진다**(가로 반지름은 여전히 폭의 절반 = d).
+     ⚠ **마스크(구멍)는 안 건드린다** — 타원 구멍은 스타디움 링 «안쪽» 을 항상 덮고(r ≥ 0.18·len 이면)
+     링 «바깥» 안에 항상 들어간다(t ≤ len/2 이면 대수적으로 참). 곧 구멍을 같이 스타디움으로 만들 필요가
+     없고, 그래야 `pvNtcMask()` 의 «겹이 여럿이면 intersect» 규약도 그대로다.
+     값은 자로 역산했다(α = 0.205 = 모서리가 평탄부에 얹어 주는 몫 · 실측 두 자리에서 같은 값):
+       배너 len 81 · 평탄부 과녁 18.57 ⇒ r **33.6** · 불릿 len 114 · 26.82 ⇒ r **47.4**
+     되돌리려면 `--ntc-r` 두 줄과 아래 두 `border-radius` 의 `/ var(--ntc-r)` 를 지운다. */
+  .pvc{--ntc-r:47.4px}                                       /* 불릿형 폴백(JS 가 인라인으로 싣는다) */
+  .pvc.ban1{--ntc-r:33.6px}
   /* ⚑ 667 4회차 ② — **안쪽 밝은 림이 노치를 따라 휜다**(비평가 AT ② · ref 화소로 확인: 노치 최심
      안쪽에 `--h` 밝은 띠가 **5~6 ref px = 12 우리 px** 으로, 곧은 변의 림(5~8 ref)과 같은 두께로 이어진다).
      지금까지는 마스크가 `.bg` 의 림을 **잘라내기만** 해서 곡선을 따라 도는 밝은 테가 없었다.
@@ -8160,7 +8178,7 @@
      상자 폭이 곧 `u` 의 반지름이라 두 링의 중심이 함께 카드 우변 위(local = d+12)에 선다. */
   .pvc>.ntc{right:0;bottom:91px;width:calc(var(--ntc-d) + 12px);height:138px;overflow:hidden;z-index:2;pointer-events:none}
   #shopw .pvc>.ntc>s{position:absolute;left:12px;top:12px;width:calc(var(--ntc-d) * 2);height:114px;box-sizing:border-box;
-    border:10px solid #000;border-radius:50%}
+    border:10px solid #000;border-radius:50% / var(--ntc-r)}   /* 923 — 세로 모서리만 짧게 = 바닥이 곧다 */
   /* ⚑ 833 10회차 — **밝은 림이 카드 우변의 검정 외곽선을 노치마다 11~12px 씩 덮고 있었다**
      (9회차 채점 DH 1순위 «끊김 배너 5곳 × 12px · 불릿 4곳 × 11px · 신뢰 상» — ① 을 7 로 막은 유일한 항목).
      기계: 이 림은 타원 테두리라 **위·아래 꼭지에서 테가 가로 띠가 되고**, 그 띠가 카드 우변
@@ -8173,7 +8191,8 @@
      림 화소 6137 → 5577(덮고 있던 560 화소만 빠졌다) · **림이 사라진 행 0개**(호는 그대로다).
      되돌리려면 이 `clip-path` 한 줄을 지운다. */
   #shopw .pvc>.ntc>u{position:absolute;left:0;top:0;bottom:0;width:calc((var(--ntc-d) + 12px) * 2);box-sizing:border-box;
-    border:12px solid var(--h);border-radius:50%;clip-path:inset(0 calc(50% + 10px) 0 0)}
+    /* 923 — 림은 `s` 에서 사방 12 바깥이므로 세로 모서리도 12 만큼 크다(호가 나란히 돈다) */
+    border:12px solid var(--h);border-radius:50% / calc(var(--ntc-r) + 12px);clip-path:inset(0 calc(50% + 10px) 0 0)}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
   /* ⚑ 885 2회차 — **윗모서리 반경이 ref 의 2/3 였다**(채점 2인 DP·DQ **독립 일치** · 둘 다 신뢰 상 ·
      둘 다 임계 3단 스윕에서 부호 불변). 자는 «탭 상변에서 깊이 d 마다 좌·우단을 재고 평탄부를 뺀 들어감» —
@@ -36888,6 +36907,12 @@ const NTC_CEN0  = { ban: 130, bl: 160 };          /* 맨 아래 노치 **중심*
    81 로 잡으면 노치 **하변**도 ref 에 더 붙는다(하변까지 100.1 ↔ ref 101.1 · 수리 전 106).
    노치 개수는 안 변한다(배너 3자리 — `b` 가 89.5·228.5·367.5 로 상한 397 안이다). */
 const NTC_LEN   = { ban: 81, bl: 114 };           /* 노치 세로 길이. bl 114 = 227/2(5회차 ⓑ 그대로) */
+/* ⚑ 923 1회차 — 노치 «바닥 평탄부». 링 `s` 의 **세로** 모서리 반지름이고 가로는 그대로 폭의 절반(= 깊이)이다.
+   곧은 바닥 길이 = len − 2r 이고, 자가 재는 평탄부(깊이 ≥ 최대−0.5)는 거기에 모서리 몫 α(r−10) 이 얹힌다
+   (α = 0.205 — 수리 전 두 형에서 같은 값이 나왔다: 배너 6.00 = α·30.5 · 불릿 10.00 = α·47).
+   과녁은 ref 실측(`tools/scan923.py` · 우리px) 배너 18.57 · 불릿 26.82 ⇒ 아래 두 값.
+   ⚠ 깊이(`NTC_DEP`)는 **안 건드렸다** — 그 축은 [20]«43/40» 이 닫아 둔 자리다(923 등재문 경고). */
+const NTC_R     = { ban: 33.6, bl: 47.4 };
 function pvNotches(p, H){
   const k = p.ban ? 'ban' : 'bl', pitch = NTC_PITCH[k], len = NTC_LEN[k], out = [];
   for(let b = NTC_CEN0[k] - len / 2; b + len + NTC_TOPGAP <= H; b += pitch) out.push({ b, len });
@@ -36991,7 +37016,7 @@ function renderPassPage(list){
       /* `--pvc-h` = 카드 높이를 «값 하나» 로 둔다 — `height` 도 이 변수를 읽고, 일러스트 자리
          `.art` 의 `mask-size` 도 이 변수를 읽는다(667 6회차 · 높이를 두 번 적지 않는다). */
       +  ' data-pv="' + p.id + '" style="top:' + tops[i] + 'px;--pvc-h:' + cardH + 'px;height:var(--pvc-h)'
-      +  ';--ntc-d:' + ndep + 'px'
+      +  ';--ntc-d:' + ndep + 'px;--ntc-r:' + NTC_R[p.ban ? 'ban' : 'bl'] + 'px'
       +  ';--ntc-fr:' + pvNtcMask(ntc, false, ndep) + ';--ntc-bg:' + pvNtcMask(ntc, true, ndep) + '">'
       +  '<div class="bg"></div><div class="hdb"></div>'
       +  '<div class="stt"><i>' + passStatusTxt(p) + '</i></div>'
