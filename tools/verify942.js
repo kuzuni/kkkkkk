@@ -172,9 +172,13 @@ console.log('\n[6] 장부 — 932 전수에서 이 자가 B → 면역으로 옮
   const row = rows.find((r) => r.file === 'probe409g.py');
   ok('[6-a] 장부에 있고 판정이 **면역(S)** 이다', row && row.verdict === 'S', row ? row.verdict : '없음');
   const brk = rows.filter((r) => r.verdict === 'B').map((r) => r.file);
-  ok('[6-b] 주홍(B)이 **6개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c` · 3회차 `probe409i` · 4회차 `probe409f` · 5회차 `probe409`)',
-    brk.length === 6 && !['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py', 'probe409.py']
-      .some((f) => brk.includes(f)), `${brk.length}개`);
+  /* ⚑ 958 1회차 이관 (2026-09-05) — 이 항이 못박는 것은 **942 의 다섯이 나갔다**는 것이고,
+     남은 개수는 그 뒤 번호가 계속 줄인다(958 이 `probe384.py` 를 닫아 6 → 5). 그래서 수는
+     «≤ 6» 으로 열고 «942 의 다섯이 하나도 안 남았다» 는 조건을 그대로 둔다 — 그 다섯이 하나라도
+     되살아나면 여기가 빨개진다. 지금 남은 다섯의 이름은 `verify958` [7-d] 가 든다(래칫). */
+  ok('[6-b] 주홍(B)에 **942 의 다섯이 하나도 없다** (1회차 `probe409g` · 2회차 `probe409c` · 3회차 `probe409i` · 4회차 `probe409f` · 5회차 `probe409`)',
+    brk.length <= 6 && !['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py', 'probe409.py']
+      .some((f) => brk.includes(f)), `${brk.length}개 [${brk.join(' ')}]`);
   const v932 = fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8');
   ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **다섯 이름**을 들고 있다)',
     /const FIXED942 = \['probe409g\.py', 'probe409c\.py', 'probe409i\.py', 'probe409f\.py', 'probe409\.py'\]/.test(v932)
