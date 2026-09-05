@@ -41,7 +41,8 @@ text-shadow» 링도 글리프 전용이라 그대로 못 쓴다. ⇒ 두 겹 **
 import math
 import sys
 
-RATIO = 0.668          # 안/바깥 반지름비 — 7회차 채점 2인(EZ 0.6679 · FA 0.670)의 ref 실측 중앙값
+RATIO = 0.647          # 안/바깥 반지름비 — 8회차 채점 2인(GB·GC)이 «우리가 ref 보다 +2.4~5.1% 크다» 로
+                       # 일치해 7회차의 0.668 에서 한 눈금 내렸다(아래 «8회차» 절)
 #                        (6회차 EY 는 0.591 · EX 의 등주비 역산은 ≈0.53 이었다 — 아래 머리말 ⚠ 참조)
 R = 18.35              # 바깥 반지름 (우리 px)
 D = 3.10               # 링 두께 = 거리 오프셋 (우리 px)
@@ -124,7 +125,10 @@ def bbox(pts):
 def to_css(pts, box):
     """폴리곤을 상자 기준 % 로 — 상자는 (x0, y0, w, h)."""
     x0, y0, w, h = box
-    return ','.join('%.2f%% %.2f%%' % ((x - x0) / w * 100, (y - y0) / h * 100) for x, y in pts)
+    # ⚑ 885 9회차 — 소수 **3자리**. 2자리(0.01% = 41px 상자에서 0.004px)로 찍으면 링 두께의
+    # 화소 실측이 3.07~3.13 으로 벌어져 `verify833` [16-d](«한 값 = 등방», 폭 < 0.05)가 빨개진다.
+    # 자를 무르게 푸는 대신 **선언의 해상도를 올렸다** — 등방성은 이 자가 지키는 뜻 그 자체다.
+    return ','.join('%.3f%% %.3f%%' % ((x - x0) / w * 100, (y - y0) / h * 100) for x, y in pts)
 
 
 def build():
@@ -158,8 +162,14 @@ def main():
     print()
     print('/* ring */  clip-path:polygon(%s)' % to_css(ring, sbox))
     print()
-    print('상자 — s: %.2fpx × %.2fpx · s::after left/top %.2fpx (= d) · %.2fpx × %.2fpx'
-          % (sw, sh, D, gw, gh))
+    # ⚑ 885 9회차 — **`left/top` 은 d 가 아니다.** 링 bbox 는 «금색 bbox 를 사방으로 d 만큼 넓힌 것»
+    # 이 아니다: 극점이 **둥근 조인의 호 위**에 있어서 가로·세로로 각각 d 보다 조금 덜 나간다
+    # (여기서 dx 3.092 · dy 3.075). 7회차가 둘 다 d(3.10)로 적어 금색이 링 안에서 (0.008, 0.025)
+    # 어긋나 있었고, 그 어긋남이 `verify833` [16-d]«링 두께가 한 값» 의 폭을 **0.053** 으로 벌렸다
+    # (기하 자체는 오차 0.0000 이다 — 자가 아니라 **좌표를 옮겨 적는 줄**이 틀렸다).
+    # 9회차가 RATIO 를 옮기며 그 폭이 0.061 로 커져 게이트가 처음 빨개졌고, 그래서 드러났다.
+    print('상자 — s: %.2fpx × %.2fpx · s::after left %.2fpx · top %.2fpx (⚠ d=%.2f 가 아니다) · %.2fpx × %.2fpx'
+          % (sw, sh, gbox[0] - sbox[0], gbox[1] - sbox[1], D, gw, gh))
 
     if not gate:
         return 0
@@ -171,7 +181,12 @@ def main():
         print('  [%s] %-46s %s' % ('ok' if cond else 'FAIL', name, got))
 
     print('\n== starpoly885 자기 검산 ==')
-    chk('r/R = 0.668 (7회차 채점 2인 EZ 0.6679 · FA 0.670)', abs(RATIO - 0.668) < 1e-9, '%.3f' % RATIO)
+    chk('r/R = 0.647 (8회차 — 렌더 편향을 뺀 ref 추정 GB 0.642 · GC 0.652 의 가운데)',
+        abs(RATIO - 0.647) < 1e-9, '%.3f' % RATIO)
+    chk('금색 상자 원점이 링 상자 안에서 (%.2f, %.2f) — d 가 아니다(9회차)'
+        % (gbox[0] - sbox[0], gbox[1] - sbox[1]),
+        abs((gbox[0] - sbox[0]) - D) < 0.5 and abs((gbox[1] - sbox[1]) - D) < 0.5,
+        'dx %.4f · dy %.4f (d %.2f)' % (gbox[0] - sbox[0], gbox[1] - sbox[1], D))
     chk('실루엣÷금색 가로 = ref 1.176 ±0.075', abs(sw / gw - 1.176) <= 0.075, '%.4f' % (sw / gw))
     chk('실루엣÷금색 세로 = ref 1.231 ±0.075', abs(sh / gh - 1.231) <= 0.075, '%.4f' % (sh / gh))
     chk('금색 bbox 가로 = ref 35.1 ±3%', abs(gw - 35.1) / 35.1 <= 0.03, '%.2f' % gw)
