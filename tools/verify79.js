@@ -21,6 +21,7 @@
  *       표본은 «3×3 이 색까지 평평 + 틴트가 실제로 물들이는» 텍셀로 고른다.
  *       §R1 다른 코스튬 색과 대면 빨갛다 · §R2 243 보정을 빼면 도로 빨갛다 (523 되돌림 시험)
  *       §R3 541 그리기 배율을 빼면 도로 빨갛다 · §R4 셰이크를 주입하면 «되계산 ox» 는 빨갛다 (929)
+ *       §R4 의 «판» 은 오프셋 크기가 아니라 «밀린 자리의 색이 실제로 다른가» 로 고른다 (943)
  *   [F] 재생 — 시트가 열려 있는 동안 캔버스 내용이 바뀌고(idle 8fps), 닫으면 rAF 가 멈춘다(eqHeroRaf 0)
  *   [G] 코스튬 연동 — S.avatar 를 av0→av3 로 바꾸면 다시 열지 않아도 시트 색이 바뀐다
  *
@@ -239,9 +240,21 @@ const ok = (b, name, detail) => {
 
   /* §R4 (929) — 셰이크 주입. `draw()` 의 `ox` 에는 `sx = rnd(±shake)·0.45` 가 들어 있고 제품은 그 값을
      `camOx` 로 발표한다. 자가 `cam.x` 로 **되계산**하면 흔들리는 프레임마다 통째로 어긋난다 —
-     이 항은 «발표된 값으로 읽는다» 를 지킨다(반복이 아니라 주입으로 가른다). */
+     이 항은 «발표된 값으로 읽는다» 를 지킨다(반복이 아니라 주입으로 가른다).
+     ⚠ 943 — «흔들린 판» 을 **오프셋 크기**(옛 축 `dOx >= 2` 장치px)로 고르면 안 된다. 그 축은
+     «흔들렸다» 를 묻고 정작 필요한 «되계산 표본이 실제로 달라지는가» 를 안 묻는다 — 밀린 자리가
+     **평평한 색 안**에 떨어지면 되계산도 같은 색을 읽어 `dRe = 0` 이 되고 그 판 하나가
+     `injRed < injN` 을 만든다(8판 중 3판 빨강 · `probe943` [1][2]). **문턱을 올려서는 못 닫는다** —
+     9.7장치px 로 크게 흔들린 판에도 판별 표본 0 인 판이 있고(`probe943` [5]) 올리는 만큼
+     «세로로만 흔들린 판»(dOy 8.9 ↔ dOx 0.4)을 통째로 놓친다(옛 축은 가로만 봤다).
+     ⇒ 판을 세기 전에 **표본을 고른다**: 밀린 자리(u+du, v+dv)의 아틀라스 3×3 이 **전부 불투명이고
+     원색과 Δ>3** 인 표본만 «되계산이 반드시 다른 색을 읽는» 표본이다(3×3 을 보는 이유는 장치px
+     반올림 ±0.5 가 이웃 텍셀로 새기 때문). 그런 표본이 한 개도 없는 프레임은 아예 판이 아니다.
+     ⚑ **무르게 푼 수리가 아니다** — 제품이 셰이크를 발표값에 안 실으면 `du = dv = 0` 이 되고,
+     표본 자신이 «3×3 이 평평» 하므로 판별 표본은 **구조적으로 0**이다 ⇒ 판이 하나도 안 서서
+     이 항은 «흔들린 프레임을 못 잡았다» 로 빨개진다(`probe943` [6]). */
   let inj = null, injN = 0, injRed = 0;
-  for (let t = 0; t < 12; t++) {
+  for (let t = 0; t < 24; t++) {
     const r = await page.evaluate(() => new Promise(res => {
       cam.shake = 12;
       requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -251,18 +264,26 @@ const ok = (b, name, detail) => {
         const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
         const g = c.getContext('2d'); g.drawImage(img, 0, 0);
         const td = g.getImageData(fr[0], fr[1], fr[2], fr[3]).data;
-        const smp = [];
+        const dif = (p, cc) => Math.max(Math.abs(p[0] - cc[0]), Math.abs(p[1] - cc[1]), Math.abs(p[2] - cc[2]));
+        const px3 = (x, y) => {                        /* 프레임 안 텍셀 색 — 불투명일 때만 */
+          if (x < 0 || y < 0 || x >= fr[2] || y >= fr[3]) return null;
+          const o = (y * fr[2] + x) * 4;
+          return td[o + 3] < 255 ? null : [td[o], td[o + 1], td[o + 2]];
+        };
+        /* ① 후보 — 3×3 이 색까지 평평(제품 식으로 읽는 쪽이 반올림에 둔감해야 한다). 상한 없이 모은다:
+           943 전에는 여기서 40개를 자르고 있었는데, 그 40개는 «맨 위 평평한 덩어리» 라 통째로
+           «이동에 둔한 화소» 였다(등재문 처방 ⓑ). */
+        const flat = [];
         for (let py = 1; py < fr[3] - 1; py++) for (let px = 1; px < fr[2] - 1; px++) {
-          const o = (py * fr[2] + px) * 4;
+          const col = px3(px, py); if (!col) continue;
           let good = true;
           for (let j = -1; j <= 1 && good; j++) for (let i = -1; i <= 1; i++) {
-            const q = ((py + j) * fr[2] + px + i) * 4;
-            if (td[q + 3] < 255 || td[q] !== td[o] || td[q + 1] !== td[o + 1] || td[q + 2] !== td[o + 2]) { good = false; break; }
+            const q = px3(px + i, py + j);
+            if (!q || dif(q, col) !== 0) { good = false; break; }
           }
-          if (good) smp.push([px, py, [td[o], td[o + 1], td[o + 2]]]);
-          if (smp.length >= 40) { py = fr[3]; break; }
+          if (good) flat.push([px, py, col]);
         }
-        if (!smp.length) return res(null);
+        if (!flat.length) return res(null);
         const z = cam.z || 1, sc = (typeof PLAYER_DRAW_SC !== 'undefined') ? PLAYER_DRAW_SC : 1;
         const xo = frameXo('knight', ATLAS.knight)[frN] || 0;
         const ly0 = -fr[7] + fr[5];
@@ -270,7 +291,23 @@ const ok = (b, name, detail) => {
         let oxR = -(cam.x - VW / (2 * z)), oyR = -(cam.y - VH / (2 * z));
         if (WORLD.w > VW / z) oxR = Math.max(VW / z - WORLD.w, Math.min(0, oxR));
         if (WORLD.h > VH / z) oyR = Math.max(VH / z - WORLD.h, Math.min(0, oyR));
-        const dif = (p, cc) => Math.max(Math.abs(p[0] - cc[0]), Math.abs(p[1] - cc[1]), Math.abs(p[2] - cc[2]));
+        /* ② 되계산이 «어느 텍셀» 을 읽게 되는가 — 화면 자리를 같게 만드는 u'/v' 를 푼 값.
+           가로는 `player.flip` 이 부호를 뒤집는다(제품 `rd` 의 `flip ? -l : l`). */
+        const ru = Math.round((player.flip ? -1 : 1) * (oxR - camOx) / sc);
+        const rv = Math.round((oyR - camOy) / sc);
+        /* ③ 판별 표본 — 밀린 자리의 3×3 이 전부 불투명이고 원색과 Δ>3 인 표본만 센다(943) */
+        const smp = [];
+        for (const [u, v, col] of flat) {
+          let disc = true;
+          for (let j = -1; j <= 1 && disc; j++) for (let i = -1; i <= 1; i++) {
+            const q = px3(u + ru + i, v + rv + j);
+            if (!q || dif(q, col) <= 3) { disc = false; break; }
+          }
+          if (disc) smp.push([u, v, col]);
+          if (smp.length >= 40) break;
+        }
+        const dOx = Math.abs((camOx - oxR) * SC), dOy = Math.abs((camOy - oyR) * SC);
+        if (!smp.length) return res({ nDisc: 0, dOx, dOy, hit: player.hitFx > 0 });
         const rd = (u, v, ox, oy) => {
           const l = (-fr[6] / 2 + fr[4] + xo + u + 0.5) * sc;
           const dxp = Math.round((player.x + (player.flip ? -l : l) + ox) * z * SC);
@@ -284,10 +321,10 @@ const ok = (b, name, detail) => {
           if (a) dPub = Math.max(dPub, dif(a, col));
           if (b) dRe = Math.max(dRe, dif(b, col));
         }
-        res({ dPub, dRe, shake: cam.shake, dOx: Math.abs((camOx - oxR) * SC), hit: player.hitFx > 0 });
+        res({ dPub, dRe, nDisc: smp.length, shake: cam.shake, dOx, dOy, hit: player.hitFx > 0 });
       }));
     }));
-    if (r && !r.hit && r.dOx >= 2) {              /* 실제로 흔들린 프레임만 */
+    if (r && !r.hit && r.nDisc > 0) {             /* 되계산이 «다른 색을 읽을 수밖에 없는» 프레임만(943) */
       injN++; if (r.dRe > 3) injRed++;
       if (!inj || r.dPub < inj.dPub) inj = r;    /* 얹힘 판(스킬·적 그림)을 피해 «가장 잘 닫히는 판» 을 고른다 */
       if (inj.dPub === 0 && injN >= 3) break;
@@ -296,9 +333,10 @@ const ok = (b, name, detail) => {
   }
   ok(!!inj && inj.dPub <= 3 && injN > 0 && injRed === injN,
      'E-R4 셰이크를 켜면 «되계산 ox» 는 빨갛고 제품이 발표한 `camOx` 는 초록이다(929 · 주입 시험)',
-     inj ? ('흔들린 판 ' + injN + '개 · 그중 되계산이 빨간 판 ' + injRed + ' · 셰이크 오프셋 ' +
-            inj.dOx.toFixed(1) + '장치px · Δ발표=' + inj.dPub + ' · Δ되계산=' + inj.dRe)
-         : '흔들린 프레임을 못 잡았다');
+     inj ? ('판별 판 ' + injN + '개 · 그중 되계산이 빨간 판 ' + injRed + ' · 판별 표본 ' + inj.nDisc +
+            '개 · 셰이크 오프셋 ' + inj.dOx.toFixed(1) + '/' + inj.dOy.toFixed(1) +
+            '장치px · Δ발표=' + inj.dPub + ' · Δ되계산=' + inj.dRe)
+         : '판별 표본이 있는 프레임을 못 잡았다(셰이크가 발표값에 안 실린다)');
   await page.evaluate(() => { cam.shake = 0; });   /* 뒤 절([F][G])에 흔들림을 남기지 않는다 */
   /* [F] 재생·정지 */
   const f1 = await page.evaluate(() => document.querySelector('#eqCards .eqil-cv').toDataURL());
