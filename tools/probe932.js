@@ -104,10 +104,10 @@ const LEDGER = {
     fix: "gold_top·gold_bot·dark_top 을 두 밝은 고원 사이 50% 교차나 질량 적분으로. find_base_u3 의 행 걷기도 같이.",
   },
   'scan667b.py': {
-    v: 'R', sig: 'k1 r1 t7 i3 f0',
+    v: 'R', sig: 'k1 r1 t11 i4 f1',
     axis: "리본 좌단 돌출 prot(ref ≈ −1.6~0 px) · 금판 솟음 ptop · dtop",
-    why: "left_edge 가 np.where(d>thr)[0][0] 로 정수 x 를 돌려주고 bbox 의 정수 모서리에서 th·ptop·dtop 이 나온다. ref 는 scale=K, 우리 크롭은 1.0 — 같은 격자 오차가 ref 에서만 ×2.06 된다.",
-    fix: "left_edge 를 문턱 교차 보간으로(ⓐ) · th/ptop/dtop 의 모서리를 ±0.5 소수 모서리로(ⓑ).",
+    why: "932 1회차가 **`left_edge` 만** 갈아 끼웠다(문턱 교차 선형 보간 · `--int` 로 옛 자 대조) — 옛 자는 ref 네 줄 전부 정확히 +0.00 이었고 이제 +0.41/+0.00/+0.39/+0.00 이다. ⚠ **`bbox` 축 셋(띠 두께·금판·수량 잉크)은 아직 정수**라 R 로 남는다.",
+    fix: "모서리마다 «바깥이 무엇인가» 를 따로 적어야 한다 — 금판 채움의 바깥은 배경이 아니라 **밝은 금 테**라, 창 전체 정규화로 갈면 폭 33 → 36.4(+10%) 로 재는 것이 바뀐다(1회차 실측). `scan667c.dark_mass` 가 두 밝은 고원을 각각 재는 이유가 이것이다.",
   },
   'probe866.py': {
     v: 'R', sig: 'k1 r1 t17 i0 f0',

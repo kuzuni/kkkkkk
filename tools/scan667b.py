@@ -16,8 +16,14 @@
   · **ref 와 우리를 같은 마스크로.** 금색은 **채움만**(tol 30 — 8회차가 ref 판 폭 33.0 / 우리 32.5 를
     낸 그 문턱이다. 문턱을 풀면 밝은 금 테까지 들어와 ref 가 40 으로 커진다).
 
+⚑ **932(1회차) — 이 자의 모서리는 부분 화소다.** 옛 판은 `bbox()`·`left_edge()` 가 **정수** 좌표를
+  돌려줬고, ref 는 우리보다 K=2.0628 배 작아 그 바닥깎기가 **우리 px 로 2.06 씩** 손해였다.
+  증거는 이 자 자신의 옛 출력이다 — «환산» 칸이 예외 없이 K 의 배수였고, 참값이 1~2 ref px 인
+  `prot`(리본 좌단 돌출)이 **네 줄 전부 정확히 +0.00** 이었다(측정표 §7-1 은 «ref −1.6» 이라 적는다).
+  `--int` 로 옛 자를 그대로 부를 수 있다(대조·되돌림 시험).
+
 실행:
-  python3 tools/scan667b.py [--cap docs/review/151-r13] [--geo docs/review/151-r13.geo.json]
+  python3 tools/scan667b.py [--cap docs/review/151-r13] [--geo docs/review/151-r13.geo.json] [--int] [--ref-only]
 """
 import json
 import sys
@@ -45,12 +51,48 @@ def near(a, rgb, tol):
     return np.abs(a - np.array(rgb)).sum(2) < tol
 
 
+INT_STEP = False          # --int 로 켜면 옛 정수 걸음 자를 그대로 쓴다(대조·되돌림 시험)
+
+
 def bbox(m, ox=0, oy=0):
+    """옛 자 — «마스크가 선 첫/끝 화소» 의 정수 좌표. 대조용으로 남긴다."""
     ys = np.where(m.any(1))[0]
     xs = np.where(m.any(0))[0]
     if not len(ys):
         return None
     return (int(xs[0]) + ox, int(ys[0]) + oy, int(xs[-1]) + ox, int(ys[-1]) + oy)
+
+
+def _edge(prof, thr, rising=True):
+    """1차원 프로파일이 thr 을 지나는 자리를 **선형 보간**으로 — 없으면 None.
+
+    ⚑ 창 **밖**은 «문턱 아래» 로 본다(가상 표본 0). 그래야 부품이 창 끝에 붙어 있어도
+    모서리가 사라지지 않고, 창을 넘어간 만큼이 음수로 드러난다.
+    돌려주는 값은 **화소 중심 좌표**(정수 i = i 번 화소의 한가운데)다.
+    """
+    n = len(prof)
+    if n < 2:
+        return None
+    seq = list(range(n)) if rising else list(range(n - 1, -1, -1))
+    pi, pv = seq[0] - (1 if rising else -1), 0.0        # 창 밖 가상 표본
+    for i in seq:
+        v = float(prof[i])
+        if pv < thr <= v:
+            return pi + (thr - pv) / (v - pv) * (i - pi)
+        pi, pv = i, v
+    return None
+
+
+# ⚑ **932 1회차가 여기서 멈춘 자리 — bbox 축 셋은 아직 정수다.**
+#    `bbox()` 를 «소속도가 반이 되는 자리» 로 갈아 끼워 봤더니 **재는 것이 바뀌었다**:
+#      · 금색 판 — 채움 바깥이 배경이 아니라 **밝은 금 테**(#FDC532)라, 안쪽 고원 ↔ 바깥 고원의
+#        한가운데가 테 안으로 들어가 폭 33 → **36.4(+10%)** · 높이 31 → 33.9. 이 자의 머리말이
+#        «문턱을 풀면 밝은 금 테까지 들어와 ref 가 40 으로 커진다» 고 경고한 바로 그 자리다.
+#      · 수량 잉크 — 창이 판 폭에서 파생되므로 판이 넓어지면 창이 커져 **옆 부품이 섞인다**
+#        (폭 42 → 60.6 · 중심 +10.35).
+#    ⇒ **모서리마다 «바깥이 무엇인가» 를 따로 적어야 한다**(`scan667c.dark_mass` 가 두 밝은 고원을
+#    각각 재는 이유가 이것이다). 그 셋은 932 다음 회차의 몫이고, 이번 회차는 **바깥이 바탕 하나로
+#    분명한 `left_edge` 만** 갈아 끼웠다.
 
 
 def win(a, x0, y0, x1, y1):
@@ -60,16 +102,27 @@ def win(a, x0, y0, x1, y1):
 
 
 def left_edge(a, rows, x0, x1, thr=60):
-    """행마다 «바탕이 아닌 첫 화소» 의 x — 검정 외곽까지 포함한 바깥 모서리"""
+    """행마다 «바탕이 아닌 첫 화소» 의 x — 검정 외곽까지 포함한 바깥 모서리.
+
+    ⚑ 932 — 옛 판은 `np.where(d > thr)[0][0]` 로 **정수 x** 를 돌려줬고, 그 위에서 나온
+    `prot`(리본 좌단 돌출)이 ref 네 줄 전부 **정확히 +0.00** 이었다(측정표 §7-1 은 «ref −1.6»
+    이라고 적어 두었다 — 자가 그 값을 표현할 수 없었던 것이다). 이제 바탕 거리 d 가 thr 을
+    지나는 자리를 **선형 보간**으로 잡는다. 딱 떨어지는 그림에서는 옛 값과 ±0.5 안에서 같다.
+    """
     out = []
     for y in rows:
         if y < 0 or y >= a.shape[0]:
             continue
         row = a[y, max(0, x0):x1]
         d = np.abs(row - np.array(BG)).sum(1)
-        i = np.where(d > thr)[0]
-        if len(i):
-            out.append(max(0, x0) + int(i[0]))
+        if INT_STEP:
+            i = np.where(d > thr)[0]
+            if len(i):
+                out.append(max(0, x0) + int(i[0]))
+            continue
+        e = _edge(d, thr, True)
+        if e is not None:
+            out.append(max(0, x0) + e)
     return out
 
 
@@ -78,7 +131,7 @@ def one_ribbon(a, tag, cl, cr, ry0, ry1, gx0, gx1, ubox, k, scale):
     S = (lambda v: v * scale)
     # ── 리본 빨강 채움
     sub, ox, oy = win(a, cl - 25, ry0 - 8, cr, ry1 + 9)
-    rb = bbox(near(sub, RED, TOL_RED), ox, oy)
+    rb = bbox(near(sub, RED, TOL_RED), ox, oy)   # ⚠ 932 — 이 축은 아직 정수다(아래 ⚑)
     if rb is None:
         print(f'  {tag}: 빨강 채움 없음')
         return None
@@ -91,9 +144,9 @@ def one_ribbon(a, tag, cl, cr, ry0, ry1, gx0, gx1, ubox, k, scale):
     prot = (np.median(ce) - np.median(re_)) if ce and re_ else float('nan')
     # ── 금색 판 채움
     sub, ox, oy = win(a, gx0, ry0 - 22 * k, gx1, ry1 + 16 * k)
-    pl = bbox(near(sub, GOLD, TOL_GOLD), ox, oy)
-    print(f'  {tag}: 띠 y {ry_t - 0:.0f}..{ry_b:.0f} 두께 **{th}** (환산 {S(th):.1f}) · '
-          f'빨강좌단 {rx0 - cl:+.1f} · 좌단돌출(바깥선) **{prot:+.2f}** (환산 {S(prot):+.2f})')
+    pl = bbox(near(sub, GOLD, TOL_GOLD), ox, oy)  # ⚠ 932 — 이 축은 아직 정수다(아래 ⚑)
+    print(f'  {tag}: 띠 y {ry_t:.0f}..{ry_b:.0f} 두께 **{th}** (환산 {S(th):.1f}) · '
+          f'빨강좌단 {rx0 - cl:+.2f} · 좌단돌출(바깥선) **{prot:+.2f}** (환산 {S(prot):+.2f})')
     if pl is None:
         print('        금색 판 채움 없음')
         return None
@@ -113,7 +166,7 @@ def one_ribbon(a, tag, cl, cr, ry0, ry1, gx0, gx1, ubox, k, scale):
         uy0, uy1 = py1 + 1, py1 + 1.5 * w
         bcx = pcx
     sub, ox, oy = win(a, ux0, uy0, ux1, uy1)
-    wi = bbox(sub.min(2) > 205, ox, oy)
+    wi = bbox(sub.min(2) > 205, ox, oy)           # ⚠ 932 — 이 축은 아직 정수다(아래 ⚑)
     if wi is None:
         print('        수량 잉크 없음')
         return None
@@ -129,6 +182,9 @@ def one_ribbon(a, tag, cl, cr, ry0, ry1, gx0, gx1, ubox, k, scale):
 
 
 def main():
+    global INT_STEP
+    if '--int' in sys.argv:
+        INT_STEP = True          # 옛 정수 걸음 자 — 대조·되돌림 시험 전용
     cap = 'docs/review/151-r13'
     geo = 'docs/review/151-r13.geo.json'
     if '--cap' in sys.argv:
@@ -136,7 +192,8 @@ def main():
     if '--geo' in sys.argv:
         geo = sys.argv[sys.argv.index('--geo') + 1]
 
-    print(f'== 레퍼런스 {REF} · 금색 문턱 {TOL_GOLD} · K={K}  (환산 = ref × K)')
+    print(f'== 레퍼런스 {REF} · 금색 문턱 {TOL_GOLD} · K={K}  (환산 = ref × K)'
+          f'  [자: {"③ 정수 걸음(옛 판 · --int)" if INT_STEP else "부분 화소(932 1회차)"}]')
     ra = np.asarray(Image.open(REF).convert('RGB')).astype(int)
     R = {}
     for name, cl, cr, rbs in REF_CARDS:
@@ -144,8 +201,16 @@ def main():
         for tag, ry0, ry1, gx0, gx1 in rbs:
             R[(name[:8], tag)] = one_ribbon(ra, tag, cl, cr, ry0, ry1, gx0, gx1, None, 1, K)
 
+    if '--ref-only' in sys.argv:
+        return
     print(f'\n== 우리 {cap}-c*.png  (환산 = ×1)')
-    G = json.load(open(geo))
+    try:
+        G = json.load(open(geo))
+    except FileNotFoundError:
+        # ⚑ 932 — ref 쪽만으로도 이 자가 돌아야 한다(ref 는 저장소 안에 있고 캡처는 아니다).
+        #   옛 판은 여기서 **추적 스택 + 코드 1** 로 죽어 ref 절까지 같이 버렸다.
+        print(f'(기하 {geo} 없음 — node tools/cap151.js <캡처>.png --crop 먼저 · ref 절만 냈다)')
+        return
     for i, c in enumerate(G['cards'], 1):
         try:
             oa = np.asarray(Image.open(f'{cap}-c{i}.png').convert('RGB')).astype(int)

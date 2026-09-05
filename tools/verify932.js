@@ -125,6 +125,39 @@ console.log('\n[4] 선례 — 두 처방이 말이 아니라 코드로 있다');
     /a=s - 0\.5 - ml/.test(s667) && /b=e \+ 0\.5 \+ mr/.test(s667));
 }
 
+/* ── [5] 1회차 수리 — `scan667b.left_edge` ────────────────────────────── */
+console.log('\n[5] 수리 — `scan667b.py` 의 리본 좌단이 부분 화소로 읽히는가 (ref 는 저장소 안에 있다)');
+{
+  const { py } = require('./pydep937');
+  const run = (extra) => String(py(['tools/scan667b.py', ...extra], {
+    cwd: path.resolve(TOOLS, '..'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+  }));
+  /* ref 쪽만 본다 — 우리 크롭은 캡처가 있어야 하고 이 자는 화소를 안 찍는 자다. */
+  const prot = (out) => (out.match(/좌단돌출\(바깥선\) \*\*([-+0-9.]+)\*\*/g) || [])
+    .map((m) => parseFloat(m.replace(/[^-+0-9.]/g, '')));
+  let oldOut, newOut;
+  try {
+    oldOut = run(['--ref-only', '--int']);
+    newOut = run(['--ref-only']);
+  } catch (e) {
+    if (e && e.status === 2) { console.log('  SKIP [5] 파이썬 의존 없음 — pip3 install pillow numpy'); }
+    else throw e;
+  }
+  if (oldOut && newOut) {
+    const o = prot(oldOut), n = prot(newOut);
+    ok('[5-a] 자가 ref 리본 넷을 다 읽는다', o.length === 4 && n.length === 4, `${o.length} ↔ ${n.length}`);
+    ok('[5-b] ⚑ **옛 정수 자는 넷 다 정확히 +0.00** — 참값이 1~2 ref px 인 축이 격자에 통째로 잠겼다는 지문',
+      o.length === 4 && o.every((v) => v === 0), o.join(' '));
+    ok('[5-c] 부분 화소 자는 **정수가 아닌 값을 낸다**(적어도 둘) — 이제 이 축이 표현된다',
+      n.filter((v) => Math.abs(v - Math.round(v)) > 1e-6).length >= 2, n.join(' '));
+    /* ⚠ 무르게 푼 수리가 아님 — **그 밖의 축은 한 글자도 안 움직였다.** */
+    const strip = (t) => t.split('\n').filter((l) => !l.startsWith('== '))
+      .map((l) => l.replace(/좌단돌출.*/, '')).join('\n');
+    ok('[5-d] ⚑ 그 밖의 축은 **출력이 한 글자도 안 바뀌었다**(수리가 이 축 하나에만 닿았다)',
+      strip(oldOut) === strip(newOut));
+  }
+}
+
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */
 console.log('\n[R] 되돌림 — 정수로 되돌리면 895 의 지문이 되돌아온다');
 {
