@@ -29,6 +29,15 @@ const ok = (n, c, d) => {
   else { fail++; console.log('  FAIL ' + n + (d ? ' — ' + d : '')); }
 };
 const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
+/* 896 1회차 — «칠해진 검정인가». `rgb(r,g,b)` · `rgba(r,g,b,a)` 둘 다 받는다.
+   투명(alpha 0)도 «검정 아님» 으로 읽어야 한다 — 색만 검정이고 안 보이는 립이 이 항의 표적이다. */
+const isBlack = (css) => {
+  const m = String(css || '').match(/rgba?\(([^)]+)\)/);
+  if (!m) return false;
+  const v = m[1].split(',').map(s => parseFloat(s));
+  const a = v.length > 3 ? v[3] : 1;
+  return a >= 0.9 && Math.max(v[0], v[1], v[2]) <= 40;
+};
 
 /* ── 기대값 (회차별 근거) ─────────────────────────────────────────────────
    배너형 = 카드1(광고 제거) · 불릿형 = 카드2·3(불릿 4행)
@@ -465,6 +474,8 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
           /* 885 8회차 — 캡 왼끝은 이제 **검정 립**(border-left)이고 크림은 그 오른쪽부터다.
              둘을 따로 낸다: capL = 립 좌단 · creamL = 크림 좌단 · redL = 상자 우단(= 위 줄의 빨강). */
           lipW: parseFloat(cap.borderLeftWidth) || 0,
+          /* 896 1회차 — 두께만 읽으면 «칠하지 않은 립» 이 통과한다(아래 [G8a]) */
+          lipC: cap.borderLeftColor,
           capL: +(r.left + bd + parseFloat(cap.left) - cb.left).toFixed(2),
           creamL: +(r.left + bd + parseFloat(cap.left) + (parseFloat(cap.borderLeftWidth) || 0) - cb.left).toFixed(2),
           redL: +(r.left + bd + parseFloat(cap.left) + (parseFloat(cap.borderLeftWidth) || 0)
@@ -500,6 +511,16 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
   ok('[G8] 리본 왼끝 **검정 립**이 카드선 밖 −2.5~−4 에서 시작한다 (ref scan885f: −2.8~−3.7 · ET 가 잰 −3.05 가 이것이다)',
     g10.every((r) => r.lipW >= 2 && r.capL <= -2.5 && r.capL >= -4.5),
     g10.map((r) => `${r.capL}(립${r.lipW})`).join(' / '));
+  /* ⚑⚑ 896 1회차 — **[G8] 은 립의 «두께와 자리» 만 읽는다.** 896 은 8회차에 «리본 왼끝은 검정 립»
+     으로 닫혔는데, 그 답 중 «검정» 을 지키는 항이 저장소에 **하나도 없었다**: 립을 크림(#FFFCF3)으로
+     칠하거나 아예 투명으로 만들어도 [G8]·[G8c]·[G8b]·`verify833` [17-f] 가 **넷 다 초록**이다
+     (1회차에 세 판을 나란히 돌려 실측 — review 896 §3). 색은 이 자가 맡는다(833 은 두께만 —
+     좌단·립의 임자가 여기라 사본을 만들지 않는다. 402 «사본을 지운다»).
+     ⚠ **선언을 읽는다** — 이 자는 «되돌아가면 빨개져야 하는 값» 만 담는 DOM 자이고, 같은 자리의
+     «찍힌 잉크» 축은 셋째 부분화소 자 `tools/scan885f.py` 가 임자다(896 1회차가 그 자로 ref·우리를
+     다시 재서 8회차 표를 재현했다 — 립 잉크 ref 3.2~4.4 ↔ 우리 2.86 우리px). */
+  ok('[G8a] 그 립은 **불투명한 검정**이다 — 색을 빼면 «검정 립» 이라는 896 의 답이 그림에서만 사라진다',
+    g10.every((r) => isBlack(r.lipC)), g10.map((r) => r.lipC).join(' / '));
   ok('[G8c] 그 립 오른쪽에서 **크림이 카드선 안쪽 −0.5~+1** 에서 시작한다 (ref scan885f +0.18 · 채점 EZ +0.23 · FA +0.31)',
     g10.every((r) => r.creamL >= -0.5 && r.creamL <= 1.0), g10.map((r) => r.creamL).join(' / '));
   ok('[G8b] 그래서 빨강이 **위 줄에서** 카드선 +28~32 에서 시작한다 (ref scan885f 위 28.85 / 중 25.2 / 아래 20.9 — EU 의 +18.6~20.6 은 아래 줄이다)',
@@ -560,6 +581,23 @@ const read = page => page.evaluate(() => [...document.querySelectorAll('.pvc')].
   ok('R8 수량 상자를 판 폭(91/79)으로 되돌리면 [G3] 이 빨개진다 (넘침이 되살아난다)',
     after9.some(r => r.adv > r.uW),
     after9.map(r => `${r.adv}>${r.uW}?`).join(' · '));
+
+  /* R11 — 896 1회차. [G8a] 가 정말로 무는지 **립을 지워** 확인한다(279: 죽은 되돌림 시험은
+     죽은 게이트보다 나쁘다). 두 판을 다 본다 — 크림으로 칠한 판(색만 바뀜)과 투명 판(안 그려짐).
+     ⚠ 여기까지 오면 앞 되돌림들이 얹은 style 이 살아 있지만 그것들은 색을 안 건드린다. */
+  const lipRe = await page.evaluate(() => {
+    const rd = () => [...document.querySelectorAll('.pvc>.rb')]
+      .map((rb) => getComputedStyle(rb, '::before').borderLeftColor);
+    const put = (css) => { const st = document.createElement('style');
+      st.textContent = '.pvc>.rb::before{' + css + '}'; document.head.appendChild(st); };
+    put('border-left-color:#FFFCF3'); const cream = rd();
+    put('border-left-color:transparent'); const clear = rd();
+    return { cream, clear };
+  });
+  ok('R11 립을 «크림»으로 칠하면 [G8a] 가 빨개진다 (두께·자리는 그대로라 [G8][G8c][G8b] 는 초록이다 — 그래서 이 항이 필요했다)',
+    lipRe.cream.length >= 4 && lipRe.cream.every(c => !isBlack(c)), lipRe.cream.join(' / '));
+  ok('R11b 립을 «투명»으로 만들어도 [G8a] 가 빨개진다 (색만 검정이고 안 그려지는 립을 안 놓친다)',
+    lipRe.clear.length >= 4 && lipRe.clear.every(c => !isBlack(c)), lipRe.clear.join(' / '));
 
   ok('[전제] 콘솔 에러 0건', errs.length === 0, errs.slice(0, 3).join(' / '));
   console.log('\nVERIFY667 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
