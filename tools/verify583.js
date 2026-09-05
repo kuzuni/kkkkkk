@@ -166,6 +166,13 @@ const INSTALL = () => {
   const K = await p.evaluate(() => ({ FXMAX, FX3_FLYS, FX3_LAND, FX3_BSPITCH, CIC_SC: FX_CIC_SC,
     FITS: FXB_FITS, SZMIN: FXB_SZMIN, SZMAX: FXB_SZMAX, DMAX: FXB_DMAX,
     ics: FXCUR.gold.ics, gs: { gold: fxGrainSc('gold'), rstone: fxGrainSc('rstone'), tstone: fxGrainSc('tstone') } }));
+  /* ⚑ 908 — 눌림 진폭의 **CSS 기본값**(`@keyframes jzHb` 의 `var(--hb-s, …)` 폴백)도 손으로 안 적고
+     제품에서 읽는다. 세 호스트가 전부 `--hb-s` 를 신고하므로 실제로는 안 쓰이지만(아래 [C-*-hb] 가
+     그것을 못박는다), 신고가 사라지면 자가 **제품이 쓰는 그 값**으로 따라가야 한다. */
+  const HB_DEF = parseFloat((src.match(/--hb-s\s*,\s*([\d.]+)\s*\)/) || [])[1]);
+  ok(Number.isFinite(HB_DEF) && HB_DEF > 1,
+     '[C0] 눌림 진폭의 CSS 기본값(`--hb-s` 폴백)을 제품에서 읽었다 — 손 상수 0', 'HB_DEF ' + HB_DEF);
+  await p.evaluate(v => { window.HB_DEF = v; }, HB_DEF);
 
   const R = {};
   for (const s of SITES) {
@@ -186,6 +193,12 @@ const INSTALL = () => {
          `fxRect(버튼)` 을 쓰는데, 룬·단련 버튼은 눌림 연출에서 ×1.02 로 커진다(실측 룬
          420×112 → 428.4×114.24 · 단련 496×173 → 505.9×176.5 · 훈련은 Δ0). 쉬는 상자로 재면
          그 2% 가 그대로 «알 1px» 로 어긋난다 ⇒ 상자는 아래 홀드 창 **안에서** 표본으로 모은다. */
+    /* ⚑⚑ 908 — **위끝 쪽 축 둘을 여기서 더 읽는다.** 아래 [C] 가 위끝을 «40ms 격자가 본 가장 큰
+       상자» 에서 유도하던 것이 그대로 플레이키였다(등재문: 30회 중 1회 · 실측 알 38.0 vs 위끝 36.0).
+       ⇒ 봉우리를 표본에서 **고르지 않고** 해석적으로 유도한다 — 「쉬는 상자 × 눌림 진폭 상한」.
+         · `rest` = 누르기 **전**의 발원 상자(이 블록은 `mouse.down` 앞이라 정의상 쉬는 값이다)
+         · `hb`   = 488 맥박 진폭(`--hb-s` · `@keyframes jzHb` 0% 의 scale). 상수를 손으로 안 적고
+                    **호스트에게 묻는다**(898 규약 — 상수가 바뀌면 자가 따라온다). */
     const AX = await p.evaluate(s => {
       const h = document.querySelector(s.host); if (!h) return null;
       const sel = (getComputedStyle(h).getPropertyValue('--burst-to') || '').trim();
@@ -193,8 +206,10 @@ const INSTALL = () => {
       const st = getComputedStyle(t);
       const sz = parseFloat(st.getPropertyValue('--burst-sz'));
       const ft = parseFloat(st.getPropertyValue('--burst-fit'));
+      const hb = parseFloat(getComputedStyle(h).getPropertyValue('--hb-s'));
       return { sel: sel, szs: (sz > 0 && sz <= 1) ? sz : 1,
-               fits: (ft > 0 && ft <= FXB_FITS) ? ft : FXB_FITS };
+               fits: (ft > 0 && ft <= FXB_FITS) ? ft : FXB_FITS,
+               hb: (hb > 0 ? hb : HB_DEF), rest: fxRect(t) };
     }, s);
     const before = await p.screenshot({ clip: { x: hostClip.x, y: hostClip.y, width: hostClip.width, height: hostClip.height } });
     const bb = await (await p.$(s.btn)).boundingBox();
@@ -372,15 +387,32 @@ const INSTALL = () => {
                icX: v => Math.max(K.SZMIN, v * hsc * a.szs * CIC * fitIC),
                plX: v => Math.max(K.SZMIN, v * hsc * a.szs * fitPl) };
     };
-    const bx = box.reduce((m, x) => (Math.min(x.bw, x.bh) > Math.min(m.w, m.h) ? { w: x.bw, h: x.bh } : m),
-                          { w: box[0].bw, h: box[0].bh });          /* §R4 가 다시 굴릴 상자 */
+    /* ⚑⚑ 908 — **위끝의 상자를 표본에서 «고르는» 것을 그만둔다.**
+       종전 `bx` 는 «40ms 격자가 본 가장 큰 상자» 였다. 그런데 621 눌림 왕복이 홀드 내내 이 상자를
+       흔들고(진폭 상한 `--hb-s` = ×1.02), 격자가 그 봉우리에 안 걸리는 실행이 있다 —
+       `probe908` 실측: 룬 격자 최대가 실행마다 420.0 ↔ 428.4 로 갈리고(2.0%) 그 2%가 위끝을
+       24 ↔ 25 로 흔든다. 위끝이 낮게 잡힌 실행에서는 **자가 못 본 더 큰 순간에 태어난 알**이
+       그것을 넘어 빨개진다(등재문 실측 알 38.0 vs 위끝 36.0 · 30회 중 1회).
+       ⇒ 봉우리를 **해석적으로** 유도한다: 「쉬는 상자 × `--hb-s`」. 표본을 안 쓰므로 실행마다
+         한 값이고(`probe908` [2] — ANA 폭 0.0px), 그 값이 곧 **진짜 봉우리**다
+         (`probe908` [5]: 격자가 봉우리를 잡은 실행에서 해석값 − 격자 최대 = **0.0px**).
+       ⚠ **문턱은 한 칸도 안 넓혔다**(334·796). 아래 ±2%/±1px 은 그대로이고, 바뀐 것은
+         «어느 상자에 대는가» 뿐이다 — 그리고 그 상자는 **커진 것이 아니라 흔들림이 멈춘 것**이다
+         (해석값 ≥ 모든 표본 = [R7a] 가 못박는다 · 무르지 않음은 [R7b] 가 못박는다).
+       ⚠ **아래끝(`sm`)은 그대로 표본에서 고른다** — 이 절 아래 ⚠⚠ 머리말이 적어 둔 대로 아래끝은
+         애초에 문턱으로 안 세워져 있고(`[C-*-hi]` 의 «눈금31» 은 표본이 작을수록 **무른** 쪽이라
+         위끝과 부호가 반대다), `probe908` [7] 실측도 그 문턱이 실행마다 **폭 0px**(여유 2~6px)이다. */
+    if (!a.rest || !(a.rest.w > 0)) { ok(false, '[C-' + s.k + '-ax] 쉬는 발원 상자를 읽었다'); continue; }
+    const bx = { w: a.rest.w * a.hb, h: a.rest.h * a.hb };          /* 해석적 봉우리 · §R4 가 다시 굴릴 상자 */
     const sm = mk(box.reduce((m, x) => (Math.min(x.bw, x.bh) < Math.min(m.w, m.h) ? { w: x.bw, h: x.bh } : m),
                              { w: box[0].bw, h: box[0].bh }));      /* 가장 작게 눌린 순간 */
-    const bg = mk(bx);                                              /* 가장 크게 부푼 순간 */
+    const bg = mk(bx);                                              /* 가장 크게 부푼 순간(해석) */
     const lo = sm.ic(24), hi = bg.ic(34);
     CH[s.k] = { cap: bg.cap, fitIC: bg.fitIC, fitPl: bg.fitPl, gs,
                 icHi: bg.ic(34), plHi: bg.pl(34), icX: bg.icX(34), plX: bg.plX(34),
                 rev: cic => mk(bx, cic),                            /* §R4 되돌림 시험이 쓴다 */
+                /* ⚑ 908 — §R7 이 쓴다: 해석 봉우리 · 그 창의 표본 상자 전부 · 쉬는 상자 */
+                bx, box, rest: a.rest, hb: a.hb, mk,
                 lo, hi, hi31: sm.ic(31) };
     const all = r.tr.filter(x => Number.isFinite(x.onx));
     const got = Math.max(...all.map(x => x.onx), 0), gotMin = Math.min(...all.map(x => x.onm), 1e9);
@@ -700,6 +732,34 @@ const INSTALL = () => {
          k + ' · 새 ' + n1(conv.d0s) + ' → ' + n1(conv.d1s) + 'px · 문턱 ' + DTOL + 'px · '
          + (conv.ok ? '초록(=반려)' : '빨강'));
     }
+  }
+
+  /* ⚑⚑ 908 신설 — [R7a]·[R7b] «해석 봉우리» 되돌림 시험 (짝으로 세운다).
+     [C] 의 위끝이 표본에서 해석으로 옮겨 갔으므로, **두 방향**을 같이 못박아야 한다:
+       [R7a] 해석 봉우리가 그 창의 **모든 표본 상자를 덮는다**(≥) — 자가 «자기가 본 것보다 작은
+             봉우리» 를 써서 통과하는 일은 없다. 이 항은 겸사겸사 **제품 검사**다:
+             표본이 해석값을 넘으면 그것은 눌림이 `--hb-s` 신고를 어긴 것이다.
+       [R7b] 진폭을 신고 전(×1.00 = 쉬는 상자)으로 되돌린 사본에서는 **표본이 실제로 그 값을 넘는다**
+             — 즉 ×`--hb-s` 는 여유를 넣은 상수가 아니라 **실제로 필요한 몫**이다. 이 짝이 없으면
+             «진폭을 아무 값이나 크게 적어도 초록» 인 자가 된다(334). */
+  console.log('\n[R7] 908 — 위끝의 «해석 봉우리» 가 무르지도, 작지도 않다');
+  for (const s of SITES) {
+    const c = CH[s.k]; if (!c || !c.box || !c.box.length) { ok(false, '[R7-' + s.k + '] 상자 표본이 있다'); continue; }
+    const wx = Math.max(...c.box.map(x => x.bw)), hx = Math.max(...c.box.map(x => x.bh));
+    ok(wx <= c.bx.w + 0.5 && hx <= c.bx.h + 0.5,
+       '[R7a-' + s.k + '] ★ 해석 봉우리(쉬는 상자 × --hb-s ' + c.hb + ')가 **그 창의 모든 표본 상자를 덮는다**'
+       + ' — 새 위끝은 «자가 본 것» 보다 작지 않고, 눌림도 신고 진폭을 안 어긴다',
+       '표본 최대 ' + n1(wx) + '×' + n1(hx) + ' ≤ 해석 ' + n1(c.bx.w) + '×' + n1(c.bx.h));
+    /* 되돌림 — 진폭을 안 곱한 «쉬는 상자» 로는 표본이 삐져나온다(= ×--hb-s 가 살아 있는 몫이다).
+       ⚠ 훈련(`.tr-card`)은 눌림이 상자를 안 흔드는 실행이 있으므로 세 자리 합계로 묻는다. */
+    CH[s.k].over = (wx > c.rest.w + 0.5 || hx > c.rest.h + 0.5);
+  }
+  {
+    const seen = SITES.map(s => CH[s.k]).filter(Boolean);
+    ok(seen.some(c => c.over),
+       '[R7b] ★ 진폭을 신고 전(×1.00 = 쉬는 상자)으로 되돌리면 표본 상자가 **실제로 그 값을 넘는다**'
+       + ' — ×`--hb-s` 는 여유가 아니라 살아 있는 몫이다(넓힌 수리가 아니다 · 334·796)',
+       SITES.map(s => s.k + (CH[s.k] ? (CH[s.k].over ? ' 넘침' : ' 안 넘침') : ' n/a')).join(' · '));
   }
 
   console.log('\n콘솔 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
