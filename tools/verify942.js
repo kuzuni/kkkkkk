@@ -172,12 +172,12 @@ console.log('\n[6] 장부 — 932 전수에서 이 자가 B → 면역으로 옮
   const row = rows.find((r) => r.file === 'probe409g.py');
   ok('[6-a] 장부에 있고 판정이 **면역(S)** 이다', row && row.verdict === 'S', row ? row.verdict : '없음');
   const brk = rows.filter((r) => r.verdict === 'B').map((r) => r.file);
-  ok('[6-b] 주홍(B)이 **7개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c` · 3회차 `probe409i` · 4회차 `probe409f`)',
-    brk.length === 7 && !['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py']
+  ok('[6-b] 주홍(B)이 **6개**로 줄었다 — 942 가 남긴 자리(1회차 `probe409g` · 2회차 `probe409c` · 3회차 `probe409i` · 4회차 `probe409f` · 5회차 `probe409`)',
+    brk.length === 6 && !['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py', 'probe409.py']
       .some((f) => brk.includes(f)), `${brk.length}개`);
   const v932 = fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8');
-  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **네 이름**을 들고 있다)',
-    /const FIXED942 = \['probe409g\.py', 'probe409c\.py', 'probe409i\.py', 'probe409f\.py'\]/.test(v932)
+  ok('[6-c] 932 게이트의 래칫도 같이 옮겨졌다 (`FIXED942` 가 **다섯 이름**을 들고 있다)',
+    /const FIXED942 = \['probe409g\.py', 'probe409c\.py', 'probe409i\.py', 'probe409f\.py', 'probe409\.py'\]/.test(v932)
     && /\[2-h\]/.test(v932));
 }
 
@@ -433,6 +433,80 @@ console.log('\n[9] 4회차 — `probe409f.py` 어깨(기둥 윗끝)가 정수 �
     && !/exp\(-0\.5/.test(src));
   ok('[9-n] 캡처 없이도 돈다 — 커밋 금지 자산(96-*.png)을 전제하지 않는다',
     /os\.path\.exists\(CAP7\)/.test(src) && /캡처 없음/.test(src));
+}
+
+/* ── [10] 5회차 — `probe409.py` ───────────────────────────────────────── */
+console.log('\n[10] 5회차 — `probe409.py` 각도별 «법선 검정 두께» 가 0.5 격자에서 풀렸는가 (판정값 2~7px · 0.5px = 7~25%)');
+{
+  const run9 = (extra) => String(py(['tools/probe409.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
+  const ph9 = run9(['--physics']);
+  /* «   7.0   int    7.00   6.50   -0.50» 한 줄 */
+  const prow = ph9.split('\n').map((l) => l.trim().split(/\s+/))
+    .filter((t) => t.length >= 5 && /^[0-9.]+$/.test(t[0]) && /^(int|cov)$/.test(t[1]))
+    .map((t) => ({ k: parseFloat(t[0]), mode: t[1], cap: parseFloat(t[2]), ref: parseFloat(t[3]) }));
+  const by9 = (m) => prow.filter((r) => r.mode === m);
+  const errRef9 = (m) => Math.max(...by9(m).map((r) => Math.abs(r.ref - r.k)));
+  const errCap9 = (m) => Math.max(...by9(m).map((r) => Math.abs(r.cap - r.k)));
+  ok('[10-a] 재현이 참값 여섯 자리를 두 자로 다 읽었다 (합성 · 그림도 브라우저도 안 쓴다)',
+    by9('int').length >= 5 && by9('cov').length === by9('int').length,
+    `${by9('int').length}자리 × 2자`);
+  /* ⚑⚑ 이 자의 얼굴 — 참값이 무엇이든 «번진 판만» 정확히 반 화소를 잃는다.
+     판정값이 2~7px 이라 그 0.50 이 곧 −7%(K7) ~ −25%(K2) 다. */
+  ok('[10-b] ⚑⚑ **옛 자는 번진 판에서만 정확히 0.50px 를 잃는다**(여섯 자리 전부) — 1:1 인데도 ref 만 얇다',
+    by9('int').length > 0 && by9('int').every((r) => Math.abs((r.cap - r.ref) - 0.5) < 1e-9),
+    by9('int').map((r) => `${r.k}:${(r.ref - r.cap).toFixed(2)}`).join(' '));
+  ok('[10-c] ⚑ 새 자는 번진 판을 참값의 ±0.10px 로 읽는다 (옛 자 0.50)',
+    errRef9('cov') <= 0.10 && errRef9('int') >= 0.5,
+    `ref 오차 ${errRef9('cov').toFixed(2)} ↔ ${errRef9('int').toFixed(2)}`);
+  /* ⚠ 덫 — 접기를 무르게 하면 «진짜 얇은 층» 을 먹는다. 참값 K2.0 이 살아 있어야 한다. */
+  const at2 = by9('cov').find((r) => Math.abs(r.k - 2.0) < 1e-9);
+  ok('[10-d] 덫 — 참값 2.0px 짜리 **진짜 얇은 검정**이 안 먹힌다 (새 자 ≥1.80 · 옛 자는 1.50 으로 −25%)',
+    at2 && at2.ref >= 1.80, at2 ? at2.ref.toFixed(2) : '못 읽음');
+  ok('[10-e] ⚑ 칼같은 판에서는 두 자가 **참값 그대로 같다** — 새 자가 얻은 것은 전부 번진 쪽이다',
+    errCap9('cov') < 1e-9 && errCap9('int') < 1e-9,
+    `cap 오차 int ${errCap9('int').toFixed(2)} ↔ cov ${errCap9('cov').toFixed(2)}`);
+
+  /* 지문 — ref 실측(캡처 없이 ref 절만 돌아도 된다). 두 코너 × 9각도 = 18칸. */
+  const thick = (out) => out.split('\n').filter((l) => l.trim().startsWith('검정'))
+    .flatMap((l) => l.trim().split(/\s+/).slice(1).map(parseFloat));
+  const nexts = (out) => out.split('\n').filter((l) => l.trim().startsWith('다음'))
+    .map((l) => l.trim().split(/\s+/).slice(1).join('')).join('|');
+  const oldOut = run9(['--int']), newOut = run9([]);
+  const oldT = thick(oldOut), newT = thick(newOut);
+  const half = (v) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-9;
+  ok('[10-f] 자가 ref 두 코너 × 9각도를 다 읽는다', oldT.length >= 18 && newT.length === oldT.length,
+    `${oldT.length} ↔ ${newT.length} 칸`);
+  ok('[10-g] ⚑ **옛 자의 값은 예외 없이 0.5 의 배수다** — 승자독식 런의 지문',
+    oldT.length > 0 && oldT.every(half), `${oldT.length}개 전부`);
+  ok('[10-h] 새 자는 그 격자에서 풀린다 (절반 넘게 비배수)',
+    newT.filter((v) => !half(v)).length > newT.length / 2,
+    `${newT.filter((v) => !half(v)).length}/${newT.length}`);
+  ok('[10-i] 두 자의 값이 ±1.0px 안이다 — **정의가 안 바뀌었다**(같은 층을 고른다)',
+    oldT.every((v, k) => Math.abs(v - newT[k]) <= 1.0),
+    `최대 ${Math.max(...oldT.map((v, k) => Math.abs(v - newT[k]))).toFixed(2)} px`);
+  /* ⚑⚑ 가장 짧은 증거 — «다음» 글자줄이 두 모드에서 **글자까지 같다**.
+     표본 자리·개수·`cls()` 분류를 한 칸도 안 건드렸다는 뜻이다(942 3회차 [8-n] 과 같은 항). */
+  ok('[10-j] ⚑⚑ 두 모드의 «다음» 글자줄이 글자까지 같다 — 표본·분류·창을 안 건드렸다',
+    nexts(oldOut).length > 0 && nexts(oldOut) === nexts(newOut), nexts(newOut));
+
+  /* 불변 — 창·상자·팔레트 + 사본 0 + 캡처 의존 0. */
+  const src9 = fs.readFileSync(path.join(TOOLS, 'probe409.py'), 'utf8');
+  ok('[10-k] 창과 걸음이 그대로다 (밖 6.0 · 안 22.0 · 0.5px)',
+    /out=6\.0, inn=22\.0, step=0\.5/.test(src9));
+  ok('[10-l] 상자·코너 원·팔레트가 그대로다 (`BOX` 손 값 · H,R = 84,30 · PAL 6색)',
+    /BOX = \{'ref': \(292, 551, 2027\), 'cap': \(291, 551, 1967\)\}/.test(src9)
+    && /^H, R = 84, 30/m.test(src9) && (src9.match(/^\s{4}\('[KBFDRS]', \(/gm) || []).length === 6);
+  ok('[10-m] ⚑ **옛 자가 살아 있다**(`--int`) — 지문을 매 실행 다시 찍을 수 있다',
+    /MODE = 'int' if '--int' in sys\.argv else 'cov'/.test(src9)
+    && /black_norm\(s\) if MODE == 'int'/.test(src9));
+  ok('[10-n] ⚑ **사본을 안 만들었다** — 층 셈은 `probe409g.runs_from` · 합성 판은 `phys_cols` 가 그린다',
+    /from probe409g import runs_from, phys_cols/.test(src9)
+    && !/def runs_from/.test(src9) && !/exp\(-0\.5/.test(src9));
+  ok('[10-o] 층을 고르는 규칙이 `ring_run` 과 같다 — 윤곽(d=0)에 **가장 가까운** K 층이다',
+    /abs\(pos - out\) < abs\(best\[0\] - out\)/.test(src9));
+  ok('[10-p] 캡처 없이도 돈다 — 커밋 금지 자산(96-*.png)을 전제하지 않는다',
+    /os\.path\.exists\(CAP7\)/.test(src9) && /캡처 .* 없음/.test(src9));
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */

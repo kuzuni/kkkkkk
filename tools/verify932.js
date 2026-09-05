@@ -51,8 +51,12 @@ const RED0 = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py', 'scan8
    자는 `tools/verify942.js` §8. */
 /* ⚛ 942 4회차 — `probe409f.py` 가 B 에서 빠졌다(기둥 윗끝을 정수 while 걷기에서
    문턱 교차 보간으로 · 옛 자가 두 판을 한 화소 갈라 놓던 자리). 자는 `tools/verify942.js` §9. */
-const FIXED942 = ['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py'];
-const BRK = ['probe352.py', 'probe384.py', 'probe409.py',
+/* ⚛ 942 5회차 — `probe409.py` 가 B 에서 빠졌다(각도별 «법선 검정 두께» 를 승자독식 런에서
+   **층 질량 분배**로 · `probe409g.runs_from` 을 부른다 — 사본 0). 옛 자는 번진 판에서만
+   **정확히 0.50px** 를 잃었고(판정값 2~7px 이라 −7~−25%) 새 자는 ±0.06px 다.
+   자는 `tools/verify942.js` §10. */
+const FIXED942 = ['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py', 'probe409.py'];
+const BRK = ['probe352.py', 'probe384.py',
   'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
 
 /* ⚠ 선별기의 `frac` 신호는 **관용구 이름**만 본다. 면역 판정의 근거는 그보다 넓다 —
