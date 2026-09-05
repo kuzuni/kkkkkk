@@ -102,19 +102,15 @@ const ok = (b, name, detail) => {
       showItem(RELICS[0].id);
       const raw = document.querySelector('#mbox .sk-db').getBoundingClientRect();
       const cls = document.getElementById('modal').className;
-      /* ---- 처방: `verify429` 가 실제로 쓰는 `settleBox` 와 **같은 본체** ----
+      /* ---- 처방: `verify429` 가 실제로 쓰는 정착과 **같은 본체** ----
          ⚠ «한 번 기다리고 2 rAF» 로는 못 닫는다 — 닫힘이 끝나는 그 프레임에 **열림이 붙어서**
          이번엔 `jzBoxIn` 0%(scale .92 = 690)를 잡는다. 그래서 «두 프레임 연속으로 돌 것이
-         없을 때만» 끝낸다(공용 `settle291` 사다리를 안 쓴 이유는 게이트 쪽 주석 ⓐⓑ). */
-      const pend = () => (document.getAnimations ? document.getAnimations() : [])
-        .filter((a) => /^jzBox/.test(a.animationName || '') && a.playState !== 'finished');
-      const t0 = performance.now();
-      for (let quiet = 0; quiet < 2 && performance.now() - t0 < 1500;) {
-        const P = pend();
-        if (P.length) { await Promise.all(P.map((a) => a.finished.catch(() => 0))); quiet = 0; }
-        else quiet++;
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      }
+         없을 때만» 끝낸다.
+         ⚑ **작업 957** — 950 이 그 규칙을 공용 §box(`window.settleBox`)로 올렸고 이 자리도 그것을
+         부른다. 이 재현기가 «처방이 창을 닫는다»([3-a])로 재는 대상이 곧 **공용 부품 자신**이다.
+         되돌림: `PW_SETTLEBOX=0` 이면 §box 가 즉시 돌아와 [3-a] 가 다시 빨개진다. */
+      if (typeof window.settleBox === 'function') await window.settleBox();
+      else await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       const fixed = document.querySelector('#mbox .sk-db').getBoundingClientRect();
       closeModal();
       return { raw: +raw.width.toFixed(2), fixed: +fixed.width.toFixed(2), cls };

@@ -97,6 +97,17 @@ const IN_PAGE_SRC = `(cap) => { const t0 = performance.now(); const lim = (cap |
      (62% `scale:1.02`) · 260ms~ 750×290. 고정 대기는 이 곡선 위 아무 데나 떨어진다 —
      한 배율이 가로·세로에 **같이** 걸리므로 «자리가 틀렸다» 가 아니라 «한 프레임을 읽었다» 다.
 
+   ⚑ **작업 957 — 이 규칙이 이제 «하나» 다.** 950 이 §box 를 세울 때 같은 일을 손으로 적은 자가
+     다섯 남아 있었다(`probe950` [5]): `verify46`(244 · 셀렉터형) · `verify429`(764) · `probe764` ·
+     `verify268`(135) · `smoke.js`(135). 957 이 그 중 **넷**을 이 부품으로 모았고, 그러면서 위
+     `pend()` 에 **«무한 반복은 안 기다린다»** 한 항이 붙었다 — 135 계열(`verify268`·`smoke`)이
+     `/^jz/` 로 넓게 보는데 `jzDotPulse`·`bgmA` 같은 상시 애니는 `finished` 가 **영원히 안 온다**.
+     그 둘이 손으로 적은 규칙에도 같은 항(`iterations !== Infinity`)이 있었다 — 사본을 접는 것이
+     아니라 **사본이 알던 것을 부품이 배우는 것**이 이 이관의 몫이다(`^jzBox` 에는 무한 연출이
+     하나도 없으므로 950·485 의 기존 호출자는 동작이 한 프레임도 안 바뀐다 · `verify957` [2]).
+     남긴 하나는 `verify46` 이다 — 그 자의 축은 «요소 자신의 애니 + bbox 연속 3회» 라 이름
+     패턴 하나로는 못 적는다(사유·표는 `docs/review/957-상자정착사본접기.md` §2 · `verify957` [5]).
+
    되돌림 스위치는 `PW_SETTLEBOX=0`(`window.__settleBoxOff`) — 켜면 §box 는 기다리지 않고
    즉시 0 을 돌려주므로 부르는 자의 폴백(= 종전 고정 대기)이 그대로 산다. 291 의 `PW_SETTLE`
    과 **가르는 이유**: 931·946 의 전후 대조가 `PW_SETTLE=0` 으로 «장치 없는 세상» 을 만드는데,
@@ -104,12 +115,19 @@ const IN_PAGE_SRC = `(cap) => { const t0 = performance.now(); const lim = (cap |
 const QUIET_SRC = `(pat, cap) => { const lim = (cap | 0) || ${CAP_MS}; const t0 = performance.now();
   const re = new RegExp(pat || '^jzBox');
   const pend = () => (document.getAnimations ? document.getAnimations() : [])
-    .filter(a => re.test(a.animationName || '') && a.playState !== 'finished');
+    .filter(a => re.test(a.animationName || '') && a.playState !== 'finished'
+      && !(a.effect && a.effect.getTiming && a.effect.getTiming().iterations === Infinity));
   const step = (quiet, n) => {
     if (window.__settleBoxOff) return Promise.resolve(n);
     if (quiet >= 2 || performance.now() - t0 > lim) return Promise.resolve(n);
     const P = pend();
-    return (P.length ? Promise.all(P.map(a => a.finished.catch(() => 0))) : Promise.resolve())
+    /* 957 — 상한을 **기다리는 동안에도** 지킨다. finished 는 «끝나지 않는 연출»(무한 반복 ·
+       멈춘 애니)에서 영원히 안 오는데, 위 상한 검사는 걸음 **사이**에만 돌아 그 자리에서
+       통째로 붙잡힌다(실측: 무한 반복 하나면 evaluate 가 안 돌아온다 · verify957 [2d]). */
+    const left = Math.max(0, lim - (performance.now() - t0));
+    return (P.length ? Promise.race([Promise.all(P.map(a => a.finished.catch(() => 0))),
+                                     new Promise(r => setTimeout(r, left))])
+                     : Promise.resolve())
       .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))
       .then(() => step(P.length ? 0 : quiet + 1, n + P.length)); };
   return step(0, 0); }`;
@@ -164,6 +182,24 @@ async function arm(page) {
   return page;
 }
 
+/* ---- §box-node (작업 957) — 노드 쪽에서 §box 를 부르는 한 자리 ----
+   `verify268`·`smoke.js` 는 대기를 **노드 쪽**에서 한다(`page.waitForFunction`). 둘 다 §box 와
+   같은 일을 손으로 적고 있었으므로 여기 한 줄로 모은다. 심긴 페이지면 심긴 본체를 부르고,
+   안 심긴 페이지(= `pwlaunch` 밖에서 만든 페이지)면 **같은 소스 문자열**을 그 자리에서 돌린다 —
+   어느 길로 가도 규칙은 `QUIET_SRC` 하나뿐이다(402 «사본을 지운다»).
+   ⚠ 상한은 부르는 자가 정한다(135 계열은 3000ms 를 쓰던 자리라 그 값을 그대로 넘긴다).
+   ⚠ 페이지가 네비게이션 중이거나 닫혔으면 **자를 멈추지 않고** 0 을 돌려준다(291 ⓒ 와 같은 태도). */
+async function settleAnimOn(page, pat = '^jzBox', cap = CAP_MS) {
+  const lim = (cap | 0) || CAP_MS;
+  try {
+    const armed = await page.evaluate(() => typeof window.settleAnim291 === 'function');
+    const run = armed
+      ? page.evaluate(([p, c]) => window.settleAnim291(p, c), [pat, lim])
+      : page.evaluate(([src, p, c]) => eval(src)(p, c), [QUIET_SRC, pat, lim]);
+    return await Promise.race([run, new Promise(r => setTimeout(() => r(-1), lim + 500))]);
+  } catch (_) { return 0; }
+}
+
 /* 브라우저(그리고 그 컨텍스트)가 만드는 모든 페이지에 자동으로 심는다. */
 function armBrowser(browser) {
   if (!browser || browser.__settle291) return browser;
@@ -182,4 +218,5 @@ function armBrowser(browser) {
   return browser;
 }
 
-module.exports = { SETTLE_SRC, IN_PAGE_SRC, QUIET_SRC, arm, armBrowser, enabled, CAP_MS, MIN_WAIT };
+module.exports = { SETTLE_SRC, IN_PAGE_SRC, QUIET_SRC, arm, armBrowser, enabled,
+                   settleAnimOn, CAP_MS, MIN_WAIT };

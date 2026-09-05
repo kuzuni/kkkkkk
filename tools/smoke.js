@@ -17,6 +17,7 @@ const path = require('path');
    여기 손으로 적혀 있던 모듈 해석·실행 파일 폴백은 `pwlaunch` 것과 **같은 말**이었고,
    사슬을 지나야 291 정착·731 소실 차단기가 붙는다(둘 다 화소와 무관한 장치다). */
 const { pw, launch } = require('./pwlaunch');
+const { settleAnimOn } = require('./settle291');   /* 957 — 개폐 연출 정착은 공용 §box 한 곳 */
 const { chromium } = pw();
 
 const SECS = Number(process.env.SMOKE_SECS || 20);
@@ -506,13 +507,11 @@ if (process.argv.includes('--selftest')) {
          아틀라스 때문에 메인 스레드가 막혀 CSS 애니메이션의 «첫 프레임» 자체가 밀린다:
          프로브 실측(`node tools/probe135.js`)에서 `jzBoxIn` 이 **420ms 동안 currentTime 0** 에
          멈춰 있다가 t≈450 에야 출발했다 → 800ms 시점이 연출 한복판이라 3~6회에 1회 FAIL 이 났다.
-         시계로 기다리지 말고 **`jz*` 애니메이션이 실제로 다 끝날 때까지** 기다린다(상한 3초). */
-      await page.waitForFunction(() => {
-        const app = document.getElementById('app'); if (!app) return true;
-        return !app.getAnimations({ subtree: true })
-          .some((a) => /^jz/.test(a.animationName || '') && a.playState === 'running'
-            && a.effect && a.effect.getTiming().iterations !== Infinity);
-      }, null, { timeout: 3000 }).catch(() => {});
+         시계로 기다리지 말고 **`jz*` 애니메이션이 실제로 다 끝날 때까지** 기다린다(상한 3초).
+         ⚑ **작업 957** — 그 규칙을 여기 손으로 적지 않는다. 950 의 공용 §box(`settle291.js`)가
+         같은 일을 하고, 957 이 «무한 반복(`jzDotPulse`·`bgmA`)은 안 기다린다» 를 그 부품에
+         심어 이 자리가 그대로 옮겨갔다. 상한 3000ms 는 종전 값 그대로. */
+      await settleAnimOn(page, '^jz', 3000);
       await page.waitForTimeout(120);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;

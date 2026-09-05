@@ -34,6 +34,7 @@
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { settleAnimOn } = require('./settle291');   /* 957 — 개폐·입장 연출 정착은 공용 §box 한 곳 */
 const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
@@ -65,19 +66,12 @@ const PARTS = ['.sk-ic', '.sk-gr', '.sk-lv', '.sk-pb', '.sk-ct', '.sk-sl', '.sk-
    (그 파일 `PENDING_SRC` 주석). 그래서 764 와 같이 **자리 쪽**에서 세운다.
    ⇒ 「**두 프레임 연속으로 `jzPg…` 가 없을 때만** 끝낸다」. 상한 1500ms 는 291·764 와 같은 값 —
    어떤 이유로든 `finished` 가 안 오면 자를 멈추지 않고 지나간다.
-   되돌림: `settlePg` 선언과 `openRel` 안 한 줄을 지우면 종전 동작 그대로
+   ⚑ **작업 957 — 여기도 규칙을 다시 안 적는다.** 950 의 §box 는 «이름 패턴을 받는 일반형»
+   (`window.settleAnim291(pat, cap)`)이라 `jzBox` 말고 **`jzPg` 에도 그대로 쓴다** — 771 이 손으로
+   적은 이 열 줄은 그 일반형과 **글자까지 같은 규칙**이었다(`verify957` [3-c] 가 그 동치를 못박는다).
+   되돌림: `PW_SETTLEBOX=0` 이면 §box 가 즉시 돌아와 771 이전 상태가 재현된다
    (`tools/probe771.js` 가 그 상태를 [1] 로 재현한다). */
-const settlePg = async (page) => page.evaluate(async () => {
-  const pend = () => (document.getAnimations ? document.getAnimations() : [])
-    .filter((a) => /^jzPg/.test(a.animationName || '') && a.playState !== 'finished');
-  const t0 = performance.now();
-  for (let quiet = 0; quiet < 2 && performance.now() - t0 < 1500;) {
-    const P = pend();
-    if (P.length) { await Promise.all(P.map((a) => a.finished.catch(() => 0))); quiet = 0; }
-    else quiet++;
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  }
-});
+const settlePg = (page) => settleAnimOn(page, '^jzPg');
 
 const openRel = async (page) => {
   await page.evaluate(() => { closeModal(); openRelw(); });
@@ -294,17 +288,15 @@ const openRel = async (page) => {
           이 자리의 창은 못 닫는다(실측: 그대로 쓰면 g200·g300 에서 `jzBoxIn` 0% = 690 을 잡는다).
        ⇒ 여기서는 «**두 프레임 연속으로 돌 것이 없을 때만** 끝낸다» 로 세운다. 상한 1500ms 는
           291 과 같은 값 — 어떤 이유로든 `finished` 가 안 오면 자를 멈추지 않고 지나간다.
-       되돌림: `settleBox` 선언과 두 호출을 지우면 종전 동작 그대로. */
+       ⚑ **작업 957 — 그 규칙은 이제 여기 안 적혀 있다.** 950 이 위 문단을 그대로 공용 부품
+          `tools/settle291.js` **§box**(`window.settleBox`)로 올렸고, 957 이 이 자리를 그 부품으로
+          갈아 끼웠다. 규칙(두 프레임 조용 · 상한 1500 · 무한 반복 제외)은 **한 곳에만** 있다.
+       되돌림: `PW_SETTLEBOX=0` 이면 §box 가 즉시 돌아오므로 **764 이전의 흔들림이 그대로
+          재현된다**(그것이 이 자의 되돌림 시험이다 — `verify957` [R]). */
     const settleBox = async () => {
-      const pend = () => (document.getAnimations ? document.getAnimations() : [])
-        .filter((a) => /^jzBox/.test(a.animationName || '') && a.playState !== 'finished');
-      const t0 = performance.now();
-      for (let quiet = 0; quiet < 2 && performance.now() - t0 < 1500;) {
-        const P = pend();
-        if (P.length) { await Promise.all(P.map((a) => a.finished.catch(() => 0))); quiet = 0; }
-        else quiet++;
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      }
+      if (typeof window.settleBox === 'function') return void (await window.settleBox());
+      /* 심기지 않은 페이지(= `pwlaunch` 밖) — 규칙을 다시 적지 않고 프레임만 한 번 넘긴다 */
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     };
     const readParts = () => {
       const box = document.getElementById('mbox'), b = box.getBoundingClientRect();

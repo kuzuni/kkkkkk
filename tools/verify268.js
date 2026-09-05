@@ -25,6 +25,7 @@
      §7 펫 그림 174 규칙 — 펫 아이콘은 이모지가 아니라 스프라이트 캔버스이고 잉크가 칸 중앙에 있다.
      §8 회귀   스킬 세부(`showSkillDetail`)는 한 픽셀도 안 바뀐다 · 콘솔/페이지 에러 0. */
 const { pw, launch } = require('./pwlaunch');
+const { settleAnimOn } = require('./settle291');   /* 957 — 상자·페이지 정착은 공용 §box 한 곳 */
 const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
@@ -130,13 +131,11 @@ const READ = (partList) => {
   /* 135 의 교훈 — 60 쥬시(`jzBoxIn`)는 62% 에서 scale 1.02 를 지난다. 고정 대기로 재면
      «연출 한복판» 을 재게 되어 같은 껍데기가 계열마다 다른 수로 나온다(첫 실행에서 실제로
      스킬만 801.03x701.91 로 읽혔다). smoke [3] 과 같은 기준으로 유한 애니메이션이 끝나기를 기다린다. */
+  /* ⚑ 작업 957 — 그 규칙을 여기 다시 안 적는다. 950 의 공용 §box(`settle291.js` QUIET_SRC)가
+     같은 일을 하고, 957 이 «무한 반복은 안 기다린다»(위 문단의 `iterations !== Infinity`)를
+     그 부품에 심어 이 자리가 그대로 옮겨갈 수 있게 했다. 상한 3000ms 는 종전 값 그대로. */
   const settle = async () => {
-    await p.waitForFunction(() => {
-      const app = document.getElementById('app'); if (!app) return true;
-      return !app.getAnimations({ subtree: true })
-        .some(a => /^jz/.test(a.animationName || '') && a.playState === 'running'
-          && a.effect && a.effect.getTiming().iterations !== Infinity);
-    }, null, { timeout: 3000 }).catch(() => {});
+    await settleAnimOn(p, '^jz', 3000);
     await p.waitForTimeout(120);
   };
   const open = async (id) => {
