@@ -95,9 +95,15 @@ async function measure(browser) {
     '[1c] ★ 테 = 검정 ' + BORDER + ' + 베벨 ' + BEVEL + ' = ' + (BORDER + BEVEL).toFixed(2) +
     ' (= ref 2 ref px · 866 의 4.5 + 2.2 = 6.7 이 아니다)',
     d && d.border + ' + ' + d.bevel);
-  ok(d && near(d.radius, d.h / 2, 0.05),
-    '[1d] radius 는 규약대로 «높이 절반» 을 따라간다 (높이가 바뀌면 같이 바뀐다)',
-    d && d.radius + ' vs ' + (d.h / 2).toFixed(3));
+  /* ⚑ 935 이관 — **방향을 뒤집었다**(333 처방 · 지우지 않았다). 904 는 866 이 끌어다 쓴
+     736 «양 끝은 원» 규약을 따라 «radius = 높이 절반» 을 물었지만, 935 가 자 둘로 재니
+     ref 는 stadium 이 **아니다**(바깥 반지름 ≈2 ref px = 4.44 · `probe904` [6] 과 `probe935`
+     가 같은 답). 그래서 이 자리는 이제 «규약을 따라가는가» 가 아니라 **«ref 실측을 따라가는가»**
+     를 묻는다. 상세·되돌림은 `tools/verify935.js`. */
+  ok(d && near(d.radius, 4.44, 0.05) && !near(d.radius, d.h / 2, 0.05),
+    '[1d] ⇄935 radius 는 ref 실측(2 ref px = 4.44)을 따르고 **stadium(높이 절반 ' +
+    (d ? (d.h / 2).toFixed(2) : '?') + ')이 아니다**',
+    d && d.radius + ' (stadium 이면 ' + (d.h / 2).toFixed(3) + ')');
   ok(d && d.top === TOP,
     '[1e] 위(top)는 안 건드렸다 — 줄어든 4.5px 은 **아래에서만** 나온다', d && d.top + '');
 
@@ -138,7 +144,7 @@ async function measure(browser) {
   const REV = css0.replace(CSS_RE, (all_) => all_
     .replace('height:53.3px', 'height:57.8px')
     .replace('border:2.22px solid #000', 'border:4.5px solid #000')
-    .replace('border-radius:26.65px', 'border-radius:28.9px')
+    .replace('border-radius:4.44px', 'border-radius:28.9px')   /* 935 이관 — 현행 값에서 866 판으로 */
     .replace('inset 0 0 0 2.22px', 'inset 0 0 0 2.2px'));
   if (REV === css0) ok(false, '[R] 되돌릴 문자열을 못 찾았다(자가 늙었다)');
   else {
