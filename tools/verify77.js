@@ -93,9 +93,29 @@ const ok = (m) => console.log('  ✓ ' + m);
           const cTxt = '+' + fmtCur('gold', cN), uTxt = '+' + fmtCur('gold', uN);
           fxFly({ x: 540, y: 1200, combat: true }, 'gold', cN);
           fxFly({ x: 540, y: 1200 }, 'gold', uN);
-          /* +n 은 그 묶음의 «첫 도착» 때 뜬다 — probe552 실측 218~299ms 라 700ms 면 4배 여유다.
-             ⚠ 창을 늘려도 안 되고(전투 +n 수명 840ms) 줄여도 안 된다(첫 도착 300ms). */
-          await new Promise((res) => setTimeout(res, 700));
+          /* ⚑ 946 4회차 이관 — 종전은 `setTimeout(700)` 한 줄이었다(«첫 도착 218~299ms 라 4배 여유»).
+             그 «여유» 는 **부하가 없을 때만** 여유다: `par 7` 에서 첫 도착이 466~805ms 로 밀려
+             제 층에 정확히 붙은 +n 을 창이 놓치고 [B] 가 «combat 묶음의 +n 이 #fxlc 에 없다» 로
+             빨개졌다(probe552 실측). 이 자는 이미 «잔존 개수» 가 아니라 **생성 로그**로 판정하므로
+             창을 넓혀도 남의 +n 에 오염되지 않는다(옛 주석의 «늘려도 안 된다» 는 개수 델타 시절 말이다).
+             ⇒ 시각을 안 보고 **도착을 기다린다**. 한도도 손으로 안 적고 제품이 `fxFlies` 에 적어 둔
+             `dur`(주행 초)·`t`(출발 지연, 음수)에서 읽어 그 배수로 잡는다(757 «손 상수 금지»). */
+          const mineFlies = () => fxFlies.filter((f) => f.n === cN || f.n === uN);
+          const promiseMs = Math.max(0, ...mineFlies().map((f) => (f.dur - f.t) * 1000));
+          const capMs = Math.max(3000, promiseMs * 8);
+          const t0 = performance.now();
+          const seen = (txt) => log.some((e) => e.kind === 'plus' && e.txt === txt);
+          let landedAt = null, capped = false;
+          for (;;) {
+            const el2 = performance.now() - t0;
+            if (seen(cTxt) && seen(uTxt)) break;
+            if (!mineFlies().length) {
+              if (landedAt == null) landedAt = el2;
+              if (el2 - landedAt > 200) break;      /* 착지 뒤 한 숨 — +n 은 착지 프레임에 뜬다 */
+            } else landedAt = null;
+            if (el2 > capMs) { capped = true; break; }
+            await new Promise((res) => setTimeout(res, 16));
+          }
           oL.disconnect(); oLC.disconnect();
           const lays = (kind, txt) => log
             .filter((e) => e.kind === kind && (txt === undefined || e.txt === txt))
@@ -106,6 +126,8 @@ const ok = (m) => console.log('  ✓ ' + m);
             flyL: lays('fly').filter((l) => l === 'fxl').length,
             cPlus: lays('plus', cTxt), uPlus: lays('plus', uTxt),
             foreign: log.filter((e) => e.kind === 'plus' && e.txt !== cTxt && e.txt !== uTxt).length,
+            capped, promiseMs: Math.round(promiseMs), capMs: Math.round(capMs),
+            waitMs: Math.round(performance.now() - t0),
           };
         } finally { killEnemy = realKill; }
       };
@@ -116,6 +138,10 @@ const ok = (m) => console.log('  ✓ ' + m);
     else fail(`[전제] 두 묶음의 +n 글자가 같다(«${r.cTxt}») — 금액으로 못 고른다`);
     if (r.foreign === 0) ok('[전제] 격리 창에 «남의» +n 0건');
     else fail(`[전제] 격리했는데 «남의» +n 이 ${r.foreign}건 — 씬이 안 격리됐다`);
+    /* ⚑ 946 4회차 — «도착이 왔는가» 를 판정과 **가른다**. 안 가르면 부하로 밀린 도착이
+       «제품이 층을 안 따라간다» 로 읽힌다(552 등재문의 뜨고 지는 FAIL 이 그 얼굴이었다). */
+    if (!r.capped) ok(`[전제] 도착이 한도 안에 왔다 (대기 ${r.waitMs}ms · 약속 ${r.promiseMs}ms · 한도 ${r.capMs}ms)`);
+    else fail(`[전제] 한도 ${r.capMs}ms 안에 도착이 없다 — 부하로 **못 쟀다**(제품 판정 아님)`);
     if (r.flyLC > 0) ok(`combat 출발 → #fxlc (${r.flyLC}개)`); else fail('combat 출발인데 #fxlc 에 fly 가 없다');
     if (r.flyL > 0) ok(`UI 출발 → #fxl (${r.flyL}개)`); else fail('UI 출발인데 #fxl 에 fly 가 없다');
     if (r.cPlus.includes('fxlc')) ok('combat +n → #fxlc'); else fail('combat 묶음의 +n 이 #fxlc 에 없다');
