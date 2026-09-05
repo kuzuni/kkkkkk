@@ -37,8 +37,11 @@ const ok = (msg, cond, detail) => {
 /* ⚑ 4회차 — `probe866.py` 가 R 에서 빠졌다(알약 바깥·속 여덟 모서리가 전부 부분 화소다 · §7). */
 /* ⚑ 5회차 — `scan885b.py` 가 R 에서 빠졌다(글리프 덩이의 모서리가 전부 부분 화소다 · §8). */
 /* ⚑ 6회차 — `scan885e.py` 가 R 에서 빠졌다(거리장을 1/4 px 격자에서 깐다 · §9). */
-const RED = ['scan887.py'];
-const FIXED = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
+/* ⚑ 7회차 — `scan887.py` 가 R 에서 빠졌다(네 끝점 교차 보간 + 금테 띠 덮개 적분 · §10).
+   **이로써 R 은 0 이다** — 래칫이 «비어서» 초록인 것이 아님은 [R4] 가 FIXED 다섯으로 못박는다. */
+const RED = [];
+const FIXED = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py', 'scan887.py'];  /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
+const RED0 = ['scan667b.py', 'probe866.py', 'scan885b.py', 'scan885e.py', 'scan887.py'];   /* 1회차 전수가 세운 **원래 R 다섯** — 줄어든 것을 여기 다시 적어야 지나간다 */
 /* ⚑ 942 1회차 — `probe409g.py` 가 B 에서 빠졌다(`--diag` 를 «이웃 두 층에 비례로 나누는» 자로 갈아 끼웠다 ·
    자는 `tools/verify942.js`). 주홍 래칫도 «줄어든 것을 여기 다시 적어야» 지나간다 — 그 자리가 이 줄이다. */
 /* ⚑ 942 2회차 — `probe409c.py` 가 B 에서 빠졌다(열별 «검정 화소 수» 를 **K 층 두께의 합** 으로 ·
@@ -392,6 +395,81 @@ console.log('\n[9] 6회차 수리 — `scan885e.py` 거리장 두께가 정수 �
   }
 }
 
+/* ── [10] 7회차 수리 — `scan887.py` 네 끝점 + 금테 띠 ──────────────────────
+   이 자는 캡처 다섯 장(`docs/shots/887-*.png`)이 있을 때만 우리 쪽 값을 잰다 —
+   그 다섯은 `node tools/verify887.js` 가 찍는다(scan887 혼자서는 안 찍는다).
+   레퍼런스 절은 캡처가 없어도 나오므로 ref 항만은 언제나 판정한다. */
+console.log('\n[10] 7회차 수리 — `scan887.py` 가 정수 걸음에서 풀렸는가');
+{
+  const { py } = require('./pydep937');
+  const SHOTS = [1600, 1841, 1920, 2280, 2600].map((h) => path.join('docs', 'shots', `887-${h}.png`));
+  const have = SHOTS.filter((s) => fs.existsSync(path.join(ROOT, s)));
+  const run = (extra) => {
+    const o = String(py([path.join(__dirname, 'scan887.py'), '--json', ...have, ...extra],
+      { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] }));
+    return JSON.parse(o.slice(o.indexOf('{')));
+  };
+  const nw = run([]), old = run(['--int']);
+  const R = nw.ref, C = nw.caps, k = R.k;
+  const b = R.border;
+  const gInt = b.gold_bot - b.gold_top + 1;
+  const ourInt = C.length ? C[0].border.gold_bot - C[0].border.gold_top + 1 : null;
+
+  ok('[10-a] 옛 걸음의 띠 두께는 두 정수다 (지문 — 장부가 «ref 2 ↔ 우리 5» 로 적어 둔 그 값)',
+    gInt === 2 && (ourInt === null || ourInt === 5), `ref ${gInt} ↔ 우리 ${ourInt}`);
+
+  /* 덮개 적분으로 재면 ref 띠는 2 가 아니다 — y681 이 금색 고원의 47% 인 부분 화소다. */
+  const gRef = b.gold_th * k, gOur = C.length ? C[0].border.gold_th * C[0].k : null;
+  const skewOld = ourInt === null ? null : (5 - gInt * k) / (gInt * k) * 100;
+  const skewNew = gOur === null ? null : (gOur - gRef) / gRef * 100;
+  ok('[10-b] 덮개 적분은 ref 띠를 **1.470 px** 로 읽는다 — 어긋남이 +12.5% 가 아니라 +53% 다',
+    Math.abs(b.gold_th - 1.470) < 0.02
+    && (skewNew === null || (skewNew > 45 && skewNew < 60 && skewOld < 20)),
+    `ref ${b.gold_th.toFixed(3)}px = ${gRef.toFixed(2)}프 ↔ 우리 ${gOur === null ? '—' : gOur.toFixed(2)}프`
+    + ` · 옛 ${skewOld === null ? '—' : skewOld.toFixed(1)}% → 새 ${skewNew === null ? '—' : skewNew.toFixed(1)}%`);
+
+  /* ⚑ 네 끝점 중 둘은 **원래 격자 위**였다 — 이 절이 그 사실을 지문으로 박는다.
+     («부분 화소로 갈면 어디든 움직인다» 는 거짓이고, 그래서 이 자의 결함은 잉크 두 끝이었다.) */
+  const dtd = [R, ...C].map((r) => r.border.dark_top_f - r.border.dark_top);
+  ok('[10-c] `dark_top`(B3)은 여섯 장 전부 Δ 0.000 — 아래 끝점은 원래 격자 위에 앉아 있었다',
+    dtd.every((d) => Math.abs(d) < 5e-3), dtd.map((d) => d.toFixed(3)).join(' · '));
+
+  const dIt = (r) => r.th['110'].sub.ink_top - r.th['110'].ink_top;
+  const okIt = C.length > 0;
+  ok('[10-d] 움직인 것은 잉크다 — 우리 `ink_top` 은 **한 행 통째**(−0.98)이고 ref 는 −0.07 뿐이다',
+    okIt && Math.abs(dIt(R)) < 0.2 && C.every((c) => Math.abs(dIt(c) + 0.981) < 0.05),
+    `ref ${dIt(R).toFixed(3)} ↔ 우리 ${C.map((c) => dIt(c).toFixed(3)).join(' ')}`);
+
+  /* 1600 은 정수 자에서 «혼자 어긋난 칸»(0.714)이었다 — 부분 화소로는 ref 에 가장 가깝다. */
+  const rat = (r, key) => (key === 'int' ? r.th['110'].ratio.B3 : r.th['110'].sub.ratio.B3);
+  if (C.length === 5) {
+    const refI = rat(R, 'int'), refF = rat(R, 'sub');
+    const dI = C.map((c) => Math.abs(rat(c, 'int') - refI));
+    const dF = C.map((c) => Math.abs(rat(c, 'sub') - refF));
+    const worstInt = dI.indexOf(Math.max(...dI)), bestFrac = dF.indexOf(Math.min(...dF));
+    ok('[10-e] ⚑ 1600 이 이상치에서 풀린다 — 정수 자로는 다섯 중 **최악**, 부분 화소로는 **최선**',
+      worstInt === 0 && bestFrac === 0,
+      `정수 ref ${refI.toFixed(3)} ↔ ${C.map((c) => rat(c, 'int').toFixed(3)).join(' ')}`
+      + ` │ 부분화소 ref ${refF.toFixed(4)} ↔ ${C.map((c) => rat(c, 'sub').toFixed(4)).join(' ')}`);
+  } else {
+    console.log(`  SKIP [10-e] 캡처 다섯 장이 있어야 순위를 센다(지금 ${C.length}장) — node tools/verify887.js 가 찍는다`);
+  }
+
+  ok('[10-f] `--int` 되돌림 — 옛 정수 답이 한 자리도 안 틀리고 되살아난다',
+    old.ref.th['110'].ratio.B3 === 0.75 && old.ref.th['110'].sub === null
+    && old.caps.every((c) => c.th['110'].sub === null),
+    `ref ${old.ref.th['110'].ratio.B3} · sub ${old.ref.th['110'].sub}`);
+
+  /* 6회차 [9-g] 와 같은 규율 — 자를 갈아 과녁을 무르게 하거나 조인 것이 아니다. */
+  const BAND = [0.67, 0.83], TGT_INT = 0.750;
+  const inB = (v) => v >= BAND[0] && v <= BAND[1];
+  ok('[10-g] 제품은 두 판정에서 다 통과한다 (과녁·대역은 한 자도 안 옮겼다 — 재수립은 별도 등재다)',
+    C.length === 0 || (C.every((c) => inB(rat(c, 'int'))) && C.every((c) => inB(rat(c, 'sub')))
+      && Math.abs(rat(R, 'int') - TGT_INT) < 1e-6),
+    `정수 ${C.map((c) => rat(c, 'int').toFixed(3)).join(' ')} · 부분화소 ${C.map((c) => rat(c, 'sub').toFixed(4)).join(' ')}`
+    + ` · 대역 ${BAND[0]}~${BAND[1]}`);
+}
+
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */
 console.log('\n[R] 되돌림 — 정수로 되돌리면 895 의 지문이 되돌아온다');
 {
@@ -409,8 +487,14 @@ console.log('\n[R] 되돌림 — 정수로 되돌리면 895 의 지문이 되돌
     `ⓐ ${refFrac.toFixed(3)} · ⓑ ${refMass.toFixed(3)}`);
   ok('[R3] 그 자리에서 ⓑ 는 참값을 되찾는다 (±2%)',
     Math.abs(refMass - W) / W <= 0.02, `${refMass.toFixed(3)} ↔ 참값 ${W}`);
-  /* 장부가 «비어서» 초록인 것이 아님 — 빨강이 실제로 하나 서 있다. */
-  ok('[R4] 빨강이 0 이 아니다 — 전수가 «찾은 것이 없어서» 닫힌 것이 아니다', RED.length > 0, RED.join(' '));
+  /* ⚑ 7회차 이관(333 처방 — 자리를 비우지 않고 **방향을 뒤집었다**).
+     6회차까지 이 항은 «빨강이 0 이 아니다» 로 «전수가 찾은 것이 없어서 닫힌 것이 아님» 을 지켰다.
+     7회차에 마지막 하나(`scan887.py`)가 갈려 **R 이 진짜로 0** 이 됐으므로, 이제 지킬 것은
+     «0 인 이유가 **다섯을 실제로 갈아 끼웠기 때문**이다» 다. 원래 다섯(`RED0`)이 전부 FIXED 에
+     들어 있어야 하고, 하나라도 빠지면(= 조용히 지워 0 을 만들면) 여기가 빨개진다. */
+  ok('[R4] R 이 0 인 것은 **원래 다섯을 전부 갈아 끼웠기 때문**이다 (찾은 것이 없어서가 아니다)',
+    RED.length === 0 && RED0.length === 5 && RED0.every((f) => FIXED.includes(f)),
+    `원래 R ${RED0.length}개 → 갈아 끼운 것 [${FIXED.join(' ')}] · 남은 빨강 ${RED.length}`);
 }
 
 console.log(`\nVERIFY932 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);

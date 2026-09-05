@@ -65,9 +65,171 @@ TH_SWEEP = (90, 110, 140)
 DARK_TH = 12
 DARK_FRAC = 0.02
 
+# ── ⚑⚑ 932 7회차 — 네 끝점을 **부분 화소**로 (2026-09-05) ──────────────────────
+# 이 자는 932 전수에서 마지막까지 남은 **R**(축척 비대칭) 이었다. 결함은 머리말이 스스로
+# 적어 둔 한 줄이다 — «레퍼런스 ±1 눈금 = 비 ±11%». 네 끝점이 전부 «문턱을 넘는 **행**» 이라
+# 레퍼런스(486 폭)의 한 눈금이 우리 2.22 px 이고, 위 12 : 아래 9 라는 **작은 두 정수**의 비가
+# 곧 과녁이었다.
+#
+# 걷개는 한 글자도 안 바꾸고(같은 창·같은 문턱·같은 «칠해진 행» 규약) **고른 행의 모서리만**
+# 부분 화소로 민다. 모서리 좌표는 5회차 규약 그대로 «화소 i = [i, i+1)» 이라 교차가 두 중심의
+# 한가운데면 옛 정수 답이 그대로 나온다(치우침 0).
+#
+#   · dark_top · base — 두 **고원** 사이 50% 교차(`plateau_edge`). 밝기의 절대 문턱을 쓰면
+#     배경 수준이 다른 두 그림에서 서로 다른 자리를 짚는다(레퍼런스 배경 16 ↔ 우리 26).
+#   · ink_top · ink_bot — 잉크는 두 고원이 아니라 **글리프**다. 그래서 이 자의 **주 조건**
+#     (`L > th`) 을 열마다 교차 보간하고 위/아래 **극단**을 취한다(`ink_edge`). 색 자격을
+#     덧붙이면 프로파일이 끊겨 교차가 격자에 도로 붙는다(932 5회차 ⓩ).
+#
+# ⚑ 실측이 세 가지를 뒤집었다(상세 `docs/review/932-정수걸음자전수.md` 7회차):
+#   ① **dark_top 과 base 는 두 그림 다 격자 위에 정확히 앉아 있다**(Δ 0.000 · 여섯 장 전부).
+#      ±1 눈금의 흔들림은 이 둘에는 **없다** — 움직이는 것은 잉크 두 끝뿐이다.
+#   ② 금테 띠는 레퍼런스가 **1.470 px**(정수 자는 2)이라, 머리말이 «ref 2px ↔ 우리 5px» 로
+#      적은 비대칭은 실제로 **+12.5% 가 아니라 +53%** 다. 887 의 결론(B1·B2 는 두 쪽에서
+#      다른 것을 훔친다)은 뒤집힌 게 아니라 **더 세진다**.
+#   ③ 비가 격자에서 풀리자 **1600 이 이상치가 아니었다** — 정수 자로는 0.714(다섯 중 혼자)
+#      였는데 부분 화소로는 0.739 로 레퍼런스 0.727 에 **가장 가깝다**. 나머지 넷이 0.775 다.
+# 옛 정수 답은 `--int` 가 한 자리도 안 틀리고 되살린다.
+SUB_SPAN = 4                  # 모서리를 찾을 때 밖으로 걷는 최대 행수(랜드마크 창 안)
+
+
+def int_only():
+    """`--int` — 7회차 이전의 **정수 걸음** 답을 한 자리도 안 틀리고 되살린다(되돌림 시험)."""
+    return '--int' in sys.argv
+
 
 def lum(p):
     return 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2]
+
+
+def plateau_edge(prof, y_in, step, span=SUB_SPAN):
+    """두 **고원** 사이 50% 교차 — 모서리 좌표(화소 i = [i, i+1)).
+
+    `y_in` 이 «안» 고원의 첫 행이고 `step` 이 밖으로 나가는 방향(-1 = 위)이다.
+    안·밖이 바로 붙어 있으면(중간 화소 없음) 교차가 두 중심의 한가운데라 **정확히 격자 경계**가
+    나온다 — 그때의 반환값은 옛 정수 답과 같다(치우침 0). 중간 화소가 있으면 그만큼 밀린다.
+    """
+    b = prof[y_in]
+    # 밖 고원 — 밖으로 걸으며 **처음 «가라앉은» 행**을 쓴다(다음 행과의 차가 전체 낙차의 8% 미만).
+    # 바로 옆을 무조건 쓰면 그 행이 경사면일 때 밀리고, 무조건 건너뛰면 배경 기울기를 물체로 읽는다.
+    a = None
+    for i in range(1, span + 1):
+        y1, y2 = y_in + step * i, y_in + step * (i + 1)
+        if not (0 <= y1 < len(prof)):
+            break
+        if not (0 <= y2 < len(prof)):
+            a = prof[y1]
+            break
+        if abs(prof[y1] - prof[y2]) <= 0.08 * abs(prof[y1] - b):
+            a = prof[y1]
+            break
+    if a is None:
+        return float(y_in) + (0.0 if step < 0 else 1.0)
+    if a == b:
+        return float(y_in) + (0.0 if step < 0 else 1.0)
+    mid = (a + b) / 2.0
+    y = y_in
+    for _ in range(span):
+        nxt = y + step
+        if not (0 <= nxt < len(prof)):
+            break
+        if (prof[nxt] - mid) * (b - mid) <= 0:        # 밖 쪽으로 넘어갔다
+            t = (prof[nxt] - mid) / (prof[nxt] - prof[y]) if prof[nxt] != prof[y] else 0.5
+            return nxt + t * (y - nxt) + 0.5          # 중심 사이 보간 → 모서리 좌표
+        y = nxt
+    return float(y_in) + (0.0 if step < 0 else 1.0)
+
+
+def band_edges(prof, y0, y1):
+    """밝은 띠 [y0, y1] 의 위·아래 모서리 — **덮개(질량) 적분**(처방 ⓑ · 667 `dark_mass` 의 밝은 판).
+
+    두께는 «위치» 가 아니라 «양» 이라 50% 교차로는 못 잰다 — 경계 화소가 봉우리에 못 미치면
+    그 부족분이 곧 그 화소의 **덮개 비율**이다. 바깥 고원은 위·아래 **각자의 것**을 쓴다
+    (레퍼런스는 띠 아래가 또 검정이고 우리 캡처는 배경이라, 한쪽 값을 양쪽에 쓰면
+    멀쩡한 배경 행이 띠의 질량으로 새어 들어온다 — 실측 5.000 이 5.155 로 부푼다).
+    """
+    peak = max(prof[y0:y1 + 1])
+    fa = prof[y0 - 1] if y0 - 1 >= 0 else prof[y0]
+    fb = prof[y1 + 1] if y1 + 1 < len(prof) else prof[y1]
+
+    def cov(v, f):
+        return 0.0 if peak <= f else max(0.0, min(1.0, (v - f) / (peak - f)))
+
+    c = cov(prof[y0], fa)
+    top = (y0 + (1.0 - c)) if c < 0.999 else (y0 - cov(prof[y0 - 1], fa) if y0 - 1 >= 0 else float(y0))
+    c = cov(prof[y1], fb)
+    bot = (y1 + c) if c < 0.999 else (y1 + 1 + (cov(prof[y1 + 1], fb) if y1 + 1 < len(prof) else 0.0))
+    return top, bot
+
+
+def base_edge(px, W, base, x1, x2, th=DARK_TH, span=SUB_SPAN):
+    """밑판 «마지막 칠해진 행» 의 **아래 모서리** — 열마다 재고 중앙값을 쓴다.
+
+    ⚠ 행 평균으로 50% 교차를 잡으면 안 된다 — 밑판 아랫변의 검은 화소는 **성기다**
+    (레퍼런스 25/369 열). 행 평균은 «검정 고원» 이 아니라 배경에 묻힌 값이라 교차가
+    언제나 두 중심의 한가운데(= 옛 정수 답)로 떨어져 **잰 척만** 하게 된다.
+    그래서 «칠해진» 열만 골라 그 열의 검정↔배경 두 고원 사이 50% 교차를 재고,
+    아랫변은 가로선이므로 **중앙값**을 취한다(최댓값은 텍스처를 쫓는다).
+    """
+    ends = []
+    for x in range(x1, x2):
+        if lum(px[x, base]) >= th:
+            continue
+        col = [lum(px[x, base + i]) for i in range(0, span + 2)]
+        dark, out = col[0], None
+        for i in range(1, len(col) - 1):
+            if abs(col[i] - col[i + 1]) <= 0.08 * abs(col[i] - dark):
+                out = (base + i, col[i])
+                break
+        if out is None:
+            continue
+        oy, a = out
+        if a == dark:
+            continue
+        mid = (a + dark) / 2.0
+        y = base
+        for _ in range(span):
+            nxt = y + 1
+            v = lum(px[x, nxt])
+            if (v - mid) * (dark - mid) <= 0:
+                pv = lum(px[x, y])
+                t = (v - mid) / (v - pv) if v != pv else 0.5
+                ends.append(nxt + t * (y - nxt) + 0.5)
+                break
+            y = nxt
+    if not ends:
+        return float(base) + 1.0
+    ends.sort()
+    return ends[len(ends) // 2]
+
+
+def ink_edge(px, W, row, th, step, x1, x2, span=SUB_SPAN):
+    """잉크의 **극단 모서리** — 열마다 주 조건(`L > th`)을 교차 보간하고 위/아래 극단을 취한다.
+
+    글리프는 «두 고원» 이 아니라 봉우리라 50% 규약이 안 선다 — 그래서 이 자가 이미 쓰는
+    문턱 `th` 를 그대로 타고(문턱 스윕이 그대로 살아 있다), 잉크가 이어지는 만큼만 걷는다.
+    반환은 모서리 좌표(화소 i = [i, i+1)) · 못 재면 None.
+    """
+    best = None
+    for x in range(x1, x2):
+        if lum(px[x, row]) <= th:
+            continue
+        y, n = row, 0
+        while n < span:
+            nxt = y + step
+            if not (0 <= nxt) or lum(px[x, nxt]) <= th:
+                break
+            y, n = nxt, n + 1
+        out = y + step
+        if out < 0:
+            continue
+        a, b = lum(px[x, out]), lum(px[x, y])
+        if b <= th:
+            continue
+        t = (th - a) / (b - a) if b != a else 0.5
+        pos = out + t * (y - out) + 0.5               # 중심 사이 보간 → 모서리 좌표
+        best = pos if best is None else (min(best, pos) if step < 0 else max(best, pos))
+    return best
 
 
 def rows(px, W, y, x1, x2):
@@ -113,7 +275,16 @@ def find_border(px, W, H):
             y -= 1
         else:
             break
-    return dict(gold_bot=gold_bot, gold_top=gold_top, dark_top=dark_top)
+    # ── 932 7회차 — 같은 세 행의 **모서리**를 부분 화소로 (걷개는 위와 한 글자도 안 다르다) ──
+    prof = [0.0] * H
+    for y in range(max(0, dark_top - SUB_SPAN - 2), min(H, gold_bot + SUB_SPAN + 3)):
+        r = rows(px, W, y, x1, x2)
+        prof[y] = sum(r) / len(r)
+    dark_top_f = plateau_edge(prof, dark_top, -1)          # 조립체 최상단(= B3) · 두 고원 사이
+    gold_top_f, gold_bot_f = band_edges(prof, gold_top, gold_bot)
+    return dict(gold_bot=gold_bot, gold_top=gold_top, dark_top=dark_top,
+                dark_top_f=dark_top_f, gold_top_f=gold_top_f, gold_bot_f=gold_bot_f,
+                gold_th=gold_bot_f - gold_top_f, dark_th=gold_top_f - dark_top_f)
 
 
 def find_ink(px, W, y_from, th):
@@ -227,12 +398,26 @@ def measure(path, native_w):
         up = ink_top - base
         up1 = (ink_top - base1) if base1 is not None else None
         ends = dict(B1=b['gold_bot'] - 1, B2=b['gold_top'], B3=b['dark_top'])
+        # ── 932 7회차 — 네 끝점의 부분 화소 판(같은 창·같은 문턱) ──
+        x1, x2 = int(W * 0.12), int(W * 0.88)
+        base_f = base_edge(px, W, base, x1, x2)          # 밑판의 **아래** 모서리(열마다 · 중앙값)
+        it_f = ink_edge(px, W, ink_top, th, -1, x1, x2)
+        ib_f = ink_edge(px, W, ink_bot, th, +1, x1, x2)
+        sub = None
+        if it_f is not None and ib_f is not None and not int_only():
+            up_f = it_f - base_f
+            ends_f = dict(B1=b['gold_bot_f'], B2=b['gold_top_f'], B3=b['dark_top_f'])
+            sub = dict(base=round(base_f, 3), ink_top=round(it_f, 3), ink_bot=round(ib_f, 3),
+                       up=round(up_f, 3),
+                       down={n: round(v - ib_f, 3) for n, v in ends_f.items()},
+                       ratio={n: round((v - ib_f) / up_f, 4) for n, v in ends_f.items()})
         out['th'][th] = dict(ink_top=ink_top, ink_bot=ink_bot, base=base, base_u1=base1,
                              run=run, up=up, up_u1=up1,
                              down={n: v - ink_bot for n, v in ends.items()},
                              ratio={n: round((v - ink_bot) / up, 3) for n, v in ends.items()},
                              ratio_u1=({n: round((v - ink_bot) / up1, 3) for n, v in ends.items()}
-                                       if up1 else None))
+                                       if up1 else None),
+                             sub=sub)
     return out
 
 
@@ -276,8 +461,16 @@ def sweep(path, native_w):
 def fmt(r):
     b = r['border']
     print(f"  {r['path']}  ({r['W']}x{r['H']} · 환산 ×{r['k']:.3f})")
-    print(f"    테두리 — 어두운 안쪽 선 y{b['dark_top']} · 금테 띠 y{b['gold_top']}..{b['gold_bot']}"
-          f" (띠 두께 {b['gold_bot'] - b['gold_top'] + 1}px)")
+    if int_only():
+        print(f"    테두리 — 어두운 안쪽 선 y{b['dark_top']} · 금테 띠 y{b['gold_top']}..{b['gold_bot']}"
+              f" (띠 두께 {b['gold_bot'] - b['gold_top'] + 1}px)")
+    else:
+        print(f"    테두리 — 어두운 안쪽 선 y{b['dark_top']} · 금테 띠 y{b['gold_top']}..{b['gold_bot']}"
+              f" (띠 두께 정수 {b['gold_bot'] - b['gold_top'] + 1}px"
+              f" · 덮개 {b['gold_th']:.3f}px = {b['gold_th'] * r['k']:.2f} 프레임px"
+              f" · 그 위 검정선 {b['dark_th']:.3f}px = {b['dark_th'] * r['k']:.2f} 프레임px)")
+        print(f"      조립체 최상단(B3) 정수 y{b['dark_top']} · 부분화소 y{b['dark_top_f']:.3f}"
+              f"  (Δ {b['dark_top_f'] - b['dark_top']:+.3f})")
     for th, d in r['th'].items():
         up_f = d['up'] * r['k']
         sign = '' if d['base_u1'] is None else f"(U1 y{d['base_u1']} · 부호 {d['base_u1'] - d['base']:+d})"
@@ -288,6 +481,12 @@ def fmt(r):
             dn = d['down'][n]
             print(f"        {n} {label:<22} 아래 {dn}px = {dn * r['k']:5.1f} 프레임px"
                   f" · 아래/위 = {d['ratio'][n]:.3f} · 위/아래 = {(1 / d['ratio'][n] if d['ratio'][n] else 0):.3f}")
+        s = d.get('sub')
+        if s:
+            print(f"        ── 932 7회차 부분 화소 — 밑판 y{s['base']} · 잉크 {s['ink_top']}..{s['ink_bot']}"
+                  f" · 위 {s['up']}px = {s['up'] * r['k']:.2f} 프레임px"
+                  f" · 아래(B3) {s['down']['B3']}px = {s['down']['B3'] * r['k']:.2f} 프레임px"
+                  f" · **아래/위 = {s['ratio']['B3']:.4f}**")
     print()
 
 
@@ -331,6 +530,21 @@ def main():
     if '--json' in sys.argv:
         print(json.dumps(dict(ref=ref, caps=caps), ensure_ascii=False, indent=1))
         return 0
+    # ── 932 7회차 — 정수 자 ↔ 부분 화소 자 ──
+    if '--int' not in sys.argv:
+        print('■ 932 7회차 — 정수 걸음 ↔ 부분 화소 (아래/위 · 끝점 B3 · 위 끝점 U3)')
+        print(f"    {'':14}{'정수':>9}{'부분화소':>11}   문턱 90/110/140 (부분 화소)")
+        for r in [ref] + caps:
+            nm = r['path'].split('/')[-1]
+            i110 = r['th'][110]['ratio']['B3']
+            s110 = r['th'][110]['sub']['ratio']['B3'] if r['th'][110].get('sub') else 0
+            sw = ' / '.join(f"{r['th'][t]['sub']['ratio']['B3']:.4f}"
+                            if r['th'].get(t, {}).get('sub') else '—' for t in TH_SWEEP)
+            print(f"    {nm:<14}{i110:>9.3f}{s110:>11.4f}   {sw}")
+        print('    ⚑ dark_top 은 여섯 장 전부 Δ 0.000 · base 는 우리 다섯이 Δ 0.000(레퍼런스만 +0.101)')
+        print('      — 아래 끝점과 밑판은 **격자 위에 정확히 앉아 있다**. 비를 움직이는 것은 잉크 두 끝뿐이고,')
+        print('      우리 쪽 ink_top 이 −0.981(한 행 통째)이라 그래서 1600 이 이상치에서 풀린다.')
+        print()
     # ── 요약 — 끝점 선택이 답을 얼마나 흔드는가 ──
     print('■ 끝점 선택이 흔드는 폭 (문턱 110 · 아래/위 · 위 끝점 = U3)')
     th = 110
