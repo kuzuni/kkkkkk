@@ -10,7 +10,10 @@
  *       elementFromPoint 프로브: #fxlc 의 요소는 오버레이에 가려지고 #fxl 의 요소는 위에 보이는가
  *   [D] 통합 — 상점 페이지를 연 채 실제 자동 전투 10초
  *       [D-a] 592 이관 — 잡몹 킬만 도는 구간에는 재화 연출이 0건(킬 드랍 코인 폐지)
- *       [D-b] 살아 있는 전투 발(스테이지 클리어 보너스)은 **여전히** 전부 #fxlc 에만 생긴다 (#fxl 0건)
+ *       [D-b] 654 이관 — 스테이지 클리어 보너스는 **지급은 그대로, 연출만 0**(무음)
+ *       [D-c] 77 의 규칙 — 그 축만 되살리면(`FX_COMBAT_FX.stageClear`) 코인이 상점 팝업이
+ *             열린 채로도 #fxlc(팝업 아래)에만 생긴다 (#fxl 0건)
+ *       [D-d] 시험이 제품 스위치를 원복했는가
  *   [E] 회귀 — 전투 킬을 막고 UI 힌트(fxAt 무태그) + 재화 증가 → #fxl 에 비행이 생기는가
  * 부산물: docs/shots/77-*.png (상점 열고 전투 프레임 6장 + 메인 전투 코인 3장) — 비평가 확인용
  */
@@ -262,18 +265,55 @@ const ok = (m) => console.log('  ✓ ' + m);
     if (r.fxlc === 0 && r.fxl === 0)
       ok(`592 — 잡몹 킬만 도는 10초에는 재화 연출이 한 건도 안 난다 (#fxlc ${r.fxlc} · #fxl ${r.fxl})`);
     else fail(`592 — 킬 드랍 연출이 남아 있다: #fxlc ${r.fxlc} · #fxl ${r.fxl}`);
-    /* [D-b] 살아 있는 전투 발 — ⑵ 스테이지 클리어 보너스. 같은 창(상점 페이지가 열린 채)에서
-       그 코인이 **여전히 페이지 아래**(#fxlc)로 가는가가 77 의 본래 질문이다. */
-    const r2 = await page.evaluate(async () => {
+    /* ⚑ 930 — **이 자리는 방향이 한 번 더 뒤집혔다(333 처방 · 지우지 않았다).**
+       552·592 가 [D-b] 를 «살아 있는 전투 발 = ⑵ 스테이지 클리어 보너스» 로 갈아 끼운 뒤,
+       654(주인 지시 «전투·보스·클리어 계열 골드 연출은 전부 무음»)가 `FX_COMBAT_FX` 의
+       네 항을 **전부 false** 로 내렸다 ⇒ 기본 설정에서 `fxAt(…,'combat')` 은 소스 전체에서
+       한 번도 안 불린다(index.html 41689 원장의 «654 정오표» — ⑴킬 ⑵클리어 ⑶파도 셋뿐이다).
+       그래서 종전 문장(«#fxlc 에 0건이면 전투 발 라우팅이 죽었다»)은 **77 이 아니라 654 를
+       재는 빨강**이었다 — 라우팅은 멀쩡하고 발원이 꺼진 것이다.
+       ⇒ 같은 표본(클리어 보너스)을 유지한 채 축을 둘로 가른다:
+         [D-b] 654 가 뺀 것 — 지급은 그대로(gold>0)인데 연출만 0 (#fxlc 0 · #fxl 0)
+         [D-c] 77 이 지키는 것 — 그 축**만** 되살리면 코인이 **상점 팝업이 열린 채로도**
+               #fxlc(팝업 아래)로만 간다. [C] 는 합성 프로브고 이 항은 제품의 진짜 경로다.
+       [D-c] 가 없으면 654 를 되돌리는 날 이 절은 «비어서 초록» 이 되고(333-②),
+       [D-b] 가 없으면 무음이 깨져도 아무도 모른다. ⚠ 654 원장이 «되돌림은 이 표 한 줄» 이라고
+       못박은 그 한 낱말을 [D-c] 가 그대로 쓴다 — 세 항이 정말 죽은 코드가 되는 날
+       (선언째 걷어내는 날) 이 항이 빨개져서 알려 준다. */
+    const bonus = async (flag) => page.evaluate(async (on) => {
       window.__c77.fxl = 0; window.__c77.fxlc = 0;
-      const g0 = S.gold;
-      stageWin = true;                                   /* 162 ① — 다음 틱이 «보스 격파 = 클리어» 갈래를 탄다 */
-      await new Promise(res => setTimeout(res, 2500));
-      return { ...window.__c77, gold: Math.round(S.gold - g0) };
-    });
-    if (r2.fxlc > 0) ok(`살아 있는 전투 발(스테이지 클리어 보너스 +${r2.gold}) 연출 ${r2.fxlc}건 → #fxlc`);
-    else fail(`살아 있는 전투 발조차 #fxlc 에 0건 (보너스 +${r2.gold} · 전투 발 라우팅이 죽었다)`);
-    if (r2.fxl === 0) ok('#fxl 은 0건 (팝업 위로 새는 연출 없음)'); else fail(`#fxl 에 ${r2.fxl}건 — 팝업 위로 뚫는 연출이 남아 있다`);
+      const g0 = S.gold, was = FX_COMBAT_FX.stageClear;
+      if (on !== null) FX_COMBAT_FX.stageClear = on;
+      try {
+        stageWin = true;                                 /* 162 ① — 다음 틱이 «보스 격파 = 클리어» 갈래를 탄다 */
+        await new Promise(res => setTimeout(res, 2500));
+        /* `sw` 는 finally 전에 읽힌다 — «사건이 도는 동안 스위치가 실제로 그 값이었나» 의 증거 */
+        return { ...window.__c77, gold: Math.round(S.gold - g0), sw: FX_COMBAT_FX.stageClear };
+      } finally { FX_COMBAT_FX.stageClear = was; }
+    }, flag);
+
+    const sw0 = await page.evaluate(() => FX_COMBAT_FX.stageClear);   /* [D-d] 의 기준선 */
+    const r2 = await bonus(null);                        /* 기본 설정 그대로 */
+    if (r2.gold > 0) ok(`654 — 클리어 보너스 골드는 그대로 들어온다 (+${r2.gold} · 이 항이 «사건이 났다» 의 증거다)`);
+    else fail(`클리어 보너스가 0 — 사건 자체가 안 났다(표본이 죽었다: stageWin 갈래를 확인하라)`);
+    if (r2.fxlc === 0 && r2.fxl === 0)
+      ok(`654 — 그런데 연출은 0건 (#fxlc ${r2.fxlc} · #fxl ${r2.fxl}) — 전투·클리어 계열 골드는 무음`);
+    else fail(`654 무음이 깨졌다: #fxlc ${r2.fxlc} · #fxl ${r2.fxl} (FX_COMBAT_FX 표를 확인하라)`);
+
+    const r3 = await bonus(true);                        /* ⑵ 축만 되살린다 */
+    if (r3.sw === true) ok('[D-c] 스위치가 사건 중에 실제로 켜져 있었다 (FX_COMBAT_FX.stageClear = true)');
+    else fail('[D-c] 스위치를 못 켰다 — 아래 두 항이 헛돈다');
+    if (r3.fxlc > 0) ok(`77 — 되살린 전투 발(클리어 보너스 +${r3.gold}) 연출 ${r3.fxlc}건이 전부 #fxlc(팝업 아래)로 간다`);
+    else fail(`77 — 축을 켰는데도 #fxlc 에 0건 (보너스 +${r3.gold} · 전투 발 라우팅이 죽었다)`);
+    if (r3.fxl === 0) ok('#fxl 은 0건 (상점 팝업 위로 새는 연출 없음)'); else fail(`#fxl 에 ${r3.fxl}건 — 팝업 위로 뚫는 연출이 남아 있다`);
+
+    /* [D-d] 제품 상수를 만진 항의 의무 — [B-R] 과 같은 꼴로 «시험이 상태를 안 더럽혔다» 를 못박는다.
+       ⚠ 기준은 리터럴 `false` 가 아니라 **시험 전에 읽은 값**(`sw0`)이다 — 리터럴로 적으면
+       이 항이 654 의 무음을 한 번 더 묻게 돼(그건 [D-b] 의 몫이다) 표가 켜진 판에서
+       «원복은 정상인데 빨강» 이 된다(930 1회차에 실제로 그랬다). */
+    const back = await page.evaluate(() => FX_COMBAT_FX.stageClear);
+    if (back === sw0) ok(`원복 확인 — FX_COMBAT_FX.stageClear 가 시험 전 값(${sw0})으로 돌아왔다 (시험이 상태를 안 더럽혔다)`);
+    else fail(`FX_COMBAT_FX.stageClear 가 ${back} 로 남았다(시험 전 ${sw0}) — 뒤 절이 654 를 안 재게 된다`);
     await page.evaluate(() => closeShopPage());
   }
 

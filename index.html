@@ -27311,7 +27311,12 @@ function step(dt){
          날고 딤 위에 밝은 골드 알약 복제(fx-lit)까지 켠다 = 주인이 본 «쌩뚱맞은 곳의 골드 이펙트».
          77 이 만든 «전투 발은 #fxlc(z7 · 팝업 아래)» 규칙을 이 줄이 안 타고 있었을 뿐이다. */
       /* 592 — ⑵ 스테이지 클리어 보너스는 **켜져 있다**(FX_COMBAT_FX.stageClear) — 주인이 뺀 것은
-         «적이 죽을 때» 뿐이다. 판정만 한 표로 모았고 기본값에서 그림은 한 픽셀도 안 바뀐다. */
+         «적이 죽을 때» 뿐이다. 판정만 한 표로 모았고 기본값에서 그림은 한 픽셀도 안 바뀐다.
+         ⚑⚑ **654 정오표(930 이 등재) — 이 문장은 592 당시의 것이고 지금은 거짓이다.**
+         654(주인 지시 «전투·보스·클리어 계열 골드 연출은 전부 무음»)가 표의 네 항을 전부
+         `false` 로 내려서 이 줄은 **기본값에서 안 불린다**(= 아래 `fxSilent` 갈래만 돈다).
+         표가 곧 답이니 «켜짐/꺼짐» 은 주석이 아니라 25737 의 표를 보라 — 그 어긋남 때문에
+         `verify77` [D] 가 «전투 발 라우팅이 죽었다» 로 잘못 빨개져 있었다(작업 930). */
       if(FX_COMBAT_FX.stageClear) fxAt(fxWorld(player.x, player.y - player.r), 'combat');
       else fxSilent('gold', bonusG);
       S.gold += bonusG; goldWin += bonusG;
@@ -27339,7 +27344,8 @@ function step(dt){
          보스는 [스테이지 재도전](retryBoss) 으로만 선다. */
       if(S.bossFarm){
         const bonusG = eGold(S.stage) * 12 * stat.goldMul;
-        /* 592 — ⑶ 파도 전멸 보너스도 **켜져 있다**(FX_COMBAT_FX.waveBonus) — ⑵ 와 같은 사건 급이다. */
+        /* 592 — ⑶ 파도 전멸 보너스도 **켜져 있다**(FX_COMBAT_FX.waveBonus) — ⑵ 와 같은 사건 급이다.
+           ⚑⚑ **654 정오표(930 이 등재)** — ⑵ 와 같은 이유로 이 문장도 지금은 거짓이다(표가 `false`). */
         if(FX_COMBAT_FX.waveBonus) fxAt(fxWorld(player.x, player.y - player.r), 'combat');   /* 518 — 위 클리어 보너스와 같은 이유 */
         else fxSilent('gold', bonusG);
         S.gold += bonusG; goldWin += bonusG;
