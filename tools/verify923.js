@@ -241,7 +241,10 @@ async function shot(page, sel, out) {
         usesVar: !!s && /var\(\s*--ntc-ps\s*\)/.test(s.style.clipPath || getComputedStyle(s).clipPath)
           ? true : (!!s && /polygon/.test(getComputedStyle(s).clipPath)),
         sO: s ? offs(s, 0) : null, uO: u ? offs(u, 10) : null,
-        sY: s ? ys(s) : [], sH: s ? s.getBoundingClientRect().height : 0
+        sY: s ? ys(s) : [], sH: s ? s.getBoundingClientRect().height : 0,
+        /* 923 7회차 — 바깥 곡선이 표의 배수가 아니라 **오프셋**이 된 뒤로 «표 격자» 를 이고 있는
+           것은 안쪽 곡선뿐이다([A4]). 그 꼬리를 잘라 내려면 표의 마디 수가 필요하다. */
+        pfN: NTC_PROF[c.classList.contains('ban1') ? 'ban' : 'bl'].length
       };
     });
   });
@@ -260,12 +263,19 @@ async function shot(page, sel, out) {
       `[A3] ${k} 림 «u» 폴리곤 — 바깥 꼭지 ${mx(c.uO)} = d+12 · 안쪽이 검정 바깥(${d})과 같다 — 호가 나란히 돈다`);
     /* 정규화 프로필 = (깊이/d, |y − 중심|/반길이). f 격자와 v 열을 갈라 담는다 — 4회차부터
        **격자는 공유하고 값은 형마다 다르다**(아래 [A4]·[A4b]). */
-    if (c.sO && c.sY.length === c.sO.length) {
-      const cy = c.sH / 2, hl = Math.max(...c.sY.map((y) => Math.abs(y - cy)));
-      const half = c.sO.slice(0, c.sO.length / 4);       /* 바깥 곡선의 위쪽 절반 */
+    /* ⚑⚑ 923 7회차 — 이 자리의 **잣대가 옮겨 갔다**(333 처방 — 자리를 비우지 않는다).
+       6회차까지는 **바깥** 곡선의 x 를 «f 격자» 로 읽었다(바깥 = 표 × d 였으니 그것이 곧 표였다).
+       7회차부터 바깥은 안쪽 곡선의 **오프셋**이라 표를 이고 있지 않다 — 표를 이고 있는 것은
+       **안쪽** 곡선(= 표 × (d−10, len−20))이다. 그래서 폴리곤 꼬리의 «표 마디 수» 만큼을
+       안쪽 곡선으로 잘라 읽는다(`ntcBand(o, i)` 가 안쪽을 뒤집어 붙이므로 꼬리를 되뒤집으면 표 순서다).
+       묻는 것은 6회차와 같다 — «두 형이 같은 f 격자를 쓰는가»([A4]) · «v 열은 갈려 있는가»([A4b]). */
+    if (c.sO && c.sY.length === c.sO.length && c.sO.length > 2 * c.pfN) {
+      const cy = c.sH / 2;
+      const ix = c.sO.slice(-c.pfN).reverse(), iy = c.sY.slice(-c.pfN).reverse();
+      const hl = Math.max(...iy.map((y) => Math.abs(y - cy)));
       norm.push({ k,
-        f: half.map((o) => (o / d).toFixed(3)).join(' '),
-        v: half.map((o, i) => (Math.abs(c.sY[i] - cy) / hl).toFixed(3)).join(' ') });
+        f: ix.map((o) => (o / (d - 10)).toFixed(3)).join(' '),
+        v: iy.map((y) => (Math.abs(y - cy) / hl).toFixed(3)).join(' ') });
     }
   }
   /* ⚑⚑ 4회차 — 이 항의 **방향이 뒤집혔다**(333 처방 — 자리를 비우지 않는다).
@@ -353,14 +363,27 @@ async function shot(page, sel, out) {
     const out = [];
     for (const k of ['ban', 'bl']) {
       const pf = NTC_PROF[k], len = NTC_LEN[k], d = NTC_DEP;
-      const hin = (len - 20) / 2, hout = len / 2, ryMain = len / 2 - 1, din = d - 10;
+      const hin = (len - 20) / 2, ryMain = len / 2 - 1, din = d - 10;
       const m = pvNtcMouth(pf, len, d);
+      /* ⚑ 923 7회차 — ⓑ 의 «검정 바깥» 은 이제 표의 배수가 아니라 **제품이 그리는 오프셋 곡선**이다.
+         자가 옛 배수식을 사본으로 들고 있으면 제품이 바뀌어도 조용히 같은 수를 낸다(402 «사본을 지운다»).
+         ⇒ 제품 함수에게 그 곡선을 직접 받아 깊이 u 에서의 반폭을 읽는다. */
+      const oc = ntcOffset(ntcInnerSamples(pf, din, hin, NTC_OFF_N), 10, NTC_OFF_N);
+      const wOut = (u) => {
+        let w = -1;
+        if (u <= oc[0][0]) w = oc[0][1];                       /* 입(카드 우변)보다 얕은 자리 */
+        for (let i = 0; i < oc.length - 1; i++) {
+          const [x1, y1] = oc[i], [x2, y2] = oc[i + 1];
+          if ((x1 - u) * (x2 - u) <= 0 && x1 !== x2) w = Math.max(w, y1 + (y2 - y1) * (u - x1) / (x2 - x1));
+        }
+        return w;
+      };
       let a = 99, b = 99, au = 0, bu = 0;
       for (let u = 0; u <= din; u += 0.05) {
         const main = ryMain * Math.sqrt(Math.max(0, 1 - (u / d) ** 2));
         const mouth = m && u < m.rx ? m.ry * Math.sqrt(Math.max(0, 1 - (u / m.rx) ** 2)) : 0;
         const hole = Math.max(main, mouth);
-        const ca = hole - ntcV(pf, u / din) * hin, cb = ntcV(pf, u / d) * hout - hole;
+        const ca = hole - ntcV(pf, u / din) * hin, cb = wOut(u) - hole;
         if (ca < a) { a = ca; au = u; }
         if (cb < b) { b = cb; bu = u; }
       }
@@ -371,7 +394,10 @@ async function shot(page, sel, out) {
   });
   for (const r of inv) {
     ok(r.a >= -0.05, `[B7a] ${r.k} 구멍 ⊇ 검정 안쪽 — 최소 여유 ${r.a} (u=${r.au} · 입 구멍 ${r.mouth})`);
-    ok(r.b >= -0.6, `[B7b] ${r.k} 구멍 ⊆ 검정 바깥 — 최소 여유 ${r.b} (u=${r.bu} · 창 −0.6 = 3회차부터의 값)`);
+    /* ⚑ 923 7회차 — 창을 **−0.6 → −0.2 로 조인다**(래칫). 바깥이 오프셋으로 나오면서 여유가
+       배너 −0.43 → **−0.12** · 불릿 1.69 → **1.71** 로 늘었다 — 넓은 창을 그대로 두면 그 소득이
+       조용히 다시 새어 나간다. 남은 −0.12 는 «타원 구멍 ↔ 오프셋 띠» 의 모양 차 몫이다. */
+    ok(r.b >= -0.2, `[B7b] ${r.k} 구멍 ⊆ 검정 바깥 — 최소 여유 ${r.b} (u=${r.bu} · 창 −0.2 = 7회차 래칫)`);
   }
 
   /* ⚑⚑ 6회차 채점 GS 신설 축 [B8] — **띠(검정 링) 두께가 노치를 따라 얇아진다.**
@@ -386,34 +412,52 @@ async function shot(page, sel, out) {
   blk('§B8 띠 두께 래칫 (6회차 채점 GS 신설 축 · 과녁 ref 9.93 — 7회차 몫)');
   const thick = await page.evaluate(() => {
     const out = [];
+    /* 그려질 선분 위(마디 사이 이음선 포함)에서 상대 폴리라인까지의 최소·최대 거리 */
+    const d2seg = (x, y, x1, y1, x2, y2) => {
+      const dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy;
+      let s = L2 ? ((x - x1) * dx + (y - y1) * dy) / L2 : 0;
+      s = Math.max(0, Math.min(1, s));
+      return Math.hypot(x - (x1 + dx * s), y - (y1 + dy * s));
+    };
+    const span = (A, B) => {
+      let mn = 99, mx = -99, u = 0;
+      for (let i = 0; i < A.length - 1; i++) {
+        for (let s = 0; s <= 20; s++) {
+          const x = A[i][0] + (A[i + 1][0] - A[i][0]) * s / 20, y = A[i][1] + (A[i + 1][1] - A[i][1]) * s / 20;
+          let b = 99;
+          for (let j = 0; j < B.length - 1; j++) b = Math.min(b, d2seg(x, y, B[j][0], B[j][1], B[j + 1][0], B[j + 1][1]));
+          if (b < mn) { mn = b; u = x; }
+          if (b > mx) mx = b;
+        }
+      }
+      return { mn: +mn.toFixed(2), mx: +mx.toFixed(2), u: +u.toFixed(1) };
+    };
     for (const k of ['ban', 'bl']) {
       const pf = NTC_PROF[k], len = NTC_LEN[k], d = NTC_DEP;
-      const hin = (len - 20) / 2, hout = len / 2, din = d - 10;
-      const inner = [], outer = [];
-      for (let i = 0; i <= 2000; i++) {
-        const f = i / 2000;
-        inner.push([f * din, ntcV(pf, f) * hin]);
-        outer.push([f * d, ntcV(pf, f) * hout]);
-      }
-      let min = 99, mu = 0;
-      for (const [x, y] of outer) {
-        let best = 99;
-        for (const [a, b] of inner) {
-          const dd = (x - a) ** 2 + (y - b) ** 2;
-          if (dd < best) best = dd;
-        }
-        best = Math.sqrt(best);
-        if (best < min) { min = best; mu = x; }
-      }
-      out.push({ k, min: +min.toFixed(2), u: +mu.toFixed(1) });
+      const hin = (len - 20) / 2, din = d - 10;
+      /* 안쪽 곡선(= 실루엣) 폴리라인 — 위쪽 가지 + 바닥 평탄부. 제품과 같은 표를 읽는다. */
+      const inner = [];
+      for (let i = 0; i <= 800; i++) { const f = i / 800; inner.push([f * din, ntcV(pf, f) * hin]); }
+      inner.push([din, -ntcV(pf, 1) * hin]);
+      /* 바깥·림은 **제품 함수가 내는 그 곡선**이다(사본 금지 — 402). */
+      const sm = ntcInnerSamples(pf, din, hin, NTC_OFF_N);
+      const oc = ntcOffset(sm, 10, NTC_OFF_N), rc = ntcOffset(sm, 22, NTC_OFF_N);
+      const b = span(oc, inner), r = span(rc, oc);
+      out.push({ k, min: b.mn, max: b.mx, u: b.u, rmin: r.mn, rmax: r.mx, n: oc.length });
     }
     return out;
   });
   for (const t of thick) {
-    /* 래칫 값 4.0 = 6회차 선언 기하의 실측(배너 5.75 · 불릿 4.22) 바로 아래. ⚠ 이 수는 GS 가 찍힌
-       화소로 잰 8.08 과 **정의가 다르다** — 여기는 두 폴리곤 곡선 사이의 수직 거리(더 엄한 대리자)이고,
-       찍힌 띠는 구멍이 입 쪽 일부를 덮어 그보다 두껍게 보인다. 두 수를 섞어 쓰지 마라. */
-    ok(t.min >= 4.0, `[B8] ${t.k} 띠 두께(선언 기하) 최소 ${t.min}(u=${t.u}) ≥ 4.0 래칫 — 곧은변 10 · ref 9.93 (7회차가 올린다)`);
+    /* ⚑⚑ 923 7회차 — 래칫(≥4.0)이 **과녁으로 올라섰다.** 바깥·림이 안쪽 곡선의 법선 오프셋이라
+       띠 두께는 이제 «어디서나 10» 이 성립한다(실측 배너 9.97~10.06 · 불릿 9.97~10.03).
+       ⚠ **두 쪽을 다 묻는다** — 얇아지는 것만 막으면 «오프셋을 그만두고 통째로 두껍게» 도 초록이 된다.
+       ⚠ 이 수는 6회차 채점 GS 가 찍힌 화소로 잰 8.08 과 **정의가 다르다**(찍힌 띠는 구멍이 입 쪽을
+       덮어 더 두껍게 보인다) — 섞어 쓰지 마라. 남은 −0.07 은 표본을 솎은 이음선 몫이다(`NTC_OFF_E`). */
+    ok(t.min >= 9.9 && t.max <= 10.15,
+      `[B8] ${t.k} 띠 두께(선언 기하) ${t.min}~${t.max}(최소 u=${t.u}) = 10 — 곧은변 10 · ref 9.93 (점 ${t.n})`);
+    /* 짝 항 — 림도 같은 오프셋으로 나온다(833 §12 «림 두께 12 불변» 을 꼭지 하나가 아니라 곡선 전체로). */
+    ok(t.rmin >= 11.9 && t.rmax <= 12.15,
+      `[B8b] ${t.k} 림 두께(선언 기하) ${t.rmin}~${t.rmax} = 12 — 833 §12 [12-d] 를 «꼭지» 에서 «곡선 전체» 로`);
   }
 
   /* ⚑ 923 3회차 — 되돌림의 사보타주가 바뀌었다. 1·2회차는 `border-radius:50%` 한 줄이면 옛 그림이 됐지만
@@ -555,6 +599,39 @@ async function shot(page, sel, out) {
     + ` (창 ${M_TOL})`);
 
   try { require('fs').unlinkSync(tmp); } catch (e) { /* 지워졌으면 됐다 */ }
+
+  /* ⚑⚑ 923 7회차 신설 §R5 — **바깥·림을 6회차의 «방사 배율» 로 되돌리면 [B8] 이 빨개지는가.**
+     이 회차가 바꾼 것은 «두 곡선 사이 수직 거리» 하나이므로, 되돌림도 그 한 축만 건드려야 한다:
+     같은 안쪽 곡선에 옛 식(바깥 = 표 × (d, len) · 림 = 표 × (d+12, len+24))을 세우고 같은 자로 잰다.
+     ⚠ 이 항이 초록(= 되돌리면 빨강)이어야 [B8] 이 «이미 참인 것을 굳힌 항» 이 아니다(338 규칙). */
+  blk('§R5 되돌림 다섯째 — 바깥·림을 옛 «방사 배율» 로 되돌리면 [B8] 이 빨개진다');
+  const r7 = await page.evaluate(() => {
+    const d2seg = (x, y, x1, y1, x2, y2) => {
+      const dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy;
+      let s = L2 ? ((x - x1) * dx + (y - y1) * dy) / L2 : 0;
+      s = Math.max(0, Math.min(1, s));
+      return Math.hypot(x - (x1 + dx * s), y - (y1 + dy * s));
+    };
+    const out = [];
+    for (const k of ['ban', 'bl']) {
+      const pf = NTC_PROF[k], len = NTC_LEN[k], d = NTC_DEP, hin = (len - 20) / 2, din = d - 10;
+      const inner = [];
+      for (let i = 0; i <= 800; i++) { const f = i / 800; inner.push([f * din, ntcV(pf, f) * hin]); }
+      inner.push([din, -ntcV(pf, 1) * hin]);
+      const old = [];                                   /* 6회차의 바깥 곡선 = 표 × (d, len/2) */
+      for (let i = 0; i <= 800; i++) { const f = i / 800; old.push([f * d, ntcV(pf, f) * len / 2]); }
+      let mn = 99, u = 0;
+      for (const [x, y] of old) {
+        let b = 99;
+        for (let j = 0; j < inner.length - 1; j++) b = Math.min(b, d2seg(x, y, inner[j][0], inner[j][1], inner[j + 1][0], inner[j + 1][1]));
+        if (b < mn) { mn = b; u = x; }
+      }
+      out.push({ k, mn: +mn.toFixed(2), u: +u.toFixed(1) });
+    }
+    return out;
+  });
+  ok(r7.every((r) => r.mn < 9.9),
+    `[R7] 옛 방사 배율로 되돌리면 띠가 [B8] 창(≥9.9) 밖으로 얇아진다 — ${r7.map((r) => `${r.k} ${r.mn}(u=${r.u})`).join(' · ')}`);
 
   blk('§Z 콘솔');
   ok(errs.length === 0, `[Z] 콘솔·페이지 에러 0건 — ${errs.length}`);
