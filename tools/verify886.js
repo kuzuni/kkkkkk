@@ -92,7 +92,12 @@ const MEASURE = `(() => {
     pedRise: r2(fl - ped.t),                 /* 받침 상변이 지면선 위로 나온 몫 */
     seat:    r2(mul.b - ped.t),              /* ★ 얹힘 깊이 */
     gapFl:   r2(fl - mul.b),                 /* 바 하변 ↓ 지면선 */
-    gapUp:   r2(mul.t - grid.b),             /* 격자 하변 ↓ 바 */
+    gapUp:   r2(mul.t - grid.b),             /* 격자 **상자** 하변 ↓ 바 */
+    /* ⚑ 879 4회차 — .rw-grid 상자는 마지막 슬롯 행보다 18.25px 아래에서 끝난다(height:516 고정 +
+       3행 절대배치). [5]·[5b] 가 이 상자 값을 **그려진 행 간 25.6** 으로 나누고 있었다 = 분자 상자 ·
+       분모 잉크. 그려진 자를 같이 낸다(verify879 [2] 와 한 벌). */
+    gapUpDrawn: (() => { const c = [...document.querySelectorAll('#relw .rw-c')];
+      return c.length ? r2(mul.t - (Math.max(...c.map(e => e.getBoundingClientRect().bottom)) - pr.top)) : null; })(),
     bandPed: r2(ped.b - fl),                 /* 지면선 ↓ 받침 하변 */
     bandAll: r2(mid.t - fl),                 /* «94px 여유» 전부 */
   };
@@ -206,20 +211,32 @@ function variant(tag, from, to) {
       /* keep-gap 쪽 — 간극을 ×1.5 로 유지하면 배율이 얼마까지 내려가는가.
          `rwMulFit()` 이 니치에서 푸는 값이라 사본을 그대로 재면 «간극이 늘고 바는 그대로» 가
          되므로, 두 대가를 **둘 다** 적는다(879 [2c] 교훈 — 한 면만 재는 자는 아무것도 안 묻는다). */
-      const gapKeepS = rr[1600].gapUp;
+      /* ⚑ 879 4회차 이관 — 분자를 **그려진** 마지막 슬롯에서 잰다(분모 ROW_PITCH 가 그려진 값이다).
+         예약도 같은 이관을 받는다: 상자 하변에서 재는 예약 = 그려진 목표 − 격자 꼬리. */
+      const TAIL = rr[1600].gapUpDrawn - rr[1600].gapUp;
+      const gapKeepS = rr[1600].gapUpDrawn;
       const budget = rr[1600].av - rr[1600].pedRise - clear * rr[1600].sc;
-      const barKeepG = budget - ROW_PITCH * GAP_K;
-      rows.push({ clear, gapKeepS, gapX: +(gapKeepS / ROW_PITCH).toFixed(2),
+      const barKeepG = budget - (ROW_PITCH * GAP_K - TAIL);
+      rows.push({ clear, gapKeepS, tail: +TAIL.toFixed(2), gapX: +(gapKeepS / ROW_PITCH).toFixed(2),
         pctKeepG: +(barKeepG / longBar * 100).toFixed(1) });
     }
-    const bad = rows.every(o => o.gapX < GAP_K || o.pctKeepG < MB_MIN_SC * 100);
-    ok(rows.length === 2 && bad,
-      '[5] ★ «안 덮게»(clear ≥ 0) 옮긴 사본은 `verify879` [2](×' + GAP_K + ') 나 [2c](' +
-      (MB_MIN_SC * 100) + '%) 중 하나를 반드시 깬다 — 886 의 기각은 취향이 아니라 산수다',
-      rows.map(o => 'clear ' + o.clear + ' → 간극 ×' + o.gapX + ' / 간극을 지키면 바 ' + o.pctKeepG + '%').join(' · '));
-    ok(r[1600].gapUp / ROW_PITCH >= GAP_K - 0.02 && r[1600].mul.h / longBar >= MB_MIN_SC,
-      '[5b] 현행(얹힘 ' + SEAT + ')은 두 문턱을 **동시에** 넘는 유일한 자리다',
-      '1600 간극 ×' + (r[1600].gapUp / ROW_PITCH).toFixed(2) +
+    /* ⚑⚑ 879 4회차 이관 — **이 항의 기각이 무효가 됐다(333 처방: 자리를 비우지 않고 방향을 뒤집는다).**
+       886 은 «안 덮게 하면 879 의 두 문턱 중 하나가 반드시 깨진다» 를 산수로 못박았는데, 그 산수는
+       간극을 **격자 상자** 하변에서 재고 있었다(분자 상자 · 분모 잉크 25.6). 879 4회차가 그 꼬리
+       18.25px 을 빼고 다시 재자 **clear 0 은 두 문턱을 둘 다 지킨다**(간극 ×1.68 · 바 100%).
+       ⇒ 기각은 **clear 12(867 의 말 그대로)에만** 남는다. 실제로 얹힘을 없애는 것은 **886 의 축**이라
+         879 는 손대지 않고 **909 로 등재**했다 — 이 항은 그 등재의 근거를 사본으로 들고 있는다. */
+    const c0 = rows.find(o => o.clear === 0), c12 = rows.find(o => o.clear === 12);
+    ok(rows.length === 2
+       && c0 && c0.gapX >= GAP_K && Math.min(c0.pctKeepG, 100) >= MB_MIN_SC * 100
+       && c12 && (c12.gapX < GAP_K || c12.pctKeepG < MB_MIN_SC * 100),
+      '[5] ★ «안 덮게» 는 이제 **clear 0 에서 가능하다**(879 4회차가 꼬리를 뺀 뒤) — 기각은 clear 12 에만 남는다 · 실행은 886 의 축이라 **909** 로 등재',
+      rows.map(o => 'clear ' + o.clear + ' → 그려진 간극 ×' + o.gapX + ' / 간극을 지키면 바 ' + o.pctKeepG + '%').join(' · ')
+        + ' (격자 꼬리 ' + (c0 ? c0.tail : '?') + ')');
+    ok(r[1600].gapUpDrawn / ROW_PITCH >= GAP_K - 0.02 && r[1600].mul.h / longBar >= MB_MIN_SC,
+      '[5b] 현행(얹힘 ' + SEAT + ')도 두 문턱을 **동시에** 넘는다 — «유일한 자리» 는 879 4회차가 무효로 만들었다(clear 0 도 넘는다)',
+      '1600 그려진 간극 ×' + (r[1600].gapUpDrawn / ROW_PITCH).toFixed(2) +
+      '(상자 자로는 ×' + (r[1600].gapUp / ROW_PITCH).toFixed(2) + ')' +
       ' · 바 ' + (r[1600].mul.h / longBar * 100).toFixed(1) + '%');
   }
 
@@ -283,10 +300,17 @@ function variant(tag, from, to) {
     if (!url) ok(false, '§R2 사본을 못 만들었다 — `--rw-mb-seat` 선언이 안 잡힌다');
     else {
       const rv = await sweep(browser, url);
-      ok(rv[1600].seat < 1 && rv[1600].gapUp / ROW_PITCH < GAP_K,
-        '§R2 얹힘을 0 으로 만든 사본에서 «간극 ×1.5» 가 깨진다 — 4px 은 장식이 아니라 **예산의 일부**다',
-        '1600 얹힘 ' + rv[1600].seat + ' · 간극 ' + rv[1600].gapUp +
-        ' (×' + (rv[1600].gapUp / ROW_PITCH).toFixed(2) + ') (사본에서 빨개져야 한다)');
+      /* ⚑ 879 4회차 이관 — 옛 문장은 «얹힘 0 이면 «간극 ×1.5» 가 깨진다» 였고, 그 판정도
+         **격자 상자** 자 위에 서 있었다(그려진 자로는 ×1.68 로 안 깨진다 — [5] 참조).
+         이 항이 실제로 지키는 것은 «4px 이 예산과 **연결돼 있다**» 이므로, 문장을
+         **깨짐** 이 아니라 **연동**으로 적는다: 얹힘을 없앤 만큼 그려진 간극이 정확히 줄어든다.
+         깨지느냐는 909 가 답할 몫이다(지금 답은 «안 깨진다»). */
+      const dGap = r[1600].gapUpDrawn - rv[1600].gapUpDrawn;
+      ok(rv[1600].seat < 1 && Math.abs(dGap - SEAT * r[1600].sc) < 0.6,
+        '§R2 얹힘을 0 으로 만들면 그려진 간극이 **정확히 그 4px 만큼** 줄어든다 — 4px 은 장식이 아니라 **예산의 일부**다(다만 879 4회차 뒤로는 그것이 문턱을 깨지 않는다 · 909)',
+        '1600 얹힘 ' + rv[1600].seat + ' · 그려진 간극 ' + r[1600].gapUpDrawn + ' → ' + rv[1600].gapUpDrawn +
+        ' (Δ' + dGap.toFixed(2) + ' ↔ 기대 ' + (SEAT * r[1600].sc).toFixed(2) +
+        ' · ×' + (rv[1600].gapUpDrawn / ROW_PITCH).toFixed(2) + ')');
     }
   }
 
