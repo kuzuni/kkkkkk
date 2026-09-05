@@ -37265,19 +37265,27 @@ function ntcOffHalf(cv, d, cy, eo){
     + (cy + s * y).toFixed(2) + 'px';
   return cv.map(p => pt(p, -1)).concat(cv.slice().reverse().map(p => pt(p, 1)));
 }
+/* 오프셋은 표본 256 × 안쪽 표본이라 한 번에 1.8ms 다 — 값이 같으면 다시 안 센다.
+   ⚠ 열쇠에 **표 전체**를 넣는다(길이·깊이만 넣으면 `verify923` §R 이 표를 사보타주해도 옛 그림이
+   나와 되돌림 시험이 조용히 초록이 된다). 표는 20 마디라 열쇠 만드는 값이 재계산보다 훨씬 싸다. */
+const pvNtcCache = new Map();
 function pvNtcPoly(len, d, k){
   /* 5회차 — 상자가 표에서 파생돼 위·아래로 `m` 씩 넓어졌다(`pvNtcMargin`). 노치 중심은 여전히
      «상자 중앙» 이므로 cy 가 그만큼 내려간다. m 은 상자를 그리는 쪽이 같이 읽는다. */
   const pf = NTC_PROF[k] || NTC_PROF.bl, din = d - 10, hin = (len - 20) / 2;
+  const key = k + '|' + len + '|' + d + '|' + pf.join(';');
+  if(pvNtcCache.has(key)) return pvNtcCache.get(key);
   const sm = ntcInnerSamples(pf, din, hin, NTC_OFF_N);
   const oc = ntcOffset(sm, 10, NTC_OFF_N), rc = ntcOffset(sm, 22, NTC_OFF_N);
   const m = pvNtcMargin(rc, len), cy = (len + 24) / 2 + m;
   /* 안쪽 곡선만 표를 그대로 읽는다(실루엣 = 과녁). 바깥·림은 그 오프셋이다.
      꼭지에서는 셋이 여전히 d−10 · d · d+12 라 833 §12 의 «한 값 파생» 이 그대로 성립한다. */
   const inner = ntcHalf(pf, din / d, hin, cy, 0);
-  return { m,
-           ps: ntcBand(ntcOffHalf(oc, d, cy, 0), inner),
-           pu: ntcBand(ntcOffHalf(rc, d, cy, 10), ntcOffHalf(oc, d, cy, 10)) };
+  const r = { m,
+              ps: ntcBand(ntcOffHalf(oc, d, cy, 0), inner),
+              pu: ntcBand(ntcOffHalf(rc, d, cy, 10), ntcOffHalf(oc, d, cy, 10)) };
+  pvNtcCache.set(key, r);
+  return r;
 }
 function pvNotches(p, H){
   const k = p.ban ? 'ban' : 'bl', pitch = NTC_PITCH[k], len = NTC_LEN[k], out = [];
