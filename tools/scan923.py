@@ -190,12 +190,28 @@ def width_at(prof, straight, i0, i1, k, u, margin=MARGIN):
     if not ys:
         return None
     dep = {i: (straight - prof[i]) * k for i in ys}
-    lo_n, hi_n = max(0, i0 - margin), min(len(prof) - 1, i1 + margin)
-    nb = {i: (straight - prof[i]) * k for i in range(lo_n, hi_n + 1) if prof[i] is not None}
     inside = [i for i in ys if dep[i] >= u]
     if not inside:
         return None
     lo, hi = min(inside), max(inside)
+    # ⚑⚑ **6회차 — 이 자에는 «천장» 이 있었다(셋째 결함).** 노치 창 `[i0,i1]` 은 «깊이 ≥ 6» 인 행이고,
+    # 이웃은 그 밖으로 `margin`(3) 행까지만 빌렸다 ⇒ **얕은 u 의 폭이 «창 + 3행» 에서 잘린다.**
+    # 배너에서 그 천장이 65.4(우리px)라 5회차가 «u1 = 64.5» 를 읽은 것은 실물이 아니라 **자의 상한**이었고,
+    # 6회차가 표를 벌려 실물을 72.2 로 만들어도 자는 64.9 로 **거의 안 움직였다**(그래서 들켰다).
+    # ⇒ 창 밖으로도 **깊이가 u 이상인 동안 걸어 나간다**(옆 노치를 물지 않게 피치의 절반에서 멈춘다).
+    # 이 천장은 ref 도 같이 잘랐다 — 4·5회차의 «자 갈림»(ref u1 65.01 ↔ 채점 2인 72.07/116.5)의 뿌리다.
+    span = i1 - i0 + 1
+    walk = max(margin, span)          # 옆 노치까지 못 가는 한도(노치 길이 = 피치의 절반 이하다)
+    # ⚠ 걸음은 «깊이가 얕아지는 동안» 만이다(단조 가드) — 안 걸면 ref 초록의 **티켓 톱니**처럼
+    #   이웃한 오목부가 이어져 창이 통째로 합쳐진다(가드 없이 재면 폭이 음수로 나온다).
+    while lo - 1 >= max(0, i0 - walk) and prof[lo - 1] is not None \
+            and u <= (straight - prof[lo - 1]) * k <= (straight - prof[lo]) * k:
+        lo -= 1
+    while hi + 1 <= min(len(prof) - 1, i1 + walk) and prof[hi + 1] is not None \
+            and u <= (straight - prof[hi + 1]) * k <= (straight - prof[hi]) * k:
+        hi += 1
+    lo_n, hi_n = max(0, lo - margin), min(len(prof) - 1, hi + margin)
+    nb = {i: (straight - prof[i]) * k for i in range(lo_n, hi_n + 1) if prof[i] is not None}
 
     def cross(i, step):
         """행 i 에서 바깥쪽(step 방향) 이웃과의 사이에서 깊이 u 를 지나는 자리.
@@ -212,7 +228,10 @@ def width_at(prof, straight, i0, i1, k, u, margin=MARGIN):
         t = (u - a) / (b - a)
         return j + t * step
 
-    return (cross(hi, -1) - cross(lo, 1)) * k
+    w = (cross(hi, -1) - cross(lo, 1)) * k
+    # 오염된 창(ref 초록의 티켓 톱니 · 배지에 물린 배너 맨 위 자리)에서는 두 교차가 뒤집힌다.
+    # 그때는 **못 쟀다(None)** 로 답한다 — 음수 폭을 숫자로 내면 그 창을 쓰는 자가 조용히 속는다(939).
+    return w if w > 0 else None
 
 
 def wprofile(prof, straight, i0, i1, k, fracs=(0.25, 0.50, 0.75, 0.90)):

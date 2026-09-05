@@ -53,7 +53,16 @@ const W_TOL = 2.5;                /* 옛 타원은 8자리 중 4자리에서 이
      (배너 −3.95 · 불릿 −11.80)은 그 두 배 넘게 밖이다. */
 const MOUTH_U = [1, 2, 3, 4, 6];
 const M_TOL = 2.0;
-const REF_M = { ban: [65.01, 63.88, 62.75, 61.61, 59.35], bl: [106.51, 104.36, 102.22, 100.08, 95.79] };
+/* ⚑⚑ **6회차 — 과녁을 다시 쟀다. 5회차의 «자 갈림» 은 갈림이 아니라 이 자의 «천장» 이었다.**
+   `width_at`/`wAt` 은 노치 창(«깊이 ≥ 6» 인 행) 밖으로 이웃을 **3행까지만** 빌렸다 ⇒ 얕은 u 의 폭이
+   «창 + 3행» 에서 잘린다(배너 천장 65.4). 5회차가 ref 를 65.01 로 읽은 것은 **ref 의 입이 그 천장에
+   눌린 값**이었고, 그래서 «채점 2인은 72 로 읽는데 자는 65» 라는 갈림처럼 보였다.
+   천장을 걷어내니(창 밖으로도 깊이가 u 이상이고 얕아지는 동안 걸어 나간다) 이 자가 ref 를
+   **72.02 / 72.31(배너) · 118.27(불릿)** 으로 읽는다 — 5회차 채점 GQ 의 72.1 / 116.5,
+   GP 의 68.2~72.5 / 113.3~118.9, 4회차 GO 의 72.07 / 115.72 와 **같은 자리**다. ⇒ 갈림은 닫혔다.
+   ⚠ 이 값들은 **오염 안 된 창**의 것이다(배너 = 아래 두 자리의 평균 · 불릿 = y299 한 자리).
+   오염된 창에서는 이 자가 이제 숫자 대신 **n/a** 로 답한다(음수 폭을 내면 조용히 속는다 — 939). */
+const REF_M = { ban: [72.17, 67.46, 63.94, 61.78, 59.35], bl: [118.27, 109.67, 105.46, 100.77, 95.79] };
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'ok ' : 'FAIL'} ${m}`); };
@@ -146,18 +155,29 @@ function notchStats(png, box, bg) {
        ⓐ 아래쪽 끝의 **부호** — `j + t` 가 아니라 `j + t*step` 이다(폭이 최대 2행 부풀고, 1행의 실물
           길이가 그림마다 달라 **ref 가 두 배 더 부푸는 비대칭 편향**이 된다) ·
        ⓑ **창** — 이웃을 노치 안(`[a,b]`)에서만 찾아 입구 쪽 교차가 경계에 물리면 잘렸다. */
+    /* ⚑⚑ 6회차 — **천장을 걷어냈다**(scan923.py `width_at` 과 같은 수리 · 위 REF_M 주석).
+       옛 자는 창 밖으로 3행까지만 빌려 얕은 u 의 폭이 «창 + 3행» 에서 잘렸고, 그 천장이 ref 와
+       우리를 **같이** 잘라 «자 갈림» 처럼 보였다. 이제 창 밖으로도 «깊이 ≥ u 이면서 얕아지는 동안»
+       걸어 나간다(단조 가드가 없으면 ref 초록의 티켓 톱니에서 이웃 오목부와 창이 합쳐진다). */
     const MG = 3;
     const wAt = (u) => {
       const idx = [];
       for (let i = a; i <= b; i++) if (inn[i] != null && inn[i] >= u) idx.push(i);
       if (!idx.length) return null;
-      const lo2 = Math.max(0, a - MG), hi2 = Math.min(inn.length - 1, b + MG);
+      const walk = Math.max(MG, b - a + 1);
+      let lo = idx[0], hi = idx[idx.length - 1];
+      while (lo - 1 >= Math.max(0, a - walk) && inn[lo - 1] != null
+        && inn[lo - 1] >= u && inn[lo - 1] <= inn[lo]) lo--;
+      while (hi + 1 <= Math.min(inn.length - 1, b + walk) && inn[hi + 1] != null
+        && inn[hi + 1] >= u && inn[hi + 1] <= inn[hi]) hi++;
+      const lo2 = Math.max(0, lo - MG), hi2 = Math.min(inn.length - 1, hi + MG);
       const cross = (i, step) => {
         const j = i - step;
         if (j < lo2 || j > hi2 || inn[j] == null) return i;
         return inn[j] === inn[i] ? i : j + step * ((u - inn[j]) / (inn[i] - inn[j]));
       };
-      return cross(idx[idx.length - 1], -1) - cross(idx[0], 1);
+      const w = cross(hi, -1) - cross(lo, 1);
+      return w > 0 ? w : null;
     };
     return { y0: a, y1: b, len: b - a + 1, dep: D, flat: best, wd: FRACS.map((f) => wAt(f * D)),
       /* 5회차 — 같은 `wAt` 에 **절대 깊이**를 넣는다(자를 새로 만들지 않는다 — 같은 자, 다른 격자). */
@@ -320,6 +340,40 @@ async function shot(page, sel, out) {
     }
   }
 
+  /* ⚑⚑ 6회차 신설 [B7] — **구멍(마스크)과 띠(폴리곤)의 두 대수 보장.** 찍힌 실루엣은
+     «구멍 ∩ 검정 안쪽 곡선» 이라 이 둘이 어긋나면 표를 벌려도 그림이 안 따라오거나(입이 잘린다),
+     검정 밖으로 바탕이 샌다. 6회차가 입 전용 구멍을 한 겹 얹은 자리이므로 그 산수를 자로 세운다:
+       ⓐ 구멍 ⊇ 검정 «안쪽» 곡선 (안 그러면 노치 속에 카드 재질이 남고 입이 잘린다)
+       ⓑ 구멍 ⊆ 검정 «바깥» 곡선 (안 그러면 검정 없는 자리가 뚫려 바탕이 샌다)
+     ⚠ ⓑ 의 창이 −0.6 인 것은 **3회차부터 있던 값**이다(배너 −0.43 · 타원 구멍 ↔ 폴리곤 띠의
+     모양 차이가 중간 깊이에서 내는 몫 · 6회차가 만든 것이 아니다 — 4회차 트리에서도 같은 −0.43).
+     찍힌 화소로는 «검정 밖 바탕» 행이 수리 전후 20행으로 같다(review 5회차 §곁들여). */
+  blk('§B7 구멍 ↔ 띠의 두 대수 보장 (입 전용 구멍 층 포함)');
+  const inv = await page.evaluate(() => {
+    const out = [];
+    for (const k of ['ban', 'bl']) {
+      const pf = NTC_PROF[k], len = NTC_LEN[k], d = NTC_DEP;
+      const hin = (len - 20) / 2, hout = len / 2, ryMain = len / 2 - 1, din = d - 10;
+      const m = pvNtcMouth(pf, len, d);
+      let a = 99, b = 99, au = 0, bu = 0;
+      for (let u = 0; u <= din; u += 0.05) {
+        const main = ryMain * Math.sqrt(Math.max(0, 1 - (u / d) ** 2));
+        const mouth = m && u < m.rx ? m.ry * Math.sqrt(Math.max(0, 1 - (u / m.rx) ** 2)) : 0;
+        const hole = Math.max(main, mouth);
+        const ca = hole - ntcV(pf, u / din) * hin, cb = ntcV(pf, u / d) * hout - hole;
+        if (ca < a) { a = ca; au = u; }
+        if (cb < b) { b = cb; bu = u; }
+      }
+      out.push({ k, a: +a.toFixed(2), au: +au.toFixed(2), b: +b.toFixed(2), bu: +bu.toFixed(2),
+        mouth: m ? `rx${m.rx}/ry${m.ry.toFixed(1)}` : '없음' });
+    }
+    return out;
+  });
+  for (const r of inv) {
+    ok(r.a >= -0.05, `[B7a] ${r.k} 구멍 ⊇ 검정 안쪽 — 최소 여유 ${r.a} (u=${r.au} · 입 구멍 ${r.mouth})`);
+    ok(r.b >= -0.6, `[B7b] ${r.k} 구멍 ⊆ 검정 바깥 — 최소 여유 ${r.b} (u=${r.bu} · 창 −0.6 = 3회차부터의 값)`);
+  }
+
   /* ⚑ 923 3회차 — 되돌림의 사보타주가 바뀌었다. 1·2회차는 `border-radius:50%` 한 줄이면 옛 그림이 됐지만
      3회차는 모양이 폴리곤이라, **옛 «작은 상자 + 테두리 + 반지름» 링을 통째로 세워야** 옛 그림이 된다
      (`clip-path:none` 만 걸면 상자가 통째로 검게 칠해져 «다른 결함» 을 재게 된다 — 그건 이 자의 물음이 아니다).
@@ -401,6 +455,9 @@ async function shot(page, sel, out) {
   blk('§R3 되돌림 셋째 — 표의 «머리»(v>1)만 v=1 로 누르면 [B6] 이 빨개지고 [B5] 는 초록이다');
   await page.evaluate(() => {
     document.getElementById('__v923rev').textContent = '';   /* 앞 되돌림 CSS 를 걷는다 */
+    /* 원래 표를 먼저 떠 둔다 — 아래 §R4 가 이 사본으로 표를 되살린 뒤 «구멍 층만» 뗀다. */
+    window.PROF0 = {};
+    Object.keys(NTC_PROF).forEach((k) => { PROF0[k] = NTC_PROF[k].map((p) => p[1]); });
     Object.keys(NTC_PROF).forEach((k) => NTC_PROF[k].forEach((p) => { if (p[1] > 1) p[1] = 1; }));
     openShopTab('pass');
   });
@@ -427,6 +484,33 @@ async function shot(page, sel, out) {
   ok(r5.length > 0 && r5.every((r) => r.wMax <= W_TOL),
     `[R5b] 그때 «깊이별 폭»([B5])은 전부 초록이다 — [B6] 이 [B5] 로 대체되지 않는다는 증거 · `
     + r5.map((r) => `${r.k}:입${r.mMax.toFixed(2)}/폭${r.wMax.toFixed(2)}`).join(' '));
+
+  /* ⚑⚑ 6회차 신설 — **되돌림 넷째: 입 전용 구멍 층만 뗀다.** 표는 그대로 두고 `pvNtcMouth` 만
+     «층 없음» 으로 돌리면, 찍힌 입은 **타원 구멍에서 잘려**(불릿 2×55.98 = 112) [B6-u1] 이 빨개진다.
+     배너는 주 구멍이 이미 덮으므로 층이 없어도 초록이다 — 그 비대칭이 «이 층이 실제로 일을 한다» 는
+     증거다(층이 장식이면 두 형 다 초록일 것이다). */
+  blk('§R4 되돌림 넷째 — 입 전용 구멍 층을 떼면 불릿 [B6-u1] 이 빨개진다 (배너는 초록)');
+  await page.evaluate(() => {
+    Object.keys(NTC_PROF).forEach((k) => NTC_PROF[k].forEach((p, i) => { p[1] = PROF0[k][i]; }));
+    pvNtcMouth = () => null;
+    openShopTab('pass');
+  });
+  await page.waitForTimeout(500);
+  const png5 = await shot(page, '#app', tmp);
+  const r6 = [];
+  for (const c of boxes) {
+    if (c.y < 0 || c.bottom > png5.height) continue;
+    const i = ((c.y + Math.round(c.h / 2)) * png5.width + Math.min(png5.width - 3, c.x + c.w + 12)) * 4;
+    const bg = [png5.data[i], png5.data[i + 1], png5.data[i + 2]];
+    const k = c.ban ? 'ban' : 'bl';
+    const ns = notchStats(png5, c, bg).filter((n) => n.dep > 20 && Math.abs(n.len - REF[k].len) <= 8);
+    if (!ns.length) continue;
+    const d1 = Math.max(...ns.map((n) => (n.md[0] == null ? 99 : Math.abs(n.md[0] - REF_M[k][0]))));
+    r6.push({ k, id: c.id, d1 });
+  }
+  ok(r6.some((r) => r.k === 'bl' && r.d1 > M_TOL) && r6.every((r) => r.k !== 'ban' || r.d1 <= M_TOL),
+    `[R6] 입 구멍 층을 떼면 불릿만 [B6-u1] 이 빨개진다 — ${r6.map((r) => `${r.k}:|Δ|${r.d1.toFixed(2)}`).join(' ')}`
+    + ` (창 ${M_TOL})`);
 
   try { require('fs').unlinkSync(tmp); } catch (e) { /* 지워졌으면 됐다 */ }
 
