@@ -37,7 +37,9 @@ const MULS = [1, 10, 100, 1000];
 const SHELL_H = 98, BAR_W = 646, BAR_L = 216, GRID_GAP = 44, COST1 = 100;  /* GRID_GAP: 813 2회차 20 → 44 */
 /* 867 — 바가 벽을 떠나 «받침 위» 로 내려오면서 «아래 이웃» 이 격자에서 받침으로 바뀌었다.
    GRID_GAP(44)은 **벽에 있던 시절의 값**이라 지우지 않고 계보로 남긴다(위 [B4] 주석). */
-const PED_GAP = 12;
+/* ⚑ 910 — 얹힘(`--rw-mb-seat`)이 4 → 0 이 되어 이 값이 12 → **16** 이다(= `--rw-ped` − 얹힘).
+   867·879·886 의 같은 상수와 한 벌로 움직인다 — 하나만 늙으면 그 자가 «자리가 틀렸다» 고 말한다. */
+const PED_GAP = 16;
 
 let pass = 0, fail = 0, hold = 0;
 const ok = (b, name, detail) => {
@@ -131,10 +133,17 @@ function preTree() {
         /* 867 — 자리가 «벽» 에서 «받침 위» 로 내려오면서 이웃이 바뀌었다. 옛 이름(gapGrid ·
            clearLintel)은 **지우지 않는다** — [B5] 가 «바가 벽 밖에 있다» 를 그 값으로 묻는다. */
         const flr = R('.rw-floor');
+        /* ⚑ 910 이관 — «격자 하변» 이 둘이다: .rw-grid 는 height:516 고정 상자이고 3행(.rw-c)은
+           그 안에 절대배치라 상자 하변이 그려진 마지막 슬롯보다 18.25px 아래다(879 4회차 §23).
+           [B4b] 의 분모(ROW_PITCH 25.6)가 그려진 값이므로 분자도 그려진 슬롯에서 잰다. */
+        const cells = [...document.querySelectorAll('#relw .rw-c')];
+        const slotBot = cells.length
+          ? +Math.max(...cells.map(c => c.getBoundingClientRect().bottom)).toFixed(2) : null;
         return { H, bar, gapGrid: +(grid.t - bar.b).toFixed(2), clearLintel: +(bar.t - lin.b).toFixed(2),
           overSeam: +(gnd.t - bar.b).toFixed(2),
-          gapUp: +(bar.t - grid.b).toFixed(2),        /* 867 — 격자 하변 ↓ 바 (위 이웃) */
-          gapDown: +(flr.t - bar.b).toFixed(2),       /* 867 — 바 ↓ 받침 상변 (아래 이웃) */
+          gapUp: +(bar.t - grid.b).toFixed(2),        /* 867 — 격자 **상자** 하변 ↓ 바 (위 이웃) */
+          gapUpDrawn: slotBot === null ? null : +(bar.t - slotBot).toFixed(2),  /* ★ 910 — 그려진 자 */
+          gapDown: +(flr.t - bar.b).toFixed(2),       /* 867 — 바 ↓ **지면선**(886 정정) */
           overPed: +(flr.t - bar.b).toFixed(2),
           cxBar: +((bar.l + bar.r) / 2).toFixed(2), cxMid: +((mid.l + mid.r) / 2).toFixed(2) };
       }, H));
@@ -209,13 +218,20 @@ function preTree() {
                  한 줄로 읽힌다»)를 **새 이웃 기준으로** 다시 묻는 항이다.
        ⚠ 옛 대역(44 고정 · 좁은 벽 대칭)은 «벽에 있을 때» 의 값이라 되살리지 마라 —
          되살리려면 867 을 통째로 되돌려야 한다(그때는 [B5] 가 먼저 빨개진다). */
-    const ROW_PITCH = 25.6;   /* 격자 행 간 — 813 1회차 CF·CG 실측 */
+    /* ── ⚑⚑ 910 이관 — **이 화면의 같은 문장을 재는 자가 셋이었다**(700 [B4b] · 867 [2] · 879 [2]).
+       879 4회차가 «분자는 상자 · 분모는 잉크» 를 고칠 때 자기 것만 데려갔고, 나머지 둘은
+       문턱이 낮아(×1.0) 1600 이 **1.12 로 간신히 초록**인 «헛여유» 로 남아 있었다. 910 이 바를
+       4px 올리자 둘 다 0.97 로 빨개졌다 — 결함이 아니라 자다(그려진 자로는 ×1.68).
+       ⇒ 셋을 같은 자로 맞춘다. 차가 «격자 꼬리 하나» 임은 `verify867` [2e]·`verify879` [2e] 가
+         이미 다섯 프레임에서 못박고 있으므로 여기서는 판정만 옮긴다(자를 새로 만들지 않는다). */
+    const ROW_PITCH = 25.6;   /* 격자 행 간 — 813 1회차 CF·CG 실측(**그려진** 값) */
     ok(rows.every(r => Math.abs(r.gapDown - PED_GAP) <= 1),
-      '[B4] 바 하변 ↔ 받침 상변 = 12px 고정 — 바가 «받침 위에 얹힌» 것으로 읽힌다(867)',
+      '[B4] 바 하변 ↔ **지면선** = ' + PED_GAP + 'px 고정 — 바가 받침 상면에 «닿아 있다»(867 · 886 정정 · 910 이 12 → 16)',
       rows.map(r => r.H + ':' + r.gapDown).join(' · '));
-    ok(rows.every(r => r.gapUp > ROW_PITCH && r.gapUp > r.gapDown),
-      '[B4b] 위(격자 하변↓바)가 격자 행 간 25.6 보다 넓고 아래(바↓받침)보다 크다 — «격자의 한 줄» 로 안 읽힌다(867)',
-      rows.map(r => `${r.H}: 위 ${r.gapUp} / 아래 ${r.gapDown} = ${(r.gapUp / r.gapDown).toFixed(2)}`).join(' · '));
+    ok(rows.every(r => r.gapUpDrawn !== null && r.gapUpDrawn > ROW_PITCH && r.gapUpDrawn > r.gapDown),
+      '[B4b] 위(**그려진** 마지막 슬롯↓바)가 격자 행 간 25.6 보다 넓고 아래(바↓지면선)보다 크다 — «격자의 한 줄» 로 안 읽힌다(867 · 910 이관)',
+      rows.map(r => `${r.H}: 위 ${r.gapUpDrawn} / 아래 ${r.gapDown} = ${(r.gapUpDrawn / r.gapDown).toFixed(2)}`
+        + ` (상자 자로는 ${r.gapUp})`).join(' · '));
     /* ⚑ 방향 전환 — 옛 [B5] 는 «바가 상인방을 안 밟는다» 였고 자리가 벽 밖으로 나간 지금은
        **아무것도 안 물어도 초록**이다(328-330 교훈의 «헛초록»). 바가 실제로 벽을 떠났는지를
        묻는 쪽으로 뒤집는다 — 867 이 통째로 되돌아가면 이 항이 먼저 빨개진다. */
