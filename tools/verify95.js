@@ -267,27 +267,69 @@ const SEED = (light) => {
        gap≥90 인 7회는 전부 fling ✗ FAIL 로 **부호가 gap 하나에 완전히 갈렸다**.
        → 같은 CDP 세션에 마지막 move 와 up 을 «연달아»(왕복을 안 기다리고) 보내면 순서는 보장되면서
          간격이 0.7~0.9ms 로 떨어진다(실측 6/6 PASS). 입력 경로 자체는 page.mouse 와 같다. */
-    await page.evaluate(() => {
-      window.__lm = 0; window.__gap = null;
-      addEventListener('pointermove', () => { window.__lm = performance.now(); }, true);
-      addEventListener('pointerup', () => { window.__gap = window.__lm ? performance.now() - window.__lm : -1; }, true);
-    });
+    /* ⚑ 946 2회차 — 판정 축을 «왕복 t0 → 450ms 뒤 t1» 에서 **총 이동**으로 옮겼다.
+       옛 축은 ⓐ 왕복이 즉시다 ⓑ 450ms 안에 프레임 예산이 건강하다 를 전제하는데,
+       `par 7` 부하에서 둘 다 깨져 **관성이 멀쩡해도** 이 절이 빨개졌다(946 1회차 실측:
+       왕복 lag 34~1469ms · 3초 rAF 표본 23~119장). 새 축은 아무것도 전제하지 않는다 —
+       기준선 = pointerup 그 순간 **페이지 안에서 동기로** 찍은 scrollTop,
+       끝값 = rAF 궤적의 마지막 값. 프레임이 몇 장 오든 «관성이 데려간 곳» 을 가리킨다.
+       재현·되돌림 시험은 `node tools/probe305.js [N] [--dead]`. */
+    await page.evaluate((TR) => {
+      window.__lm = 0; window.__last = null; window.__up = null; window.__trace = [];
+      addEventListener('pointermove', () => {
+        window.__lm = performance.now();
+        /* 제품의 `dsRec` 은 최상위 `let` — `window.dsRec` 로는 안 보여도 **이름으로는 닿는다**
+           (946 2회차 실측). 그래서 «마지막 move → up» 을 대역이 아니라 제품이 재는 값으로 찍는다. */
+        try { window.__last = dsRec ? { t: dsRec.t, v: dsRec.v } : null; } catch (_) { window.__last = 'unreadable'; }
+      }, true);
+      addEventListener('pointerup', () => {
+        const now = performance.now(), b = window.__box();
+        let glide = null, dragged = null;
+        try { glide = dsGlide; } catch (_) {}
+        try { dragged = dsDragged; } catch (_) {}
+        /* 제품이 «이 속도면 얼마나 굴린다» 고 스스로 약속한 거리 — Σ v·dt·damp^n = v·16.67/(1−damp).
+           상수는 제품에서 이름으로 읽어 파생시킨다(손 상수 금지 · DS_DAMP 가 바뀌면 자동 추종). */
+        let pred = null;
+        try {
+          const vv = window.__last && window.__last !== 'unreadable' ? Math.min(Math.abs(window.__last.v || 0), DS_VMAX) : null;
+          if (vv != null) pred = (vv * 16.67) / (1 - DS_DAMP);
+        } catch (_) {}
+        window.__up = { t: now, s: b ? b.scrollTop : -1, el: b, glide, dragged, pred,
+          proxyGap: window.__lm ? now - window.__lm : null,
+          prodGap: window.__last && window.__last !== 'unreadable' ? now - window.__last.t : null };
+        const rec = () => {
+          const t = performance.now() - now, bb = window.__box();
+          window.__trace.push([t, bb ? bb.scrollTop : -1]);
+          if (t < TR) requestAnimationFrame(rec);
+        };
+        requestAnimationFrame(rec);
+      }, true);
+    }, 2500);
     const cdp = await ctx.newCDPSession(page);
     const mev = (type, y, buttons) => cdp.send('Input.dispatchMouseEvent',
       { type, x: info.x, y, button: 'left', buttons, clickCount: 1, pointerType: 'mouse' });
     await mev('mousePressed', info.y, 1);
     for (let i = 1; i <= 5; i++) { await mev('mouseMoved', info.y - i * 60, 1); await page.waitForTimeout(8); }
     await Promise.all([mev('mouseMoved', info.y - 360, 1), mev('mouseReleased', info.y - 360, 0)]);
-    const t0 = await page.evaluate(() => window.__top());
-    const gap = await page.evaluate(() => window.__gap);
-    await page.waitForTimeout(450);
-    const t1 = await page.evaluate(() => window.__top());
+    await page.waitForTimeout(2700);
+    const e = await page.evaluate(() => ({ up: window.__up, trace: window.__trace }));
+    const gap = e.up ? (e.up.prodGap != null ? e.up.prodGap : e.up.proxyGap) : null;
     const gs = typeof gap === 'number' && gap >= 0 ? `${Math.round(gap)}ms` : '측정불가';
+    const relS = e.up ? e.up.s : null;
+    const endS = e.trace && e.trace.length ? e.trace[e.trace.length - 1][1] : relS;
+    const d = relS == null ? null : endS - relS;
     /* 표본이 창 밖에 섰으면 «제품이 틀렸다» 고 말하지 않는다 — 게이트 자신을 지목한다. */
-    if (typeof gap === 'number' && gap >= 90)
+    if (!e.up) fail('게이트 계측 — pointerup 이 안 잡혔다 (제품 결함 아님 · 305)');
+    else if (typeof gap === 'number' && gap >= 90)
       fail(`게이트 계측 — 마지막 move → up 간격 ${gs} 가 제품의 관성 창(90ms) 밖이라 관성을 판정할 수 없다 (제품 결함 아님 · 305)`);
-    else if (t1 - t0 > 20) ok(`뗀 뒤 ${Math.round(t1 - t0)}px 더 흐름 (${Math.round(t0)} → ${Math.round(t1)} · move→up ${gs})`);
-    else fail(`관성 없음 — 뗀 직후 ${Math.round(t0)} → ${Math.round(t1)} (move→up ${gs} — 창 안인데 안 흘렀다)`);
+    /* ㉠ «관성 미발화» 는 총 이동과 **따로** 센다 — 뿌리도 처방도 다르다(946 1회차). */
+    else if (!e.up.glide && !e.up.dragged) fail(`관성 미발화 — 드래그가 확정되지 않았다(ds-drag ✗ · move→up ${gs} · 946 ㉠)`);
+    /* 제품이 이 속도로 약속하는 거리 자체가 문턱 아래면 «관성이 죽었다» 가 아니라 «제스처가 느렸다» 다.
+       부하에서 마지막 move 의 벽시계 dt 가 늘어나 `v = dy/dt` 가 눌린다(946 2회차 실측 0.055~0.068). */
+    else if (e.up.pred != null && e.up.pred <= 20)
+      fail(`게이트 계측 — 제스처 속도가 눌려 제품 약속이 ${e.up.pred.toFixed(1)}px 뿐이다(문턱 20 아래 · 관성을 판정할 수 없다 · 제품 결함 아님 · 946 ㉢)`);
+    else if (d > 20) ok(`뗀 뒤 ${Math.round(d)}px 더 흐름 (${Math.round(relS)} → ${Math.round(endS)} · 제품 약속 ${e.up.pred == null ? '—' : e.up.pred.toFixed(0)}px · 프레임 ${e.trace.length}장 · move→up ${gs})`);
+    else fail(`관성 없음 — 뗀 곳 ${Math.round(relS)} → 끝값 ${Math.round(endS)} (총 이동 ${Math.round(d)}px · 프레임 ${e.trace.length}장 · move→up ${gs} — 창 안인데 안 흘렀다)`);
     await ctx.close();
   }
 
