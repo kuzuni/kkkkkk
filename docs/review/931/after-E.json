@@ -1,0 +1,39 @@
+{
+ "runs": 3,
+ "par": 1,
+ "env": {},
+ "files": [
+  "smoke.js"
+ ],
+ "all": {
+  "smoke.js": [
+   {
+    "file": "smoke.js",
+    "code": 0,
+    "ms": 221018,
+    "verdict": "SMOKE PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 1080×2520 절전 모드 잘림 없음 |  | SMOKE PASS"
+   },
+   {
+    "file": "smoke.js",
+    "code": 0,
+    "ms": 220919,
+    "verdict": "SMOKE PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 1080×2520 절전 모드 잘림 없음 |  | SMOKE PASS"
+   },
+   {
+    "file": "smoke.js",
+    "code": 0,
+    "ms": 221216,
+    "verdict": "SMOKE PASS",
+    "pass": true,
+    "fail": false,
+    "tail": "  ✓ 1080×2520 절전 모드 잘림 없음 |  | SMOKE PASS"
+   }
+  ]
+ }
+}
