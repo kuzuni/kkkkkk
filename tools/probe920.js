@@ -41,6 +41,7 @@
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
+const { py: py937 } = require('./pydep937');   // 937 — 파이썬 자가 «없음» 이면 «한 줄 + 코드 2»
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -58,7 +59,7 @@ const RETIRED = { ratio: 0.900, band: [0.82, 1.00], name: 'U1+조립체(887)' };
 const CAP_TOP = 'var(--rw-g3) - var(--rw-i));';
 const CAP_TOP_RX = 'var(--rw-g3) - var(--rw-i) - 1.6px);';
 
-const py = (args) => execFileSync('python3', [path.join(__dirname, 'scan887.py'), ...args],
+const py = (args) => py937([path.join(__dirname, 'scan887.py'), ...args],
   { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const json = (out) => JSON.parse(out.slice(out.indexOf('{')));
 
