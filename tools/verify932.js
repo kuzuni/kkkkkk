@@ -31,7 +31,10 @@ const ok = (msg, cond, detail) => {
 
 /* 이 회차가 읽어 판정한 두 목록 — 래칫이다. 늘면 이 자가 먼저 짖는다.
    R = 축척 비대칭(②ⓐ · 895 와 같은 얼굴) · B = 번짐 비대칭(②ⓑ · 1:1 · 942 로 등재) */
-const RED = ['probe866.py', 'scan667b.py', 'scan885b.py', 'scan885e.py', 'scan887.py'];
+/* ⚑ 3회차 — `scan667b.py` 가 R 에서 빠졌다(얇은 축 넷이 전부 부분 화소다 · §6).
+   래칫은 «늘면 빨강» 이므로 **줄어든 것도 여기서 다시 적어야** 지나간다 — 그 자리가 이 줄이다. */
+const RED = ['probe866.py', 'scan885b.py', 'scan885e.py', 'scan887.py'];
+const FIXED = ['scan667b.py'];         /* 이 번호가 실제로 갈아 끼운 자 — [6-e] 가 «비어서 초록» 을 막는다 */
 const BRK = ['probe352.py', 'probe384.py', 'probe409.py', 'probe409c.py', 'probe409f.py',
   'probe409g.py', 'probe409i.py', 'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
 
@@ -125,7 +128,7 @@ console.log('\n[4] 선례 — 두 처방이 말이 아니라 코드로 있다');
     /a=s - 0\.5 - ml/.test(s667) && /b=e \+ 0\.5 \+ mr/.test(s667));
 }
 
-/* ── [5] 1회차 수리 — `scan667b.left_edge` ────────────────────────────── */
+/* ── [5][6] 수리 — `scan667b.py` (2회차 prot · 3회차 ptop·dtop·두께) ───── */
 console.log('\n[5] 수리 — `scan667b.py` 의 리본 좌단이 부분 화소로 읽히는가 (ref 는 저장소 안에 있다)');
 {
   const { py } = require('./pydep937');
@@ -133,14 +136,18 @@ console.log('\n[5] 수리 — `scan667b.py` 의 리본 좌단이 부분 화소�
     cwd: path.resolve(TOOLS, '..'), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
   }));
   /* ref 쪽만 본다 — 우리 크롭은 캡처가 있어야 하고 이 자는 화소를 안 찍는 자다. */
-  const prot = (out) => (out.match(/좌단돌출\(바깥선\) \*\*([-+0-9.]+)\*\*/g) || [])
-    .map((m) => parseFloat(m.replace(/[^-+0-9.]/g, '')));
+  const nums = (out, re) => (out.match(re) || []).map((m) => parseFloat(m.replace(/[^-+0-9.]/g, '')));
+  const prot = (o) => nums(o, /좌단돌출\(바깥선\) \*\*([-+0-9.]+)\*\*/g);
+  const ptop = (o) => nums(o, /띠상변 위로 \*\*([-+0-9.]+)\*\*/g);
+  const dtop = (o) => nums(o, /잉크상변 − 띠하변 \*\*([-+0-9.]+)\*\*/g);
+  const thk = (o) => nums(o, /두께 \*\*([0-9.]+)\*\*/g);
+  const frac = (a) => a.filter((v) => Math.abs(v - Math.round(v)) > 1e-6).length;
   let oldOut, newOut;
   try {
     oldOut = run(['--ref-only', '--int']);
     newOut = run(['--ref-only']);
   } catch (e) {
-    if (e && e.status === 2) { console.log('  SKIP [5] 파이썬 의존 없음 — pip3 install pillow numpy'); }
+    if (e && e.status === 2) { console.log('  SKIP [5][6] 파이썬 의존 없음 — pip3 install pillow numpy'); }
     else throw e;
   }
   if (oldOut && newOut) {
@@ -149,12 +156,36 @@ console.log('\n[5] 수리 — `scan667b.py` 의 리본 좌단이 부분 화소�
     ok('[5-b] ⚑ **옛 정수 자는 넷 다 정확히 +0.00** — 참값이 1~2 ref px 인 축이 격자에 통째로 잠겼다는 지문',
       o.length === 4 && o.every((v) => v === 0), o.join(' '));
     ok('[5-c] 부분 화소 자는 **정수가 아닌 값을 낸다**(적어도 둘) — 이제 이 축이 표현된다',
-      n.filter((v) => Math.abs(v - Math.round(v)) > 1e-6).length >= 2, n.join(' '));
-    /* ⚠ 무르게 푼 수리가 아님 — **그 밖의 축은 한 글자도 안 움직였다.** */
-    const strip = (t) => t.split('\n').filter((l) => !l.startsWith('== '))
-      .map((l) => l.replace(/좌단돌출.*/, '')).join('\n');
-    ok('[5-d] ⚑ 그 밖의 축은 **출력이 한 글자도 안 바뀌었다**(수리가 이 축 하나에만 닿았다)',
-      strip(oldOut) === strip(newOut));
+      frac(n) >= 2, n.join(' '));
+    /* ⚠ 3회차 이관 — 옛 [5-d]는 «그 밖의 축은 한 글자도 안 바뀌었다» 였다.
+       3회차가 나머지 얇은 축 셋을 갈아 끼웠으므로 그 문장은 이제 거짓이다.
+       333 처방대로 **자리를 비우지 않고 방향을 옮긴다**: «무르게 풀지 않았다» 의 증거는
+       이제 «값이 안 움직였다» 가 아니라 **«창(문턱으로 잡은 정수 상자)이 안 움직였다»** 다.
+       이것이 2회차 ⓗ 가 얻은 교훈의 기계적 표현이다 — 부분 화소는 문턱을 무르게 하는 일이 아니다. */
+    const wins = (t) => t.split('\n').filter((l) => l.includes('창(정수)')).join('\n');
+    ok('[5-d] ⚑ **창(문턱으로 잡은 정수 상자)은 두 모드에서 한 글자도 안 다르다** — 부분 화소가 «문턱을 무르게 하는 일» 이 아님을 못박는다',
+      wins(oldOut).length > 0 && wins(oldOut) === wins(newOut), `${wins(newOut).split('\n').length}줄`);
+
+    console.log('\n[6] 3회차 수리 — 남은 얇은 축 셋(ptop · dtop · 띠 두께)');
+    const K = P.K;
+    const isMulK = (v) => Math.abs(v * K / K - Math.round(v)) < 1e-6;   /* ref 눈금 = 정수 ref px */
+    for (const [name, f, min] of [['ptop 금판 솟음', ptop, 3], ['dtop 잉크 솟음', dtop, 3], ['띠 두께', thk, 4]]) {
+      const oo = f(oldOut), nn = f(newOut);
+      ok(`[6-a] ⚑ 옛 자의 **${name}** 은 ref 값이 전부 정수 ref px 에 굳어 있다 (지문 — 환산은 K 배수)`,
+        oo.length >= min && oo.every(isMulK), oo.join(' '));
+      ok(`[6-b] 부분 화소 자의 **${name}** 은 정수가 아니다 (넷 중 ${min} 이상)`,
+        frac(nn) >= min, nn.join(' '));
+      /* ⚑ 무르게 푼 것이 아니라 **같은 것을 더 곱게** 잰 것 — 옛 값에서 ±1 눈금 안이다. */
+      ok(`[6-c] **${name}** 이 옛 값에서 ±1.0 px 안이다 — 정의가 안 바뀌었다(2회차가 겪은 +10~13% 가 아니다)`,
+        nn.length === oo.length && nn.every((v, i) => Math.abs(v - oo[i]) <= 1.0),
+        nn.map((v, i) => (v - oo[i]).toFixed(2)).join(' '));
+    }
+    /* 남긴 축은 «못 고친 것» 이 아니라 «고치면 안 되는 것» — 그 판정을 자가 들고 있는다. */
+    const wid = nums(newOut, /폭 ([0-9.]+)/g);
+    ok('[6-d] ⚑ 판·잉크 **폭은 정수 그대로다** — 얇은 축이 아니고(33~47 px) 바깥이 밝은 금 테라 두 색 경계가 아니다 (3회차 판정)',
+      wid.length >= 8 && wid.every((v) => Number.isInteger(v)), wid.join(' '));
+    ok('[6-e] 이 번호가 실제로 갈아 끼운 자가 있다 (래칫이 «비어서» 줄어든 것이 아니다)',
+      FIXED.length > 0 && FIXED.every((f) => !RED.includes(f)), FIXED.join(' '));
   }
 }
 
