@@ -8510,8 +8510,16 @@
   .pvc>.bdg>i{position:absolute;left:0;right:0;top:59.375px;text-align:center;color:#FFFC7E;
     font-size:46px;line-height:48px;-webkit-text-stroke:8px #000;paint-order:stroke fill;
     letter-spacing:var(--bdg-ls);padding-left:var(--bdg-ls);transform:rotate(15deg)}
+  /* ⚑⚑ 933 — **여기 있던 `font-weight:400` 은 죽은 선언이라 지웠다(그림 Δ0px).**
+     ① 5936행 `#shopw i,#shopw em,#shopw b,#shopw u,#shopw s{… font-weight:900}` 이 **ID 급(1,0,1)**
+        이라 `.pvc>.bdg>b`(0,3,1)를 이긴다 — 바로 아래 `transform-origin` 짝이 겪은 것과 **같은 함정**이다.
+        ⇒ 두 줄은 **둘 다 900 으로 그려지고 있었다**(933 등재문의 «윗줄과 아랫줄의 굵기가 다르다» 는 사실이 아니다).
+     ② 그리고 굵기를 올려도 잉크는 안 움직인다 — 20행 `@font-face` 가 한 벌(Jua)로 **400~900 을 전부**
+        자기 것이라고 말해 브라우저가 합성 볼드를 안 건다(`probe933` v1 = 현행과 **화소 동일**).
+     ⇒ 이 자리의 «획이 가늘다» 는 `font-weight` 로는 못 닫는다. 되살리려면 이 줄을 `#shopw` 급으로 적어라
+        (그래도 그림은 안 변한다 — 이유는 ②). 상세는 `verify933` §A·§B. */
   .pvc>.bdg>b{position:absolute;left:0;right:0;top:102.675px;text-align:center;color:#FFFC7E;
-    font-size:31px;line-height:40px;font-weight:400;-webkit-text-stroke:7px #000;
+    font-size:31px;line-height:40px;-webkit-text-stroke:7px #000;
     letter-spacing:var(--bdg-ls);padding-left:var(--bdg-ls);
     paint-order:stroke fill;transform:rotate(15deg)}
   /* ⚠⚠ **특이성 함정 — 이 두 줄이 없으면 위의 `transform-origin` 은 한 픽셀도 안 먹는다.**
