@@ -103,8 +103,25 @@ const MEASURE = `(() => {
      scale(--rwc)=1 이므로 «rect 높이 / 레이아웃 높이» 가 곧 조상 배율이다. */
   const gEl = document.querySelector('#relw .rw-grid') || document.getElementById('rwGrid');
   const sc = grid.h / gEl.offsetHeight;
+  /* ⚑ 879 5회차 — **av 를 «격자 하변에서» 재면 안 된다.** 5회차가 --rw-gof 로 격자만 위로
+     옮겼으므로 «floor.t 빼기 grid.b» 는 이제 «니치» 가 아니라 **니치 + gof** 다(4회차 §23 과 같은
+     종류의 드리프트 — 자가 이름 붙인 것을 더는 안 재고 있다. 그대로 뒀으면 [1] 이 헛초록이 된다).
+     ⚠ 이 블록은 템플릿 리터럴 안이라 **백틱 금지**(윗 주석의 경고 — 5회차에 또 한 번 밟았다).
+     격자의 «설계 하변» = 그려진 상자 하변 + gof 로 되돌려서 잰다.
+     ⚠⚠ gof 를 **커스텀 속성 값으로 읽지 마라** — 등록 안 된 커스텀 속성의 computed value 는
+     calc() 를 푼 px 이 아니라 **토큰 문자열**이라 parseFloat 이 NaN 을 준다(5회차에 그렇게 읽어
+     [1]·[7b] 가 조용히 헛초록이 됐다). 아치와 같은 수법으로 **그려진 것에서** 잰다 —
+     top:var(--rw-gt) 를 문 클론의 상변이 곧 «격자의 설계 상변» 이고, gof 는 그것과 실제 상변의 차다. */
+  const gp = document.createElement('div');
+  gp.style.cssText = 'position:absolute;left:0;width:1px;top:var(--rw-gt);height:1px';
+  bg.appendChild(gp);
+  const gtTop = r2(gp.getBoundingClientRect().top - p.t2);
+  gp.remove();
+  const gofRect = r2(gtTop - grid.t);
   return { sc: Math.round(sc * 1e5) / 1e5,
-    av: r2(floor.t - grid.b),
+    gof: r2(gofRect / sc),
+    av: r2(floor.t - grid.b - gofRect),
+    archT, gridT: grid.t,
     gapUp: r2(mul.t - grid.b),                     /* 상자 자 — 예산식(--rw-av)이 사는 공간 */
     slotBot,
     gapUpDrawn: r2(mul.t - slotBot),               /* ★ 그려진 자 — 눈이 보는 «격자 ↓ 바» */
@@ -121,7 +138,9 @@ const MEASURE = `(() => {
 /* `mbsOverride` = null 이면 제품 그대로, 문자열이면 그 값을 인라인으로 덮는다.
    2회차에 «되돌림» 이 둘이 됐다 — [2] 는 배율을 **올려서**(1), [2c] 는 **내려서**(1회차의
    0.7347 = «행 간 ×2» 자리) 빨개져야 한다. 한쪽만 있으면 트레이드의 한 면만 지키는 자다. */
-async function sweep(browser, mbsOverride) {
+/* `gofOverride`(5회차) = 격자 오프셋을 덮는다 — §R5 가 «gof 를 0 으로 되돌리면 [7] 이 빨개진다» 를
+   찍기 위한 손잡이다(누른 항을 되돌려 보는 자리는 [2]/[2c] 와 같은 규약). */
+async function sweep(browser, mbsOverride, gofOverride) {
   const r = {};
   for (const H of FRAMES) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: H }, deviceScaleFactor: 1 });
@@ -132,6 +151,11 @@ async function sweep(browser, mbsOverride) {
     /* §R — 배율만 다른 자리로 되돌린다(인라인이라 rwMulFit 이 쓴 값을 그대로 덮는다). */
     if (mbsOverride)
       await page.evaluate((v) => document.getElementById('relw').style.setProperty('--rw-mbs', v), mbsOverride);
+    /* ⚠ 예산 변수는 `#relw` 가 아니라 **`.rw-panel`** 에 산다 — `#relw` 에 인라인으로 얹으면
+       더 가까운 `.rw-panel` 선언이 이겨 **아무 일도 안 일어난다**(5회차에 한 번 그랬다). */
+    if (gofOverride !== undefined && gofOverride !== null)
+      await page.evaluate((v) => document.querySelector('#relw .rw-panel')
+        .style.setProperty('--rw-gof', v), gofOverride);
     await page.waitForTimeout(200);
     r[H] = await page.evaluate(MEASURE);
     await ctx.close();
@@ -237,13 +261,42 @@ async function sweep(browser, mbsOverride) {
     '[6] ★ 들보 하변 ↔ 아치 정점(상자)이 **양수** — CU 의 «화소 −1px 중첩» 은 세 번째 자로 미재현(probe879 §2: 화소 여유 +18)',
     at('clear'));
 
+  /* ── [7] 신설 — ⚑⚑ **이 회차가 누른 항을 묻는 항**(328~330 규약) ─────────────
+     5회차 채점 2인(ER·ES)이 각자 독립으로 «1600 은 여백이 모자란 게 아니라 **잘못 나뉘어** 있다»
+     를 냈다 — 아치 위 띠는 긴 프레임의 72.8%(ES 자로 74.4%) 를 지켰는데 격자↔바는 46.0% 만
+     남아 **한 화면 안에서 잔존율이 1.6배 갈렸다.** `--rw-gof` 는 그 둘을 **같은 잔존율**로
+     맞추는 지점이고, 이 항이 그 약속을 잰다.
+     ⚠ 두 띠를 **같은 자**로 잰다(4회차 §23 의 교훈 — 분자와 분모가 다른 자면 «없는 결론» 이 난다):
+       위 띠 = (아치 상자 상변 → 격자 상변) − GOF_A · 아래 띠 = 그려진 마지막 슬롯 → 바(둘 다 CSS px).
+     GOF_A(10.5) = 아치 «정점 안쪽면» 이 아치 상자 상변보다 아래인 양 — 5회차 채점 2인이 각자
+     11(ER) · 10.2(ES) 로 쟀다. ⚠ 이 값은 **비의 «기울기» 만** 건드린다(a 를 0~20 으로 흔들어도
+     d 는 13.7~16.0 이라 두 채점자의 요구 14~15 안에 그대로 있다) — 문턱이 아니라 눈금이다. */
+  const GOF_A = 10.5;
+  const topCss = H => (r[H].gridT - r[H].archT) / r[H].sc - GOF_A;
+  const botCss = H => r[H].gapUpDrawn / r[H].sc;
+  const retT = topCss(1600) / topCss(2280), retB = botCss(1600) / botCss(2280);
+  ok(Math.abs(retT - retB) < 0.03,
+    '[7] ★ 1600 의 두 띠(아치 위 · 격자↔바)가 긴 프레임 대비 **같은 잔존율** — 눌림을 균등하게 나눴다(5회차 채점 2인 ER·ES 의 1순위)',
+    '위 띠 ' + topCss(1600).toFixed(1) + '/' + topCss(2280).toFixed(1) + ' = ' + retT.toFixed(3)
+      + ' · 아래 띠 ' + botCss(1600).toFixed(1) + '/' + botCss(2280).toFixed(1) + ' = ' + retB.toFixed(3)
+      + ' · 차 ' + Math.abs(retT - retB).toFixed(3) + ' (gof ' + r[1600].gof.toFixed(2) + ')');
+
+  /* ── [7b] 신설 — 긴 네 프레임은 이 손잡이가 **아예 안 물린다** ───────────────
+     식이 `av = 186` 에서 스스로 0 이 되는 것을 사본이 아니라 제품에서 확인한다. */
+  ok([1841, 1920, 2280, 2600].every(H => r[H].gof < 0.01),
+    '[7b] 긴 네 프레임의 `--rw-gof` 는 **정확히 0** — 879 는 1600 한 장만 건드린다(식이 av=186 에서 스스로 비껴간다)',
+    FRAMES.map(H => H + ':' + r[H].gof.toFixed(2)).join(' · '));
+
   /* ── §R 되돌림 ─────────────────────────────────────────────────────────── */
   /* ⚑ 4회차 — 제품이 이미 배율 1 이라 옛 §R(«1 로 올린다»)은 이제 **아무것도 안 묻는다.**
-     [2] 가 여전히 무는지 보려면 **1 보다 더 키워야** 한다. 1.15 는 그려진 간극을
-     46.90 → 32.4(행 간의 1.27배)로 밀어 문턱 아래로 내린다. */
-  const rv = await sweep(browser, '1.15');
+     [2] 가 여전히 무는지 보려면 **1 보다 더 키워야** 한다.
+     ⚑ **5회차 재기준 1.15 → 1.30.** `--rw-gof` 가 격자↔바에 14.8 을 더 얹어 그려진 간극이
+     42.96 → 57.75 가 됐고, 그만큼 1.15(간극 47.1 · 행 간의 1.84배)로는 **더 이상 문턱을 못 넘긴다**
+     — 자가 «안 문다» 가 아니라 **재원이 늘어 되돌림의 세기가 부족해진 것**이다(4회차가 같은 이유로
+     «1 → 1.15» 로 올렸다). 1.30 은 간극을 57.75 → 28.4(행 간의 1.11배)로 밀어 문턱 아래로 내린다. */
+  const rv = await sweep(browser, '1.30');
   ok(rv[1600].gapUpDrawn < ROW_PITCH * MB_GAP_K,
-    '§R 배율을 1.15 로 **더 키운** 사본에서 [2] 가 빨개진다 — 문턱이 아직 무는지 (제품이 배율 1 이라 옛 «1 로 되돌리기» 는 이제 아무것도 안 묻는다)',
+    '§R 배율을 1.30 으로 **더 키운** 사본에서 [2] 가 빨개진다 — 문턱이 아직 무는지 (5회차 재기준: gof 가 간극을 14.8 늘려 1.15 로는 이제 안 넘어간다)',
     '되돌린 1600 그려진 격자↔바 ' + rv[1600].gapUpDrawn + ' (행 간의 ' + (rv[1600].gapUpDrawn / ROW_PITCH).toFixed(2) + '배)');
   /* ⚑ 4회차 이관 — 옛 §R2 는 «배율 1 을 강제해도 긴 네 프레임은 안 움직인다» 였다. 그때는
      1600 만 1 이 아니어서 그 문장이 «879 는 1600 한 장만 건드린다» 를 뜻했다. 이제는
@@ -279,6 +332,21 @@ async function sweep(browser, mbsOverride) {
     '§R4 ★ 옛 자리(배율 0.899)로 되돌리면 [2c] 는 **초록인 채** [2d] 가 빨개진다 — 3회차의 «제로섬» 이 자의 헛빨강이었음을 사본으로 못박는다',
     '되돌린 1600 바 ' + (rv3[1600].barH / rv3[1600].sc / (r[2280].barH / r[2280].sc) * 100).toFixed(1)
       + '%(≥85 초록) · 그려진 간극 ' + rv3[1600].gapUpDrawn + ' ↔ 목표 ' + (ROW_PITCH * MB_GAP_K).toFixed(1));
+
+  /* §R5 신설 — ⚑⚑ **5회차가 누른 것을 되돌리는 시험.** `--rw-gof` 를 0(격자가 아치 한가운데 =
+     4회차까지의 자리)으로 되돌리면 [7] 이 빨개져야 한다. 이 항이 없으면 «gof 가 통째로 사라져도
+     초록인 게이트» 가 된다(328~330 이관 교훈 — 누른 항을 묻는 항이 있어야 수리가 산다).
+     ⚠ [2] 는 이 되돌림으로 **안 빨개진다**(gof 0 에서도 그려진 간극 42.96 ≥ 38.4) —
+     그래서 [7] 이 따로 필요하다. 그 사실 자체도 아래에 같이 찍는다. */
+  const rv4 = await sweep(browser, false, '0px');
+  const topCss4 = H => (rv4[H].gridT - rv4[H].archT) / rv4[H].sc - GOF_A;
+  const botCss4 = H => rv4[H].gapUpDrawn / rv4[H].sc;
+  const retT4 = topCss4(1600) / topCss4(2280), retB4 = botCss4(1600) / botCss4(2280);
+  ok(Math.abs(retT4 - retB4) >= 0.03 && rv4[1600].gapUpDrawn >= ROW_PITCH * MB_GAP_K,
+    '§R5 ★ `--rw-gof` 를 0 으로 되돌리면 [7] 이 빨개진다 — 그리고 그 자리에서 **[2] 는 초록인 채**다(=[2] 만으로는 이 결함을 못 본다)',
+    '되돌린 1600 위 띠 잔존 ' + retT4.toFixed(3) + ' ↔ 아래 띠 ' + retB4.toFixed(3)
+      + ' (차 ' + Math.abs(retT4 - retB4).toFixed(3) + ' ≥ 0.03) · [2] 그려진 간극 '
+      + rv4[1600].gapUpDrawn + ' ≥ 목표 ' + (ROW_PITCH * MB_GAP_K).toFixed(1) + ' → 초록');
 
   await browser.close();
   console.log('\nVERIFY879 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));

@@ -137,6 +137,21 @@ const inter = (a, b) => {
         const tabbar = document.getElementById('tabbar');
         const q = s => F(relw.querySelector(s));
 
+        /* ⚑ 879 5회차 이관 — `.rw-grid` 는 이제 `top:calc(var(--rw-gt) − var(--rw-gof))` 다.
+           «격자 상변» 과 «--rw-gt» 가 더는 같은 값이 아니므로, gt 를 격자에서 읽던 자리는
+           전부 gof 를 되돌려 놔야 한다(안 그러면 아치가 15px 위로 «움직인 것처럼» 보인다).
+           값은 커스텀 속성으로 읽지 말고(등록 안 된 속성은 computed 가 토큰 문자열이다)
+           top:var(--rw-gt) 를 문 클론으로 **그려진 것에서** 잰다. */
+        let rwGof = 0;
+        const bgEl = relw.querySelector('.rw-bg'), gEl0 = relw.querySelector('.rw-grid');
+        if (bgEl && gEl0) {
+          const gp = document.createElement('div');
+          gp.style.cssText = 'position:absolute;left:0;width:1px;top:var(--rw-gt);height:1px';
+          bgEl.appendChild(gp);
+          rwGof = (gp.getBoundingClientRect().top - gEl0.getBoundingClientRect().top) / sc;
+          gp.remove();
+        }
+
         let hitBad = 0; const hitWho = [];
         for (const c of tabbar.children) {
           const g = c.getBoundingClientRect();
@@ -152,6 +167,7 @@ const inter = (a, b) => {
           tabTop: F(tabbar).t,
           panel: q('.rw-panel'), bowl: q('.rw-bowl'), bg: q('.rw-bg'), frame: q('.rw-frame'),
           fcbl: q('.rw-fc.bl'), fcbr: q('.rw-fc.br'),
+          gof: rwGof,   /* 879 5회차 — 격자만 아치 안에서 위로 옮긴 양(긴 네 프레임은 0) */
           grid: q('.rw-grid'), mid: q('.rw-mid'), floor: q('.rw-floor'), basin: q('.rw-basin'), cost: q('.rw-cost'), cap: q('.rw-cap'),
           lintel: q('.rw-lintel'), ground: q('.rw-ground'), steps: q('.rw-steps'),
           floorEl: q('.rw-floor'),
@@ -350,7 +366,13 @@ const inter = (a, b) => {
          이 줄은 제품 식의 **거울**이므로 같은 식으로 따라간다.
          되돌림: `(GAP2_PX + g3) * 0.551` 이면 9회차와 항등이다. */
       const iGap = Math.max(12, (GAP2_PX + g3) * 0.4737 + 2.57);
-      const wantG = [gt, T - gt, GAP2_PX + g3 - iGap, iGap];
+      /* ⚑ 879 5회차 이관 — 배분 규칙(ref 1:3.797)은 **한 글자도 안 바뀌었다.** 바뀐 것은
+         그 규칙이 정한 자리에서 **격자만** gof 만큼 위로 간다는 것이다(아치·바·수반 Δ0).
+         ⇒ 규칙이 준 A·B 에서 gof 를 옮겨 적는다. 5회차 채점 2인(ER·ES)이 각자 «위 띠는
+         긴 프레임의 72.8% 를 지켰는데 격자↔바는 46.0% 만 남았다 = 눌림이 잘못 나뉘었다» 로
+         1순위 지목한 자리이고, 그 균등화가 `verify879` [7] 이다.
+         ⚠ 여기서 gof 를 안 옮기면 이 항이 **879 5회차를 되돌리라고 요구하는 자**가 된다. */
+      const wantG = [gt - (r.gof || 0), T - gt + (r.gof || 0), GAP2_PX + g3 - iGap, iGap];
       const gErr = Math.max(...gaps.map((g, i) => Math.abs(g - wantG[i])));
       ck(`[${H}] ⑥ 여백이 «아치 위:아래 = ref 1:3.797 + 벽 하한 110(8회차 [H1]) + 안내문 ref 비» 배분 규칙대로`, gErr < 1.0,
         `실측 ${gaps.map(g => g.toFixed(1)).join('/')} vs 기대 ${wantG.map(g => g.toFixed(1)).join('/')} (최대 Δ${gErr.toFixed(2)})`);
@@ -542,7 +564,10 @@ const inter = (a, b) => {
       /* ② 12회차 — 상인방이 어느 프레임에서도 «있다». 1600 에서 −50.3px 로 통째로 사라졌다. */
       /* 13회차 — 아치 정점은 «격자 top − 186» 이 아니라 «격자 top − av» 다(짧은 프레임에서 아치가 눌린다).
          상인방은 네 프레임 전부 **66px 온전히** 보여야 한다(1600 에서 13px 잘렸다 — AD ⑦·AE ②). */
-      const apex = r.grid.t - av;
+      /* ⚑ 879 5회차 이관 — 아치는 `--rw-gt` 에 매달려 있고 격자만 gof 만큼 위로 갔다.
+         `r.grid.t` 로 정점을 잡으면 **아치가 같이 올라간 것처럼** 보여 상인방과 겹쳐 읽힌다
+         (화소 자로는 여유 +18 로 그대로다 — probe879 [2]). 설계 상변으로 되돌려서 잡는다. */
+      const apex = r.grid.t + (r.gof || 0) - av;
       ck(`[${H}] ② 상인방 66px 온전 · 패널 안 20px 이상(금테 내측 회피) · 아치 정점 위`,
         r.lintel.t >= P.t + 20 - 0.6 && Math.abs(r.lintel.h - 66) < 0.6 && r.lintel.b <= apex + 0.6,
         `상인방 ${r.lintel.t.toFixed(1)}..${r.lintel.b.toFixed(1)} (h ${r.lintel.h.toFixed(1)}) · 아치 정점 ${apex.toFixed(1)} · 패널 상단 여백 ${(r.lintel.t - P.t).toFixed(1)}`);

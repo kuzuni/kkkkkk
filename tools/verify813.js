@@ -77,6 +77,22 @@ const MEASURE = `(() => {
      패널로 재면 2280 에서 263.6 이 나와 비가 4.57 로 튄다(그 값은 여백이 아니라 «그릇 밖» 이다). */
   const p = R('#relw .rw-bowl') || R('#relw .rw-panel');
   const rel = o => o && { t: +(o.t - p.t).toFixed(2), b: +(o.b - p.t).toFixed(2), h: +o.h.toFixed(2) };
+  /* ⚑ 879 5회차 이관 — 격자 상변은 이제 «rw-gt» 가 아니라 «gt 빼기 gof» 다(격자만 아치
+     안에서 위로 갔다 · 아치·바·수반 Δ0). gt 를 격자에서 읽는 아래 [5c] 가 그대로면 «clearance 가
+     졌다» 고 **잘못** 읽는다. 설계 상변으로 되돌린다 — 커스텀 속성 값이 아니라(등록 안 된 속성은
+     computed 가 토큰 문자열이다) 클론이 문 rw-gt 를 그려진 것에서 잰다.
+     ⚠ 이 블록은 템플릿 리터럴 안이다 — **백틱 금지**(879 5회차에 두 번 밟았다). */
+  let rwGof = 0;
+  {
+    const bgEl = document.querySelector('#relw .rw-bg'), gEl0 = document.querySelector('#relw .rw-grid');
+    if (bgEl && gEl0) {
+      const gp = document.createElement('div');
+      gp.style.cssText = 'position:absolute;left:0;width:1px;top:var(--rw-gt);height:1px';
+      bgEl.appendChild(gp);
+      rwGof = gp.getBoundingClientRect().top - gEl0.getBoundingClientRect().top;
+      gp.remove();
+    }
+  }
   const o = { panel: p, grid: rel(R('#rwGrid')), mid: rel(R('#relw .rw-mid')),
               cap: rel(R('#relw .rw-cap')), fc: rel(R('#relw .rw-fc.bl')),
               lintel: rel(R('#relw .rw-lintel')), mul: rel(R('#rwMulBar')),
@@ -125,7 +141,8 @@ const MEASURE = `(() => {
        ⚠ 이 주석 안에 백틱을 쓰지 마라 — MEASURE 가 템플릿 리터럴이라 그 자리에서 끊긴다. */
     archFl: +(516 + 2 * (rel(R('#relw .rw-floor')).t - o.grid.b)).toFixed(2),
     gapMid: +(o.mid.t - o.grid.b).toFixed(2),
-    gt: +o.grid.t.toFixed(2),
+    gt: +(o.grid.t + rwGof).toFixed(2),   /* 879 5회차 — 격자 상변 + gof = «설계 gt» */
+    gof: +rwGof.toFixed(2),
     wall: +(o.grid.t - o.lintel.b).toFixed(2) };
 })()`;
 
@@ -368,10 +385,17 @@ async function sweep(browser, url) {
        그대로이고 **예산 상수만** 따라간다 — 상수를 안 옮기면 이 자가 866 의 정당한 이동을
        «샜다» 로 읽는다. 총합은 CSS `--rw-sp` 의 830 과 **같은 값이어야 한다**(둘이 갈리면 빨강). */
     const CONTENT = 830;
-    ok(FRAMES.every(H => Math.abs((r[H].gt + r[H].gapMid + r[H].above + r[H].g3)
+    /* ⚑ 879 5회차 — **이 항이 원하는 자는 [5c] 의 자와 다르다.** [5c] 는 «예산식이 gt 를 어디에
+       두려 했나» 를 묻고(설계 gt), [6b] 는 «그려진 네 여백이 실제로 보존되나» 를 묻는다(실측 상변).
+       격자가 gof 만큼 위로 간 뒤로 둘이 갈라졌으므로, 여기서는 gof 를 **도로 빼서** 실측 상변으로
+       잰다 — 안 빼면 첫 여백만 설계값이고 둘째 여백은 실측값이라 **합이 gof 만큼 부푼다**
+       (5회차에 실제로 1600 이 497.1 vs 482.0 으로 빨개졌다).
+       한 항 안에서 분자와 분모가 다른 자가 되면 «없는 결론» 이 난다 — 879 4회차 §23 의 교훈이다. */
+    const gapTop = H => r[H].gt - (r[H].gof || 0);
+    ok(FRAMES.every(H => Math.abs((gapTop(H) + r[H].gapMid + r[H].above + r[H].g3)
                                   - (r[H].panelH - CONTENT)) < 1.5),
-      '[6b] 그릇 안 네 여백의 합 = 그릇높이 − 830 — 세로가 그릇 밖·안 어디로도 안 샌다',
-      FRAMES.map(H => H + ':' + (r[H].gt + r[H].gapMid + r[H].above + r[H].g3).toFixed(1)
+      '[6b] 그릇 안 네 여백의 합 = 그릇높이 − 830 — 세로가 그릇 밖·안 어디로도 안 샌다(879 5회차: 첫 여백은 **실측 상변**으로 — [5c] 의 설계 gt 와 자가 다르다)',
+      FRAMES.map(H => H + ':' + (gapTop(H) + r[H].gapMid + r[H].above + r[H].g3).toFixed(1)
         + '/' + (r[H].panelH - CONTENT).toFixed(1)).join(' · '));
   }
 

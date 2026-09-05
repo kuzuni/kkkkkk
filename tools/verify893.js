@@ -225,8 +225,13 @@ const budget = (m) => {
     const b0 = budget(base[1600]);
     const gap0 = base[1600].mul.t - base[1600].grid.b;
     const ratio0 = base[1600].archH / base[1600].archW;
-    ok(b.N >= 1 && gap < GAP_MIN && ratio < ARCH_MIN,
-      `[R2] 1600 에 계단 1단을 되살리면 — 격자↔바 여유와 아치 종횡비가 **둘 다** 깨진다 (재원 없음의 증명)`,
+    /* ⚑ 879 5회차 이관 — **깨지는 축이 둘에서 하나로 줄었다.** `--rw-gof` 가 격자를 14.8px 위로
+       옮겨 «격자↔바» 에 그만큼을 얹은 뒤로, 계단을 되살려도 그 축은 11.6 로 **하한 8 위에 남는다**
+       (5회차 전에는 하한 아래로 떨어졌다). 그래서 «재원이 없다» 의 증명은 이제 **아치 종횡비 한 축**이
+       혼자 진다 — 항을 지우지 않고 그 사실을 적는다(333). 실제로 계단은 여전히 못 되살린다.
+       ⚠ 두 축을 계속 요구하면 이 자가 **879 5회차를 되돌리라고 요구하는 자**가 된다. */
+    ok(b.N >= 1 && ratio < ARCH_MIN && gap >= GAP_MIN,
+      `[R2] 1600 에 계단 1단을 되살리면 — **아치 종횡비**가 깨진다 (재원 없음의 증명 · 879 5회차 gof 뒤로 격자↔바 축은 살아남아 이 한 축이 혼자 진다)`,
       `단 ${b0.N} → ${b.N} · 격자↔바 ${gap0.toFixed(1)} → ${gap.toFixed(1)} (하한 ${GAP_MIN}) · ` +
       `아치 1:${ratio0.toFixed(3)} → 1:${ratio.toFixed(3)} (하한 1:${ARCH_MIN}) · av ${base[1600].av.toFixed(1)} → ${s.av.toFixed(1)}`);
     ok(gap0 >= GAP_MIN && ratio0 >= ARCH_MIN - 0.005,
