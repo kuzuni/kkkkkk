@@ -76,6 +76,17 @@ function measure(png, geo) {
   return JSON.parse(line.slice(5));
 }
 
+/* 932 8회차 — 셋째 자(질량 적분 ⓑ). `measure()` 가 이미 쓴 기하 JSON 을 그대로 먹는다. */
+function measure932(png, geo) {
+  const gj = png.replace(/\.png$/, '.json');
+  if (!fs.existsSync(gj)) fs.writeFileSync(gj, JSON.stringify(geo));
+  const out = py(['tools/scan932.py', '--cap', path.relative(ROOT, png),
+    '--geo', path.relative(ROOT, gj), '--json'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 24 });
+  const line = out.split('\n').find((l) => l.startsWith('JSON '));
+  if (!line) throw new Error('scan932 가 JSON 을 못 냈다:\n' + out);
+  return JSON.parse(line.slice(5));
+}
+
 (async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v895-'));
   const b = await launch(chromium);
@@ -157,6 +168,39 @@ function measure(png, geo) {
   ok(pc(m.our_s_up, m.ref_s_up) >= -30 && pc(m.our_s_up, m.ref_s_up) <= -8,
     `[B3] 윗줄 획 잔차가 **−8~−30% 에 그대로 있다** (932 등재 — 자 셋이 갈렸다: GH «맞다» / GI −15% / 이 자 −20%)`,
     `ref ${m.ref_s_up} ↔ 우리 ${m.our_s_up} (${pc(m.our_s_up, m.ref_s_up).toFixed(1)}%)`);
+
+  /* ── §B' 셋째 자 — 932 8회차가 «자 갈림» 을 닫았다 ──────────────────
+     ⚑⚑ [B3] 이 열어 둔 갈림(GH «맞다» / GI −15% / ⓐ −20.3%)의 뿌리는 **셋이 전부 «교차점» 계열**이라
+     서로를 못 가린다는 것이었다(932 2회차 ⓕ-2). ⇒ 계열이 다른 넷째 관측 = **질량 적분 ⓑ**
+     (`tools/scan932.py` · `scan667c.dark_mass` 의 연속 걸음판)를 **같은 광선·같은 표본** 위에 얹었다.
+     같은 광선을 쓰므로 갈림이 «창이 달라서» 가 아니라 **«추정기가 달라서»** 임이 [B4] 로 못박힌다. */
+  const m9 = measure932(path.join(dir, 'now.png'), g0);
+  blk("§B' 셋째 자 (질량 적분 ⓑ) — 932 8회차가 «자 갈림» 을 닫았다");
+  /* ⚑ 먼저 «같은 자리인가» 부터다 — 셋째 자가 제 창을 따로 잡았다면 아래 판정은 비교가 아니다. */
+  ok(Math.abs(m9.ref_cross_up - m.ref_s_up) <= 0.05 && Math.abs(m9.our_cross_up - m.our_s_up) <= 0.05,
+    `[B4] 셋째 자가 **같은 광선**을 쓴다 — 그 위에서 ⓐ 를 다시 내면 §B 의 값과 붙는다 (갈림의 원인이 창이 아니라 추정기임의 증거)`,
+    `ⓐ ref ${m9.ref_cross_up} ↔ ${m.ref_s_up} · 우리 ${m9.our_cross_up} ↔ ${m.our_s_up}`);
+  /* ⚑⚑ **GH(«맞다» = 0%)가 기각된 자리다.** ⓑ 는 저장소 자신의 물리 시험이 «참값을 ±2% 로 되찾는다»
+     고 못박은 추정기고(`verify932` [R3]), 그 자가 −17% 를 낸다. ⇒ «윗줄 획은 얇다» 는 확정이고
+     크기는 GI(−15%)와 ⓐ(−20.3%) **사이**다. 대역은 그 둘을 양 끝으로 잡는다. */
+  /* ⚠ «ⓑ 가 ⓐ 를 그대로 되뇌지 않는가» 를 같이 묻는다 — 무르게 적은 ⓑ 는 ⓐ 와 붙어 버리고,
+     그러면 이 절은 갈림을 «닫았다» 고 적으면서 실제로는 아무것도 안 가른 것이 된다.
+     ⚑ 갈리는 쪽은 **ref 뿐**이다(우리 쪽은 둘이 0.001 로 붙는다) — 해상도가 낮은 그림에서만
+     번짐이 비대칭이라 교차점이 밀린다는 뜻이고, 그것이 곧 ⓑ 를 고른 이유다. */
+  ok(m9.d_mass_up >= -21 && m9.d_mass_up <= -14
+     && Math.abs(m9.ref_mass_up - m9.ref_cross_up) >= 0.1,
+    `[B5] ⓑ 질량 적분이 윗줄 잔차를 **−14~−21%** 로 낸다 — GI(−15%)와 ⓐ(−20.3%) 사이 · **GH «맞다»(0%)는 기각** (그리고 ⓑ 가 ⓐ 를 되뇌지 않는다)`,
+    `ref ${m9.ref_mass_up} ↔ 우리 ${m9.our_mass_up} (${m9.d_mass_up}%) · ref 에서 ⓐ−ⓑ ${(m9.ref_cross_up - m9.ref_mass_up).toFixed(3)} · 우리 ${(m9.our_cross_up - m9.our_mass_up).toFixed(3)}`);
+  /* ⚑ **세 자가 갈려도 «선언» 으로 옮기면 한 값에 모인다.** [1-k] 의 환산비 0.534(아랫줄 3.73 ⇒ 7)를
+     그대로 쓰면 ⓐ 10.10 · ⓑ 9.73 — 둘 다 **10** 이다(현행 8). 이것이 932 8회차가 낸 답이고,
+     선언을 실제로 옮기는 것은 `verify833` [1-k] 를 이관해야 하므로 **961** 로 등재했다.
+     ⚠ 이 항은 «10 으로 바꿔라» 가 아니라 «두 자의 환산이 한 칸에 모인다» 를 지킨다 —
+     자를 무르게 고쳐 둘이 갈라지면 여기가 먼저 빨개진다. */
+  const dcl = (v) => v / 0.534;
+  ok(Math.abs(dcl(m9.ref_cross_up) - dcl(m9.ref_mass_up)) <= 0.75
+     && Math.round(dcl(m9.ref_cross_up)) === 10 && Math.round(dcl(m9.ref_mass_up)) === 10,
+    `[B6] ⓐ·ⓑ 를 [1-k] 의 환산비(0.534)로 선언에 옮기면 **둘 다 10** 이다 (현행 8 — 961 등재)`,
+    `ⓐ ${dcl(m9.ref_cross_up).toFixed(2)} · ⓑ ${dcl(m9.ref_mass_up).toFixed(2)}`);
 
   /* ── §C 아랫줄을 줄인 대가 ──────────────────────────────────────────
      크기를 줄이면 그 줄의 잉크가 상자 안에서 위로 뜬다 — 그래서 [1-o] 의 상자 값이 따라왔다.

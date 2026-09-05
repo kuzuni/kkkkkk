@@ -151,6 +151,21 @@ console.log('\n[4] 선례 — 두 처방이 말이 아니라 코드로 있다');
     /def dark_mass\(/.test(s667) && /1 - prof\[j\] \/ lo/.test(s667));
   ok('[4-c] ⓑ 는 소수 모서리까지 낸다 (±0.5 — 두께와 모서리가 항등식으로 묶인다)',
     /a=s - 0\.5 - ml/.test(s667) && /b=e \+ 0\.5 \+ mr/.test(s667));
+  /* ⚑⚑ 8회차 — ② 짝인 관측(«배지 윗줄 검정 획 자 갈림»)을 닫은 자다.
+     [4-a]·[4-b] 는 두 처방이 **코드로** 있다는 것만 지켰는데, 갈림을 실제로 가른 것은
+     «둘을 **같은 광선** 위에 얹은 자» 다. 그 성질이 이 자의 전부이므로 여기서 못박는다 —
+     창을 따로 잡는 자로 바뀌면 두 값의 차가 «추정기 차이» 가 아니게 되고 판정이 무효가 된다.
+     ⚠ 화소 판정은 여기가 아니라 `verify895` §B'(캡처를 찍는 자) 몫이다 — 이 자는 소스만 본다. */
+  const s932 = fs.readFileSync(path.join(TOOLS, 'scan932.py'), 'utf8');
+  ok('[4-d] 셋째 자 `scan932.py` 가 ⓐ·ⓑ 를 **한 광선**에서 낸다 (같은 `ray()` 표본을 `cross_on`·`mass_on` 둘이 먹는다)',
+    /def ray\(/.test(s932) && /def cross_on\(/.test(s932) && /def mass_on\(/.test(s932)
+    && /ts, ps = ray\(/.test(s932) && /cross_on\(ts, ps\)/.test(s932) && /mass_on\(ts, ps\)/.test(s932));
+  ok('[4-e] 그 자의 ⓑ 는 안쪽·바깥 고원을 **각각** 잡는다 (노랑 255 ↔ 분홍 244 — 하나로 뭉개면 895 2회차 ⓗ 의 함정에 빠진다)',
+    /lo = max\(ps\[:i_in\]\)/.test(s932) && /hi = max\(ps\[i_out:/.test(s932)
+    && /ps\[j\] \/ lo/.test(s932) && /ps\[j\] \/ hi/.test(s932));
+  ok('[4-f] 판정은 `verify895` §B\' 가 화소로 내린다 — 이 자가 그 자리를 가리키고 있다 (판정이 저장소에서 사라지면 여기가 짖는다)',
+    /\[B4\]/.test(fs.readFileSync(path.join(TOOLS, 'verify895.js'), 'utf8'))
+    && /scan932\.py/.test(fs.readFileSync(path.join(TOOLS, 'verify895.js'), 'utf8')));
 }
 
 /* ── [5][6] 수리 — `scan667b.py` (2회차 prot · 3회차 ptop·dtop·두께) ───── */
