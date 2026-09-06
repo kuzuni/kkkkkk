@@ -4561,6 +4561,17 @@
      ⚠ `z-index` 를 주지 마라 — 같은 층에서 **플래시 뒤에 붙는 것**(DOM 순서)이 곧 «위» 다.
        z 를 주면 뒤따라 붙는 스파크(`.fx-spark`)까지 이 판때기 밑으로 깔린다. */
   .fx-keep{position:absolute;box-sizing:border-box;pointer-events:none}
+  /* ⚑⚑ 683 11회차 — 위 금지의 **명시된 예외 하나**(`FXKEEP_TXT` = 89 유물 카드 «Lv.n» 글자 라벨).
+     금지가 막으려던 것은 «판때기» 다 — 배지 패치는 불투명한 원반이라 z 를 주면 그 사각형이
+     스파크를 통째로 가린다. **글자 패치는 판때기가 아니다**: 그릇이 투명하고 가리는 것은
+     글리프 잉크(획+테)뿐이라, 알은 글자 «사이» 로 그대로 보이고 글자 «위» 만 안 지난다.
+     ⚠ 값이 아니라 **실측이 이 예외를 연다**(`probe683d` [3]): 라벨 획↔국소 배경 «4.5:1 미만» 이
+       현행 31% ↔ **패치 올림 21%** ↔ 알을 아예 숨긴 사본 25% — 즉 이 한 줄이 **알을 지우지 않고**
+       알을 지운 것보다 더 회수한다(753 «1회당 정확 1개» 사양은 한 글자도 안 건드린다).
+     ⚠ 스코프는 `fxFlashKeep` 이 **`FXKEEP_TXT` 에만** 붙인다(840 뱃지·814 신고 잉크는 안 붙는다) —
+       그 둘은 각자 불투명한 그림이라 위 금지가 그대로 옳다.
+     되돌림: 이 선언을 지우면 11회차 이전이다(`probe683d` §R 가 그것을 시험한다). */
+  .fx-keep.fx-keep-top{z-index:1}
   /* 재렌더가 없는 화면(스킬·유물 세부의 레벨 알약)에서는 대상 자체도 같이 튄다 */
   .fx-hit{animation:fxHit .26s cubic-bezier(.34,1.56,.64,1) both}
   @keyframes fxHit{0%{transform:scale(1)}34%{transform:scale(1.05)}100%{transform:scale(1)}}
@@ -45032,6 +45043,14 @@ function fxFlashKeep(el, host, owner){
                 r.y + r.h < host.y || r.y > host.y + host.h)) continue;
     const b = document.createElement('s');
     b.className = 'fx-keep';
+    /* ⚑⚑ 683 11회차 — **글자 라벨 패치만 «알 위» 로**(위 `.fx-keep-top` CSS 머리말이 근거·스코프다).
+       레이어의 그리는 순서는 «나중에 붙는 것이 위» 인데 알(`.fx-spark.fx-rlic`)은 플래시 **뒤에**
+       터지므로 패치는 언제나 알 밑에 깔린다 — 되살린 글자를 알이 다시 씻는다. z 한 칸이 그 순서만
+       뒤집는다(그릇은 투명하니 알은 글자 사이로 그대로 보인다).
+       ⚠ `still`(840 뱃지)·`live`(814 신고 잉크)는 **제외**한다 — 그 둘은 불투명한 그림이라
+         위 금지(«판때기에 z 금지»)가 그대로 옳다. */
+    let ktop = false; if(!still && !live){ try { ktop = k.matches(FXKEEP_TXT); } catch(_){} }
+    if(ktop) b.classList.add('fx-keep-top');
     b.__fxKeepHost = el;
     const cl = k.cloneNode(true);
     try { for(const pr of cs) cl.style.setProperty(pr, cs.getPropertyValue(pr)); } catch(_){}
