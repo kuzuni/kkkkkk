@@ -26,6 +26,10 @@ const { chromium } = pw();
 const SRC = path.resolve(__dirname, '..', 'index.html');
 const URL = 'file://' + SRC.replace(/\\/g, '/');
 const W = 1080, H = 2280;
+/* 993 되돌림 시험 손잡이 — `--stall <ms>` 로 창을 일부러 놓치게 한다(`tools/verify993.js` 가 쓴다).
+   수명보다 큰 값을 주면 이 자는 «빨강» 이 아니라 «못 쟀다»(코드 3)로 답해야 한다. */
+const _si = process.argv.indexOf('--stall');
+const STALL = _si >= 0 && process.argv[_si + 1] ? Number(process.argv[_si + 1]) : 0;
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d !== undefined && d !== '' ? '  [' + d + ']' : '')); };
@@ -42,8 +46,20 @@ const ev = async (page, fn, arg) => {
    ⚑ **애니메이션을 한 시각에 세운다**(probe788·verify683 과 같은 처리). 안 세우면 `fxHitEl` 의
      `.fx-hit`(scale 1.05)가 호스트를 흔드는 **한복판**에서 재게 된다 — 그러면 [C1] 이 «패치가
      어긋났다» 가 아니라 «읽는 순간이 달랐다» 를 재서 Δ가 0.09 ↔ 2.41px 로 실행마다 갈린다
-     (자를 처음 짤 때 실제로 그랬다 · 344 «플레이키는 제품이 아니라 자의 것일 수 있다»). */
-const FIRE = ({ ID, KEEP }) => {
+     (자를 처음 짤 때 실제로 그랬다 · 344 «플레이키는 제품이 아니라 자의 것일 수 있다»).
+
+   ⚑⚑ **993 — 발화와 읽기를 한 `evaluate` 안으로 합쳤다(이 자의 플레이키를 고친 것이 이것이다).**
+     종전에는 `FIRE`(evaluate) → `waitForTimeout(80)` → `READ`(evaluate) 로 **읽는 시각이 Node 쪽
+     왕복 지연에 달려 있었다.** 그런데 제품은 연출 노드를 **벽시계 타이머**로 걷는다
+     (`fxBye` = `setTimeout(remove, …)` — 애니를 세워도 이 타이머는 돈다). 부하가 걸려 왕복이
+     수명을 넘으면 노드가 **읽기 전에 사라져** 단언이 어긋난 게 아니라 **잴 것이 없어진다**:
+       플래시만 죽음 → `[B2] flash idx -1 < keep idx 0`
+       둘 다 죽음   → `[H1] 측정 실패` · `[H1b] 그릇 null` · `[R1] 패치 0장 · 플래시 0장`
+     `probe993` 이 그 셋을 지연 사다리로 순서대로 찍고, 동시 6판에서 **2판 FAIL** 로 현장을 재현했다.
+   ⇒ 이제 «발화 → rAF 두 바퀴 → 읽기» 가 **페이지 안에서** 끝난다(간격 3~20ms). 창을 놓치면
+     아래 `shot()` 이 **다시 쏘고**, 끝내 못 재면 «못 쟀다»(종료 코드 3, 939 규약)로 답한다 —
+     빨강으로 위장하지 않는다. 창을 놓친 것과 «제품이 플래시를 안 만들었다» 는 `n0` 로 가른다. */
+const SHOT = async ({ ID, KEEP, STALL }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   const it = RELICS.filter(r => r.id === ID)[0]; if (!it) return null;
   if (KEEP === false) {                       /* [R] 되돌림 — 넷째 인자를 떨군 사본 */
@@ -51,10 +67,21 @@ const FIRE = ({ ID, KEEP }) => {
       window.fxFlash = function (el, iv, inset) { return window.__v795ff.call(this, el, iv, inset); }; }
   } else if (window.__v795ff) { window.fxFlash = window.__v795ff; window.__v795ff = null; }
   rwSummonFx(it, true, null);
+  const t0 = performance.now();
+  /* 발화 «직후» 의 장수 — 창을 놓친 것(1 → 0)과 제품이 안 만든 것(처음부터 0)을 가르는 유일한 표 */
+  const n0 = { flash: L.querySelectorAll('.fx-flash').length, keep: L.querySelectorAll('.fx-keep').length };
   try { document.getAnimations().forEach(a => { a.pause(); try { a.currentTime = 20; } catch (_) {} }); } catch (_) {}
-  return { id: it.id };
+  /* 되돌림 시험용 손잡이 — 창을 일부러 놓치게 해 이 자가 «빨강» 이 아니라 «못 쟀다» 로 답하는지 본다 */
+  if (STALL) await new Promise(r => setTimeout(r, STALL));
+  /* rAF 두 바퀴 = 패치의 추적이 한 번 돈 뒤(제품이 실제로 그리는 자리). 종전 `waitForTimeout(80)` 자리다. */
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const out = window.__v795read(ID);
+  out.t0 = t0; out.n0 = n0; out.gap = out.t1 - t0;
+  return out;
 };
-/* 세운 뒤 rAF 한 바퀴를 돌리고 나서 읽는다(패치의 추적 한 번 = 제품이 실제로 그리는 자리). */
+/* 세운 뒤 rAF 한 바퀴를 돌리고 나서 읽는다(패치의 추적 한 번 = 제품이 실제로 그리는 자리).
+   ⚠ 993 — 이 함수는 **페이지 안에 한 벌만** 심는다(`window.__v795read`, 아래 설치 한 줄).
+     `SHOT` 안에 같은 코드를 다시 적으면 «두 벌» 이 되어 한쪽만 고쳐지는 자리가 생긴다. */
 const READ = ID => {
   const L = document.getElementById('fxl');
   const el = document.querySelector('[data-rw="' + ID + '"]');
@@ -71,7 +98,7 @@ const READ = ID => {
              transform: c.transform, textAlign: c.textAlign, zIndex: c.zIndex, text: n.textContent }; };
   const host = R(el), lab = R(u);
   return {
-    id: ID, nKeep: keeps.length, nLab: kLab.length, nFlash: flash.length,
+    id: ID, t1: performance.now(), nKeep: keeps.length, nLab: kLab.length, nFlash: flash.length,
     flashIdx: flash.length ? kids.indexOf(flash[0]) : -1,
     keepIdx: kLab.length ? kids.indexOf(kLab[0]) : -1,
     host, lab, patch: R(kLab.length ? kLab[0].querySelector('u') : null),
@@ -97,8 +124,38 @@ const READ = ID => {
   await p.waitForTimeout(800);
   await ev(p, () => { try { closeModal(); } catch (_) {} S.relic = 1e12; openRelw(); });
   await p.waitForTimeout(400);
+  /* 993 — READ 를 페이지 안에 한 벌 심는다(`SHOT` 이 부른다 · 위 머리말의 «두 벌 금지»). */
+  await p.evaluate(src => { window.__v795read = new Function('ID', 'return (' + src + ')(ID);'); }, READ.toString());
 
-  /* 788 [H0] 과 같은 전제 — 대상 칸을 **실경로**로 보유시킨다(336: 세이브가 만들 수 있는 상태만 잰다) */
+  /* ⚑ 993 — 한 판 «쏘고 읽는다». 창을 놓치면 다시 쏜다(창을 놓쳤다 = 발화 직후엔 있던 플래시가
+     읽을 때 없다). ⚠ **재시도로 초록을 사지 않는다** — 되풀이하는 조건은 «플래시가 살아 있는가»
+     하나뿐이고, 패치(이 자가 실제로 묻는 것)의 유무는 판정에 안 쓴다. 제품이 플래시를 아예 안
+     만들면(`n0.flash === 0`) 그건 진짜 결함이라 **즉시 그대로 돌려준다**(재시도 금지). */
+  /* 판수 — 창(노드 수명 ~220~330ms 실측) 안에 rAF 두 바퀴가 들어가야 한 판이 선다. 4중 동시 실행
+     같은 극한에서는 한 판이 통째로 밀릴 수 있어 넉넉히 둔다(5 → 8 로 올리자 [4-a] 의 «못 쟀다» 가
+     1/4 → 0/4 로 내려갔다). ⚠ 이 수를 올리는 것은 «초록을 사는 것» 이 아니다 — 되풀이 조건은
+     «플래시가 살아 있는가» 뿐이고 패치 유무는 판정에 안 쓴다(위 `shot()` 머리말). */
+  const TRIES = 8;
+  const shot = async (ID, KEEP) => {
+    let last = null;
+    for (let i = 1; i <= TRIES; i++) {
+      const s = await ev(p, SHOT, { ID, KEEP, STALL });
+      if (s) { s.tries = i; last = s; }
+      if (!s) continue;
+      if (s.n0.flash === 0) return s;               /* 제품이 안 만들었다 — 잴 것이 없는 게 아니라 결함 */
+      if (s.nFlash === 1) return s;                 /* 창 안에서 읽었다 */
+    }
+    return last;                                    /* 다섯 판 다 창을 놓쳤다 — 아래에서 «못 쟀다» */
+  };
+  /* 창을 끝내 못 잡으면 «빨강» 이 아니라 «못 쟀다»(코드 3)로 답한다 — 939 규약. */
+  const missed = s => !!s && s.n0 && s.n0.flash === 1 && s.nFlash === 0;
+  const giveUp = (s, where) => {
+    console.error('\nverify795: ' + where + ' — 연출 노드가 읽기 전에 걷혔다(' + TRIES + '판 전부). '
+      + '발화→읽기 간격 ' + r2(s && s.gap) + 'ms · `fxBye` 타이머가 그보다 짧다. '
+      + '부하를 줄여 다시 돌리거나, 수명(`FXBYE_PAD`·`fxAnimEnd`)이 줄지 않았는지 보라 — 측정 실패다(단언 실패가 아니다).');
+    process.exit(3);
+  };
+
   const own = await ev(p, () => {
     for (let i = 0; i < 4000 && !(has('rl0') && has('rl1')); i++) summonRelic(true);
     renderRelw(); return { a: has('rl0'), b: has('rl1'), lv: oLv('rl0') };
@@ -106,9 +163,8 @@ const READ = ID => {
 
   blk('A] 전제 — 뿌리는 «세기» 가 아니라 «자리» 다 (라벨이 카드 밖으로 걸쳐 있다)');
   ok(!!own && own.a && own.b, 'A1 전제 — 대상 두 칸을 `summonRelic()` 실경로로 보유시켰다', own ? ('rl0 Lv.' + own.lv) : '실패');
-  await ev(p, FIRE, { ID: 'rl0', KEEP: true });
-  await p.waitForTimeout(80);                 /* rAF 한 바퀴 — 패치의 추적이 한 번 돈 뒤에 읽는다 */
-  const K = await ev(p, READ, 'rl0');
+  const K = await shot('rl0', true);
+  if (missed(K)) giveUp(K, '[A~H] 본 표본');
   ok(!!K && K.over > 0,
      'A2 ★ «Lv.n» 이 카드 하변 **밖**으로 걸친다 — 카드 rect 로 뜨는 플래시의 흰 테가 그 띠를 지난다',
      K ? (r2(K.over) + 'px 밖 (카드 하변 ' + r2(K.host.y + K.host.h) + ' ↔ 라벨 하변 ' + r2(K.lab.y + K.lab.h) + ')') : '측정 실패');
@@ -184,8 +240,12 @@ const READ = ID => {
     for (const n of Array.prototype.slice.call(L.querySelectorAll('.fx-flash'))) n.remove();
     return { before };
   });
-  await p.waitForTimeout(200);
-  const E2 = await ev(p, () => document.getElementById('fxl').querySelectorAll('.fx-keep').length);
+  /* ⚑ 993 — 종전에는 `waitForTimeout(200)` 이었다. 부하로 프레임이 굶으면 그 200ms 안에 rAF 가
+     한 번도 안 돌아 «패치가 안 걷혔다» 로 빨개진다(패치는 rAF 에서 스스로 걷힌다). 시간을 세지 말고
+     **조건**을 기다린다 — 못 기다리면 그때 진짜 빨강이다. */
+  const E2 = await p.waitForFunction(() => document.getElementById('fxl').querySelectorAll('.fx-keep').length === 0,
+      null, { timeout: 5000 }).then(() => 0).catch(async () =>
+      await ev(p, () => document.getElementById('fxl').querySelectorAll('.fx-keep').length));
   ok(!!E && E.before >= 1 && E2 === 0,
      'E1 ★ 플래시 노드를 걷으면 다음 프레임에 패치도 스스로 사라진다 — «없는 것을 덮는 판때기» 0장',
      E ? (E.before + '장 → ' + E2 + '장') : '측정 실패');
@@ -202,18 +262,29 @@ const READ = ID => {
      F ? ('플래시 ' + F.flash + ' · 패치 ' + F.keep) : '측정 실패');
 
   blk('R] 되돌림 — 넷째 인자를 떨구면 이 자가 통째로 빨개진다');
-  await ev(p, FIRE, { ID: 'rl0', KEEP: false });
-  await p.waitForTimeout(80);
-  const R = await ev(p, READ, 'rl0');
+  const R = await shot('rl0', false);
+  if (missed(R)) giveUp(R, '[R1] 되돌림 표본');
   ok(!!R && R.nLab === 0 && R.nFlash === 1,
      'R1 ★ `keep` 을 떨군 사본에서는 라벨 패치가 0장이다(플래시는 그대로 뜬다)',
      R ? ('패치 ' + R.nLab + '장 · 플래시 ' + R.nFlash + '장') : '측정 실패');
-  await ev(p, FIRE, { ID: 'rl0', KEEP: true });
-  await p.waitForTimeout(80);
-  const R2 = await ev(p, READ, 'rl0');
+  const R2 = await shot('rl0', true);
+  if (missed(R2)) giveUp(R2, '[R2] 원복 표본');
   ok(!!R2 && R2.nLab === 1,
      'R2 ★ 원복하면 다시 선다 — [B1] 이 «항상 1장» 을 재는 헛초록이 아니다',
      R2 ? (R2.nLab + '장') : '측정 실패');
+
+  blk('T] 측정 창 — 이 자가 «부하에서 빨개지던» 자리(993)');
+  /* ⚠⚑ **여기에 «간격 < n ms» 를 적으면 993 을 다시 만든다.** 1회차에 실제로 그랬다 — `< 120ms` 로
+     적었더니 부하 6판 중 4판이 **이 항만** 빨개졌다(다른 항은 전부 초록). 부하에서는 rAF 두 바퀴가
+     길어질 수 있고 그래도 **수명 안이면 측정은 옳다.** 그러니 시간이 아니라 **창 안에서 읽었는가**
+     라는 불변식을 묻는다(간격은 수로만 남긴다 — 문턱이 아니다). */
+  ok(!!K && K.nFlash === 1 && K.gap !== undefined,
+     'T1 ★ 읽기가 노드가 **살아 있는 동안**(창 안에서) 끝났다 — 종전(왕복 + `waitForTimeout(80)`)은 '
+     + '부하에서 노드 수명(실측 ~265ms)을 넘겨 «잴 것이 없는» 빨강을 냈다',
+     K ? ('간격 ' + r2(K.gap) + 'ms · 플래시 ' + K.nFlash + '장 · 표본 ' + K.tries + '판째') : '측정 실패');
+  ok(!!K && K.n0 && K.n0.flash === 1,
+     'T2 ★ 발화 «직후» 에 플래시가 1장 — 창을 놓친 것과 «제품이 안 만든 것» 을 가르는 표다',
+     K && K.n0 ? ('발화 직후 플래시 ' + K.n0.flash + ' · 패치 ' + K.n0.keep) : '측정 실패');
 
   blk('W] 위생');
   ok(errs.length === 0, 'W1 콘솔 에러 0', errs.slice(0, 3).join(' | '));
