@@ -2141,9 +2141,14 @@ function writeReport(rep) {
       }));
       cand.sort((x, y) => x.e - y.e);
       const us = new Set(), uw = new Set();
+      /* ⚑ 199 41회차 — 같은 루프가 짝을 **벽 → 칸** 으로도 남긴다(`cell`). 41회차의 «문턱 위
+         몫» 은 관측 간격과 **그 벽들이 배정된 칸의** 목표 간격을 같은 짝에서 재야 하는데,
+         짝을 다시 지으면 그 자리에서 자가 둘이 된다(13회차 II · 20회차 규약). 판정에 쓰는
+         집합(`us`·`uw`)은 한 글자도 안 바뀐다 — 기록만 하나 더 남긴다. */
+      const cell = new Map();
       for (const c of cand) {
         if (us.has(c.si) || uw.has(c.wi)) continue;
-        us.add(c.si); uw.add(c.wi);
+        us.add(c.si); uw.add(c.wi); cell.set(c.wi, REACH[c.si]);
       }
       /* ⓙ 잉여를 둘로 — «창 안 중복»(어떤 칸의 창 안이지만 그 칸을 남에게 뺏긴 벽) 과
          «창 밖»(어느 칸의 창에도 안 드는 벽 = §0 의 «없어야 할 벽»). */
@@ -2162,7 +2167,7 @@ function writeReport(rep) {
         out++;
         if (coord(w) > LADDER_END) outOut++; else outIn++;
       });
-      return { hit: us.size, extra: ws.length - uw.size, dup, out, outIn, outOut, seat: uw };
+      return { hit: us.size, extra: ws.length - uw.size, dup, out, outIn, outOut, seat: uw, cell };
     };
     const pairOf  = (r) => pairBy(r, wallT);
     const hitOf   = (r) => pairOf(r).hit;
@@ -2283,6 +2288,68 @@ function writeReport(rep) {
     L.push(`_⚠ **문턱 민감도**(자의성 점검) — 문턱을 ${WALL_MIN}분에서 옮기면 분모가 이렇게 바뀐다:`
       + [WALL_MIN, WALL_MIN + 1, 2 * WALL_MIN, 3 * WALL_MIN].map(t => ` ${t}분 → ${reachAt(t).length}칸`).join(' ·')
       + `_`);
+    L.push('');
+    /* ⚑⚑ 199 41회차 — **말미 축의 «문턱 위 몫»**(40-11 1번). 33회차가 축 이름 셋을 세워 두고도
+       (① 문턱 위 간격·적중 · ③ 문턱 위 진폭 · ② 말미 한계 수급) 그 몫을 재는 줄은 표에 없었다 —
+       세 창이 전부 «판정 불가» 라 잴 것이 없었기 때문이다. 40회차의 두 단 사다리가 90일 창에서
+       처음 «판정 가능»(문턱 위 벽 3개)을 열었으므로, 이제 표가 그 몫을 스스로 찍는다.
+       ⚠ **«판정 불가» 인 창에서는 수를 안 찍는다** — §0-2 규약 «못 보는 창의 수는 판정이 아니라
+       그림자다». 그림자를 숫자로 적어 두면 다음 회차가 그것을 인용한다(32-4 가 실제로 그랬다).
+       ⚠ 자를 두 벌로 안 적는다 — 벽 목록은 `wallsOf` · 짝은 `pairOf().cell` · 구간은 `faceNetOf`,
+       전부 위에서 ①③ 이 쓰는 그 함수다(13회차 II · 356-⑬).
+       ⚠ 분자와 분모를 **같은 짝**에서 잰다 — 관측 간격은 배정된 말미 벽들의 ① 좌표로, 목표
+       간격은 **그 벽들이 배정된 칸**으로. 전체 목표(`SPAN_T`)로 나누면 창 아래 칸까지 분모에
+       들어와 «문턱 위» 라는 이름이 거짓이 된다. */
+    const lateWallOf  = (r) => wallsOf(r).filter(w => SW > 0 && w.stage >= SW);
+    const lateSeatOf  = (r) => {                       /* 문턱 위 + 배정된 벽 (시간순) */
+      const ws = wallsOf(r), p = pairOf(r), out = [];
+      ws.forEach((w, wi) => { if (SW > 0 && w.stage >= SW && p.cell.has(wi)) out.push({ w, t: p.cell.get(wi) }); });
+      return out;
+    };
+    const gmPair = (a, b, n) => (n < 1 || !(a > 0) || !(b > 0)) ? 0 : Math.pow(b / a, 1 / n);
+    const lateGapOf   = (r) => { const L2 = lateSeatOf(r);   /* 벽 하나로는 간격이 없다 — 13회차 JJ */
+      return L2.length < 2 ? 0 : gmPair(wallT(L2[0].w), wallT(L2[L2.length - 1].w), L2.length - 1); };
+    const lateGapTOf  = (r) => { const L2 = lateSeatOf(r);
+      return L2.length < 2 ? 0 : gmPair(L2[0].t, L2[L2.length - 1].t, L2.length - 1); };
+    /* ③ 문턱 위 진폭 — 구간의 **시작 벽**이 문턱 위인 실오르막만 센다(`faceNetOf` 와 같은 색인). */
+    const lateFaceOf  = (r) => { const ws = wallsOf(r), f = faceNetOf(r);
+      return f.filter((v, i) => ws[i] && SW > 0 && ws[i].stage >= SW); };
+    /* 대조 — 같은 자의 «문턱 아래» 몫. ⚠ p50 끼리 빼서 만들지 않는다(18회차 정정C — 분해는
+       시드별로만 참이다). 그래서 아래 몫도 **제 자로** 재고, 항등 «위+아래=전체» 를 시드별로
+       검산해 그 수를 같이 찍는다(«사다리 안/밖» 이 이미 쓰는 규약 그대로). */
+    const lowFaceOf   = (r) => { const ws = wallsOf(r), f = faceNetOf(r);
+      return f.filter((v, i) => !(ws[i] && SW > 0 && ws[i].stage >= SW)); };
+    const lateN     = med(runs.map(r => lateWallOf(r).length));
+    const lateSeatN = med(runs.map(r => lateSeatOf(r).length));
+    const lateGap   = med(runs.map(lateGapOf).filter(v => v > 0));
+    const lateGapT  = med(runs.map(lateGapTOf).filter(v => v > 0));
+    const lateFaceS = med(runs.map(r => lateFaceOf(r).reduce((a, b) => a + b, 0)));
+    const lateFaceC = med(runs.map(r => lateFaceOf(r).length));
+    if (WINV.can === true) {
+      L.push(`**⚑ 말미 몫 — 문턱 s${SW} 위 (창 역량 «판정 가능» 일 때만 찍는다 · §0-2)**`
+        + ` — ① 문턱 위 벽 p50 = ${lateN}개(그중 배정 ${lateSeatN}개 · 미배정 ${lateN - lateSeatN}개)`
+        + ` · **문턱 위 간격 기하평균 p50 = ${lateGap > 0 ? lateGap.toFixed(2) : '— (미정의 · 배정 벽 2개 미만)'}`
+        + `${lateGap > 0 && lateGapT > 0 ? ` (배정 칸의 목표 ×${lateGapT.toFixed(3)}`
+            + ` · ${(100 * (lateGap / lateGapT - 1)) >= 0 ? '+' : ''}${(100 * (lateGap / lateGapT - 1)).toFixed(1)}%)` : ''}**`
+        + ` · ③ 문턱 위 실오르막 합 p50 = ${lateFaceS}분`
+        + ` (활성 시간 ${ACT}분의 ${(100 * lateFaceS / ACT).toFixed(2)}% · 구간 ${lateFaceC}개`
+        + ` · 벽당 ${lateFaceC ? (lateFaceS / lateFaceC).toFixed(1) : '—'}분)`
+        + ` · ② 말미 한계 수급은 아래 [G] 줄에서 읽는다`);
+      L.push('');
+      L.push(`_대조 — **문턱 아래** 실오르막 합 p50 = ${med(runs.map(r => lowFaceOf(r).reduce((a, b) => a + b, 0)))}분`
+        + ` (구간 ${med(runs.map(r => lowFaceOf(r).length))}개`
+        + ` · 벽당 ${med(runs.map(r => { const f = lowFaceOf(r); return f.length ? f.reduce((a, b) => a + b, 0) / f.length : NaN; })).toFixed(1)}분)`
+        + ` ↔ 문턱 위 벽당 ${lateFaceC ? (lateFaceS / lateFaceC).toFixed(1) : '—'}분`
+        + ` (⚠ p50 끼리 빼지 마라 — 시드별 항등 «위+아래=전체» 검산`
+        + ` ${runs.filter(r => lateFaceOf(r).length + lowFaceOf(r).length === faceNetOf(r).length).length}/${runs.length}`
+        + ` · 벽당 비 = **${(() => { const a = med(runs.map(r => { const f = lateFaceOf(r); return f.length ? f.reduce((x, y) => x + y, 0) / f.length : NaN; })),
+                                     b = med(runs.map(r => { const f = lowFaceOf(r); return f.length ? f.reduce((x, y) => x + y, 0) / f.length : NaN; }));
+                                     return (a > 0 && b > 0) ? '×' + (a / b).toFixed(2) : '—'; })()}**`
+        + ` — 목표는 두 구역 공통 «벽당 ≥60분 급»)_`);
+    } else {
+      L.push(`_⚠ **말미 몫 — 안 찍는다.** 이 창은 문턱 위를 ${WIN.MIN_LATE}칸도 담지 않는다`
+        + `(${WINV.why}) — §0-2 «못 보는 창의 수는 판정이 아니라 그림자다». 수가 필요하면 창을 늘려라._`);
+    }
     L.push('');
     L.push(`_(옛 자 — 8칸 분모·겹쳐 세기·왼쪽 끝 좌표: 적중 ${med(runs.map(hit8Of))}/${tgtN8}`
       + ` · 간격 목표 ×${SPAN_T8.toFixed(3)} · 첫 벽 옛 목표 30분)_`);
