@@ -362,6 +362,15 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
     return { full: f, ring: cut > 0 ? f.slice(0, cut).trim() : '', tail: cut > 0 ? f.slice(cut) : '',
              n: (f.match(/drop-shadow\(/g) || []).length };
   }) : null;
+  /* ⚑⚑ 683 14회차 — **13회차 상태의 테**(되돌림 사본 전용). 14회차가 채움·테의 «극성» 을 뒤집자
+     라벨 글리프가 알 위에 놓여도 밝은 채움을 **못 자른다** — 그래서 [B2c] 의 사본이 클램프만
+     되돌려서는 0.00px 로 안 움직인다(자가 죽은 게 아니라 **대가가 하나 더 사라진 것**이다).
+     ⇒ 사본은 극성까지 13회차로 되돌린다. ⚠ 사본의 값은 **지금 사슬에서 파생**시킨다(402 «표 두 벌»
+       금지) — 되돌리는 것은 두 자리뿐이다: `invert(1)` 을 빼고 테 색을 흰색으로.
+  ⚠ **계산된 값은 색을 `rgb(20, 13, 4)` 로 적는다** — 16진수만 갈면 사본이 조용히 «흰 채움 + 어두운 테»
+       인 채로 남아 [B2c] 가 0.00px 로 헛빨강이 된다(자 1판이 그랬다). 표기와 무관하게 **테 색 전부**를 흰색으로 적는다. */
+  const ringOld = layers ? layers.ring.replace(/\binvert\(1\)\s*/i, '')
+    .replace(/rgba?\([^)]*\)|#[0-9A-Fa-f]{3,8}/g, '#FFF') : '';
   const paint = async css => ev(p, f => {
     for (const nd of document.querySelectorAll('#fxl .fx-rlic')) nd.style.filter = f;
   }, css);
@@ -437,7 +446,8 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
   let fInk = null;
   if (geo && fired && layers && layers.ring) {
     await ev(p, () => { if (!window.__r683k12) window.__r683k12 = window.fxKeepTxtTop;
-      window.fxKeepTxtTop = () => null; });
+      window.fxKeepTxtTop = () => null;
+      });
     const re2 = await ev(p, id => {
       const it = RELICS.find(r => r.id === id); if (!it) return false;
       const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
@@ -448,7 +458,7 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
       }
       return document.querySelectorAll('#fxl .fx-rlic').length === 1;
     }, geo.id);
-    if (re2) { await paint(layers.ring); await p.waitForTimeout(80); fInk = await inkEgg(); await paint(''); }
+    if (re2) { await paint(ringOld); await p.waitForTimeout(80); fInk = await inkEgg(); await paint(''); }
     await ev(p, () => { if (window.__r683k12) { window.fxKeepTxtTop = window.__r683k12; window.__r683k12 = null; } });
   }
   if (icInk && bInk) {
@@ -467,14 +477,22 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
        + (r.d - b.d).toFixed(2) + 'px');
     const f = fInk ? dOf(fInk, icInk) : null;
     ok(!!f && Math.abs(f.d - b.d) >= 0.5,
-       'B2c ★ **되돌림 시험**(683 12회차 이관) — **12·13회차 클램프**를 되돌리면 [B2b] 가 실제로 움직인다(≥0.5px). '
+       'B2c ★ **되돌림 시험**(683 12회차 이관 · **14회차 재이관**) — **13회차 상태**(검은 채움 + 흰 테 + 클램프 없음)로 '
+       + '되돌리면 [B2b] 가 실제로 움직인다(≥0.5px). '
        + '안 움직이면 이 자는 «언제나 초록» 인 헛초록이다',
        f ? ('클램프 되돌림 ' + f.d.toFixed(2) + 'px ↔ 후광 자체 ' + b.d.toFixed(2) + 'px = 차 '
             + Math.abs(f.d - b.d).toFixed(2) + 'px') : '측정 실패');
-    ok(Math.abs(r.d - b.d) <= 0.3,
-       'B2d ★ **12·13회차가 11회차의 대가를 없앴다**(신설) — 지금 제품에서는 11회차 선언을 되돌려도 알이 안 움직인다(≤0.3px). '
-       + '플래시가 라벨 띠를 안 밝히니 라벨 글리프가 알 잉크를 안 자른다',
-       '전경 몫 ' + (r.d - b.d).toFixed(2) + 'px (11회차 2.00px)');
+    /* ⚑⚑ 683 14회차 — 문턱을 **눈금과 비율**로 다시 적었다(넓혀서 초록을 산 것이 아니다).
+       이 자의 중심은 반픽셀 격자 위에 있어 «0.00 ↔ 0.50» 을 실행마다 오간다 — 0.3px 은 **눈금 한 칸보다
+       작은 문턱**이라 판정이 동전 던지기가 된다(14회차에 실제로 두 값이 다 나왔다). ⇒ ⓐ 절대값은
+       **눈금 한 칸(0.5px)** 으로 적고, ⓑ 그 대신 **되돌림 사본과의 비율**(≤ 1/4)을 같이 요구한다.
+       ⓑ 가 이 항의 힘을 지킨다 — 13회차 사본은 2.50px(다섯 칸)이라 «대가가 사라졌다» 가 우연히
+       참이 될 수 없다. */
+    const fg = Math.abs(r.d - b.d), fgR = f ? Math.abs(f.d - b.d) : null;
+    ok(fg <= 0.5 && (fgR === null || fg <= fgR / 4),
+       'B2d ★ **12·13회차가 11회차의 대가를 없앴다**(신설 · 14회차 재적음) — 지금 제품에서는 11회차 선언을 되돌려도 '
+       + '알이 **눈금 한 칸(0.5px) 안**에서만 움직이고, 그 몫이 13회차 사본의 1/4 이하다',
+       '전경 몫 ' + fg.toFixed(2) + 'px ↔ 13회차 사본 ' + (fgR === null ? '—' : fgR.toFixed(2)) + 'px (11회차 2.00px)');
   }
   /* 되돌림 시험 — 자가 «자리» 를 정말 재는지. 3px 밀면 [B1] 이 빨개져야 한다(334 처방). */
   if (geo && fired && gInk) {

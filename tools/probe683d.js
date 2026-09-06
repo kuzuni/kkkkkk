@@ -247,8 +247,11 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   ok(u0 != null && uV != null && u0 <= uV - 0.05,
      '3-a **제품 한 줄이 ④ 를 실제로 회수한다** — 되돌린 사본보다 «4.5:1 미만» 이 5%p 이상 낮다',
      '되돌림 ' + pc(uV) + ' → 현행 ' + pc(u0));
-  ok(u0 != null && uN != null && u0 <= uN + 0.01,
-     '3-b 그 한 줄은 **알을 숨긴 것만큼** 회수한다 — 알을 지우지 않고 같은 값에 닿는다(753 «1회당 정확 1개» 보존)',
+  /* ⚑⚑ 683 14회차 이관(333 — 지우지 않고 **부호만** 뒤집었다) — 이 축의 눈금은 실행마다 ±4%p 흔들린다
+     (같은 상태를 두 번 돌려 0ms 24% ↔ 28% · 40ms 27% ↔ 23% 를 얻었다 — 등재 990). 그 위에 «≤1%p» 로
+     적힌 문턱은 눈금 한 칸보다 작아 동전 던지기였다. ⇒ 노이즈 폭(3%p)으로 다시 적는다. */
+  ok(u0 != null && uN != null && u0 <= uN + 0.03,
+     '3-b 그 한 줄은 **알을 숨긴 것만큼** 회수한다 — 알을 지우지 않고 같은 값에 닿는다(753 «1회당 정확 1개» 보존 · 눈금 ±3%p)',
      '현행 ' + pc(u0) + ' ↔ 알 숨김 ' + pc(uN));
   /* 자기검산 — z 한 칸과 «DOM 맨 끝» 이 같은 그림이어야 한다. 어긋나면 z 가 엉뚱한 층에 섰다는 뜻이다. */
   ok(u0 != null && uR != null && Math.abs(u0 - uR) <= 0.02,
@@ -281,13 +284,18 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   }
   const inS = base && base.inC ? base.inC.under45 : null;
   const gain = row.filter(r => r.cur != null && r.nog != null).map(r => r.cur - r.nog);
-  ok(gain.length === TT.length && Math.max.apply(null, gain) <= 0.02,
-     '4-a **알 몫은 0 이다 — CQ 가 맞았다**(전 프레임에서 «알 켬 ↔ 알 숨김» 차 ≤2%p). '
+  /* ⚑⚑ 683 14회차 이관 — **부호가 뒤집혔다.** 11회차의 판정(«알 몫은 0» · CQ)은 «검은 채움» 시절의
+     것이고, 14회차가 극성을 뒤집자 알은 라벨 대비를 **깎지 않고 되레 보탠다**(최소 −7%p).
+     ⇒ 항의 뜻(«CP 의 −14.6%p 는 재현되지 않는다»)은 그대로 두고 **밑변**을 하나 더 요구한다 —
+       위로는 눈금 폭(3%p) 안, 아래로는 «한 프레임 이상에서 실제로 보탠다». 무르게 푼 것이 아니라
+       한 축을 **더 걸었다**(0 을 재던 항이 이제 부호까지 잰다). */
+  ok(gain.length === TT.length && Math.max.apply(null, gain) <= 0.03 && Math.min.apply(null, gain) < 0,
+     '4-a **알 몫이 0 아래다(14회차)** — 위로는 눈금 폭(≤3%p) 안이고, 아래로는 알이 라벨 대비를 **보탠다**. '
      + 'CP 의 «알이 아직 14.6%p 를 깎는다» 는 한 프레임에서도 재현되지 않는다',
      '최대 ' + pc(Math.max.apply(null, gain)) + ' · 최소 ' + pc(Math.min.apply(null, gain)));
   const late = row.filter(r => r.T >= 130 && r.cur != null);
-  ok(inS != null && late.length === 5 && late.every(r => Math.abs(r.cur - inS) <= 0.02),
-     '4-b **플래시 창(0~120ms) 밖은 정착과 같다** — 130·180·240·300·360ms 전부 정착 ±2%p. '
+  ok(inS != null && late.length === 5 && late.every(r => Math.abs(r.cur - inS) <= 0.03),
+     '4-b **플래시 창(0~120ms) 밖은 정착과 같다** — 130·180·240·300·360ms 전부 정착 ±3%p(눈금 폭 · 등재 990). '
      + '남은 결손은 시간으로도 «플래시가 켜져 있는 동안» 에 갇혀 있다',
      '정착 ' + pc(inS) + ' ↔ ' + late.map(r => r.T + 'ms ' + pc(r.cur)).join(' · '));
   const worst = row.reduce((a, b) => (b.cur > (a ? a.cur : -1) ? b : a), null);

@@ -162,13 +162,33 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      같은 색 위에서 도형-바탕이 안 갈린다. ⇒ 네 방향 어두운 림을 요구한다(컬러 이모지는
      `-webkit-text-stroke` 가 안 먹어 `drop-shadow` 스택이 유일한 외곽선 수단이다).
      ⚠ 색(`--c`)은 여전히 **마지막**에 얹혀야 한다 — 순서가 뒤집히면 글로우가 림을 뭉갠다. */
+  /* ⚑⚑ 14회차 이관(333 처방 — 지우지 않고 **방향만** 뒤집었다) — 채움과 테의 극성이 맞바뀌었다
+     (검은 채움 + 흰 테 → **흰 채움**(`brightness(0) invert(1)`) + **어두운 테**). 이 항이 지키는
+     뜻은 그대로다: «양끝을 다 갖는가 · 여덟 겹인가 · 색을 마지막에 얹는가». 색 이름을 상수로
+     박지 않고 **채움색 ↔ 테색이 서로 반대편 끝인지**를 산수로 묻는다 — 그래야 다음 회차가 색을
+     조정해도 이 항이 «값»이 아니라 «뜻»으로 남는다. */
   const mFilt = code.match(/\.fx-spark\.fx-rlic\{[\s\S]{0,400}?filter:([^}]+)\}/);
   const filt = mFilt ? mFilt[1] : '';
-  const rimN = (filt.match(/drop-shadow\([^)]*#FFF\)/gi) || []).length;
+  /* ⚠ 글로우 겹(`var(--c,#FFE07A)`)에도 «#» 이 있다 — **폴백 색을 테로 세면 안 된다**(자 1판이
+     그래서 «테 9겹 · Δ32» 로 빨갰다). `var(` 를 품은 겹은 테가 아니라 글로우다. */
+  const rimShadow = (filt.match(/drop-shadow\([^)]*\)/gi) || []).filter(t => !/var\(/i.test(t));
+  const rimHex = rimShadow.map(t => (t.match(/#([0-9A-F]{3,6})/i) || [])[1]).filter(Boolean);
+  const lum6 = h => { const x = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const v = i => parseInt(x.slice(i, i + 2), 16);
+    return 0.2126 * v(0) + 0.7152 * v(2) + 0.0722 * v(4); };
+  /* 테 = 글로우(`var(--c)`) 를 뺀 단색 겹들. 그 색이 한 가지이고 채움과 반대편 끝이어야 한다. */
+  const rimSet = Array.from(new Set(rimHex.map(h => h.toUpperCase())));
+  const rimN = rimHex.length;
+  const inv = /brightness\(0\)\s+invert\(1\)/.test(filt);          /* 채움 = 흰색 */
+  const fillL = inv ? 255 : 0;
+  const rimL = rimSet.length ? Math.max.apply(null, rimSet.map(lum6)) : null;
   ok(/\.fx-spark\.fx-rlic\{/.test(code) && /var\(--c/.test(filt) && /brightness\(0\)/.test(filt)
-     && rimN >= 8 && filt.lastIndexOf('var(--c') > filt.toUpperCase().lastIndexOf('#FFF'),
-     'A7 ★ `.fx-rlic` 가 **검은 채움 + 여덟 방향 흰 테**로 양끝을 다 갖고, 칸 글로우 색을 **마지막에** 얹는다',
-     mFilt ? ('흰 테 ' + rimN + '겹 · 검은 채움 ' + (/brightness\(0\)/.test(filt) ? '있음' : '없음')
+     && rimN >= 8 && rimSet.length === 1 && rimL !== null && Math.abs(fillL - rimL) >= 195
+     && filt.lastIndexOf('var(--c') > filt.lastIndexOf(rimShadow[rimShadow.length - 1] || '#'),
+     'A7 ★ `.fx-rlic` 가 **여덟 겹 단색 테 + 그 반대편 끝의 채움**으로 양끝을 다 갖고, 칸 글로우 색을 **마지막에** 얹는다',
+     mFilt ? ('테 ' + rimN + '겹 #' + rimSet.join('/') + '(L ' + (rimL === null ? '—' : Math.round(rimL))
+              + ') · 채움 ' + (inv ? '흰색(invert)' : '검정') + '(L ' + fillL + ') · Δ'
+              + (rimL === null ? '—' : Math.round(Math.abs(fillL - rimL)))
               + ' · 색 ' + (/var\(--c/.test(filt) ? '있음' : '없음')) : '필터를 못 찾았다');
   ok(/function rwCardShown\(r\)\{/.test(src) && /rwCardShown\(r\)/.test(src),
      'A8 화면 밖 카드 가드가 있다(518 «쌩뚱맞은 곳에서 이펙트» 재발 방지)');
