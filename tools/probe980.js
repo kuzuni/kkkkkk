@@ -13,7 +13,7 @@
  *   [3] **정답표의 기준선**(`baseline()`)이 무엇인가 — 소환 **전** 페이지라 당첨 칸이 미보유(`.off`)다.
  *   [4] 그래서 Δ 열이 무엇을 세는가 — «연출이 더한 잉크» 인가 «칸이 켜졌다» 인가.
  *   [5] 등재문의 파일 목록(`probe683c`·`probe683d`·`verify753`)이 실제로 A8 을 쓰는가.
- *   [6] **예열** — 이 페이지의 첫 스크린샷이 우리가 부탁한 상태를 그리는가.
+ *   [6] **예열** — 우리가 재는 장이 «버린 뒤» 의 장인가(버린 몫 자체는 값으로만 적는다 · 986).
  *   [R] 되돌림 — 쌍둥이를 뜨는 «방법»(`visibility` ↔ `display`)이 재는 대상을 바꾸는가.
  *
  * ⚠ 프레임은 `cap683.js` 의 `open`·`FREEZE`·`TALLY`·`STOPS`·`grow` 를 **require 해서 그대로** 쓴다.
@@ -22,6 +22,13 @@
  *   전 화면에서 31,677px(카드 상자 안 9,465px) 어긋나고 둘째 장부터 카드 상자가 굳는다
  *   (남는 흔들림은 상단 HUD y143~236 뿐 — 카드와 안 겹친다). 예열을 안 하면 «되돌림» 시험이
  *   자기 잡음을 결함으로 읽는다.
+ * ⚑⚑ **986 — 그 «버린 몫» 에는 문턱이 없다.** 1회차의 [6-a] 는 「첫 장이 **더 밝다**(정착 잉크 ×
+ *   (1.05²−1) ≈ 748px)」를 **항상 난다**로 걸었는데, 그 몫은 `#fxl` 합성 레이어가 한 프레임 늦게
+ *   그려지느냐에 달렸고 **그것은 러너의 몫**이다 — 수리 전 4판 실측이 **Δ 0 · 0 · 0 · 525px**(빨강 3판)
+ *   이고, 나는 판마저 748 이 아니었다(팝이 도는 중이라 배율이 1.0~1.05 사이 어디든이다).
+ *   ⇒ 984 처방 준용: **버린 값은 `info` 로만 찍고, 판정은 «첫 장을 실제로 버렸는가»(소스 래칫 [6-a])
+ *   와 «재는 장이 굳어 있는가»([6-b]) 라는 자가 고르는 축에만 건다.** [6-c]·[6-d] 가 그 축이
+ *   «늘 초록인 자» 가 아님을 오염을 손으로 심어 못박는다.
  */
 'use strict';
 const path = require('path');
@@ -97,13 +104,27 @@ async function frameA(T) {
   const twin = (await p.screenshot()).toString('base64');
   await p.evaluate(q => { document.getElementById('fxl').style.visibility = q; }, pv);
   const back = (await p.screenshot()).toString('base64');
+  /* 되돌림 재료(986) — «안 걷힌 팝이 첫 장에 남았다» 를 **손으로 심는다**: 당첨 카드에 `.fx-hit` 의
+     봉우리와 같은 몫(`scale(1.05)`)을 인라인으로 걸고 한 장, 걷고 한 장. 러너가 늦게 그려 주기를
+     기다리지 않으므로 **판마다 같다** — 아래 [6-c]·[6-d] 가 이 두 장으로 [6-b] 축을 되돌린다.
+     ⚠ **인라인 `transform` 만으로는 no-op 이다** — 카드 자신의 `.fx-hit{animation:fxHit .26s linear both}` 가
+     `both` 로 100% 키프레임(`scale(1)`)을 물고 있고, **애니메이션이 채운 값은 보통 인라인 선언을 이긴다**.
+     `!important` 는 그 위라서 그것으로 심는다(1회차에 그냥 심었다가 실측 0px 로 되돌림이 헛초록이 될 뻔했다). */
+  const csel = '[data-rw="' + st.id + '"]';
+  const dq = await p.evaluate(s => { const el = document.querySelector(s);
+    const q = el.getAttribute('style');
+    el.style.setProperty('transform', 'scale(1.05)', 'important'); return q; }, csel);
+  const dirty = (await p.screenshot()).toString('base64');
+  await p.evaluate(({ s, q }) => { const el = document.querySelector(s);
+    if (q === null) el.removeAttribute('style'); else el.setAttribute('style', q); }, { s: csel, q: dq });
+  const dirtyBack = (await p.screenshot()).toString('base64');
   /* 쌍둥이 ② `display:none` — 렌더 트리에서 빠지며 CSS 애니가 **취소**된다(파괴적 · 아래 [R]) */
   const pd = await p.evaluate(() => { const L = document.getElementById('fxl');
     const q = L.style.display; L.style.display = 'none'; return q; });
   const twinD = (await p.screenshot()).toString('base64');
   await p.evaluate(q => { document.getElementById('fxl').style.display = q; }, pd);
   const backD = (await p.screenshot()).toString('base64');
-  return { b, p, st, warm, shot, twin, back, twinD, backD };
+  return { b, p, st, warm, shot, twin, back, dirty, dirtyBack, twinD, backD };
 }
 
 (async () => {
@@ -207,17 +228,39 @@ async function frameA(T) {
      '5-c 그 자는 프레임마다 `#fxl` 을 **비우고** 시작한다(앞 프레임의 패치가 안 남는다)',
      '`while (L && L.firstChild) L.removeChild(L.firstChild)`');
 
-  blk('6] 예열 — 이 페이지의 **첫 장은 우리가 부탁한 상태가 아니다**');
+  blk('6] 예열 — **우리가 재는 장이 «버린 뒤» 의 장인가**(버린 몫은 러너가 정한다 · 등재 986)');
   const w0 = await PIX(f.p, { a: f.warm, b: f.shot, box: BOX, band: 1, thr: 0.05 });
-  info('첫 장 ↔ 둘째 장', '밝은 잉크 ' + w0.ia + 'px → ' + w0.ib + 'px (Δ ' + (w0.ia - w0.ib) + 'px) · '
-    + '어긋난 화소 ' + w0.n + 'px');
-  ok(w0.ia > w0.ib,
-     '6-a 첫 장이 **더 밝다** — 이 프레임에는 알이 0개인데도 그렇다. 그 몫은 카드 자신의 `.fx-hit` 팝'
-     + '(`scale(1.05)`)이 아직 안 걷힌 것이다: 정착 잉크 × (1.05² − 1) 로 설명된다',
-     '실측 Δ ' + (w0.ia - w0.ib) + 'px ↔ 산수 ' + Math.round(w0.ib * (1.05 * 1.05 - 1)) + 'px');
+  info('버린 첫 장 ↔ 재는 둘째 장 **(값 · 판정 아님)**', '밝은 잉크 ' + w0.ia + 'px → ' + w0.ib
+    + 'px (Δ ' + (w0.ia - w0.ib) + 'px) · 어긋난 화소 ' + w0.n + 'px · `.fx-hit` 봉우리 산수 '
+    + Math.round(w0.ib * (1.05 * 1.05 - 1)) + 'px');
+  info('⚑ 이 Δ 에는 문턱을 안 건다(986)', '`#fxl` 이 합성 레이어라 첫 장이 **한 프레임 늦게 그려지는 판**에서만 '
+    + '팝이 남는다 — 안 늦은 판의 **Δ 0px 도 정상**이고, 남은 판도 팝이 도는 중이라 값이 봉우리 산수보다 작다'
+    + '(수리 전 4판 실측 0 · 0 · 0 · 525px). 이 값은 이 자가 «고른» 값이 아니라 «받은» 값이다(984-①)');
+  const self = rd('probe980.js'), sl = self.split('\n');
+  const fa = (self.match(/async function frameA[\s\S]*?\n\}\n/) || [''])[0];
+  const warmAt = fa.indexOf('const warm = (await p.screenshot())'), shotAt = fa.indexOf('const shot = (await p.screenshot())');
+  const head = i => { for (let j = i; j >= 0; j--) { const t = sl[j].trim();
+    if (/^(ok|info|const|let|var|return|blk)\b/.test(t) || /^(ok|info)\(/.test(t)) return t; } return ''; };
+  const w0Use = sl.map((l, i) => i).filter(i => /\bw0\.[a-z]/.test(sl[i]) && !/^\s*[*/]/.test(sl[i]));
+  const w0Judge = w0Use.filter(i => /^ok\(/.test(head(i)));
+  ok(warmAt >= 0 && shotAt > warmAt && w0Use.length > 0 && w0Judge.length === 0,
+     '6-a **첫 장을 실제로 버린다 · 그리고 버린 값에는 판정 표지가 없다**(소스 래칫 · 984 [2-e] 꼴) — '
+     + '`frameA` 가 재는 장(`shot`) **앞에서** 한 장을 버리고(`warm`), 그 버린 장에서 나온 값(`w0`)은 '
+     + '`info` 로만 적힌다. 판정이 이 값으로 되돌아오면 이 항이 빨개진다',
+     '버림 위치 ' + (warmAt >= 0 ? (shotAt > warmAt ? '`shot` 앞 ✔' : '`shot` 뒤 ✖') : '없음 ✖')
+     + ' · 버린 값 사용처 ' + w0Use.length + '곳 · 그 중 판정 줄 ' + w0Judge.length + '곳');
   const w1 = await PIX(f.p, { a: f.shot, b: f.back, box: BOX, band: 1, thr: 0.0005 });
-  ok(w1.n === 0, '6-b 그리고 **둘째 장부터는 굳는다** — 뒤에 찍은 장과 화소까지 같다',
+  ok(w1.n === 0, '6-b 그리고 **재는 장은 굳어 있다** — 뒤에 찍은 장과 화소까지 같다(둘째 장부터 굳는다)',
      w1.n + 'px 차이');
+  const rv = await PIX(f.p, { a: f.dirty, b: f.back, box: BOX, band: 1, thr: 0.0005 });
+  ok(rv.n > 0,
+     '6-c **되돌림 — [6-b] 는 «늘 초록인 자» 가 아니다**: 안 걷힌 팝(`scale(1.05)`)을 손으로 심은 장은 '
+     + '같은 상태의 장과 **화소가 갈린다**. 즉 첫 장을 안 버렸는데 그 장이 오염됐다면 [6-b] 가 빨개진다 '
+     + '— 러너가 늦게 그려 주기를 기다리지 않으므로 이 항은 판마다 같다',
+     rv.n + 'px 어긋남(잉크 ' + rv.ia + 'px ↔ ' + rv.ib + 'px)');
+  const rb = await PIX(f.p, { a: f.dirtyBack, b: f.back, box: BOX, band: 1, thr: 0.0005 });
+  ok(rb.n === 0, '6-d 그리고 심은 오염을 걷으면 **화소까지** 재던 장으로 돌아온다(비파괴 · [R-a] 와 같은 급)',
+     rb.n + 'px 차이');
 
   blk('R] 되돌림 — 쌍둥이를 뜨는 방법이 재는 대상을 바꾸는가(`visibility` ↔ `display`)');
   const bk = await PIX(f.p, { a: f.shot, b: f.back, box: BOX, band: 1, thr: 0.0005 });
