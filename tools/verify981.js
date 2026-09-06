@@ -82,7 +82,10 @@ const R2_MAX = { gem: 0.66,        /* 실측 0.618 (수리 전 0.787 — `fire` 
                                       (bottle .686 · rock .661 · fire .641 · rockfall .622 → 전부 0.60 아래) —
                                       **비평가 선(0.60) 아래로 통째로 내려간 첫 종**이다(여유는 형제와 같은 한 칸). */
 const D1_MAX = 0.90;          /* 792 [D1] 과 같은 값 — 되감기 금지 축 */
-const DIAG_TOL = 0.25;        /* 792 [E1] 과 같은 값 */
+/* 792 [E1] 과 같은 값. ⚑ 998 — 995 가 792 에서 **눈금을 대각 → 최대 변**으로 옮기며 이름도
+   `DIAG_TOL` → `BULK_TOL` 로 갈았다(값은 ±25% 그대로). 여기도 같이 옮긴다 —
+   이름이 눈금을 말해야 다음 워커가 «무엇을 재는 여유인가» 를 안 헷갈린다. */
+const BULK_TOL = 0.25;
 
 /* 되돌림 사본 — 981 이전의 «볼록한 육각» 으로 되돌린다.
    ⚠ 저장소 루트에 둔다(/tmp 면 상대 경로 assets/** 가 404 — 792 주석 참조).
@@ -95,6 +98,28 @@ const NEG_TWO  = path.join(ROOT, '.v981-neg-two-'  + process.pid + '.html');   /
 /* ⚠ 줄 전체가 아니라 **머리**만 붙잡는다(792 9회차 교훈 — 줄이 길어지면 자가 먼저 죽는다). */
 const TAG_ROCK = `      const rr = [`;
 const OLD_ROCK = `      const rr = [9.8,7.7,9.4,6.9,10.0,8.1];`;
+
+/* ⚑ 998 — **되돌림 앵커는 한 곳에서만 선언한다**(402 «사본을 지운다»).
+   아래 [D2] 가 네 판을 **다 구워서** 견주기 때문에, 앵커를 [R1]~[R4] 와 여기에 두 벌로 적으면
+   그 순간 «자기 자신을 견주는» 사본이 하나 더 생긴다(997 이 바로 그 자리였다).
+   ⇒ 굽는 법은 이 표뿐이고 [D2]·[R1]~[R4] 가 **같은 표를 읽는다**.
+   ⚠ 표에 종을 더할 때는 «한 값만 바꾼다» 를 지켜라 — 두 값을 같이 되돌리면 그 판이 빨개져도
+     원인이 무엇인지 못 말한다([R2]~[R4] 주석이 각자 그 이유를 적고 있다). */
+const REVERTS = [
+  { key: 'rock', what: '옛 `rr`(볼록 육각)로',
+    has: s => s.includes(TAG_ROCK),
+    apply: s => s.replace(new RegExp(TAG_ROCK.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*'), OLD_ROCK) },
+  { key: 'cvx', what: '오목(a)을 0 으로 지워',
+    has: s => /E_A = 0\.\d/.test(s) && /M_A = 0\.\d/.test(s),
+    apply: s => s.replace(/E_A = 0\.\d+/, 'E_A = 0').replace(/M_A = 0\.\d+/, 'M_A = 0') },
+  { key: 'seg', what: '참격 고리 획을 굵혀 구멍을 메워',
+    has: s => /ringArcs\(5\.5 \+ 2\*pad\)/.test(s),
+    apply: s => s.replace('ringArcs(5.5 + 2*pad)', 'ringArcs(17 + 2*pad)') },
+  { key: 'fat', what: '초승달을 도로 살찌워',
+    has: s => /M_RAK = 2\.25/.test(s),
+    apply: s => s.replace('M_RAK = 2.25', 'M_RAK = 1.95') },
+];
+const RV = k => REVERTS.find(r => r.key === k);
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
@@ -258,30 +283,77 @@ function holePx(px, bw) {
        989 뒤 실제로 밖 4종(whirl·arrow·bounce·gale)으로 빨개졌고 그 넷은 981 도 989 도
        한 획 안 건드린 종이다. 산수만 베끼면 원본이 눈금을 갈 때 이렇게 거짓말한다(402).
        ⇒ **792 의 자에게 직접 묻는다**(`verify982` 가 쓰는 그 measure 를 그대로 부른다).
-       ⚠ 값을 다시 계산하지 않으므로 문턱·눈금이 또 바뀌어도 이 항은 저절로 따라온다. */
+       ⚠ 값을 다시 계산하지 않으므로 문턱·눈금이 또 바뀌어도 이 항은 저절로 따라온다.
+
+       ⚑⚑ **998 이관 — 눈금과 «묻는 문장» 을 같이 갈았다(995 의 세 번째 자리).**
+       ① **눈금** — 995 가 792 [E1] 을 «대각» 에서 **최대 변**(`bulk`)으로 옮겼는데 이 자리만
+          `own`(대각)을 계속 읽고 있었다. 대각은 `대각 = 최대변 × √(1+(최소변/최대변)²)` 이라
+          **정사각형 종을 +41.4% 부풀려** 밴드를 인위적으로 좁힌다 — 착수 시점 실측이 그것을
+          그대로 찍는다: 같은 17종이 **대각으로는 밖 0종**(초록), **최대 변으로는 밖 5종**
+          (shuri·stone·arrow·meteor·lance). 이 항의 초록은 «규격이 섰다» 가 아니라 **눈금이 만든 것**이었다.
+       ② **묻는 문장** — 그렇다고 792 의 **절대 밴드**를 여기서 다시 물으면, 995 뒤 792 가
+          배율표(`SHOT_SC`)로 [E1] 을 닫을 때까지 **981 이 «남의 미완» 때문에 빨갛다**.
+          밖 다섯 중 넷은 981 이 한 획도 안 건드린 종이다(982 [C1] 이 989·995 에서 똑같이 겪었다).
+       ⇒ **981 이 질 수 있는 것 하나만 묻는다 — «내 처방이 밴드 안에 있던 종을 밖으로 냈는가».**
+          [R1]~[R4] 의 네 되돌림 판을 **다 굽고**(998 등재문 ⓐ), **네 판 전부에서 «안»** 이던 종이
+          제품에서 밖이면 빨강이다. 802 의 배율·꼬리 같은 남의 손잡이는 이 물음에 안 걸린다.
+       ⚠ **«한 판에서라도 밖» 이던 종은 안 센다** — 그 종은 내 처방이 아니라도 밖이라는 뜻이고,
+          그것까지 세면 이 자는 다시 «남의 미완» 을 지키는 자가 된다.
+       ⚠ 절대 밴드(밖 5종)는 **792 [E1] 이 든다** — 여기서 두 번 묻지 않는다. 값은 (기록)으로만 찍는다. */
     const V792 = require('./verify792');
+    /* 접는 법·견주는 법은 부품 한 벌이다(998 · 402) — 여기서 다시 적으면 그것이 세 번째 사본이다.
+       `verify998` 이 같은 부품을 합성 표로 굽어 «이 판정이 실제로 잡는가» 를 못박는다. */
+    const B998 = require('./bulk998');
+    const bulkBand = (rows) => B998.band(rows, BULK_TOL, 'bulk');
     const e1 = await V792.measure(browser, 'file://' + SRC);
-    const e1ids = e1.out && e1.out.rows ? Object.keys(e1.out.rows) : [];
-    const dgs = e1ids.map(i => e1.out.rows[i].own).sort((a, b) => a - b);
-    const dMed = dgs.length ? dgs[Math.floor((dgs.length - 1) / 2)] : 0;
-    const dLo = dMed * (1 - DIAG_TOL), dHi = dMed * (1 + DIAG_TOL);
-    const dBad = e1ids.filter(i => e1.out.rows[i].own < dLo || e1.out.rows[i].own > dHi);
-    ok(e1ids.length === 17 && dBad.length === 0,
-       '[D2] 되감기 금지 — **792 의 자에게 직접 물었다**: 덩치 대각(본체 + 제 손 부품)이 [E1] 밴드' +
-       '(중앙값 ' + dMed + ' 의 ±' + Math.round(DIAG_TOL * 100) + '%) 안 · 잰 종 ' + e1ids.length +
-       ' · 밖 ' + dBad.length + '종' +
-       (dBad.length ? ' (' + dBad.map(i => i + ':' + e1.out.rows[i].own).join(' · ') + ')' : ''));
+    const e1rows = (e1.out && e1.out.rows && !e1.out.__err) ? e1.out.rows : {};
+    const cb = bulkBand(e1rows);
+    const negs = [];
+    const negErr = [];
+    for (const rv of REVERTS) {
+      if (!rv.has(src)) { negErr.push(rv.key + ' 앵커 없음'); continue; }
+      const f = path.join(ROOT, '.v981-e1-' + rv.key + '-' + process.pid + '.html');
+      fs.writeFileSync(f, rv.apply(src), 'utf8');
+      try {
+        const r = await V792.measure(browser, 'file://' + f);
+        if (!r.out || r.out.__err || !r.out.rows) { negErr.push(rv.key + ' 측정 예외'); continue; }
+        negs.push(Object.assign({ key: rv.key, rows: r.out.rows }, bulkBand(r.out.rows)));
+      } finally { try { fs.unlinkSync(f); } catch (_) {} }
+    }
+    /* «네 판 전부에서 안» 이던 종 ∩ «제품에서 밖» = 내 처방이 낸 종 (부품 `bulk998.newOut`) */
+    const newOut = B998.newOut(cb, negs);
+    ok(cb.ids.length === 17 && negs.length === REVERTS.length && newOut.length === 0,
+       '[D2] 되감기 금지 — **792 의 자에게 직접 물었다**(눈금 = 최대 변 `bulk`): 내 네 처방이 [E1] ' +
+       '덩치 밴드(중앙값 ' + cb.m + ' 의 ±' + Math.round(BULK_TOL * 100) + '% = ' + cb.lo + '~' + cb.hi +
+       ') **안에 있던 종을 밖으로 내지 않았다** · 잰 종 ' + cb.ids.length + ' · 되돌림 판 ' +
+       negs.length + '/' + REVERTS.length + (negErr.length ? '(' + negErr.join(' · ') + ')' : '') +
+       ' · 새로 밖 ' + newOut.length + '종' + (newOut.length ? ' (' + newOut.map(i => i + ':' + e1rows[i].bulk).join(' · ') + ')' : ''));
+    /* (기록) 절대 밴드는 792 [E1] 몫이다 — 여기서는 «누가 밖인가» 를 판마다 찍어만 둔다.
+       ⚑ 이 줄이 곧 998 의 근거다: 같은 17종이 대각으로는 밖 0종, 최대 변으로는 밖 여럿이다. */
+    {
+      const dg = cb.ids.map(i => e1rows[i].own).sort((a, b) => a - b);
+      const dM = dg.length ? dg[Math.floor((dg.length - 1) / 2)] : 0;
+      const dOut = cb.ids.filter(i => e1rows[i].own < dM * (1 - BULK_TOL) || e1rows[i].own > dM * (1 + BULK_TOL));
+      console.log('       (기록) [E1] 밴드 밖 — 제품 최대 변 [' + cb.out.join('·') + '](' + cb.out.length +
+        '종 · 스프레드 ' + cb.sp + '배) ↔ **같은 판을 옛 눈금(대각)으로 접으면** [' + dOut.join('·') + '](' +
+        dOut.length + '종) — 998 이 갈아 낸 것이 이 차다');
+      for (const n of negs) {
+        const mv = cb.ids.filter(i => n.rows[i] && n.rows[i].bulk !== e1rows[i].bulk);
+        console.log('       (기록) 되돌림 ' + n.key.padEnd(5) + ' 밖 [' + n.out.join('·') + '] · 중앙값 ' + n.m +
+          ' · 덩치가 움직인 종 ' + (mv.length ? mv.map(i => i + ' ' + n.rows[i].bulk + '→' + e1rows[i].bulk).join(' · ') : '없음'));
+      }
+    }
 
     console.log('       (기록) 정렬 IoU 상위 6 — ' +
       pairs.slice(0, 6).map(p => p.sa + '↔' + p.sb + ':' + p.iou.toFixed(3)).join(' · '));
   }
 
   /* ── [R] 되돌림 시험 ── */
-  if (!src.includes(TAG_ROCK)) {
+  if (!RV('rock').has(src)) {                       /* 998 — 굽는 법은 REVERTS 표 하나뿐이다 */
     ok(false, '[R0] 되돌림 앵커 `' + TAG_ROCK.trim() + '` 를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
   } else {
     ok(true, '[R0] 되돌림 앵커를 찾았다');
-    fs.writeFileSync(NEG_ROCK, src.replace(new RegExp(TAG_ROCK.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*'), OLD_ROCK), 'utf8');
+    fs.writeFileSync(NEG_ROCK, RV('rock').apply(src), 'utf8');
     try {
       const neg = await pairsOf(browser, 'file://' + NEG_ROCK);
       if (neg.__err) { ok(false, '[R1] 되돌림 사본 측정 예외 — ' + neg.__err); }
@@ -317,10 +389,10 @@ function holePx(px, bw) {
   /* ── [R2] 2회차의 되돌림 시험 — «볼록해서 붙는다» 를 그대로 찍는다 ──
      한 글자만 바꾼다: 두 종의 변조 a 를 0 으로(= 오목을 지운 **볼록 타원**). 형상·크기·각도는
      그대로이므로 이 판이 빨개지면 원인은 «오목» 하나뿐이다(2회차의 주장 전체가 이 한 줄에 있다). */
-  if (!/E_A = 0\.\d/.test(src) || !/M_A = 0\.\d/.test(src)) {
+  if (!RV('cvx').has(src)) {                        /* 998 — 같은 표(REVERTS) */
     ok(false, '[R2-0] 되돌림 앵커(`E_A = 0.x` · `M_A = 0.x`)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
   } else {
-    fs.writeFileSync(NEG_CVX, src.replace(/E_A = 0\.\d+/, 'E_A = 0').replace(/M_A = 0\.\d+/, 'M_A = 0'), 'utf8');
+    fs.writeFileSync(NEG_CVX, RV('cvx').apply(src), 'utf8');
     try {
       const neg = await pairsOf(browser, 'file://' + NEG_CVX);
       if (neg.__err) { ok(false, '[R2] 되돌림 사본 측정 예외 — ' + neg.__err); }
@@ -341,10 +413,10 @@ function holePx(px, bw) {
      0.406 → **0.414**(+0.008)로 **꿈쩍도 안 했다**. 즉 표창과 갈린 것은 대칭 수가 아니라 **구멍**이다
      (토막 수는 «회전감» 이라는 뜻의 몫이고 분간의 축이 아니다 — 제품 주석도 그렇게 고쳤다).
      ⇒ 되돌림을 **획을 굵혀 고리를 메우는** 쪽으로 다시 세운다. 한 값(획 폭)만 바꾼다. */
-  if (!/ringArcs\(5\.5 \+ 2\*pad\)/.test(src)) {
+  if (!RV('seg').has(src)) {                        /* 998 — 같은 표(REVERTS) */
     ok(false, '[R3-0] 되돌림 앵커(`ringArcs(5.5 + 2*pad)`)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
   } else {
-    fs.writeFileSync(NEG_SEG, src.replace('ringArcs(5.5 + 2*pad)', 'ringArcs(17 + 2*pad)'), 'utf8');
+    fs.writeFileSync(NEG_SEG, RV('seg').apply(src), 'utf8');
     try {
       const neg = await pairsOf(browser, 'file://' + NEG_SEG);
       if (neg.__err) { ok(false, '[R3] 되돌림 사본 측정 예외 — ' + neg.__err); }
@@ -368,10 +440,10 @@ function holePx(px, bw) {
        높다). 즉 «굽은 띠 무리» 는 이 종이 얇지 않은 한 반드시 되돌아온다.
      ⚠ 뿔 각·잉크 무게중심은 이 한 값에서 **파생**되므로(제품이 `Math.acos` 로 낸다) 사본이
        스스로 닫힌다 — 되돌림 사본에 손으로 적을 상수가 하나도 없다(368·861 처방). */
-  if (!/M_RAK = 2\.25/.test(src)) {
+  if (!RV('fat').has(src)) {                        /* 998 — 같은 표(REVERTS) */
     ok(false, '[R4-0] 되돌림 앵커(`M_RAK = 2.25`)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
   } else {
-    fs.writeFileSync(NEG_FAT, src.replace('M_RAK = 2.25', 'M_RAK = 1.95'), 'utf8');
+    fs.writeFileSync(NEG_FAT, RV('fat').apply(src), 'utf8');
     try {
       const neg = await pairsOf(browser, 'file://' + NEG_FAT);
       if (neg.__err) { ok(false, '[R4] 되돌림 사본 측정 예외 — ' + neg.__err); }
