@@ -33,6 +33,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
+const G = require('./gitrev756');          /* 얕은 클론 판정·이력 깊이 — 자를 두 벌로 안 적는다 (756) */
 const REL = 'docs/PROGRESS.md';
 const listAll = process.argv.slice(2).includes('--list');
 
@@ -71,7 +72,14 @@ const gitQ = a => { try { return execFileSync('git', a, GOPT).trim(); } catch (e
  *   (움직이는 ref 를 고정 커밋으로 바꿨더니 이번엔 **고르는 그물**이 움직였다 — 같은 병의 세 번째 얼굴).
  *   ⇒ 후보를 받아 **제목(`%s`)이 그 말머리로 시작하는지**로 거른다(본문 인용은 제목이 아니다).
  * ⚠ 여러 번이면 **가장 오래된 것**의 부모가 «수리 전» 이다(2회차 wip 의 부모는 이미 수리 후다). */
-const BEFORE_FALLBACK = '842dc2f';         /* claim(566) — 566 의 수리(wip) 직전 */
+/* ⚠ 폴백 SHA 는 **`wip(566)` 의 부모**여야 한다 — 566 이 적어 둔 `842dc2f`(claim(566))는
+   같은 번호의 커밋이라 그럴듯해 보이지만 **부모가 아니다**(그 다음 커밋은 `wip(491)` 이다 · 964 실측).
+   실제 부모는 `9104a067`(`wip(567): 문서 …`) 이고, 번호가 시간 순서가 아닌 것이 그 이유다
+   (워커 넷이 병렬로 도니 566 의 이웃 커밋이 566 의 것일 이유가 없다).
+   폴백이 [4-a]~[4-d] 를 통과했던 것은 claim(566) 도 수리 **전**이라 553 이 아직 8칸이었기 때문이고,
+   [4-e] 만 그 어긋남을 짚었다 — 그것이 [4-e] 가 있는 이유다. 다시 뽑는 법:
+     git rev-list --fixed-strings --grep='wip(566):' HEAD | tail -1 | xargs -I{} git rev-parse --short {}^  */
+const BEFORE_FALLBACK = '9104a067';        /* `wip(566)` 의 부모 — 566 의 수리 직전 (964 정정) */
 function pickBefore() {
   if (process.env.P566_BEFORE) return { ref: process.env.P566_BEFORE, how: 'P566_BEFORE 환경변수' };
   for (const head of ['wip(566):', 'done(566):']) {
@@ -255,12 +263,38 @@ if (require.main === module) {
        이것 없이 그물이 미끄러지면 [4-a] 가 «칸 7» 이라는 엉뚱한 이름으로 빨개진다
        (573 1회차가 그렇게 한 시간을 썼다 — LESSONS 571-④·573-⑥). */
     if (!process.env.P566_BEFORE) {
-      /* BEFORE 의 **바로 다음** 커밋(HEAD 로 가는 길 위) 제목을 본다 */
-      const path = (gitQ(['rev-list', '--ancestry-path', BEFORE.ref + '..HEAD']) || '').split('\n').filter(Boolean);
-      const child = path.length ? gitQ(['log', '-1', '--format=%s', path[path.length - 1]]) : null;
-      ok('[4-e] 고른 «수리 전» 의 **바로 다음** 커밋이 566 의 수리다(그물이 본문 인용을 안 물었다)',
-         /^(wip|done)\(566\):/.test(String(child || '')),
-         '다음 커밋 «' + String(child || '?').slice(0, 46) + '»');
+      /* BEFORE 의 **바로 다음** 커밋(HEAD 로 가는 길 위) 제목을 본다.
+         ⚠ 이 길은 **이력이 닿아야** 있다. 루틴 컨테이너의 클론은 얕아서(964 착수 실측 211커밋 ≈
+         2026-09-02 이후) 566(08-31)이 창 밖이면 ⓐ 그물이 조용히 미끄러져 폴백으로 내려앉고
+         ⓑ 그 폴백은 **객체만** 있고 HEAD 의 조상이 아니라(이식된 뿌리) `--ancestry-path` 가 0줄이다.
+         그러면 [4-a]~[4-d] 는 `git show` 만으로 초록인데 이 항만 «다음 커밋 «?»» 로 빨갛다 — 964 가 재현한 자리.
+         ⇒ 756 규약 ②대로 **얕으면 환경(⏸ 보류 · 세지 않는다) · 얕지 않은데 안 닿으면 빨강**으로 가른다.
+         파는 쪽(규약 ①)을 여기서 자동으로 하지 않는 이유는 값이 비싸서다 — 566 시대까지 넓히면
+         이력이 211 → 3,310커밋이 되고 `verifyProgress` §1 이 done() 커밋마다 `git show` 를 돌아
+         **모든 워커의 push 게이트**가 실측 4~5배(88초) 느려진다. 필요한 사람이 아래 한 줄을 부른다. */
+      const chain = (gitQ(['rev-list', '--ancestry-path', BEFORE.ref + '..HEAD']) || '').split('\n').filter(Boolean);
+      if (!chain.length) {
+        const ds = gitQ(['log', '-1', '--format=%cs', BEFORE.ref]);
+        const since = ds ? new Date(Date.parse(ds) - 864e5).toISOString().slice(0, 10) : '2026-08-30';
+        if (G.isShallow()) {
+          console.log('  –   [4-e] 건너뜀(⏸ 보류 · 환경) — ' + BEFORE.ref + ' 가 이 얕은 클론에서 HEAD 의 조상이 아니다'
+            + '(이력 ' + G.depth() + '커밋). `git fetch --shallow-since=' + since + ' origin main` 뒤 다시.');
+        } else {
+          ok('[4-e] 고른 «수리 전» 이 HEAD 의 조상이다(얕은 클론이 아닌데 길이 없다 = 진짜 빨강)',
+             false, BEFORE.ref + ' · 조상 아님');
+        }
+      } else {
+        const child = gitQ(['log', '-1', '--format=%s', chain[chain.length - 1]]);
+        ok('[4-e] 고른 «수리 전» 의 **바로 다음** 커밋이 566 의 수리다(그물이 본문 인용을 안 물었다)',
+           /^(wip|done)\(566\):/.test(String(child || '')),
+           '다음 커밋 «' + String(child || '?').slice(0, 46) + '»');
+        /* [4-f] 이력이 닿는 환경에서는 **폴백 상수 자신**도 같이 묻는다 — 964 가 고친 것이 이 값이고,
+           그물이 도는 동안에는 아무도 폴백을 안 써서 상수가 조용히 썩는다(그 침묵이 964 의 뿌리다). */
+        const full = r => gitQ(['rev-parse', r]);
+        ok('[4-f] 폴백 SHA 가 그물이 고르는 값과 같다(안 쓰이는 동안 상수가 썩지 않았는지)',
+           !!full(BEFORE_FALLBACK) && full(BEFORE_FALLBACK) === full(BEFORE.ref),
+           BEFORE_FALLBACK + ' ↔ ' + BEFORE.ref);
+      }
     }
   }
 

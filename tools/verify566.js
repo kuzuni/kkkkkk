@@ -75,18 +75,42 @@ try {
   ok('[B-e] §1·§3 은 같은 표에서 조용하다(ⓒ 의 빨강이지 남의 빨강이 아니다)',
      !/PROGRESS REVERTED/.test(b.out) && !/PROGRESS UNCLOSED/.test(b.out));
 
-  /* ── [B2] 되돌림 시험 — 축 ⓒ 를 걷어낸 사본은 같은 표에서 초록 ── */
+  /* ── [B2] 되돌림 시험 — 축 ⓒ 를 걷어낸 사본은 같은 표에서 초록 ──
+     ⚠ **치환문은 리터럴이 아니라 본체에서 파생시킨다(964 · 861·960 [R] 선례).**
+     566 은 이 자리에 «  const cells = cellsOf(line);» 한 줄을 그대로 박아 두었는데,
+     809 가 그 줄을 «const impl = cellsOf(line)[3];» 로 갈아 끼우자 `replace` 가
+     **조용한 no-op** 이 됐다 — 사본이 본체와 글자 하나 안 다르니 «축 ⓒ 를 걷어낸 사본» 이
+     축 ⓒ 를 그대로 지닌 채 [B] 와 같은 표를 돌아 code 1 을 냈고, [B2-0]·[B2-a]·[B2-b]
+     셋이 한 덩어리로 빨갛게 굳었다(964 등재문의 «한 덩어리» 가 이것이다).
+     ⇒ 앵커는 축 ⓒ **자신의 이름**(`kind: 'mute'` 를 미는 줄)이고, **정확히 한 줄**일 때만 믿는다.
+     못 찾거나 여럿이면 [B2-0] 이 «앵커 n줄» 로 빨개진다 — 조용히 no-op 이 되는 길을 막았다. */
   const src = fs.readFileSync(path.join(ROOT, 'tools', 'verifyProgress.js'), 'utf8');
-  const cut = src.replace('  const cells = cellsOf(line);', '  continue;   /* verify566 [B2] 되돌림 시험 — 축 ⓒ 무력화 */\n  const cells = cellsOf(line);');
-  ok('[B2-0] 전제: 사본이 실제로 달라졌다', cut !== src);
+  const MUTE_PUSH = /^[ \t]*contra\.push\(\{[^\n]*kind: 'mute'[^\n]*\);[ \t]*$/gm;
+  const anchors = src.match(MUTE_PUSH) || [];
+  const cut = anchors.length === 1
+    ? src.replace(MUTE_PUSH, '  continue;   /* verify566 [B2] 되돌림 시험 — 축 ⓒ 무력화 */')
+    : src;
+  ok('[B2-0] 전제: 축 ⓒ 를 미는 줄을 본체에서 «정확히 한 줄» 찾아 걷어냈다',
+     anchors.length === 1 && cut !== src, '앵커 ' + anchors.length + '줄');
   /* 사본은 **저장소 안**에 둔다 — `ROOT = __dirname/..` 이라 임시 디렉터리에 두면 종료 코드 2 로 죽고
-     그 2 를 «초록 아님» 으로 잘못 읽게 된다(verify557 [B2] 가 1회차에 겪은 자리). */
-  const cutPath = path.join(ROOT, 'tools', `.v566-cut-${process.pid}.js`);
-  let b2;
-  try { fs.writeFileSync(cutPath, cut); b2 = run(['--file', f512, '--no-gate'], 'tools/.v566-cut.js'); }
-  finally { if (fs.existsSync(cutPath)) fs.unlinkSync(cutPath); }
+     그 2 를 «초록 아님» 으로 잘못 읽게 된다(verify557 [B2] 가 1회차에 겪은 자리).
+     ⚠ 이름은 pid 를 섞되(648) **부르는 이름도 같이** 섞어야 한다 — 648 이 쓰는 쪽만 고치고
+     `run(…, 'tools/.v566-cut.js')` 를 그대로 둬서, 앵커가 멀쩡해도 없는 파일을 부를 뻔했다(964). */
+  const cutName = '.v566-cut-' + process.pid + '.js';
+  const cutPath = path.join(ROOT, 'tools', cutName);
+  let b2, b2n;
+  try {
+    fs.writeFileSync(cutPath, cut);
+    b2 = run(['--file', f512, '--no-gate'], 'tools/' + cutName);
+    /* [B2-c] 되돌림 — «걷어내기가 no-op 이면» 이 절이 초록으로 지나가지 않는다는 것을 못박는다.
+       본체를 **그대로** 사본 자리에 놓고 같은 표를 돌린다 = 964 가 고친 그 상태의 재현. */
+    fs.writeFileSync(cutPath, src);
+    b2n = run(['--file', f512, '--no-gate'], 'tools/' + cutName);
+  } finally { if (fs.existsSync(cutPath)) fs.unlinkSync(cutPath); }
   ok('[B2-a] 축 ⓒ 를 걷어낸 사본은 같은 표에서 종료 코드 0(초록)', b2.code === 0, 'code ' + b2.code);
   ok('[B2-b] 즉 [B] 의 빨강은 축 ⓒ 의 것이다', b2.code === 0 && b.code === 1);
+  ok('[B2-c] 되돌림 — 걷어내기가 no-op(사본 = 본체)이면 이 절은 다시 빨갛다(964 의 재현)',
+     b2n.code === 1, 'code ' + b2n.code);
 
   /* ── [C] 음성 — 구현 칸이 «–» 면 조용하다(범위의 경계) ── */
   console.log('\n[C] 음성 — 구현 칸이 «–» 인 완료행은 축 밖이다');
