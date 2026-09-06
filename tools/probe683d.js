@@ -86,13 +86,26 @@ const SEEDER = () => {
 };
 
 /* 프레임 한 장 — `probe683c` 의 SHOT 과 **같은 규약**(같은 것을 재려면 같은 자리를 얼려야 한다). */
-const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE, SEED }) => {
+/* ⚑⚑ **994 이관 — «태생 α 램프» 를 되돌리는 스텁.** 994 가 알의 태생 세기를 겹침 창에 맞추면서
+   ([2]·[3] 이 묻는) «알이 라벨을 씻는다» 가 **태생 프레임에서 거의 사라졌다**(NOTOP 되돌림 25% → 16%).
+   [4] 가 12·13회차 제품을 `NOFADE` 로 되돌리고 «11회차 판에서 알이 남긴 몫» 을 묻는 것과 **같은 꼴**이라
+   ([4] 머리말), [2]·[3] 도 994 를 되돌린 사본 위에서 묻는다 — 항의 뜻·문턱은 한 칸도 안 바뀌고
+   («패치를 걷으면 무너진다» ≥1.3 · «되돌린 사본보다 5%p 낮다»), 재는 나무만 그 물음이 사는 나무다.
+   ⚠ 이 스텁을 빼면 [2-c]·[3-a] 는 **문턱 폭 안**(1%p)으로 내려앉아 아무것도 안 묻는 항이 된다. */
+const KF14 = '@keyframes fxRlic{0%{transform:translate(0,0) scale(1);opacity:.55}'
+  + '35%{transform:translate(calc(var(--dx)*.55),calc(var(--dy)*.55)) scale(.72);opacity:.45}'
+  + '100%{transform:translate(var(--dx),var(--dy)) scale(.45);opacity:0}}';
+const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE, NOR994, SEED, KF }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__p4to) { window.__p4to = window.setTimeout; window.__p4ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
   const st = document.getElementById('__p4nogain'); if (st) st.remove();
   if (NOGAIN) { const t = document.createElement('style'); t.id = '__p4nogain';
     t.textContent = '.fx-spark.fx-rlic{display:none !important}'; document.head.appendChild(t); }
+  /* 994 — 태생 α 램프를 되돌린 사본(위 `KF14` 머리말). 키프레임은 **스폰 전에** 갈아야 한다. */
+  const k9 = document.getElementById('__p4kf'); if (k9) k9.remove();
+  if (NOR994 && KF) { const t = document.createElement('style'); t.id = '__p4kf';
+    t.textContent = KF; document.head.appendChild(t); }
   const it = RELICS.filter(r => r.id === RID)[0]; if (!it) return null;
   /* NOFADE — 12·13회차 제품을 **되돌린 사본**. 되돌림 손잡이는 하나다: `fxKeepTxtTop` 이 `null` 을
      주면 `fxFlashClampH` 가 통째로 안 열려 상자가 12회차 이전(네 변 다 띠만큼)으로 돌아간다.
@@ -259,8 +272,11 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE, SEED 
                return z.length ? Math.max.apply(null, z) - Math.min.apply(null, z) : null; })() };
   };
   const grabM = async o => { const rs = []; for (const s of SEEDS) rs.push(await grab(Object.assign({}, o, { SEED: s }))); return foldMed(rs); };
-  const cur = await grab({ T: 0 });                 show('t0 현행(알 켬)', cur);
-  const nok = await grab({ T: 0, NOKEEP: true });   show('t0 되돌림 — 795 패치 걷음', nok);
+  /* 994 이관 — [2]·[3] 은 «11회차 판» 의 물음이라 994(태생 α 램프)를 되돌린 사본 위에서 잰다
+     (위 `KF14` 머리말 · [4] 가 `NOFADE` 로 하는 것과 같은 꼴). 문턱은 한 칸도 안 바뀌었다. */
+  const R9 = { NOR994: true, KF: KF14 };
+  const cur = await grab(Object.assign({ T: 0 }, R9));               show('t0 현행(알 켬 · 994 되돌림)', cur);
+  const nok = await grab(Object.assign({ T: 0, NOKEEP: true }, R9)); show('t0 되돌림 — 795 패치 걷음', nok);
 
   const mul = (a, b) => (a && b && b > 0) ? a / b : null;
   const mIn = mul(cur && cur.inC && cur.inC.med, nok && nok.inC && nok.inC.med);
@@ -289,9 +305,10 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE, SEED 
 
   /* ── [3] 그러면 남은 +17%p 의 임자는 누구인가 ── */
   blk('3] 11회차 제품 한 줄(`.fx-keep-top`) — 회수량 · 되돌림 · 자기검산');
-  const nog = await grab({ T: 0, NOGAIN: true });   show('t0 현행 — 알만 숨김', nog);
-  const rev = await grab({ T: 0, NOTOP: true });    show('§R 되돌림 — `.fx-keep-top` 을 뗀 사본', rev);
-  const rai = await grab({ T: 0, RAISE: true });    show('자기검산 — 패치를 DOM 맨 끝으로(RAISE)', rai);
+  /* 994 이관 — [2] 와 같은 사본 위에서 잰다(위 `R9` 머리말) */
+  const nog = await grab(Object.assign({ T: 0, NOGAIN: true }, R9)); show('t0 현행 — 알만 숨김', nog);
+  const rev = await grab(Object.assign({ T: 0, NOTOP: true }, R9));  show('§R 되돌림 — `.fx-keep-top` 을 뗀 사본', rev);
+  const rai = await grab(Object.assign({ T: 0, RAISE: true }, R9));  show('자기검산 — 패치를 DOM 맨 끝으로(RAISE)', rai);
   const u0 = cur && cur.all ? cur.all.under45 : null;
   const uS = base && base.all ? base.all.under45 : null;
   const uN = nog && nog.all ? nog.all.under45 : null;
