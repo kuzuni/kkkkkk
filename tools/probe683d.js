@@ -58,14 +58,17 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   if (NOGAIN) { const t = document.createElement('style'); t.id = '__p4nogain';
     t.textContent = '.fx-spark.fx-rlic{display:none !important}'; document.head.appendChild(t); }
   const it = RELICS.filter(r => r.id === RID)[0]; if (!it) return null;
+  /* NOFADE — 12·13회차 제품을 **되돌린 사본**. 되돌림 손잡이는 하나다: `fxKeepTxtTop` 이 `null` 을
+     주면 `fxFlashClampH` 가 통째로 안 열려 상자가 12회차 이전(네 변 다 띠만큼)으로 돌아간다.
+     ⚠ 스폰 **전에** 걸어야 한다(상자 높이는 스폰 시각에 정해진다). */
+  if (NOFADE) { if (!window.__p4ktt) window.__p4ktt = window.fxKeepTxtTop;
+    window.fxKeepTxtTop = () => null; }
+  else if (window.__p4ktt) { window.fxKeepTxtTop = window.__p4ktt; window.__p4ktt = null; }
   if (T >= 0) rwSummonFx(it, true, null);
   if (RAISE && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))) L.appendChild(nd);
   /* NOTOP — 11회차 제품 한 줄을 **되돌린 사본**(`.fx-keep-top` 을 뗀다 = CSS 선언을 지운 것과 같다) */
   if (NOTOP && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep-top'))) nd.classList.remove('fx-keep-top');
   if (NOKEEP && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))) nd.remove();
-  /* NOFADE — 12회차 제품을 **되돌린 사본**(`fxFlashFade` 가 건 마스크를 뗀다 = 함수 본문을 지운 것과 같다) */
-  if (NOFADE && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-flash'))) {
-    nd.style.webkitMaskImage = 'none'; nd.style.maskImage = 'none'; }
   try { document.getAnimations().forEach(a => {
     const tg = a.effect && a.effect.target;
     if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = Math.max(0, T); } catch (_) {} }
@@ -263,7 +266,7 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
      회수됐다»(A4·A5 ↔ A8) 로 **정반대**를 냈고, 셋(둘의 자 + 내 자)이 정착 기준선을 0.0% ↔ 42.3%
      ↔ 23% 로 각자 다르게 잡았다. §11-10 이 «12회차가 `probe683d` [2] 의 구역 분할에 A3/A4/A5 를
      넣어 답하라» 고 남긴 자리다 — 여기서 **한 마스크·한 기준선**으로 다시 잰다.
-     ⚠ 12회차 제품(글자 띠 α 빼기)이 이 물음을 지워 버리므로 **되돌린 사본(NOFADE)** 으로 잰다:
+     ⚠ 12·13회차 제품(상자를 글자 앞에서 끝내기)이 이 물음을 지워 버리므로 **되돌린 사본(NOFADE)** 으로 잰다:
        그래야 «11회차 판에서 알이 남긴 몫» 이라는 물음 그대로다. */
   blk('4] §11-7 갈림 — 시간 축(플래시 창 안 ↔ 밖) · **되돌린 사본**으로 잰다');
   const TT = [0, 40, 80, 130, 180, 240, 300, 360];
@@ -293,7 +296,7 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
      'T=' + (worst ? worst.T : '—') + 'ms ' + pc(worst && worst.cur) + ' ↔ 정착 ' + pc(inS));
 
   /* ── [5] 12회차 제품 — «되그려야 하는 글자» 띠에서 플래시가 α 를 뺀다 ── */
-  blk('5] 12회차 제품(`fxFlashFade`) — 회수 · 되돌림 · 대가 · 스코프');
+  blk('5] 12·13회차 제품(`fxFlashClampH`) — 회수 · 되돌림 · 대가 · 스코프 · 닫힌 액자');
   const IN = [];
   for (const T of [0, 40, 80]) {
     const a = await grab({ T }), b = await grab({ T, NOFADE: true });
@@ -308,7 +311,7 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
      + '11회차가 «공용 판 몫» 으로 넘겼던 +13~20%p 가 이 행 안에서 닫혔다',
      IN.map(r => r.T + 'ms ' + pc(r.fix)).join(' · ') + ' ↔ 정착 ' + pc(inS));
   ok(IN.every(r => r.rev != null && r.fix != null) && Math.max.apply(null, IN.map(r => r.rev - r.fix)) >= 0.08,
-     '5-b **되돌림 시험** — 마스크를 뗀 사본(NOFADE)은 다시 무너진다(최대 8%p 이상). '
+     '5-b **되돌림 시험** — `fxKeepTxtTop` 이 `null` 을 주게 한 사본(NOFADE)은 다시 무너진다(최대 8%p 이상). '
      + '«언제나 초록인 자» 가 아니다',
      IN.map(r => r.T + 'ms +' + pc(r.rev - r.fix)).join(' · '));
   const outS = base && base.outC ? base.outC.under45 : null;
@@ -316,41 +319,55 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
      '5-c **대가 0** — 카드 «밖» 구역(하변 아래 20px)은 이 변경으로도 안 나빠진다',
      IN.map(r => r.T + 'ms ' + pc(r.out)).join(' · ') + ' ↔ 정착 밖 ' + pc(outS));
   /* 스코프 짝 — «신고 잉크를 가진 호스트만» 이 문을 지난다. 같은 화면의 형제(카드 «아이콘 상자»)는
-     `.rw-c>u` 를 자식으로 안 가지므로 마스크가 서면 안 된다. 이 항이 없으면 09·12·17·코스튬·장비·
+     `.rw-c>u` 를 자식으로 안 가지므로 상자가 안 짧아져야 한다. 이 항이 없으면 09·12·17·코스튬·장비·
      훈련·단련·룬까지 조용히 같이 바뀌어도 아무 자도 안 짖는다(LESSONS 666-⑨ · `verify619` [K6] 축). */
   const sc = await ev(p, RID => {
     const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
     const card = document.querySelector('[data-rw="' + RID + '"]');
     const icon = card && card.querySelector('i');
     if (!card || !icon) return null;
-    fxFlash(card, 340, false, true);
-    const a = L.querySelector('.fx-flash');
-    const am = a ? (getComputedStyle(a).maskImage || getComputedStyle(a).webkitMaskImage || 'none') : null;
+    /* ⚠ 앞선 NOFADE 사본이 스텁을 걸어 둔 채로 올 수 있다 — 먼저 원복하고 잰다(안 하면 «클램프가
+       아예 안 걸린 상자» 를 재고도 초록이 나온다. 이 자가 실제로 그 함정을 한 번 밟았다). */
+    if (window.__p4ktt) { window.fxKeepTxtTop = window.__p4ktt; window.__p4ktt = null; }
+    const rd = host => { fxFlash(host, 340, false, true);
+      const f = L.querySelector('.fx-flash');
+      const o = f ? { top: parseFloat(f.style.top), h: parseFloat(f.style.height),
+                      mask: getComputedStyle(f).maskImage || getComputedStyle(f).webkitMaskImage || 'none',
+                      r: (() => { const q = fxRect(host); const p2 = q ? { y: q.y, h: q.h } : null; return p2; })() } : null;
+      while (L.firstChild) L.removeChild(L.firstChild); return o; };
+    const A = rd(card), B = rd(icon);
     const kt = (typeof fxKeepTxtTop === 'function') ? fxKeepTxtTop(card) : null;
-    const ab = a ? { top: parseFloat(a.style.top), h: parseFloat(a.style.height) } : null;
-    while (L.firstChild) L.removeChild(L.firstChild);
-    fxFlash(icon, 340, false, true);
-    const b = L.querySelector('.fx-flash');
-    const bm = b ? (getComputedStyle(b).maskImage || getComputedStyle(b).webkitMaskImage || 'none') : null;
-    while (L.firstChild) L.removeChild(L.firstChild);
-    return { am, bm, kt, ab };
+    const peak = (typeof FXFLASH_PEAK === 'number') ? FXFLASH_PEAK : 1;
+    /* 같은 호스트를 «신고 없음» 으로 한 번 더 — 짧아진 양을 재려면 안 짧아진 상자가 있어야 한다 */
+    const keep = window.fxKeepTxtTop; window.fxKeepTxtTop = () => null;
+    const A0 = rd(card); window.fxKeepTxtTop = keep;
+    return { A, A0, B, kt, peak };
   }, ID);
-  info('신고 호스트(카드)의 마스크', sc ? String(sc.am).slice(0, 90) : '측정 실패');
-  info('형제 호스트(아이콘 상자)의 마스크', sc ? String(sc.bm) : '측정 실패');
-  ok(!!sc && /gradient/.test(String(sc.am)),
-     '5-d1 신고 잉크(`FXKEEP_TXT`)를 **가진** 호스트에서만 마스크가 선다', sc ? '섰다' : '측정 실패');
-  ok(!!sc && !/gradient/.test(String(sc.bm)),
-     '5-d2 **스코프의 짝** — 같은 화면 형제(그 잉크가 없는 호스트)는 마스크 0건. '
-     + '09·12·17·코스튬·장비·훈련·단련·룬이 안 바뀌는 근거가 이 항이다', sc ? String(sc.bm) : '측정 실패');
-  /* α 가 0 이 되는 자리는 «잉크 윗변» 이어야 한다 — 그 아래면 글자를 여전히 밝히고,
-     너무 위면 플래시를 필요 이상으로 깎는다(둘 다 결함이다). 봉우리 배율 보정만큼의 여유를 준다. */
-  const cutY = (() => { if (!sc || !sc.am || !sc.ab) return null;
-    const m = /transparent\s+([\d.]+)px|rgba\(0,\s*0,\s*0,\s*0\)\s+([\d.]+)px/.exec(String(sc.am));
-    return m ? sc.ab.top + parseFloat(m[1] || m[2]) : null; })();
-  info('α=0 지점(프레임 y) ↔ 신고 잉크 윗변', cutY != null ? r2(cutY) + ' ↔ ' + r2(sc.kt) : '측정 실패');
-  ok(cutY != null && sc.kt != null && cutY <= sc.kt + 0.5 && cutY >= sc.kt - 6,
-     '5-e α=0 지점이 **신고 잉크 윗변 바로 위**다(0~6px 위 — 봉우리 `scale(1.06)` 보정분)',
-     cutY != null ? ('Δ ' + r2(sc.kt - cutY) + 'px') : '측정 실패');
+  info('신고 호스트(카드) 상자', sc && sc.A ? ('top ' + r2(sc.A.top) + ' · h ' + r2(sc.A.h)
+       + ' ↔ 신고 없음 h ' + r2(sc.A0 && sc.A0.h) + ' · 호스트 rect h ' + r2(sc.A.r && sc.A.r.h)
+       + ' · 마스크 ' + sc.A.mask) : '측정 실패');
+  info('형제 호스트(아이콘 상자) 상자', sc && sc.B ? ('h ' + r2(sc.B.h)
+       + ' · 호스트 rect h ' + r2(sc.B.r && sc.B.r.h) + ' · 마스크 ' + sc.B.mask) : '측정 실패');
+  ok(!!sc && !!sc.A && !!sc.A0 && sc.A.h < sc.A0.h - 1,
+     '5-d1 신고 잉크(`FXKEEP_TXT`)를 **가진** 호스트에서만 상자가 짧아진다 — 신고를 없앤 사본보다 짧다',
+     sc && sc.A && sc.A0 ? (r2(sc.A.h) + ' < 신고 없음 ' + r2(sc.A0.h)) : '측정 실패');
+  ok(!!sc && !!sc.B && sc.B.r && sc.B.h > 0 && Math.abs(sc.B.h - sc.B.r.h) <= 0.01,
+     '5-d2 **스코프의 짝** — 같은 화면 형제(그 잉크가 없는 호스트)는 상자가 호스트 rect 그대로다. '
+     + '09·12·17·코스튬·장비·훈련·단련·룬이 안 바뀌는 근거가 이 항이다',
+     sc && sc.B ? (r2(sc.B.h) + ' ↔ 호스트 ' + r2(sc.B.r.h)) : '측정 실패');
+  /* 아래변이 서는 자리는 «잉크 윗변» 이어야 한다 — 그 아래면 글자를 여전히 밝히고,
+     너무 위면 플래시를 필요 이상으로 깎는다(둘 다 결함이다). 봉우리 배율에서 정확히 닿아야 한다. */
+  const botPeak = sc && sc.A ? (sc.A.top + sc.A.h / 2 + (sc.A.h / 2) * sc.peak) : null;
+  info('봉우리(scale 1.06)에서의 아래변 ↔ 신고 잉크 윗변',
+       botPeak != null ? r2(botPeak) + ' ↔ ' + r2(sc.kt) : '측정 실패');
+  ok(botPeak != null && sc.kt != null && Math.abs(botPeak - sc.kt) <= 1.0,
+     '5-e 아래변이 **봉우리에서 신고 잉크 윗변에 정확히 닿는다**(±1px — `FXFLASH_PEAK` 보정)',
+     botPeak != null ? ('Δ ' + r2(sc.kt - botPeak) + 'px') : '측정 실패');
+  /* ⚑⚑ 13회차 — **액자가 닫혀 있다.** 12회차는 같은 회수를 «마스크로 α 를 빼서» 얻었고 채점 2인이
+     각자 «아래 레일이 0장 · ㄷ 자» 로 잡았다. 이 항이 그 되돌아감을 막는다(마스크가 서면 빨강). */
+  ok(!!sc && !!sc.A && !/gradient/.test(String(sc.A.mask)),
+     '5-f ★ **액자가 닫혀 있다** — 마스크 0건이라 네 변이 다 그려진다(12회차 «ㄷ 자» 결손의 회귀 게이트)',
+     sc && sc.A ? String(sc.A.mask) : '측정 실패');
 
   ok(errs.length === 0, 'Z1 콘솔 에러 0', errs.length ? errs.slice(0, 3).join(' | ') : '없음');
 

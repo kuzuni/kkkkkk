@@ -63,6 +63,9 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE, NOFADE }) => {
     s.textContent = '.fx-flash{border-width:' + NOCAP + 'px !important}'; document.head.appendChild(s); }
   if (window.__v862ring) { window.fxRingIn = window.__v862ring; window.__v862ring = null; }
   if (RINGFN != null) { window.__v862ring = window.fxRingIn; window.fxRingIn = () => RINGFN; }
+  if (NOFADE) { if (!window.__v862ktt) window.__v862ktt = window.fxKeepTxtTop;
+    window.fxKeepTxtTop = () => null; }
+  else if (window.__v862ktt) { window.fxKeepTxtTop = window.__v862ktt; window.__v862ktt = null; }
   const it = RELICS.filter(r => r.id === RID)[0]; if (!it) return null;
   const el = document.querySelector('[data-rw="' + RID + '"]');
   if (T >= 0) {
@@ -77,14 +80,14 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE, NOFADE }) => {
     if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = Math.max(0, T); } catch (_) {} }
     else { a.pause(); try { a.finish(); } catch (_) {} }
   }); } catch (e) {}
-  /* ⚑⚑ 683 12회차 이관 — `NOFADE` 는 **12회차 제품을 되돌린 사본**이다(`fxFlashFade` 의 마스크를 뗀다).
+  /* ⚑⚑ 683 12·13회차 이관 — `NOFADE` 는 **그 회차 제품을 되돌린 사본**이다(`fxKeepTxtTop` 이
+     `null` 을 주게 해 `fxFlashClampH` 를 통째로 닫는다 = 상자가 네 변 다 띠만큼 들어간 옛 꼴).
      아래 [R2][R3] 은 «들이기·흰 테 상한이 일을 하는가» 를 묻는 862 자신의 되돌림 항인데, 12회차가
      플래시를 라벨 띠에서 빼 버리자 두 항의 전제가 사라져 값이 붙었다(들이기 0 사본의 액자선 잔존
      3.1% → 21.7% · 흰 테 상한 되돌림 15% ↔ 15%). 문턱을 넓히는 대신(334) **재는 사본을 12회차
      이전으로 되돌린다**(333 처방) — 두 축은 원래 묻던 것을 그대로 묻고, «12회차가 흡수했다» 는
      새 사실은 [C5] 가 따로 못박는다. */
-  if (NOFADE && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-flash'))) {
-    nd.style.webkitMaskImage = 'none'; nd.style.maskImage = 'none'; }
+
   const u = el.querySelector('u'), b = u.getBoundingClientRect(), c = el.getBoundingClientRect();
   if (BLANK) { window.__v862lab = u.textContent; u.textContent = ''; }
   let box = null, rim = null; const fl = L && L.querySelector('.fx-flash');
@@ -170,11 +173,41 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE, NOFADE }) => {
   const B = live && live.st;
   info('`.fx-flash` CSS 흰 테', cssRim + 'px');
   info('카드 ↔ 플래시 상자', B ? (JSON.stringify(B.card) + ' ↔ ' + JSON.stringify(B.box)) : '측정 실패');
+  /* ⚑⚑ **683 12·13회차 이관 — «네 변» 에 명시된 예외 하나가 생겼다(333 처방: 지우지 않고 갈랐다).**
+     유물 카드는 «Lv.n» 글자를 카드 하변 밖으로 걸치고 795 가 그것을 «워시 위로 되그릴 잉크» 로
+     신고한다. 그 신고가 있으면 플래시 **아래변만** 그 잉크 앞에서 멈춘다(`fxFlashClampH`) —
+     그래야 판이 글자를 안 밝히고, 12회차가 마스크로 하려다 만든 «ㄷ 자 액자» 도 안 생긴다.
+     ⇒ [B1] 은 **좌·우·상 세 변**을 종전 문턱 그대로 묻고(한 칸도 안 넓혔다),
+       아래변은 **[B1b]** 가 «신고가 없으면 띠 · 있으면 잉크 앞» 두 갈래로 묻는다. */
   ok(!!B && !!B.box && Math.abs((B.box.x - B.card.x) - band) < 0.6 && Math.abs((B.box.y - B.card.y) - band) < 0.6
-     && Math.abs((B.card.w - B.box.w) - 2 * band) < 1.2 && Math.abs((B.card.h - B.box.h) - 2 * band) < 1.2,
-     'B1 ★ **단발 호출에서도** 상자가 네 변 모두 띠(' + band + 'px)만큼 들어간다 — 들이기는 `inset` 인자가 아니라 «액자가 있는가» 가 정한다',
+     && Math.abs((B.card.w - B.box.w) - 2 * band) < 1.2,
+     'B1 ★ **단발 호출에서도** 상자가 좌·우·상 세 변 모두 띠(' + band + 'px)만큼 들어간다 — 들이기는 `inset` 인자가 아니라 «액자가 있는가» 가 정한다 (683 12·13회차: 아래변은 [B1b])',
      B && B.box ? ('좌 Δ' + r2(B.box.x - B.card.x) + ' · 상 Δ' + r2(B.box.y - B.card.y)
-                   + ' · 폭 −' + r2(B.card.w - B.box.w) + ' · 높이 −' + r2(B.card.h - B.box.h)) : '측정 실패');
+                   + ' · 폭 −' + r2(B.card.w - B.box.w)) : '측정 실패');
+  const BF = await ev(p, () => {
+    const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+    const card = document.querySelector('.rw-c[data-rw]'); if (!card) return null;
+    const rd = () => { fxFlash(card, null, false, true); const f = L.querySelector('.fx-flash');
+      const o = f ? { top: parseFloat(f.style.top), h: parseFloat(f.style.height) } : null;
+      while (L.firstChild) L.removeChild(L.firstChild); return o; };
+    const on = rd();
+    const keep = window.fxKeepTxtTop; window.fxKeepTxtTop = () => null;
+    const off = rd(); window.fxKeepTxtTop = keep;
+    const q = fxRect(card);
+    return { on, off, card: q ? { y: q.y, h: q.h } : null,
+             kt: (typeof fxKeepTxtTop === 'function') ? fxKeepTxtTop(card) : null,
+             peak: (typeof FXFLASH_PEAK === 'number') ? FXFLASH_PEAK : 1 };
+  });
+  const botOn = BF && BF.on ? BF.on.top + BF.on.h / 2 + (BF.on.h / 2) * BF.peak : null;
+  info('아래변 — 신고 있음 ↔ 없음', BF && BF.on && BF.off && BF.card
+    ? ('h ' + r2(BF.on.h) + ' ↔ ' + r2(BF.off.h) + ' (카드 h ' + r2(BF.card.h) + ' · 띠 ' + band + ')'
+       + ' · 봉우리 아래변 ' + r2(botOn) + ' ↔ 신고 잉크 윗변 ' + r2(BF.kt)) : '측정 실패');
+  ok(!!BF && !!BF.off && !!BF.card && Math.abs((BF.card.h - BF.off.h) - 2 * band) < 1.2
+     && botOn != null && BF.kt != null && Math.abs(botOn - BF.kt) <= 1.0,
+     'B1b ★ **아래변의 두 갈래** — 신고 잉크가 **없으면** 종전대로 띠(' + band + 'px)만큼이고(그 사본으로 확인), '
+     + '**있으면** 봉우리에서 그 잉크 윗변에 정확히 선다 (683 12·13회차 · 손 상수 0개)',
+     BF && BF.off && BF.card ? ('신고 없음 높이 −' + r2(BF.card.h - BF.off.h)
+       + ' · 신고 있음 봉우리 Δ ' + r2(BF.kt - botOn) + 'px') : '측정 실패');
   ok(!!B && B.rim != null && B.rim === Math.min(cssRim, band) && B.rim < cssRim,
      'B2 ★ 흰 테가 «CSS 값 ↔ 띠» 중 작은 쪽이다 — 액자선 자리를 넘지 않는다',
      B ? (B.rim + 'px = min(' + cssRim + ', ' + band + ')') : '측정 실패');

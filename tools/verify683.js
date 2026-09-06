@@ -614,6 +614,9 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
       /* 788 ⓐ — **뽑지 않는다.** 위 [H0] 이 이미 보유시킨 고정 칸에 연출만 건다
          (`rwSummonFx` 는 «어느 칸에 그리는가» 만 `it` 에서 읽는다 — 제품 경로 그대로다). */
       const it = RELICS.filter(r => r.id === ID)[0]; if (!it) return null;
+      if (NOFADE) { if (!window.__v683ktt) window.__v683ktt = window.fxKeepTxtTop;
+        window.fxKeepTxtTop = () => null; }
+      else if (window.__v683ktt) { window.fxKeepTxtTop = window.__v683ktt; window.__v683ktt = null; }
       if (T >= 0) rwSummonFx(it, true, null);
       /* ⚑⚑ 683 12회차 — `NOFADE` 는 **12회차 제품을 되돌린 사본**이다(`fxFlashFade` 가 건 마스크를 뗀다).
          아래 [H2][H3][H4] 는 «패치·길이 축이 살아 있는가» 를 묻는 되돌림 항인데, 12회차가 플래시를
@@ -621,9 +624,6 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
          겪은 것의 재판). 문턱을 내리는 대신(334) **재는 사본**을 12회차 이전으로 되돌린다(333 처방):
          그러면 두 축은 원래 묻던 것을 그대로 묻고, «12회차가 그 축을 흡수했다» 는 새 사실은
          아래 [H5][H6] 이 따로 못박는다(둘이 짝이라 어느 쪽이 죽어도 빨개진다). */
-      if (NOFADE) { const L2 = document.getElementById('fxl');
-        if (L2) for (const nd of Array.prototype.slice.call(L2.querySelectorAll('.fx-flash'))) {
-          nd.style.webkitMaskImage = 'none'; nd.style.maskImage = 'none'; } }
       try { document.getAnimations().forEach(a => {
         const tg = a.effect && a.effect.target;
         if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = Math.max(0, T); } catch (_) {} }
@@ -824,47 +824,56 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      두 회차 연속 일치)를 닫은 자리다. 회수·되돌림·대가의 **값**은 `probe683d` [4][5] 가 재고
      (그 자가 마스크·기준선을 들고 있다), 이 절은 그 처방이 **어떤 모양으로 서 있어야 하는가**를
      묶는다 — 손 상수로 굳지 않았는가 · 스코프가 이 화면 밖으로 안 새는가 · 자리가 잉크 윗변인가. */
-  blk('J] 글자 띠 α — 손잡이의 모양 · 스코프 · 자리 (12회차)');
-  ok(/function fxKeepTxtTop\(el\)\{/.test(src) && /function fxFlashFade\(d, el, top, h\)\{/.test(src),
-     'J1 손잡이가 이름 있는 함수 둘이다(`fxKeepTxtTop`·`fxFlashFade`) — 호출부에 산수를 안 적는다');
+  blk('J] 글자 앞에서 멈추는 상자 — 손잡이의 모양 · 스코프 · 자리 · 닫힌 액자 (12·13회차)');
+  ok(/function fxKeepTxtTop\(el\)\{/.test(src) && /function fxFlashClampH\(el, top, h\)\{/.test(src),
+     'J1 손잡이가 이름 있는 함수 둘이다(`fxKeepTxtTop`·`fxFlashClampH`) — 호출부에 산수를 안 적는다');
   ok(/function fxKeepTxtTop[\s\S]{0,600}querySelectorAll\(FXKEEP_TXT\)/.test(src),
      'J2 ★ 신고 목록을 **795 의 `FXKEEP_TXT` 에서 되읽는다** — «되그릴 잉크» 목록이 둘로 갈리지 않는다 '
      + '(갈리면 한쪽만 늘어나는 날 조용히 어긋난다)');
-  ok(/function fxFlashFade[\s\S]{0,700}borderTopWidth/.test(src),
-     'J3 ★ 페이드 길이가 **`.fx-flash` 자신의 `border-width`** 에서 나온다 — 손 상수를 새로 안 적었다(795·862 처방)');
-  ok(/function fxFlashFade[\s\S]{0,700}FXFLASH_PEAK/.test(src),
-     'J4 봉우리 보정에 이미 있는 `FXFLASH_PEAK` 를 쓴다 — 마스크는 요소 좌표라 `scale(1.06)` 을 같이 탄다');
+  ok(/function fxFlashClampH[\s\S]{0,500}FXFLASH_PEAK/.test(src),
+     'J3 ★ 봉우리 보정에 이미 있는 `FXFLASH_PEAK` 를 쓴다 — 상자는 **중심 기준**으로 1.06 배 커지므로 '
+     + '보정을 안 하면 봉우리에서 아래변이 잉크를 ≈3px 밟는다(손 상수 0개)');
+  ok(!/fxFlashFade/.test(src) && !/maskImage/.test(src),
+     'J4 ★ **마스크를 안 쓴다** — 12회차의 α 감산은 «아래 레일이 0장인 ㄷ 자 액자» 를 만들었고 '
+     + '채점 2인이 각자 그것을 새 결손으로 잡았다(13회차 정정)');
   const fade = await ev(p, () => {
     const L = document.getElementById('fxl'); if (!L) return null;
     while (L.firstChild) L.removeChild(L.firstChild);
     const card = document.querySelector('.rw-c[data-rw]'); const icon = card && card.querySelector('i');
     if (!card || !icon) return null;
-    const rd = q => { const f = L.querySelector('.fx-flash');
-      const m = f ? (getComputedStyle(f).maskImage || getComputedStyle(f).webkitMaskImage || 'none') : 'none';
-      const g = /([\d.]+)px\s*,\s*(?:transparent|rgba\(0,\s*0,\s*0,\s*0\))\s+([\d.]+)px/.exec(String(m));
-      const o = { m: String(m).slice(0, 120), top: f ? parseFloat(f.style.top) : null,
-                  a: g ? parseFloat(g[1]) : null, z: g ? parseFloat(g[2]) : null };
-      while (L.firstChild) L.removeChild(L.firstChild);
-      return o; };
-    fxFlash(card, 340, false, true); const A = rd();
-    fxFlash(icon, 340, false, true); const B = rd();
-    return { A, B, kt: (typeof fxKeepTxtTop === 'function') ? fxKeepTxtTop(card) : null };
+    const rd = host => { fxFlash(host, 340, false, true);
+      const f = L.querySelector('.fx-flash');
+      const q = fxRect(host);
+      const o = f ? { top: parseFloat(f.style.top), h: parseFloat(f.style.height),
+                      mask: getComputedStyle(f).maskImage || getComputedStyle(f).webkitMaskImage || 'none',
+                      hostH: q ? q.h : null, hostY: q ? q.y : null } : null;
+      while (L.firstChild) L.removeChild(L.firstChild); return o; };
+    const A = rd(card), B = rd(icon);
+    const keep = window.fxKeepTxtTop; window.fxKeepTxtTop = () => null;
+    const A0 = rd(card); window.fxKeepTxtTop = keep;
+    return { A, A0, B, kt: (typeof fxKeepTxtTop === 'function') ? fxKeepTxtTop(card) : null,
+             peak: (typeof FXFLASH_PEAK === 'number') ? FXFLASH_PEAK : 1 };
   });
-  info('신고 호스트(유물 카드) 마스크', fade ? fade.A.m : '측정 실패');
-  info('형제 호스트(아이콘 상자) 마스크', fade ? fade.B.m : '측정 실패');
-  ok(!!fade && /gradient/.test(fade.A.m) && fade.A.z != null,
-     'J5 신고 잉크를 **가진** 호스트에서 마스크가 선다', fade ? String(fade.A.z) + 'px 에서 α=0' : '측정 실패');
-  ok(!!fade && !/gradient/.test(fade.B.m),
-     'J6 ★ **스코프의 짝** — 그 잉크가 없는 호스트는 마스크 0건. 09·12·17·코스튬·장비·훈련·단련·룬이 '
-     + '한 픽셀도 안 바뀌는 근거가 이 항이다(`verify619` [K6] 와 같은 축)', fade ? fade.B.m : '측정 실패');
-  const cy = fade && fade.A.top != null && fade.A.z != null ? fade.A.top + fade.A.z : null;
-  ok(cy != null && fade.kt != null && cy <= fade.kt + 0.5 && cy >= fade.kt - 6,
-     'J7 ★ α=0 지점이 **신고 잉크 윗변 바로 위**다(0~6px 위 = 봉우리 보정분) — 아래면 글자를 계속 밝히고, '
-     + '너무 위면 플래시를 필요 이상으로 깎는다',
-     cy != null && fade.kt != null ? ('α=0 ' + Math.round(cy * 100) / 100 + ' ↔ 잉크 윗변 ' + Math.round(fade.kt * 100) / 100) : '측정 실패');
-  ok(!!fade && fade.A.a != null && fade.A.z != null && fade.A.z - fade.A.a > 4,
-     'J8 하드 컷이 아니라 **페이드**다(α 1→0 구간이 4px 초과) — 컷은 흰 링을 한 줄에서 끊어 «잘린 액자» 로 읽힌다',
-     fade ? (Math.round((fade.A.z - fade.A.a) * 100) / 100 + 'px') : '측정 실패');
+  const r2b = v => (v == null ? '—' : Math.round(v * 100) / 100);
+  info('신고 호스트(유물 카드) 상자', fade && fade.A
+    ? ('h ' + r2b(fade.A.h) + ' ↔ 신고 없음 ' + r2b(fade.A0 && fade.A0.h) + ' · 호스트 ' + r2b(fade.A.hostH)
+       + ' · 마스크 ' + fade.A.mask) : '측정 실패');
+  info('형제 호스트(아이콘 상자)', fade && fade.B ? ('h ' + r2b(fade.B.h) + ' ↔ 호스트 ' + r2b(fade.B.hostH)) : '측정 실패');
+  ok(!!fade && !!fade.A && !!fade.A0 && fade.A.h < fade.A0.h - 1,
+     'J5 신고 잉크를 **가진** 호스트에서만 상자가 짧아진다',
+     fade && fade.A ? (r2b(fade.A.h) + ' < 신고 없음 ' + r2b(fade.A0.h)) : '측정 실패');
+  ok(!!fade && !!fade.B && fade.B.hostH != null && Math.abs(fade.B.h - fade.B.hostH) <= 0.01,
+     'J6 ★ **스코프의 짝** — 그 잉크가 없는 호스트는 상자가 호스트 rect 그대로다. 09·12·17·코스튬·장비·'
+     + '훈련·단련·룬이 한 픽셀도 안 바뀌는 근거가 이 항이다(`verify619` [K6] 와 같은 축)',
+     fade && fade.B ? (r2b(fade.B.h) + ' ↔ ' + r2b(fade.B.hostH)) : '측정 실패');
+  const bot = fade && fade.A ? fade.A.top + fade.A.h / 2 + (fade.A.h / 2) * fade.peak : null;
+  ok(bot != null && fade.kt != null && Math.abs(bot - fade.kt) <= 1.0,
+     'J7 ★ 아래변이 **봉우리(`scale 1.06`)에서 신고 잉크 윗변에 정확히 닿는다**(±1px) — 그 아래면 글자를 '
+     + '계속 밝히고, 너무 위면 플래시를 필요 이상으로 깎는다',
+     bot != null && fade.kt != null ? ('봉우리 아래변 ' + r2b(bot) + ' ↔ 잉크 윗변 ' + r2b(fade.kt)) : '측정 실패');
+  ok(!!fade && !!fade.A && !/gradient/.test(String(fade.A.mask)),
+     'J8 ★ **액자가 닫혀 있다** — 마스크 0건이라 네 변이 다 그려진다(12회차 «ㄷ 자» 결손의 회귀 게이트)',
+     fade && fade.A ? String(fade.A.mask) : '측정 실패');
 
   blk('F] 불변 — 텍스트 0건(666) · 지불 이미터는 그대로 산다');
   const txt = await ev(p, () => {

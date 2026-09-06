@@ -426,18 +426,18 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
     if (re) { await paint(layers.ring); await p.waitForTimeout(80); bInk = await inkEgg(); await paint(''); }
     await ev(p, () => { const s = document.getElementById('__r683r11'); if (s) s.remove(); });
   }
-  /* ⚑⚑ 683 12회차 — **«12회차 페이드를 되돌린» 사본**(11회차 선언은 그대로 살린다).
-     12회차가 플래시를 라벨 띠에서 빼자 라벨 글리프가 알 위에 놓여도 알의 잉크가 안 잘린다 —
+  /* ⚑⚑ 683 12회차 — **«12·13회차 상자 클램프를 되돌린» 사본**(11회차 선언은 그대로 살린다).
+     12·13회차가 플래시 상자를 라벨 앞에서 끝내자 라벨 글리프가 알 위에 놓여도 알의 잉크가 안 잘린다 —
      즉 11회차가 치른 «전경 몫» 대가가 **0 으로 사라졌다**(2.00px → 0.00px). 그러면 옛 [B2c]
      («11회차 선언을 되돌리면 [B2b] 가 움직인다»)는 전제가 사라져 헛빨강이 된다.
      ⇒ 축을 지우지 않고 **되돌릴 대상을 12회차 쪽으로 옮긴다**(333 처방): 페이드를 되돌리면
        전경 몫이 되살아나야 하고([B2c]), 지금 제품에서는 대가가 0 이어야 한다([B2d]).
-     ⚠ 인라인 마스크는 `!important` 로만 눌린다(사본이 자기 style 로 들고 있다 — 11회차 §R 함정과 같은 꼴). */
+     ⚠ 되돌림 손잡이는 **하나**다(13회차) — `fxKeepTxtTop` 이 `null` 을 주면 `fxFlashClampH` 가 통째로
+       안 열려 상자가 12회차 이전으로 돌아간다. **스폰 전에** 걸어야 한다(상자는 스폰 시각에 정해진다). */
   let fInk = null;
   if (geo && fired && layers && layers.ring) {
-    await ev(p, () => { const s = document.createElement('style'); s.id = '__r683r12';
-      s.textContent = '.fx-flash{-webkit-mask-image:none !important;mask-image:none !important}';
-      document.head.appendChild(s); });
+    await ev(p, () => { if (!window.__r683k12) window.__r683k12 = window.fxKeepTxtTop;
+      window.fxKeepTxtTop = () => null; });
     const re2 = await ev(p, id => {
       const it = RELICS.find(r => r.id === id); if (!it) return false;
       const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
@@ -449,7 +449,7 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
       return document.querySelectorAll('#fxl .fx-rlic').length === 1;
     }, geo.id);
     if (re2) { await paint(layers.ring); await p.waitForTimeout(80); fInk = await inkEgg(); await paint(''); }
-    await ev(p, () => { const s = document.getElementById('__r683r12'); if (s) s.remove(); });
+    await ev(p, () => { if (window.__r683k12) { window.fxKeepTxtTop = window.__r683k12; window.__r683k12 = null; } });
   }
   if (icInk && bInk) {
     const r = dOf(bInk, icInk);
@@ -467,12 +467,12 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
        + (r.d - b.d).toFixed(2) + 'px');
     const f = fInk ? dOf(fInk, icInk) : null;
     ok(!!f && Math.abs(f.d - b.d) >= 0.5,
-       'B2c ★ **되돌림 시험**(683 12회차 이관) — **12회차 페이드**를 되돌리면 [B2b] 가 실제로 움직인다(≥0.5px). '
+       'B2c ★ **되돌림 시험**(683 12회차 이관) — **12·13회차 클램프**를 되돌리면 [B2b] 가 실제로 움직인다(≥0.5px). '
        + '안 움직이면 이 자는 «언제나 초록» 인 헛초록이다',
-       f ? ('페이드 되돌림 ' + f.d.toFixed(2) + 'px ↔ 후광 자체 ' + b.d.toFixed(2) + 'px = 차 '
+       f ? ('클램프 되돌림 ' + f.d.toFixed(2) + 'px ↔ 후광 자체 ' + b.d.toFixed(2) + 'px = 차 '
             + Math.abs(f.d - b.d).toFixed(2) + 'px') : '측정 실패');
     ok(Math.abs(r.d - b.d) <= 0.3,
-       'B2d ★ **12회차가 11회차의 대가를 없앴다**(신설) — 지금 제품에서는 11회차 선언을 되돌려도 알이 안 움직인다(≤0.3px). '
+       'B2d ★ **12·13회차가 11회차의 대가를 없앴다**(신설) — 지금 제품에서는 11회차 선언을 되돌려도 알이 안 움직인다(≤0.3px). '
        + '플래시가 라벨 띠를 안 밝히니 라벨 글리프가 알 잉크를 안 자른다',
        '전경 몫 ' + (r.d - b.d).toFixed(2) + 'px (11회차 2.00px)');
   }
