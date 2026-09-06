@@ -190,7 +190,7 @@ const FREEZE_OLD = () => {
         ['fxUpOk(card, card);                            /* 17 «성공» 과 같은 한 세트(58 톤) — 814: 문구는 뺀다 */',
          "fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));"],
         ['      cosLvPop();                                    /* 814 — 값이 바뀐 줄이 «방금 갱신됐다» 를 말한다 */\n', ''],
-        ['  .sk-clv.fx-cvswap{animation:fxCvSwapS .34s cubic-bezier(.34,1.56,.64,1) both, fxCvLit .34s linear}', ''],
+        ['  .sk-clv.fx-cvswap{animation:fxCvSwapS .34s linear both, fxCvLit .34s linear}', '']   /* 979 이관 — 약칭이 오버슛에서 `linear` 로 갈렸다(값 Δ0). 앵커는 «지금 판» 이어야 한다 */,
         ['#bCos .sk-card{--burst-ry:.315;--burst-sz:.5;--burst-rx:.60;--flash-keep:.sk-clv,.sk-bar>b;--flash-k:.70}', '']
       ];
       let rev = s;
