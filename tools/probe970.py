@@ -359,6 +359,11 @@ def main():
         print('   깊이  %s' % ' '.join('%5.1f' % r[0] for r in rows))
         print('   좌비  %s' % ' '.join('%5.2f' % r[1] for r in rows))
         print('   우비  %s' % ' '.join('%5.2f' % r[2] for r in rows))
+        L = sorted(r[1] for r in rows)
+        R = sorted(r[2] for r in rows)
+        mL, mR = L[len(L) // 2], R[len(R) // 2]
+        print('   절대 L 중앙값 %.3f ⇒ rx %.2f · R 중앙값 %.3f ⇒ rx %.2f · **좌우 갈림 %.2f px**'
+              % (mL, 30 * mL, mR, 30 * mR, abs(30 * mL - 30 * mR)))
         vs = sorted([r[1] for r in rows] + [r[2] for r in rows])
         med = vs[len(vs) // 2]
         q1, q3 = vs[len(vs) // 4], vs[3 * len(vs) // 4]
@@ -377,6 +382,10 @@ def main():
             q1, q3 = v[len(v) // 4], v[3 * len(v) // 4]
             print('   %s  비율 중앙값 %.3f (사분위 %.3f~%.3f · 표본 %d)  ⇒ rx %.2f'
                   % (side, m, q1, q3, len(v), 30 * m))
+        vL = sorted(o['L']); vR = sorted(o['R'])
+        print('   면역 L ⇒ rx %.2f · R ⇒ rx %.2f · **좌우 갈림 %.2f px**'
+              % (30 * vL[len(vL) // 2], 30 * vR[len(vR) // 2],
+                 abs(30 * vL[len(vL) // 2] - 30 * vR[len(vR) // 2])))
         allv = sorted(o['L'] + o['R'])
         m = allv[len(allv) // 2]
         q1, q3 = allv[len(allv) // 4], allv[3 * len(allv) // 4]

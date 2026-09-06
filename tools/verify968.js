@@ -112,18 +112,26 @@ const IDX = { refCov: 30.6, capCov: 28.1, refInt: 32.0, capInt: 28.7 };
   const rxCap = toRx(IDX.capCov, 3), rxRef = toRx(IDX.refCov, 3);
   ok('[1-d] ⚑ **대조군이 닫힌다** — 눈금 28.1 을 모델로 되돌리면 rx **30.0**(참값 = CSS 선언 30)',
     near(rxCap, 30, 0.25), f2(rxCap));
-  ok('[1-e] 같은 모델로 ref 눈금 30.6 을 옮기면 rx **32.6** — 선언 30 과의 차는 0.6 이 아니라 **2.6** 이다',
-    near(rxRef, 32.65, 0.3) && rxRef - 30 > 2.0, f2(rxRef) + ' (Δ선언 +' + f2(rxRef - 30) + ')');
+  /* ⚑⚑ 970 이관 (2026-09-06) — 아래 넷은 **뜻은 그대로, 값만** 옮겼다. 968 이 «오차막대» 로
+     적은 ±1.3 이 실은 `radius()` 의 ref 원점 리터럴 하나였고(ref 만 셸상변+6 · cap 은 +7),
+     970 이 그것을 **2028** 로 모아 두 자를 한 규칙으로 세웠다. 그래서 눈금이 30.6 → 29.6 ·
+     과녁이 32.65 → **31.62** 다. 자리를 비우지 않는다 — [1-e] 는 여전히 «같은 모델로 옮기면
+     선언 30 과 얼마나 갈리나» 를 묻고, [1-f] 는 여전히 «원점 1px 이 과녁을 얼마나 흔드나» 를
+     묻는다. 다만 이제 그 흔들림은 **오차막대가 아니라 고쳐진 버그**라고 적는다.
+     상세·판정은 `tools/verify970.js` · `docs/review/970-알약코너반경.md`. */
+  ok('[1-e] 같은 모델로 ref 눈금을 옮기면 rx **31.6** — 선언 30 과의 차는 0.6 이 아니라 **1.6** 이다',
+    near(rxRef, 31.62, 0.35) && rxRef - 30 > 1.0, f2(rxRef) + ' (Δ선언 +' + f2(rxRef - 30) + ')');
   const rxLo = toRx(IDX.refCov, 2), rxHi = toRx(IDX.refCov, 4);
-  ok('[1-f] 과녁에는 오차막대가 있다 — `radius(ref7, …, 2027)` 원점 리터럴 **1px 당 ∓1.3** ⇒ **rx = 32.7 ± 1.3**',
-    near(rxRef - rxLo, 1.3, 0.15) && near(rxHi - rxRef, 1.3, 0.15) && rxLo - 30 > 1.0,
+  ok('[1-f] ⚑ 970 — 원점 리터럴 **1px 당 ∓1.3** 은 그대로지만, 그 1px 은 오차막대가 아니라 **버그였다**(2027 → 2028)',
+    near(rxRef - rxLo, 1.3, 0.2) && near(rxHi - rxRef, 1.3, 0.2)
+    && /radius\(ref7, 292, 551, 2028, 'ref'\)/.test(S352),
     'off2 ' + f2(rxLo) + ' · off3 ' + f2(rxRef) + ' · off4 ' + f2(rxHi));
-  ok('[1-g] 같은 자끼리의 짝만 뺀다 — ref ↔ 우리 눈금 차가 **+2.5** (옛 자로도 +3.3 으로 같은 부호)',
-    IDX.refCov - IDX.capCov > 2.0 && IDX.refInt - IDX.capInt > 2.0,
+  ok('[1-g] 같은 자끼리의 짝만 뺀다 — ref ↔ 우리 눈금 차가 **+1.5** (옛 자로도 같은 부호)',
+    IDX.refCov - IDX.capCov > 1.0 && IDX.refInt - IDX.capInt > 1.0,
     '새 자 +' + f2(IDX.refCov - IDX.capCov) + ' · 옛 자 +' + f2(IDX.refInt - IDX.capInt));
-  ok('[1-h] ⚠ 등재문의 짝(«30.6 ↔ 선언 30 = Δ0.6»)은 **자를 섞은 것**이다 — 같은 자로는 그 값이 안 나온다',
-    Math.abs(Math.abs(IDX.refCov - 30) - Math.abs(IDX.refCov - IDX.capCov)) > 1.5,
-    '|30.6−30| ' + f2(Math.abs(IDX.refCov - 30)) + ' ↔ |30.6−28.1| ' + f2(IDX.refCov - IDX.capCov));
+  ok('[1-h] ⚠ 등재문의 짝(«눈금 ↔ 선언 30»)은 **자를 섞은 것**이다 — 같은 자로는 그 값이 안 나온다',
+    Math.abs(Math.abs(IDX.refCov - 30) - Math.abs(IDX.refCov - IDX.capCov)) > 1.0,
+    '|눈금−30| ' + f2(Math.abs(IDX.refCov - 30)) + ' ↔ |눈금−우리눈금| ' + f2(IDX.refCov - IDX.capCov));
 
   /* ── [2] 제품은 한 자도 안 옮겼다 — 세 자리가 한 값 ────────────────────── */
   console.log('\n[2] 968 은 제품 `index.html` **0줄** — 반경 30 이 세 자리에 그대로다');
