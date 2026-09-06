@@ -271,18 +271,21 @@ def _phys_px(widths, sig, x, blur):
     """참값 층더미의 한 점 — 번짐(σ)은 정규화 가우시안(ref = JPEG 의 경사면)."""
     import math as _m
     col = dict(PAL)
+    # 958 2회차 — 층 이름은 이 팔레트의 글자가 **기본**이고, 팔레트 밖 부품(352 의 셸 크림·
+    # 바 바닥·구분선)은 **RGB 삼중항을 그대로** 적을 수 있다. 글자를 주면 옛 걸음 그대로다
+    # (PAL 에 색을 더하면 `cls()` 분류가 바뀌어 남의 자가 흔들리므로 팔레트는 안 건드린다).
     edges, acc = [], 0.0
     for ch, w in widths:
-        edges.append((acc, acc + w, ch))
+        edges.append((acc, acc + w, col[ch] if isinstance(ch, str) else tuple(ch)))
         acc += w
 
     def truth(u):
         if u < 0.0:
-            return col[edges[0][2]]      # 더미 밖은 «같은 층이 이어진다» — 끝의 가짜 경사면을 안 만든다
-        for a, b, ch in edges:
+            return edges[0][2]           # 더미 밖은 «같은 층이 이어진다» — 끝의 가짜 경사면을 안 만든다
+        for a, b, rgb in edges:
             if a <= u < b:
-                return col[ch]
-        return col[edges[-1][2]]
+                return rgb
+        return edges[-1][2]
 
     if not blur:
         return truth(x)

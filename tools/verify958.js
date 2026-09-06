@@ -247,8 +247,12 @@ console.log('\n[7] 장부 — 932 전수에서 B → 면역 · 주홍 래칫 6 �
   ok('[7-c] ⚑ 판정이 유효하다 — 장부의 신호가 지금 소스와 같다 (자를 또 고치면 여기가 먼저 빨개진다)',
     r && !r.stale, r && `${r.sig} ↔ ${r.led && r.led.sig}`);
   const brk = rows.filter((x) => x.verdict === 'B').map((x) => x.file);
-  ok('[7-d] 주홍이 5 로 줄었다 (942 가 넘긴 여섯 중 하나를 닫았다)',
-    brk.length === 5, brk.join(' '));
+  /* 958 2회차 이관 — 못박는 뜻은 «958 이 닫은 자가 주홍에 하나도 없다» 이고, 개수 5 는
+     1회차 시점의 잔량이었다. 2회차가 `probe352.py` 를 닫아 4 가 되므로 **뜻은 그대로 두고**
+     수만 «≤ 5» 로 열었다 — 남은 넷의 **이름**은 아래 [9-o] 가 래칫으로 든다. */
+  ok('[7-d] 주홍에 **958 이 닫은 자가 하나도 없다** (1회차 `probe384` · 2회차 `probe352`)',
+    brk.length <= 5 && !['probe384.py', 'probe352.py'].some((f) => brk.includes(f)),
+    brk.join(' '));
   ok('[7-e] 장부가 «왜» 를 든다 — 기각한 처방과 고른 처방이 둘 다 적혀 있다',
     r && /runs_from/.test(r.led.why) && /문턱 교차 보간/.test(r.led.why));
 }
@@ -265,6 +269,130 @@ console.log('\n[8] 캡처 — 커밋 금지 자산이 없어도 돈다');
     fs.existsSync(cap) || /캡처 .* 없음/.test(out));
   ok('[8-c] 소스가 존재 확인 뒤에 연다 (무조건 `Image.open` 이 아니다)',
     /os\.path\.exists\(CAP7\)/.test(SRC));
+}
+
+/* ── [9] 2회차 — `tools/probe352.py` ───────────────────────────────────── */
+console.log('\n[9] 2회차 — `probe352.py` 세 축(테두리 두께 · 구분선 h · 알약 코너 인셋)이 정수 격자에서 풀렸는가');
+{
+  const S352 = fs.readFileSync(path.join(TOOLS, 'probe352.py'), 'utf8');
+  const run352 = (extra) => String(py(['tools/probe352.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+  const PH = run352(['--physics']);
+  const COV = run352([]);
+  const INT = run352(['--int']);
+
+  /* «⇒ **… 부호 편향  옛 -2.333 → 새 -0.205 px**» → [옛, 새] */
+  const bias = (head) => {
+    const blk = PH.split(head)[1];
+    const m = blk && blk.match(/옛\s*([-+]?[\d.]+)\s*→\s*새\s*([-+]?[\d.]+)\s*px/);
+    return m ? [parseFloat(m[1]), parseFloat(m[2])] : null;
+  };
+  const A = bias(' ⓐ 셸 검정 테두리'), B = bias(' ⓑ 구분선 두께'), D = bias(' ⓒ 알약 코너 인셋');
+
+  /* ---- 물리 — 합성 판이 «번진 쪽만 한 방향으로 깎인다» 를 세 축에서 다시 찍는다 ---- */
+  ok('[9-a] 재현이 세 축을 전부 낸다 (그림도 브라우저도 안 쓴다)', !!A && !!B && !!D,
+    A && B && D ? `두께 ${A} · 구분선 ${B} · 인셋 ${D}` : 'nul');
+  ok('[9-b] 두께 — 옛 자는 번진 판에서 **한 방향으로** 2px 넘게 깎인다',
+    A && A[0] < -2.0, A && A[0]);
+  ok('[9-c] 두께 — 새 자는 그 편향이 **1/10 아래**다', A && Math.abs(A[1]) < 0.25 && Math.abs(A[1]) < Math.abs(A[0]) / 10,
+    A && A[1]);
+  ok('[9-d] 구분선 — 옛 자는 편향이 남고 새 자는 **0.00** 이다 (S↔V 는 밝기 차 22 뿐인데도)',
+    B && Math.abs(B[0]) > 0.1 && Math.abs(B[1]) < 0.02, B && `${B[0]} → ${B[1]}`);
+  ok('[9-e] 인셋(위치 축) — 옛 자 +0.9 대 → 새 자 ±0.05 안',
+    D && D[0] > 0.5 && Math.abs(D[1]) < 0.05, D && `${D[0]} → ${D[1]}`);
+  const gap = PH.match(/판 사이 \|Δ\| ([\d.]+) → ([\d.]+)/);
+  ok('[9-f] 판 사이 |Δ| 도 같이 줄었다 (두 판을 갈라 놓던 그 값이다)',
+    gap && parseFloat(gap[2]) < parseFloat(gap[1]) / 2, gap && `${gap[1]} → ${gap[2]}`);
+
+  /* ---- 지문 — 칼같은 판은 정수가 맞고, 번진 판만 격자에서 풀려야 한다 ---- */
+  const fp = (who, mode) => {
+    const m = PH.match(new RegExp(`${who} ${mode}\\s+정수 (\\d+)/(\\d+)`));
+    return m ? [+m[1], +m[2]] : null;
+  };
+  const capCov = fp('cap', 'cov'), refInt = fp('ref', 'int'), refCov = fp('ref', 'cov');
+  ok('[9-g] ⚑ **칼같은 판은 새 자도 정수다** — 경계가 계단이면 부분 화소 정보가 애초에 없다',
+    capCov && capCov[0] === capCov[1] && capCov[1] > 0, capCov && capCov.join('/'));
+  ok('[9-h] 번진 판 — 옛 자는 **전부** 정수', refInt && refInt[0] === refInt[1] && refInt[1] > 0,
+    refInt && refInt.join('/'));
+  ok('[9-i] 번진 판 — 새 자는 **하나도** 정수가 아니다', refCov && refCov[0] === 0 && refCov[1] > 0,
+    refCov && refCov.join('/'));
+
+  /* ---- ref 실측 — 격자에서 풀렸는가 + CSS 항등식 검산 ---- */
+  const b4 = COV.match(/부분화소 좌([\d.]+) 우([\d.]+) 상([\d.]+) 하([\d.]+)/);
+  const bi = INT.match(/느슨≤24 좌(\d+) 우(\d+) 상(\d+) 하(\d+)\s+\|\s+순검정≤4 좌(\d+) 우(\d+) 상(\d+) 하(\d+)/);
+  ok('[9-j] ref 테두리 넷이 전부 **비정수**다 (옛 자는 넷 다 정수였다)',
+    b4 && [1, 2, 3, 4].every((k) => Math.abs(+b4[k] - Math.round(+b4[k])) > 1e-9),
+    b4 && b4.slice(1, 5).join(' '));
+  /* ⚑⚑ 옛 자가 «검정 문턱을 둘» 들고 있던 것 자체가 정수 걸음의 증상이었다 — 둘은 **같은 런의
+     같은 두 모서리**를 재면서 시작 표본만 한 칸 다르게 잡아(순검정은 AA 를 피해 l+1 에서 센다)
+     예외 없이 1 이 벌어진다. 부분 화소는 그 애매함이 **없다** — 값이 하나이고, 두 정수 사이에 앉는다. */
+  ok('[9-k] ⚑⚑ 옛 자는 문턱마다 **다른 답**을 내고(네 면 다 1~2 차이) 새 자는 **한 값**이다',
+    bi && b4 && [1, 2, 3, 4].every((k) => +bi[k] - +bi[k + 4] >= 1)
+      && [1, 2, 3, 4].every((k) => +bi[k + 4] < +b4[k] && +b4[k] < +bi[k] + 1),
+    bi && b4 && `느슨 ${bi.slice(1, 5).join('/')} · 순검정 ${bi.slice(5, 9).join('/')} → ${b4.slice(1, 5).join('/')}`);
+  ok('[9-l] ⚑ **하변이 검산이다** — `box-shadow` 립은 상·좌·우뿐이라 하변은 테두리 7 뿐이고, 새 자가 7.0±0.1 을 낸다',
+    b4 && Math.abs(+b4[4] - 7.0) < 0.1, b4 && b4[4]);
+  ok('[9-m] 그 셋(립 있는 면)은 7 + `--sl` 1.5 = **8.5** 쪽이다 (옛 정수 자는 어느 문턱으로도 못 낸 값)',
+    b4 && [1, 2, 3].every((k) => Math.abs(+b4[k] - 8.5) < 0.35), b4 && b4.slice(1, 4).join(' '));
+  ok('[9-n] ⚠ 옛 자는 하변에서 **둘 다 틀렸다** (느슨 6 · 순검정 5 ↔ 참값 7) — 무르게 푼 수리가 아니다',
+    bi && +bi[4] < 7 && +bi[8] < 7, bi && `느슨 ${bi[4]} · 순검정 ${bi[8]}`);
+
+  const sepC = COV.match(/부분화소 y ([\d.]+)~([\d.]+) \(h \*\*([\d.]+)\*\*\) · 상변에서 \*\*\+([\d.]+)\*\*/);
+  const sepI = INT.match(/y (\d+)~(\d+) \(h (\d+)\) · 셸 바깥 상변에서 \*\*\+(\d+)\*\*/);
+  ok('[9-o] ref 구분선 h 가 격자에서 풀렸다 (옛 정수 55 ↔ 제품 선언 54)',
+    sepC && sepI && Math.abs(+sepC[3] - Math.round(+sepC[3])) > 1e-9 && +sepI[3] === 55,
+    sepC && sepI && `${sepI[3]} → ${sepC[3]}`);
+  ok('[9-p] 그 값이 제품 선언(54) 쪽으로 움직였다 — 자를 갈자 «어긋남» 이 줄었다',
+    sepC && sepI && Math.abs(+sepC[3] - 54) < Math.abs(+sepI[3] - 54),
+    sepC && sepI && `|55−54| 1.00 → |${sepC[3]}−54| ${(Math.abs(+sepC[3] - 54)).toFixed(2)}`);
+  const insC = (COV.match(/부분화소 좌 ([^\n]+)/) || [])[1];
+  const ins = insC ? insC.trim().split(/\s+/).filter((v) => v !== '--').map(Number) : [];
+  ok('[9-q] ref 코너 인셋도 격자에서 풀렸다 (16칸 중 비정수 ≥ 14)',
+    ins.length >= 15 && ins.filter((v) => Math.abs(v - Math.round(v)) > 1e-9).length >= 14,
+    `${ins.filter((v) => Math.abs(v - Math.round(v)) > 1e-9).length}/${ins.length}`);
+
+  /* ---- 보존 — 두 모드가 **같은 것**을 잰다 ---- */
+  const pick = (t) => t.split('\n').filter((l) => /느슨≤24|좌인셋|우인셋|셸 바깥 상변에서/.test(l)).join('\n');
+  ok('[9-r] ⚑⚑ 두 모드의 «어느 런인가» 가 **글자까지 같다** — 표본·문턱·창을 안 건드렸다는 가장 짧은 증거',
+    pick(COV) === pick(INT) && pick(INT).length > 0);
+  ok('[9-s] 그래도 두 자가 실제로 다른 값을 낸다 (사본이 아니다)',
+    b4 && bi && Math.abs(+b4[4] - +bi[4]) > 0.5);
+
+  /* ---- 불변 — 창·문턱·«고르는 규칙» 이 소스에 그대로다 ---- */
+  ok('[9-t] 두 문턱 상수가 소스에 그대로다 (`LOOSE, PURE = 24, 4`)', /LOOSE, PURE = 24, 4/.test(S352));
+  ok('[9-u] «3칸 이상 런» 규칙이 그대로다', (S352.match(/len\(cur\) >= 3/g) || []).length === 2);
+  ok('[9-v] 구분선 색 상자가 그대로다',
+    /45 <= px\[x, y\]\[0\] <= 95 and 30 <= px\[x, y\]\[1\] <= 80/.test(S352) && /sum\(px\[x, y\]\) < 210/.test(S352));
+  ok('[9-w] 알약 상자·창(span 25 · 좌우 ±25)이 그대로다',
+    /def radius\(px, pill_l, pill_r, pill_t, tag, span=25\)/.test(S352)
+    && /pill_l - 25/.test(S352) && /pill_r \+ 25/.test(S352)
+    && /radius\(ref7, 292, 551, 2027, 'ref'\)/.test(S352));
+  ok('[9-x] 원호 역산식이 그대로다 (`r = (d+ins) + √(2·d·ins)`)',
+    (S352.match(/\(d \+ ins\) \+ math\.sqrt\(2\.0 \* d \* ins\)/g) || []).length === 2);
+  ok('[9-y] 옛 자가 `--int` 로 살아 있다', /MODE = 'int' if '--int' in sys\.argv else 'cov'/.test(S352));
+  ok('[9-z] ⚑ **사본을 안 만들었다** — 합성 판은 `probe409g.phys_cols` 가 그린다(번짐 셈 0줄)',
+    /from probe409g import phys_cols/.test(S352) && !/def _phys_px|def _phys_sample/.test(S352));
+
+  /* ---- 캡처 (여섯째) ---- */
+  ok('[9-A] ⚑ 캡처가 없어도 **즉사하지 않는다** (942 2·3·4·5회차 · 958 1회차와 같은 얼굴로 **여섯째**)',
+    /══════ 07 스킬 시트/.test(COV));
+  ok('[9-B] 없으면 «없다» 고 한 줄 말하고 ref 절만 돈다',
+    fs.existsSync(path.join(ROOT, 'docs/review/96-full-hero.png')) || /캡처 없음/.test(COV));
+  ok('[9-C] 소스가 존재 확인 뒤에 연다', /os\.path\.exists\(CAP7\)/.test(S352));
+
+  /* ---- 래칫 — 남은 넷의 이름 ---- */
+  const brk4 = P.census().filter((x) => x.verdict === 'B').map((x) => x.file).sort();
+  ok('[9-D] 주홍 넷이 **이름으로** 남았다 (958 이 여섯 중 둘을 닫았다)',
+    brk4.join(' ') === 'probe449.py scanA4.py scanA4b.py scan335.py'.split(' ').sort().join(' '),
+    brk4.join(' '));
+
+  /* ---- 되돌림 ---- */
+  ok('[9-R1] 옛 자(`--int`)를 [9-c] 의 자로 재면 **떨어진다** — 항이 헛초록이 아니다',
+    A && !(Math.abs(A[0]) < 0.25));
+  ok('[9-R2] 구분선·인셋도 마찬가지다',
+    B && D && Math.abs(B[0]) > 0.02 && Math.abs(D[0]) > 0.05);
+  ok('[9-R3] ref 지문도 되돌아간다 — 옛 자는 테두리 넷이 **전부** 정수다',
+    bi && [1, 2, 3, 4, 5, 6, 7, 8].every((k) => /^\d+$/.test(bi[k])));
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */
