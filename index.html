@@ -23820,11 +23820,14 @@ const ES_A    = 0.5872;     /* = ln(1.14)/ln(1.25) — 적 «맷집 대 화력»
      그대로 재현된다(`verify249` [J] 되돌림 시험이 그것을 실제로 굽는다). */
 const ES_BAND  = 40;        /* 초기 톱니 주기 — 199 6회차: 벽의 «자리»(① 적중·첫 벽·간격)를 정하는 경계 점프의 크기 */
 const ES_BAND2 = 16;        /* 말미 톱니 주기 — 199 32회차: α 2.21 이 요구하는 폭(14.9~15.5) */
+const ES_BAND3 = 24;        /* 전이 톱니 주기 — 199 40회차 후보(두 단 사다리). **0 이면 종전 한 단** */
 const ES_BANDG = 9;         /* 사다리 문턱 = 초기 폭의 «관문 번호» n ⇒ 문턱 스테이지 = ES_BAND × n */
-const eBandSw  = ES_BAND * ES_BANDG;                     /* 사다리가 좁아지는 스테이지(이 칸부터 ES_BAND2) */
-const eBandW   = a => a < eBandSw ? ES_BAND : ES_BAND2;  /* 그 구간의 폭 — 앵커 a 로 묻는다 */
-const eBand    = s => s < eBandSw ? Math.max(1, ES_BAND * Math.floor(s / ES_BAND))
-                                  : eBandSw + ES_BAND2 * Math.floor((s - eBandSw) / ES_BAND2);
+const eBandSw  = ES_BAND * (ES_BANDG - (ES_BAND3 ? 1 : 0));  /* 사다리가 좁아지는 스테이지 */
+const eBandSw2 = eBandSw + (ES_BAND3 || 0);                  /* 말미 구간(폭 ES_BAND2) 시작 */
+const eBandW   = a => a < eBandSw ? ES_BAND : (a < eBandSw2 ? ES_BAND3 : ES_BAND2);
+const eBand    = s => s < eBandSw  ? Math.max(1, ES_BAND * Math.floor(s / ES_BAND))
+                    : s < eBandSw2 ? eBandSw
+                                   : eBandSw2 + ES_BAND2 * Math.floor((s - eBandSw2) / ES_BAND2);
 const eSmooth = a => (1 + ES_K*(a-1))
                   * Math.pow(ES_M1, Math.min(a, ES_KNEE) - 1)
                   * Math.pow(ES_M2, Math.max(0, a - ES_KNEE));

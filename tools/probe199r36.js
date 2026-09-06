@@ -41,7 +41,31 @@ const ck = (name, cond, got) => { if (cond) { OK++; say(`  ✔ ${name}` + (got !
                                   else { NG++; say(`  ✗ ${name}` + (got != null ? ` — ${got}` : '')); } };
 
 /* ── 실행 둘 — 36회차가 **같은 κ 표**(6a013a86ea41)로 새로 돌린 것. ── */
-const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const SRC_HEAD = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+/* ⚑ 199 40회차 이관 — 이 자가 읽는 실행들은 전부 **한 단 사다리 세대**(40 → 16)의 표다.
+   제품이 두 단(40 → `ES_BAND3` → 16)이 된 뒤로 «현재 곡선» 으로 그 표를 해석하면 판정이
+   통째로 어긋난다 — «s360 의 장벽을 만든 폭» 이 40 이 아니라 16 으로 읽히고, 이 자의 본체
+   주장(«어긋난 것은 옛 폭이 만든 관문이다»)이 자기 근거를 잃는다. ⇒ 곡선을 **그 실행이 쓴
+   세대**로 되돌려 읽는다. 되돌림이 조용히 공허해지지 않도록 [G0] 이 그것을 실행 기록
+   (`band`·`bandSw`·`band2`)과 대조한다 — 세대가 또 바뀌면 그 항이 먼저 빨개진다. */
+const SRC = SRC_HEAD.replace(/const ES_BAND3\s*=\s*\d+/, 'const ES_BAND3 = 0');
+
+/* ═══ [G0] 세대 대조 — 위 «되돌려 읽기» 가 공허해지지 않게 ═══════════════════
+   되돌린 곡선이 정말 그 실행이 쓴 세대인지 **실행 기록**(`band`·`bandSw`·`band2`)과 맞춘다.
+   제품이 또 갈리면 이 항이 **먼저** 빨개져 본체 판정이 조용히 낡는 것을 막는다(199 40회차). */
+function gen0Check(runFile) {
+  const p = path.join(ROOT, 'docs', 'review', runFile);
+  if (!fs.existsSync(p)) return;
+  const rep = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const s0 = (rep.policies && rep.policies.diligent && rep.policies.diligent[0]) || null;
+  const ec = require('./ecurve')(SRC, 'GEN0');
+  ck('[G0] 되돌려 읽은 곡선이 그 실행이 쓴 세대와 같다 (ES_BAND·eBandSw·ES_BAND2 대조)',
+     !!s0 && s0.band === ec.BAND && s0.bandSw === ec.SW && s0.band2 === ec.BAND2,
+     s0 ? `실행 ${s0.band}/${s0.bandSw}/${s0.band2} ↔ 되돌린 곡선 ${ec.BAND}/${ec.SW}/${ec.BAND2}` : '실행 JSON 없음');
+  ck('[G0b] 되돌리기가 실제로 한 글자를 바꿨다 — 제품이 두 단이라는 뜻 (한 단이면 공허하게 참)',
+     SRC !== SRC_HEAD || !/const ES_BAND3\s*=\s*[1-9]/.test(SRC_HEAD),
+     SRC !== SRC_HEAD ? '제품 = 두 단 → 한 단으로 되돌려 읽었다' : '제품 = 한 단 (되돌릴 것이 없다)');
+}
 const mkEC = (m2, tag) => require('./ecurve')(
   m2 == null ? SRC : SRC.replace(/const ES_M2\s*=\s*[\d.]+;/, 'const ES_M2   = ' + m2 + ';'), tag);
 const EC = mkEC(null, 'PROBE199R36');
@@ -362,5 +386,7 @@ say('   35-7 2번(«부호는 이미 판정됐다 — 후보는 cp 와 실제 �
 say('   장벽이 아니라 **자**가 만든 것이었다(하루 격자가 세션 계단을 가로지른 몫).');
 say('4. 〔36정정A〕 장벽의 닫힌 식은 근사다([B0]) — 자는 제품 `eScale` 에서 관문마다 파생해야 한다.');
 say('');
+gen0Check('199-bot-2026-09-06-r36-base.json');
+
 say((NG === 0 ? 'PROBE199R36 PASS ' : 'PROBE199R36 FAIL ') + OK + '/' + (OK + NG));
 process.exit(NG === 0 ? 0 : 1);

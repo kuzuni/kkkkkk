@@ -46,11 +46,18 @@ module.exports = function readECurve(SRC, tag){
        그것이 제품 `isGateStage` 의 뜻이다. 아래 `isGate` 가 그 정의 그대로다. */
     const BAND2 = one(/const ES_BAND2\s*=\s*(\d+)/);
     const BANDG = one(/const ES_BANDG\s*=\s*(\d+)/);
-    const SW    = (BAND && BAND2 && BANDG) ? BAND * BANDG : null;   /* 사다리 문턱 스테이지 */
-    const bandW = a => (SW && a >= SW) ? BAND2 : BAND;              /* 그 구간의 폭 */
+    /* ⚑ 199 40회차 — 사다리가 **두 단**이 될 수 있다: 40 → `ES_BAND3`(전이 한 구간) → `ES_BAND2`.
+       전이 폭이 0/없으면 SW2 === SW 라 분기가 통째로 접히고 종전 한 단과 **비트 동일**이다
+       (되돌림 한 줄 = `ES_BAND3 = 0`). 문턱은 전이가 있으면 관문 한 칸 앞이다 —
+       제품 `eBandSw = ES_BAND * (ES_BANDG - (ES_BAND3 ? 1 : 0))` 과 같은 식을 여기서도 쓴다. */
+    const BAND3 = one(/const ES_BAND3\s*=\s*(\d+)/);
+    const SW    = (BAND && BAND2 && BANDG) ? BAND * (BANDG - (BAND3 ? 1 : 0)) : null;  /* 사다리 문턱 스테이지 */
+    const SW2   = SW ? SW + (BAND3 || 0) : null;                    /* 말미 구간(폭 BAND2) 시작 */
+    const bandW = a => !SW ? BAND : (a < SW ? BAND : (a < SW2 ? BAND3 : BAND2));       /* 그 구간의 폭 */
     const band  = !BAND ? (s => s)
-                : SW ? (s => s < SW ? Math.max(1, BAND*Math.floor(s/BAND))
-                                    : SW + BAND2*Math.floor((s - SW)/BAND2))
+                : SW ? (s => s < SW  ? Math.max(1, BAND*Math.floor(s/BAND))
+                            : s < SW2 ? SW
+                                      : SW2 + BAND2*Math.floor((s - SW2)/BAND2))
                      : (s => Math.max(1, BAND*Math.floor(s/BAND)));
     const eSmooth = a => (1 + K*(a-1))
                       * Math.pow(M1, Math.min(a, KNEE) - 1)
@@ -69,7 +76,7 @@ module.exports = function readECurve(SRC, tag){
     const isGate = s => BAND ? (s >= BAND && band(s) === s) : false;
     return {
       form: BAND ? '249' : '177', K, KNEE, M1, M2, A, HB, DB, EG_B, EG_R,
-      BAND, BAND2, BANDG, SW, RAMP, GATE_N: gateN, GATE_HP, eSmooth, eBand: band, eBandW: bandW, eScale, isGate,
+      BAND, BAND2, BAND3, BANDG, SW, SW2, RAMP, GATE_N: gateN, GATE_HP, eSmooth, eBand: band, eBandW: bandW, eScale, isGate,
       eHp:  s => HB * eScale(s),
       eDmg: s => DB * Math.pow(eScale(s), A),
       /* 스테이지 보스의 실체력 배수 — 249 관문 스테이지에서만 1 이 아니다 */
@@ -78,7 +85,9 @@ module.exports = function readECurve(SRC, tag){
       desc: 'eHp ' + HB + '×eScale(s) · eDmg ' + DB + '×eScale(s)^' + A
           + ' · eSmooth = (1+' + K + '(a-1))×' + M1 + '^min(a,' + KNEE + ')-1×' + M2 + '^max(0,a-' + KNEE + ')'
           + (BAND ? ' · a = eBand(s) = max(1,' + BAND + '×floor(s/' + BAND + ')) [249 구간 계단]'
-                  + (SW ? ' · **사다리** s≥' + SW + '(= ' + BAND + '×관문 ' + BANDG + ')부터 폭 ' + BAND2 + ' [199 32회차]' : '')
+                  + (SW ? ' · **사다리** s≥' + SW + '(= ' + BAND + '×관문 ' + (BANDG - (BAND3 ? 1 : 0)) + ')부터 폭 '
+                          + (BAND3 ? BAND3 + ' → s≥' + SW2 + ' 부터 ' + BAND2 + ' [199 32·40회차 두 단]'
+                                   : BAND2 + ' [199 32회차]') : '')
                   + (RAMP ? ' · 밴드 내 상승면 ^(RAMP ' + RAMP + '·(s−a)/폭) [199 4회차]' : '')
                   + ' · 관문 보스 ×' + GATE_HP + (SW ? ' (관문 = 구간 첫 칸)' : ' (s%' + gateN + '===0)')
                   : ' · a = s [177 매끈]')

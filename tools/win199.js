@@ -40,9 +40,14 @@ const MIN_LATE = 2;
    간격이 끝까지 일정하면 사다리가 없는 것이므로 **null**(«말미 축 자체가 없다»)이다. */
 function ladderSw(r) {
   if (!r || typeof r !== 'object') return null;
-  const sw = r.bandSw, b2 = r.band2, b = r.band;
+  const sw = r.bandSw, b2 = r.band2, b = r.band, b3 = r.band3;
+  /* ⚑ 199 40회차 — 사다리가 **두 단**(40 → `ES_BAND3` → `ES_BAND2`)이면 문턱 바로 위 구간은
+     전이 폭이다. 첫 «좁은» 관문은 그래서 `sw + band2` 가 아니라 **`sw + band3`** 다 —
+     한 단 표기 그대로 두면 두 단에서 한 칸(전이 구간 안쪽)을 가리켜, 격자에서 되찾는 폴백과
+     서로 다른 답을 낸다(자가 둘이 되는 자리 — 20회차 규약). 전이 폭이 없으면 종전 그대로다. */
+  const wFirst = (b3 > 0) ? b3 : b2;
   /* 폭이 안 좁아지면(되돌림본 `ES_BAND2 = ES_BAND`) 사다리가 아니다 — 수를 내면 안 된다. */
-  if (sw > 0 && b2 > 0 && b > 0) return b2 < b ? sw + b2 : null;
+  if (sw > 0 && b2 > 0 && b > 0) return (b2 < b && wFirst < b) ? sw + wFirst : null;
   const g = Array.isArray(r.gateSet) ? r.gateSet : null;
   if (!g || g.length < 3) return null;
   const w0 = g[1] - g[0];

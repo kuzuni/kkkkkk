@@ -46,7 +46,31 @@ let OK = 0, NG = 0;
 const ck = (name, cond, got) => { if (cond) { OK++; say(`  ✔ ${name}` + (got != null ? ` — ${got}` : '')); }
                                   else { NG++; say(`  ✗ ${name}` + (got != null ? ` — ${got}` : '')); } };
 
-const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const SRC_HEAD = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+/* ⚑ 199 40회차 이관 — 이 자가 읽는 실행들은 전부 **한 단 사다리 세대**(40 → 16)의 표다.
+   제품이 두 단(40 → `ES_BAND3` → 16)이 된 뒤로 «현재 곡선» 으로 그 표를 해석하면 판정이
+   통째로 어긋난다 — «s360 의 장벽을 만든 폭» 이 40 이 아니라 16 으로 읽히고, 이 자의 본체
+   주장(«어긋난 것은 옛 폭이 만든 관문이다»)이 자기 근거를 잃는다. ⇒ 곡선을 **그 실행이 쓴
+   세대**로 되돌려 읽는다. 되돌림이 조용히 공허해지지 않도록 [G0] 이 그것을 실행 기록
+   (`band`·`bandSw`·`band2`)과 대조한다 — 세대가 또 바뀌면 그 항이 먼저 빨개진다. */
+const SRC = SRC_HEAD.replace(/const ES_BAND3\s*=\s*\d+/, 'const ES_BAND3 = 0');
+
+/* ═══ [G0] 세대 대조 — 위 «되돌려 읽기» 가 공허해지지 않게 ═══════════════════
+   되돌린 곡선이 정말 그 실행이 쓴 세대인지 **실행 기록**(`band`·`bandSw`·`band2`)과 맞춘다.
+   제품이 또 갈리면 이 항이 **먼저** 빨개져 본체 판정이 조용히 낡는 것을 막는다(199 40회차). */
+function gen0Check(runFile) {
+  const p = path.join(ROOT, 'docs', 'review', runFile);
+  if (!fs.existsSync(p)) return;
+  const rep = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const s0 = (rep.policies && rep.policies.diligent && rep.policies.diligent[0]) || null;
+  const ec = require('./ecurve')(SRC, 'GEN0');
+  ck('[G0] 되돌려 읽은 곡선이 그 실행이 쓴 세대와 같다 (ES_BAND·eBandSw·ES_BAND2 대조)',
+     !!s0 && s0.band === ec.BAND && s0.bandSw === ec.SW && s0.band2 === ec.BAND2,
+     s0 ? `실행 ${s0.band}/${s0.bandSw}/${s0.band2} ↔ 되돌린 곡선 ${ec.BAND}/${ec.SW}/${ec.BAND2}` : '실행 JSON 없음');
+  ck('[G0b] 되돌리기가 실제로 한 글자를 바꿨다 — 제품이 두 단이라는 뜻 (한 단이면 공허하게 참)',
+     SRC !== SRC_HEAD || !/const ES_BAND3\s*=\s*[1-9]/.test(SRC_HEAD),
+     SRC !== SRC_HEAD ? '제품 = 두 단 → 한 단으로 되돌려 읽었다' : '제품 = 한 단 (되돌릴 것이 없다)');
+}
 const readEC = require('./ecurve');
 const withM2 = (src, m2) => m2 == null ? src : src.replace(/const ES_M2\s*=\s*[\d.]+;/, 'const ES_M2   = ' + m2 + ';');
 /* 사다리 이전 트리 사본 — 32회차가 `ES_BAND2`·`ES_BANDG` 를 넣기 전의 곡선.
@@ -415,5 +439,7 @@ say('   ⇒ 장벽을 견주는 회차는 **그 벽들만** 써야 한다(빠른
 say('4. 〔36정정A〕 를 옛 실행에 대면 31-2 의 세 점이 ' + E.map(x => `${pc(x.d)}→${pc(x.dD)}`).join(' · ') + ' 로 커진다([E2]).');
 say('   34-4 의 방향(α_span > 말미 α)은 살지만 **값이 바뀌므로**([E4]) 다음 회차는 파생 열을 인용해야 한다.');
 say('');
+gen0Check('199-bot-2026-09-06-r36-base.json');   /* 상수를 실은 실행으로 대조한다(r31 세대 표는 사다리 상수를 안 싣는다) */
+
 say((NG === 0 ? 'PROBE199R37 PASS ' : 'PROBE199R37 FAIL ') + OK + '/' + (OK + NG));
 process.exit(NG === 0 ? 0 : 1);

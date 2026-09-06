@@ -1409,6 +1409,11 @@ async function runOne(page, pol, seed, days, onRow) {
        자리를 한 번도 안 담는다 — 그때 «사다리 없음» 과 «창이 못 봄» 이 같은 얼굴이 된다. */
     out.bandSw = (typeof eBandSw === 'number') ? eBandSw : null;
     out.band2  = (typeof ES_BAND2 === 'number') ? ES_BAND2 : null;
+    /* ⚑ 199 40회차 — 사다리가 **두 단**(40 → ES_BAND3 → ES_BAND2)이 될 수 있다. 전이 폭을
+       안 실어 주면 `win199.ladderSw` 가 «첫 좁은 관문» 을 `bandSw + band2` 로 잡아 두 단에서
+       한 칸 어긋난다(전이 구간이 그 자리에 있다). 없으면 null = 종전 한 단이다. */
+    out.band3   = (typeof ES_BAND3 === 'number' && ES_BAND3 > 0) ? ES_BAND3 : null;
+    out.bandSw2 = (typeof eBandSw2 === 'number') ? eBandSw2 : null;
     out.gateSet = (typeof isGateStage === 'function')
       ? (() => { const g = [], top = Math.max(1, S.stage | 0, S.best | 0) + 2 * out.band;
                  for(let s = 1; s <= top; s++) if(isGateStage(s)) g.push(s);

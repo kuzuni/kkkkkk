@@ -41,13 +41,23 @@ const num = re => { const m = SRC.match(re); return m ? Number(m[1]) : NaN; };
 const BAND  = num(/const ES_BAND\s*=\s*(\d+)/);
 const BAND2 = num(/const ES_BAND2\s*=\s*(\d+)/);
 const BANDG = num(/const ES_BANDG\s*=\s*(\d+)/);
+/* ⚑ 199 40회차 — 사다리가 **두 단**(40 → `ES_BAND3` → `ES_BAND2`)이 됐다. 전이 폭이 없으면
+   0 으로 읽어 종전 한 단 식이 그대로 성립한다(되돌림 한 줄이 이 자도 같이 되돌린다). */
+const BAND3 = Number.isFinite(num(/const ES_BAND3\s*=\s*(\d+)/)) ? num(/const ES_BAND3\s*=\s*(\d+)/) : 0;
 ok(Number.isFinite(BAND) && Number.isFinite(BAND2) && Number.isFinite(BANDG),
-   '[E1] 제품 사다리 상수 셋이 읽힌다', `ES_BAND ${BAND} · ES_BAND2 ${BAND2} · ES_BANDG ${BANDG}`);
+   '[E1] 제품 사다리 상수 셋이 읽힌다', `ES_BAND ${BAND} · ES_BAND2 ${BAND2} · ES_BANDG ${BANDG}` + (BAND3 ? ` · ES_BAND3 ${BAND3}` : ''));
 ok(BAND2 < BAND, '[E2] 사다리가 실재한다(말미 폭 < 초기 폭)', `${BAND2} < ${BAND}`);
-const SW0 = BAND * BANDG;              /* 폭이 바뀌는 칸(제품 eBandSw) */
-const NARROW0 = SW0 + BAND2;           /* **첫 좁은 관문** = 이 자의 문턱 */
-ok(/const eBandSw\s*=\s*ES_BAND \* ES_BANDG/.test(SRC),
+const SW0 = BAND * (BANDG - (BAND3 ? 1 : 0));   /* 폭이 바뀌는 칸(제품 eBandSw) */
+/* **첫 «좁은» 관문** = 이 자의 문턱. 두 단이면 문턱 바로 위 구간이 **전이 폭**이므로
+   첫 좁은 관문은 `SW0 + BAND2` 가 아니라 **`SW0 + BAND3`** 다 — `win199.ladderSw` 와 같은 식이다
+   (둘이 갈리면 자가 둘이 된다 · 20회차 규약). */
+const NARROW0 = SW0 + (BAND3 || BAND2);
+ok(/const eBandSw\s*=\s*ES_BAND \* \(ES_BANDG - \(ES_BAND3 \? 1 : 0\)\)/.test(SRC)
+   || /const eBandSw\s*=\s*ES_BAND \* ES_BANDG/.test(SRC),
    '[E3] 문턱이 제품에서도 파생식이다(리터럴 스테이지 아님)', `eBandSw = ${SW0}`);
+ok(BAND3 === 0 || (BAND2 < BAND3 && BAND3 < BAND),
+   '[E4] 전이 폭은 두 폭 **사이**다 — 밖이면 «두 단» 이 아니라 다른 한 단이다',
+   BAND3 ? `${BAND2} < ${BAND3} < ${BAND}` : '전이 없음(한 단)');
 
 /* ── [A] 배선 ─────────────────────────────────────────────────────────── */
 const BOT = rd('tools/bot199.js');
@@ -65,19 +75,26 @@ ok(!/\b(360|376)\b/.test(WSRC.replace(/^\s*\*.*$/gm, '').replace(/\/\*[\s\S]*?\*
 ok(W.MIN_LATE === 2, '[A6] 기준은 «간격의 정의» 그대로 2다(자의적 여유가 아니다)', 'MIN_LATE=' + W.MIN_LATE);
 
 /* ── [B] 판정식 단위 시험 ─────────────────────────────────────────────── */
-const mkGates = (band, band2, sw, top) => {
+/* 199 40회차 — 격자 굽기가 **두 단**을 안다: 문턱 위 한 구간이 전이 폭(band3)이고 그 위가 band2 다.
+   전이 폭이 0 이면 루프가 한 번도 안 돌아 종전 한 단 격자와 **같은 배열**이다(되돌림이 자도 되돌린다). */
+const mkGates = (band, band2, sw, top, band3) => {
   const g = [];
   for (let s = band; s <= sw; s += band) g.push(s);
-  for (let s = sw + band2; s <= top; s += band2) g.push(s);
+  const sw2 = sw + (band3 || 0);
+  if (band3) g.push(sw2);
+  for (let s = sw2 + band2; s <= top; s += band2) g.push(s);
   return g;
 };
-const gLadder = mkGates(BAND, BAND2, SW0, SW0 + 6 * BAND2);
-const gFlat   = mkGates(BAND, BAND, SW0, SW0 + 6 * BAND);
+const gLadder = mkGates(BAND, BAND2, SW0, SW0 + (BAND3 || 0) + 6 * BAND2, BAND3);
+const gFlat   = mkGates(BAND, BAND, SW0, SW0 + 6 * BAND, 0);
 
 ok(W.ladderSw({ gateSet: gLadder }) === NARROW0,
    '[B1] 격자만으로 문턱을 되찾는다(옛 JSON 리플레이 경로)', String(W.ladderSw({ gateSet: gLadder })));
-ok(W.ladderSw({ bandSw: SW0, band2: BAND2, band: BAND, gateSet: gLadder }) === NARROW0,
+ok(W.ladderSw({ bandSw: SW0, band2: BAND2, band: BAND, band3: BAND3 || null, gateSet: gLadder }) === NARROW0,
    '[B2] 상수를 실은 실행도 **같은 수**를 낸다(두 경로가 안 갈린다)');
+ok(BAND3 === 0 || W.ladderSw({ bandSw: SW0, band2: BAND2, band: BAND, gateSet: gLadder }) !== NARROW0,
+   '[B2b] ⚑ 전이 폭을 **안 실은** 옛 표기는 두 단에서 다른 수를 낸다 — 그래서 실행이 `band3` 를 싣는다',
+   BAND3 ? String(W.ladderSw({ bandSw: SW0, band2: BAND2, band: BAND, gateSet: gLadder })) + ' ≠ ' + NARROW0 : '전이 없음(한 단 — 공허하게 참)');
 ok(W.ladderSw({ gateSet: gFlat }) === null,
    '[B3] 상수 밴드 격자에서는 문턱이 **없다**(«못 본다» 가 아니라 «볼 것이 없다»)');
 ok(W.ladderSw({ bandSw: SW0, band2: BAND, band: BAND }) === null,
