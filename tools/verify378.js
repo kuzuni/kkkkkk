@@ -19,6 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품(한 틱) */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -103,23 +104,15 @@ async function readRow(page, y, xs) {
   }), [b64, y, xs]);
 }
 
-const SETON = ([sel, i]) => {
-  const bar = document.querySelector(sel);
-  if (!bar) return false;
-  const cells = [...bar.querySelectorAll(':scope > .stab')];
-  if (i == null) return true;
-  if (!cells[i]) return false;
-  cells.forEach((c, j) => {
-    c.classList.toggle('on', j === i);
-    const ink = c.querySelector('i');
-    if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-  });
-  return true;
-};
+/* 967 — `SETON` 은 **선언째 지웠다**(402 «사본을 지운다» · 963 «남기면 다음 세션이 다시 두 evaluate 로 쓴다»).
+   심는 손잡이는 공용 부품 `__stab967.set`(`tools/stab967.js`) 하나이고, 그것은 아래 `READBACK`
+   **안에서** 불린다 — 그래서 «켜기 → 읽기» 가 구조적으로 한 틱이다(967 · 963 이관). */
 
-const READBACK = ([sel]) => {
+/* ⚑ 967 — `i` 를 넘기면 켜기를 겸한다(생략 = 읽기만 · 자연 활성 호스트가 그렇게 쓴다). */
+const READBACK = ([sel, i]) => {
   const bar = document.querySelector(sel);
   if (!bar) return null;
+  if (i != null && window.__stab967.set(sel, i) === -2) return null;
   const cells = [...bar.querySelectorAll(':scope > .stab')];
   const idx = cells.findIndex(c => c.classList.contains('on'));
   if (idx < 0) return null;
@@ -144,10 +137,9 @@ const SETTLE = () => {
 /* 한 (호스트, 칸) 을 재서 면별 런렝스를 돌려준다. 캡처는 **한 장**이고 그 앞뒤로 되읽기를 한다 —
    여러 장 찍으면 renderUI() 가 그 사이에 `.on` 을 되돌려 «다른 칸 그림» 을 재게 된다. */
 async function measure(page, sel, i) {
-  if (!await page.evaluate(SETON, [sel, i])) return null;
-  await page.waitForTimeout(200);
-  await page.evaluate(SETTLE);
-  const g = await page.evaluate(READBACK, [sel]);
+  /* 967 — 켜기와 읽기가 **한 evaluate** 다. 전에는 `SETON` → 200ms → `SETTLE` → `READBACK` 이라
+     그 사이가 틱 경계였고, 제품이 그 바를 소유하면 심은 활성이 그 틈에 되돌려진다(963). */
+  const g = await page.evaluate(READBACK, [sel, i]);
   if (!g || (i != null && g.idx !== i)) return null;
   const y = Math.round(g.bar.y + g.bar.h / 2);
   const x0 = Math.round(g.bar.x), x1 = Math.round(g.bar.x + g.bar.w) - 1;
@@ -158,6 +150,8 @@ async function measure(page, sel, i) {
     ...Array.from({ length: 20 }, (_, k) => p0 + k),
     ...Array.from({ length: 20 }, (_, k) => p1 - k),
   ]);
+  /* 967 — 캡처는 틱을 넘길 수밖에 없다(핀도 16ms 창이 남는다) ⇒ **캡처 직후 되읽어** 그 사이
+     활성이 안 바뀌었는지 본다. 어긋나면 값을 안 쓰고 null 로 신고한다(부른 쪽이 빨간 점수 줄을 낸다). */
   const g2 = await page.evaluate(READBACK, [sel]);
   if (!g2 || g2.idx !== g.idx) return null;
   const cL = g.bar.x + g.border, cR = g.bar.x + g.bar.w - g.border;
@@ -176,6 +170,7 @@ async function measure(page, sel, i) {
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
     page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     page.on('pageerror', e => errs.push(String(e.message || e)));
     await page.goto('file://' + path.resolve(process.env.V378_SRC || path.join(ROOT, 'index.html')));

@@ -28,6 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품(한 틱) */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -71,18 +72,25 @@ const SETTLE = () => {
     requestAnimationFrame(() => requestAnimationFrame(() => r(P.length)))));
 };
 
-const SETON = ([sel, i]) => {
+/* 967 — `SETON` 은 **선언째 지웠다**(402 «사본을 지운다» · 963 «남기면 다음 세션이 다시 두 evaluate 로 쓴다»).
+   심는 손잡이는 공용 부품 `__stab967.set`(`tools/stab967.js`) 하나이고, 아래 `SET_READ` **안에서**
+   불린다 — «켜기 → 읽기» 가 구조적으로 한 틱이다.
+
+   ⚑ 이 자는 캡처(`shoot`)로 채점하므로 **읽은 뒤에도 틱을 넘는다.** 그래서 두 겹이다:
+     ① 켜기·읽기는 한 evaluate    ② 캡처 구간은 핀으로 붙들고 **캡처 직후 되읽어 점수 줄로 문다**
+     (핀만으로는 16ms 창이 남는다 — 967 §«핀은 덮는 장치»). */
+const SET_READ = ([sel, i]) => {
   const bar = document.querySelector(sel);
-  if (!bar) return false;
-  const cells = [...bar.querySelectorAll(':scope > .stab')];
-  if (i == null) return true;
-  if (!cells[i]) return false;
-  cells.forEach((c, j) => {
-    c.classList.toggle('on', j === i);
-    const ink = c.querySelector('i');
-    if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-  });
-  return true;
+  if (!bar) return null;
+  const idx = window.__stab967.set(sel, i);
+  if (idx === -2) return null;
+  const on = bar.querySelector(':scope > .stab.on');
+  if (!on) return null;
+  const cs = getComputedStyle(on, '::before');
+  const b = on.getBoundingClientRect();
+  return { idx, want: i == null ? idx : i,
+    x: b.x, y: b.y, w: b.width, h: b.height, l: cs.left, r: cs.right,
+    label: (on.querySelector('i') || {}).textContent || '' };
 };
 
 async function shoot(page) {
@@ -158,6 +166,7 @@ const fmt = a => a.map(([c, n]) => c + n.toFixed(1)).join(' ');
     page.on('pageerror', e => errs.push(String(e)));
     page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
     await page.goto('file://' + path.resolve(ROOT, 'index.html'));
     await page.waitForTimeout(1400);
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
@@ -187,28 +196,29 @@ const fmt = a => a.map(([c, n]) => c + n.toFixed(1)).join(' ');
       await page.waitForTimeout(900);
       await page.evaluate(SETTLE);
       for (const i of idxs) {
-        const okSet = await page.evaluate(SETON, [sel, i]);
-        if (!okSet) { ok('[전제] ' + name + ' 칸' + (i + 1) + ' 을 활성으로 만들 수 있다', false, '칸 없음'); continue; }
+        /* 967 — 켜기와 읽기가 한 evaluate 다(전에는 `SETON` → 500ms → `SETTLE` → 읽기 세 evaluate 였다). */
+        const g = await page.evaluate(SET_READ, [sel, i]);
+        if (!g) { ok('[전제] ' + name + ' 칸' + (i == null ? '(자연)' : i + 1) + ' 활성 칸을 읽었다', false, '없음'); continue; }
+        /* 967 — «켠 칸을 그대로 쟀는가». 전에는 되읽은 칸을 말없이 채점했다(칸1 이 두 번 재지고
+           칸3 은 한 번도 안 재지면서 점수 줄 수는 그대로 = 초록). 이제는 빨개진다. */
+        ok('[전제] ' + name + ' 칸' + (i == null ? '(자연)' : i + 1) + ' — 켠 칸을 그대로 쟀다 (한 틱 · 967)',
+          g.idx === g.want, '켠 칸 ' + (g.want + 1) + ' → 잰 칸 ' + (g.idx + 1));
+        if (g.idx !== g.want) continue;
         if (i != null) forced++;
-        await page.waitForTimeout(500);
-        await page.evaluate(SETTLE);
-        const g = await page.evaluate(s => {
-          const bar = document.querySelector(s);
-          const on = bar.querySelector(':scope > .stab.on');
-          if (!on) return null;
-          const cs = getComputedStyle(on, '::before');
-          const b = on.getBoundingClientRect();
-          return { x: b.x, y: b.y, w: b.width, h: b.height, l: cs.left, r: cs.right,
-            label: (on.querySelector('i') || {}).textContent || '' };
-        }, sel);
-        if (!g) { ok('[전제] ' + name + ' 활성 칸을 읽었다', false, '없음'); continue; }
         /* 어느 면이 셸에 닿는가 = 인셋 0 인 쪽. 둘 다 7 이면 가운데 칸이라 이 자가 볼 자리가 아니다. */
         const left = g.l === '0px', right = g.r === '0px';
         if (!left && !right) continue;
         const tag = name + ' 칸' + (i == null ? '(자연)' : i + 1) + '«' + g.label + '»';
         const near = left ? ['TL', 'BL'] : ['TR', 'BR'];
         const far = left ? ['TR', 'BR'] : ['TL', 'BL'];
+        /* 967 — 캡처 구간은 틱을 넘는다 ⇒ 핀으로 붙들고 **캡처 직후 되읽어 점수 줄로** 묻는다. */
+        if (i != null) await page.evaluate(([s, k]) => window.__stab967.pin(s, k), [sel, i]);
         await shoot(page);
+        const after = await page.evaluate(([s]) => window.__stab967.on(s), [sel]);
+        if (i != null) await page.evaluate(() => window.__stab967.unpin());
+        ok('[전제] ' + tag + ' — 캡처 사이에 활성이 안 바뀌었다 (967)',
+          after === g.idx, '캡처 전 칸' + (g.idx + 1) + ' → 캡처 뒤 칸' + (after + 1));
+        if (after !== g.idx) continue;
 
         /* [2][3] 닿는 면 **아래** 코너 — 가장 바깥이 D, 그 뒤가 B */
         const dk = [], bv = [], head = [], bleed = [];
@@ -280,13 +290,14 @@ const fmt = a => a.map(([c, n]) => c + n.toFixed(1)).join(' ');
     await page.evaluate(() => { goTab('hero', true); heroSubGo('eq'); });
     await page.waitForTimeout(900);
     await page.evaluate(SETTLE);
-    await page.evaluate(SETON, ['#eqTabs', 0]);
-    await page.waitForTimeout(400);
     await page.evaluate(SETTLE);
-    const gE = await page.evaluate(() => {
-      const b = document.querySelector('#eqTabs > .stab.on').getBoundingClientRect();
+    /* 967 — 켜기·읽기 한 틱. [R] 은 그 뒤로 주입·캡처를 되풀이하므로 핀으로 붙들어 둔다. */
+    const gE = await page.evaluate(([s, k]) => {
+      if (window.__stab967.pin(s, k) !== k) return null;
+      const b = document.querySelector(s + ' > .stab.on').getBoundingClientRect();
       return { x: b.x, y: b.y, w: b.width, h: b.height };
-    });
+    }, ['#eqTabs', 0]);
+    ok('[R] 전제 — 06 장비 첫 칸을 켠 그대로 쟀다 (967)', !!gE, gE ? '' : '켠 칸이 되돌려졌다');
     const inject = async (id, css) => {
       await page.evaluate(([i, c]) => {
         const s = document.createElement('style'); s.id = i; s.textContent = c; document.head.appendChild(s);

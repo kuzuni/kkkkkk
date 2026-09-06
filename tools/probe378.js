@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품(한 틱) */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -68,26 +69,20 @@ async function readRow(page, y, xs) {
   }), [b64, y, xs]);
 }
 
-/* 활성 칸을 n 번째로 옮긴다 — 라벨 외곽선(ol3/ol4)까지 같이 갈아 실제 클릭과 같은 그림을 만든다. */
-const SETON = ([sel, i]) => {
-  const bar = document.querySelector(sel);
-  if (!bar) return null;
-  const cells = [...bar.querySelectorAll(':scope > .stab')];
-  if (!cells[i]) return null;
-  cells.forEach((c, j) => {
-    c.classList.toggle('on', j === i);
-    const ink = c.querySelector('i');
-    if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-  });
-  return true;
-};
+/* 967 — `SETON` 은 **선언째 지웠다**(402 «사본을 지운다» · 963 «남기면 다음 세션이 다시 두 evaluate 로 쓴다»).
+   심는 손잡이는 공용 부품 `__stab967.set`(`tools/stab967.js`) 하나이고, 아래 `READBACK` **안에서**
+   불린다 — «켜기 → 읽기» 가 구조적으로 한 틱이다. 967 재현(`node tools/probe967.js`)이 잰 값:
+   같은 틱 어긋남 **0/200** · 벽시계 200ms 는 `#trSubs` 에서 5~7/10. */
 
 /* ⚑ 되읽기 — «내가 켠 칸» 이 아니라 **지금 실제로 켜져 있는 칸**을 돌려준다.
-   23 훈련(#trSubs) 처럼 renderUI() 가 매 틱 상태에서 `.on` 을 다시 그리는 바는 클래스 주입이
-   되돌려진다. 그것을 모르고 재면 «칸2 를 쟀다» 면서 실은 칸1 을 찍는다(1회차에 그랬다). */
-const READBACK = ([sel]) => {
+   23 훈련(#trSubs)·23 룬(#rnSubs) 은 제품이 그 자리를 소유해(`renderTrain()`/`renderRunes()` 가
+   `dataset` 에서 `.on` 을 다시 그린다) 클래스 주입이 되돌려진다. 그것을 모르고 재면
+   «칸2 를 쟀다» 면서 실은 칸1 을 찍는다(1회차에 그랬다).
+   967 — `i` 를 넘기면 켜기를 겸한다(생략 = 읽기만). */
+const READBACK = ([sel, i]) => {
   const bar = document.querySelector(sel);
   if (!bar) return null;
+  if (i != null && window.__stab967.set(sel, i) === -2) return null;
   const cells = [...bar.querySelectorAll(':scope > .stab')];
   const idx = cells.findIndex(c => c.classList.contains('on'));
   if (idx < 0) return null;
@@ -117,6 +112,7 @@ const SETTLE = () => {
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
     await page.goto('file://' + path.resolve(ROOT, 'index.html'));
     await page.waitForTimeout(1400);
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
@@ -137,12 +133,12 @@ const SETTLE = () => {
       if (!n) { console.log(name + ' — 바 없음'); continue; }
       console.log('── ' + name + ' (' + sel + ', ' + n + '칸)');
       for (let i = 0; i < n; i++) {
-        if (!await page.evaluate(SETON, [sel, i])) continue;
-        await page.waitForTimeout(200);
-        await page.evaluate(SETTLE);
-        const g = await page.evaluate(READBACK, [sel]);
+        /* 967 — 켜기와 읽기가 **한 evaluate** 다(전에는 `SETON` → 200ms → `SETTLE` → `READBACK`). */
+        const g = await page.evaluate(READBACK, [sel, i]);
         if (!g) continue;
-        if (g.idx !== i) { console.log('  칸' + (i + 1) + ' — 주입이 되돌려졌다(renderUI 가 상태에서 다시 그린다) → 실제 활성 칸' + (g.idx + 1) + ' · 건너뛴다'); continue; }
+        if (g.idx !== i) { console.log('  칸' + (i + 1) + ' — ⚠⚠ 못 쟀다: 한 틱 안에서 활성이 칸' + (g.idx + 1) + ' 로 되돌려졌다 (제품이 이 자리를 소유한다 — 963·967)'); continue; }
+        /* 967 — 캡처는 틱을 넘는다 ⇒ 핀으로 붙들고 캡처 뒤 되읽는다(아래 g2). */
+        await page.evaluate(([s, k]) => window.__stab967.pin(s, k), [sel, i]);
         const y = Math.round(g.bar.y + g.bar.h / 2);
         const x0 = Math.round(g.bar.x), x1 = Math.round(g.bar.x + g.bar.w) - 1;
         const px0 = Math.round(g.cell.x), px1 = Math.round(g.cell.x + g.cell.w) - 1;
@@ -156,7 +152,8 @@ const SETTLE = () => {
           ...Array.from({ length: 20 }, (_, k) => px1 - k),
         ]);
         const g2 = await page.evaluate(READBACK, [sel]);
-        if (!g2 || g2.idx !== i) { console.log('  칸' + (i + 1) + ' — 캡처 도중 활성이 되돌려졌다 → 건너뛴다'); continue; }
+        await page.evaluate(() => window.__stab967.unpin());
+        if (!g2 || g2.idx !== i) { console.log('  칸' + (i + 1) + ' — ⚠⚠ 못 쟀다: 캡처 사이에 활성이 되돌려졌다 (967)'); continue; }
         const L = all.slice(0, 24), R = all.slice(24, 48);
         const PL = all.slice(48, 68), PR = all.slice(68, 88);
         /* 이 면에 알약이 닿는가 — 칸 변이 셸 콘텐츠 변과 같은가 */

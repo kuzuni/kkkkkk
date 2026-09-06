@@ -29,6 +29,7 @@
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품(한 틱) */
 const { chromium } = pw();
 
 const W = 1080, H = 2280;
@@ -63,9 +64,18 @@ const SETTLE = () => {
 
 /* ⚑ probe378·379 교훈 — «내가 켠 칸» 이 아니라 **지금 실제로 켜져 있는 칸**을 돌려준다
    (renderUI() 가 매 틱 `.on` 을 다시 그리는 바가 있다). 좌표는 전부 바 «바깥» 좌변 기준. */
-const READ = ([sel]) => {
+/* ⚑⚑ 967 (2026-09-06) — **켜기와 읽기가 한 evaluate 다.**
+   전에는 `SETON` · `SETTLE` · `READ` 세 evaluate 였고 그 사이가 **틱 경계**였다. 제품이 그 바를
+   소유하면 심은 활성이 그 틈에 되돌려지는데(963), 이 자는 `g.onIdx` 로 **되읽은 칸을 그대로 채점**했다
+   — 칸1 이 두 번 채점되고 칸3 은 한 번도 안 재지면서 **점수 줄 수는 그대로**라 초록이었다.
+   ⇒ 심기는 공용 부품 `__stab967.set` 이 이 evaluate **안에서** 한다(`tools/stab967.js`).
+      i 를 넘기면 켜기를 겸하고, 생략하면 읽기만 한다. `want` 로 «내가 켠 칸» 을 같이 돌려주므로
+      부른 쪽이 «켠 칸을 그대로 쟀는가» 를 **점수 줄로** 물 수 있다. */
+const READ = ([sel, i]) => {
   const bar = document.querySelector(sel);
   if (!bar) return { missing: true };
+  const want = i == null ? null : window.__stab967.set(sel, i);
+  if (want === -2) return { missing: true };
   const cs = getComputedStyle(bar);
   const bb = bar.getBoundingClientRect();
   const s = bb.width / bar.offsetWidth;                 /* 입장 연출 스케일 */
@@ -73,6 +83,7 @@ const READ = ([sel]) => {
   const cells = [...bar.querySelectorAll(':scope > .stab')];
   const seps = [...bar.querySelectorAll(':scope > .stab-sep')];
   return {
+    want: i == null ? null : i,      /* 967 — «내가 켠 칸». onIdx 와 다르면 그 판은 못 잰 것이다 */
     ow: bb.width / s,
     bw: parseFloat(cs.borderLeftWidth),
     n: cells.length,
@@ -90,18 +101,9 @@ const READ = ([sel]) => {
   };
 };
 
-const SETON = ([sel, i]) => {
-  const bar = document.querySelector(sel);
-  if (!bar) return false;
-  const cells = [...bar.querySelectorAll(':scope > .stab')];
-  if (!cells[i]) return false;
-  cells.forEach((c, j) => {
-    c.classList.toggle('on', j === i);
-    const ink = c.querySelector('i');
-    if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-  });
-  return true;
-};
+/* 967 — `SETON` 은 **선언째 지웠다**(402 «사본을 지운다»). 남겨 두면 다음 세션이 다시
+   «두 evaluate» 로 쓴다(963 이 probe379·verify379 에서 같은 이유로 지웠다).
+   심는 손잡이는 `__stab967.set` 하나이고 그것은 `READ` **안에서만** 불린다. */
 
 /* 한 바를 «지금 켜져 있는 칸» 기준으로 채점한다 — verify379.grade 와 **같은 규약**이다. */
 function grade(g, tag) {
@@ -154,6 +156,7 @@ function grade(g, tag) {
     page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     page.on('pageerror', e => errs.push('pageerror: ' + e.message));
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
     await page.goto('file://' + path.resolve(process.env.V389_SRC || path.join(__dirname, '..', 'index.html')));
     await page.waitForTimeout(1400);
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
@@ -176,10 +179,12 @@ function grade(g, tag) {
         g0.sp === 0 && g0.n === 4 && g0.grid.join(',') === '1,2,3,4',
         '.sp' + g0.sp + ' / ' + g0.n + '칸 / c' + g0.grid.join(',c'));
       for (let i = 0; i < g0.n; i++) {
-        if (!await page.evaluate(SETON, [sel, i])) continue;
-        await page.evaluate(SETTLE);
-        const g = await page.evaluate(READ, [sel]);
-        if (g.missing || g.onIdx < 0) continue;
+        const g = await page.evaluate(READ, [sel, i]);
+        /* 967 — «켠 칸을 그대로 쟀는가» 를 **점수 줄**로 묻는다. 전에는 어긋나도 조용히
+           되읽은 칸을 채점했다(칸1 두 번 · 칸3 0번, 총점은 그대로) — 이제는 빨개진다. */
+        ok('[' + name + ' 칸' + (i + 1) + '] 전제 — 켠 칸을 그대로 쟀다 (한 틱 · 967)',
+          !g.missing && g.onIdx === i, g.missing ? '바 없음' : '켠 칸 ' + (i + 1) + ' → 잰 칸 ' + (g.onIdx + 1));
+        if (g.missing || g.onIdx !== i) continue;
         grade(g, '[' + name + ' 칸' + (g.onIdx + 1) + ' «' + g.cells[g.onIdx].label + '»]');
       }
     }
@@ -191,11 +196,10 @@ function grade(g, tag) {
     console.log('\n[2] ref 잉크 중심 검산 — 07 스킬 시트, c2 «스킬» 활성 (ref 와 같은 상태)');
     await page.evaluate(() => { goTab('hero', true); heroSubGo('sk'); });
     await page.waitForTimeout(650);
-    await page.evaluate(SETON, ['#bSk .stabs', 1]);
     await page.evaluate(SETTLE);
-    const gr = await page.evaluate(READ, ['#bSk .stabs']);
-    ok('전제 — 07 시트 바를 c2 활성으로 잡았다', !gr.missing && gr.onIdx === 1,
-      gr.missing ? '없음' : '활성 idx ' + gr.onIdx);
+    const gr = await page.evaluate(READ, ['#bSk .stabs', 1]);   /* 967 — 켜기·읽기 한 틱 */
+    ok('전제 — 07 시트 바를 c2 활성으로 잡았다 (켠 칸을 그대로 쟀다 · 967)',
+      !gr.missing && gr.onIdx === 1, gr.missing ? '없음' : '활성 idx ' + gr.onIdx);
     if (!gr.missing && gr.onIdx === 1) {
       let sum = 0;
       REF_CENTER.forEach((r, i) => {
