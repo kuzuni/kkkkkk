@@ -22,6 +22,17 @@
  *   [2] 자기검산 줄 — 꼬리 세 줄(기준선 · 예열 · 씬 A 마지막 눈금)이 있다.
  *   [3] 행동 — 실제로 씬 A 를 돌려 판정·값·파일을 확인한다.
  *   [R] 되돌림 — `--twin-legacy` 로 옛 기준선을 되살리면 Δ(A8)가 **7,000px 대로 되돌아간다**.
+ *
+ * ⚑⚑ **987 (2026-09-06) — [3-h] 의 과녁을 옮겼다(986 준용).** 종전 [3-h] 는 예열 줄의 Δ 에
+ *   «8 중 **6 이상**에서 첫 장 ≠ 둘째 장» 이라는 문턱을 걸고 있었다. 그 Δ 는 이 자가 «고른» 값이
+ *   아니라 러너에게 «받은» 값이라(984-①) **0px 도 정상**이고, `cap683.js` 200행 그날 표는 이미
+ *   8 중 1 을 0 으로 찍어 여유가 한 칸뿐이었다 — 즉 **버리기로 한 값에 문턱을 걸어 러너가 우리 대신
+ *   채점하던 자리**다(986 과 같은 병 · 자리만 다름). ⇒ 판정 둘로 갈랐다:
+ *     [3-h]  «예열을 **실제로 지났는가**» — 여덟 칸이 다 있고 `-1`(예열 없음)이 아니다.
+ *            되돌림은 §R [R-d] 다(`--twin-legacy` 는 예열을 안 하므로 이 항이 곧바로 빨개진다).
+ *     [3-h2] «그 값에 **판정 표지가 없는가**» — 소스 래칫(986 [6-a] 꼴). 조용히 버려도, 다시
+ *            채점해도 빨갛다. ⚠ 문턱을 6 → 1 로 «내리는» 길은 헛초록이다(LESSONS 334).
+ *   Δ 자체는 `info` 관찰 줄로 계속 찍는다 — 조용히 버리면 다음 세션이 같은 것을 다시 배운다(980-④).
  */
 'use strict';
 const fs = require('fs');
@@ -36,6 +47,9 @@ const FAST = process.argv.includes('--fast');
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d !== undefined && d !== '' ? '  [' + d + ']' : '')); };
+/* 관찰 — 점수에 안 들어간다(987 · 984-① «고른 값 ↔ 받은 값»). 값은 찍되 판정은 안 한다:
+   조용히 버리면 다음 세션이 같은 것을 다시 배운다(980-④). */
+const info = (m, d) => console.log('  ·    ' + m + (d !== undefined && d !== '' ? '  [' + d + ']' : ''));
 
 const fn = name => {                 /* 함수 하나의 본문만 잘라 온다(중괄호 깊이 · 975 와 같은 자) */
   const i = src.indexOf('async function ' + name + '(');
@@ -118,10 +132,37 @@ const num = s => { const m = /-?\d+/.exec(s || ''); return m ? +m[0] : NaN; };
   const warmL = line(r.out, '예열(버린 첫 장');
   const wpairs = (warmL.split(': ')[1] || '').trim().split(' · ')
     .map(x => x.split(' ')[1]).map(x => (x || '').split('→').map(Number));
-  const wdiff = wpairs.filter(q => q.length === 2 && Number.isFinite(q[0]) && q[0] !== q[1]).length;
-  ok(wdiff >= 6,
-     '[3-h] 예열 줄이 «첫 장 ≠ 둘째 장» 을 **밝힌다** — 조용히 버리면 다음 세션이 같은 것을 다시 배운다',
-     wdiff + '/8 프레임에서 다름');
+  /* ⚑⚑ 987 — **문턱을 걷었다.** 종전 [3-h] 는 «8 중 6 이상에서 첫 장 ≠ 둘째 장» 이었는데,
+     그 Δ 는 이 자가 «고른» 값이 아니라 러너에게 «받은» 값이다(984-①): `#fxl` 이 합성 레이어라
+     첫 장이 몇 프레임 늦게 그려지느냐가 판마다 다르고(986 실측 0·0·0·525·428·252px),
+     `cap683.js` 200행의 그날 표는 이미 **8 중 1**(T=40 `5,994→5,994`)을 0 으로 찍었다.
+     ⇒ 판정은 «예열을 **실제로 지났는가**»(값이 있고 `-1` 이 아니다)로 옮기고 Δ 는 **관찰**로 내린다.
+     ⚠ 문턱을 6 → 1 로 «내리는» 길은 헛초록이다(LESSONS 334) — 한 프레임만 늦어도 통과가 되어
+     예열의 뜻이 사라진다. 되돌림은 §R [R-d](`--twin-legacy` = 예열 없음 ⇒ 이 항이 빨개진다). */
+  /* ⚠ 판정에는 **개수만** 넘긴다 — 값을 담은 그릇(`wpairs`)은 판정 줄에 못 닿게 한다([3-h2] 가 그것을 센다). */
+  const wcount = wpairs.length;
+  const warmed = wpairs.filter(q => q.length === 2 && Number.isFinite(q[0]) && Number.isFinite(q[1]) && q[0] !== -1).length;
+  ok(wcount === 8 && warmed === 8,
+     '[3-h] **여덟 장이 모두 예열을 실제로 지났다** — 예열 줄이 프레임마다 «첫 장 → 둘째 장» 두 수를 다 적고 '
+     + '`-1`(예열 없음)이 아니다. 재는 장은 «버린 뒤» 의 장이다',
+     warmed + '/' + wcount + ' 프레임이 예열을 지났다');
+  const wdelta = wpairs.map((q, i) => 'A' + (i + 1) + ' ' + (q[0] - q[1]) + 'px');   /* 관찰 — 판정 아님(987) */
+  info('[3-h·값] 버린 첫 장 − 쓴 둘째 장 **(값 · 판정 아님)**', wdelta.join(' · ')
+     + ' — **0px 도 정상이다**(안 늦게 그려진 판) · 0 이 아닌 판의 값도 «정착 잉크 ×(1.05²−1)» 언저리일 '
+     + '이유가 없다(팝이 도는 중이라 배율이 1.0~1.05 사이 어디든 · 986 §1)');
+  /* [3-h2] 소스 래칫(986 [6-a] · 984 [2-e] 꼴) — «버린 몫» 이 다시 판정 자리로 기어들면 빨개진다.
+     세 이름(값을 담은 그릇 · 관찰 줄 · 옛 문턱 변수)을 **판정 줄(`ok(`) 안에 적으면** 그 순간 빨갛다.
+     판정에 필요한 것은 «몇 장이 예열을 지났나» 라는 **개수**뿐이고 그건 위 두 상수가 들고 있다. */
+  const self = fs.readFileSync(__filename, 'utf8').split('\n');
+  const headOf = i => { for (let j = i; j >= 0; j--) { const t = self[j].trim();
+    if (/^(ok|info|const|let|var|return|if|for|console)\b/.test(t)) return t; } return ''; };
+  const dLine = i => /\b(wpairs|wdelta|wdiff)\b/.test(self[i]) && !/^\s*[*/]/.test(self[i].trim());
+  const dUse = self.map((l, i) => i).filter(dLine);
+  const dJudge = dUse.filter(i => /^ok\(/.test(headOf(i)));
+  ok(dUse.length > 0 && dJudge.length === 0,
+     '[3-h2] **그 값에는 판정 표지가 없다**(소스 래칫) — 버린 몫은 `info` 로 «적히기만» 한다. '
+     + '조용히 버려도(사용처 0곳) 다시 채점해도(판정 줄 ≥ 1곳) 빨개진다',
+     '버린 몫 사용처 ' + dUse.length + '곳 · 그 중 판정 줄 ' + dJudge.length + '곳');
   ok(fs.existsSync(path.join(OUT, '683-' + R + '-Asettle.png')),
      '[3-i] 진짜 정착 프레임이 파일로 남는다(비평가가 눈으로 대조할 기준 프레임)',
      '683-' + R + '-Asettle.png');
