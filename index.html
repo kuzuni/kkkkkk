@@ -8507,8 +8507,20 @@
   .pvc>.bdg{--bdg-ls:5.2px}
   /* ⚠ 두 줄은 **같은 점**을 중심으로 돈다(위 ⚑⚑). 배지가 172×184 이므로 중심은 (50%, 92px) 이고,
      각 줄의 지역 좌표로는 92 − 자기 top 이다. 이 두 값이 짝이라 한쪽만 고치면 강체가 깨진다. */
+  /* ⚑⚑ 961 — **윗줄 검정 획 8 → 10.** 895 2회차가 «자가 갈려 못 옮긴다» 로 남겨 둔 자리이고
+     (GH «맞다» 0% / GI −15% / `scan895` ⓐ −20.3%), 932 8회차가 **계열이 다른 넷째 자**
+     (`scan932` 질량 적분 ⓑ −17.3%)를 같은 광선 위에 얹어 «윗줄 획은 얇다» 를 확정한 뒤
+     환산비 0.534 로 옮겨 ⓐ 10.10 · ⓑ 9.73 = **둘 다 10** 을 냈다.
+     ⚑ 그 10 은 **계산값**이라 그대로 안 썼다 — `probe961` 이 선언 8·9·10·11·12 를 실제로 굴려
+     그려진 획을 화소로 쟀고(ⓐ −20.3 / −10.2 / **−0.3** / +9.1 / +18.4% · ⓑ −17.3 / −6.8 / **+2.8**
+     / +12.3 / +22.6%) **두 자가 같은 칸 10 을 골랐다**. 계산과 그림이 같은 답을 냈다.
+     ⚠ 아랫줄 7 은 **건드리지 마라** — 895 1회차가 5 로 내렸다가 2회차에 되돌린 자리다(정수 걸음 자의 바닥값).
+     ⚠ 대가는 **0px 이고 그것이 구조적**이다 — `paint-order:stroke fill` 이라 획은 노랑 채움 뒤에 깔리고,
+     §C 의 두 축(두 줄 빈 띠 · 노랑 AABB)은 **노랑 마스크**로 재므로 스윕 다섯 칸에서 값이 한 자도 안 움직였다
+     (빈 띠 −3.0% · AABB +1.4% 고정 — `probe961` [6][7]).
+     되돌림: 이 줄의 10 을 8 로. */
   .pvc>.bdg>i{position:absolute;left:0;right:0;top:59.375px;text-align:center;color:#FFFC7E;
-    font-size:46px;line-height:48px;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    font-size:46px;line-height:48px;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     letter-spacing:var(--bdg-ls);padding-left:var(--bdg-ls);transform:rotate(15deg)}
   /* ⚑⚑ 933 — **여기 있던 `font-weight:400` 은 죽은 선언이라 지웠다(그림 Δ0px).**
      ① 5936행 `#shopw i,#shopw em,#shopw b,#shopw u,#shopw s{… font-weight:900}` 이 **ID 급(1,0,1)**
