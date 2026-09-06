@@ -55,10 +55,28 @@ const SETTLE = () => {
 };
 
 /* ⚑ probe378 교훈 — «내가 켠 칸» 이 아니라 **지금 실제로 켜져 있는 칸**을 돌려준다.
-   renderUI() 가 매 틱 `.on` 을 다시 그리는 바가 있어, 안 그러면 «칸3 을 쟀다» 면서 칸1 을 찍는다. */
-const READ = ([sel]) => {
+   renderUI() 가 매 틱 `.on` 을 다시 그리는 바가 있어, 안 그러면 «칸3 을 쟀다» 면서 칸1 을 찍는다.
+   ⚑⚑ 963 이관 (2026-09-06) — **그 되읽기만으로는 구멍이 안 닫힌다.** 되읽기는 틀린 칸을
+   «조용히 갈아 끼울» 뿐이라, 아래 [1] 은 칸1 을 두 번 채점하고 **칸3 을 한 번도 안 재고도**
+   초록이었다(점수 줄 수가 그대로라 눈에 안 띈다). 뿌리는 `SETON` 과 `READ` 가 **두 evaluate** =
+   그 사이가 틱 경계라는 것이고, 제품이 그 자리를 소유한다 —
+   `renderRunes()`(index.html ~40219)가 `#trSubs` 의 `.on` 을 `trSub` 로 되돌린다.
+   실측(963 1회차): 되돌림 **72.5ms** · 틱 넘김 경로 20회 중 **3회** 어긋남 · 같은 틱 **0/20**.
+   ⇒ 인자에 `i` 를 받으면 **먼저 켜고 같은 틱에서 읽는다**(`i` 생략 = 읽기만 — [R] 절이 그렇게 쓴다).
+   `i < 0` 은 «전 칸 끄기». 전환(transition)이 없는 순수 클래스 기하라 같은 틱 값이 최종값이다. */
+const READ = ([sel, i]) => {
   const bar = document.querySelector(sel);
   if (!bar) return { missing: true };
+  if (i !== undefined) {
+    const cc = [...bar.querySelectorAll(':scope > .stab')];
+    if (i >= 0 && !cc[i]) return { missing: true };
+    cc.forEach((c, j) => {
+      const on = i >= 0 && j === i;
+      c.classList.toggle('on', on);
+      const ink = c.querySelector('i');
+      if (ink) { ink.classList.toggle('ol4', on); ink.classList.toggle('ol3', !on); }
+    });
+  }
   const cs = getComputedStyle(bar);
   const s = bar.getBoundingClientRect().width / bar.offsetWidth;   /* 입장 연출 스케일 */
   if (!isFinite(s) || s <= 0) return { missing: true, hidden: true };
@@ -69,6 +87,7 @@ const READ = ([sel]) => {
     bw: parseFloat(cs.borderLeftWidth),
     n: cells.length,
     sp: bar.classList.contains('sp2') ? 2 : bar.classList.contains('sp3') ? 3 : 0,
+    want: i === undefined ? null : i,        /* 963 — «내가 켠 칸» */
     onIdx: cells.findIndex(c => c.classList.contains('on')),
     /* 바 «바깥» 좌변 기준 상대 좌표 — 절대 x 는 입장 연출 중심 보정이 섞인다(verify47 머리말) */
     cells: cells.map(c => {
@@ -79,18 +98,8 @@ const READ = ([sel]) => {
   };
 };
 
-const SETON = ([sel, i]) => {
-  const bar = document.querySelector(sel);
-  if (!bar) return false;
-  const cells = [...bar.querySelectorAll(':scope > .stab')];
-  if (!cells[i]) return false;
-  cells.forEach((c, j) => {
-    c.classList.toggle('on', j === i);
-    const ink = c.querySelector('i');
-    if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-  });
-  return true;
-};
+/* 963 — `SETON` 은 선언째 사라졌다. 켜기는 `READ([sel, i])` 가 **같은 틱 안에서** 겸한다
+   (사본을 남기면 다음 세션이 다시 두 evaluate 로 쓴다 — 402 «사본을 지운다»). */
 
 /* 한 바를 «지금 켜져 있는 칸» 기준으로 채점한다. tag 는 로그용. */
 function grade(name, g, tag) {
@@ -155,11 +164,15 @@ function grade(name, g, tag) {
       console.log('\n── ' + name + ' (' + sel + ', .sp' + g0.sp + ', ' + g0.n + '칸, 바깥 ' + f2(g0.ow) + ')');
       ok(name + ' 전제 — 균등분할 선언(.spN) = 실제 칸 수', g0.sp === g0.n, '.sp' + g0.sp + ' / ' + g0.n + '칸');
       for (let i = 0; i < g0.n; i++) {
-        if (!await page.evaluate(SETON, [sel, i])) continue;
-        await page.evaluate(SETTLE);
-        const g = await page.evaluate(READ, [sel]);
-        if (g.missing || g.onIdx < 0) continue;
-        /* 켠 칸이 되돌려졌으면(renderUI) 그 칸은 «되읽은 칸» 으로 채점된다 — 라벨을 같이 찍는다 */
+        const g = await page.evaluate(READ, [sel, i]);          /* 963 — 켜기·읽기가 한 틱 */
+        if (g.missing) { ok(name + ' 칸' + (i + 1) + ' 을 켤 수 있다', false, '칸 없음'); continue; }
+        /* ⚑ 963 — **«쟀다고 말한 칸» 을 실제로 쟀는지가 점수 줄이다.** 이 항이 없으면
+           틱이 넘어간 판에서 칸1 이 두 번 채점되고 칸3 은 한 번도 안 재지는데 **총점은 같다**
+           (전에 실제로 그랬다 — probe379 는 그 판을 표에 찍었다). */
+        ok(name + ' 칸' + (i + 1) + ' — 켠 칸을 그대로 쟀다 (제품 렌더가 안 끼어들었다)',
+          g.onIdx === i,
+          g.onIdx < 0 ? '전부 꺼짐' : '칸' + (g.onIdx + 1) + ' «' + g.cells[g.onIdx].label + '» 로 되돌려짐');
+        if (g.onIdx !== i) continue;
         grade(name, g, '[' + name + ' 칸' + (g.onIdx + 1) + ' «' + g.cells[g.onIdx].label + '»]');
       }
     }
@@ -182,9 +195,10 @@ function grade(name, g, tag) {
     });
     await page.waitForTimeout(80);
     for (let i = 0; i < 2; i++) {
-      await page.evaluate(SETON, ['#__sp2probe', i]);
-      const g = await page.evaluate(READ, ['#__sp2probe']);
+      const g = await page.evaluate(READ, ['#__sp2probe', i]);   /* 963 — 켜기·읽기가 한 틱 */
       if (g.missing) { ok('.sp2 합성 바 측정', false, '없음'); break; }
+      ok('.sp2 합성 바 칸' + (i + 1) + ' — 켠 칸을 그대로 쟀다', g.onIdx === i,
+        g.onIdx < 0 ? '전부 꺼짐' : '칸' + (g.onIdx + 1));
       ok('.sp2 합성 바 — 균등분할 선언 = 2칸', g.sp === 2 && g.n === 2, '.sp' + g.sp + ' / ' + g.n + '칸');
       grade('sp2', g, '[.sp2 칸' + (g.onIdx + 1) + ']');
     }

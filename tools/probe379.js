@@ -37,44 +37,40 @@ const HOSTS = [
 const f2 = v => (Math.round(v * 100) / 100).toFixed(2);
 const sgn = v => (v >= 0 ? '+' : '') + f2(v);
 
-/* 활성 칸을 n 번째로 옮긴다 — probe378 과 같은 손잡이. */
-const SETON = ([sel, i]) => {
-  const bar = document.querySelector(sel);
-  if (!bar) return null;
-  const cells = [...bar.querySelectorAll(':scope > .stab')];
-  if (!cells[i]) return null;
-  cells.forEach((c, j) => {
-    c.classList.toggle('on', j === i);
-    const ink = c.querySelector('i');
-    if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-  });
-  return true;
-};
-
-/* 전 칸 비활성 — ⓐ(칸 격자)를 잴 때만 쓴다. 활성 칸은 알약이라 상자가 다르다. */
-const SETOFF = ([sel]) => {
-  const bar = document.querySelector(sel);
-  if (!bar) return null;
-  [...bar.querySelectorAll(':scope > .stab')].forEach(c => {
-    c.classList.remove('on');
-    const ink = c.querySelector('i');
-    if (ink) { ink.classList.remove('ol4'); ink.classList.add('ol3'); }
-  });
-  return true;
-};
-
-/* ⚑ probe378 교훈 — «내가 켠 칸» 이 아니라 **지금 실제로 켜져 있는 칸**을 읽는다
-   (renderUI() 가 매 틱 `.on` 을 다시 그리는 바가 있다). */
-const READ = ([sel]) => {
+/* ⚑⚑ 963 (2026-09-06) — **켜기와 읽기를 한 틱 안에서 한다.**
+   전에는 `SETON` · `SETTLE` · `READ` 세 evaluate 였고, 그 사이가 **틱 경계**였다.
+   `#trSubs` 는 제품이 그 자리를 소유한다 — `renderRunes()`(index.html ~40219)가
+   `el.classList.toggle('on', el.dataset.trsub === trSub)` 로 **내가 심은 활성을 되돌린다**.
+   실측(963 1회차): 되돌림까지 **72.5ms** · 되돌아가는 칸은 언제나 칸1(`trSub='train'`) ·
+   현행 틱 넘김 경로는 20회 중 **3회** 어긋났고(15%) 같은 틱 경로는 **0/20** 이다.
+   그래서 probe379 를 세 번 돌리면 세 번째 판의 ⓑ 가 «칸3 «단련»» 자리에 **칸1 «훈련» 을 한 번 더**
+   찍었다(6회 중 4쌍이 서로 다르다 — 등재 963).
+   ⚠ 그 전에도 «되읽기»(아래 onIdx)는 있었지만 그것은 **조용한 대체**였다 — 틀린 칸을 찍되
+     틀렸다고 말하지 않아, 쓰는 사람은 칸3 을 잰 표로 읽는다. 되읽기는 남기고(전제 검사로 쓴다)
+     **어긋나면 값을 찍지 않고 큰 소리로 신고**한다(아래 ⓑ). 문턱·허용치는 한 칸도 안 넓혔다.
+   ⚠ 같은 틱이 안전한 이유: `.stab`/`.stab.on` 은 전환(transition)이 없는 **순수 클래스 기하**라
+     (`.stabs.sp2/.sp3/.sp4` 규칙 — index.html ~13924~13950) `getBoundingClientRect()` 가
+     강제 리플로 뒤 최종값을 돌려준다. 그래서 `SETTLE`(입장 연출 대기)은 **호스트 진입 뒤 한 번**만
+     필요하고 칸 순회 안에서는 필요 없다.
+   i < 0 이면 «전 칸 끄기»(ⓐ 칸 격자를 잴 때 — 활성 칸은 알약이라 상자가 다르다). */
+const SET_READ = ([sel, i]) => {
   const bar = document.querySelector(sel);
   if (!bar) return null;
   const cells = [...bar.querySelectorAll(':scope > .stab')];
   if (!cells.length) return null;
+  if (i >= 0 && !cells[i]) return null;
+  cells.forEach((c, j) => {
+    const on = i >= 0 && j === i;
+    c.classList.toggle('on', on);
+    const ink = c.querySelector('i');
+    if (ink) { ink.classList.toggle('ol4', on); ink.classList.toggle('ol3', !on); }
+  });
   const cs = getComputedStyle(bar);
   const bb = bar.getBoundingClientRect();
   const bw = parseFloat(cs.borderLeftWidth);
   const onIdx = cells.findIndex(c => c.classList.contains('on'));
   return {
+    want: i,                        /* 963 — «내가 켠 칸». onIdx 와 다르면 그 판은 못 잰 것이다 */
     /* 바 바깥 상자(border-box) — 이것이 4칸 격자가 나누는 상자다 */
     outer: { x: bb.x, w: bb.width },
     border: bw,
@@ -126,10 +122,9 @@ const SETTLE = () => {
       await page.evaluate(SETTLE);
 
       /* ⓐ 는 «칸» 을 재는 절이다 — 활성 칸은 알약이라 상자가 다르다(오버행). 전부 끄고 읽는다.
-         ⚠ 못 끄는 바(renderUI 가 매 틱 다시 그린다)가 있으므로 되읽기로 확인하고 그 칸은 표시한다. */
-      await page.evaluate(SETOFF, [sel]);
-      await page.evaluate(SETTLE);
-      const base = await page.evaluate(READ, [sel]);
+         963 — 끄기와 읽기가 **한 틱**이라 제품 렌더가 그 사이에 못 끼어든다. 그래도 되읽기는
+         남긴다(전제 검사) — 켜진 칸이 남아 있으면 그건 클래스 말고 다른 것이 켜고 있다는 뜻이다. */
+      const base = await page.evaluate(SET_READ, [sel, -1]);
       if (!base) { console.log(name + ' — 바 없음\n'); continue; }
       hosts++;
       const { outer, border, padW, n, mode } = base;
@@ -140,7 +135,9 @@ const SETTLE = () => {
 
       /* ⓐ 칸 격자 */
       console.log('   ⓐ 칸 — [실제 좌..우 / 폭]  vs  [바깥 격자 좌..우 / 폭]'
-        + (base.onIdx >= 0 ? '   ⚠ 칸' + (base.onIdx + 1) + ' 은 «못 끈 활성 칸»(알약 상자다)' : ''));
+        + (base.onIdx >= 0
+          ? '   ⚠⚠ 칸' + (base.onIdx + 1) + ' 이 «한 틱 안에서도 안 꺼졌다» — 그 칸은 알약 상자다(963)'
+          : ''));
       base.cells.forEach((c, i) => {
         const gl = i * gridCell, gr = (i + 1) * gridCell;
         console.log('      칸' + (i + 1) + ' «' + (c.label || '?') + '»  '
@@ -152,11 +149,17 @@ const SETTLE = () => {
       /* ⓑ 오버행 — 칸을 차례로 활성으로 만들고 알약 상자를 «그 칸의 격자» 와 견준다 */
       console.log('   ⓑ 오버행 — 활성 알약 변 − 바깥 격자 칸 변');
       for (let i = 0; i < n; i++) {
-        if (!await page.evaluate(SETON, [sel, i])) continue;
-        await page.evaluate(SETTLE);
-        const r = await page.evaluate(READ, [sel]);
-        if (!r || r.onIdx < 0) { console.log('      칸' + (i + 1) + ' — 활성 주입 되돌려짐(건너뜀)'); continue; }
-        const j = r.onIdx;                    /* 실제로 켜진 칸 */
+        const r = await page.evaluate(SET_READ, [sel, i]);
+        if (!r) { console.log('      칸' + (i + 1) + ' — 칸 없음(건너뜀)'); continue; }
+        /* 963 — **어긋나면 값을 안 찍는다.** 전에는 «지금 켜져 있는 칸» 으로 조용히 갈아 끼워
+           칸1 을 두 번 찍고 칸3 을 한 번도 안 쟀다(그러고도 표는 3줄이라 멀쩡해 보였다). */
+        if (r.onIdx !== i) {
+          console.log('      칸' + (i + 1) + ' — ⚠⚠ 못 쟀다: 한 틱 안에서 활성이 '
+            + (r.onIdx < 0 ? '전부 꺼졌다' : '칸' + (r.onIdx + 1) + ' 로 되돌려졌다')
+            + ' (제품이 이 자리를 소유한다 — 963)');
+          continue;
+        }
+        const j = r.onIdx;                    /* == i. 되읽기로 확인한 값이다 */
         const p = r.cells[j];
         const gl = j * gridCell, gr = (j + 1) * gridCell;
         console.log('      칸' + (j + 1) + ' «' + (p.label || '?') + '» 활성  알약 '
