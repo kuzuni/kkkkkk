@@ -45,9 +45,25 @@ const REC_SRC = function () {
   var origR = (window.Range && Range.prototype.getBoundingClientRect) || null;
   var rec = [], on = false, depth = 0;
   var MAX = 8000;               /* 한 장 사이의 기억 상한 — 넘으면 그냥 안 센다(멈추지 않는다) */
+  /* ⚑⚑ **제품이 부른 rect 는 안 센다 — 이 가름이 없으면 감사자가 배경 잡음에 묻힌다.**
+     `drawHud`→`cpRoom`·`fitNum`→`fitRoom` 은 매 프레임 rect 를 부르고 HUD 숫자는 팝
+     (`jz-up-n`)까지 걸려 있어서, 안 가르면 «낡은 읽기» 가 자마다 수백 건 나오는데 **그중
+     자가 창으로 쓴 것은 하나도 없다**. 가름은 호출 스택이 준다(실측):
+       제품  … at cpRoom (file:///…/index.html:29979)      ← `index.html` 이 있다
+       자    … at eval (eval at evaluate) / UtilityScript.evaluate ← 없다
+     ⚠ 스택을 뜨는 값이 싸지 않아 `stackTraceLimit` 을 4 로 줄인다 — 감사자를 **켰을 때만** 이므로
+     평소 자의 예외 보고는 그대로다. */
+  try { Error.stackTraceLimit = 4; } catch (_) {}
+  function mine() {
+    try {
+      var s = new Error().stack || '';
+      return s.indexOf('index.html') < 0;
+    } catch (_) { return false; }
+  }
   function push(o, r) {
     if (!on || depth || rec.length >= MAX) return;
-    rec.push({ o: o, x: r.x, y: r.y, w: r.width, h: r.height });
+    if (!mine()) return;
+    rec.push({ o: o, x: r.x, y: r.y, w: r.width, h: r.height, t: performance.now() });
   }
   Element.prototype.getBoundingClientRect = function () {
     var r = origE.call(this); push(this, r); return r;
@@ -82,30 +98,44 @@ const REC_SRC = function () {
   window.__geo974 = {
     start: function () { on = true; rec.length = 0; },
     stop: function () { on = false; rec.length = 0; },
-    /* 찍는 순간 다시 재서 «건네준 값 ↔ 지금 값» 을 견준다 */
-    audit: function (tol) {
+    /* 찍는 순간 다시 재서 «건네준 값 ↔ 지금 값» 을 견준다.
+       ⚑ **나이로 가른다.** 자를 부팅하는 동안(로딩 막이 걷히고 HUD 숫자가 오르는 사이)에도 rect 는
+       수백 건 읽히는데, 그것은 «창» 이 아니라 **준비**다. 창은 «재고 곧바로 찍는» 것이라 나이가 짧다.
+       ⇒ `young` = 찍기 직전 `win` ms 안에 읽힌 것 — **이 축이 병이고, 나머지는 배경이다.** */
+    audit: function (tol, win) {
       depth++;
       var t = (tol === null || tol === undefined) ? 0.75 : tol;
-      var stale = 0, detached = 0, seen = rec.length, worst = null, sample = [];
+      var W = (win === null || win === undefined) ? 1500 : win;
+      var now = performance.now();
+      var stale = 0, young = 0, detached = 0, seen = rec.length, worst = null, sample = [];
       for (var i = 0; i < rec.length; i++) {
         var e = rec[i], r = null;
         if (!alive(e.o)) { detached++; continue; }
         try { r = measure(e.o); } catch (_) { continue; }
         if (!r) continue;
+        /* ⚑ **«사라진 노드» 와 «크기가 변한 노드» 는 다른 축이다.** Range 는 DOM 이 바뀌면
+           스스로 접히면서(collapse) 컨테이너를 살아 있는 조상으로 올려 잡는다 — `alive()` 가
+           못 거르고 0×0 으로 나온다. 그것은 «창이 어긋났다» 가 아니라 «잰 것이 없어졌다» 이고,
+           974 가 쫓는 것은 **둘 다 실물인데 값이 갈리는** 쪽이다. */
+        if ((r.width === 0 && r.height === 0) && (e.w > 0 || e.h > 0)) { detached++; continue; }
         var d = Math.max(Math.abs(r.x - e.x), Math.abs(r.y - e.y),
                          Math.abs(r.width - e.w), Math.abs(r.height - e.h));
         if (d > t) {
+          var age = now - e.t;
           stale++;
-          var one = { d: d, tag: tag(e.o),
-                      before: [+e.w.toFixed(2), +e.h.toFixed(2), +e.x.toFixed(2), +e.y.toFixed(2)],
-                      after: [+r.width.toFixed(2), +r.height.toFixed(2), +r.x.toFixed(2), +r.y.toFixed(2)] };
-          if (sample.length < 8) sample.push(one);
-          if (!worst || d > worst.d) worst = one;
+          if (age <= W) {
+            young++;
+            var one = { d: d, age: +age.toFixed(0), tag: tag(e.o),
+                        before: [+e.w.toFixed(2), +e.h.toFixed(2), +e.x.toFixed(2), +e.y.toFixed(2)],
+                        after: [+r.width.toFixed(2), +r.height.toFixed(2), +r.x.toFixed(2), +r.y.toFixed(2)] };
+            if (sample.length < 8) sample.push(one);
+            if (!worst || d > worst.d) worst = one;
+          }
         }
       }
       rec.length = 0;
       depth--;
-      return { reads: seen, stale: stale, detached: detached, worst: worst, sample: sample };
+      return { reads: seen, stale: stale, young: young, detached: detached, worst: worst, sample: sample };
     },
   };
   window.__geo974.start();
@@ -116,19 +146,26 @@ function tol() {
   return Number.isFinite(v) ? v : 0.75;
 }
 
+/* «창» 으로 볼 나이(ms) — 재고 곧바로 찍는 것만 센다. `PW_GEO974_WIN` 으로 바꾼다. */
+function win() {
+  const v = parseFloat(process.env.PW_GEO974_WIN);
+  return Number.isFinite(v) ? v : 1500;
+}
+
 function enabled() {
   const v = process.env.PW_GEO974;
   return !!v && v !== '0';
 }
 
 /* ---- 집계 — 프로세스 하나가 여러 페이지를 써도 한 장부에 모인다 ---- */
-const ledger = { shots: 0, reads: 0, stale: 0, detached: 0, worst: null, sample: [] };
+const ledger = { shots: 0, reads: 0, stale: 0, young: 0, detached: 0, worst: null, sample: [] };
 
 function fold(r) {
   if (!r) return;
   ledger.shots++;
   ledger.reads += r.reads | 0;
   ledger.stale += r.stale | 0;
+  ledger.young += r.young | 0;
   ledger.detached += r.detached | 0;
   if (r.worst && (!ledger.worst || r.worst.d > ledger.worst.d)) ledger.worst = r.worst;
   for (const s of r.sample || []) if (ledger.sample.length < 12) ledger.sample.push(s);
@@ -144,7 +181,8 @@ function report() {
     try { require('fs').writeFileSync(dest, JSON.stringify(out, null, 1)); } catch (_) {}
   }
   console.error('[geo974] ' + out.entry + ' — 찍기 ' + out.shots + '장 · 읽기 ' + out.reads
-    + '건 · **낡은 읽기 ' + out.stale + '건**' + (out.detached ? ' · 떨어진 노드 ' + out.detached + '건' : '')
+    + '건 · **창 나이 안 낡은 읽기 ' + out.young + '건**(전체 낡음 ' + out.stale + ')'
+    + (out.detached ? ' · 떨어진 노드 ' + out.detached + '건' : '')
     + (out.worst ? ' · 최악 Δ' + out.worst.d.toFixed(2) + 'px ' + out.worst.tag : ''));
 }
 
@@ -156,7 +194,8 @@ async function arm(page) {
   page.screenshot = async (...a) => {
     /* ⚑ **찍기 «직전» 에 감사한다** — 그래야 «건네준 값 ↔ 찍히는 판» 을 견주는 것이 된다 */
     try {
-      const r = await page.evaluate((t) => (window.__geo974 ? window.__geo974.audit(t) : null), tol());
+      const r = await page.evaluate(
+        (a) => (window.__geo974 ? window.__geo974.audit(a[0], a[1]) : null), [tol(), win()]);
       fold(r);
     } catch (_) {}
     return await orig(...a);
