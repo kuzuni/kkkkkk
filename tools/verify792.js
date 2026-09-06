@@ -190,10 +190,46 @@ async function measure(browser, url) {
        ⚠ **재는 것은 한 칸도 안 바뀐다** — 상자 크기·문턱·발 놓는 자리(`CX − ox`)는 그대로고,
          바뀌는 것은 «어느 자리에서 재는가» 뿐이다. */
     player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
-    const CX = Math.round(player.x + ox + 180), CY = Math.round(player.y + oy - 22), R = 60;
-    const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
-    const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);
-    const grab = () => { draw(); return ctx.getImageData(bx, by, bw, bh).data; };
+    const CX = Math.round(player.x + ox + 180), CY = Math.round(player.y + oy - 22);
+    const boxOf = (R) => ({ R, bx: Math.round((CX - R) * SC), by: Math.round((CY - R) * SC),
+                            bw: Math.round(2 * R * SC), bh: Math.round(2 * R * SC) });
+    const grabAt = (B) => { draw(); return ctx.getImageData(B.bx, B.by, B.bw, B.bh).data; };
+    const mkOf = (sp, ex) => Object.assign(
+      { k: sp.k, sh: sp.sh, sa: sp.sa, x: CX - ox, y: CY - oy, vx: 0, vy: 0, a: 0,
+        dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
+        spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
+        tx: sp.tx === undefined ? undefined : CX - ox,
+        ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 }, ex || {});
+    /* ⚑⚑ 989 ⓑ — **상자를 상수에서 뺀다.** R 60(= 240기기px)은 `meteor` 의 잉크를 테두리에서
+       잘랐고(실측 30화소), **잘린 값은 상자 크기로 수렴하므로 [E1] 이 그 종을 «밴드 안» 으로
+       읽었다** — 결함이 있어야 초록인 자다(979-②). 상수를 손으로 키우는 것은 답이 아니다
+       (다음 종에서 같은 병이 재발한다). ⇒ «잉크가 테두리에 닿으면 키워서 다시 잰다» 를
+       사다리로 돌려 **닿음 0** 이 되는 첫 상자를 고른다. 사다리·수렴은 `probe989` [2][3] 이 찍는다
+       (R240 부터 닿음 0 이고 R240↔R480 에서 눈금이 한 종도 안 움직인다). */
+    const pick = (() => {
+      const ids0 = Object.keys(specs);
+      for (const R of [60, 120, 240, 480, 960]) {
+        const B = boxOf(R);
+        let touch = 0;
+        for (const id in specs) {
+          const sp = specs[id];
+          clearFx(); shots.push(mkOf(sp, { mf: 0 })); const t = grabAt(B);   /* 바탕 — 아래 ⓒ */
+          clearFx(); shots.push(mkOf(sp));            const q = grabAt(B);
+          for (let i = 0, p = 0; i < q.length; i += 4, p++) {
+            let best = 0;
+            for (let k = 0; k < 3; k++) { const v = Math.abs(q[i + k] - t[i + k]); if (v > best) best = v; }
+            if (best <= 8) continue;
+            const x = p % B.bw, y = (p - x) / B.bw;
+            if (x === 0 || y === 0 || x === B.bw - 1 || y === B.bh - 1) touch++;
+          }
+          clearFx();
+        }
+        if (!touch) return { R, tried: R, grew: R > 60 };
+        if (R === 960) return { R, tried: R, grew: true, over: touch };
+      }
+    })();
+    const BOX = boxOf(pick.R), R = BOX.R, bx = BOX.bx, by = BOX.by, bw = BOX.bw, bh = BOX.bh;
+    const grab = () => grabAt(BOX);
     /* ⚑⚑ 855 — 벽시계를 상수에 세운다(오라 반지름이 `sin(performance.now()/220)` 로 뛴다).
        ⚠ **아래 프레임 비용 측정은 진짜 시계를 써야 하므로** 원본을 들고 있다가 그 앞에서 되돌린다.
          안 되돌리면 `bake`·`frame` 이 전부 0 이 되어 «연출이 공짜» 라고 거짓말한다(792-③ 이 세운 축). */
@@ -223,13 +259,24 @@ async function measure(browser, url) {
     const rows = {}, masks = {};
     for (const id in specs) {
       const sp = specs[id];
-      const mk = () => ({ k: sp.k, sh: sp.sh, sa: sp.sa, x: CX - ox, y: CY - oy, vx: 0, vy: 0, a: 0,
-                          dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
-                          spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
-                          tx: sp.tx === undefined ? undefined : CX - ox,
-                          ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 });
+      const mk = (ex) => mkOf(sp, ex);
+      /* ⚑⚑ 989 ⓒ — **바탕은 «발이 없는 장면» 이 아니라 «발을 놓되 그림만 끈 장면» 이다.**
+         발이 오면 늘어나는 그림이 `shotBody()` 하나가 아니다: 운석은 `b.k === 'meteor'` 인 동안
+         착탄 지점에 **낙하 예고 링**(반경 = 실제 피해 반경 · index.html 28773 루프)을 지면에 깐다.
+         그 링은 «그린 반경이 곧 판정» 이라 541 이 크기 배수에서 빼 둔 부품이고 `shotBody` 밖이라
+         **덩치(③) 축이 아니다.** 종전 바탕으로 재면 그 링이 이 종의 잉크·후광·대각에 통째로
+         섞여 들어왔다(실측 8,271화소 · 상자를 키우면 대각이 157 → **687.7** 로 뛴다).
+         ⇒ 그림만 끄는 손잡이는 제품에 이미 있다 — 19회차 표창 미스 페이드의 `b.mf`(그리기 알파).
+         ⚠ 16종은 두 바탕이 **화소까지 같다**(`probe989` [6] · 아래 `dBase` 가 그 값을 들고 나간다).
+         ⚠ α 풀이의 바탕도 이것이라야 옳다 — 링 위에 겹친 화소는 종전 바탕에서 α 가 틀리게 나왔다. */
+      clearFx(); shots.push(mk({ mf: 0 }));      const bs = grab();   /* b — 이 발 밑의 진짜 바탕 */
       clearFx(); shots.push(mk());              const a0 = grab();   /* r1 — 한 겹 */
       clearFx(); shots.push(mk(), mk());        const a2 = grab();   /* r2 — 두 겹 */
+      let dBase = 0;
+      for (let i = 0; i < bs.length; i += 4) {
+        if (Math.abs(bs[i] - base[i]) > 8 || Math.abs(bs[i + 1] - base[i + 1]) > 8 ||
+            Math.abs(bs[i + 2] - base[i + 2]) > 8) dBase++;
+      }
       let hard = 0, sp2 = 0;
       const m = new Uint8Array(bw * bh);        /* 잉크 전체 */
       const hd = new Uint8Array(bw * bh);       /* 본체 */
@@ -238,12 +285,12 @@ async function measure(browser, url) {
       for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
         let c = 0, best = 0;
         for (let k = 0; k < 3; k++) {
-          const v = Math.abs(a0[i + k] - base[i + k]);
+          const v = Math.abs(a0[i + k] - bs[i + k]);
           if (v > best) { best = v; c = k; }
         }
         if (best <= 8) continue;
         m[p] = 1;
-        const d1 = a0[i + c] - base[i + c];
+        const d1 = a0[i + c] - bs[i + c];
         const d2 = a2[i + c] - a0[i + c];
         let al = 1 - d2 / d1;                   /* α = 1 − (r2 − r1)/(r1 − b) */
         if (!isFinite(al)) al = 1;
@@ -410,7 +457,7 @@ async function measure(browser, url) {
       for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
         if (hd[p]) { bR += a0[i]; bB += a0[i + 2]; nBc++; continue; }
         if (!(sf[p] && out[p]) || av[p] < 0.12 || dtm[p] > CBAND) continue;   /* CBAND — 아래 한 곳 선언 */
-        const un = (k) => { const v = (a0[i + k] - (1 - av[p]) * base[i + k]) / av[p];
+        const un = (k) => { const v = (a0[i + k] - (1 - av[p]) * bs[i + k]) / av[p];
                             return v < 0 ? 0 : (v > 255 ? 255 : v); };
         hR += un(0); hB += un(2); nHc++;
       }
@@ -427,26 +474,45 @@ async function measure(browser, url) {
       for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
         if (!hd[p]) continue;
         lb += 0.299 * a0[i] + 0.587 * a0[i + 1] + 0.114 * a0[i + 2];
-        lg += 0.299 * base[i] + 0.587 * base[i + 1] + 0.114 * base[i + 2];
+        lg += 0.299 * bs[i] + 0.587 * bs[i + 1] + 0.114 * bs[i + 2];
         nb++;
       }
-      /* ⚑ 11회차 [E] — ③ 덩치 축의 자. 10회차 2인 공통 ⓓ(«덩치가 두 무리로 갈린다»)는
-         **본체(α ≥ A_BODY)** 만 두고 재야 한다: 후광 링은 9회차부터 종에 안 달린 규격이고,
-         제 손으로 깐 반투명 부품(운석 꼬리·화구 불빛)은 α < A_BODY 라 여기 안 들어온다
-         (그 몫은 [B8s] `fFar` 가 따로 센다). 눈금은 **본체 실루엣 bbox 의 대각**이다 —
-         CV 가 «대각 중앙값 ±25%» 로 목표를 그 축에 적었고, 면적은 대각의 제곱이라 밴드가
-         자동으로 따라온다(그래서 [E2] 의 상한은 손 상수가 아니라 [E1] 에서 파생한다). */
+      /* ⚑ 11회차 [E] — ③ 덩치 축의 자. 10회차 2인 공통 ⓓ(«덩치가 두 무리로 갈린다»).
+         ⚑⚑ **989 ⓐ — 눈금을 한 칸 넓혔다.** 11회차는 «본체(α ≥ A_BODY) 만» 으로 세웠고
+         그 판단은 **절반만 옳았다**: 공용 링은 두께가 균일해 상대 밴드를 안 흔들지만,
+         **종이 제 손으로 깐 반투명 부품**(화구 불빛 · 병 불빛 · 운석 불꼬리)은 α < A_BODY 라
+         눈금에서 빠지는데 **눈은 그것을 덩치로 센다**. 12회차 비평 2인(CX·CY)이 각자 렌더한
+         대조 시트에서 `boom` +32.5/+26.3% · `flask` +32.6/+35.1% 를 잰 것이 그 몫이고,
+         [E1] 은 같은 트리에서 «밖 0종» 이었다(989 등재문).
+         ⇒ 눈금 = **본체 ∪ «제 손으로 깐 반투명 부품»** 의 bbox 대각.
+         ⚠ 부품의 정의를 자에 새로 적지 않는다 — [B8s] 가 `fFar` 로 **이미 세고 있는 바로 그 화소**
+           (본체에서 `CBAND`px 밖 후광)를 그대로 쓴다. 공용 링은 설계 두께 12px 라 CBAND 안이라
+           안 들어온다(그래서 링을 가진 15종은 `own` 이 `diag` 와 글자 그대로 같다).
+         ⚠ 본체 대각(`diag`)은 **지우지 않고 같이 들고 간다** — 아래 표·[E2]·`verify982` 가 읽는다. */
       let bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1;
+      let ox0 = 1e9, oy0 = 1e9, ox1 = -1, oy1 = -1;
+      let vx0 = 1e9, vy0 = 1e9, vx1 = -1, vy1 = -1;      /* 989 — 눈이 보는 상한(공용 링까지) · 기록만 */
       for (let p = 0; p < hd.length; p++) {
-        if (!hd[p]) continue;
         const x = p % bw, y = (p - x) / bw;
-        if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
-        if (y < by0) by0 = y; if (y > by1) by1 = y;
+        if (m[p]) {
+          if (x < vx0) vx0 = x; if (x > vx1) vx1 = x;
+          if (y < vy0) vy0 = y; if (y > vy1) vy1 = y;
+        }
+        if (hd[p]) {
+          if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
+          if (y < by0) by0 = y; if (y > by1) by1 = y;
+        } else if (!(sf[p] && out[p] && dtm[p] > CBAND)) continue;
+        if (x < ox0) ox0 = x; if (x > ox1) ox1 = x;
+        if (y < oy0) oy0 = y; if (y > oy1) oy1 = y;
       }
       const bbw = bx1 < 0 ? 0 : bx1 - bx0 + 1, bbh = by1 < 0 ? 0 : by1 - by0 + 1;
+      const obw = ox1 < 0 ? 0 : ox1 - ox0 + 1, obh = oy1 < 0 ? 0 : oy1 - oy0 + 1;
+      const vbw = vx1 < 0 ? 0 : vx1 - vx0 + 1, vbh = vy1 < 0 ? 0 : vy1 - vy0 + 1;
       masks[id] = m;
-      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off,
+      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off, dBase,
                    bbw, bbh, diag: +Math.hypot(bbw, bbh).toFixed(1),
+                   own: +Math.hypot(obw, obh).toFixed(1),
+                   vis: +Math.hypot(vbw, vbh).toFixed(1),
                    dL: nb ? +((lb - lg) / nb).toFixed(1) : 0,
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
                    fSpec: +(sp2 / Math.max(1, ink)).toFixed(4),
@@ -612,7 +678,8 @@ async function measure(browser, url) {
        굽기가 실패해 `null` 이 캐시된 종은 링이 없는 것으로 센다. */
     const aura = (typeof AURA_SPR !== 'undefined')
       ? Array.from(AURA_SPR.entries()).filter(e => e[1]).map(e => String(e[0]).split('|')[0]) : [];
-    return { rows, worst, n: ids.length, frame, bake: +bake.toFixed(1), nShot: 60, aura, cband: CBAND, rings: ringM };
+    return { rows, worst, n: ids.length, frame, bake: +bake.toFixed(1), nShot: 60, aura, cband: CBAND, rings: ringM,
+             box: { R, bw, clip: pick.over || 0, grew: !!pick.grew } };
   });
 
   await ctx.close();
@@ -748,8 +815,12 @@ if (require.main === module) (async () => {
            래칫을 안 내리면 «규격 밖 종이 하나 새로 생겨도 초록» 인 자가 된다(328~330 교훈의 반대편
            자리 — 거기서는 «항을 눌러 초록으로 되돌리지 마라» 였고, 여기서는 «재고가 줄면 문을
            그만큼 좁혀라» 다). 자리는 `verify865` 가 이어서 지킨다([A4] 가 창 하나를 따로 못박는다). */
-      ok(own.length <= 3, '[B8s] 자가 링을 못 가리는 종(제 손으로 깐 반투명 부품 · 먼몫 > ' + FAR_MAX +
-         ') ' + own.length + '종 ≤ 3 (불 계열뿐 — 865 가 `lance` 를 뺐다) — ' +
+      /* ⚑ **989 이관 — 래칫을 3 → 2 로 내렸다.** 989 가 `fire` 를 0.733 로 눌러 화구 불빛의 뻗음이
+         CBAND(18px) 안으로 들어오면서 `boom` 이 이 목록에서 빠졌다(먼몫 0.167 → 0.03 이하).
+         865 가 `lance` 를 뺐을 때와 **같은 규칙**이다 — 재고가 줄면 문을 그만큼 좁힌다.
+         안 내리면 «규격 밖 종이 하나 새로 생겨도 초록» 인 자가 된다. */
+      ok(own.length <= 2, '[B8s] 자가 링을 못 가리는 종(제 손으로 깐 반투명 부품 · 먼몫 > ' + FAR_MAX +
+         ') ' + own.length + '종 ≤ 2 (불 계열뿐 — 865 가 `lance` 를, 989 가 `boom` 을 뺐다) — ' +
          (own.map(i => i + ':' + out.rows[i].fFar).join(' · ') || '없음'));
       /* [B8]·[B8b] 는 **구운 링 자산**을 잰다(위 `rings` 주석 — 장면 자는 방향마다 바탕이 달라
          ±5px 로 흔들린다). 자산 화소 = 화면 화소이므로 «찍힌 픽셀» 을 안 놓는다. */
@@ -788,14 +859,40 @@ if (require.main === module) (async () => {
          **눈금은 본체 bbox 대각**(위 측정 주석) · **목표는 CV 가 준 «대각 중앙값 ±25%»** 다.
          ⚠ 관측값을 문턱으로 박지 않는다(825) — ±25% 는 비평가가 준 목표고, [E2] 의 면적 상한
            2.78 은 그 대각 밴드에서 파생한다((1.25/0.75)² = 2.78). 손 상수는 한 개도 없다. */
-      const dgs = ids.map(i => out.rows[i].diag).sort((a, b) => a - b);
+      /* ⚑⚑ 989 — 눈금이 **본체 → «본체 + 제 손으로 깐 반투명 부품»** 으로 바뀌었다(measure 주석 ⓐ)
+         고, 상자는 상수가 아니라 **닿음 0 이 되는 첫 상자**다(ⓑ). 문턱(±25%)은 한 글자도 안 건드렸다 —
+         비평가 CV 가 준 목표를 넓혀 초록으로 되돌리는 것이 이 행이 고치려는 병 그 자체다(979-②). */
+      ok(out.box && out.box.clip === 0,
+         '[E0] 측정 상자가 잉크를 안 자른다 — 사다리에서 고른 상자 R' + (out.box ? out.box.R : '?') +
+         '(' + (out.box ? out.box.bw : '?') + '기기px) · 테두리에 닿는 화소 ' +
+         (out.box ? out.box.clip : '?') + ' (R60 이면 meteor 30화소 — **잘린 값은 상자 크기로 수렴해 밴드 안으로 읽힌다**)');
+      const dgs = ids.map(i => out.rows[i].own).sort((a, b) => a - b);
       const dMed = dgs[Math.floor((dgs.length - 1) / 2)];
       const dLo = +(dMed * (1 - DIAG_TOL)).toFixed(1), dHi = +(dMed * (1 + DIAG_TOL)).toFixed(1);
-      const dBad = ids.filter(i => out.rows[i].diag < dLo || out.rows[i].diag > dHi);
+      const dBad = ids.filter(i => out.rows[i].own < dLo || out.rows[i].own > dHi);
       ok(dBad.length === 0,
-         '[E1] ③ 덩치 — 본체 대각이 중앙값 ' + dMed + 'px 의 ±' + Math.round(DIAG_TOL * 100) +
+         '[E1] ③ 덩치 — **본체 + 제 손 부품** 대각이 중앙값 ' + dMed + 'px 의 ±' + Math.round(DIAG_TOL * 100) +
          '% (' + dLo + '~' + dHi + ') 안 · 밖 ' + dBad.length + '종' +
-         (dBad.length ? ' (' + dBad.map(i => i + ':' + out.rows[i].diag).join(' · ') + ')' : ''));
+         (dBad.length ? ' (' + dBad.map(i => i + ':' + out.rows[i].own).join(' · ') + ')' : '') +
+         ' · 본체만 재면(옛 눈금) 밖 ' +
+         (() => { const g = ids.map(i => out.rows[i].diag).sort((a, b) => a - b);
+                  const m = g[Math.floor((g.length - 1) / 2)];
+                  return ids.filter(i => out.rows[i].diag < m * (1 - DIAG_TOL) ||
+                                         out.rows[i].diag > m * (1 + DIAG_TOL)).length; })() + '종');
+      /* ⚑ 989 — **이웃 눈금을 같이 찍는다(기록만).** [E1] 의 눈금은 «공용 링 제외» 라 CBAND(18px)에
+         **계단**이 있다 — 제 손 부품의 뻗음이 그 문턱을 넘나들면 한 종의 값이 «본체» 와
+         «본체+부품» 사이를 뛴다(실측: `boom` 은 배율 0.9 근처가 그 자리다). 그래서 문턱이 하나도
+         없는 눈금(**보이는 잉크 전부** — 비평가가 대조 시트에서 재는 것이 이 값이다)을 나란히
+         찍어 둔다. 판정은 [E1] 하나뿐이고 이 줄은 **다음 회차 채점의 대조표**다. */
+      {
+        const vs = ids.map(i => out.rows[i].vis).sort((a, b) => a - b);
+        const vM = vs[Math.floor((vs.length - 1) / 2)];
+        const vBad = ids.filter(i => out.rows[i].vis < vM * (1 - DIAG_TOL) || out.rows[i].vis > vM * (1 + DIAG_TOL));
+        console.log('  (기록) [E1] 이웃 눈금 — **보이는 발 전부**(공용 링까지) 대각 중앙값 ' + vM +
+          'px · ±' + Math.round(DIAG_TOL * 100) + '% 밖 ' + vBad.length + '종' +
+          (vBad.length ? ' (' + vBad.map(i => i + ':' + out.rows[i].vis).join(' · ') + ')' : '') +
+          ' · 최소 ' + vs[0] + ' ~ 최대 ' + vs[vs.length - 1]);
+      }
       /* ⚑⚑ [E2] 는 **판정이 아니라 기록이다** — 처음엔 «[E1] 대각 밴드에서 파생한 면적 상한
          (1.25/0.75)² = 2.78» 로 세웠고, 그 자가 **묻는 질문 자체가 틀렸다**:
          면적 = 대각² × **채움 밀도**인데 밀도는 «얼마나 크게» 가 아니라 **«무슨 모양인가»** 다.
@@ -823,11 +920,12 @@ if (require.main === module) (async () => {
       console.log('  (기록) 후광을 굽는 첫 프레임 ' + out.bake + 'ms — 종당 한 번뿐(캐시)');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
-      console.log('\n  [표] 종별 — 본체대각(bbox) · 본체잉크 · ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫' +
+      console.log('\n  [표] 종별 — 덩치대각(본체+제손) · 본체대각(bbox) · 본체잉크 · ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫' +
                   ' · 두께p90/p10 · 비대칭 · 먼몫 · 후광R−B / 본체R−B');
       for (const id of ids) {
         const r = out.rows[id];
         console.log('        ' + id.padEnd(9) + r.sh.padEnd(10) +
+                    String(r.own).padStart(7) +
                     (r.diag + '(' + r.bbw + '×' + r.bbh + ')').padStart(15) +
                     String(r.hard).padStart(7) +
                     String(r.ink).padStart(7) + '  ' +
