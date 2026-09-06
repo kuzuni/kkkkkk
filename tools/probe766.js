@@ -18,6 +18,32 @@
  *   ⇒ 값이 아니라 **창의 위상**이 흔들린 것이므로, 고칠 자리는 문턱이 아니라 장면이다.
  *
  * 출력은 전부 수치다. 처방·수정은 하지 않는다.
+ *
+ * ── 946 6회차(2026-09-05) — `par 7` 부하에서 흔들리던 자리를 닫았다 ────────────
+ * 부하 실측(하네스 없이 맨손 병렬 · 7배치 × 3회 = **21 실행**)에서 **8 실행이 빨갰다**:
+ * `9`×8 · `1`×6 · `R`×2 · `7`×1. 뿌리는 하나이고 **이 자가 스스로 적어 둔 결론과 어긋나 있었다** —
+ * [7]·[8] 이 «q(남은 부팅 큐)는 **시계**이지 제품의 성질이 아니다» 라고 못박아 놓고,
+ * [1]·[9] 는 그 시계가 만든 **절대 자리**(«옛 중앙값이 상한 32 의 −6 위에 산다»)를 단언하고 있었다.
+ * 한가할 때 500ms 창은 큐를 «반쯤» 비우지만(q 22~30 · 옛 중앙값 31~32 = 상한),
+ * 부하가 오면 같은 500ms 가 q 30~40 을 남겨 옛 중앙값이 **20~27** 로 내려온다.
+ * 값이 옮겨 간 것이 아니라 **창의 위상**이 옮겨 간 것이고, 그것이 이 자의 결론 자체다.
+ *   ⓐ **[1]·[9] 의 절대 자리 두 개를 걷었다**(«mg ≤ 2» 는 «흔들림이 있다» = 동전 ·
+ *      «중앙값 > 상한−6» 은 기계 속도 · «새 중앙값 ≤ POP» 은 한쪽만 막는 부등호였다 —
+ *      [10] 이 이미 대칭 밴드 |Δ| ≤ 6 으로 같은 말을 하고 있다). 수치는 그대로 인쇄한다.
+ *   ⓑ **빈자리는 «제품 직독» 으로 채웠다**(333 — 자리를 비우지 않는다 · 946 공통 부품 ①):
+ *      장면을 부른 **직후 상태**를 재서 [1] 은 «옛 장면은 위상을 그대로 물려받는다»
+ *      (`post.q === pre.q` · `post.killed === pre.killed`) · [2] 는 «새 장면은 위상을 지운다»
+ *      (`post.q === ENEMY_COUNT` · `killed 0`)를 단언한다. 통계가 아니라 **한 프레임의 사실**이라
+ *      부하와 무관하고, `spawnStage()` 가 `spawnQ.length = 0; … queueMobs()` 인 한 참이다.
+ *   ⓒ **짝 비교만 남겼다** — [4]([1]↔[2] 는 둘 다 500ms 라 **위상 정합**이다) · [9]′(`mOld > mNew`) ·
+ *      [R]′(**중앙 여유** 비교 — 최악 표본 하나로 물으면 [3] 스윕의 3000ms 새 표본이 톱니 봉우리를
+ *      한 번 타는 것만으로 빨개진다: 실측 b1w7 «옛 0 → 새 0» 동률) · [7](방향 `dOld > 0` 만).
+ *      21 실행 전수에서 넷 다 **빨강 0**(옛 판정은 각각 6·8·2·1회 빨강).
+ *   ⓓ **[0] 무효 검사 + 코드 3**(939 규약 · 946 3~5회차와 같은 셈법) — [7]·[8]·[8-b] 는
+ *      **두 위상의 중앙값**을 견주는 항이라 «중앙값을 말하려면 표본이 둘» 이 그대로 하한이다.
+ *      스윕이 큐를 못 비우면(q=0 표본 < 2) 그 실행은 **못 잰 것**이지 제품이 깨진 것이 아니다.
+ *   ⓔ **`--dead` 되돌림 시험** — 새 팔의 장면 수리를 되돌린 사본(둘 다 옛 장면)에서 돈다.
+ *      «새 장면은 위상을 지운다» 가 **결정적으로** 빨개지는 것이 통과다(동전이 아니다).
  */
 const path = require('path');
 const fs = require('fs');
@@ -41,26 +67,35 @@ let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
   console.log((b ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' — ' + detail : ''));
   b ? pass++ : fail++;
+  return !!b;                                   /* 946 6회차 — `--dead` 가 [6-b] 의 결과를 집어 간다 */
 };
 const med = a => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : 0; };
 
 /* ── 관측 한 번 ────────────────────────────────────────────────────────────
    `scene`: 'old' = 옛 [A](손으로 `enemies.length = 0`) · 'new' = 620 규약(`spawnStage()` + `killed` 고정).
    나머지(60초·0.5초 표본·앞 5초 제외·중앙값)는 `probe504` [A] 와 **같은 산수**다. */
-async function observe(browser, scene, waitMs) {
+async function observe(browser, scene, waitMs, dead) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   await page.goto(URL);
   await page.waitForFunction(() => typeof SKILLS !== 'undefined' && typeof step === 'function'
     && typeof makeEnemy === 'function');
   await page.waitForTimeout(waitMs);
-  const r = await page.evaluate(({ scene }) => {
+  const r = await page.evaluate(({ scene, dead }) => {
     S.stage = 20; S.eqSkill = ['slash']; markDirty();
     /* 장면을 잡기 **직전**의 부팅 상태 — 옛 장면에서 값을 정하는 것이 이것이다 */
     const pre = { en: enemies.length, q: spawnQ.length, killed: (typeof killed !== 'undefined' ? killed : -1),
                   /* 779 — 파도 정원은 **제품에서 읽는다**(아래 [2] 가 손 상수 50 을 안 쓰게) */
                   pop: (typeof ENEMY_COUNT !== 'undefined' ? ENEMY_COUNT : -1) };
-    if (scene === 'new') spawnStage(); else enemies.length = 0;
+    /* ⚑ 946 6회차 `--dead` — «새 팔의 장면 수리를 되돌린 사본». 되돌림 시험에서만 참이고
+       그때 새 팔은 옛 장면을 부른다(= 수리 이전). 아래 [2] 의 «위상을 지운다» 가 그 자리에서
+       결정적으로 빨개지는 것이 통과다. */
+    if (scene === 'new' && !dead) spawnStage(); else enemies.length = 0;
+    /* 장면을 부른 **직후** 상태 — 946 6회차의 판정 재료(통계가 아니라 한 프레임의 사실이다).
+       옛 장면은 `spawnQ`·`killed` 를 손대지 않으므로 붙는 시점의 위상을 그대로 물려받고,
+       새 장면은 `spawnStage()` 안의 `spawnQ.length = 0; … queueMobs()` 로 위상을 지운다. */
+    const post = { en: enemies.length, q: spawnQ.length,
+                   killed: (typeof killed !== 'undefined' ? killed : -1) };
     const cnt = [], snaps = [], kind = {};
     const SNAP_AT = [15, 30, 45].map(t => t * 60);
     let bossFrames = 0;
@@ -76,9 +111,9 @@ async function observe(browser, scene, waitMs) {
       if (SNAP_AT.indexOf(f) >= 0) snaps.push(enemies.filter(e => e.hp > 0).length);
     }
     const m = a => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : 0; };
-    return { pre, nMed: m(cnt), nMin: Math.min(...cnt), nMax: Math.max(...cnt),
+    return { pre, post, nMed: m(cnt), nMin: Math.min(...cnt), nMax: Math.max(...cnt),
              samples: cnt.length, snaps, bossFrames, kinds: Object.keys(kind).join(',') };
-  }, { scene });
+  }, { scene, dead });
   await ctx.close();
   return r;
 }
@@ -87,6 +122,8 @@ async function observe(browser, scene, waitMs) {
   let browser;
   browser = await launch(chromium);   /* 931 — 실행 파일 폴백까지 사슬이 맡는다 */
   const K = +(process.env.PROBE766_K || 5);       /* 실행 수 — 분포를 잡는 최소치(759 가 쓴 방법) */
+  const DEAD = process.argv.includes('--dead');   /* 946 6회차 — 되돌림 시험(맨 아래 [D] 절) */
+  if (DEAD) console.log('  [--dead] 되돌림 사본 — 새 팔도 옛 장면(`enemies.length = 0`)으로 돈다');
 
   ok(!!A2, '0 `probe504` [A2] 의 밴드를 파일에서 그대로 읽었다(사본 0개)',
      A2 ? '[' + A2.lo + ', ' + A2.hi + '] · POP=' + RULE.POP : '정규식이 못 찾았다');
@@ -106,13 +143,24 @@ async function observe(browser, scene, waitMs) {
   const oldOut = old.filter(r => outOf(r.nMed));
   /* ⚑ **«이번 K회에 빨강이 하나는 나온다» 로 물으면 그 물음 자신이 플레이키다** — 1회차에
      그렇게 적었다가 0/5 회로 기각당했다(등재문의 실측도 2/4 였다). 재현해야 할 것은
-     «빨강이 났다» 가 아니라 **«상한에 붙어 산다»** 이고, 그것이 실행마다 갈리는 이유다. */
+     «빨강이 났다» 가 아니라 **«상한에 붙어 산다»** 이고, 그것이 실행마다 갈리는 이유다.
+     ⚑⚑ **946 6회차 — 그 «붙어 산다» 마저 동전이었다.** 옛 판정은 «최소 여유 ≤ 2»(= «흔들림이
+     있다» 를 단언하는 항 = 동전) 와 «중앙값 > 상한−6» 이었는데, 뒤엣것은 제품이 아니라
+     **기계 속도**가 정한다 — 500ms 창이 부팅 큐를 얼마나 비웠는가에 옛 장면의 값이 통째로
+     끌려간다는 것이 바로 이 자의 결론([7]·[8])이다. `par 7` 21 실행에서 **6회 빨강**
+     (부하에서 옛 중앙값이 20~27 로 내려온다). ⇒ **수치는 그대로 찍고 판정은 걷었다.**
+     그 문장을 지는 항은 사라지지 않았다 — **[4]**(같은 500ms 위상에서 옛↔새 여유 비교) ·
+     **[8-b]**(옛의 값을 정하는 것은 q) · **[R]**(장면을 되돌리면 다시 가장자리로) 셋이다(333). */
   const marginOf0 = v => Math.min(v - band.lo, band.hi - v);
   const mgOld5 = Math.min(...old.map(r => marginOf0(r.nMed)));
-  ok(mgOld5 <= 2 && med(old.map(r => r.nMed)) > band.hi - 6,
-     '1 옛 장면의 값은 [A2] 상한에 **붙어 산다** — 그래서 실행마다 갈린다(등재문 재현)',
-     '중앙값 ' + old.map(r => r.nMed).join(',') + ' (상한 ' + band.hi + ') · 최소 여유 ' + mgOld5
-     + ' · 이번 ' + K + '회 중 밴드 밖 ' + oldOut.length + '회');
+  console.log('      관측 — 중앙값 ' + old.map(r => r.nMed).join(',') + ' (밴드 [' + band.lo + ', ' + band.hi
+    + ']) · 최소 여유 ' + mgOld5 + ' · 이번 ' + K + '회 중 밴드 밖 ' + oldOut.length + '회');
+  /* 946 6회차 — 빈자리는 **제품 직독**으로 채운다(공통 부품 ①): 옛 장면이 흔들리는 이유는
+     «장면이 붙는 시점의 위상을 그대로 물려받는다» 는 **한 프레임의 사실**이고, 통계가 아니라
+     그 사실을 직접 묻는다. `enemies.length = 0` 은 `spawnQ`·`killed` 를 손대지 않는다. */
+  ok(old.every(r => r.post.en === 0 && r.post.q === r.pre.q && r.post.killed === r.pre.killed),
+     '1 옛 장면은 붙는 시점의 **위상을 그대로 물려받는다**(`spawnQ`·`killed` 무보정 — 제품 직독)',
+     old.map(r => 'q ' + r.pre.q + '→' + r.post.q + ' · killed ' + r.pre.killed + '→' + r.post.killed).join(' · '));
   /* ⚑ 779 — 이 항의 전칭은 `en + q === 50` 이었고 **4회 중 1회 빨갰다**(등재 실측 `30+19` = 49).
      50 은 «부팅 파도 정원» 으로 맞는 수지만, 그 등식이 성립하는 것은 **첫 킬이 나기 전까지**다 —
      `waitForTimeout(500)` 창 안에서 한 마리라도 죽으면 곧바로 깨진다(`probe779` [1]·[2]:
@@ -138,7 +186,7 @@ async function observe(browser, scene, waitMs) {
   console.log('\n  [2] 새 장면(`spawnStage()` — 판을 통째로 되돌린다) × ' + K);
   const neu = [];
   for (let i = 0; i < K; i++) {
-    const r = await observe(browser, 'new', 500);
+    const r = await observe(browser, 'new', 500, DEAD);
     neu.push(r);
     console.log('      run' + (i + 1) + '  부팅(en ' + r.pre.en + ' · q ' + r.pre.q + ')  중앙값 '
       + r.nMed + '  범위 ' + r.nMin + '~' + r.nMax + '  스냅 ' + r.snaps.join('/')
@@ -153,14 +201,34 @@ async function observe(browser, scene, waitMs) {
   const marginOf = v => Math.min(v - band.lo, band.hi - v);      /* 음수면 밴드 밖 */
   const mgOld = Math.min(...old.map(r => marginOf(r.nMed)));
   const mgNew = Math.min(...neu.map(r => marginOf(r.nMed)));
-  ok(mgNew > mgOld, '4 새 장면은 밴드 가장자리에서 더 멀다(플레이키를 정하는 것은 폭이 아니라 여유다)',
-     '최소 여유 — 옛 ' + mgOld + ' → 새 ' + mgNew
+  /* ⚑ 946 6회차 — **최소 여유는 정수라 동률에 걸린다.** 수리 뒤 `par 7` 21 실행에서 한 실행이
+     «옛 5 → 새 5» 로 빨갰다([R] 도 «중앙 여유 6 → 6» 으로 한 번). 여유의 재료 `nMed` 가
+     마릿수(정수)라 최소·중앙값은 칸에 몰리고, 그 칸이 겹치면 «어느 쪽이 가장자리에 가까운가» 라는
+     물음 자체가 답을 못 낸다. ⇒ **같은 표본·같은 축을 평균으로** 읽는다(문턱은 그대로 0 —
+     바를 낮춘 것이 아니라 **눈금의 해상도**를 올린 것이다). ⚠ 비교는 **실행 안의 짝**이다
+     (실행 사이에는 옛 1.0~6.2 · 새 6.2~9.0 으로 겹친다 — 부하가 위상을 통째로 민다).
+     `par 7` 42 실행에서 짝의 간격(새 − 옛)은 **1.4~7.2** 로 한 번도 안 뒤집혔다.
+     최소값은 관측으로 남긴다. */
+  const meanMg = pool => pool.reduce((s, v) => s + marginOf(v), 0) / pool.length;
+  const avOld = meanMg(old.map(r => r.nMed)), avNew = meanMg(neu.map(r => r.nMed));
+  ok(avOld < avNew, '4 새 장면은 밴드 가장자리에서 더 멀다(플레이키를 정하는 것은 폭이 아니라 여유다)',
+     '평균 여유 — 옛 ' + avOld.toFixed(1) + ' → 새 ' + avNew.toFixed(1)
+     + ' · 최소 여유 옛 ' + mgOld + ' → 새 ' + mgNew + '(관측)'
      + ' · 폭은 오히려 옛 ' + (Math.max(...old.map(r => r.nMed)) - Math.min(...old.map(r => r.nMed)))
      + ' < 새 ' + (Math.max(...neu.map(r => r.nMed)) - Math.min(...neu.map(r => r.nMed))));
   ok(neu.every(r => r.bossFrames === 0), '5 새 장면의 60초는 **끝까지 일반 전투**다(보스 국면 0프레임)',
      '옛 장면 보스프레임 ' + old.map(r => r.bossFrames).join(',') + ' → 새 ' + neu.map(r => r.bossFrames).join(','));
   ok(neu.every(r => r.snaps.every(n => n > 0)), '6 새 장면의 504-STD 세 프레임이 전부 비지 않았다([B] 재료)',
      neu.map(r => r.snaps.join('/')).join(' · '));
+  /* ⚑ 946 6회차 — [7] 이 통계로 말하던 «새는 q 갈림에 안 끌린다» 를 **제품 직독**으로 옮겼다.
+     `spawnStage()` 는 `enemies.length = 0; spawnQ.length = 0; … killed = 0; queueMobs()` 라
+     붙는 시점이 무엇을 남겼든 **파도 정원(ENEMY_COUNT)짜리 새 큐**로 덮는다 = 위상이 지워진다.
+     통계(중앙값 차)로 물으면 표본 11개짜리 추정이라 부하에서 잡음(±4)에 묻히지만,
+     이 항은 한 프레임의 사실이라 부하와 무관하다. **`--dead` 가 겨누는 자리도 여기다.** */
+  const ok6b = ok(neu.every(r => r.post.en === 0 && r.post.q === r.pre.pop && r.post.killed === 0),
+     '6-b 새 장면은 붙는 시점의 **위상을 지운다**(`spawnQ` = ENEMY_COUNT · killed 0 — 제품 직독)',
+     neu.map(r => 'q ' + r.pre.q + '→' + r.post.q + ' · killed→' + r.post.killed).join(' · ')
+     + ' (정원 ' + (neu[0] ? neu[0].pre.pop : '?') + ')');
 
   /* ── [3] 뿌리 지목 — 옛 장면의 값은 «부팅 큐» 가 정한다 ─────────────────
      `waitForTimeout` 을 바꾸면 부팅 파도가 나온 만큼이 달라진다. 그것이 값을 움직이면
@@ -178,7 +246,7 @@ async function observe(browser, scene, waitMs) {
     const row = { old: [], new: [], q: [] };
     for (let r = 0; r < REP; r++) {
       const a = await observe(browser, 'old', ms);
-      const b = await observe(browser, 'new', ms);
+      const b = await observe(browser, 'new', ms, DEAD);
       w.old.push({ ms, ...a }); w.new.push({ ms, ...b });
       row.old.push(a.nMed); row.new.push(b.nMed); row.q.push(a.pre.q);
     }
@@ -199,10 +267,29 @@ async function observe(browser, scene, waitMs) {
   };
   const oldAll = old.concat(w.old), newAll = neu.concat(w.new);
   const sOld = splitBy(oldAll), sNew = splitBy(newAll);
-  ok(sOld.d !== null && sNew.d !== null && sOld.d >= 4 && Math.abs(sNew.d) < sOld.d,
-     '7 붙는 시점은 **q 를 통해서만** 값에 닿는다 — 옛 장면만 그 갈림에 끌려간다(뿌리 지목)',
+
+  /* ── [0] 무효 검사 — «위상 축을 못 잡았다» 를 판정으로 흘리지 않는다 ─────────
+     (946 3~5회차와 같은 셈법 · 939 규약: 0 통과 · 1 실패 · 2 환경에 없음 · **3 자가 못 쟀다**)
+     아래 [7]·[8]·[8-b] 는 **두 위상(q>0 · q=0)의 중앙값**을 견주는 항이다. 문턱은 손으로
+     안 적는다 — «중앙값을 말하려면 표본이 둘은 있어야 한다» 가 그대로 하한이다.
+     스윕의 긴 시점이 큐를 못 비우면(부하가 아주 세면 3000ms 도 안 빈다) 그 실행은
+     **못 잰 것**이지 제품이 깨진 것이 아니다. 21 실행 실측에서는 21/21 이 두 위상을 다 잡았다. */
+  console.log('\n  [0] 위상 표본 — 옛 q>0 ' + sOld.y.length + ' · q=0 ' + sOld.n.length
+    + ' / 새 q>0 ' + sNew.y.length + ' · q=0 ' + sNew.n.length + ' (전체 옛 ' + oldAll.length + ' · 새 ' + newAll.length + ')');
+  if (sOld.y.length < 2 || sOld.n.length < 2) {
+    console.error('PROBE766 무효 — 위상 표본 q>0 ' + sOld.y.length + ' · q=0 ' + sOld.n.length
+      + ' (두 위상의 중앙값을 견주려면 각각 둘은 필요하다).'
+      + ' 부하를 낮춰(동시 실행 수를 줄여) 다시 돌려라 — 제품 결함이 아니라 측정 실패다.');
+    await browser.close();
+    process.exit(3);
+  }
+  /* ⚑ 946 6회차 — 손 상수 «Δ ≥ 4» 를 걷었다(부하에서 Δ 가 3 까지 내려온다: 21 실행 중 1회 빨강).
+     남긴 것은 **방향**뿐이고(21/21 에서 Δ 3~13 으로 양수), «새는 안 끌린다» 는 통계가 아니라
+     위 **[6-b] 제품 직독**이 진다 — 새 팔의 Δ 는 표본 11개짜리 추정이라 잡음이 ±4 다(관측으로만). */
+  ok(sOld.d !== null && sNew.d !== null && sOld.d > 0,
+     '7 붙는 시점은 **q 를 통해서만** 값에 닿는다 — 옛 장면이 그 갈림에 끌려간다(뿌리 지목)',
      '옛 q>0 ' + med(sOld.y) + ' vs q=0 ' + med(sOld.n) + ' (Δ' + sOld.d + ')'
-     + ' · 새 q>0 ' + med(sNew.y) + ' vs q=0 ' + med(sNew.n) + ' (Δ' + sNew.d + ')');
+     + ' · 새 Δ' + sNew.d + '(관측 — 잡음 대역) · [6-b] 가 «새는 위상을 지운다» 를 결정적으로 진다');
   const qGone = per.old.filter(x => x.q === 0);
   ok(qGone.length > 0 && per.old[0].q > 0,
      '8 오래 기다리면 부팅 큐가 다 빠진다 — 즉 q 는 **시계**이지 제품의 성질이 아니다',
@@ -220,9 +307,16 @@ async function observe(browser, scene, waitMs) {
   /* ── [4] 갈래 ⓐ 기각 — 제품의 개체수가 커진 것이 아니다 ─────────────────
      같은 트리·같은 제품에서 **장면만 바꿔** 밴드 안팎이 갈리면, 옮겨 간 것은 개체수가 아니라 창이다. */
   const mOld = med(old.map(r => r.nMed)), mNew = med(neu.map(r => r.nMed));
-  ok(mOld > band.hi - 6 && mNew <= RULE.POP,
-     '9 갈래 ⓐ(«분포가 옮겨 갔다») 기각 — 같은 트리에서 장면만 바꾸면 중앙값이 POP 자리로 돌아온다',
-     '옛 중앙값의 중앙값 ' + mOld + ' · 새 ' + mNew + ' (POP ' + RULE.POP + ')');
+  /* ⚑ 946 6회차 — 절대 자리 둘을 걷고 **짝**만 남겼다. 옛 판정은 `mOld > 상한−6`(기계 속도가
+     정하는 자리 — 부하에서 20~27 로 내려온다) 과 `mNew <= POP`(한쪽만 막는 부등호 —
+     새 중앙값 24 가 POP 23 을 한 칸 넘었다는 이유로 빨갰다. 대칭 밴드는 바로 아래 [10] 이
+     이미 |Δ| ≤ 6 으로 들고 있다)였고, 둘이 합쳐 `par 7` 21 실행 중 **8회 빨강**이었다.
+     같은 트리·같은 실행기에서 **장면만 바꿔** 값이 내려오는가 — 그것이 ⓐ 기각의 전부다
+     (21/21 에서 옛 > 새). ⓐ 를 지는 나머지 두 항: **[10]**(새가 POP 과 같은 자리) ·
+     **[1]/[6-b]**(옛은 위상을 물려받고 새는 지운다 — 제품 직독). */
+  ok(mOld > mNew,
+     '9 갈래 ⓐ(«분포가 옮겨 갔다») 기각 — 같은 트리에서 장면만 바꾸면 중앙값이 내려온다',
+     '옛 중앙값의 중앙값 ' + mOld + ' · 새 ' + mNew + ' (Δ' + (mOld - mNew) + ' · POP ' + RULE.POP + ')');
   ok(Math.abs(mNew - RULE.POP) <= 6,
      '10 갈래 ⓑ(«상한이 원래 좁았다») 기각 — 새 장면의 값은 POP=' + RULE.POP + ' 과 «같은 자리» 다',
      '새 중앙값 ' + mNew + ' · |Δ| ' + Math.abs(mNew - RULE.POP));
@@ -241,11 +335,40 @@ async function observe(browser, scene, waitMs) {
   /* ⚠ 새 쪽에 **절대 문턱을 새로 적지 않는다**(«여유 ≥ 4» 라고 적었다가 15 가 나와 기각당했다 —
      그것이야말로 «값을 밴드에 맞추는 짓» 이다). 되돌림은 **관계**로만 묻는다:
      새 표본은 한 번도 밴드를 안 넘고, 옛 표본은 그보다 가장자리에 가깝다. */
-  ok(outNew === 0 && mgOldAll < mgNewAll, 'R 장면만 되돌리면 같은 자가 다시 밴드 가장자리에 붙는다(되돌림)',
-     '최소 여유 옛 ' + mgOldAll + ' → 새 ' + mgNewAll
+  /* ⚑ 946 6회차 — **최악 표본 하나**로 물으면 «가장자리에 붙어 산다» 가 표본 운에 걸린다:
+     [3] 스윕은 3000ms 처럼 평소 안 쓰는 시점도 도는데, 그 자리에서 **새 표본 하나**가 톱니
+     봉우리를 타면 최소 여유가 옛과 동률이 된다(실측 b1w7 «옛 0 → 새 0» · 21 실행 중 2회 빨강).
+     묻고 싶은 것은 «한 표본이 어디까지 갔나» 가 아니라 **«어느 쪽이 가장자리 가까이 사는가»**
+     이므로 분포로 옮겼다. ⚠ 그 첫 판(중앙 여유)도 **정수라 동률**에 걸렸다 — 수리 뒤 21 실행에서
+     «옛 6 → 새 6» 으로 한 번 빨갰다. ⇒ [4] 와 같은 처방으로 **평균 여유**(21 실행에서 옛 3.0~5.3 ·
+     새 7.5~8.5 · 짝의 간격 **1.65~5.41**). 중앙값·최악값·밴드 밖 회수는 관측치로 그대로 찍는다. */
+  const medMg = pool => med(pool.map(x => marginOf(x.nMed)));
+  const avMg = pool => meanMg(pool.map(x => x.nMed));
+  ok(outNew === 0 && avMg(oldAll) < avMg(newAll),
+     'R 장면만 되돌리면 같은 자가 다시 밴드 가장자리에 붙는다(되돌림)',
+     '평균 여유 옛 ' + avMg(oldAll).toFixed(2) + ' → 새 ' + avMg(newAll).toFixed(2)
+     + ' · 중앙 여유 옛 ' + medMg(oldAll) + ' → 새 ' + medMg(newAll)
+     + ' · 최악 여유 옛 ' + mgOldAll + ' → 새 ' + mgNewAll + '(관측)'
      + ' · 밴드 밖 옛 ' + outOld + '/' + oldAll.length + '회 · 새 ' + outNew + '/' + newAll.length + '회');
 
   await browser.close();
+
+  /* ── [D] `--dead` 되돌림 시험 (946 6회차) ────────────────────────────────
+     «무르게 푼 수리가 아님» 을 매 실행 못박는 자리다. 되돌림 사본에서는 새 팔도 옛 장면을
+     부르므로 **[6-b]**(«새 장면은 위상을 지운다»)가 곧바로 거짓이 된다 — 통계가 아니라
+     `spawnQ` 한 값이라 **동전이 아니다**(같은 배치를 몇 번 돌려도 같은 답).
+     ⚠ **되돌리는 것은 장면 한 줄뿐이다** — 60초 창 안의 620 규약(`killed` 고정)은 그대로 두므로
+     새 팔이 옛 팔과 «같은 표본» 이 되지는 않는다(실측: 되돌림 사본에서도 [9] 가 Δ8 로 초록).
+     그래서 나머지 항의 빨강/초록은 **통과 조건으로 쓰지 않는다** — 짝 비교 셋([4]·[9]·[R])은
+     이 사본에서 널이 아니고, 널로 세우려면 표본 수까지 맞춰야 한다(775 §2 · 946 5회차 ⚠). */
+  if (DEAD) {
+    const revived = !ok6b;
+    console.log('\n  [D] 되돌림 — 새 팔의 장면 수리를 되돌리면 [6-b] 가 빨개지는가: '
+      + (revived ? '빨강(= 통과)' : '초록(= 실패 — 자가 무르다)')
+      + ' · 나머지 항의 빨강 ' + Math.max(0, fail - (revived ? 1 : 0)) + '건은 관측이다');
+    console.log('\n' + (revived ? 'PASS' : 'FAIL') + ' --dead 되돌림 시험');
+    process.exit(revived ? 0 : 1);
+  }
   console.log('\n' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail));
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
