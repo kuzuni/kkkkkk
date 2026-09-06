@@ -605,7 +605,15 @@ async function measure(browser, url) {
   return { out, errs };
 }
 
-(async () => {
+/* ⚑ 982 이관 — `measure()` 는 «후광 / 본체 / 하이라이트» 를 **알파를 풀어서** 가르는
+   저장소의 유일한 자리다(위 «층 분해» 주석이 그 방정식이다). 982(본체 채움 밀도)가 같은 것을
+   다시 적으면 그 순간 사본이 둘이 되고, 한쪽 문턱만 고쳐지면 두 자가 서로 다른 것을 세게 된다
+   (402 «사본을 지운다»). ⇒ 이름으로 빌려 준다.
+   ⚠ 빌려 갈 때 아래 IIFE 가 같이 돌면 브라우저가 두 번 뜨므로 «직접 실행일 때만» 으로 감쌌다 —
+     `node tools/verify792.js` 는 한 글자도 안 바뀐다. */
+module.exports = { measure };
+
+if (require.main === module) (async () => {
   console.log('=== VERIFY 792 — 스킬 이펙트 연출 규격(세 층) 통일 ===\n');
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const src = fs.readFileSync(SRC, 'utf8');
