@@ -325,3 +325,8 @@ tools/__pycache__/
 # ⚠ 규칙이 **없었다**: docs/review/*.png·tools/*.png·/*.png 는 막혀 있는데 이 자리만 뚫려 있어
 #    회차가 끝날 때마다 13MB 가 추적 안 된 채 남았다(881 행도 `scratch/` 를 쓴다).
 /scratch/
+
+# 923 10회차 — 채점 캡처를 한 폴더에 모았다(`923-r10*.png` 대신 `shots923/`).
+# 위 `docs/review/*.png` 는 **한 단계만** 막으므로 하위 폴더는 뚫려 있었다 — 885 가 `/scratch/`
+# 에서 겪은 자리와 같은 구멍이다. ROUTINE 서두 «캡처는 커밋하지 마라(`git add -f` 금지)» 그대로.
+docs/review/shots923/
