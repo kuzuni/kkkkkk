@@ -211,7 +211,11 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
     fin: window.__v682.fin, raw: window.__v682.raw, buys: window.__v682.buys,
     up: (typeof RW_FX_UP === 'number') ? RW_FX_UP : null,
     btn: (b => ({ x: b.left, y: b.top, w: b.width, h: b.height }))(document.getElementById('rwBasin').getBoundingClientRect()),
-    cy: (b => b.top + b.height * RW_FX_Y)(document.getElementById('rwBasin').getBoundingClientRect())
+    /* ⚑ 990 이관 — 발원이 «상자 높이의 28%»(`RW_FX_Y`, 666 3회차)에서 **가격바 화폐 아이콘**으로
+       옮겨졌고 그 상수는 선언째 걷혔다. 값을 사본으로 다시 적지 않고 **제품에게 직접 묻는다**
+       (402 «사본을 지운다» — 발원이 또 옮겨져도 아래 «탄생 반경» 줄이 따라온다).
+       ⚠ `rwPayFrom()` 은 fx 레이어 좌표라, 이 값을 쓰는 자리도 같은 좌표(`style.left/top`)로 잰다. */
+    org: (typeof rwPayFrom === 'function') ? rwPayFrom() : null
   }));
 
   const FIN = (G && G.fin) || [], RAW = (G && G.raw) || [];
@@ -278,8 +282,10 @@ const RESET = () => { window.__v682.fin = []; window.__v682.raw = []; window.__v
   ok(EX.length > 0 && EX.every(b => b.n === 1),
      'E4 ★ 배수를 안 켠 홀드의 실행 단위는 «1장» — 700 이 켠 축이 이 자의 표본으로 새지 않았다',
      '실행별 장수 ' + [...new Set(EX.map(b => b.n))].join(',') + ' (실행 ' + EX.length + '건)');
-  const r0s = flat.map(q => Math.hypot(q.x - (G.btn.x + G.btn.w / 2), q.y - G.cy));
-  info('탄생 반경(px) 최소~최대', r1(Math.min(...r0s)) + '~' + r1(Math.max(...r0s)) + ' (fxBurst 의 22×jt 그대로)');
+  const r0s = G.org ? flat.map(q => Math.hypot(q.x - G.org.x, q.y - G.org.y)) : [];
+  info('탄생 반경(px) 최소~최대', r0s.length
+    ? r1(Math.min(...r0s)) + '~' + r1(Math.max(...r0s)) + ' (fxBurst 의 22×jt 그대로 · 발원 = 990 가격바 아이콘)'
+    : '발원을 못 읽었다');
 
   blk('R] 되돌림 — 자가 «그 자리» 를 보는가');
   /* R1 — 제품 자기 알의 **후처리 전** 벡터에 옛 뒤집기를 다시 건다(사본 파일 없이 수리 전 그림 재현) */

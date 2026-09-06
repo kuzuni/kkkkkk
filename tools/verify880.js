@@ -24,8 +24,18 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
 const { STOPS, SEED } = require('./cap681');
 const T = [], ok = (n, c, d) => { T.push([n, !!c, d || '']); };
 
-/* 한 판(벽 신고 있음/없음)을 굴려 여덟 프레임을 재고, 스폰 기하도 같이 돌려준다 */
-async function run(blank) {
+/* 한 판(벽 신고 있음/없음 × 발원 지금/990 이전)을 굴려 여덟 프레임을 재고, 스폰 기하도 같이 돌려준다.
+   ⚑⚑ 990 이관 — 둘째 손잡이 `reach` 가 생긴 이유(자를 무르게 푼 것이 아니다):
+     990 이 **발원을 그릇 아가리에서 가격바 화폐 아이콘으로 내리면서**(≈114px 아래) 이 버스트의
+     상향 사거리가 배수 바에 **아예 안 닿게** 됐다. 그러면 §1 의 «덮임 0%» 는 여전히 참이지만
+     [C5b]·[C6]·[R1]·[R1b] — 즉 **«벽이 실제로 알을 잘랐는가»** 를 묻는 네 항이 «잘린 알 0개» 로
+     빨개진다. 그것은 880 이 깨졌다는 뜻이 아니라 **880 이 막던 상황이 이 화면에서 사라졌다**는 뜻이다.
+     ⚠ 여기서 네 항을 지우면 «`--burst-block` 이 통째로 사라져도 초록인 게이트» 가 되어 이 자가
+       머리말에서 스스로 금지한 것을 하는 셈이다(334 교훈). ⇒ 항을 지우지 않고 **묻는 판을 옮겼다**
+       (333 처방): 벽이 사거리 «안» 인 판을 자가 직접 만들어(발원을 990 이전 자리로 되돌린다 —
+       제품 파일은 한 줄도 안 건드린다) 거기서 넷을 묻는다. 그러면 이 자는 이제 둘을 다 말한다 —
+       ① 지금 화면은 안 밟는다(§1) ② 벽이 사거리 안이어도 안 밟는다, 그리고 그때 실제로 잘린다(§2·§R). */
+async function run(blank, reach) {
   const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
@@ -59,11 +69,15 @@ async function run(blank) {
   await p.waitForTimeout(700);
   await p.waitForFunction(() => document.querySelectorAll('#fxl > *').length === 0, null, { timeout: 5000 }).catch(() => {});
 
-  const out = await p.evaluate(({ stops, sd, blank }) => {
+  const out = await p.evaluate(({ stops, sd, blank, reach }) => {
     /* §R1 — 신고를 지우는 판. 인라인 빈 값이 CSS 선언을 이기므로 `fxbBlockRects` 가 빈 배열을 낸다
        (= 880 수리 «전» 과 같은 상태. 제품 코드는 한 줄도 안 되돌린다) */
     const basin = document.getElementById('rwBasin');
     if (blank) basin.style.setProperty('--burst-block', ' ');
+    /* 990 이관 — «벽이 사거리 안» 인 판. 발원을 990 이전 자리(666 3회차의 그릇 아가리 = 상자
+       높이의 28%)로 되돌린다. 제품의 `rwPayFrom()` 만 창에서 갈아 끼우므로 파일은 안 건드린다. */
+    if (reach) window.rwPayFrom = function () {
+      const r = fxRect(basin); return r ? { x: r.x + r.w / 2, y: r.y + r.h * 0.28 } : null; };
 
     let s = sd >>> 0;
     Math.random = function () { s |= 0; s = (s + 0x6D2B79F5) | 0;
@@ -167,14 +181,17 @@ async function run(blank) {
 
     /* 봉투와 무관한 **기하** 단언용 — 끝 상자와 바를 같은 좌표계(프레임 px)로 돌려준다 */
     return { spawn, frames, unit, barF: fxRect(document.getElementById('rwMulBar')) };
-  }, { stops: STOPS, sd: SEED, blank });
+  }, { stops: STOPS, sd: SEED, blank, reach });
   await b.close();
   return { out, errs };
 }
 
 (async () => {
-  const A = await run(false);           /* 신고 있음 = 제품 현재 상태 */
+  const A = await run(false);           /* 신고 있음 = 제품 현재 상태(990 발원) */
   const B = await run(true);            /* 신고 없음 = 880 수리 전과 같은 상태(되돌림) */
+  /* 990 이관 — «벽이 사거리 안» 인 짝(위 `run` 머리말). C = 신고 있음 · D = 신고 없음 */
+  const C = await run(false, true);
+  const D = await run(true, true);
 
   const INPAD = 4;                      /* index.html `FXB_INPAD` — 신고 여유 */
   const fa = A.out.frames, fb = B.out.frames;
@@ -190,7 +207,10 @@ async function run(blank) {
      fa.map(f => f.eggs).join('/') + ' vs ' + fb.map(f => f.eggs).join('/'));
 
   /* ── §2 «각도는 안 건드렸다» ───────────────────────────────────────── */
-  const sa = A.out.spawn, sb = B.out.spawn;
+  /* ⚑ 990 이관 — §2 는 **«벽이 사거리 안» 인 짝(C·D)** 에 대고 묻는다. 지금 발원(A·B)에서는 벽이
+     사거리 밖이라 «잘린 알» 표본이 0 이고, 0 을 대상으로 한 «각도 불변»·«한 줄로 안 눌린다» 는
+     아무것도 안 지키는 항이 된다(위 `run` 머리말). 지금 화면 몫은 §1 과 [C7] 이 그대로 지킨다. */
+  const sa = C.out.spawn, sb = D.out.spawn;
   ok('[C4a] 두 판의 알 수가 같다', sa.length === sb.length && sa.length > 0, sa.length + ' vs ' + sb.length);
   const dirEq = sa.length === sb.length && sa.every((e, i) => {
     const g = sb[i];
@@ -220,22 +240,38 @@ async function run(blank) {
        `--dx/--dy` 는 `toFixed(1)` 로 적히므로 반올림 한 톨(≤0.05px)이 그 경계를 파고든다.
        제품 주석이 같은 자리에서 이미 경고한다(«딱 맞추면 반올림 한 톨에 [C1] 이 흔들린다 —
        574·709·825»). ⇒ 한 톨(0.1px)을 빼고 묻는다. */
-  const bar = A.out.barF;
+  const bar = C.out.barF;
   const barGap = (sp) => Math.min(...sp.map(e => {
     const h = e.w / 2, ex = e.x + e.dx, ey = e.y + e.dy;
     const dx = Math.max(bar.x - (ex + h), (ex - h) - (bar.x + bar.w), 0);
     const dy = Math.max(bar.y - (ey + h), (ey - h) - (bar.y + bar.h), 0);
     return Math.hypot(dx, dy);
   }));
-  ok('[C7] 끝 상자 ↔ 바 간격 ≥ 신고 여유 ' + INPAD + 'px (반올림 한 톨 허용)',
+  ok('[C7] 끝 상자 ↔ 바 간격 ≥ 신고 여유 ' + INPAD + 'px (반올림 한 톨 허용 · 벽이 사거리 안인 판)',
      barGap(sa) >= INPAD - 0.1,
      '최소 ' + barGap(sa).toFixed(2) + 'px (바 프레임좌표 y '
      + bar.y.toFixed(1) + '..' + (bar.y + bar.h).toFixed(1) + ')');
+  /* ⚑ 990 신설 — **지금 화면 몫**의 같은 물음. [C7] 이 «벽이 사거리 안이어도 안 밟는다» 를 지키고
+     이 항이 «지금 발원에서는 애초에 못 닿는다» 를 수치로 남긴다(둘은 다른 말이라 항도 둘이다). */
+  const barA = A.out.barF;
+  const barGapA = Math.min(...A.out.spawn.map(e => {
+    const h = e.w / 2, ex = e.x + e.dx, ey = e.y + e.dy;
+    const dx = Math.max(barA.x - (ex + h), (ex - h) - (barA.x + barA.w), 0);
+    const dy = Math.max(barA.y - (ey + h), (ey - h) - (barA.y + barA.h), 0);
+    return Math.hypot(dx, dy);
+  }));
+  ok('[C7b] 지금 발원(990 — 가격바 화폐 아이콘)에서는 끝 상자가 바에 애초에 못 닿는다',
+     barGapA >= INPAD - 0.1, '최소 ' + barGapA.toFixed(2) + 'px');
 
   /* ── §R 되돌림 ────────────────────────────────────────────────────── */
-  const covB = Math.max(...fb.map(f => f.cov));
-  ok('[R1] 신고(`--burst-block`)를 지우면 다시 밟는다(≥1%)', covB >= 1,
-     '신고 없음 최악 ' + covB.toFixed(2) + '% ↔ 있음 ' + worstCov.toFixed(3) + '%');
+  /* ⚑ 990 이관 — 되돌림도 **벽이 사거리 안인 짝(C·D)** 에서 묻는다. 지금 발원(A·B)에서는 신고를
+     지워도 애초에 못 닿아 이 항이 «신고가 통째로 사라져도 초록» 이 된다 — 이 자가 머리말에서
+     스스로 금지한 자리다. 아래 [C1c] 가 그 짝의 양성 대조다. */
+  const covD = Math.max(...D.out.frames.map(f => f.cov));
+  const covC = Math.max(...C.out.frames.map(f => f.cov));
+  ok('[C1c] 벽이 사거리 안인 판에서도 덮임 0% (880 의 본 주장)', covC < 0.005, '최악 ' + covC.toFixed(3) + '%');
+  ok('[R1] 신고(`--burst-block`)를 지우면 다시 밟는다(≥1%)', covD >= 1,
+     '신고 없음 최악 ' + covD.toFixed(2) + '% ↔ 있음 ' + covC.toFixed(3) + '%');
   ok('[R1b] 신고를 지운 판은 끝 상자가 실제로 바 안으로 들어간다(기하)', barGap(sb) === 0,
      '최소 간격 ' + barGap(sb).toFixed(2) + 'px ↔ 신고 있음 ' + barGap(sa).toFixed(2) + 'px');
   ok('[R2] 안 신고한 호스트는 벽이 0개(무변경 보장)', A.out.unit.noDecl === 0, '반환 ' + A.out.unit.noDecl);

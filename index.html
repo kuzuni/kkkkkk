@@ -36430,7 +36430,27 @@ const RW_FX_N0 = 10;                     /* 첫 발 — 619 어휘(`fxUpOk` 의 
      ↩ 되돌림: 이 블록을 위 머리말의 뒤집기 3줄로 되돌리면 666 4회차와 픽셀 동일하다.
        (⚠ 4회차가 적어 둔 «`RW_FX_UP` 을 `Infinity` 로 두면 360°» 는 **뒤집기 시절의 되돌림**이다 —
         새 식에서 ∞ 는 원뿔이 수직 한 줄로 **좁아진다**. 360° 로 되돌리려면 뒤집기째 되돌린다.) */
-const RW_FX_Y = 0.28, RW_FX_FLY = 2.0, RW_FX_UP = 0;
+/* ⚑⚑ 990(2026-09-06, 838 11회차 곁다리 · T2 «버그(연출 발원)») — **발원을 그릇에서 «가격바 화폐
+   아이콘» 으로 옮겼다.** 세 회차·네 사람이 각자 다른 자로 같은 수를 냈다(838 5회차 DF·DG «아이콘 Ø 의
+   4.1배» · 11회차 DL 4.38배 · DM 4.30배) — 알 궤적의 최소자승 교점이 **가마솥 테 타원 중심에서 3px**
+   이고 유물화폐 아이콘에서는 **124~136px** 이라, 사람은 이 연출을 «가마솥이 뿜는다» 로 읽는다.
+   666 이 지시받은 문장은 «유물 소환 버튼에서 **유물화폐 아이콘** 파티클» 이므로 이것은 새 설계가
+   아니라 **규약 위반의 수리**다. 대조로 838 씬 A(훈련 골드)는 같은 계측이 **0.095배**다.
+   ⚑ **새 기계를 안 만든다 — 838 2회차의 `--burst-from`(발원 = 신고한 자식의 중심)과 같은 뜻**이고,
+     공용 부품(`fxBurst`)은 한 글자도 안 건드렸다. 다만 그 신고는 `t.querySelector` 라 **호스트 안**만
+     보는데 이 화면의 가격 알약(`#rwCost`)은 `#rwBasin` 의 **형제**(120 이 `.rw-mid` 로 묶어 둔 두 덩이)라
+     그 셀렉터로는 못 집는다 ⇒ 같은 산수(«자식 중심 · 없으면 호스트 중심»)를 이 자리에서 적는다.
+   ⚠ **`RW_FX_Y`(666 3회차 «발원점을 그릇 아가리로»)는 이 지시가 덮으므로 선언째 걷었다**
+     (죽은 코드 금지 — 295-②·399·460). 3회차가 그 값을 올린 이유(라벨·비용 알약을 밟지 않게)는
+     **4회차의 상향 반구가 이미 구조로 지킨다** — 아래로 가는 알이 0 이라 발원 «아래» 인 가격 알약은
+     한 알도 안 지나고, 위로 나는 알은 3회차 시절과 같은 곳(라벨 위)을 지난다.
+   ↩ 되돌림: `rwPayFrom()` 을 `p => fxPt($('rwBasin'))` 로 두고 `RW_FX_Y = 0.28` 을 되살려
+     `cy = r.y + r.h * RW_FX_Y` 로 적으면 990 이전과 픽셀 동일하다. */
+function rwPayFrom(){
+  const c = $('rwCost'), ic = c && c.querySelector('[data-cur-slot]');
+  return (ic && typeof fxPt === 'function' ? fxPt(ic) : null) || (typeof fxPt === 'function' ? fxPt($('rwBasin')) : null);
+}
+const RW_FX_FLY = 2.0, RW_FX_UP = 0;
 const RW_FX_JIT = 0.30;                  /* 682 — 칸 폭 대비 ±지터. 0 이면 고정 부채 · 0.5 면 완전 난수(뭉침) */
 let rwFxW = 0;                           /* 682 — 버스트마다 도는 저불일치 위상(황금비 · 619 6회차와 같은 수열) */
 
@@ -36640,11 +36660,11 @@ function rwSummonFx(it, first, iv){
      상자·세기·길이는 한 글자도 안 바뀐다 — 이 카드에서만 라벨이 안 씻긴다(정착 21:1 그대로). */
   if(el){ fxFlash(el, first ? RW_FLASH_MS / FXTICK_DUTY : iv, false, true); fxHitEl(el); rwGainFx(it, el, first); }
   const L = (typeof fxL === 'function') ? fxL() : null;
-  const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
-  if(!L || !r) return false;
+  const o = (typeof rwPayFrom === 'function') ? rwPayFrom() : null;
+  if(!L || !o) return false;
   const n = Math.max(1, Math.min(first ? RW_FX_N0 : UPFX_N, FXMAX - L.childElementCount - 1));
-  const cx = r.x + r.w / 2, cy = r.y + r.h * RW_FX_Y, before = new Set(L.children);
-  fxBurst({ x:r.x + r.w / 2, y:cy }, FXPAL.up, n, false, null, PAY_CUR.relic);
+  const cx = o.x, cy = o.y, before = new Set(L.children);
+  fxBurst({ x:cx, y:cy }, FXPAL.up, n, false, null, PAY_CUR.relic);
   const born = [];
   for(const nd of L.children) if(!before.has(nd)) born.push(nd);
   const m = born.length, ph = (rwFxW = (rwFxW + 0.6180339887) % 1);

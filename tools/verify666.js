@@ -92,6 +92,15 @@ const ARM = () => {
       const fx = parseFloat(nd.style.getPropertyValue('--dx')), fy = parseFloat(nd.style.getPropertyValue('--dy'));
       if(Number.isFinite(fx)) rec.dx = fx;
       if(Number.isFinite(fy)) rec.dy = fy;
+      /* ⚑ 990 신설 — **태생 «자리» 도 최종값이 따로 있다.** 위 `rec.x/y` 는 append 순간의
+         `getBoundingClientRect`(= `fxBurst` 가 링 위에 앉힌 자리 · 뷰포트 좌표)인데,
+         `rwSummonFx` 는 그 뒤 **같은 각으로 태생점을 옮겨 적는다**(`left/top`). [A3b] 는
+         «태생점 + 최종 방향» 이 한 직선이어야 성립하므로 **그 최종 자리**를 따로 남긴다.
+         ⚠ 단위가 다르다 — `left/top` 은 fx 레이어 좌표라 [A3b] 는 `iconFx`(같은 좌표)에 대고 묻는다.
+           `rec.x/y`(뷰포트)를 그대로 두는 이유는 [C1][C2][C4] 가 뷰포트 상자와 짝이기 때문이다. */
+      const lx = parseFloat(nd.style.left), ly = parseFloat(nd.style.top);
+      if(Number.isFinite(lx)) rec.lx = lx;
+      if(Number.isFinite(ly)) rec.ly = ly;
       /* ⚑⚑ 683 이관 — **갈래도 «최종» 으로 다시 읽는다.** 3회차가 이동값에서 배운 것과 **같은 교훈**이다:
          제품이 스폰 «직후» 에 손보는 자리가 또 하나 생겼다 — 683 의 획득 이미터는 `fxBurst` 가
          `.fx-cic`(재화 `<img>`)로 낳은 알을 그 자리에서 `.fx-rlic`(유물 글리프)로 갈아 끼운다.
@@ -134,8 +143,19 @@ async function press(page, opt) {
     const b = document.getElementById('rwBasin'), gr = document.getElementById('rwGrid');
     if (!b || !gr) return null;
     const bb = b.getBoundingClientRect(), gb = gr.getBoundingClientRect();
+    /* ⚑ 990 이관 — 발원을 «그릇 아가리» 에서 **가격바 화폐 아이콘**으로 옮겼다(아래 [A3]).
+       ⚠ 상자는 **누르기 «전»** 에 잰다 — `hbBeat('#rwBasin')` 의 맥박이 버튼을 늘였다 줄이므로
+         버튼 축으로 재면 판정이 위상 제비뽑기가 된다(871 이 훈련에서 세운 그 규칙).
+         가격 알약은 버튼의 **형제**라 맥박을 안 타고, 그래서 이 값이 곧 제품이 쓴 값이다. */
+    const ic = document.querySelector('#rwCost [data-cur-slot]');
+    const ib = ic ? ic.getBoundingClientRect() : null;
+    const ifx = (ic && typeof fxRect === 'function') ? fxRect(ic) : null;
     return { btn: { x: bb.x, y: bb.y, w: bb.width, h: bb.height },
-             grid: { x: gb.x, y: gb.y, w: gb.width, h: gb.height } };
+             grid: { x: gb.x, y: gb.y, w: gb.width, h: gb.height },
+             icon: ib ? { x: ib.x + ib.width / 2, y: ib.y + ib.height / 2,
+                          d: (ib.width + ib.height) / 2 } : null,
+             iconFx: ifx ? { x: ifx.x + ifx.w / 2, y: ifx.y + ifx.h / 2,
+                             d: (ifx.w + ifx.h) / 2 } : null };
   });
   if (!g) return null;
   const hb = await holdUntil(page, { at: { x: g.btn.x + g.btn.w / 2, y: g.btn.y + g.btn.h / 2 },
@@ -164,9 +184,20 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
      바뀐 것은 인자 하나라, 모양을 그 자리에서 넓히되 «first» 는 계속 요구한다(첫 발/틱 갈래의 뿌리). */
   ok(/function rwSummonFx\(it, first(, iv)?\)\{/.test(code),
      'A2 회당 연출이 **한 함수**(`rwSummonFx`)다 — 첫 발·홀드 틱이 같은 자리를 지난다(1:1 축의 뿌리)');
-  ok(/fxRect\(\$\('rwBasin'\)\)/.test(code) && /fxBurst\(\{ x:r\.x[^;]*PAY_CUR\.relic\)/.test(code)
-     && /const RW_FX_Y = [\d.]+, RW_FX_FLY = [\d.]+, RW_FX_UP = [\d.]+;/.test(code),
-     'A3 발화가 «버튼 상자 안의 한 점(그릇 아가리)» 에서 «표가 말하는 재화(`PAY_CUR.relic`)» 로 터진다(3회차)');
+  /* ⚑⚑ 990 이관 — **항을 지우지 않고 묻는 자리만 갈아 끼웠다**(333 처방). 종전 항은 발원을
+     «그릇 아가리»(`RW_FX_Y` = 상자 높이의 28%)로 못 박고 있었는데, 세 회차 네 사람이 그 자리를
+     결함으로 적었고(838 5회차 DF·DG · 11회차 DL·DM — 알 궤적 교점이 유물화폐 아이콘에서
+     124~136px = 아이콘 Ø 의 4.1~4.4배) 주인이 666 에 준 문장 자체가 «유물 소환 버튼에서
+     **유물화폐 아이콘** 파티클» 이라 **종전 항이 규약 위반 쪽을 지키고 있었다**.
+     ⇒ 지금 묻는 것은 셋이다 — ① 발원을 손 상수가 아니라 **가격바 화폐 아이콘에서 읽는가**
+     ② 그 표가 말하는 재화(`PAY_CUR.relic`)로 터지는가 ③ **찍힌 알이 실제로 그 점에서 나는가**
+     (아래 [A3b] — 모양만 맞추고 값이 딴 데면 그쪽이 빨개진다). */
+  /* ⚠ 마지막 항은 «글자가 없다» 가 아니라 «**선언**이 없다» 를 묻는다 — 3·4회차 머리말은 왜 그 값이
+     었는지의 유일한 근거라 남겨 두는 것이 규약이다(58·683). 되살아나는 것은 `const` 쪽이다. */
+  ok(/function rwPayFrom\(\)\{/.test(code) && /\$\('rwCost'\)[\s\S]{0,80}data-cur-slot/.test(code)
+     && /fxBurst\(\{ x:cx, y:cy \}[^;]*PAY_CUR\.relic\)/.test(code)
+     && !/const RW_FX_Y\b/.test(code),
+     'A3 발화가 «가격바 유물화폐 아이콘» 에서 «표가 말하는 재화(`PAY_CUR.relic`)» 로 터진다(990 — 손 상수 `RW_FX_Y` 는 선언째 걷혔다)');
   ok(/const PAY_CUR = \{[^}]*relic:'relic'/.test(code),
      'A4 `PAY_CUR` 표에 유물 소환 자리가 있다 — 화폐 문자열을 호출부에 손으로 안 적는다(402 규약)');
   /* 2회차 — `upFx` 의 세대 큐를 안 타므로 상한을 **여기서** 지킨다. `fxBurst` 의 FXMAX 가드는
@@ -241,6 +272,24 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
   const outs = icons.filter(a => !inBox(a, H.btn, 2));
   ok(icons.length > 0 && outs.length === 0, 'C1 ★ **지불 알의 탄생 좌표**가 전부 버튼 상자 안이다(지불 스폰 = 버튼뿐)',
      '밖 ' + outs.length + '/' + icons.length);
+  /* ⚑⚑ 990 신설 — [A3] 의 **런타임 짝**. 선언만 물으면 «모양은 맞고 값은 딴 데» 를 못 잡는다.
+     알마다 노드에 적힌 «태생점 + 최종 방향» 이 곧 그 알의 직선이고, 한 버스트의 알들은
+     **발원 한 점에서 갈라져 나가므로** 그 점까지의 수직거리가 전부 0 이다(제품이 태생점을
+     `발원 + r0·(cos,sin)` 로, 이동을 같은 각으로 적는다 — 838 11회차 두 사람이 프레임 변위로
+     역투영해 쓴 그 산수이고, 여기서는 표본 오차 없이 같은 수를 얻는다).
+     ⚠ 문턱 2px 은 반올림 한 칸이다(제품이 `toFixed(1)` 로 적는다) — 수리 전 이 값은
+       **124~136px** 이었으므로 한 칸도 안 겹친다. */
+  const rayOff = H.iconFx ? icons.map(a => {
+    const m = Math.hypot(a.dx, a.dy);
+    if (!(m > 0.5) || !Number.isFinite(a.lx) || !Number.isFinite(a.ly)) return null;
+    const vx = H.iconFx.x - a.lx, vy = H.iconFx.y - a.ly;
+    return Math.abs((vx * a.dy - vy * a.dx) / m);
+  }).filter(v => v !== null) : [];
+  const rayMax = rayOff.length ? Math.max(...rayOff) : Infinity;
+  ok(!!H.iconFx && rayOff.length > 0 && rayMax <= 2,
+     'A3b ★ **찍힌 알의 궤적이 전부 그 아이콘 중심을 지난다** — 발원이 그릇이면 여기가 빨개진다(990)',
+     '최악 ' + (Number.isFinite(rayMax) ? p2(rayMax) : '—') + 'px / 아이콘 Ø ' + (H.iconFx ? p2(H.iconFx.d) : '—')
+       + ' · 알 ' + rayOff.length + '개');
   const gridSpawn = H.add.filter(a => (a.k === 'icon' || a.k === 'spark') && !inBox(a, H.btn, 2) && inBox(a, H.grid, 0));
   ok(gridSpawn.length === 0, 'C2 ★ 격자(슬롯) 발 **지불** 파티클 0건 — 수리 전 여기가 유일한 발화점이었다',
      gridSpawn.length + '알');
@@ -375,6 +424,28 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
     ok(d && d.buys.length > 0 && ic === 0,
        'R3 `rwSummonFx` 를 비우면 소환은 도는데 버스트가 0 이다 — [E1] 이 빨개지는 자리',
        d ? '소환 ' + d.buys.length + '회 · 아이콘 ' + ic + '알' : 'n/a');
+  }
+  {
+    /* ⚑⚑ R4(990 신설) — **발원을 990 이전(그릇 아가리)으로 되돌린다.** `rwPayFrom()` 만 갈아 끼우면
+       666 3회차의 `cy = r.y + r.h × 0.28` 과 **같은 점**이 나오므로 제품 파일은 안 건드리고 그 그림을
+       재현할 수 있다. 이 항이 없으면 [A3b] 가 «이미 참인 것을 굳힌 항» 인지 «결함을 잡는 항» 인지
+       가를 수 없다(334 «허용치를 넓혀 무르게 풀지 마라» · 368 §R2 와 같은 자리).
+       ⚠ 문턱은 [A3b] 와 **같은 2px** 이고 여기서는 그 수십 배가 나와야 한다 — 안 나오면
+         그것은 «되돌렸는데 그림이 같다» 는 뜻이라, 그때 의심할 것은 제품이 아니라 이 자다. */
+    await reboot(() => {
+      window.rwPayFrom = function () { const r = fxRect(document.getElementById('rwBasin'));
+        return r ? { x: r.x + r.w / 2, y: r.y + r.h * 0.28 } : null; };
+    });
+    const d = await press(page, { need: 2, minMs: 900, maxMs: 12000 });
+    const ics = d ? d.add.filter(a => a.k === 'icon') : [];
+    const offs = (d && d.iconFx) ? ics.map(a => { const m = Math.hypot(a.dx, a.dy);
+      if (!(m > 0.5) || !Number.isFinite(a.lx) || !Number.isFinite(a.ly)) return null;
+      return Math.abs(((d.iconFx.x - a.lx) * a.dy - (d.iconFx.y - a.ly) * a.dx) / m);
+    }).filter(v => v !== null) : [];
+    const mx = offs.length ? Math.max(...offs) : 0;
+    ok(offs.length > 0 && mx > 2,
+       'R4 발원을 «그릇 아가리» 로 되돌리면 궤적이 아이콘을 안 지난다 — [A3b] 가 빨개지는 자리(990)',
+       '최악 ' + p2(mx) + 'px · 알 ' + offs.length + '개');
   }
 
   await browser.close();
