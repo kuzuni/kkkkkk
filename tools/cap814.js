@@ -98,17 +98,68 @@ const clipOf = (sel) => ({ x: Math.max(0, Math.round(sel.x - 226)), y: Math.max(
      치우는» 명시적 걷기라, 막을 이유가 애초에 없었다. 플래시·알갱이의 타이머 수거는 종전대로 막는다.
    ⚠ 이 구멍은 «하네스가 제품보다 나쁘게 보이게» 만들었다 — 캡처를 고칠 때는 **어느 걷기가
      타이머고 어느 것이 규약인지** 갈라서 막아라. */
+/* ⚑⚑ **978(15회차) 정정 — 10회차 처방은 반대쪽으로 지나쳤다.**
+   10회차는 «`.fx-keep` 는 걷히게 둔다» 로 구멍을 닫았는데, 그러면 **타이머 걷기까지** 통과한다 —
+   `.fx-keep` 의 수명은 `fxBye()` 의 `setTimeout` 이고 스크린샷 한 장이 200~480ms 라
+   **step-2..8·live-2..6 에 값 줄 사본이 한 장도 없다**(14회차 채점 EE 실측: «13/500» 순백
+   0ms 241/241 → 80ms **0/241** · [+] 키라인 0ms 160/160 → 80ms 101/160).
+   그래서 EE 는 «8회차 부품이 1/5 표본에서만 값을 낸다» 로 읽었는데, **제품은 340ms 내내 1장을
+   들고 있다**(무력화 0 인 실런타임 rAF 표본 105·189·342ms 전부 1장 · 색도 원본과 같다).
+   ⇒ 가르는 축은 «무엇을 걷는가» 가 아니라 **«언제 걷는가»** 다(probe814c 14회차). 세 겹을 그대로 쓴다:
+     ① **시각 문** — 클릭이 반환한 뒤에 무력화를 켠다(`__fxFreeze(true)`). 규약 걷기(`fxFlashRekeep` 이
+        `renderUI()` 뒤에 앞 장을 걷는 것)는 클릭 핸들러 «안» 에서 동기로 끝나 그대로 일어나고,
+        `fxBye()` 의 타이머 걷기만 막힌다.
+     ② **결정적 청소** — `__fxDedupe()` 가 «줄 **종류**마다 마지막 한 장» 만 남긴다(글자로 짝지으면
+        «Lv. 12»↔«Lv. 13» 이 다른 짝이 돼 둘 다 남는다).
+     ③ **재감기** — 청소 뒤에 다시 감고 찍는다(이 자는 이미 두 번 감으므로 청소를 그 «앞» 에 둔다).
+   ⚠ 두 걷기를 안 가르면 이 자는 **양쪽 중 한 쪽으로만** 틀린다 — 통째로 막으면 낡은 사본이 겹쳐
+     남고(9·10회차), 통째로 열면 살아 있는 사본까지 사라진다(11~14회차). */
 const FREEZE = () => {
+  let on = false;
+  const R = Element.prototype.remove, RC = Node.prototype.removeChild;
+  const kind = (n) => { const s = (n.textContent || '').replace(/\s+/g, ' ').trim();
+    return /^Lv\./.test(s) ? 'lv' : /^\d+\s*\/\s*\d+$/.test(s) ? 'bar' : 'badge'; };
+  window.__fxFreeze = (v) => { on = !!v; };
+  window.__fxDedupe = () => {
+    const L2 = document.getElementById('fxl'); if (!L2) return 0;
+    const ks = [...L2.querySelectorAll('.fx-keep')], last = new Map();
+    for (const k of ks) last.set(kind(k), k);
+    let n = 0;
+    for (const k of ks) if (last.get(kind(k)) !== k && k.parentNode === L2) { RC.call(L2, k); n++; }
+    return n;
+  };
+  window.__fxKeeps = () => {
+    const L2 = document.getElementById('fxl'); if (!L2) return { lv: 0, bar: 0 };
+    const t = (n) => (n.textContent || '').replace(/\s+/g, ' ').trim();
+    const ks = [...L2.querySelectorAll('.fx-keep')];
+    return { lv: ks.filter((k) => /^Lv\./.test(t(k))).length,
+             bar: ks.filter((k) => /^\d+\s*\/\s*\d+$/.test(t(k))).length };
+  };
+  const inFx = (n) => { try { return on && !!(n && n.parentNode && n.parentNode.id === 'fxl'); } catch (_) { return false; } };
+  Element.prototype.remove = function () { if (inFx(this)) return; return R.call(this); };
+  Node.prototype.removeChild = function (c) { if (on && this && this.id === 'fxl') return c; return RC.call(this, c); };
+};
+
+/* §R 되돌림 시험용 — 11~14회차의 판(`.fx-keep` 를 **타이머까지** 걷히게 둔다) */
+const FREEZE_OLD = () => {
   const keep = (n) => { try { return !!(n && n.classList && n.classList.contains('fx-keep')); } catch (_) { return false; } };
   const inFx = (n) => { try { return !!(n && n.parentNode && n.parentNode.id === 'fxl' && !keep(n)); } catch (_) { return false; } };
   const R = Element.prototype.remove, RC = Node.prototype.removeChild;
   Element.prototype.remove = function () { if (inFx(this)) return; return R.call(this); };
   Node.prototype.removeChild = function (c) { if (this && this.id === 'fxl' && !keep(c)) return c; return RC.call(this, c); };
+  window.__fxKeeps = () => {
+    const L2 = document.getElementById('fxl'); if (!L2) return { lv: 0, bar: 0 };
+    const t = (n) => (n.textContent || '').replace(/\s+/g, ' ').trim();
+    const ks = [...L2.querySelectorAll('.fx-keep')];
+    return { lv: ks.filter((k) => /^Lv\./.test(t(k))).length,
+             bar: ks.filter((k) => /^\d+\s*\/\s*\d+$/.test(t(k))).length };
+  };
 };
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const log = [];
+  const chk = {};   /* 978 자가점검 — `now` 판의 프레임별 «값 줄 사본» 수 */
 
   /* ⚑ 6회차 — 판이 **셋**이다. 5회차 채점은 «판 P(4회차) ↔ 판 A(5회차)» 를 나란히 놓아
      회수량을 두 비평가가 각자 잴 수 있었다(그 표가 5회차 절의 회수 표다). 이번 회차가 바꾼 것도
@@ -152,14 +203,21 @@ const FREEZE = () => {
     }
 
     /* ── 벌 1: CSS 진행도 정지 스텝 ─────────────────────────── */
+    const stepKeeps = [], liveKeeps = [];
     {
       const { b, p } = await boot(src);
       const sel = await select(p);
       const clip = clipOf(sel);
       await p.evaluate(FREEZE);                    /* 4회차 — 안 하면 2~8번이 «연출이 끝난 카드» 다 */
-      await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
+      /* 978 — ① 시각 문: 클릭이 반환한 «뒤» 에 켠다(규약 걷기는 통과 · 타이머 걷기만 막는다) */
+      await p.evaluate(() => {
+        document.querySelector('#bCos [data-cosup]').click();
+        if (window.__fxFreeze) window.__fxFreeze(true);
+      });
       for (let i = 0; i < STEPS.length; i++) {
         await p.evaluate((t) => {
+          /* 978 — ② 결정적 청소를 **감기 앞** 에 둔다(청소 → 재감기 → 찍기) */
+          if (window.__fxDedupe) window.__fxDedupe();
           /* ⚑ 10회차 — **두 번 감는다.** 사본(`.fx-keep` 안 복제 노드)의 애니는 갓 등록돼
              한 번의 `getAnimations()` 에 안 잡힐 수 있고, 그러면 그 사본만 시간이 안 감긴 채
              찍힌다 — 판 A 의 «Lv.» 이 320ms 에도 금색이던 것이 그것이다(같은 순간 판 P 는 흰색).
@@ -169,10 +227,14 @@ const FREEZE = () => {
             document.getAnimations().forEach((a) => { a.pause(); try { a.currentTime = t; } catch (_) {} });
           }
         }, STEPS[i]);
+        /* 978 자가점검 — 이 프레임이 «값 줄 사본» 을 들고 있는가(줄 종류마다 1장). 없으면 그
+           프레임은 8회차 부품을 채점할 수 없는 장이다(EE 가 «1/5 표본» 으로 읽은 자리). */
+        stepKeeps.push(await p.evaluate(() => (window.__fxKeeps ? window.__fxKeeps() : { lv: -1, bar: -1 })));
         await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-step-${i + 1}.png`), clip });
       }
       await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-full.png`) });
-      log.push(`${kind}-step-1..8 @ ${STEPS.join('/')}ms (CSS 정지 스텝 · 파티클 정지)`);
+      log.push(`${kind}-step-1..8 @ ${STEPS.join('/')}ms (CSS 정지 스텝 · 파티클 정지)`
+        + ` · 값 줄 사본 [${stepKeeps.map((k) => k.lv + '/' + k.bar).join(' ')}]`);
       await b.close();
     }
 
@@ -192,13 +254,23 @@ const FREEZE = () => {
          ⚠ 채점 캡처 전용이다(제품 0줄) — 회귀는 `node tools/probe814b.js`. */
       await p.evaluate(FREEZE);
       const t0 = Date.now();
-      await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
+      /* 978 — step 벌과 같은 시각 문(클릭 «뒤» 에 켠다) */
+      await p.evaluate(() => {
+        document.querySelector('#bCos [data-cosup]').click();
+        if (window.__fxFreeze) window.__fxFreeze(true);
+      });
       const at = [];
       for (let i = 1; i <= 6; i++) {
         at.push(Date.now() - t0);
+        /* 978 — ② 결정적 청소는 **찍기 직전** 마다(재감기는 없다 — 이 벌은 실시간이 축이다) */
+        liveKeeps.push(await p.evaluate(() => {
+          if (window.__fxDedupe) window.__fxDedupe();
+          return window.__fxKeeps ? window.__fxKeeps() : { lv: -1, bar: -1 };
+        }));
         await p.screenshot({ path: path.join(OUT, `814-${TAG}-${kind}-live-${i}.png`), clip });
       }
-      log.push(`${kind}-live-1..6 @ ${at.join('/')}ms (실시간 · 입자 실제)`);
+      log.push(`${kind}-live-1..6 @ ${at.join('/')}ms (실시간 · 입자 실제)`
+        + ` · 값 줄 사본 [${liveKeeps.map((k) => k.lv + '/' + k.bar).join(' ')}]`);
       await b.close();
     }
 
@@ -224,8 +296,33 @@ const FREEZE = () => {
       await b.close();
     }
 
+    if (kind === 'now') { chk.step = stepKeeps.slice(); chk.live = liveKeeps.slice(); }
     if (kind !== 'now') { try { fs.unlinkSync(path.join(ROOT, src)); } catch (_) {} }
   }
+
+  /* ── 978 자가점검 + §R 되돌림 — 이 자가 찍은 장이 «8회차 부품» 을 채점할 수 있는 장인가 ──────
+     probe814c [P13] 과 같은 항이다. `now` 판만 본다 — `p7`·`pre` 는 `--flash-keep` 선언이 없어
+     사본이 **없는 것이 정답**이다(그 두 판에서 1장이 나오면 그것이야말로 대조군 오염이다). */
+  const bad = (a) => a.filter((k) => k.lv !== 1 || k.bar !== 1).length;
+  const badStep = bad(chk.step || []), badLive = bad(chk.live || []);
+  /* 되돌림 — 11~14회차 판(`.fx-keep` 를 타이머까지 걷히게 둔다)에서는 뒤 프레임에 사본이 0장이어야 한다 */
+  let holeLate = null;
+  {
+    const { b, p } = await boot('index.html');
+    await select(p);
+    await p.evaluate(FREEZE_OLD);
+    await p.evaluate(() => document.querySelector('#bCos [data-cosup]').click());
+    await p.waitForTimeout(700);                     /* `fxBye()` 수명(620ms) 뒤 */
+    holeLate = await p.evaluate(() => (window.__fxKeeps ? window.__fxKeeps() : { lv: -1, bar: -1 }));
+    await b.close();
+  }
+  const okAll = badStep === 0 && badLive === 0 && holeLate.lv === 0;
+  console.log('CAP814 자가점검 (978 · probe814c [P13] 과 같은 항)');
+  console.log('  · now-step 8장 중 «줄마다 사본 1장» 이 아닌 장 ' + badStep + '개 · now-live 6장 중 ' + badLive + '개');
+  console.log('  · §R 되돌림(11~14회차 판 · 700ms 뒤) — 값 줄 사본 «Lv. n» ' + holeLate.lv + '장 · «n/500» ' + holeLate.bar
+    + '장 (0 이어야 한다 = 그 판은 뒤 프레임을 채점할 수 없었다)');
+  console.log('  ' + (okAll ? '✓' : '✗') + ' 8회차 값 줄 부품이 **모든 프레임**에 서 있다');
+  if (!okAll) { console.error('CAP814 자가점검 실패 — 값 줄 사본이 빠진 장이 있다(step ' + badStep + ' · live ' + badLive + ' · 되돌림 ' + holeLate.lv + ')'); process.exitCode = 1; }
 
   console.log('CAP814 (' + TAG + ')');
   for (const l of log) console.log('  · ' + l);

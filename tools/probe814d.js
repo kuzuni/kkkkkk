@@ -46,14 +46,58 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : 
 const f2 = (n) => (n === null || n === undefined ? '—' : n.toFixed(2));
 const f3 = (n) => (n === null || n === undefined ? '—' : n.toFixed(3));
 
-/* 연출 노드 수거 무력화 — probe814c 와 같은 것(9·10회차가 여기서 두 번 미끄러졌다: `.fx-keep` 는
-   걷히게 두고 `#fxl` 자식만 지킨다) */
+/* 연출 노드 수거 무력화 — probe814c 와 **같은 것**(14회차 판).
+   ⚑⚑ **978(15회차) 이관 — 이 자는 14회차까지 «구멍이 열린» 사본을 쓰고 있었다.**
+   앞 판은 `#fxl` 안 노드의 걷기를 **부팅 순간부터 통째로** 막았다. 그러면 «한 자리에 한 장» 을
+   지키는 **규약 걷기**(`fxFlashRekeep` 이 `renderUI()` 뒤에 앞 장을 걷는 것)까지 같이 막혀
+   **낡은 사본**(옛 카드에서 뜬 «Lv. 12» 장)이 살아 있는 사본 옆에 남는다. 그 사본은 `fxCvLit` 이
+   안 걸려 **순백(255,255,255)** 이라 [D5]·[D6] 이 재던 «ED 열창 안 순백» 을 통째로 만들었다
+   (실측 — 구멍 있을 때 53px 100% · 막으면 **0px**). 즉 8~14회차의 이 자리는 **헛초록**이었다.
+   ⇒ probe814c 14회차의 **세 겹**을 그대로 옮긴다(자를 두 벌로 갈라 두면 같은 판을 두 값으로 읽는다):
+     ① **시각 문** — 무력화를 «클릭이 반환한 뒤» 에 켠다(`__fxFreeze(true)`). 규약 걷기는 클릭
+        핸들러 «안» 에서 동기로 끝나므로 그대로 일어나고, `fxBye()` 의 **타이머 걷기만** 막힌다.
+     ② **결정적 청소** — `__fxDedupe()` 가 «줄 **종류**마다 마지막 한 장» 만 남긴다(글자로 짝지으면
+        «Lv. 12»↔«Lv. 13» 이 서로 다른 짝이 돼 둘 다 남는다 — 13회차가 밟은 함정).
+     ③ **재감기** — 청소 사이에 새로 뜬 사본은 감긴 적이 없어 «실시간으로 흐른 색» 이므로
+        청소 → 재감기 → 찍기 순서로 못박는다. */
 const FREEZE = () => {
+  let on = false;
+  const R = Element.prototype.remove, RC = Node.prototype.removeChild;
+  const kind = (n) => { const s = (n.textContent || '').replace(/\s+/g, ' ').trim();
+    return /^Lv\./.test(s) ? 'lv' : /^\d+\s*\/\s*\d+$/.test(s) ? 'bar' : 'badge'; };
+  window.__fxFreeze = (v) => { on = !!v; };
+  window.__fxDedupe = () => {
+    const L2 = document.getElementById('fxl'); if (!L2) return 0;
+    const ks = [...L2.querySelectorAll('.fx-keep')], last = new Map();
+    for (const k of ks) last.set(kind(k), k);
+    let n = 0;
+    for (const k of ks) if (last.get(kind(k)) !== k && k.parentNode === L2) { RC.call(L2, k); n++; }
+    return n;
+  };
+  const inFx = (n) => { try { return on && !!(n && n.parentNode && n.parentNode.id === 'fxl'); } catch (_) { return false; } };
+  Element.prototype.remove = function () { if (inFx(this)) return; return R.call(this); };
+  Node.prototype.removeChild = function (c) { if (on && this && this.id === 'fxl') return c; return RC.call(this, c); };
+};
+
+/* §R2 되돌림 시험용 — **14회차까지의 구멍 난 사본**(부팅 순간부터 규약 걷기까지 막는다).
+   이것을 돌려 «순백이 되살아나는가» 를 묻는 것이 이 수리가 무르지 않다는 증거다. */
+const FREEZE_HOLE = () => {
   const inFx = (n) => { try { return !!(n && n.parentNode && n.parentNode.id === 'fxl'); } catch (_) { return false; } };
   const R = Element.prototype.remove, RC = Node.prototype.removeChild;
   Element.prototype.remove = function () { if (inFx(this)) return; return R.call(this); };
   Node.prototype.removeChild = function (c) { if (this && this.id === 'fxl') return c; return RC.call(this, c); };
 };
+
+/* `#fxl` 사본을 **줄 종류마다** 센다 — [D8]·§R2 의 자(«한 자리에 한 장» 규약) */
+const keepCount = (p) => p.evaluate(() => {
+  const L2 = document.getElementById('fxl'); if (!L2) return { lv: 0, bar: 0, badge: 0, txt: [] };
+  const t = (n) => (n.textContent || '').replace(/\s+/g, ' ').trim();
+  const ks = [...L2.querySelectorAll('.fx-keep')];
+  return { lv: ks.filter((k) => /^Lv\./.test(t(k))).length,
+           bar: ks.filter((k) => /^\d+\s*\/\s*\d+$/.test(t(k))).length,
+           badge: ks.filter((k) => !t(k)).length,
+           txt: ks.map(t) };
+});
 
 const srgb = (v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
 const L = (r, g, b) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b);
@@ -84,7 +128,7 @@ function quantile(img, box, skip) {
            fg: q(sorted, 0.99), bg: q(sorted, 0.50), n: v.length, midPx };
 }
 
-async function boot() {
+async function boot(hole) {
   const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
@@ -92,7 +136,7 @@ async function boot() {
   p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   p.on('pageerror', (e) => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
-  await p.addInitScript(FREEZE);
+  await p.addInitScript(hole ? FREEZE_HOLE : FREEZE);   /* hole = §R2 되돌림 벌 */
   await p.goto('file://' + path.join(ROOT, 'index.html'));
   await p.waitForTimeout(1200);
   await p.evaluate(() => {
@@ -245,16 +289,28 @@ function inkShare(mask, box) {
   const pre = await geo(p);
   if (!pre || !pre.lv || !pre.bar) { console.log('  ✗ 값 줄 상자를 못 잡았다'); process.exit(1); }
 
-  /* 워시 봉우리 한 장 — probe814c 와 같은 프레임 */
+  /* 워시 봉우리 한 장 — probe814c 와 같은 프레임 · **같은 세 겹**(978 이관 · FREEZE 머리말) */
   await p.evaluate((peak) => {
     const btn = document.querySelector('#bCos [data-cosup]'); if (!btn) throw new Error('[강화] 없음');
     btn.click();
+    /* ① 시각 문 — 규약 걷기(클릭 핸들러 안)는 끝났고, 이 뒤에 오는 것은 타이머 걷기뿐이다 */
+    if (window.__fxFreeze) window.__fxFreeze(true);
     for (const a of document.getAnimations()) {
       try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
         if (d) { a.currentTime = d * peak; a.pause(); } } catch (_) {}
     }
   }, PEAK_WASH);
   await p.waitForTimeout(120);
+  /* ② 결정적 청소 → ③ 재감기 (다 뜬 뒤에 부르는 것이 결정적이다 — probe814c 14회차 실측) */
+  const nDedup = await p.evaluate((peak) => {
+    const n = window.__fxDedupe ? window.__fxDedupe() : 0;
+    for (const a of document.getAnimations()) {
+      try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
+        if (d) { a.currentTime = d * peak; a.pause(); } } catch (_) {}
+    }
+    return n;
+  }, PEAK_WASH);
+  const keeps = await keepCount(p);   /* [D8] — 줄 종류마다 몇 장인가 */
   /* ⚑⚑ **상자를 «찍기 전» 과 «찍은 뒤» 둘 다 읽는다 — 이 자가 첫 실행에 미끄러진 자리다.**
      애니를 정지시켜도 이 호스트는 `renderUI()` 가 격자를 통째로 갈아 끼우고(840 머리말)
      `.sk-clv` 의 팝(`fxCvSwap`)이 조상 변형으로 걸려 있어, **Range bbox 를 언제 읽느냐**에 따라
@@ -329,12 +385,19 @@ function inkShare(mask, box) {
   console.log('  · Range bbox — 찍기 «전» ' + (pre2.lv ? pre2.lv.w.toFixed(1) + '×' + pre2.lv.h.toFixed(1) : '—')
     + ' (잉크 ' + (cvPre * 100).toFixed(1) + '% 담음 · 그 창으로 재면 ' + f2(qPre && qPre.r) + ':1) ↔ 찍은 «뒤» '
     + post.lv.w.toFixed(1) + '×' + post.lv.h.toFixed(1) + ' (잉크 ' + (cvPost * 100).toFixed(1) + '% · ED 창 ' + (cvEd * 100).toFixed(1) + '%)');
-  /* ⚠ 문턱을 실측(90.3% ↔ 67.5%)에 붙이지 않는다 — 붙이면 574·709·825 계보의 «문턱에 붙은 자» 가 된다.
-     가르는 것은 «담는다 ↔ 문다» 이므로 두 값 사이를 넉넉히 가르는 자리(85% / 78%)에 세운다. */
-  ok(cvPost >= 0.85 && cvPre <= 0.78,
-    '[D0] ★ **찍은 뒤 읽은 상자만 찍힌 잉크를 담는다** — 뒤 ' + (cvPost * 100).toFixed(1) + '% ≥ 85% · 전 '
-    + (cvPre * 100).toFixed(1) + '% ≤ 78%. 팝 변형(×1.19)이 재렌더로 풀리는 탓이고, 그래서 «찍기 전» 창은 '
-    + f2(qPre && qPre.r) + ':1 로 **분자(순백 글리프)를 잘라 낸다**. probe814c 의 «찍은 뒤 읽기» 순서가 옳다');
+  /* ⚑⚑ **978(15회차) 이관 — 문턱이 아니라 «무엇을 주장하는가» 가 바뀌었다.**
+     앞 판의 문턱(뒤 ≥85% · 전 ≤78%)은 **구멍 난 하네스**에서 잰 90.3% ↔ 67.5% 위에 세운 것이다.
+     구멍을 막으면 두 값이 **100.0% ↔ 89.4%** 로 붙는다 — «찍기 전» 창이 잘라 내던 잉크의 대부분이
+     낡은 순백 사본(상자 밖에 앉아 있던 것)이었기 때문이다. 그래서 [D0] 이 재던 «분자 붕괴»(3.19 ↔ 5.08,
+     Δ1.89)도 대부분 그 사본 몫이고, 지금은 **3.10 ↔ 3.07(Δ0.03)** 이다.
+     ⇒ 항을 비우지 않고 **방향을 그대로 둔 채 과녁만 실재하는 크기로 옮긴다**(333 처방):
+       ① 순서 주장(«찍은 뒤 읽은 상자가 잉크를 온전히 담는다»)은 **살아 있다** — 뒤가 100% 이고 전이 그보다 작다.
+       ② 그 순서가 **값에 미치는 크기**는 이제 Δ≤0.15 다 — 974(«찍기 전 읽기가 분자를 잘라 낸다»)가
+          쓰던 ×1.19 창 이야기는 **크기 면에서 하네스 몫이 컸다**는 것을 여기 남긴다(974 통지).
+     ⚠ 문턱은 실측에 붙이지 않는다 — 담김은 «온전히(≥99%) ↔ 문다(≤95%)» 로 가른다. */
+  ok(cvPost >= 0.99 && cvPre <= 0.95 && cvPost > cvPre,
+    '[D0] ★ **찍은 뒤 읽은 상자만 찍힌 잉크를 «온전히» 담는다** — 뒤 ' + (cvPost * 100).toFixed(1) + '% ≥ 99% · 전 '
+    + (cvPre * 100).toFixed(1) + '% ≤ 95%. 팝 변형(×1.19)이 재렌더로 풀리는 탓이고, probe814c 의 «찍은 뒤 읽기» 순서가 옳다');
 
   const bLv = belong(imgOn, imgLvOff, mLv), bBar = belong(imgOn, imgBarOff, mBar);
 
@@ -349,6 +412,13 @@ function inkShare(mask, box) {
   const midInA = shA.set.has(A.midPx[0] + ',' + A.midPx[1]);
   const midInB = shB.set.has(B.midPx[0] + ',' + B.midPx[1]);
   console.log('  · **중앙값 픽셀이 잉크 안인가** — A ' + (midInA ? '예(오염)' : '아니오(면)') + ' · B ' + (midInB ? '예(오염)' : '아니오(면)'));
+  /* 978 이관 — [D0] 의 «크기» 절(위 머리말 ②). 읽는 시점이 값에 미치는 크기를 여기서 찍는다. */
+  const dPrePost = (qPre && qPre.r !== null && A && A.r !== null) ? Math.abs(qPre.r - A.r) : null;
+  console.log('  · 읽는 시점만 바꾼 같은 창 — 찍기 «전» ' + f2(qPre && qPre.r) + ':1 ↔ «뒤» ' + f2(A.r)
+    + ':1 (Δ' + f2(dPrePost) + ')');
+  ok(dPrePost !== null && dPrePost <= 0.15,
+    '[D0b] ★ **그 순서가 값에 미치는 크기는 Δ' + f2(dPrePost) + ' 뿐이다** (≤0.15) — 14회차까지 이 자리가 재던 Δ1.89'
+    + '(3.19 ↔ 5.08)는 대부분 **하네스가 남긴 낡은 순백 사본** 몫이었다. 974 통지');
 
   console.log('\n[3] 세 번째 자 (소속으로 가른 대비)');
   console.log('  · «Lv. n»  ' + f2(bLv.r) + ':1  (잉크 상위1% ' + f3(bLv.fg) + ' ÷ **그 자리의 면** 중앙값 ' + f3(bLv.bg) + ' · 잉크 ' + bLv.n + 'px)');
@@ -377,12 +447,20 @@ function inkShare(mask, box) {
   const whShare = whT ? whInk / whT : 0;
   console.log('\n[5] ED 가 «빼라» 고 한 순백 픽셀의 소속 — ED 열창 안 L≥0.99 픽셀 ' + whT + '개 중 **잉크** ' + whInk + '개 ('
     + (whShare * 100).toFixed(1) + '%)');
-  ok(whT > 0 && whShare >= 0.9,
-    '[D5] ★ 그 순백은 **판때기가 아니라 글자다** — ED 열창 안 순백 ' + whT + 'px 중 ' + whInk + 'px('
-    + (whShare * 100).toFixed(1) + '%)가 «그 줄을 지우면 사라지는» 픽셀이다. 빼면 **글리프 채움을 지우고 그 글자의 대비를 재는** 것이 된다(분자 붕괴)');
-  ok(bLv.fg >= 0.99,
-    '[D6] ★ 그래서 분자는 워시 밑에서도 **순백이 맞다** — 잉크 상위1% L ' + f3(bLv.fg)
-    + ' (≥0.99). 8회차 `--flash-keep` 이 «잉크만 워시 위로» 올린 결과이고 [P3](글리프 채움 Δ0.000)와 같은 말이다');
+  /* ⚑⚑ **978(15회차) — 이 두 항이 뒤집힌다. 뒤집힌 것이 이 작업의 본체다.**
+     13·14회차의 [D5]«그 순백은 글자다 100.0%» · [D6]«분자는 순백» 은 **둘 다 하네스가 만든 값**이었다 —
+     구멍이 열려 있어 옛 카드에서 뜬 낡은 사본(«Lv. 12»)이 `fxCvLit` 없이 **순백**으로 남았고,
+     그것이 «그 줄을 지우면 사라지는» 픽셀이라 잉크로 세어졌다. 구멍을 막으면 그 순백이 **0px** 이다.
+     ⇒ 자리를 비우지 않고 **방향을 뒤집어** 같은 축(«ED 가 지목한 순백의 정체»)을 계속 묻는다(333 처방):
+       · [D5] = «그 순백은 **제품 것이 아니다**» — 막으면 0px, 되살리면 돌아온다(§R2 가 짝이다).
+       · [D6] = «분자는 순백이 아니라 **앰버**» — `#FFC02E` 의 L 0.5977 이 과녁이고, 그 값이 곧
+         probe814c 가 낸 3.07:1 의 분자다(두 자가 같은 판을 같은 값으로 읽는다 = 갈림이 닫혔다). */
+  ok(whT === 0,
+    '[D5] ★ 그 순백은 **제품 것이 아니었다** — 구멍을 막은 판의 ED 열창 안 L≥0.99 픽셀 ' + whT + 'px (0 이어야 한다). '
+    + '13·14회차가 «글자다» 로 읽은 53px 는 전부 **하네스가 남긴 낡은 사본**이다(§R2 가 되살린다)');
+  ok(Math.abs(bLv.fg - 0.5977) <= 0.02,
+    '[D6] ★ 그래서 분자는 순백이 아니라 **앰버다** — 잉크 상위1% L ' + f3(bLv.fg)
+    + ' ≈ `#FFC02E` 의 0.598 (±0.02). 이 값이 probe814c 의 3.07:1 분자와 같은 것이다');
 
   /* ── §R 되돌림 — 이 자가 «열창 무관» 이라는 주장 자체를 시험한다 ── */
   console.log('\n§R 되돌림 — 열창을 바꿔도 세 번째 자가 안 움직이는가 (움직이면 이 자도 열창 자다)');
@@ -398,6 +476,47 @@ function inkShare(mask, box) {
     + ' > 세 번째 자 Δ' + f2(Math.abs(wide.r - tight.r)) + '. 열창 의존이 실재한다는 양성 대조다');
 
   ok(!errs.length, '[D7] 콘솔 에러 0건 — ' + (errs.length ? errs[0] : '없음'));
+
+  /* ── [D8] «한 자리에 한 장» — probe814c [P13] 과 같은 항(978 신설) ────────────────
+     이 자가 재는 판이 «제품이 그리는 판» 이라는 것의 가장 짧은 증거다. 제품은 실런타임에서
+     340ms 내내 값 줄 사본을 **1장**만 들고 있다(probe814c [P9]~[P12]). */
+  console.log('\n[6] `#fxl` 사본 — 줄 종류마다 몇 장인가 (제품 규약: 한 자리에 한 장)');
+  console.log('  · «Lv. n» ' + keeps.lv + '장 · «n/500» ' + keeps.bar + '장 · 글자 없는 배지 판때기 ' + keeps.badge + '장'
+    + ' · 청소가 걷은 낡은 사본 ' + nDedup + '장 · 목록 [' + keeps.txt.join(' | ') + ']');
+  ok(keeps.lv === 1 && keeps.bar === 1,
+    '[D8] ★ **정지 벌에 값 줄 사본이 줄마다 1장뿐이다** — «Lv. n» ' + keeps.lv + '장 · «n/500» ' + keeps.bar
+    + '장. 시각 문 + 결정적 청소가 낡은 사본을 남기지 않는다(probe814c [P13] 과 같은 항)');
+
+  /* ── §R2 되돌림 — 구멍을 되살리면 8~14회차의 헛초록이 그대로 돌아오는가 ─────────── */
+  console.log('\n§R2 되돌림 — 14회차까지의 «구멍 난 무력화» 를 되살린 벌 (돌아와야 이 수리가 실재한다)');
+  const H = await boot(true);
+  await H.p.evaluate((peak) => {
+    document.querySelector('#bCos [data-cosup]').click();
+    for (const a of document.getAnimations()) {
+      try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
+        if (d) { a.currentTime = d * peak; a.pause(); } } catch (_) {}
+    }
+  }, PEAK_WASH);
+  await H.p.waitForTimeout(120);
+  const hGeo = await geo(H.p);
+  const hImg = await shot(H.p, 'hole');
+  const hKeeps = await keepCount(H.p);
+  await H.b.close();
+  const hc = hGeo.card;
+  const hEd = { x: hc.x - CROP_OX + ED_CROP.x0, y: hc.y - CROP_OY + ED_CROP.y0,
+                w: ED_CROP.x1 - ED_CROP.x0, h: ED_CROP.y1 - ED_CROP.y0 };
+  let hWhite = 0;
+  for (let y = Math.round(hEd.y) + 1; y < Math.round(hEd.y + hEd.h) - 1; y++)
+    for (let x = Math.round(hEd.x) + 1; x < Math.round(hEd.x + hEd.w) - 1; x++)
+      if (lumAt(hImg, x, y) >= 0.99) hWhite++;
+  console.log('  · 구멍 벌 — ED 열창 안 순백 ' + hWhite + 'px · 사본 «Lv. n» ' + hKeeps.lv + '장 · «n/500» ' + hKeeps.bar
+    + '장 · 목록 [' + hKeeps.txt.join(' | ') + ']');
+  ok(hWhite > 0 && hKeeps.lv >= 2,
+    '[R2-a] ★ 구멍을 되살리면 **낡은 사본과 그 순백이 같이 돌아온다** — 순백 ' + hWhite + 'px(>0) · «Lv. n» 사본 '
+    + hKeeps.lv + '장(≥2). 막은 판은 0px · 1장이다. 즉 [D5]·[D6] 이 뒤집힌 것은 문턱을 푼 것이 아니라 **판이 바뀐 것**이다');
+  ok(hWhite > whT && hKeeps.lv > keeps.lv,
+    '[R2-b] ★ 두 판이 같은 축에서 반대다 — 순백 ' + whT + 'px ↔ ' + hWhite + 'px · 사본 ' + keeps.lv + '장 ↔ '
+    + hKeeps.lv + '장 (막은 판 < 구멍 판)');
 
   await b.close();
   console.log('\nPROBE814D ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
