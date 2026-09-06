@@ -39,7 +39,7 @@ const r2 = v => Math.round(v * 100) / 100;
 /* 한 프레임 — 팝을 끝낸 뒤 같은 자리에 다시 띄운다(`probe862` 와 같은 전제: 팝이 상자를 흔들면
    판마다 다른 상자가 나온다 — 실측 139.8 ↔ 151). RINGFN 이 수면 `fxRingIn` 을, NOCAP 이 수면
    흰 테 상한을 되돌린 사본이 된다(§R). */
-const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
+const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE, NOFADE }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__v862to) { window.__v862to = window.setTimeout; window.__v862ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
@@ -77,6 +77,14 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
     if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = Math.max(0, T); } catch (_) {} }
     else { a.pause(); try { a.finish(); } catch (_) {} }
   }); } catch (e) {}
+  /* ⚑⚑ 683 12회차 이관 — `NOFADE` 는 **12회차 제품을 되돌린 사본**이다(`fxFlashFade` 의 마스크를 뗀다).
+     아래 [R2][R3] 은 «들이기·흰 테 상한이 일을 하는가» 를 묻는 862 자신의 되돌림 항인데, 12회차가
+     플래시를 라벨 띠에서 빼 버리자 두 항의 전제가 사라져 값이 붙었다(들이기 0 사본의 액자선 잔존
+     3.1% → 21.7% · 흰 테 상한 되돌림 15% ↔ 15%). 문턱을 넓히는 대신(334) **재는 사본을 12회차
+     이전으로 되돌린다**(333 처방) — 두 축은 원래 묻던 것을 그대로 묻고, «12회차가 흡수했다» 는
+     새 사실은 [C5] 가 따로 못박는다. */
+  if (NOFADE && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-flash'))) {
+    nd.style.webkitMaskImage = 'none'; nd.style.maskImage = 'none'; }
   const u = el.querySelector('u'), b = u.getBoundingClientRect(), c = el.getBoundingClientRect();
   if (BLANK) { window.__v862lab = u.textContent; u.textContent = ''; }
   let box = null, rim = null; const fl = L && L.querySelector('.fx-flash');
@@ -195,7 +203,15 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
     return { same, tot, pct: tot ? Math.round(same / tot * 1000) / 10 : 0 };
   }, { a: aPng, z: zPng, c: card, bw: w });
 
-  const CL = async (aPng, zPng, box) => ev(p, async ({ a, z, bx }) => {
+  /* ⚑⚑ **683 12회차 이관 — 마스크를 «정착에서 한 번만» 뜬다(10회차 처방 · `probe683c` §10-3).**
+     옛 자는 잉크 마스크를 **프레임마다** 떴다. 그러면 «씻겨서 배경과 같아진 획» 이 표본에서 통째로
+     빠지는 **생존자 편향**이라, 씻길수록 표본이 «잘 읽히는 획» 만 남아 값이 좋아진다 —
+     실제로 이 자는 수리 전에 «연출 프레임 6% < 정착 14%» 라는 **불가능한 답**을 내고 있었다
+     (흰 판이 뜬 프레임이 깨끗한 프레임보다 잘 읽힐 수는 없다). 683 10회차가 같은 편향을 자기
+     자에서 잡아 고쳤고(그때 t0 중앙값 5.16 → 11.07 · «4.5:1 미만» 2% → 31%), 여기서도 같은 처방이다.
+     ⚠ **문턱을 무르게 잡으려고 바꾼 것이 아니다** — 고친 자로 재면 수리 전이 오히려 **나빠진다**
+       (정착 대비 +7%p). 아래 [C2][C3] 이 그 «정착 대비» 로 다시 적힌 이유다. */
+  const CL = async (aPng, zPng, box, mask) => ev(p, async ({ a, z, bx, mk }) => {
     const load = u => new Promise((okp, no) => { const i = new Image(); i.onload = () => okp(i); i.onerror = no; i.src = 'data:image/png;base64,' + u; });
     const px = async u => { const im = await load(u); const cv = document.createElement('canvas');
       cv.width = im.width; cv.height = im.height; const g = cv.getContext('2d'); g.drawImage(im, 0, 0);
@@ -205,11 +221,15 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
     const rl = d => (i) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
     const lum = d => (i) => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
     const la = lum(A2), lz = lum(Z);
-    const ink = []; for (let i = 0; i < A2.length; i += 4) if (Math.abs(la(i) - lz(i)) >= 24) ink.push(i);
-    if (ink.length < 120) return { ink: ink.length };
-    const iv = ink.map(la).sort((x, y) => x - y);
-    const hiT = iv[Math.floor(iv.length * 0.75)];
-    const fill = ink.filter(i => la(i) >= hiT);
+    let ink, fill;
+    if (mk && mk.ink && mk.ink.length) { ink = mk.ink; fill = mk.fill; }
+    else {
+      ink = []; for (let i = 0; i < A2.length; i += 4) if (Math.abs(la(i) - lz(i)) >= 24) ink.push(i);
+      if (ink.length < 120) return { ink: ink.length };
+      const iv = ink.map(la).sort((x, y) => x - y);
+      const hiT = iv[Math.floor(iv.length * 0.75)];
+      fill = ink.filter(i => la(i) >= hiT);
+    }
     const isInk = new Uint8Array(bx.w * bx.h); for (const i of ink) isInk[i / 4] = 1;
     const rr = rl(A2), out = [];
     for (const i of fill) { const q = i / 4, x = q % bx.w, y = (q / bx.w) | 0; const cand = [];
@@ -223,8 +243,9 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
       out.push((Math.max(bg, fg) + 0.05) / (Math.min(bg, fg) + 0.05)); }
     out.sort((u, v) => u - v);
     return { ink: ink.length, nf: fill.length, med: out.length ? out[out.length >> 1] : null,
-             under45: out.length ? out.filter(v => v < 4.5).length / out.length : null };
-  }, { a: aPng, z: zPng, bx: box });
+             under45: out.length ? out.filter(v => v < 4.5).length / out.length : null,
+             mask: mk ? null : { ink, fill } };
+  }, { a: aPng, z: zPng, bx: box, mk: mask || null });
 
   /* ═══ [C] 화소 ═══════════════════════════════════════════════════════ */
   blk('C] 화소 — 액자선 잔존 · 라벨 «4.5:1 미만» 비율');
@@ -236,20 +257,40 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
   ok(!!now && now.pct >= 90,
      'C1 ★ **액자선이 산다** — 흰 판이 떠 있는 프레임에서도 띠 화소의 90% 이상이 정착과 같은 색이다 (수리 전 3.1%)',
      now ? now.pct + '%' : '측정 실패');
+  /* 마스크는 **정착에서 한 번만** 뜬다(위 CL 머리말) — 아래 모든 사본이 같은 표본을 잰다. */
   const baseCL = settled && blank ? await CL(settled.png, blank.png, LAB) : null;
-  const liveCL = live && blank ? await CL(live.png, blank.png, LAB) : null;
+  const LMK = baseCL && baseCL.mask;
+  const liveCL = live && blank ? await CL(live.png, blank.png, LAB, LMK) : null;
   const u45 = v => v == null ? '?' : Math.round(v * 100) + '%';
   info('라벨 «Lv.n» — 정착', baseCL ? (r2(baseCL.med) + ':1 · 4.5:1 미만 ' + u45(baseCL.under45)) : '측정 실패');
   info('라벨 «Lv.n» — t0', liveCL ? (r2(liveCL.med) + ':1 · 4.5:1 미만 ' + u45(liveCL.under45)) : '측정 실패');
   /* ⚠ 자는 «중앙값» 이 아니라 **읽을 수 있는가**(4.5:1 미만 비율)를 묻는다 — 플래시가 하는 일이
      곧 워시라 어느 판이든 중앙값은 내려간다(정착 17.71). 683 9회차가 ⓑⓒ 를 기각한 축도 이것이고
      (64~66%), 수리 전 값이 7% 다. 문턱 10% 는 그 둘 사이가 아니라 **수리 전 + 3%p** 다. */
-  ok(!!liveCL && liveCL.under45 != null && liveCL.under45 <= 0.10,
-     'C2 ★ 라벨이 읽힌다 — 획 화소의 «4.5:1 미만» 이 10% 이하다 (수리 전 7% · 등재문이 기각한 판 64~66%)',
-     liveCL ? u45(liveCL.under45) : '측정 실패');
-  ok(!!baseCL && !!liveCL && baseCL.under45 != null && liveCL.under45 <= baseCL.under45,
-     'C3 연출이 도는 프레임이 **정착보다 나쁘지 않다**',
-     baseCL && liveCL ? ('t0 ' + u45(liveCL.under45) + ' ↔ 정착 ' + u45(baseCL.under45)) : '측정 실패');
+  /* ⚑⚑ **683 12회차 이관 — «절대 10%» 를 «정착 대비» 로 옮겼다(333 처방 · 내린 것이 아니다).**
+     옛 문턱 10% 는 **생존자 편향이 든 자**가 낸 6~7% 위에 세운 값이라(위 CL 머리말) 자를 고치는
+     순간 뜻이 사라진다. 이 항이 지키려는 것은 «연출이 라벨을 못 읽게 만들지 않는다» 하나이고,
+     그 물음의 자연스러운 기준선은 **같은 자로 잰 정착 프레임**이다.
+     실측(고친 자): 12회차 전 정착 +7%p → 12회차 후 **+1%p**. 문턱 +2%p 는 그 사이가 아니라
+     **12회차 실측 + 1%p** 다(조이는 쪽으로만 다시 적어라). */
+  const dLab = baseCL && liveCL && baseCL.under45 != null && liveCL.under45 != null
+    ? liveCL.under45 - baseCL.under45 : null;
+  ok(dLab != null && dLab <= 0.02,
+     'C2 ★ 라벨이 읽힌다 — 연출 프레임의 «4.5:1 미만» 이 **정착 +2%p** 안이다 (683 12회차 이관 · 옛 문턱 «절대 10%»)',
+     dLab != null ? ('t0 ' + u45(liveCL.under45) + ' ↔ 정착 ' + u45(baseCL.under45) + ' = +' + Math.round(dLab * 100) + '%p') : '측정 실패');
+  ok(dLab != null && liveCL.med != null && baseCL.med != null && liveCL.med >= baseCL.med * 0.5,
+     'C3 연출이 도는 프레임의 중앙 대비가 정착의 절반 아래로 안 떨어진다 (683 12회차 이관 — 옛 «정착보다 나쁘지 않다»)',
+     baseCL && liveCL ? ('t0 ' + r2(liveCL.med) + ':1 ↔ 정착 ' + r2(baseCL.med) + ':1') : '측정 실패');
+  /* ⚑ 683 12회차 — **[R3] 의 짝(새 사실).** 12회차가 플래시를 라벨 띠에서 빼면서 «흰 테가 라벨을
+     밝힌다» 경로 자체가 닫혔다: 페이드가 살아 있으면 흰 테 상한을 되돌려도 라벨은 안 움직인다.
+     [R3] 은 그것을 **되돌린 사본**에서 계속 묻고(축 보존), 이 항이 지금 제품의 상태를 못박는다.
+     둘이 짝이라 어느 쪽이 죽어도 빨개진다. */
+  const capLive = await shot({ T: 0, NOCAP: cssRim });
+  const capLiveCL = capLive && blank ? await CL(capLive.png, blank.png, LAB, LMK) : null;
+  ok(!!capLiveCL && !!liveCL && capLiveCL.under45 != null
+     && Math.abs(capLiveCL.under45 - liveCL.under45) <= 0.03,
+     'C5 ★ **683 12회차가 «흰 테 ↔ 라벨» 경로를 흡수했다** — 페이드가 살아 있으면 흰 테 상한을 되돌려도 라벨이 안 움직인다(±3%p)',
+     capLiveCL && liveCL ? (u45(capLiveCL.under45) + ' ↔ 지금 ' + u45(liveCL.under45)) : '측정 실패');
   /* ⚑ 876 §C4 — **위상 고정 회귀 게이트.** t0 를 여러 번 다시 찍어 [C1] 값이 실행마다 흔들리지
      않음을 못박는다. 등재문의 사고(같은 트리·같은 명령이 1%↔16.5%↔100% 로 튀어 14/17↔17/17)가
      되살아나면 **바로 이 항이 빨개진다** — [C1] 문턱(90%)을 넓히지 않고 «어느 프레임을 재는가» 를
@@ -295,16 +336,23 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE }) => {
   ok(!!rOld && !!now && rOld.pct < now.pct - 30,
      'R1 ★ `fxRingIn` 을 «안쪽 링만» 으로 되돌리면 액자선이 다시 무너진다 — [C1] 이 «원래부터 참» 을 굳힌 항이 아니다',
      rOld && now ? (rOld.pct + '% ↔ 지금 ' + now.pct + '%') : '측정 실패');
-  const zeroRing = await shot({ T: 0, RINGFN: 0 });             /* 수리 전 단발 호출(들이기 0) */
+  /* ⚑ 683 12회차 이관 — 되돌림 사본은 **페이드도 같이 되돌린다**(위 `NOFADE` 머리말).
+     12회차 마스크가 카드 하변 띠를 안 그리는 바람에, 들이기를 0 으로 되돌려도 그 띠의 액자선이
+     살아남아 3.1% → 21.7% 가 됐다 — 축(«들이기가 일을 한다»)은 그대로인데 사본이 섞인 것이다. */
+  const zeroRing = await shot({ T: 0, RINGFN: 0, NOFADE: true });   /* 수리 전 단발 호출(들이기 0) */
   const rZero = zeroRing && settled ? await RINGPX(zeroRing.png, settled.png, CARD, band) : null;
   ok(!!rZero && rZero.pct < 10,
      'R2 ★ 들이기를 0 으로 되돌리면(= 수리 전 단발 호출) 액자선 잔존이 10% 아래로 떨어진다',
      rZero ? rZero.pct + '%' : '측정 실패');
-  const noCap = await shot({ T: 0, NOCAP: cssRim });             /* 흰 테 상한만 되돌린 사본 */
-  const capCL = noCap && blank ? await CL(noCap.png, blank.png, LAB) : null;
-  ok(!!capCL && !!liveCL && capCL.under45 != null && capCL.under45 > liveCL.under45,
-     'R3 ★ 흰 테 상한만 되돌리면 라벨의 «4.5:1 미만» 이 는다 — 상한이 헛일이 아니다',
-     capCL && liveCL ? (u45(capCL.under45) + ' ↔ 지금 ' + u45(liveCL.under45)) : '측정 실패');
+  /* ⚑ 683 12회차 이관 — 이 축도 **양쪽 다 페이드를 되돌린 사본**에서 잰다(위 [R2] 와 같은 이유).
+     페이드가 살아 있으면 흰 테는 라벨 띠에 아예 못 닿아 두 값이 붙는다 — 그 «지금» 상태는 [C5] 몫이다. */
+  const noCap = await shot({ T: 0, NOCAP: cssRim, NOFADE: true });  /* 흰 테 상한만 되돌린 사본 */
+  const capCL = noCap && blank ? await CL(noCap.png, blank.png, LAB, LMK) : null;
+  const liveNF = await shot({ T: 0, NOFADE: true });
+  const liveNFCL = liveNF && blank ? await CL(liveNF.png, blank.png, LAB, LMK) : null;
+  ok(!!capCL && !!liveNFCL && capCL.under45 != null && capCL.under45 > liveNFCL.under45,
+     'R3 ★ 흰 테 상한만 되돌리면 라벨의 «4.5:1 미만» 이 는다 — 상한이 헛일이 아니다 (683 12회차 이관: 양쪽 다 페이드 되돌린 사본)',
+     capCL && liveNFCL ? (u45(capCL.under45) + ' ↔ 페이드 되돌림 ' + u45(liveNFCL.under45)) : '측정 실패');
   /* 원복이 «자를 무르게 잡아» 통과한 게 아님을 못박는다 — 같은 자로 다시 초록 */
   const back = await shot({ T: 0 });
   const rBack = back && settled ? await RINGPX(back.png, settled.png, CARD, band) : null;

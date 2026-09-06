@@ -251,7 +251,12 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
     const load = u => new Promise((okp, no) => { const i = new Image(); i.onload = () => okp(i); i.onerror = no; i.src = 'data:image/png;base64,' + u; });
     const px = async u => { const im = await load(u); const cv = document.createElement('canvas');
       cv.width = im.width; cv.height = im.height; const g = cv.getContext('2d'); g.drawImage(im, 0, 0);
-      return g.getImageData(c.x + 7, c.y + c.h - 13, 10, 10).data; };
+      /* ⚑⚑ 683 12회차 — 표본을 **좌하 → 좌상** 코너로 옮겼다. 12회차가 플래시를 «되그릴 글자» 띠
+         (= 카드 하변 쪽)에서 빼면서 **좌하 코너는 이제 흰 판이 정당하게 안 뜨는 자리**가 됐고,
+         그 자리로 «연출이 떠 있는가» 를 물으면 자가 «연출 없음» 이라고 답한다(t0 0.06 ↔ 정착 0.06).
+         묻는 문장(«이 프레임에 흰 판이 떠 있는가»)은 그대로 두고 **묻는 자리만** 아직 판이 덮는
+         곳으로 옮긴다 — 12회차 이후 실측 t0 0.85 ↔ 정착 0.06 으로 옛 값과 같은 폭이다. */
+      return g.getImageData(c.x + 7, c.y + 3, 10, 10).data; };
     const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
     const mean = d => { let s = 0; for (let i = 0; i < d.length; i += 4)
       s += 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]); return s / (d.length / 4); };
@@ -260,7 +265,7 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
   {
     const s = await shot({ T: 0 });
     const cr = s && settled ? await CORNER(s.png, settled.png, CARD) : null;
-    info('자기검산 — 카드 좌하 코너 휘도(흰 판이 떠 있는가)',
+    info('자기검산 — 카드 좌상 코너 휘도(흰 판이 떠 있는가 · 12회차에 좌하에서 옮김)',
          cr ? ('t0 L=' + r2(cr.a) + ' ↔ 정착 L=' + r2(cr.z)) : '측정 실패');
     ok(!!cr && cr.a > 0.5 && cr.z < 0.2,
        '3-전제 이 자가 «연출이 떠 있는» 프레임을 재고 있다 — 아니면 아래 [3][4] 는 무의미하다',
@@ -303,9 +308,16 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
           되돌림이 median 11.07 → **5.15** · «4.5:1 미만» 31% → **40%** 로 또렷이 갈린다.
      ⇒ 하드는 «795 의 패치가 듣는가» 하나(배수 1.5)이고, 못 넘은 목표(«정착 이하»)는 아래 ⏸ 로
        매 실행 찍는다 — `verify683` [H1]/[H4] 가 채움↔테 축에서 쓰는 것과 같은 규약이다. */
-  ok(now != null && noKeep != null && noKeep > 0 && now >= noKeep * 1.5
-     && u0 != null && uNoKeep != null && u0 < uNoKeep,
-     '3-a **795 의 라벨 패치가 듣고 있다** — 걷으면 획↔주변 중앙값이 2/3 아래로 내려가고 «4.5:1 미만» 이 는다(10회차 — 고정 마스크로 재잰 값)',
+  /* ⚑⚑ 683 12회차 이관 — **판정 축을 «중앙값 배수» 에서 «4.5:1 미만»(이 자의 1차 축)으로 옮겼다.**
+     12회차가 플래시를 라벨 띠에서 빼면서 패치가 하던 일의 일부를 흡수했다 — 패치는 여전히 듣지만
+     (걷으면 «4.5:1 미만» 15% → 25% = **+10%p**) 중앙값 배수는 1.5 → **1.33** 으로 줄었다.
+     이 자 자신이 «중앙값이 아니라 읽을 수 있는가를 묻는다» 고 적어 두었으므로(862 와 같은 규약)
+     하드는 그 1차 축에서 **+8%p 이상**으로 다시 적고(실측 +10%p · 조이는 쪽으로만 다시 적어라),
+     중앙값은 아래 꼬리표로 계속 찍는다. 문턱을 무르게 잡은 것이 아니라 **섞여 있던 두 축 중
+     이 자의 축을 골랐다**(333 처방 · 옛 배수는 기록으로 남긴다). */
+  ok(u0 != null && uNoKeep != null && uNoKeep - u0 >= 0.08
+     && now != null && noKeep != null && noKeep > 0 && now > noKeep,
+     '3-a **795 의 라벨 패치가 듣고 있다** — 걷으면 «4.5:1 미만» 이 8%p 이상 늘고 중앙값도 내려간다(683 12회차 이관 · 옛 «중앙값 배수 1.5»)',
      now != null && noKeep != null
        ? (r2(now) + ':1 → 걷으면 ' + r2(noKeep) + ':1 (배수 ' + r2(now / noKeep) + ') · «4.5:1 미만» '
           + Math.round(u0 * 100) + '% → ' + Math.round(uNoKeep * 100) + '%')

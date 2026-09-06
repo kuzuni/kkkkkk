@@ -426,6 +426,31 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
     if (re) { await paint(layers.ring); await p.waitForTimeout(80); bInk = await inkEgg(); await paint(''); }
     await ev(p, () => { const s = document.getElementById('__r683r11'); if (s) s.remove(); });
   }
+  /* ⚑⚑ 683 12회차 — **«12회차 페이드를 되돌린» 사본**(11회차 선언은 그대로 살린다).
+     12회차가 플래시를 라벨 띠에서 빼자 라벨 글리프가 알 위에 놓여도 알의 잉크가 안 잘린다 —
+     즉 11회차가 치른 «전경 몫» 대가가 **0 으로 사라졌다**(2.00px → 0.00px). 그러면 옛 [B2c]
+     («11회차 선언을 되돌리면 [B2b] 가 움직인다»)는 전제가 사라져 헛빨강이 된다.
+     ⇒ 축을 지우지 않고 **되돌릴 대상을 12회차 쪽으로 옮긴다**(333 처방): 페이드를 되돌리면
+       전경 몫이 되살아나야 하고([B2c]), 지금 제품에서는 대가가 0 이어야 한다([B2d]).
+     ⚠ 인라인 마스크는 `!important` 로만 눌린다(사본이 자기 style 로 들고 있다 — 11회차 §R 함정과 같은 꼴). */
+  let fInk = null;
+  if (geo && fired && layers && layers.ring) {
+    await ev(p, () => { const s = document.createElement('style'); s.id = '__r683r12';
+      s.textContent = '.fx-flash{-webkit-mask-image:none !important;mask-image:none !important}';
+      document.head.appendChild(s); });
+    const re2 = await ev(p, id => {
+      const it = RELICS.find(r => r.id === id); if (!it) return false;
+      const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+      rwSummonFx(it, true);
+      for (const a of document.getAnimations()) {
+        const t = a.effect && a.effect.target;
+        if (t && L && L.contains(t)) { try { a.pause(); a.currentTime = 0; } catch (_) {} }
+      }
+      return document.querySelectorAll('#fxl .fx-rlic').length === 1;
+    }, geo.id);
+    if (re2) { await paint(layers.ring); await p.waitForTimeout(80); fInk = await inkEgg(); await paint(''); }
+    await ev(p, () => { const s = document.getElementById('__r683r12'); if (s) s.remove(); });
+  }
   if (icInk && bInk) {
     const r = dOf(bInk, icInk);
     ok(r.d <= EPS_C,
@@ -440,10 +465,16 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
        + '그려진 그대로의 알 중심. 늘면 라벨이 알을 더 가린 것이다(조이는 쪽으로만 다시 적어라)',
        '그린 대로 ' + r.d.toFixed(2) + 'px ↔ 후광 자체 ' + b.d.toFixed(2) + 'px · 전경 몫 '
        + (r.d - b.d).toFixed(2) + 'px');
-    ok(Math.abs(r.d - b.d) >= 0.5,
-       'B2c ★ **되돌림 시험** — 11회차 선언을 되돌리면 [B2b] 가 실제로 움직인다(≥0.5px). '
+    const f = fInk ? dOf(fInk, icInk) : null;
+    ok(!!f && Math.abs(f.d - b.d) >= 0.5,
+       'B2c ★ **되돌림 시험**(683 12회차 이관) — **12회차 페이드**를 되돌리면 [B2b] 가 실제로 움직인다(≥0.5px). '
        + '안 움직이면 이 자는 «언제나 초록» 인 헛초록이다',
-       '차 ' + Math.abs(r.d - b.d).toFixed(2) + 'px');
+       f ? ('페이드 되돌림 ' + f.d.toFixed(2) + 'px ↔ 후광 자체 ' + b.d.toFixed(2) + 'px = 차 '
+            + Math.abs(f.d - b.d).toFixed(2) + 'px') : '측정 실패');
+    ok(Math.abs(r.d - b.d) <= 0.3,
+       'B2d ★ **12회차가 11회차의 대가를 없앴다**(신설) — 지금 제품에서는 11회차 선언을 되돌려도 알이 안 움직인다(≤0.3px). '
+       + '플래시가 라벨 띠를 안 밝히니 라벨 글리프가 알 잉크를 안 자른다',
+       '전경 몫 ' + (r.d - b.d).toFixed(2) + 'px (11회차 2.00px)');
   }
   /* 되돌림 시험 — 자가 «자리» 를 정말 재는지. 3px 밀면 [B1] 이 빨개져야 한다(334 처방). */
   if (geo && fired && gInk) {
