@@ -58,6 +58,10 @@ const killLine = (src, tag, repl) =>
    **평탄 판**이 나온다 = 4회차까지의 세계. [B6] 이 그것을 실제로 잡는지 [R3] 이 못박는다. */
 const NEG_FADE = path.join(ROOT, '.v792-neg-fade-' + process.pid + '.html');
 const TAG_FADE = `const HALO_FADE = 1;`;
+/* ⚑ 11회차 — 덩치 배율표를 **비운 사본**. [E1] 이 «지금 그대로» 를 초록으로 지나가는 자가
+   아니라 **처방이 닿은 자리**를 재는 자임을 [R5] 가 못박는다(없으면 밴드를 무르게 풀 수 있다). */
+const NEG_SC   = path.join(ROOT, '.v792-neg-sc-' + process.pid + '.html');
+const TAG_SC   = `const SHOT_SC = { arc:`;
 
 /* 710 [C1] 과 **같은 문턱**을 쓴다.
    ⚠ 1회차에 여기를 «710 이 마감 때 찍은 값 0.796» 으로 박았다가 스스로 빨개졌다 —
@@ -91,6 +95,9 @@ const TH_MIN = 9, TH_MAX = 15, ASYM_MAX = 3.0, DWARM_MAX = 30;
    링만 있는 종 0 ~ 0.001 ↔ 제 손으로 반투명 부품을 그리는 종 0.062(운석 꼬리) · 0.127(창 잔광) ·
    0.158(화구) · 0.375(병 불빛). 빈 구간 한가운데를 잡는다(825 규칙). */
 const FAR_MAX = 0.03;
+/* [E1] 덩치 밴드 — **10회차 비평가 CV 가 준 목표 문장 그대로**다: «대각 중앙값 ±25% 밖 7종».
+   [B8]·[B9] 와 같은 자리(관측값이 아니라 목표를 박는다). [E2] 는 이 값에서 파생한다. */
+const DIAG_TOL = 0.25;
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
@@ -409,8 +416,23 @@ async function measure(browser, url) {
         lg += 0.299 * base[i] + 0.587 * base[i + 1] + 0.114 * base[i + 2];
         nb++;
       }
+      /* ⚑ 11회차 [E] — ③ 덩치 축의 자. 10회차 2인 공통 ⓓ(«덩치가 두 무리로 갈린다»)는
+         **본체(α ≥ A_BODY)** 만 두고 재야 한다: 후광 링은 9회차부터 종에 안 달린 규격이고,
+         제 손으로 깐 반투명 부품(운석 꼬리·화구 불빛)은 α < A_BODY 라 여기 안 들어온다
+         (그 몫은 [B8s] `fFar` 가 따로 센다). 눈금은 **본체 실루엣 bbox 의 대각**이다 —
+         CV 가 «대각 중앙값 ±25%» 로 목표를 그 축에 적었고, 면적은 대각의 제곱이라 밴드가
+         자동으로 따라온다(그래서 [E2] 의 상한은 손 상수가 아니라 [E1] 에서 파생한다). */
+      let bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1;
+      for (let p = 0; p < hd.length; p++) {
+        if (!hd[p]) continue;
+        const x = p % bw, y = (p - x) / bw;
+        if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
+        if (y < by0) by0 = y; if (y > by1) by1 = y;
+      }
+      const bbw = bx1 < 0 ? 0 : bx1 - bx0 + 1, bbh = by1 < 0 ? 0 : by1 - by0 + 1;
       masks[id] = m;
       rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off,
+                   bbw, bbh, diag: +Math.hypot(bbw, bbh).toFixed(1),
                    dL: nb ? +((lb - lg) / nb).toFixed(1) : 0,
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
                    fSpec: +(sp2 / Math.max(1, ink)).toFixed(4),
@@ -587,7 +609,7 @@ async function measure(browser, url) {
   console.log('=== VERIFY 792 — 스킬 이펙트 연출 규격(세 층) 통일 ===\n');
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const src = fs.readFileSync(SRC, 'utf8');
-  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE, NEG_AURA]) { try { fs.unlinkSync(f); } catch (_) {} } };
+  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE, NEG_AURA, NEG_SC]) { try { fs.unlinkSync(f); } catch (_) {} } };
 
   try {
     /* ---- [C] 선언 ---- */
@@ -740,6 +762,36 @@ async function measure(browser, url) {
       ok(out.worst.iou <= IOU_MAX,
          '[D1] 710 회귀 짝 — 종별 실루엣 IoU 최댓값 ' + out.worst.iou + ' ≤ ' + IOU_MAX +
          ' (최악 쌍 ' + out.worst.a + '↔' + out.worst.b + ' · 이 쌍은 흔들린다 — 위 주석)');
+      /* ⚑⚑ 11회차 [E] — ③ 덩치. 10회차 2인 공통 ⓓ 를 자로 옮긴다.
+         **눈금은 본체 bbox 대각**(위 측정 주석) · **목표는 CV 가 준 «대각 중앙값 ±25%»** 다.
+         ⚠ 관측값을 문턱으로 박지 않는다(825) — ±25% 는 비평가가 준 목표고, [E2] 의 면적 상한
+           2.78 은 그 대각 밴드에서 파생한다((1.25/0.75)² = 2.78). 손 상수는 한 개도 없다. */
+      const dgs = ids.map(i => out.rows[i].diag).sort((a, b) => a - b);
+      const dMed = dgs[Math.floor((dgs.length - 1) / 2)];
+      const dLo = +(dMed * (1 - DIAG_TOL)).toFixed(1), dHi = +(dMed * (1 + DIAG_TOL)).toFixed(1);
+      const dBad = ids.filter(i => out.rows[i].diag < dLo || out.rows[i].diag > dHi);
+      ok(dBad.length === 0,
+         '[E1] ③ 덩치 — 본체 대각이 중앙값 ' + dMed + 'px 의 ±' + Math.round(DIAG_TOL * 100) +
+         '% (' + dLo + '~' + dHi + ') 안 · 밖 ' + dBad.length + '종' +
+         (dBad.length ? ' (' + dBad.map(i => i + ':' + out.rows[i].diag).join(' · ') + ')' : ''));
+      /* ⚑⚑ [E2] 는 **판정이 아니라 기록이다** — 처음엔 «[E1] 대각 밴드에서 파생한 면적 상한
+         (1.25/0.75)² = 2.78» 로 세웠고, 그 자가 **묻는 질문 자체가 틀렸다**:
+         면적 = 대각² × **채움 밀도**인데 밀도는 «얼마나 크게» 가 아니라 **«무슨 모양인가»** 다.
+         가는 초승달(arc 채움 .53)과 꽉 찬 불덩이(fire .78)가 같은 bbox 에서 같은 잉크를 낼
+         길은 **실루엣을 바꾸는 것뿐**이고, 실루엣은 710 이 그린 것이라 792 밖이다
+         (①·프리미티브 재사용을 네 회차가 같은 이유로 792 밖으로 판정한 그 자리).
+         ⇒ 대각을 밴드에 넣은 뒤 남는 잉크 비는 **밀도 축**이므로 그 축의 자로 갈라 적는다.
+         ⚠ 무르게 푼 것이 아님은 [E1] 이 못박는다 — 덩치의 «크기» 축은 판정으로 서 있고,
+           여기서 내려놓은 것은 **이 행이 손댈 수 없는 축** 하나뿐이다(그 축은 새 번호로 등재). */
+      const hs = ids.map(i => out.rows[i].hard);
+      const aRat = +(Math.max.apply(null, hs) / Math.max(1, Math.min.apply(null, hs))).toFixed(2);
+      const dens = ids.map(i => ({ i, d: out.rows[i].hard / Math.max(1, out.rows[i].bbw * out.rows[i].bbh) }));
+      const dSort = dens.slice().sort((a, b2) => a.d - b2.d);
+      console.log('  (기록) [E2] 덩치(면적) — 본체 잉크 최대÷최소 ' + aRat +
+        ' · 그 중 «크기» 몫은 [E1] 이 닫았고 남는 것은 **채움 밀도**다(잉크 ÷ bbox 면적): ' +
+        dSort[0].i + ' ' + dSort[0].d.toFixed(2) + ' ~ ' + dSort[dSort.length - 1].i + ' ' +
+        dSort[dSort.length - 1].d.toFixed(2) + ' (' +
+        (dSort[dSort.length - 1].d / Math.max(0.001, dSort[0].d)).toFixed(2) + '배) — 밀도는 실루엣(710) 축이라 이 행 밖');
       /* [P1] 문턱 6.0ms 의 근거 — 실측이 **두 무리로 갈려 있고 그 사이가 텅 비었다**:
          정상 경로 ~1.0ms ↔ 4회차가 되돌린 두 안 20.9ms(3겹) · 1749.8ms(매 프레임 blur).
          빈 구간 한가운데를 문턱으로 삼는다(825 의 «관측값을 문턱으로 박지 마라» 와 같은 규칙).
@@ -749,11 +801,13 @@ async function measure(browser, url) {
       console.log('  (기록) 후광을 굽는 첫 프레임 ' + out.bake + 'ms — 종당 한 번뿐(캐시)');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
-      console.log('\n  [표] 종별 — ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫' +
+      console.log('\n  [표] 종별 — 본체대각(bbox) · 본체잉크 · ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫' +
                   ' · 두께p90/p10 · 비대칭 · 먼몫 · 후광R−B / 본체R−B');
       for (const id of ids) {
         const r = out.rows[id];
         console.log('        ' + id.padEnd(9) + r.sh.padEnd(10) +
+                    (r.diag + '(' + r.bbw + '×' + r.bbh + ')').padStart(15) +
+                    String(r.hard).padStart(7) +
                     String(r.ink).padStart(7) + '  ' +
                     r.fSoft.toFixed(3) + ' / ' + r.fSpec.toFixed(4) +
                     String(r.off).padStart(8) + String(r.dL).padStart(9) +
@@ -818,6 +872,23 @@ async function measure(browser, url) {
       ok(Object.keys(rAura.out.rings || {}).length === 0 && bad2.length >= 8 && as2.length >= 5,
          '[R4] 링을 끄면 두께·대칭이 흩어진다 — 링 자산 ' + Object.keys(rAura.out.rings || {}).length +
          '종(0) · 장면 두께 밴드 밖 ' + bad2.length + '종 ≥ 8 · 비대칭 ' + as2.length + '종 ≥ 5 (잰 종 ' + ks2.length + ')');
+    }
+    /* ⚑ [R5] — 11회차. 배율표를 **비우면** 덩치가 수리 전으로 돌아간다(밴드 밖 6종).
+       ⚠ 문턱을 «≥ 6» 이 아니라 «≥ 4» 로 둔다 — 밴드는 **중앙값에 매여 있어** 표를 비우면
+         중앙값 자체도 141.8 로 같이 움직이므로, 되돌린 세계에서 밖으로 나가는 종 수는
+         관측값 6 에 딱 붙여 박을 값이 아니다(825 «관측값을 문턱으로 박지 마라»).
+         그래도 «표가 없으면 밴드가 깨진다» 는 명제는 4 로도 충분히 못박힌다(수리 후는 0 이다). */
+    fs.writeFileSync(NEG_SC, killLine(src, TAG_SC, `const SHOT_SC = {};`), 'utf8');
+    const rSc = await measure(browser, 'file://' + NEG_SC);
+    if (rSc.out && rSc.out.__err) ok(false, '[R5] 사본 측정 예외 — ' + rSc.out.__err);
+    else {
+      const ks3 = Object.keys(rSc.out.rows);
+      const dg3 = ks3.map(i => rSc.out.rows[i].diag).sort((a, b2) => a - b2);
+      const md3 = dg3[Math.floor((dg3.length - 1) / 2)];
+      const bad3 = ks3.filter(i => rSc.out.rows[i].diag < md3 * (1 - DIAG_TOL) ||
+                                   rSc.out.rows[i].diag > md3 * (1 + DIAG_TOL));
+      ok(bad3.length >= 4, '[R5] 덩치 배율표를 비우면 [E1] 이 빨개진다 — 밴드 밖 ' + bad3.length +
+         '종 ≥ 4 (중앙값 ' + md3 + 'px · ' + bad3.join(' · ') + ')');
     }
   } finally {
     clean();
