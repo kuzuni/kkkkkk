@@ -27,6 +27,28 @@
  * ⚠ 자는 10회차가 고친 **고정 마스크**를 그대로 쓴다(정착에서 한 번만 뜬다 — 프레임마다 뜨면
  *   «씻겨서 배경과 같아진 획» 이 표본에서 빠지는 생존자 편향이다. `probe683c` §10-3).
  *
+ * ⚑⚑ **992 — 이 자는 같은 상태를 두 번 재면 다른 값을 냈다(±4%p).** 뿌리는 눈금이 아니라
+ *   **표본**이다: `rwSummonFx` 의 알은 `rnd(-RW_FX_JIT, RW_FX_JIT)`(index.html 36653)와
+ *   `fxBurst` 안의 `Math.random` 으로 **실행마다 다른 자리에 떨어지고**, 그 알이 라벨 획 옆
+ *   3~4px 국소 배경(`bgOf`)을 밟으면 그 화소의 대비가 통째로 바뀐다. 자는 setTimeout·rAF·
+ *   애니메이션 `currentTime` 까지 얼려 놓고 **난수만 안 얼렸다** — 같은 부류의 한 칸이 빠져 있었다.
+ *   ⇒ ① 부팅 시점에 **씨앗 난수기**를 심어 페이지 전체를 결정적으로 만들고(`addInitScript`),
+ *      스폰 직전에 `__p4seed(SEED)` 로 알의 draw 를 고른다.
+ *      ⚠ 부팅부터 심는 이유 — 설정 루프(`summonRelic` 반복)도 난수를 먹어서, 스폰 때만 심으면
+ *        그 앞의 소비량이 실행마다 달라 `rwFxW` 위상(36650)이 어긋난다.
+ *   ② 문턱이 눈금 폭과 같은 자리(±3%p — [4-a]·[4-b]·[5-a]·[5-c])는 **씨앗 3판의 중앙값**으로
+ *      적는다(58 규약). 한 판만 뜨면 «결정적이지만 임의의 draw» 라 분포의 가장자리를 답으로 굳힌다.
+ *   ⚠ **문턱은 한 칸도 안 넓혔다** — 넓히는 것이 아니라 **흔들리는 원인을 없앤 것**이다
+ *     (992 등재문의 ⚠ «문턱만 넓히지 마라»). 그 증거가 **[6]** 이다: [6-a] 같은 씨앗 두 판 Δ0%p ·
+ *     [6-b] 서로 다른 씨앗 세벌 둘의 중앙값이 ±3%p 안에서 같다(= 적는 수가 draw 에 안 흔들린다).
+ *
+ * ⚑⚑ **992 가 등재문을 정정했다 — «제품이 아니라 자» 는 거짓이다.** 씨앗을 심고 **수리 전 트리**
+ *   (`3f8fb76^`)와 대조하니(338·344 규칙) 갈렸다: 수리 전은 세 프레임 전부 **씨앗 폭 0%p** 이고
+ *   [5-a] 가 **초록**(0ms 24%)이다. 흔들림도 빨강도 **14회차(극성 뒤집기)가 같이 데려온 것**이다 —
+ *   알이 대비를 «깎는» 쪽에서 «보태는» 쪽으로 바뀌면서 알 자리가 이 축을 처음으로 움직이게 됐다.
+ *   ⇒ HEAD 의 [5-a] 빨강은 **T=0ms(씨앗 폭 0%p · 28% ↔ 정착 23%)** 가 혼자 만든다 = 동전 던지기가
+ *     아니라 **재현되는 잔여**다. 그 잔여의 임자는 683 이므로 **994 로 등재**했다(992 는 자만 고친다).
+ *
  * 종료 코드: 0 통과 · 1 FAIL (환경 없음은 `pwlaunch`/`png913` 이 코드 2 로 낸다)
  */
 'use strict';
@@ -49,8 +71,22 @@ const ev = async (p, fn, arg) => { try { return await p.evaluate(fn, arg); }
 const r2 = v => (v == null ? '—' : Math.round(v * 100) / 100);
 const pc = v => (v == null ? '—' : Math.round(v * 100) + '%');
 
+/* 992 — 부팅 시점에 심는 씨앗 난수기(mulberry32). 페이지의 `Math.random` 을 통째로 갈아
+   같은 상태가 같은 그림을 내게 한다. `__p4seed(n)` 으로 스트림을 되감는다. */
+const SEEDER = () => {
+  let s = 1;
+  Math.random = () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  window.__p4seed = n => { s = ((n >>> 0) || 1); };
+};
+
 /* 프레임 한 장 — `probe683c` 의 SHOT 과 **같은 규약**(같은 것을 재려면 같은 자리를 얼려야 한다). */
-const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => {
+const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE, SEED }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__p4to) { window.__p4to = window.setTimeout; window.__p4ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
@@ -64,6 +100,9 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   if (NOFADE) { if (!window.__p4ktt) window.__p4ktt = window.fxKeepTxtTop;
     window.fxKeepTxtTop = () => null; }
   else if (window.__p4ktt) { window.fxKeepTxtTop = window.__p4ktt; window.__p4ktt = null; }
+  /* 992 — 알의 draw 를 고른다. 스폰 **직전**이어야 한다(그 뒤 `fxBurst`·`rnd` 가 먹는 난수가
+     이 씨앗에서 나온다). 씨앗을 안 주면 1 — 옛 자와 같은 자리에서 한 판만 뜨는 셈이다. */
+  if (window.__p4seed) window.__p4seed(SEED == null ? 1 : SEED);
   if (T >= 0) rwSummonFx(it, true, null);
   if (RAISE && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))) L.appendChild(nd);
   /* NOTOP — 11회차 제품 한 줄을 **되돌린 사본**(`.fx-keep-top` 을 뗀다 = CSS 선언을 지운 것과 같다) */
@@ -97,6 +136,8 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   const p = await browser.newPage({ viewport: { width: W, height: H } });
   const errs = [];
   p.on('pageerror', e => errs.push(String(e).split('\n')[0]));
+  /* 992 — `goto` **앞에** 심는다. 부팅 난수(설정 루프 포함)까지 결정적이어야 `rwFxW` 위상이 안 어긋난다. */
+  await p.addInitScript(SEEDER);
   await p.goto(URL, { waitUntil: 'load' });
   await p.waitForFunction(() => typeof openRelw === 'function');
   await p.waitForTimeout(800);
@@ -204,6 +245,20 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   show('정착(연출 0 · 알 숨김)', base);
 
   const grab = async o => { const s = await shot(o); return s ? await CL(s.png, blank.png, BOX, CUT, MK) : null; };
+  /* 992 — 문턱이 눈금 폭과 같은 자리는 **씨앗 3판의 중앙값**으로 적는다(58 규약).
+     씨앗을 심어 놨으므로 한 판도 재현되지만, 한 판은 «분포 중 하나» 라 가장자리를 답으로 굳힐 수 있다.
+     구역별 `under45`·`med` 만 중앙값으로 접고 화소 수(n)·마스크는 첫 판 것을 그대로 쓴다(같은 마스크다). */
+  const SEEDS = [1, 2, 3];
+  const mid = a => { const v = a.filter(x => x != null).sort((x, y) => x - y); return v.length ? v[v.length >> 1] : null; };
+  const foldMed = rs => {
+    const gs = rs.filter(Boolean); if (!gs.length) return null;
+    const zone = k => { const zs = gs.map(r => r[k]).filter(Boolean); return zs.length
+      ? { n: zs[0].n, med: mid(zs.map(z => z.med)), under45: mid(zs.map(z => z.under45)) } : null; };
+    return { ink: gs[0].ink, nf: gs[0].nf, all: zone('all'), inC: zone('inC'), outC: zone('outC'), seeds: gs.length,
+             spread: (() => { const z = gs.map(r => r.inC && r.inC.under45).filter(x => x != null);
+               return z.length ? Math.max.apply(null, z) - Math.min.apply(null, z) : null; })() };
+  };
+  const grabM = async o => { const rs = []; for (const s of SEEDS) rs.push(await grab(Object.assign({}, o, { SEED: s }))); return foldMed(rs); };
   const cur = await grab({ T: 0 });                 show('t0 현행(알 켬)', cur);
   const nok = await grab({ T: 0, NOKEEP: true });   show('t0 되돌림 — 795 패치 걷음', nok);
 
@@ -275,8 +330,8 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   const TT = [0, 40, 80, 130, 180, 240, 300, 360];
   const row = [];
   for (const T of TT) {
-    const a = await grab({ T, NOFADE: true });
-    const b = await grab({ T, NOGAIN: true, NOFADE: true });
+    const a = await grabM({ T, NOFADE: true });
+    const b = await grabM({ T, NOGAIN: true, NOFADE: true });
     row.push({ T, cur: a && a.inC ? a.inC.under45 : null, nog: b && b.inC ? b.inC.under45 : null });
     info('T=' + String(T).padStart(3) + 'ms  카드 «안» <4.5',
          '현행 ' + pc(row[row.length - 1].cur) + ' · 알 숨김 ' + pc(row[row.length - 1].nog)
@@ -307,12 +362,12 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   blk('5] 12·13회차 제품(`fxFlashClampH`) — 회수 · 되돌림 · 대가 · 스코프 · 닫힌 액자');
   const IN = [];
   for (const T of [0, 40, 80]) {
-    const a = await grab({ T }), b = await grab({ T, NOFADE: true });
+    const a = await grabM({ T }), b = await grabM({ T, NOFADE: true });
     IN.push({ T, fix: a && a.inC ? a.inC.under45 : null, rev: b && b.inC ? b.inC.under45 : null,
-              out: a && a.outC ? a.outC.under45 : null });
+              out: a && a.outC ? a.outC.under45 : null, sp: a ? a.spread : null });
     info('T=' + String(T).padStart(3) + 'ms  카드 «안» <4.5',
          '**현행** ' + pc(IN[IN.length - 1].fix) + ' ↔ 되돌림 ' + pc(IN[IN.length - 1].rev)
-         + ' ↔ 정착 ' + pc(inS));
+         + ' ↔ 정착 ' + pc(inS) + '  (씨앗 3판 폭 ' + pc(IN[IN.length - 1].sp) + ')');
   }
   ok(inS != null && IN.every(r => r.fix != null && r.fix <= inS + 0.03),
      '5-a **회수 — 플래시 창 안이 정착에 닿는다**(세 프레임 전부 정착 +3%p 안). '
@@ -376,6 +431,41 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => 
   ok(!!sc && !!sc.A && !/gradient/.test(String(sc.A.mask)),
      '5-f ★ **액자가 닫혀 있다** — 마스크 0건이라 네 변이 다 그려진다(12회차 «ㄷ 자» 결손의 회귀 게이트)',
      sc && sc.A ? String(sc.A.mask) : '측정 실패');
+
+  /* ── [6] 992 — **자 자신의 재현성**(이 자가 «같은 상태에서 다른 값» 을 내던 자리) ──
+     이 절이 없으면 위의 씨앗은 «값을 예쁘게 만든 손질» 과 구분되지 않는다. 두 항이 갈라 답한다:
+       [6-a] 같은 씨앗 두 판은 **한 화소도 안 다르다**(Δ0%p) — 실행 간 흔들림이 죽었다.
+       [6-b] **서로 다른 씨앗 세벌 둘**(1·2·3 ↔ 4·5·6)의 중앙값이 ±3%p 안에서 같다 —
+             [4]·[5] 가 적는 수가 «어느 draw 를 뽑았나» 에 안 흔들린다.
+     ⚠ 왜 «폭 > 0» 이 아니라 «두 중앙값이 같다» 인가 — 폭은 **나무마다 다르다**(수리 전 트리에서는
+       0%p 였다가 14회차 뒤 4%p 가 됐다). 폭을 항으로 걸면 제품이 바뀔 때마다 자가 엉뚱하게
+       빨개진다. 자가 약속할 것은 «알이 흔들린다» 가 아니라 **«내가 적는 수는 안 흔들린다»** 다.
+     ⚠ 폭 자체는 **정보로 찍고**, 문턱 폭(3%p)을 넘으면 ⏸ 로 남긴다 — 그건 자의 결함이 아니라
+       그 트리의 연출이 알 자리에 민감하다는 관측이다(실패로 세지 않는다). */
+  blk('6] 992 — 자 자신의 재현성(씨앗 난수기)');
+  const s1 = await grab({ T: 40, SEED: 7 });
+  const s2 = await grab({ T: 40, SEED: 7 });
+  const d11 = (s1 && s1.inC && s2 && s2.inC) ? Math.abs(s1.inC.under45 - s2.inC.under45) : null;
+  info('같은 씨앗(7) 두 판', pc(s1 && s1.inC && s1.inC.under45) + ' ↔ ' + pc(s2 && s2.inC && s2.inC.under45));
+  ok(d11 != null && d11 === 0,
+     '6-a **같은 상태 = 같은 값** — 같은 씨앗 두 판이 화소 하나까지 같다(992 의 ±4%p 흔들림이 죽었다)',
+     d11 != null ? ('Δ ' + pc(d11)) : '측정 실패');
+  const draws = [];
+  for (const s of [1, 2, 3, 4, 5, 6]) { const r = await grab({ T: 40, SEED: s });
+    draws.push(r && r.inC ? r.inC.under45 : null); }
+  const dv = draws.filter(x => x != null);
+  const spread = dv.length ? Math.max.apply(null, dv) - Math.min.apply(null, dv) : null;
+  const mA = mid(draws.slice(0, 3)), mB = mid(draws.slice(3, 6));
+  info('씨앗 1~6 여섯 판', draws.map(pc).join(' · ') + ' → 폭 ' + pc(spread));
+  info('세벌 중앙값', '1·2·3 ' + pc(mA) + ' ↔ 4·5·6 ' + pc(mB));
+  ok(dv.length === 6 && mA != null && mB != null && Math.abs(mA - mB) <= 0.03,
+     '6-b **내가 적는 수는 draw 에 안 흔들린다** — 서로 다른 씨앗 세벌의 중앙값이 ±3%p 안에서 같다. '
+     + '[4]·[5] 의 ±3%p 문턱이 다시 눈금보다 커졌다(문턱은 한 칸도 안 넓히지 않았다)',
+     (mA != null && mB != null) ? ('Δ ' + pc(Math.abs(mA - mB)) + ' · 한 판 폭 ' + pc(spread)) : '측정 실패');
+  if (spread != null && spread > 0.03)
+    hold('[관측 · 실패 아님] 한 판(single draw)의 폭이 문턱 폭(3%p)보다 크다 — 이 트리의 연출은 알 자리에 민감하다. '
+         + '중앙값 없이 한 판만 뜨면 이 축은 다시 동전 던지기가 된다',
+         '폭 ' + pc(spread) + ' (씨앗 6판)');
 
   ok(errs.length === 0, 'Z1 콘솔 에러 0', errs.length ? errs.slice(0, 3).join(' | ') : '없음');
 
