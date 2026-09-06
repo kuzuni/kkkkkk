@@ -50,11 +50,16 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
      «기본 시드에서만 초록» 인 자였다(LESSONS 882-② «비 계열 축은 시드 3장 중앙값»).
      나머지 항은 종전대로 기본 시드 한 장이다 — 873 이 세운 기준값과 견주는 자리라 건드리지 않는다. */
   const C2SEEDS = [20260903, 20260904];
-  const iouS = [A.iouPeak];
-  for (const sd of C2SEEDS) { const r = await runScene(SCENES[0], null, { seed: sd });
-    if (!r.err) iouS.push(r.iouPeak); }
-  const iouMed = (() => { const b = [...iouS].sort((x, y) => x - y); const h = b.length >> 1;
-    return b.length % 2 ? b[h] : (b[h - 1] + b[h]) / 2; })();
+  const runs = [A];
+  for (const sd of C2SEEDS) { const r = await runScene(SCENES[0], null, { seed: sd }); if (!r.err) runs.push(r); }
+  const med = a => { const b = [...a].sort((x, y) => x - y); const h = b.length >> 1;
+    return b.length % 2 ? b[h] : (b[h - 1] + b[h]) / 2; };
+  const iouS = runs.map(r => r.iouPeak);
+  const iouMed = med(iouS);
+  /* ⚑⚑ 12회차 — **[C3]·[F2] 도 같은 세 장으로 읽는다**(882-② · 11회차가 세운 기준선 표).
+     한 장으로 읽으면 «기본 시드에서만» 초록·빨강인 항이 또 생긴다 — [C2] 가 그래서 11회차에 이관됐다. */
+  const excS = runs.map(r => r.gapExcess), excMed = med(excS);
+  const clrS = runs.map(r => r.clrMin), clrMed = med(clrS);
   if (A.err || B.err) { ok(false, 'V0 표본을 못 얻었다', (A.err || '') + ' ' + (B.err || '')); }
   else {
     console.log('  · 씬 A ' + Math.round(A.geo.bw) + '×' + Math.round(A.geo.bh) + ' · 알 ' + A.n
@@ -96,8 +101,26 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
        「53」 쪽 ±40° 섹터는 방이 35px 뿐이라 «발원 원반(26px)을 벗어나는 알» 이 **산술적으로 못 산다**:
        A5 를 0 으로 지키면 그 섹터가 비고(빈 각 116~122°), 그 섹터를 쓰면 A5 가 5알로 빨개진다(5회차 실측 둘 다).
        둘 중 비평 2인이 1순위로 적은 것은 A5 쪽이다(DD·DE 4회차) — 그래서 A5 를 지키고 이 값이 대가를 적는다. */
-    ok(A.fanGap <= 135, 'C3 끝점이 온 원에 퍼진다 — 가장 큰 빈 각 ≤ 135° · ' + p2(A.fanGap) + '°',
-       '2회차 채점 CZ «40.8° 부채»(= 빈 각 319°) · DA «65° 쐐기»(= 빈 각 295°) · 4회차 52~92°(A5 전) · 5회차 116~122°(A5 와 맞바꿈 · 문턱은 그 위로 띄웠다 — 574·709·825 «문턱 플레이키»)');
+    /* ⚑⚑ 12회차 이관 — **[C3] 이 «정당한 공백» 까지 결함으로 세고 있었다.**
+       11회차 채점 2인이 각자 그것을 손으로 걷어내고 읽었다 — DM «최대 빈 각 107.0° 인데 「53」 쐐기는
+       44.3° ⇒ **초과 62.7°**» · DL «이 67.4° 부채는 「53」 섹터가 **아니다**». 즉 두 사람이 실제로 쓴 자는
+       «빈 각» 이 아니라 «**구멍이 정당화하지 않는** 빈 각» 이다. 원래 자는 그 둘을 못 가른다 —
+       12회차가 알을 가격 숫자 섹터에서 아예 빼내자 **초과 공백은 70.7° → 55.7° 로 줄었는데
+       원래 자는 105.5° → 136.6° 로 빨개졌다**(같은 그림을 두 자가 반대로 읽는다).
+       ⇒ 축을 «초과분» 으로 옮긴다. **무르게 푼 것이 아님은 [R5] 가 사본으로 못박는다** —
+       12회차를 되돌린 사본은 이 문턱에 여전히 걸린다(333 처방).
+       ⚠ 원래 자도 **버리지 않는다** — 아래 [C3b] 가 «구멍이 설명하는 것보다 이만큼 넘게 비지는 않는다» 로
+         남는다(문턱을 손으로 적지 않고 그 호스트의 쐐기에서 파생시킨다 · 402 «사본을 지운다»). */
+    ok(excMed <= 65, 'C3 구멍이 정당화하지 않는 빈 각(시드 3장 중앙값) ≤ 65° — ' + p2(excMed) + '°',
+       '표본 ' + excS.map(p2).join(' / ') + ' · 12회차 전 70.7(59.0/70.7/84.7) · 11회차 채점 DM 62.7° · DL 67.4°');
+    ok(A.fanGap <= A.wedge + 65, 'C3b 빈 각 자체도 «쐐기 + 65°» 안 — ' + p2(A.fanGap) + '° ≤ ' + p2(A.wedge + 65) + '°',
+       '쐐기(= `--burst-keep` 상자가 발원에서 먹는 각) ' + p2(A.wedge) + '° · 2회차 채점 CZ «40.8° 부채»(빈 각 319°) · DA «65° 쐐기»(빈 각 295°)');
+    /* ⚑ 12회차 신설 — 11회차 ㉡ 의 자(«발원 테두리부터의 여유»). [A4](총 이동 ÷ 지름)는 **태어난 자리부터**
+       세므로 «코인 밖으로 얼마나 나왔나» 를 못 본다 — 그래서 세 알이 서 있는데 1.49 로 초록이었다.
+       ⚠ 이 회차가 이 축을 **다 갚지는 못했다**(0.59 → 0.67 · 아래 §4 12회차 절 «남은 것»).
+         래칫으로 세워 다음 회차가 이 값 아래로 못 내려가게만 한다. */
+    ok(clrMed >= 0.60, 'F2 발원 테두리부터의 여유 — 가장 얕은 알도 ≥ 0.60 몸길이(시드 3장 중앙값) · ' + p2(clrMed),
+       '표본 ' + clrS.map(p2).join(' / ') + ' · 12회차 전 0.59(0.55/0.59/0.68) · 11회차 채점 DL «뭉치 0.51 ↔ 선두 1.83 몸길이»');
     /* ── [E] 반경 예산(6회차) — 위 머리말의 DG 산수 ────────────────── */
     const arcNeed = A.n * 2 * Math.asin(Math.min(1, (A.maxD / 2) / Math.max(1e-9, A.rE))) * 180 / Math.PI;
     const arcHave = 360 - A.fanGap;
@@ -135,6 +158,29 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
       ok(!rev.err && rev.iouPeak >= 0.85,
          'R4 그 사본은 이웃 장 IoU 가 여전히 문턱 위 — ' + (rev.err || p2(rev.iouPeak)),
          '수리 전 0.94 · 지금 트리 중앙값 ' + p2(iouMed) + ' · 문턱 0.80');
+    }
+    /* ⚑⚑ 12회차 되돌림 — **[C3] 의 이관이 «무른 수리» 가 아님을 못박는다**(333 처방 · LESSONS 232-①).
+       12회차의 두 자리를 **둘 다** 되돌린다: ⓐ 밑각 배분(`FXB_ABIN` 을 0 으로 두면 훑을 칸이 없어
+       `AWARP` 가 null 로 떨어져 종전 등간격이 그대로 돌아온다) · ⓑ 융합을 다시 «탄생 자리» 에서 본다.
+       되돌린 사본은 새 문턱(65°)에 **여전히 걸려야** 한다 — 안 걸리면 이 자는 «이미 참인 것» 을
+       굳힌 것이다. ⚠ 시드 3장 중앙값으로 읽는다(본 항과 같은 자여야 대조가 성립한다). */
+    {
+      const code3 = fs.readFileSync(SRC, 'utf8');
+      const m3 = /const FXB_FAIR = [\d.]+, FXB_ABIN = \d+;/.exec(code3);
+      ok(!!m3, 'R5a 12회차의 선언을 찾았다', m3 ? m3[0] : '못 찾음');
+      if (m3) {
+        fs.writeFileSync(TMP, code3.replace(m3[0], 'const FXB_FAIR = 0.5, FXB_ABIN = 0;')
+                                   .replace(/fo \? ex : sx/g, 'sx').replace(/fo \? ey : sy/g, 'sy'));
+        const exc3 = [];
+        for (const sd of [undefined, ...C2SEEDS]) {
+          const r3 = await runScene(SCENES[0], TMP, sd === undefined ? undefined : { seed: sd });
+          if (!r3.err) exc3.push(r3.gapExcess);
+        }
+        const m3med = med(exc3);
+        ok(exc3.length === 3 && m3med > 65,
+           'R5b 12회차를 되돌린 사본은 초과 공백이 여전히 문턱 위 — ' + p2(m3med) + '°',
+           '표본 ' + exc3.map(p2).join(' / ') + ' · 지금 트리 중앙값 ' + p2(excMed) + '° · 문턱 65°');
+      }
     }
     /* ⚑ 6회차 되돌림 — 신고 **둘만** 걷는다(제품 상수는 그대로). 5회차의 그림으로 돌아가
        [E2] 가 적자가 되는지 본다: «무르게 푼 수리가 아니다» 를 이 항이 못박는다(LESSONS 232-①). */

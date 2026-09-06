@@ -40,6 +40,45 @@ function iou(a, b) {
   return uni > 0 ? inter / uni : 0;
 }
 
+/* ⚑⚑ 838 12회차 — **11회차 채점 2인이 실제로 잰 두 축을 자에 세운다.**
+ * 11회차의 ㉡ 은 «정지하는 알 3개» 인데 [A4](총 이동 ÷ 지름 = 1.49)가 그것을 **못 본다** —
+ * 두 사람이 잰 것은 «수명 후반의 속도»(DM t=70→250 에서 0.014~0.025 vs 0.217 px/ms = **11.9배**)와
+ * «발원 테두리부터의 여유»(DL «선두 1.83 몸길이 ↔ 뭉치 0.51 몸길이 = 3.6배»)다.
+ * 총 이동은 **태어난 자리까지 세므로**(발원 원반 밖에서 태어난 알은 안 움직여도 값이 크다)
+ * «나온 뒤로 얼마나 더 가는가» 를 못 잰다 — 그래서 [A4] 가 1.49 로 초록인 채 세 알이 서 있다.
+ * ㉠(빈 부채)도 같은 자리에 세운다: 빈 각 자체가 아니라 **«「53」 이 정당화하지 않는 초과분»**
+ * (DM 107.0° − 44.3° 쐐기 = 62.7° · DL 67.4° — 두 사람이 다른 사분면에서 재고 4.7° 차로 맞았다).
+ */
+function angSpan(h, ox, oy) {   /* 구멍 사각형이 발원에서 차지하는 각 구간 [lo,hi](도 · hi 는 lo 를 넘을 수 있다) */
+  if (ox >= h.x && ox <= h.x + h.w && oy >= h.y && oy <= h.y + h.h) return [0, 360];
+  const cs = [[h.x, h.y], [h.x + h.w, h.y], [h.x, h.y + h.h], [h.x + h.w, h.y + h.h]]
+    .map(c => ((Math.atan2(c[1] - oy, c[0] - ox) * 180 / Math.PI) + 360) % 360).sort((a, b) => a - b);
+  /* 네 각을 담는 **가장 짧은 호** — 원을 넘어가는 자리(0° 근처)도 이 방법이 그대로 잡는다 */
+  let bLo = cs[0], bW = 360;
+  for (let i = 0; i < cs.length; i++) {
+    const lo = cs[i], w = (cs[(i + 3) % 4] - lo + 720) % 360;
+    if (w < bW) { bW = w; bLo = lo; }
+  }
+  return [bLo, bLo + bW];
+}
+/* 각 구간들이 [lo,hi] 창 안에서 덮는 각도(도) — 원을 넘는 구간은 두 토막으로 잘라 센다 */
+function blockedIn(spans, lo, hi) {
+  const segs = [];
+  for (const s of spans) {
+    const a = ((s[0] % 360) + 360) % 360, b = a + (s[1] - s[0]);
+    for (const off of [-360, 0, 360]) {
+      const x = Math.max(a + off, lo), y = Math.min(b + off, hi);
+      if (y > x) segs.push([x, y]);
+    }
+  }
+  segs.sort((p, q) => p[0] - q[0]);
+  let cov = 0, end = -Infinity;
+  for (const [a, b] of segs) {
+    if (a > end) { cov += b - a; end = b; } else if (b > end) { cov += b - end; end = b; }
+  }
+  return cov;
+}
+
 function summarize(env, org) {
   const rows = env.rows, last = rows.length - 1;
   const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
@@ -59,7 +98,18 @@ function summarize(env, org) {
     const over = org.bx === undefined ? 0 : Math.max(...pts.map(p2 => Math.max(
       org.bx - (p2.cx - p2.w / 2), (p2.cx + p2.w / 2) - (org.bx + org.bw),
       org.by - (p2.cy - p2.w / 2), (p2.cy + p2.w / 2) - (org.by + org.bh))));
-    return { maxD, net, pth, r0, rE, over, pts, body: maxD > 0 ? net / maxD : 0, ious, iouMax: Math.max(...ious) };
+    /* ⚑ 12회차 — **수명 후반(t=70→250)의 이동 속도**(DM 이 잰 그 축 · px/ms).
+       격자 시각에서 자리를 찾으므로 STOPS 를 바꿔도 따라온다(없으면 앞뒤 끝을 쓴다). */
+    const iA = Math.max(0, STOPS.indexOf(70)), iB = STOPS.indexOf(250) < 0 ? last : STOPS.indexOf(250);
+    let lp = 0;
+    for (let k = iA + 1; k <= iB; k++) lp += Math.hypot(pts[k].cx - pts[k - 1].cx, pts[k].cy - pts[k - 1].cy);
+    const lateV = (STOPS[iB] - STOPS[iA]) > 0 ? lp / (STOPS[iB] - STOPS[iA]) : 0;
+    /* ⚑ 12회차 — **발원 테두리부터의 여유**(DL 이 잰 그 축 · 몸길이 환산).
+       [A4](총 이동 ÷ 지름)와 다른 것을 묻는다 — 총 이동은 «태어난 자리» 부터 세지만
+       사람이 보는 것은 «코인 밖으로 얼마나 나왔나» 다. 발원 원반은 A5 와 같은 값(`fr × 0.72`). */
+    const clr = maxD > 0 && org.fr ? (rE - org.fr * 0.72) / maxD : 0;
+    return { maxD, net, pth, r0, rE, over, pts, body: maxD > 0 ? net / maxD : 0, ious, iouMax: Math.max(...ious),
+             lateV, clr };
   });
   const pairIoU = per[0].ious.map((_, k) => mean(per.map(p => p.ious[k])));
   /* ⚑ 838 3회차 — 비평 2인이 2회차에서 **각도**로 결함을 적었다(CZ «40.8° 부채» · DA «좌향 65° 쐐기 ·
@@ -68,8 +118,23 @@ function summarize(env, org) {
        pile   = 끝점 x 가 2px 띠 안에 몇 알이나 몰렸는가(클램프 서명) */
   const angs = per.map(p => Math.atan2(p.pts[last].cy - org.y, p.pts[last].cx - org.x) * 180 / Math.PI)
                   .map(v => (v + 360) % 360).sort((a, b) => a - b);
-  const fanGap = angs.length < 2 ? 360
-    : Math.max(...angs.map((v, i) => (i ? v - angs[i - 1] : v + 360 - angs[angs.length - 1])));
+  const gaps = angs.map((v, i) => (i ? v - angs[i - 1] : v + 360 - angs[angs.length - 1]));
+  const fanGap = angs.length < 2 ? 360 : Math.max(...gaps);
+  /* ⚑ 12회차 — **빈 각 중 «구멍이 정당화하지 않는» 몫**(DM 62.7° · DL 67.4°).
+     빈 각 자체(C3)와 다른 것을 묻는다 — «비어 있다» 가 아니라 «비어 있을 이유가 있나» 다.
+     ⚠ **가장 큰 빈 각 하나만 봐서는 못 잡는다(재현으로 확인)** — 기본 시드에서 최대 빈 각
+     (313°→58° · 105.5°)은 가격 숫자 상자가 82.3° 를 덮어 초과가 23° 뿐인데, 두 사람이 각각
+     적은 부채는 **두 번째·세 번째 빈 각**(58°→120° 62.0° · 227°→298° 71.0° · 구멍 0°)이다.
+     DL 이 «이건 「53」 섹터가 **아니다**» 라고 못박은 것이 바로 그 자리다. ⇒ **모든 빈 각을 훑어**
+     각자에서 구멍이 덮는 몫을 뺀 뒤 그 최댓값을 쓴다. */
+  const spans = (org.holes || []).map(h => angSpan(h, org.x, org.y));
+  const wedge = spans.length ? blockedIn(spans, 0, 360) : 0;
+  let gapExcess = angs.length < 2 ? 360 : 0, gapLo = 0, gapHi = 360, gapBlocked = 0;
+  for (let i = 0; i < gaps.length; i++) {
+    const lo = i ? angs[i - 1] : angs[angs.length - 1] - 360, hi = lo + gaps[i];
+    const blk = spans.length ? blockedIn(spans, lo, hi) : 0;
+    if (gaps[i] - blk > gapExcess) { gapExcess = gaps[i] - blk; gapLo = lo; gapHi = hi; gapBlocked = blk; }
+  }
   const xs = per.map(p => p.pts[last].cx);
   const pile = Math.max(...xs.map(x => xs.filter(y => Math.abs(y - x) <= 1).length));
   const med = a => { const b = [...a].sort((x, y) => x - y); const h = b.length >> 1;
@@ -85,6 +150,14 @@ function summarize(env, org) {
     rE: mean(per.map(p => p.rE)),
     growth: mean(per.map(p => p.rE)) / Math.max(1e-9, mean(per.map(p => p.r0))),
     pairIoU, iouPeak: Math.max(...pairIoU), fanGap, pile,
+    /* ⚑ 12회차 신설 — 위 두 머리말의 축(㉠·㉡). 덧붙이는 값이라 기존 수는 한 자리도 안 움직인다. */
+    wedge, gapBlocked, gapExcess, gapLo, gapHi,
+    lateVMin: Math.min(...per.map(p => p.lateV)), lateVMax: Math.max(...per.map(p => p.lateV)),
+    lateVMed: med(per.map(p => p.lateV)),
+    lateVRatio: Math.max(...per.map(p => p.lateV)) / Math.max(1e-9, Math.min(...per.map(p => p.lateV))),
+    slow: per.filter(p => p.lateV < 0.05).length,     /* DM 이 «정지» 로 센 알(0.014~0.025 ↔ 0.217 px/ms) */
+    clrMin: org.fr ? Math.min(...per.map(p => p.clr)) : 0,
+    clrMed: org.fr ? med(per.map(p => p.clr)) : 0,
     /* ⚑ 838 5회차 — 비평 2인이 4회차에서 **직접 센 수**: 끝나도 발원 원반 안에 있는 알(DD 3알 · DE 2~6알) */
     stuck: org.fr ? per.filter(p => p.rE < org.fr * 0.72).length : 0,   /* 그린 원반 ≈ 상자의 0.72(제품 `FXB_FOK` 와 같은 값 · DD 실측 52/71) */
     spill: Math.max(...per.map(p => p.over)),      /* 호스트 상자 밖으로 나간 잉크(px · 음수면 안쪽) */
@@ -167,7 +240,19 @@ async function runScene(scene, src, opts) {
                   const ri = ic ? ic.getBoundingClientRect() : rb;
                   fi = Math.min(ri.width, ri.height); }
       } catch (e) {}
-      return { x: ox / sc, y: oy / sc, fr: fr / sc, fi: fi / sc,
+      /* ⚑ 838 12회차 — **호스트가 «덮지 마라» 고 신고한 잉크**(816 `--burst-keep`)를 그대로 읽어 온다.
+         11회차 두 사람이 «「53」 이 정당화하는 쐐기» 로 잰 그 상자다 — 자가 손으로 좌표를 적으면
+         라벨이 바뀔 때 조용히 갈리므로 **제품이 읽는 그 선택자**에서 뽑는다(402 «사본 금지»). */
+      const holes = [];
+      try {
+        const ks = getComputedStyle(el).getPropertyValue('--burst-keep').trim();
+        if (ks) for (const nd of el.querySelectorAll(ks)) {
+          const rk = nd.getBoundingClientRect();
+          if (rk.width > 0 && rk.height > 0)
+            holes.push({ x: rk.x / sc, y: rk.y / sc, w: rk.width / sc, h: rk.height / sc });
+        }
+      } catch (e) {}
+      return { x: ox / sc, y: oy / sc, fr: fr / sc, fi: fi / sc, holes,
                bx: r.x / sc, by: r.y / sc, bw: r.width / sc, bh: r.height / sc };
     }, scene.btn);
     if (!geo) return { err: '호스트 없음: ' + scene.btn, errs };

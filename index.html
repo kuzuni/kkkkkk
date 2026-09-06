@@ -44413,6 +44413,12 @@ const FXB_KMAX = 0.55, FXB_BODY = 1.35, FXB_KLAD = 3;
    0.34 ⇒ 훈련 36px(−22%) · 단련 `.tb`(340×173) 58px·룬 `.rbt.b1`(420×112) 38px 로 **셋 다 상한에 안 닿거나
    조금만 닿는다**. 신고 안 한 호스트는 이 줄을 아예 안 지난다(583 «알갱이 크기 더 크게» 는 그대로다). */
 const FXB_FITS = 0.22, FXB_SZMIN = 16, FXB_KSTEPF = 0.70, FXB_BR = 0.34, FXB_FOK = 0.72;   /* 838 3회차 — FITS 0.34→0.30 · FXB_BR = 탄생 반경이 «남은 방» 에서 갖는 몫 */
+/* ⚑ 838 12회차 — 밑각을 «방 깊이» 로 배분하는 두 값(신고 호스트 전용 · 아래 `AWARP` 머리말).
+   `FXB_FAIR` = 가중치가 포화하는 여유(**몸길이 단위**) — 11회차 채점 2인의 처방이 만난 그 값이다
+   (DM «알 지름 2배» · DL «테두리 + 2.0 몸길이»). 이 아래로는 깊이에 비례해 알이 덜 간다.
+   `FXB_ABIN` = 원을 몇 칸으로 훑는가(5°) — 알 하나가 먹는 각(끝반경 56·지름 16 에서 16.7°)보다
+   촘촘해야 얕은 섹터의 경계가 한 칸에 뭉개지지 않는다. */
+const FXB_FAIR = 0.5, FXB_ABIN = 72;
 /* ⚑ 838 6회차 — `FXB_FITS` 는 **호스트가 좁혀 신고할 수 있다**(`--burst-fit`, 0<v≤`FXB_FITS`).
    5회차 채점 2인(DF·DG)의 남은 1순위가 «반경이 모자란다 — 알을 Ø11(DF)/Ø15.5(DG) 로» 였고, 그 자리는
    씬 A(훈련 `.tr-card>.cb` 310×106) 다. 값을 **전역으로** 내리면 단련(496×173)·룬(420×112)에서
@@ -44879,6 +44885,70 @@ function fxBurst(t, col, n, strict, iv, ic){
     p.x = clamp(p.x, PB_M, FRAME_W - PB_M);
     p.y = clamp(p.y, PB_M, Math.max(PB_M, frameH - PB_M));
   }
+  /* ⚑⚑ 838 12회차 — **개수를 «방 깊이» 로 배분한다**(신고 호스트 전용).
+     11회차 채점 2인의 최저는 넷 다 ③ 이고, 그 ③ 이 한 뿌리의 두 얼굴이었다:
+       ㉠ 「53」 이 정당화하는 것보다 넓은 빈 부채(DM 62.7° · DL 67.4° · 자 실측 중앙값 **70.7°**)
+       ㉡ 그 반대편 44~69° 호에 몰려 «수명 후반에 안 움직이는» 알 셋(DL 3.6배 · 자 실측 **3.25배**)
+     **같은 알이다.** 기계는 이렇다 — 밑각이 `i/cnt` 등간격이라 알의 절반이 얕은 방(「53」 쪽 33px)을
+     향하고, 5회차의 «못 벗어나는 방향은 안 쓴다»(A5)가 그 알들을 **각도 사다리로 밀어낸다**.
+     밀린 알은 «가장 가까운 쓸 수 있는 각» = 얕은 섹터의 **경계**에 앉으므로 거기서 뭉치고
+     (기본 시드 58°·58° · 20260903 53·54·59°), 정작 방이 깊은 반대편은 빈 채로 남는다.
+     8회차가 «끝점 융합» 으로 그 뭉치를 흩으려다 실패한 것도 같은 이유다 — 밀어낼 곳이 없다.
+     ⇒ **밀어내지 말고 처음부터 안 보낸다.** 밑각을 뽑는 자리에서 «그 방향으로 쓸 수 있는 깊이» 를
+     가중치로 삼아 등간격을 눕힌다(단조 사상이라 링의 **차례**는 그대로 · 15회차 «판때기» 규칙 불변).
+     ⚑ **두 사람의 손잡이가 같은 상수로 만난다** — DM «여유가 알 지름 2배 미만인 호에 3개를 심지 마라» ·
+     DL «목표 반경 하한 = 테두리 + 2.0 몸길이». 둘 다 **2 몸길이**다 ⇒ 그 값에서 가중치가 포화한다.
+     ⚠ 난수는 한 번도 더 안 뽑는다(아래 `jitA` 는 종전 그 자리 그대로) — 신고 안 한 호스트
+       (09·12·17·장비·코스튬·우편·퀘스트)와 점 대상은 **한 값도 안 바뀐다**(`AWARP` 가 null).
+     ⚠ 사다리(`FXB_KTRY`)·A5·융합 회피는 **그대로 남는다** — 이것은 밑각의 배분이고 그 셋은 안전망이다. */
+  const AWARP = (() => {
+    if(!(fo && r) || cnt < 2) return null;
+    /* 대표 알 지름 — 아래 루프의 크기 산수를 **난수 없이** 한 번 되짚는다(24~34 의 중앙 29) */
+    let nsz = Math.round(29 * hsc * szs);
+    if(IC) nsz = Math.round(nsz * FX_CIC_SC);
+    if(fitK < 1) nsz = Math.max(FXB_SZMIN, Math.round(nsz * fitK));
+    const im = Math.max(0, Math.min(nsz/2 + FXB_INPAD, r.w/2 - 1, r.h/2 - 1));
+    const ax0 = Math.max(20, r.x + im), ax1 = Math.min(FRAME_W - 20, r.x + r.w - im);
+    const ay0 = r.y + im, ay1 = r.y + r.h - im;
+    /* 벽·구멍까지의 거리 — 루프 안 `rayRoom` 과 **같은 산수**다(대표 상자로 한 번만 돈다) */
+    const dep = (ux2, uy2) => {
+      const E = 1e-6; let tt = Infinity;
+      if(Math.abs(ux2) > E) tt = Math.min(tt, ((ux2 > 0 ? ax1 : ax0) - p.x) / ux2);
+      if(Math.abs(uy2) > E) tt = Math.min(tt, ((uy2 > 0 ? ay1 : ay0) - p.y) / uy2);
+      for(const h of kh){
+        let t0 = -Infinity, t1 = Infinity;
+        if(Math.abs(ux2) > E){ const a1 = (h.x - p.x)/ux2, a2 = (h.x + h.w - p.x)/ux2;
+          t0 = Math.max(t0, Math.min(a1, a2)); t1 = Math.min(t1, Math.max(a1, a2)); }
+        else if(p.x < h.x || p.x > h.x + h.w) continue;
+        if(Math.abs(uy2) > E){ const a1 = (h.y - p.y)/uy2, a2 = (h.y + h.h - p.y)/uy2;
+          t0 = Math.max(t0, Math.min(a1, a2)); t1 = Math.min(t1, Math.max(a1, a2)); }
+        else if(p.y < h.y || p.y > h.y + h.h) continue;
+        if(t1 >= Math.max(0, t0)) tt = Math.min(tt, Math.max(0, t0));
+      }
+      return Math.max(0, tt === Infinity ? 0 : tt);
+    };
+    const w = [], cum = []; let tot = 0;
+    for(let k = 0; k < FXB_ABIN; k++){
+      const th = (k + 0.5) / FXB_ABIN * Math.PI * 2;
+      /* «쓸 수 있는 여유» = 발원 원반(A5 와 같은 값)을 벗어난 뒤 남는 길이.
+         ⚠ **깊이에 «비례» 로 주면 안 된다(1차 시도가 그렇게 했다가 되레 벌어졌다)** — 같은 예산을
+         똑같이 나누므로 가중치가 큰 쪽이 각을 **좁게** 먹어 알이 깊은 방향으로 몰리고,
+         정작 중간 깊이의 부채가 비었다(초과 공백 중앙값 70.7° → **73.8°**).
+         두 사람이 적은 것은 «깊을수록 많이» 가 아니라 **«얕으면 심지 마라»** 다 ⇒ 문턱 한 표.
+         경계가 한 칸에 뚝 끊기지 않게 문턱 아래 4분의 1 구간만 선형으로 눕힌다. */
+      const room = dep(Math.cos(th), Math.sin(th)) - fo.r * FXB_FOK - (FXB_SZMIN + 4) / 2;
+      const v = clamp(room / Math.max(1, FXB_FAIR * nsz), 0, 1);
+      w.push(v); tot += v; cum.push(tot);
+    }
+    /* 온 원이 다 얕으면 배분할 것이 없다 — 종전 등간격 그대로(5회차의 «가장 깊은 방향» 이 받는다) */
+    if(tot <= 1e-6) return null;
+    return (u) => {
+      const x = (((u % 1) + 1) % 1) * tot;
+      let k = 0; while(k < FXB_ABIN - 1 && cum[k] < x) k++;
+      const lo = k ? cum[k - 1] : 0, f = w[k] > 1e-9 ? clamp((x - lo) / w[k], 0, 1) : 0.5;
+      return (k + f) / FXB_ABIN * Math.PI * 2;
+    };
+  })();
   for(let i=0;i<cnt;i++){
     const el = document.createElement('s');
     /* 16회차 — 산포 95~195 는 카드 밖까지 흩어져 «±450px 드리프트» 로 읽혔다(Z ②) → 80~150.
@@ -44889,7 +44959,11 @@ function fxBurst(t, col, n, strict, iv, ic){
        연속 발화가 같은 네 자리 근처에 다시 앉아 «매 타격의 새 버스트» 가 아니라 «켜져 있는 고정 장식» 으로
        읽힌다(비평가 DP 실측 «f1~f7 좌표가 ±20px 이내로 고정» · 12px 격자 중복 34%).
        위상은 한 칸(2π/cnt) 안에서만 돌리므로 **링의 등간격은 그대로**다(15회차 «판때기» 방지 규칙 불변). */
-    const a = (i/cnt)*Math.PI*2 + phase + rnd(-0.18, 0.18);
+    /* ⚑ 838 12회차 — 지터는 **배분 공간에서** 준다(위 `AWARP` 머리말). 난수를 뽑는 자리·횟수는
+       종전 그대로라 신고 안 한 호스트의 값은 한 자리도 안 움직인다. */
+    const jitA = rnd(-0.18, 0.18);
+    const a = AWARP ? AWARP(i/cnt + (phase + jitA) / (Math.PI*2))
+                    : (i/cnt)*Math.PI*2 + phase + jitA;
     const jt = rnd(0.82, 1.18);                        /* 개체차 — 완전 균일 링은 «판때기» 로 읽힌다(15회차 X ②) */
     /* ⚑ 838 3회차 — 이동량을 «상자 대각» 이 아니라 **그 방향으로 남은 거리**에서 뽑는다(아래 `rayRoom`).
        2회차는 대각의 60~100%(98~164px)를 요청했는데 발원에서 벽까지가 좌 98·우 33·상 25·하 37px 이라
@@ -45103,7 +45177,18 @@ function fxBurst(t, col, n, strict, iv, ic){
           || (!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey));
         if(okKh) anyOk = true;
         /* 619 12회차 — 글자 회피와 **융합 회피를 같은 각도 굴림 하나로** 본다(축을 새로 만들지 않는다) */
-        if(okKh && roomOk && !fxbFuse(sx, sy, sz/2)){ took = true; tookSz = Math.min(sz, roomSz); break; }
+        /* ⚑ 838 12회차 — **발원을 신고한 호스트에서는 융합을 «끝점» 에서 본다.**
+           619 12회차의 이 규칙은 알이 호스트 bbox 타원 둘레(넓게 흩어진 자리)에서 태어나던 때의
+           것이고, 838 2회차가 발원을 «코인» 으로 옮기면서 탄생 링이 `FXB_RMIN` 22px 로 줄었다 —
+           둘레 138px 에 지름 16 짜리 열 알이면 **산술적으로 반드시 겹친다**. 그래서 이 검사가
+           탄생 자리에서 켜지는 순간 사다리가 밑각을 통째로 굴려(실측: 배분이 세운 10칸 중 두 칸이
+           +29.8° · +69.9° 로 날아갔다) 방금 세운 배분을 도로 흩는다 — 그 두 칸이 비운 자리가
+           11회차 두 사람이 잰 «초과 공백» 의 나머지다.
+           ⚠ 뜻으로도 끝점이 맞다 — 발원이 하나면 «코인에서 같이 나온다» 가 **의도한 그림**이고
+             («한 덩이로 읽힌다» 는 8회차가 확인했듯 t=0 이 아니라 착지에서 갈린다),
+             12회차 규칙이 막으려던 «연속 버스트가 같은 자리» 는 앞 버스트 알(`ks` 초기값)이 그대로 막는다.
+           ⚠ 신고 안 한 호스트는 종전 그대로 시작점에서 본다(09·12·17·장비·코스튬·우편·퀘스트 불변). */
+        if(okKh && roomOk && !fxbFuse(fo ? ex : sx, fo ? ey : sy, sz/2)){ took = true; tookSz = Math.min(sz, roomSz); break; }
         /* 5회차 — 차선도 «깊은 방향» 중에서 고른다. 안 그러면 융합 하나 때문에 **얕은 원래 각**으로
            되돌아가 그 알이 발원 원반 안에서 끝난다(A5 가 5알을 세던 자리다). */
         if(okKh && roomOk && !fb) fb = { ang, sx, sy, ex, ey };
@@ -45123,7 +45208,7 @@ function fxBurst(t, col, n, strict, iv, ic){
       el.style.width = sz + 'px'; el.style.height = sz + 'px';
       el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     }
-    if(fb && (fxbFuse(sx, sy, sz/2) || (kh.length
+    if(fb && (fxbFuse(fo ? ex : sx, fo ? ey : sy, sz/2) || (kh.length
          && (fxbHit(kh, sx, sy) || fxbHit(kh, (sx + ex)/2, (sy + ey)/2) || fxbHit(kh, ex, ey))))){
       ang = fb.ang; sx = fb.sx; sy = fb.sy; ex = fb.ex; ey = fb.ey;
     }
@@ -45136,7 +45221,9 @@ function fxBurst(t, col, n, strict, iv, ic){
     el.style.left = sx + 'px';
     el.style.top  = sy + 'px';
     /* 619 12회차 — 같은 버스트의 **뒤 입자**도 방금 앉힌 이 알을 피하게 한다(한 버스트 안 융합) */
-    if(strict && r) ks.push({ x:sx, y:sy, r:sz/2 });
+    /* 619 12회차 — 같은 버스트의 **뒤 입자**도 방금 앉힌 이 알을 피하게 한다(한 버스트 안 융합).
+       ⚑ 838 12회차 — 신고 호스트는 위 검사와 **같은 점**(끝점)을 등록한다(자와 검사가 갈리면 헛돈다). */
+    if(strict && r) ks.push({ x: fo ? ex : sx, y: fo ? ey : sy, r:sz/2 });
     el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');
     el.style.setProperty('--dy', (ey - sy).toFixed(1) + 'px');
     L.appendChild(el); made++;
