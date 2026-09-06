@@ -14,18 +14,44 @@
  *
  * 이 자는 셋을 **각각 되돌려** 그때마다 판정이 뒤집히는 것을 보인다(376-④ — 축마다 되돌림 하나).
  * ⚠ 문턱(±25%)은 한 글자도 안 건드린다 — 넓혀서 초록으로 되돌리는 것이 이 행이 고친 병이다(979-②).
+ *
+ * ── 1003 수리(2026-09-06) — «989 직전 사본» 을 **굽지 말고 꺼낸다** ────────────
+ * 1회차의 사본은 «**오늘 트리** + `SHOT_SC` 한 줄 되돌림» 이었다. 등재 당시엔 그것이 곧
+ * 989 직전 트리였지만(실측 — 534fce3 의 `SHOT_SC` 는 `PRE989` 와 **글자까지 같다**),
+ * 그 뒤 981 5회차가 «도약탄 두 마디 → 세 마디 지그재그» 로 **그림을 갈아** 사본이 갈라졌다:
+ * `bounce` 의 본체 대각이 옛 배율에서 158.5 → **218.7** 로 뛰어 **옛 눈금 쪽도 밴드 밖**이 되고,
+ * [R2] 가 지키던 «옛 눈금은 초록 ↔ 새 눈금은 빨강» 대조가 **성립하지 않게** 됐다(등재 1003).
+ * ⇒ 사본을 **고정 SHA**(`PRE_SHA`)에서 꺼낸다(`gitrev756` 사다리). 그러면 두 눈금이
+ *   **한 트리**를 재므로 축이 정확히 하나다(376-④) — 그리고 그 트리는 **앞으로도 안 변한다**.
+ * ⚠ 문턱을 넓히거나 [R2] 를 «개수 견줌» 으로 무르게 푸는 길로 가지 않았다 — 이 항이 지키는 것은
+ *   «[E1] 의 초록은 눈금이 만든 것이었다» 는 989 의 근거 **그 자체**라, 대조가 살아 있어야 한다.
+ *   구운 사본이 왜 못 쓰게 됐는지는 [R2b] 가 **매 실행 다시 증명한다**(되돌림 시험).
+ * ⚠ **접는 법은 대각 그대로다(995 뒤에도)** — 1003 실측: 진짜 989 직전 트리를 995 의 눈금
+ *   (최대 변)으로 접으면 본체 밖 **5종** · 제손 밖 **7종** 으로 **둘 다 빨강**이라 대조가 없다.
+ *   최대 변 밴드는 792 가 `SHOT_SC` 로 아직 닫는 중인 **절대 밴드**이고(오늘 트리도 밖 5종),
+ *   989 의 축은 «본체만 ↔ 본체+제 손 부품» **한 가지**다. 그 축에서 초록↔빨강이 서는 접는 법이
+ *   대각이므로 여기서는 대각으로 접는다. 접는 산수 자체는 998 부품(`bulk998.band`)을 쓴다.
  */
 'use strict';
 const path = require('path');
 const fs = require('fs');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+const G = require('./gitrev756');
+const B998 = require('./bulk998');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 const url = (f) => 'file://' + f;
 
-/* **989 직전 사본** — 배율표를 «989 가 얹기 전» 값으로 되돌린 한 줄(다른 종은 한 글자도 안 건드린다).
+/* **989 직전 트리** — 굽지 않고 이 SHA 에서 통째로 꺼낸다(1003). `claim(989)` 의 부모다.
+   ⚠ 얕은 클론이면 `gitrev756` 사다리가 판다 — 못 파면 **환경**이라 ⏸ 보류(세지 않는다). */
+const PRE_SHA = '534fce3dec0874b7a7624f56b84cffa80cbad5b5';
+const PRE_SINCE = '2026-09-05';         /* 사다리 첫 칸(날짜) — 표본이 고정이라 안 썩는다(756) */
+const NEG_REAL = path.join(ROOT, '.v989-pre-' + process.pid + '.html');
+
+/* **1회차의 구운 사본** — 배율표를 «989 가 얹기 전» 값으로 되돌린 한 줄. 이제 판정에는 안 쓰고
+   [R2b] 가 «왜 이 사본으로는 축이 안 갈리는가» 를 **매 실행 다시 증명하는** 데만 쓴다(1003).
    ⚠ `verify792` [R5] 처럼 표를 **비우면** arc·rock·moon·arrow·ball 까지 같이 풀려
      «눈금 축» 이 아니라 «표 전체» 를 되돌리게 된다 — 1회차에 실제로 그렇게 세웠다가
      [R2] 가 «옛 눈금도 빨갛다» 로 빨개졌다(376-④ — 되돌림은 **축 하나씩** 이라야 뜻이 있다). */
@@ -219,32 +245,40 @@ async function measure(browser, file, R, ringBase) {
   return { out, errs };
 }
 
-const med = (a) => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor((s.length - 1) / 2)]; };
-const outBand = (rows, key) => {
-  const ids = Object.keys(rows);
-  const m = med(ids.map(i => rows[i][key]));
-  return { m, bad: ids.filter(i => rows[i][key] < m * (1 - DIAG_TOL) || rows[i][key] > m * (1 + DIAG_TOL)) };
-};
-const show = (rows, key, r) => r.bad.map(i => i + ':' + rows[i][key]).join(' · ') || '없음';
+/* 접는 산수는 **998 부품 한 벌**이다 — 자마다 다시 적으면 그것이 곧 사본이고(402), 1001 이
+   그 네 번째 사본을 걷어냈다. 여기 열쇠는 대각(`body`/`own`/`vis`)이다 — 위 머리말 참조. */
+const outBand = (rows, key) => B998.band(rows, DIAG_TOL, key);
+const show = (rows, key, r) => r.out.map(i => i + ':' + rows[i][key]).join(' · ') || '없음';
 
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
   fs.writeFileSync(NEG_SC, killLine(src, TAG_SC, PRE989), 'utf8');
 
+  /* **989 직전 트리**를 고정 SHA 에서 꺼낸다(1003). 못 꺼내면 갈린다 —
+     얕은 클론이라 못 판 것이면 **환경**(⏸ 보류, 세지 않는다) · 안 얕은데 없으면 **빨강**. */
+  const pre = G.show(PRE_SHA, 'index.html', { since: PRE_SINCE });
+  if (pre.ok) fs.writeFileSync(NEG_REAL, pre.buf);
+
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   console.log('=== VERIFY 989 — [E1] 의 «결함이 있어야 초록» 을 세 축으로 못박는다 ===\n');
+  console.log('  989 직전 트리 = ' + PRE_SHA.slice(0, 7) +
+              (pre.ok ? ' (꺼냈다' + (pre.how || ' — 클론에 이미 있었다') + ')' : ' ✗ ' + pre.why) + '\n');
 
   /* ① 지금 트리 · 지금 자(상자는 792 가 사다리로 고른 값과 같은 자리에서 닿음 0 인 R60) */
   const now = await measure(browser, SRC, 60, false);
   /* ② 되돌림 ⓒ — 바탕을 «발이 없는 장면» 으로(낙하 예고 링이 섞인다) · 상자는 넉넉히 */
   const ring = await measure(browser, SRC, 240, true);
-  /* ③ 되돌림 ⓑ+ⓐ — **989 직전 크기** 사본에서 상자 R60 ↔ R240 */
-  const negS = await measure(browser, NEG_SC, 60, false);
-  const negB = await measure(browser, NEG_SC, 240, false);
+  /* ③ 되돌림 ⓑ+ⓐ — **989 직전 트리**에서 상자 R60 ↔ R240 */
+  const negS = pre.ok ? await measure(browser, NEG_REAL, 60, false) : null;
+  const negB = pre.ok ? await measure(browser, NEG_REAL, 240, false) : null;
+  /* ④ [R2b] — 1회차가 구웠던 사본(오늘 트리 + 한 줄 되돌림). 판정이 아니라 «왜 못 쓰나» 의 증거다. */
+  const bakeB = await measure(browser, NEG_SC, 240, false);
   await browser.close();
-  try { fs.unlinkSync(NEG_SC); } catch (e) { /* 지워지면 그만 */ }
+  for (const f of [NEG_SC, NEG_REAL]) { try { fs.unlinkSync(f); } catch (e) { /* 지워지면 그만 */ } }
 
-  for (const [n, r] of [['지금', now], ['링바탕', ring], ['직전R60', negS], ['직전R240', negB]]) {
+  const runs = [['지금', now], ['링바탕', ring], ['구운사본R240', bakeB]]
+    .concat(pre.ok ? [['직전R60', negS], ['직전R240', negB]] : []);
+  for (const [n, r] of runs) {
     if (r.out.__err) { console.log('  FAIL 측정 실패(' + n + '): ' + r.out.__err); process.exit(1); }
   }
 
@@ -261,32 +295,34 @@ const show = (rows, key, r) => r.bad.map(i => i + ':' + rows[i][key]).join(' · 
 
   /* ── 지금 트리 ── */
   ok(ids.length === 17, '[A1] 투사체를 내는 종 ' + ids.length + '종을 쟀다 (17)');
-  ok(oNow.bad.length === 0,
+  ok(oNow.out.length === 0,
      '[A2] ③ 덩치 — **본체 + 제 손 부품** 대각이 중앙값 ' + oNow.m + 'px 의 ±' +
-     Math.round(DIAG_TOL * 100) + '% (' + (oNow.m * (1 - DIAG_TOL)).toFixed(1) + '~' +
-     (oNow.m * (1 + DIAG_TOL)).toFixed(1) + ') 안 · 밖 ' + oNow.bad.length + '종 — ' + show(R, 'own', oNow));
-  ok(vNow.bad.length === 0,
+     Math.round(DIAG_TOL * 100) + '% (' + oNow.lo + '~' + oNow.hi + ') 안 · 밖 ' +
+     oNow.out.length + '종 — ' + show(R, 'own', oNow));
+  ok(vNow.out.length === 0,
      '[A3] 문턱이 없는 이웃 눈금(**보이는 발 전부** — 비평가가 대조 시트에서 재는 것)으로도 밖 ' +
-     vNow.bad.length + '종 (중앙값 ' + vNow.m + 'px) — [E1] 눈금의 CBAND 계단을 타고 «작게 만들어» 통과한 것이 아니다');
+     vNow.out.length + '종 (중앙값 ' + vNow.m + 'px) — [E1] 눈금의 CBAND 계단을 타고 «작게 만들어» 통과한 것이 아니다');
   ok(ids.every(i => R[i].edge === 0),
      '[A4] 지금 크기에서는 상자 R60 이 한 종도 안 자른다 — 닿는 종 ' +
      ids.filter(i => R[i].edge > 0).length);
 
   /* ── 되돌림 ⓐ 눈금 ── */
-  ok(bNow.bad.length > 0,
-     '[R1] **되돌림 ⓐ — 옛 눈금(본체만)으로 재면 지금 트리가 빨개진다**: 밖 ' + bNow.bad.length +
+  ok(bNow.out.length > 0,
+     '[R1] **되돌림 ⓐ — 옛 눈금(본체만)으로 재면 지금 트리가 빨개진다**: 밖 ' + bNow.out.length +
      '종(중앙값 ' + bNow.m + ') ' + show(R, 'body', bNow) +
      ' ⇒ 두 눈금은 **다른 것을 잰다**(옛 눈금으로는 규격을 닫을 수 없다)');
-  {
+  if (!pre.ok && pre.env) {
+    console.log('  ⏸ [R2]·[R3] ' + G.skipNote(pre) + ' — 세지 않는다(756 규약 ②)');
+  } else if (!pre.ok) {
+    ok(false, '[R2]·[R3] **989 직전 트리를 못 꺼냈다**(환경이 아니다): ' + pre.why);
+  } else {
     const b = outBand(negB.out.rows, 'body'), o = outBand(negB.out.rows, 'own');
-    ok(b.bad.length === 0 && o.bad.length >= 3,
-       '[R2] **되돌림 ⓐ 확정 — 989 직전 트리에서 옛 눈금(본체만)은 «밖 ' + b.bad.length +
-       '종» 으로 **초록**인데 새 눈금은 «밖 ' + o.bad.length + '종» 으로 **빨갛다** (' +
+    ok(b.out.length === 0 && o.out.length >= 3,
+       '[R2] **되돌림 ⓐ 확정 — 989 직전 트리(' + PRE_SHA.slice(0, 7) + ')에서 옛 눈금(본체만)은 «밖 ' +
+       b.out.length + '종» 으로 **초록**인데 새 눈금은 «밖 ' + o.out.length + '종» 으로 **빨갛다** (' +
        show(negB.out.rows, 'own', o) + ' · 중앙값 ' + o.m + ') — [E1] 의 초록은 **눈금이 만든 것**이었다');
-  }
 
-  /* ── 되돌림 ⓑ 상자 ── */
-  {
+    /* ── 되돌림 ⓑ 상자 ── */
     const cS = Object.keys(negS.out.rows).filter(i => negS.out.rows[i].edge > 0);
     const cB = Object.keys(negB.out.rows).filter(i => negB.out.rows[i].edge > 0);
     const shrunk = cS.filter(i => negS.out.rows[i].own < negB.out.rows[i].own);
@@ -296,6 +332,21 @@ const show = (rows, key, r) => r.bad.map(i => i + ':' + rows[i][key]).join(' · 
        ') · 넉넉한 상자(R240)에서는 ' + cB.length + '종 · 잘려서 **작게 읽힌** 종 ' +
        shrunk.map(i => i + ' ' + negS.out.rows[i].own + '→' + negB.out.rows[i].own).join(' · ') +
        ' ⇒ 잘린 값은 상자로 수렴해 «밴드 안» 을 만든다');
+  }
+
+  /* ── 1003 — «구운 사본으로는 왜 안 되는가» 를 매 실행 다시 증명한다 ── */
+  {
+    const bk = outBand(bakeB.out.rows, 'body');
+    const moved = Object.keys(bakeB.out.rows).filter(i =>
+      pre.ok && Math.abs(bakeB.out.rows[i].body - negB.out.rows[i].body) > 1);
+    ok(bk.out.length > 0,
+       '[R2b] **1003 — 구운 사본(오늘 트리 + `SHOT_SC` 한 줄 되돌림)으로는 축이 안 갈린다**: ' +
+       '그 사본은 옛 눈금(본체만)으로도 **밖 ' + bk.out.length + '종** (' +
+       show(bakeB.out.rows, 'body', bk) + ' · 중앙값 ' + bk.m + ') 이라 [R2] 의 «초록↔빨강» 이 없다' +
+       (pre.ok ? ' · 진짜 989 직전 트리와 본체 대각이 어긋난 종 ' + moved.length + '종 (' +
+         (moved.map(i => i + ' ' + negB.out.rows[i].body + '→' + bakeB.out.rows[i].body).join(' · ') || '없음') +
+         ')' : '') +
+       ' ⇒ 사본은 **굽지 말고 고정 SHA 에서 꺼낸다**(376-④ · 되돌림은 축 하나씩)');
   }
 
   /* ── 되돌림 ⓒ 바탕(낙하 예고 링) ── */
@@ -312,9 +363,14 @@ const show = (rows, key, r) => r.bad.map(i => i + ':' + rows[i][key]).join(' · 
        ' ⇒ 바탕을 «발이 없는 장면» 으로 두면 [E1] 은 **다른 부품의 크기**를 재게 된다');
   }
 
-  ok(now.errs.length + ring.errs.length + negS.errs.length + negB.errs.length === 0,
-     '[G1] 콘솔/페이지 오류 0건 (실측 ' +
-     (now.errs.length + ring.errs.length + negS.errs.length + negB.errs.length) + ')');
+  {
+    /* ⚠ 989 직전 트리의 오류까지 여기서 세면 **남의 옛 트리**가 이 자를 빨갛게 만든다 —
+       세는 것은 «지금 트리» 와 그 파생 사본뿐이고, 옛 트리 것은 찍기만 한다(1003). */
+    const nErr = now.errs.length + ring.errs.length + bakeB.errs.length;
+    const oErr = pre.ok ? negS.errs.length + negB.errs.length : 0;
+    ok(nErr === 0, '[G1] 콘솔/페이지 오류 0건 — 지금 트리 · 링바탕 · 구운 사본 (실측 ' + nErr + ')' +
+       (pre.ok ? ' · (기록) 989 직전 트리 ' + oErr + '건' : ''));
+  }
 
   console.log('\nVERIFY989 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   process.exit(fail ? 1 : 0);
