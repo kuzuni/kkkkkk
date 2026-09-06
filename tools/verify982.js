@@ -108,7 +108,7 @@ const med = xs => { const s = xs.slice().sort((a, b) => a - b); return s[Math.fl
       const ids = Object.keys(out.rows);
       const rows = ids.map(i => ({ i, sh: out.rows[i].sh, d: dens(out.rows[i]),
                                    hard: out.rows[i].hard, bbw: out.rows[i].bbw, bbh: out.rows[i].bbh,
-                                   diag: out.rows[i].diag, fFar: out.rows[i].fFar }));
+                                   diag: out.rows[i].diag, own: out.rows[i].own, fFar: out.rows[i].fFar }));
       const all = rows.map(r => r.d);
       const dMed = med(all);
       const LO = +(dMed * (1 - DENS_TOL)).toFixed(4);
@@ -122,9 +122,12 @@ const med = xs => { const s = xs.slice().sort((a, b) => a - b); return s[Math.fl
          '[A1] 축 검산 — 방사 발광 재질 ' + fire.length + '종(' + fire.map(r => r.i).join('·') +
          ')을 빼도 밀도 스프레드가 ' + (keep * 100).toFixed(0) + '% 남는다 (전체 ' + sAll.toFixed(2) +
          '배 → 나머지 ' + sRest.toFixed(2) + '배 · ≥50%) ⇒ 축은 «재질별 밴드» 가 아니라 «전 종 하한»');
-      ok(fire.length >= 3 && fire.length <= 4,
+      /* ⚑ 989 이관 — 래칫 3~4 → **2**. 989 가 화구를 0.733 으로 눌러 불빛의 뻗음이 CBAND 안으로
+         들어오면서 `boom` 이 이 무리에서 빠졌다(먼몫 0.167 → 0.03 이하). `verify792` [B8s] 가
+         같은 수(≤ 2)를 들고 있다 — 재고가 줄면 문을 그만큼 좁힌다(865·989 와 같은 규칙). */
+      ok(fire.length === 2,
          '[A2] 그 무리를 자에 손으로 안 적었다 — 제품의 `fFar` > ' + FAR_MAX + ' 로 갈린 ' +
-         fire.length + '종 (3~4 · `verify792` [B8s] 와 같은 문턱)');
+         fire.length + '종 (2 · `verify792` [B8s] 와 같은 문턱·같은 수)');
 
       /* ---- [B] 하한 ---- */
       const bad = rows.filter(r => r.d < LO).sort((a, b) => a.d - b.d);
@@ -143,13 +146,17 @@ const med = xs => { const s = xs.slice().sort((a, b) => a - b); return s[Math.fl
          '천장은 원형도가 잡고 있으므로 1.0 으로는 안 간다)');
 
       /* ---- [C] 대가 ---- */
-      const dgs = rows.map(r => r.diag);
+      /* ⚑ 989 이관 — [E1] 의 **눈금이 바뀌었다**(본체 → 본체 + 종이 제 손으로 깐 반투명 부품).
+         옛 눈금(`diag`)을 여기서 계속 재면 이 항은 «792 의 판정» 이 아니라 **792 가 버린 자**를
+         지키게 된다 — 989 뒤 실제로 밖 4종으로 빨개졌고 그 넷(whirl·arrow·bounce·gale)은
+         989 가 한 글자도 안 건드린 종이다. 값은 `verify792` 의 measure 가 돌려준 것 그대로다(402). */
+      const dgs = rows.map(r => r.own);
       const gMed = med(dgs);
       const gLo = +(gMed * (1 - DIAG_TOL)).toFixed(1), gHi = +(gMed * (1 + DIAG_TOL)).toFixed(1);
-      const gBad = rows.filter(r => r.diag < gLo || r.diag > gHi);
+      const gBad = rows.filter(r => r.own < gLo || r.own > gHi);
       ok(gBad.length === 0,
-         '[C1] 대가 — 792 [E1] 대각 밴드가 그대로다 (중앙값 ' + gMed + 'px · ' + gLo + '~' + gHi +
-         ' · 밖 ' + gBad.length + '종' + (gBad.length ? ' ' + gBad.map(r => r.i + ':' + r.diag).join(' · ') : '') +
+         '[C1] 대가 — 792 [E1] 덩치 밴드가 그대로다 (중앙값 ' + gMed + 'px · ' + gLo + '~' + gHi +
+         ' · 밖 ' + gBad.length + '종' + (gBad.length ? ' ' + gBad.map(r => r.i + ':' + r.own).join(' · ') : '') +
          ') — 획을 부풀리면 bbox 도 같이 커진다');
       ok(out.worst.iou <= IOU_MAX,
          '[C2] 대가 — 710 분간이 안 되감겼다 · 실루엣 IoU 최댓값 ' + out.worst.iou + ' ≤ ' + IOU_MAX +

@@ -223,25 +223,26 @@ function holePx(px, bw) {
        '[D1] 되감기 금지 — 정렬 **전** IoU 최댓값 ' + rawMax.toFixed(3) + ' ≤ ' + D1_MAX +
        ' (792 [D1]·710 [C1] 과 같은 값 — 이 작업이 그 축을 안 흔들었다)');
 
-    /* [D2] — 792 [E1] 덩치 밴드. 자를 두 벌 적지 않으려고 **같은 산수**만 옮겨 왔다.
-       ⚠ 이 항이 빨개지면 981 의 획 수정이 792 의 판정을 깬 것이다(등재문 «되감기 금지»). */
-    const dgs = cur.ids.map(i => {
-      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
-      const px = cur.rows[i].body;
-      for (let p = 0; p < px.length; p++) {
-        if (!px[p]) continue;
-        const x = p % cur.bw, y = (p - x) / cur.bw;   /* 상자 폭은 측정이 돌려준 값 — 자에 손으로 적지 않는다(402) */
-        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
-      }
-      return +Math.hypot(x1 - x0 + 1, y1 - y0 + 1).toFixed(1);
-    }).sort((a, b) => a - b);
-    const dMed = dgs[Math.floor((dgs.length - 1) / 2)];
+    /* [D2] — 792 [E1] 덩치 밴드.
+       ⚑⚑ **989 이관 — 여기서 «본체 마스크로 산수만 옮겨 오던» 사본을 걷어냈다.**
+       989 가 [E1] 의 눈금을 **본체 → 본체 + 종이 제 손으로 깐 반투명 부품**(공용 링 제외)으로
+       옮기자, 이 자리의 사본은 «792 의 판정» 이 아니라 **792 가 버린 자**를 지키게 됐다 —
+       989 뒤 실제로 밖 4종(whirl·arrow·bounce·gale)으로 빨개졌고 그 넷은 981 도 989 도
+       한 획 안 건드린 종이다. 산수만 베끼면 원본이 눈금을 갈 때 이렇게 거짓말한다(402).
+       ⇒ **792 의 자에게 직접 묻는다**(`verify982` 가 쓰는 그 measure 를 그대로 부른다).
+       ⚠ 값을 다시 계산하지 않으므로 문턱·눈금이 또 바뀌어도 이 항은 저절로 따라온다. */
+    const V792 = require('./verify792');
+    const e1 = await V792.measure(browser, 'file://' + SRC);
+    const e1ids = e1.out && e1.out.rows ? Object.keys(e1.out.rows) : [];
+    const dgs = e1ids.map(i => e1.out.rows[i].own).sort((a, b) => a - b);
+    const dMed = dgs.length ? dgs[Math.floor((dgs.length - 1) / 2)] : 0;
     const dLo = dMed * (1 - DIAG_TOL), dHi = dMed * (1 + DIAG_TOL);
-    const dBad = dgs.filter(d => d < dLo || d > dHi);
-    ok(dBad.length === 0,
-       '[D2] 되감기 금지 — 본체 대각이 792 [E1] 밴드(중앙값 ' + dMed + ' 의 ±' +
-       Math.round(DIAG_TOL * 100) + '%) 안 · 밖 ' + dBad.length + '종' +
-       (dBad.length ? ' (' + dBad.map(d => d).join(' · ') + ')' : ''));
+    const dBad = e1ids.filter(i => e1.out.rows[i].own < dLo || e1.out.rows[i].own > dHi);
+    ok(e1ids.length === 17 && dBad.length === 0,
+       '[D2] 되감기 금지 — **792 의 자에게 직접 물었다**: 덩치 대각(본체 + 제 손 부품)이 [E1] 밴드' +
+       '(중앙값 ' + dMed + ' 의 ±' + Math.round(DIAG_TOL * 100) + '%) 안 · 잰 종 ' + e1ids.length +
+       ' · 밖 ' + dBad.length + '종' +
+       (dBad.length ? ' (' + dBad.map(i => i + ':' + e1.out.rows[i].own).join(' · ') + ')' : ''));
 
     console.log('       (기록) 정렬 IoU 상위 6 — ' +
       pairs.slice(0, 6).map(p => p.sa + '↔' + p.sb + ':' + p.iou.toFixed(3)).join(' · '));

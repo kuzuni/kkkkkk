@@ -115,6 +115,11 @@ async function measure(browser, R) {
                           spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
                           tx: sp.tx === undefined ? undefined : CX - ox,
                           ty: sp.ty === undefined ? undefined : CY - oy, fl0: sp.fl0 });
+      /* ⚑⚑ 989 이관 ⓒ — 바탕을 «발이 없는 장면» 에서 **«발을 놓되 그림만 끈 판»**(`b.mf`)으로 옮겼다.
+         종전 바탕으로 재면 운석이 지면에 까는 **낙하 예고 링**(반경 = 실제 피해 반경 · 그림이 곧
+         판정이라 541 이 크기 배수에서 뺀 부품)이 이 종의 잉크로 셈돼 대각이 687.7 로 뛴다 —
+         그것은 «이 발이 크다» 가 아니라 «다른 부품을 재고 있다» 다(`verify989` [R4]·[R5]). */
+      clearFx(); shots.push(Object.assign(mk(), { mf: 0 })); const base2 = grab();
       clearFx(); shots.push(mk());              const a0 = grab();
       clearFx(); shots.push(mk(), mk());        const a2 = grab();
 
@@ -126,7 +131,7 @@ async function measure(browser, R) {
       for (let i = 0, p = 0; i < a0.length; i += 4, p++) {
         let c = 0, best = 0;
         for (let k = 0; k < 3; k++) {
-          const v = Math.abs(a0[i + k] - base[i + k]);
+          const v = Math.abs(a0[i + k] - base2[i + k]);
           if (v > best) { best = v; c = k; }
         }
         if (best <= 8) continue;
@@ -135,7 +140,7 @@ async function measure(browser, R) {
         if (x < vx0) vx0 = x; if (x > vx1) vx1 = x;
         if (y < vy0) vy0 = y; if (y > vy1) vy1 = y;
         if (x === 0 || y === 0 || x === bw - 1 || y === bh - 1) edge++;
-        const d1 = a0[i + c] - base[i + c];
+        const d1 = a0[i + c] - base2[i + c];
         const d2 = a2[i + c] - a0[i + c];
         let al = 1 - d2 / d1;
         if (!isFinite(al)) al = 1;
@@ -209,18 +214,28 @@ async function measure(browser, R) {
   const visBadNC = idsNC.filter(i => band(B.out.rows[i].vis, mVisNC));
 
   ok(ids.length === 17, '[1] 투사체를 내는 종 ' + ids.length + '종을 쟀다 (실측 ' + ids.length + ')');
-  ok(clipped.length > 0,
-     '[2] 갈래 ⓑ — **자의 상자(R' + A.out.box.R + ')가 잉크를 자른다**: 테두리에 닿는 종 ' +
+  /* ⚑⚑ 989 이관 — **[2]·[3] 의 방향을 뒤집었다.** 이 두 항은 «자의 상자 R60 이 잉크를 자른다»
+     를 단언하던 자리인데, 989 가 바로 그것을 걷어냈다(상자를 사다리로 바꾸고 불 계열 셋을
+     `SHOT_SC` 로 눌렀다) — 그대로 두면 이 재현기가 **수리된 세계에서 영원히 빨간 자**가 되어
+     다음 스윕에 «게이트 부패» 로 다시 등재된다(333 처방: 자리를 비우지도, 항을 눌러 초록으로
+     되돌리지도 말고 **살아 있는 질문으로 갈아 끼운다**).
+     ⚠ 수리 전 세계의 단언은 사라지지 않았다 — `verify989` [R3] 이 **989 직전 사본**에서 같은
+       것을 묻는다(거기서는 지금도 meteor 30화소가 잘리고 204.9 → 228.6 으로 작게 읽힌다). */
+  ok(clipped.length === 0,
+     '[2] 갈래 ⓑ — 989 이후: 자의 상자(R' + A.out.box.R + ')가 잉크를 **안 자른다** — 테두리에 닿는 종 ' +
      clipped.length + '종' + (clipped.length ? ' (' + clipped.map(i => i + ':' + A.out.rows[i].edge).join(' · ') + ')' : '') +
-     ' — 잘린 값은 상자 크기로 수렴하므로 [E1] 이 그 종을 «밴드 안» 으로 읽는다');
-  ok(bodyBadA.length === 0 && bodyBad.length > 0,
-     '[3] 갈래 ⓑ 확정 — **같은 눈금(본체)인데 상자만 바꾸면 판정이 뒤집힌다**: R' + A.out.box.R +
+     ' (수리 전 meteor 30화소 — 잘린 값은 상자로 수렴해 [E1] 이 «밴드 안» 으로 읽었다 · `verify989` [R3])');
+  ok(bodyBadA.length === bodyBad.length,
+     '[3] 갈래 ⓑ 확정 — 989 이후: **상자를 바꿔도 판정이 안 바뀐다** — R' + A.out.box.R +
      ' 에서 밴드 밖 ' + bodyBadA.length + '종(중앙값 ' + mBodyA + 'px) ↔ R' + B.out.box.R +
      ' 에서 밴드 밖 ' + bodyBad.length + '종(중앙값 ' + mBody + 'px' +
      (bodyBad.length ? ' · ' + bodyBad.map(i => i + ':' + B.out.rows[i].body).join(' · ') : '') +
-     ') ⇒ **[E1] 의 초록은 상자가 만든 것**이다');
-  ok(visBad.length > 0 && visBadNC.length > 0,
-     '[4] 갈래 ⓐ — **보이는 발**(후광 + 제 손 부품)로 재면 밴드 밖 ' + visBad.length + '종(중앙값 ' +
+     ') · 수리 전에는 0종 ↔ 1종으로 **뒤집혔다**(그 초록은 상자가 만든 것이었다)');
+  /* ⚑⚑ 989 이관 — [2]·[3] 과 같은 이유로 방향을 뒤집었다. 이 항이 «밖이 있다» 를 단언하던 것이
+     12회차의 발견이고, 989 가 [E1] 의 눈금을 그 몫까지 재도록 넓힌 뒤 `SHOT_SC` 로 닫았다.
+     ⇒ 지금 물어야 할 것은 «눈으로 재도 밖이 없는가» 다(수리 전 4종 · 잘린 종을 빼도 2종). */
+  ok(visBad.length === 0 && visBadNC.length === 0,
+     '[4] 갈래 ⓐ — 989 이후: **보이는 발**(후광 + 제 손 부품)로 재도 밴드 밖 ' + visBad.length + '종(중앙값 ' +
      mVis + 'px)' + (visBad.length ? ' (' + visBad.map(i => i + ':' + B.out.rows[i].vis).join(' · ') + ')' : '') +
      ' · 잘린 종을 빼도 밖 ' + visBadNC.length + '종(중앙값 ' + mVisNC + 'px · ' +
      (mVisNC * 0.75).toFixed(1) + '~' + (mVisNC * 1.25).toFixed(1) + ')' +

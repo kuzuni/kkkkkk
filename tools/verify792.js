@@ -228,8 +228,14 @@ async function measure(browser, url) {
         if (R === 960) return { R, tried: R, grew: true, over: touch };
       }
     })();
-    const BOX = boxOf(pick.R), R = BOX.R, bx = BOX.bx, by = BOX.by, bw = BOX.bw, bh = BOX.bh;
-    const grab = () => grabAt(BOX);
+    /* ⚠ 고른 상자는 **CX·CY 에서 곧바로** 편다(`BOX.bx` 로 받아 쓰지 않는다) — `verify936` 의
+       인구조사는 «player 파생 이름이 `getImageData` 인자에 보이는가» 로 이 파일을 세는데,
+       한 번 접으면 사슬이 끊겨 이 자가 **못박음 목록에서 조용히 빠진다**(936 [3] 이 실제로
+       그렇게 빨개졌다 — 쉼표로 갈리는 객체 리터럴은 그 자의 선언 파서가 못 따라간다). */
+    const R = pick.R;
+    const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
+    const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);
+    const grab = () => { draw(); return ctx.getImageData(bx, by, bw, bh).data; };
     /* ⚑⚑ 855 — 벽시계를 상수에 세운다(오라 반지름이 `sin(performance.now()/220)` 로 뛴다).
        ⚠ **아래 프레임 비용 측정은 진짜 시계를 써야 하므로** 원본을 들고 있다가 그 앞에서 되돌린다.
          안 되돌리면 `bake`·`frame` 이 전부 0 이 되어 «연출이 공짜» 라고 거짓말한다(792-③ 이 세운 축). */
