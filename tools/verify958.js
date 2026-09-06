@@ -567,8 +567,9 @@ console.log('\n[11] 4회차 — `scan335.py` 색 밴드 두께가 격자에서 �
     cen && cen.led && cen.led.v);
   ok('[11-u] 그 판정이 **낡지 않았다** (sig 가 지금 소스와 맞는다)', cen && !cen.stale,
     cen && `${cen.sig} ↔ ${cen.led && cen.led.sig}`);
-  ok('[11-v] 주홍 둘이 **이름으로** 남았다 (958 이 여섯 중 넷을 닫았다)',
-    /const BRK = \['scanA4\.py', 'scanA4b\.py'\]/.test(fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8')));
+  /* ⚛ 958 5회차 이관 — 뜻은 그대로 두고 **수만** «≤2» 로. 남은 하나의 이름은 [12-v] 가 든다. */
+  ok('[11-v] 주홍이 **줄기만 한다** (958 이 여섯 중 넷을 닫은 뒤로 늘지 않았다)',
+    P.census().filter((x) => x.verdict === 'B').length <= 2);
   ok('[11-w] 장부가 이 자를 부분 화소로 적었다 (`--physics` 수치까지)', /−1\.417 → −0\.020/.test(P932));
 
   /* ---- 되돌림 ---- */
@@ -576,6 +577,87 @@ console.log('\n[11] 4회차 — `scan335.py` 색 밴드 두께가 격자에서 �
     pi && !(Math.abs(pi[1]) < 0.10), pi && pi[1]);
   ok('[11-R2] 옛 자를 [11-h] 의 자로 재면 떨어진다 (6·5 는 7±0.15 밖이다)',
     gotI.every((v) => Math.abs(v - 7) > 0.15), gotI.join(' '));
+}
+
+/* ── [12] 5회차 — `tools/scanA4.py` ───────────────────────────────────── */
+console.log('\n[12] 5회차 — `scanA4.py` 링 «어두운 띠» 두께가 0.5 격자에서 풀렸는가 (걸음 0.5px · 932 처방 ⓐ)');
+{
+  const SA4 = fs.readFileSync(path.join(TOOLS, 'scanA4.py'), 'utf8');
+  const runA4 = (extra) => String(py(['tools/scanA4.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+  const PH = runA4(['--physics']);
+  const COV = runA4([]);
+  const INT = runA4(['--int']);
+
+  /* ---- 물리 ---- */
+  const prow = (mode, W) => {
+    const l = PH.split('\n').find((x) => new RegExp(`^\\s+${mode}\\s+${W}\\s`).test(x));
+    return l ? l.trim().split(/\s+/).slice(2).map(Number) : null;
+  };
+  const i7 = prow('int', 7), c7 = prow('cov', 7), c3 = prow('cov', 3);
+  ok('[12-a] 재현이 두 자를 다 낸다 (그림도 브라우저도 안 쓴다)', !!i7 && !!c7 && !!c3);
+  ok('[12-b] 옛 자는 번진 판에서 **한 방향으로** 1px 넘게 부푼다 (참값 7px 띠)',
+    i7 && i7[1] > 1.0, i7 && i7[1]);
+  ok('[12-c] 새 자는 그 편향이 **1/10 아래**다', c7 && Math.abs(c7[1]) < 0.10
+    && Math.abs(c7[1]) < Math.abs(i7[1]) / 10, c7 && c7[1]);
+  ok('[12-d] ⚑ **칼같은 판은 두 자가 같다** — 두께 문턱을 «고원 한복판» 으로 세웠기 때문이다 (스윕값을 쓰면 +0.214 밀린다)',
+    i7 && c7 && Math.abs(i7[0]) < 1e-9 && Math.abs(c7[0]) < 1e-9, i7 && c7 ? `${i7[0]} ↔ ${c7[0]}` : 'nul');
+  ok('[12-e] ⚠ 참값 3px 짜리 띠는 **분해 한계**가 남는다 (σ1.1 에서 가운데가 설계 고원에 못 닿는다) — 숨기지 않고 찍는다',
+    c3 && c3[1] > 0.2 && c3[1] < 1.0, c3 && c3[1]);
+
+  /* ---- ref 실측 — 문턱 스윕 수렴이 검산이다 ---- */
+  const ringOf = (txt) => {
+    const blk = (txt.split('REF 1번 활성')[1] || '').split('REF ')[0];
+    return blk.split('\n').map((l) => l.match(/thr\s*(\d+).*?r44\.[05]~47\.[05]\(([\d.]+)\)/))
+      .filter(Boolean).map((m) => parseFloat(m[2]));
+  };
+  const rI = ringOf(INT), rC = ringOf(COV);
+  ok('[12-f] 옛 자는 그 띠를 **0.5 의 배수**로만 낸다', rI.length === 3
+    && rI.every((v) => Math.abs(v * 2 - Math.round(v * 2)) < 1e-9), rI.join(' '));
+  ok('[12-g] ⚑⚑ 옛 자는 **문턱마다 다른 답**을 낸다 (3.0 ↔ 4.0 = 33% 흔들림)',
+    rI.length === 3 && Math.max(...rI) - Math.min(...rI) >= 0.9, rI.join(' '));
+  ok('[12-h] ⚑⚑ 새 자는 문턱 스윕에 **거의 안 흔들린다** — 값이 한 곳으로 모인다',
+    rC.length === 3 && Math.max(...rC) - Math.min(...rC) < 0.25, rC.map((v) => v.toFixed(2)).join(' '));
+  ok('[12-i] 새 자는 **하나도** 0.5 의 배수가 아니다 (격자에서 풀렸다)',
+    rC.length === 3 && rC.every((v) => Math.abs(v * 2 - Math.round(v * 2)) > 1e-6),
+    rC.map((v) => v.toFixed(2)).join(' '));
+
+  /* ---- 무르게 푼 수리가 아님 ---- */
+  ok('[12-j] ⚑ 런을 «고르는» 규칙이 그대로다 (이웃 간격 0.75 · «b − a ≥ 1»)',
+    /r - cur\[-1\] > 0\.75/.test(SA4) && /g\[1\] - g\[0\] >= 1/.test(SA4));
+  ok('[12-k] 문턱 3종 스윕이 그대로다', /for thr in \(60, 80, 100\)/.test(SA4));
+  ok('[12-l] 반지름 걸음 0.5 · 각 72지점 중앙값이 그대로다',
+    /np\.arange\(0, rmax, 0\.5\)/.test(SA4) && /np\.median\(px, axis=0\)/.test(SA4));
+  ok('[12-m] ⚑⚑ 두께 문턱이 **스윕값이 아니라 고원 한복판**이다',
+    /max\(lo_s\) \+ dark\) \/ 2\.0/.test(SA4) && /max\(hi_s\) \+ dark\) \/ 2\.0/.test(SA4));
+  ok('[12-n] ⚑ 고원은 **극값**이다 («측정 고원» — probe384 가 «다음 지렛대» 로 적어 둔 축)',
+    /dark = min\(mx\[ia:ib \+ 1\]\)/.test(SA4));
+  ok('[12-o] ⚠ 교차 탐색이 **방향을 안 가린다** (한복판은 선별 경계 쌍의 안쪽일 수 있다)',
+    /for k in range\(max\(0, j - 6\), min\(n - 1, j \+ 6\)\)/.test(SA4));
+  ok('[12-p] 옛 자가 `--int` 로 살아 있다', /MODE = 'int' if '--int' in sys\.argv else 'cov'/.test(SA4));
+  ok('[12-q] 두 자가 실제로 다른 값을 낸다 (사본이 아니다)',
+    rI.length === 3 && rC.length === 3 && rI.some((v, i) => Math.abs(v - rC[i]) > 0.05));
+
+  /* ---- 캡처 즉사(아홉째) ---- */
+  ok('[12-r] ⚑ 캡처가 없어도 **안 죽는다** — ref 절만 돈다 (아홉째)',
+    /ref 절만 돈다/.test(COV) && rC.length === 3);
+  ok('[12-s] 그런데도 ref 절은 온전히 다 돈다 (일곱 절 전부)',
+    /\[7\] 행 기하/.test(COV) && /\[4\] 자물쇠/.test(COV));
+
+  /* ---- 장부 ---- */
+  const cen = P.census().find((r) => r.file === 'scanA4.py');
+  ok('[12-t] 장부가 `scanA4.py` 를 **S** 로 옮겼다', cen && cen.led && cen.led.v === 'S',
+    cen && cen.led && cen.led.v);
+  ok('[12-u] 그 판정이 **낡지 않았다** (sig 가 지금 소스와 맞는다)', cen && !cen.stale,
+    cen && `${cen.sig} ↔ ${cen.led && cen.led.sig}`);
+  ok('[12-v] 주홍이 **하나만** 남았다 (958 이 여섯 중 다섯을 닫았다)',
+    /const BRK = \['scanA4b\.py'\]/.test(fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8')));
+
+  /* ---- 되돌림 ---- */
+  ok('[12-R1] 옛 자를 [12-c] 의 자로 재면 떨어진다 — 항이 헛초록이 아니다',
+    i7 && !(Math.abs(i7[1]) < 0.10), i7 && i7[1]);
+  ok('[12-R2] 옛 자를 [12-h] 의 자로 재면 떨어진다 (문턱 스윕 폭 0.25 밖이다)',
+    rI.length === 3 && Math.max(...rI) - Math.min(...rI) >= 0.25, rI.join(' '));
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */
