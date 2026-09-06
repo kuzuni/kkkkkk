@@ -37,8 +37,10 @@ const TH = 110;
 
 /* 905 가 확정한 과녁과 대역 — 레퍼런스는 위 12 : 아래 9 ref px 이고 한 눈금이 프레임 2.222px 다.
    ±1 눈금이 (9±1)/12 = 0.667~0.833 · 9/(12±1) = 0.692~0.818 ⇒ 0.67~0.83(±11%). */
-const REF_RATIO = 0.750;
-const BAND = [0.67, 0.83];
+/* ⚑⚑ 948 이관 — 위 두 줄의 근거(«±1 눈금»)는 **정수 격자의 한 칸**이고, 932 7회차가 자를
+   부분 화소로 갈면서 그 칸이 없어졌다. 948 이 과녁을 0.7338(부분 화소)로 옮기고 대역을
+   «위상 스윕으로 잰 자 자신의 재현성»(± 9.6%)에서 다시 뽑았다 — 값은 `tools/target948.js` 한 곳. */
+const { REF_RATIO, BAND, INT_RATIO } = require('./target948');
 /* 되돌림 대상 — 이 회차가 옮긴 **한 자리**(10회차 어파인의 목표비 .9 → .75) */
 const NEW = 'var(--rw-g3)) * .4286 + 1.21px * var(--rwc,1)));';
 const OLD = 'var(--rw-g3)) * .4737 + 2.57px * var(--rwc,1)));';
@@ -138,19 +140,22 @@ async function shoot(browser, file, fh, url) {
 
   /* ── [6] 확정값 — 레퍼런스는 **0.750** 이다 ── */
   {
-    const v = ref.th[TH].ratio.B3, old = ref.th[TH].ratio_u1.B1, old887 = ref.th[TH].ratio_u1.B3;
-    ok(Math.abs(v - REF_RATIO) < 0.005 && Math.abs(old - 1.00) < 0.005 && Math.abs(old887 - 0.90) < 0.005,
-      '[6] 레퍼런스 확정값 = **0.750**(위 12 : 아래 9 ref px) · 같은 그림에서 887 의 자는 0.90 · 옛 규약 한 벌은 1.00',
-      `905 ${v.toFixed(3)} · 887(U1 + 조립체) ${old887.toFixed(3)} · 옛 한 벌(U1 + 띠 «안») ${old.toFixed(3)}` +
-      ` · 위 ${ref.th[TH].up}(U1 로는 ${ref.th[TH].up_u1}) : 아래 ${ref.th[TH].down.B3} ref px`);
+    const v = ref.th[TH].sub.ratio.B3, vi = ref.th[TH].ratio.B3;
+    const old = ref.th[TH].ratio_u1.B1, old887 = ref.th[TH].ratio_u1.B3;
+    ok(Math.abs(v - REF_RATIO) < 0.002 && Math.abs(vi - INT_RATIO) < 0.005 &&
+       Math.abs(old - 1.00) < 0.005 && Math.abs(old887 - 0.90) < 0.005,
+      '[6] 레퍼런스 확정값 = **0.7338**(부분 화소 · 948 · 정수 걸음으로는 0.750) · 887 의 자는 0.90 · 옛 규약 한 벌은 1.00',
+      `948 부분 화소 ${v.toFixed(4)} · 905 정수 ${vi.toFixed(3)} · 887(U1 + 조립체) ${old887.toFixed(3)} · ` +
+      `옛 한 벌(U1 + 띠 «안») ${old.toFixed(3)} · 위 ${ref.th[TH].up}(U1 로는 ${ref.th[TH].up_u1}) : 아래 ${ref.th[TH].down.B3} ref px`);
   }
 
   /* ── [7] 제품 — 다섯 프레임이 과녁 대역 안 ── */
   {
-    const vals = caps.map(c => c.th[TH].ratio.B3);
+    const vals = caps.map(c => c.th[TH].sub.ratio.B3);
     ok(vals.every(v => v >= BAND[0] && v <= BAND[1]),
-      `[7] 제품의 **화소** 아래/위 비가 과녁 ${REF_RATIO}(대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
-      caps.map((c, i) => path.basename(c.path).replace(/^905-|\.png$/g, '') + ':' + vals[i].toFixed(3)).join(' · '));
+      `[7] 제품의 **부분 화소** 아래/위 비가 과녁 ${REF_RATIO}(대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
+      caps.map((c, i) => path.basename(c.path).replace(/^905-|\.png$/g, '') + ':' + vals[i].toFixed(4)).join(' · ') +
+      ' · 정수 걸음으로는 ' + caps.map(c => c.th[TH].ratio.B3.toFixed(3)).join('/'));
   }
 
   /* ── [R] 되돌림 — **905 이전(10회차 어파인)으로 되돌린 사본**에 두 자를 다 대 본다 ──
@@ -175,9 +180,9 @@ async function shoot(browser, file, fh, url) {
       fs.unlinkSync(neg);
       const negScan = json(py(['--json', shot])).caps[0];
       rOld = negScan.th[TH].ratio_u1.B3;      /* 887 의 자(U1 위 + 조립체 아래) */
-      rNew = negScan.th[TH].ratio.B3;         /* 905 의 자 */
+      rNew = negScan.th[TH].sub.ratio.B3;     /* 905 의 자 — 948 이관으로 부분 화소 */
     }
-    const refOld = ref.th[TH].ratio_u1.B3, refNew = ref.th[TH].ratio.B3;
+    const refOld = ref.th[TH].ratio_u1.B3, refNew = ref.th[TH].sub.ratio.B3;
     const dOld = rOld == null ? null : Math.abs(rOld - refOld) / refOld * 100;
     const dNew = rNew == null ? null : Math.abs(rNew - refNew) / refNew * 100;
     ok(rOld != null && dOld < 5 && dNew > 20,

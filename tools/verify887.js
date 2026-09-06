@@ -43,11 +43,17 @@ const BASE = 2280;
    두었는데, 그 자가 두 그림에서 밑판 외곽선의 **반대편**을 짚고 있었다(우리 −2px · ref +2px).
    위도 같은 걷개로 재면 레퍼런스는 위 12 : 아래 9 ref px 다. 상세 `docs/review/905-안내문위끝점자.md`.
    대역도 같은 방법으로 다시 뽑았다 — ±1 눈금이 (9±1)/12 = 0.667~0.833 · 9/(12±1) = 0.692~0.818. */
-const REF_RATIO = 0.750;
-const BAND = [0.67, 0.83];
+/* ⚑⚑ 948 이관 — **과녁도 대역도 «정수 격자» 위에서 세워진 값이었다.**
+   932 7회차가 `scan887` 을 부분 화소로 갈자 0.750 은 «정수 두 개의 비» 였음이 드러났고,
+   위 주석의 «±1 눈금» 은 그 정수 격자의 한 칸이라 부분 화소 축에는 **없는 눈금**이다.
+   948 이 두 수를 다시 세웠다 — 과녁 0.7338(부분 화소) · 대역 = 과녁 ± 9.6%
+   (`probe948` [4] 위상 스윕으로 잰 **자 자신의 재현성**). 값은 `tools/target948.js` 한 곳이다. */
+const { REF_RATIO, BAND, INT_RATIO } = require('./target948');
 /* `verify813` [3] 이 쓰는 거울 상수 — 화소 − 상자. 여기 [5] 가 실측으로 지킨다.
-   905 — 위 끝점이 2px 내려오면서 위 거울이 +3 → **+0.7** 이 됐다(아래는 그대로 −2.6). */
-const MIRROR = { up: 0.7, dn: -3, tol: 1.2 };
+   905 — 위 끝점이 2px 내려오면서 위 거울이 +3 → **+0.7** 이 됐다(아래는 그대로 −2.6).
+   ⚑ 948 — 과녁이 부분 화소로 가면서 **거울도 같이 갔다**(위 +0.7 → −1.34 · 아래 −3 → −3.58).
+     자를 두 곳에 두지 않는다 — 화소 쪽 값이 부분 화소면 거울도 부분 화소여야 한다. */
+const MIRROR = { up: -1.34, dn: -3.58, tol: 1.2 };
 
 let pass = 0, fail = 0;
 const ok = (cond, title, got) => {
@@ -105,7 +111,8 @@ const MEASURE = () => {
   }
   const ref = s.ref, caps = s.caps;
   const TH = 110;
-  const rt = (r, end) => r.th[TH].ratio[end];
+  const rt = (r, end) => r.th[TH].ratio[end];              /* 정수 걸음 — 대조용 */
+  const st = (r, end) => r.th[TH].sub.ratio[end];          /* 948 — 약속의 자는 부분 화소다 */
 
   /* ── [1] 두 그림의 하단 테두리는 «조립체» 이고 구조가 같다 ── */
   {
@@ -132,21 +139,31 @@ const MEASURE = () => {
 
   /* ── [3] 자의 안정성 — 잉크 문턱을 흔들어도 답이 안 바뀐다(A3-ⓑ 의 자기 적용) ── */
   {
-    const spread = (r) => { const v = [90, 110, 140].map(t => r.th[t] && r.th[t].ratio.B3).filter(x => x != null);
-                            return Math.max(...v) - Math.min(...v); };
-    const m = Math.max(spread(ref), ...caps.map(spread));
-    ok(m === 0, '[3] 잉크 문턱 90/110/140 에서 답이 **한 자리도** 안 바뀐다 — 문턱으로 흔들리는 자는 이 약속을 못 맡는다',
-      `최대 진폭 ${m.toFixed(3)} (ref ${rt(ref, 'B3').toFixed(3)} · 캡처 ${rt(caps[0], 'B3').toFixed(3)})`);
+    const spread = (r, sub) => { const v = [90, 110, 140]
+        .map(t => r.th[t] && (sub ? r.th[t].sub.ratio.B3 : r.th[t].ratio.B3)).filter(x => x != null);
+      return Math.max(...v) - Math.min(...v); };
+    const mInt = Math.max(spread(ref), ...caps.map(c => spread(c)));
+    /* ⚑ 948 — 정수 걸음에서 «진폭 0» 인 것은 자가 안정해서가 아니라 **분수를 버려서**다.
+       부분 화소로 재면 문턱이 답을 움직인다(ref 1.9%). 그래도 그 폭은 대역의 1/5 이라
+       이 자는 여전히 이 약속을 맡을 수 있다 — 문턱이 아니라 **위상**이 대역을 정한다(`verify948` [3]). */
+    const mSub = Math.max(spread(ref, true), ...caps.map(c => spread(c, true)));
+    const half = (BAND[1] - BAND[0]) / 2;
+    ok(mInt === 0 && mSub < half,
+      '[3] 잉크 문턱 90/110/140 이 답을 흔드는 폭은 **대역의 1/5 안**이다 — 문턱으로 흔들리는 자는 이 약속을 못 맡는다',
+      `부분 화소 최대 진폭 ${mSub.toFixed(4)} (대역 반폭 ${half.toFixed(4)} 의 ${(mSub / half * 100).toFixed(0)}%) · ` +
+      `정수 걸음은 ${mInt.toFixed(3)} — 안정해서가 아니라 분수를 버려서다 · ` +
+      `ref ${st(ref, 'B3').toFixed(4)} · 캡처 ${st(caps[0], 'B3').toFixed(4)}`);
   }
 
   /* ── [4] 확정값 — 레퍼런스는 **0.750** 이다 ──
      905 이관: 옛 규약 «한 벌»(위 U1 + 아래 금테 띠 «안»)은 같은 그림에서 1.000 을 낸다.
      두 착시가 **비만 상쇄**해 1.00 으로 읽히던 것이 이 값이다(887 이 아래를, 905 가 위를 걷었다). */
   {
-    const v = rt(ref, 'B3'), old = ref.th[TH].ratio_u1.B1;
-    ok(Math.abs(v - REF_RATIO) < 0.005 && Math.abs(old - 1.00) < 0.005,
-      '[4] 레퍼런스 확정값 = **0.750**(위 12 : 아래 9 ref px) · 같은 그림에서 옛 규약 한 벌(U1 + 띠 «안»)은 1.00 을 낸다',
-      `조립체 최상단 ${v.toFixed(3)} · 옛 규약 한 벌 ${old.toFixed(3)} · 위 ${ref.th[TH].up} : 아래 ${ref.th[TH].down.B3} ref px`);
+    const v = st(ref, 'B3'), vi = rt(ref, 'B3'), old = ref.th[TH].ratio_u1.B1;
+    ok(Math.abs(v - REF_RATIO) < 0.002 && Math.abs(vi - INT_RATIO) < 0.005 && Math.abs(old - 1.00) < 0.005,
+      '[4] 레퍼런스 확정값 = **0.7338**(부분 화소 · 948) · 같은 그림의 정수 걸음은 0.750 · 옛 규약 한 벌(U1 + 띠 «안»)은 1.00',
+      `조립체 최상단 부분 화소 ${v.toFixed(4)} · 정수 ${vi.toFixed(3)}(위 ${ref.th[TH].up} : 아래 ${ref.th[TH].down.B3} ref px) · ` +
+      `옛 규약 한 벌 ${old.toFixed(3)}`);
   }
 
   /* ── [5] 짝 항 — `verify813` [3] 의 거울 상수가 실제 화소와 맞는가 ──
@@ -157,25 +174,26 @@ const MEASURE = () => {
     for (const c of caps) {
       const H = Number(path.basename(c.path).match(/(\d+)\.png$/)[1]);
       const d = dom[H]; if (!d) continue;
-      const du = c.th[TH].up - d.visAbove, dd = c.th[TH].down.B3 - d.visGap;
+      const du = c.th[TH].sub.up - d.visAbove, dd = c.th[TH].sub.down.B3 - d.visGap;
       if (Math.abs(du - MIRROR.up) > MIRROR.tol || Math.abs(dd - MIRROR.dn) > MIRROR.tol)
         bad.push(`${H}: 위 ${du.toFixed(1)} · 아래 ${dd.toFixed(1)}`);
     }
     const sample = caps.map(c => {
       const H = Number(path.basename(c.path).match(/(\d+)\.png$/)[1]);
-      return `${H}:${(c.th[TH].up - dom[H].visAbove).toFixed(1)}/${(c.th[TH].down.B3 - dom[H].visGap).toFixed(1)}`;
+      return `${H}:${(c.th[TH].sub.up - dom[H].visAbove).toFixed(2)}/${(c.th[TH].sub.down.B3 - dom[H].visGap).toFixed(2)}`;
     }).join(' · ');
-    ok(!bad.length, `[5] 짝 항 — \`verify813\` [3] 의 거울 상수(위 +${MIRROR.up} · 아래 ${MIRROR.dn})가 실제 화소와 ±${MIRROR.tol} 안`,
+    ok(!bad.length, `[5] 짝 항 — \`verify813\` [3] 의 **부분 화소** 거울 상수(위 ${MIRROR.up} · 아래 ${MIRROR.dn})가 실제 화소와 ±${MIRROR.tol} 안`,
       `화소−상자 ${sample}` + (bad.length ? ' · 어긋남 ' + bad.join(' / ') : ''));
   }
 
   /* ── [6] 제품 — 다섯 프레임이 과녁 대역 안 ── */
   {
-    const vals = caps.map(c => rt(c, 'B3'));
+    const vals = caps.map(c => st(c, 'B3'));
     ok(vals.every(v => v >= BAND[0] && v <= BAND[1]),
-      `[6] 제품의 **화소** 아래/위 비가 과녁 0.750(대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
-      caps.map((c, i) => path.basename(c.path).replace(/^887-|\.png$/g, '') + ':' + vals[i].toFixed(3)).join(' · ') +
-      ' · 905 전(.4737·T+2.57)은 1.000 이었다');
+      `[6] 제품의 **부분 화소** 아래/위 비가 과녁 ${REF_RATIO}(대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
+      caps.map((c, i) => path.basename(c.path).replace(/^887-|\.png$/g, '') + ':' + vals[i].toFixed(4)).join(' · ') +
+      ' · 905 전(.4737·T+2.57)은 1.000 이었다 · 정수 걸음으로는 ' +
+      caps.map(c => rt(c, 'B3').toFixed(3)).join('/') + ' (948: 넷이 한 칸에 몰린다)');
   }
 
   /* ── [R] 되돌림 — **제품을 887 이전(.5 분할)으로 되돌린 사본**에 두 규약을 다 대 본다 ──
@@ -217,17 +235,17 @@ const MEASURE = () => {
          887 세대가 «두 착시가 비만 상쇄한다» 고 적은 그 짝이고, 그래야 이 항이
          887 이 실제로 본 그림(ref 1.000 ↔ 옛 제품 0.96)을 그대로 재현한다. */
       rOld = negScan.th[TH].ratio_u1.B1;
-      rNew = negScan.th[TH].ratio.B3;
+      rNew = negScan.th[TH].sub.ratio.B3;      /* 948 — 새 규약 쪽은 부분 화소로 잰다 */
     }
     const refOld = ref.th[TH].ratio_u1.B1;
     const dOld = rOld == null ? null : Math.abs(rOld - refOld) / refOld * 100;
-    const dNew = rNew == null ? null : Math.abs(rNew - rt(ref, 'B3')) / rt(ref, 'B3') * 100;
+    const dNew = rNew == null ? null : Math.abs(rNew - st(ref, 'B3')) / st(ref, 'B3') * 100;
     /* 905 — 문턱 12 → 9. 위 끝점이 정정되며 «새 규약» 쪽 차가 15.6% → 10.1% 로 줄었다
        (그 대신 905 자신의 되돌림 시험이 33% 를 낸다 — `verify905` [R]). */
     ok(rOld != null && dOld < 6 && dNew > 9,
       '[R] **887 이전(.5)으로 되돌린 사본** — 옛 규약 한 벌로는 ref 와 4% 안(결함 안 보임) · 새 규약으로는 10% 차(결함)',
       note || `옛 규약 한 벌 ref ${refOld.toFixed(3)} ↔ 옛 제품 ${rOld.toFixed(3)} (차 ${dOld.toFixed(1)}%) · ` +
-      `새 규약 ref ${rt(ref, 'B3').toFixed(3)} ↔ 옛 제품 ${rNew.toFixed(3)} (차 ${dNew.toFixed(1)}%)`);
+      `새 규약(부분 화소) ref ${st(ref, 'B3').toFixed(4)} ↔ 옛 제품 ${rNew.toFixed(4)} (차 ${dNew.toFixed(1)}%)`);
   }
 
   console.log(`\nVERIFY887 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);

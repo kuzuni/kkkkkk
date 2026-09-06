@@ -51,8 +51,12 @@ const OUT = path.join(ROOT, 'docs', 'shots');
 const FRAMES = [1600, 1841, 1920, 2280, 2600];
 const TH = 110;
 
-/* 905 가 확정한 과녁·대역(살아 있는 자) ↔ 887 이 세웠다가 은퇴한 과녁·대역 */
-const LIVE = { ratio: 0.750, band: [0.67, 0.83], name: 'U3(905)' };
+/* 살아 있는 과녁·대역 ↔ 은퇴한 과녁·대역.
+   ⚑ 948 — 905 의 0.750 · [0.67, 0.83] 도 **정수 격자 위에서 세운 값**이라 은퇴했다.
+     살아 있는 값은 부분 화소 축이고 `tools/target948.js` 한 곳에 있다. */
+const T948 = require('./target948');
+const LIVE = { ratio: T948.REF_RATIO, band: T948.BAND, name: 'U3 부분화소(948)' };
+const LIVE_INT = { ratio: T948.INT_RATIO, name: 'U3 정수(905 · 대조용)' };
 const RETIRED = { ratio: 0.900, band: [0.82, 1.00], name: 'U1+조립체(887)' };
 
 /* 인계된 처방 — «안내문 블록을 1.6px 위로»(879 8회차 §50 EX) */
@@ -82,7 +86,8 @@ async function shoot(browser, file, fh, url) {
 const pair = (m) => {
   const d = m.th[TH];
   return {
-    u3: { up: d.up, down: d.down.B3, r: d.ratio.B3 },
+    u3: { up: d.up, down: d.down.B3, r: d.ratio.B3,
+          sub: d.sub.ratio.B3, subUp: d.sub.up, subDn: d.sub.down.B3 },   /* 948 — 약속의 자 */
     u1: { up: d.up_u1, down: d.down.B3, r: d.ratio_u1.B3 },
     sign: d.base_u1 - d.base,
   };
@@ -138,12 +143,14 @@ const nm = (p) => path.basename(p).replace(/^probe920-|\.png$/g, '').replace('89
 
   console.log('\n■ [4] 살아 있는 과녁으로 본 제품 — 다섯 프레임');
   for (const c of C) {
-    const inb = c.u3.r >= LIVE.band[0] && c.u3.r <= LIVE.band[1];
-    console.log(`    ${L(c.name, 7)}${c.u3.r.toFixed(3)}  ${inb ? '대역 안' : '대역 밖'}` +
-      `  (과녁 ${LIVE.ratio} · 대역 ${LIVE.band[0]}~${LIVE.band[1]})`);
+    const inb = c.u3.sub >= LIVE.band[0] && c.u3.sub <= LIVE.band[1];
+    console.log(`    ${L(c.name, 7)}${c.u3.sub.toFixed(4)}  ${inb ? '대역 안' : '대역 밖'}` +
+      `  (과녁 ${LIVE.ratio} · 대역 ${LIVE.band[0]}~${LIVE.band[1]} · 정수 걸음으로는 ${c.u3.r.toFixed(3)})`);
   }
 
-  console.log('\n■ [5] 1600 의 0.714 는 **화소 격자의 최적점**인가');
+  /* ⚑ 948 — 아래 표는 **정수 축**의 탐색이다. 932 7회차가 자를 부분 화소로 갈면서 이 «칸» 은
+     약속의 자가 아니게 됐다(뜻이 뒤집힌다 — 등재문 948 ③). 계보로 남기되, 답은 그 아래 줄이다. */
+  console.log('\n■ [5] 1600 의 0.714 는 **화소 격자의 최적점**인가 (정수 축 — 948 이 은퇴시킨 물음)');
   {
     const s = c1600.u3.up + c1600.u3.down;
     const cand = [];
@@ -153,10 +160,22 @@ const nm = (p) => path.basename(p).replace(/^probe920-|\.png$/g, '').replace('89
     }
     for (const k of cand) {
       console.log(`    위 ${P(k.up, 3)} : 아래 ${P(k.down, 3)} -> ${k.r.toFixed(3)}` +
-        `  (과녁에서 ${((k.r - LIVE.ratio) / LIVE.ratio * 100).toFixed(1)}%)` +
+        `  (정수 과녁 ${LIVE_INT.ratio} 에서 ${((k.r - LIVE_INT.ratio) / LIVE_INT.ratio * 100).toFixed(1)}%)` +
         (k.up === c1600.u3.up ? '   ← 지금' : ''));
     }
-    console.log(`    ⇒ 합 ${s}px 격자에서 과녁 0.750 에 가장 가까운 칸이 지금 칸이다(다음 칸은 더 멀다).`);
+    console.log(`    ⇒ 합 ${s}px 격자에서 정수 과녁 0.750 에 가장 가까운 칸이 지금 칸이다(다음 칸은 더 멀다).`);
+    /* ⚑⚑ 948 — 부분 화소 축에서 다시 물으면 답이 **한 겹 아래**다: 1600 은 비로는 다섯 중
+       과녁에 가장 가깝지만(+0.75%), 절대 여백으로는 가장 멀다. 비는 척도 불변이라
+       «위·아래가 같이 줄어든 것»(813 의 g3 압축)을 볼 수 없다. */
+    const K = scan.ref.k;                 /* ref px → 프레임 px */
+    const rUp = R.u3.subUp * K, rDn = R.u3.subDn * K;
+    const cL = C.find(c => c.name !== '1600');
+    console.log(`    ⚑ 948 — 부분 화소로 다시 물으면: ref 위 ${rUp.toFixed(2)} · 아래 ${rDn.toFixed(2)} 프레임px 기준으로`);
+    console.log(`       1600 비 ${c1600.u3.sub.toFixed(4)}(${((c1600.u3.sub / LIVE.ratio - 1) * 100).toFixed(2)}%) 인데 ` +
+      `절대는 위 ${((c1600.u3.subUp / rUp - 1) * 100).toFixed(1)}% · 아래 ${((c1600.u3.subDn / rDn - 1) * 100).toFixed(1)}%`);
+    console.log(`       긴 넷 비 ${cL.u3.sub.toFixed(4)}(${((cL.u3.sub / LIVE.ratio - 1) * 100).toFixed(2)}%) · ` +
+      `절대는 위 ${((cL.u3.subUp / rUp - 1) * 100).toFixed(1)}% · 아래 ${((cL.u3.subDn / rDn - 1) * 100).toFixed(1)}%`);
+    console.log('       ⇒ «나머지 넷이 1600 을 따라가야 한다» 는 기각 — 1600 은 비로만 가깝다.');
   }
 
   console.log('\n■ [6] 인계된 처방(«블록을 1.6px 위로»)을 사본에 실제로 먹인다');
@@ -179,10 +198,10 @@ const nm = (p) => path.basename(p).replace(/^probe920-|\.png$/g, '').replace('89
       const rxScan = json(py(['--json', ...rxShots]));
       for (const c of rxScan.caps) {
         const p = pair(c), n = nm(c.path).replace(/^rx-/, '');
-        const inb = p.u3.r >= LIVE.band[0] && p.u3.r <= LIVE.band[1];
-        console.log(`    ${L(n, 7)}위 ${P(p.u3.up, 3)} : 아래 ${P(p.u3.down, 3)} -> ${p.u3.r.toFixed(3)}  ` +
+        const inb = p.u3.sub >= LIVE.band[0] && p.u3.sub <= LIVE.band[1];
+        console.log(`    ${L(n, 7)}위 ${P(p.u3.up, 3)} : 아래 ${P(p.u3.down, 3)} -> ${p.u3.sub.toFixed(4)}  ` +
           `${inb ? '대역 안' : '**대역 밖**'}` +
-          `  (같은 프레임 지금 값 ${C.find(x => x.name === n) ? C.find(x => x.name === n).u3.r.toFixed(3) : '?'})`);
+          `  (같은 프레임 지금 값 ${C.find(x => x.name === n) ? C.find(x => x.name === n).u3.sub.toFixed(4) : '?'})`);
       }
       console.log('    ⇒ 처방은 **옛 과녁 0.90 을 겨눈 값**이다 — 살아 있는 과녁에서는 반대 방향이다.');
     }

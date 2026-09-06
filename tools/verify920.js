@@ -36,12 +36,13 @@ const REVIEW = path.join(ROOT, 'docs', 'review');
 const FRAMES = [1600, 1841, 1920, 2280, 2600];
 const TH = 110;
 
-/* 905 가 확정한 살아 있는 과녁·대역 */
-const REF_RATIO = 0.750;
-const BAND = [0.67, 0.83];
+/* 살아 있는 과녁·대역 — 905 가 세우고 **948 이 부분 화소 위에서 다시 세웠다**(`tools/target948.js`).
+   905 의 0.750 은 «정수 두 개의 비» 였고 대역의 근거 «±1 눈금» 은 정수 격자의 한 칸이었다. */
+const T = require('./target948');
+const { REF_RATIO, BAND, INT_RATIO } = T;
 /* 887 이 세웠다가 905 가 은퇴시킨 과녁·대역 — 대조용으로만 쓴다(333 처방: 자리를 비우지 않는다) */
-const RETIRED_RATIO = 0.900;
-const RETIRED_BAND = '0.82~1.00';
+const RETIRED_RATIO = T.RETIRED[0].ratio;
+const RETIRED_BAND = T.RETIRED[0].band;
 /* 879 8회차 채점 2인(EW·EX)이 적은 두 수 — 이 자가 «어느 칸의 값인지» 를 되짚는다 */
 const EWEX = { ref: { up: 10, down: 9 }, f1600: { up: 20, down: 15 } };
 /* 인계된 처방 — «안내문 블록을 1.6px 위로»(879 8회차 §50) */
@@ -74,7 +75,8 @@ async function shoot(browser, file, fh, url) {
 const pair = (m) => {
   const d = m.th[TH];
   return {
-    u3: { up: d.up, down: d.down.B3, r: d.ratio.B3 },
+    /* 948 — 약속의 자는 **부분 화소**다. 정수 칸(`u3.r`)은 대조·계보용으로 남긴다. */
+    u3: { up: d.up, down: d.down.B3, r: d.ratio.B3, sub: d.sub.ratio.B3, subUp: d.sub.up, subDn: d.sub.down.B3 },
     u1: { up: d.up_u1, down: d.down.B3, r: d.ratio_u1.B3 },
   };
 };
@@ -94,7 +96,11 @@ function briefingHygiene() {
     const carries = t.includes(RETIRED_BAND) || /아래÷위\s*0\.90\b/.test(t) || /확정값[^\n]*0\.90\b/.test(t);
     if (!carries) continue;
     hit.push(f);
-    const corrected = /905/.test(t) || /0\.67~0\.83/.test(t);
+    /* 948 — 대역 0.67~0.83 도 이제 은퇴했다(정수 격자 위에서 세운 값). 그 뒤 브리핑은
+       948 이나 새 대역을 적어도 «정오 달림» 으로 읽는다 — 표식을 좁혀 옛 기록을 빨갛게
+       만들 이유가 없다(333: 자리를 비우지 않는다). */
+    const corrected = /905/.test(t) || /948/.test(t) || /0\.67~0\.83/.test(t) ||
+                      new RegExp(BAND[0] + '~' + BAND[1]).test(t);
     if (!corrected) bad.push(f);
   }
   ok(bad.length === 0,
@@ -131,17 +137,21 @@ function briefingHygiene() {
 
   /* ── [1] 제품은 **살아 있는 자**의 과녁 위에 있다 ── */
   {
-    const vals = C.map(c => c.u3.r);
+    const vals = C.map(c => c.u3.sub);
     ok(vals.every(v => v >= BAND[0] && v <= BAND[1]),
-      `[1] 제품의 아래/위 비가 **살아 있는 과녁**(905 · ${REF_RATIO} · 대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
-      C.map(c => `${c.name}:${c.u3.r.toFixed(3)}`).join(' · '));
+      `[1] 제품의 아래/위 비가 **살아 있는 과녁**(948 · 부분 화소 ${REF_RATIO} · 대역 ${BAND[0]}~${BAND[1]}) 안 — 다섯 프레임`,
+      C.map(c => `${c.name}:${c.u3.sub.toFixed(4)}`).join(' · ') +
+      ' · 정수 걸음으로는 ' + C.map(c => c.u3.r.toFixed(3)).join('/'));
   }
 
   /* ── [2] 갈림의 크기 — 같은 레퍼런스 그림에서 두 자가 두 답을 낸다 ── */
   {
     const gap = Math.abs(R.u1.r - R.u3.r) / R.u3.r * 100;
-    ok(Math.abs(R.u3.r - REF_RATIO) < 0.005 && Math.abs(R.u1.r - RETIRED_RATIO) < 0.005 && gap > 15,
-      '[2] **자 갈림은 의견이 아니라 20%다** — 같은 ref 그림에서 U3 0.750 ↔ U1 0.900',
+    /* 948 — 이 항이 견주는 두 값은 **둘 다 정수 칸**이다(U1 은 부분 화소 판이 없다).
+       그래서 과녁이 아니라 `INT_RATIO` 로 못박는다 — 자를 두 곳에 두지 않으려면
+       «어느 축의 값인지» 를 이름으로 밝혀야 한다. */
+    ok(Math.abs(R.u3.r - INT_RATIO) < 0.005 && Math.abs(R.u1.r - RETIRED_RATIO) < 0.005 && gap > 15,
+      '[2] **자 갈림은 의견이 아니라 20%다** — 같은 ref 그림에서(정수 칸) U3 0.750 ↔ U1 0.900',
       `ref U3 ${R.u3.r.toFixed(3)}(위 ${R.u3.up}:아래 ${R.u3.down}) ↔ U1 ${R.u1.r.toFixed(3)}(위 ${R.u1.up}:아래 ${R.u1.down}) · 차 ${gap.toFixed(1)}%`);
   }
 
@@ -179,27 +189,38 @@ function briefingHygiene() {
       fs.unlinkSync(rx);
       out = json(py(['--json', ...rxShots])).caps.map(c => ({ name: nm(c.path), ...pair(c) }));
     }
-    const outside = out ? out.filter(c => c.u3.r < BAND[0] || c.u3.r > BAND[1]) : [];
+    const outside = out ? out.filter(c => c.u3.sub < BAND[0] || c.u3.sub > BAND[1]) : [];
     const worse = out ? out.every(c => {
       const now = C.find(x => x.name === c.name);
-      return Math.abs(c.u3.r - REF_RATIO) > Math.abs(now.u3.r - REF_RATIO);
+      return Math.abs(c.u3.sub - REF_RATIO) > Math.abs(now.u3.sub - REF_RATIO);
     }) : false;
     ok(!!out && outside.length >= 1 && worse,
       '[4] ⚑⚑ 인계된 처방(«블록을 1.6px 위로»)은 **기각**된다 — 먹이면 1600 이 대역 밖으로 나가고 다섯 프레임 전부 과녁에서 멀어진다',
-      note || out.map(c => `${c.name}:${c.u3.r.toFixed(3)}${(c.u3.r < BAND[0] || c.u3.r > BAND[1]) ? '(밖)' : ''}`).join(' · ') +
+      note || out.map(c => `${c.name}:${c.u3.sub.toFixed(4)}${(c.u3.sub < BAND[0] || c.u3.sub > BAND[1]) ? '(밖)' : ''}`).join(' · ') +
       ` · 대역 밖 ${outside.length}/${out.length} · 다섯 다 과녁에서 더 멀어짐 ${worse ? 'O' : 'X'}`);
   }
 
-  /* ── [5] 무르게 통과시킨 것이 아니다 — 1600 의 0.714 는 화소 격자의 **최근접 칸** ── */
+  /* ── [5] ⚑⚑ 948 이 갈아 끼운 항 — **비는 척도 불변이라 «둘 다 줄어든 것» 을 못 본다** ──
+     905 판의 이 항은 «1600 의 0.714 는 화소 격자의 **최근접 칸**이다» 라는 정수 논변이었고,
+     932 7회차가 자를 부분 화소로 갈면서 그 «칸» 이 없어져 **뜻이 뒤집혔다**(등재문 948 ③).
+     자리를 비우지 않고(333) 같은 물음(«대역을 넓혀 통과시킨 것 아닌가»)에 더 센 답을 놓는다:
+     1600 은 비로는 다섯 중 과녁에 **가장 가깝지만**, 절대 여백으로는 **가장 멀다** —
+     813 이 짧은 프레임에서 `--rw-g3` 를 압축해 위·아래가 **같이** 3.0px 줄었고 비는 그것을 못 본다.
+     ⇒ 등재문의 «나머지 넷이 1600 을 따라가야 한다» 는 여기서 기각된다. */
   {
-    const s = f1600.u3.up + f1600.u3.down;
-    const d = (up) => Math.abs((s - up) / up - REF_RATIO);
-    const here = d(f1600.u3.up);
-    const near = [f1600.u3.up - 1, f1600.u3.up + 1].filter(u => u > 0 && s - u > 0);
-    ok(near.every(u => d(u) > here),
-      '[5] 1600 의 0.714 는 **화소 격자의 최근접 칸**이다 — 이웃 칸이 과녁에서 더 멀다(대역을 넓혀 통과시킨 것이 아니다)',
-      `합 ${s}px · 지금 위 ${f1600.u3.up}:아래 ${f1600.u3.down} = ${((s - f1600.u3.up) / f1600.u3.up).toFixed(3)}` +
-      ' · 이웃 ' + near.map(u => `${u}:${s - u}=${((s - u) / u).toFixed(3)}`).join(' / '));
+    const K = scan.ref.k;                       /* ref px → 프레임 px */
+    const rUp = R.u3.subUp * K, rDn = R.u3.subDn * K;
+    const dev = (c) => ({ up: c.u3.subUp / rUp - 1, dn: c.u3.subDn / rDn - 1 });
+    const fLong = C.find(c => c.name !== '1600');
+    const d16 = dev(f1600), dL = dev(fLong);
+    const ratioCloser = Math.abs(f1600.u3.sub - REF_RATIO) < Math.abs(fLong.u3.sub - REF_RATIO);
+    const absFarther = Math.abs(d16.up) > Math.abs(dL.up) && Math.abs(d16.dn) > Math.abs(dL.dn);
+    ok(ratioCloser && absFarther,
+      '[5] 1600 은 **비로만 가깝다** — 절대 여백으로는 다섯 중 가장 멀다(대역을 넓혀 통과시킨 것이 아니다)',
+      `ref 위 ${rUp.toFixed(2)} · 아래 ${rDn.toFixed(2)} 프레임px | ` +
+      `1600 비 ${f1600.u3.sub.toFixed(4)}(과녁 대비 ${((f1600.u3.sub / REF_RATIO - 1) * 100).toFixed(2)}%) 인데 ` +
+      `위 ${(d16.up * 100).toFixed(1)}% · 아래 ${(d16.dn * 100).toFixed(1)}% | ` +
+      `긴 넷 비 ${fLong.u3.sub.toFixed(4)} · 위 ${(dL.up * 100).toFixed(1)}% · 아래 ${(dL.dn * 100).toFixed(1)}%`);
   }
 
   /* ── [6] 브리핑 위생 — 이 사고의 뿌리 ── */
