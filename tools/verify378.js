@@ -218,7 +218,9 @@ async function measure(page, sel, i) {
       await page.evaluate(SETTLE);
       for (const i of idxs) {
         const m = await measure(page, sel, i);
-        if (!m) { ok(name + ' 칸' + (i == null ? '(자연 활성)' : i + 1) + ' 측정', false, '활성 주입이 되돌려졌다'); continue; }
+        /* 967 — 한 벌의 말로 묻는다: 켠 칸을 그대로 쟀는가(주입이 되돌려졌거나 캡처 사이에 바뀌면 빨강). */
+        if (!m) { ok(name + ' 칸' + (i == null ? '(자연 활성)' : i + 1)
+          + ' — 켠 칸을 그대로 쟀다 (한 틱 + 캡처 되읽기 · 967)', false, '활성이 되돌려졌다'); continue; }
         snap[name + '#' + m.g.idx] = m;
         const tag = name + ' 칸' + (m.g.idx + 1) + '«' + m.g.label + '»';
         for (const [side, touch, bar, pill] of [['좌', m.touchL, m.barL, m.pillL], ['우', m.touchR, m.barR, m.pillR]]) {

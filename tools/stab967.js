@@ -43,6 +43,22 @@ const INSTALL = () => {
     if (!bar) return null;
     return [...bar.querySelectorAll(':scope > .stab')];
   };
+  /* ⚑ 제품이 소유하는 바는 **제품에게 시킨다**(967 등재문의 첫 처방 — «제품 setter 로 고정»).
+     클래스만 심으면 제품 렌더가 되돌리므로 자는 그것을 핀으로 «덮어» 왔지만, 핀에는 16ms 창이 남는다.
+     칸이 제 상태 키를 마크업에 들고 있고(제품이 클릭 위임에서 읽는 그 키다) 그 setter 가 살아 있으면,
+     같은 값을 제품에게 넣어 준다 — 그러면 제품 렌더가 **되돌릴 것이 없다**(되돌림이 구조적으로 0).
+     setter 가 없는 바는 아래 클래스 주입으로 내려간다(지금 넷이 그렇고, 그 넷은 되돌리지 않는다). */
+  const OWNERS = [
+    ['trsub', 'setTrSub'],       /* 23 훈련 — `renderTrain()` 이 `trSub` 에서 `.on` 을 다시 그린다 */
+    ['runesub', 'setRuneSub'],   /* 23 룬  — `renderRunes()` 가 `runeSub` 에서 다시 그린다 */
+  ];
+  const drive = cell => {
+    for (const [key, fn] of OWNERS) {
+      const v = cell.dataset ? cell.dataset[key] : null;
+      if (v != null && typeof window[fn] === 'function') { window[fn](v); return true; }
+    }
+    return false;
+  };
   window.__stab967 = {
     /* 활성을 i 번 칸으로 옮긴다 — 라벨 외곽선(ol3/ol4)까지 같이 갈아 실제 클릭과 같은 그림을 만든다.
        i 가 null/undefined 면 «자연 활성»(제품이 켠 그대로)이라 아무것도 안 건드린다.
@@ -52,6 +68,9 @@ const INSTALL = () => {
       const cells = cellsOf(sel);
       if (!cells || !cells.length) return -2;
       if (i != null && i >= 0 && !cells[i]) return -2;
+      /* 제품이 소유하는 바면 제품에게 시킨다 — 그 뒤에도 클래스를 심어 `ol3/ol4` 까지 맞춘다
+         (제품 렌더가 `.on` 은 다시 그려도 잉크 외곽선은 제 규약대로 둔다). */
+      if (i != null && i >= 0) drive(cells[i]);
       if (i != null) {
         cells.forEach((c, j) => {
           const on = i >= 0 && j === i;
