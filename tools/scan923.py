@@ -53,6 +53,18 @@ COV = '--nocov' not in sys.argv    # 4회차: 덮개 적분이 기본(--nocov �
 PED = '--ruler8' not in sys.argv   # 9회차 자 수리 둘(받침 빼기 · 안쪽 끝도 덮개)이 기본 — `--ruler8` 로 8회차 자
 PED_W0, PED_W1 = 3, 9              # 받침 표본 창 — 경계 화소 i 에서 +3..+8(경계 번짐 두 화소를 건너뛴다)
 COLSCAN = '--norow' not in sys.argv and '--nocol' not in sys.argv   # 9회차: 띠 점구름에 «열 스캔» 도 넣는다
+# ── 10회차 신설 — «두께를 **어느 끝의 깊이**로 적는가» (`--uat outer|inner|mid`) ─────
+#   9회차 채점(GX·GY)이 «남은 결함은 하나인데 자마다 −2.89 ↔ −0.41 ↔ +0.58 로 갈리고
+#   기준점을 바꾸면 **부호까지 뒤집힌다**» 를 남겼다(GY 실측). 그 갈림은 자의 정밀도가 아니라
+#   **이름표**다 — 한 두께 표본은 두 점(바탕 쪽 끝 · 림 쪽 끝)을 잇는데 그 둘의 깊이가
+#   띠 두께만큼(≈10~14 우리px) 다르므로, 어느 쪽으로 적느냐가 표를 통째로 한 칸 반 민다.
+#   ⚑ **고를 근거는 «자의 축 = 손잡이의 축» 이다** — 제품의 손잡이 `NTC_BAND` 는
+#   `ntcOffset()` 이 **안쪽(실루엣) 표본의 깊이 px** 로 반지름을 읽는 표다. 그 실루엣이 곧
+#   «검정↔바탕» 경계(= `outer_x`)이므로 `outer` 가 표와 같은 축이다. 축이 어긋난 자로 재면
+#   `NTC_BAND[i]` 를 고쳐도 **그 칸이 안 움직여** 회차가 수렴하지 않는다.
+#   ⚠ 이 말은 논증이지 측정이 아니다 — `tools/probe923.js` 가 **되찾기 시험**으로 못박는다:
+#   우리 렌더는 선언표를 아는 유일한 그림이니, 셋 중 그 표를 되찾는 이름표가 옳은 것이다.
+UAT = (sys.argv[sys.argv.index('--uat') + 1] if '--uat' in sys.argv else 'outer')
 MIN_EXT_OUR = 12.0                # «카드 재질» 로 인정할 최소 덩이 두께(**우리 px** — ref 에서는 /K)
 GAP_OUR = 3.0                     # 덩이를 이어 붙일 수 있는 틈(우리 px · ref 1.45px) — 아래 ⚑
 
@@ -432,7 +444,11 @@ def band_prof(a, y0, y1, x0, x1, bg, t, k, straight, i0=None, i1=None, darkf=DAR
     for xi, y in inns:
         d = np.hypot(O[:, 0] - xi, O[:, 1] - y)
         j = int(d.argmin())
-        out.append(((straight - (O[j, 0] - x0)) * k, float(d[j]) * k, y))
+        # 10회차 — 이름표(위 UAT). `outer` 가 기본이자 «손잡이의 축» 이다.
+        uo = (straight - (O[j, 0] - x0)) * k          # 바탕 쪽 끝(= 실루엣 = `NTC_BAND` 의 축)
+        ui = (straight - (xi - x0)) * k               # 림 쪽 끝(= `oc` · 두께만큼 깊다)
+        u = ui if UAT == 'inner' else (uo + ui) / 2 if UAT == 'mid' else uo
+        out.append((u, float(d[j]) * k, y))
     return out
 
 

@@ -100,6 +100,25 @@ const REF_B = {
   bl: [null, 13.29, 13.77, 14.18, 14.03, 12.14, 10.64]
 };
 const B_TOL = 0.9;
+/* ⚑⚑ **10회차 신설 — «바닥↔옆면 이음» 축**(8·9회차 채점 2인 GV·GW 가 각자 낸 2순위).
+   위 [B5] 격자는 .25/.50/.75/**.90** 에서 끝난다 ⇒ 이음이 사는 **.90~1.00 구간이 자에 없었다**
+   (5회차가 «입» 을 그래서 [B6] 으로 따로 세운 것과 같은 꼴 — 격자가 없으면 결함도 없다).
+   ref 실측(`wprofile` 을 이 격자로 · 오염 안 된 자리: 배너 = 아래 두 자리 평균 · 불릿 = len 97.0 한 자리):
+     불릿 — .80 57.40 · .86 50.22 · .90 42.76 · .94 37.35 · .96 33.15 · .98 29.48
+     배너 — .80 35.69 · .86 30.57 · .90 26.10 · .94 22.25 · .96 20.11 · .98 17.66
+   ⚑ **수리 전 실측이 «불릿 한 형뿐» 임을 못박았다** — 불릿 Δ(우리−ref) .90 **+0.02** · .94 **−2.90** ·
+   .96 **−3.18** · .98 **−3.20** 인데 **배너는 같은 격자에서 +0.6 안**이다. 그래서 10회차는
+   `NTC_PROF.bl` 꼬리 두 마디만 열었고 `ban` 은 한 값도 안 건드렸다(배너가 이 항의 대조군이다).
+   ⚠ 창 ±1.6 은 [B5] 의 ±2.5 보다 좁다 — 수리 후 실측 최대 |Δ| 는 1.13(불릿 .80 · 수리와 무관한
+   자리다)이고 수리 전 값 −3.20 은 그 두 배 밖이다(§R10 이 그 사본으로 매 실행 확인한다).
+   ⚠ **f = 1.00 은 이 격자에 없다** — 그 자리는 «평탄부» 라 [B1] 이 이미 자기 자로 묻고 있고,
+   마지막 행 하나에 걸려 자가 2.06~14.0 으로 튄다(ref 배너 두 자리가 n/a ↔ 2.06 으로 갈린다). */
+const FRACS_J = [0.80, 0.86, 0.90, 0.94, 0.96, 0.98];
+const REF_J = {
+  ban: [35.69, 30.57, 26.10, 22.25, 20.11, 17.66],
+  bl: [57.40, 50.22, 42.76, 37.35, 33.15, 29.48]
+};
+const J_TOL = 1.6;
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'ok ' : 'FAIL'} ${m}`); };
@@ -240,7 +259,9 @@ function notchStats(png, box, bg) {
     };
     return { y0: a, y1: b, len: b - a + 1, dep: D, flat: best, wd: FRACS.map((f) => wAt(f * D)),
       /* 5회차 — 같은 `wAt` 에 **절대 깊이**를 넣는다(자를 새로 만들지 않는다 — 같은 자, 다른 격자). */
-      md: MOUTH_U.map((u) => wAt(u)) };
+      md: MOUTH_U.map((u) => wAt(u)),
+      /* 10회차 — 같은 `wAt`, 세 번째 격자(바닥 쪽 .80~.98). 자는 여전히 하나다. */
+      jd: FRACS_J.map((f) => wAt(f * D)) };
   });
 }
 
@@ -404,6 +425,14 @@ async function shot(page, sel, out) {
         ok(got != null && Math.abs(got - want) <= M_TOL,
           `[B6-u${u}] ${k}(${c.id}) y${n.y0} 깊이 ${u}px 세로 폭 `
           + `${got == null ? 'n/a' : got.toFixed(2)} (ref ${want} · ±${M_TOL})`);
+      });
+      /* ⚑⚑ 10회차의 본체 — «바닥으로 도는 이음이 ref 를 따라가는가». [B5] 는 .90 에서 끝나
+         그 아래 이음이 각져도 초록이고, 그게 8·9회차 채점 2인의 2순위였다(위 REF_J 주석). */
+      FRACS_J.forEach((f, j) => {
+        const got = n.jd[j], want = REF_J[k][j];
+        ok(got != null && Math.abs(got - want) <= J_TOL,
+          `[B9-${Math.round(f * 100)}] ${k}(${c.id}) y${n.y0} 깊이 ${Math.round(f * 100)}% 세로 폭 `
+          + `${got == null ? 'n/a' : got.toFixed(2)} (ref ${want} · ±${J_TOL})`);
       });
     }
   }
@@ -808,6 +837,49 @@ async function shot(page, sel, out) {
   ok(r9.length > 0 && r9.every((r) => r.worst > B_TOL),
     `[R9] 표를 «어디서나 10» 으로 되돌리면 불릿 어깨 칸이 [B8] 창(±${B_TOL}) 밖이다 — `
     + r9.map((r) => `${r.id} y${r.y0} |Δref| ${r.worst}`).join(' · '));
+
+  /* ⚑⚑ **10회차 신설 — 되돌림 일곱째: 꼬리 두 마디만 되돌린다.** 앞의 여섯은 모양을 통째로
+     갈거나(§R·§R2) 머리를 누르거나(§R3) 띠 표를 지운다(§R9) — 10회차가 만진 것은
+     `NTC_PROF.bl` 의 **.95·.98 두 값**뿐이라 그 어느 것으로도 이번 수리가 되돌려졌는지 알 수 없다.
+     ⇒ 그 두 값만 9회차 것(.348 / .270)으로 되돌려 **[B9] 는 빨개지고 [B5] 는 초록인가**를 묻는다.
+     ⚠ 짝 항([R10b])이 있어야 «[B9] 가 [B5] 로 대체되지 않는다» 가 선다 — [B5] 격자가 .90 에서
+     끝나므로 꼬리를 되돌려도 [B5] 는 초록이어야 하고, 그것이 이 축을 따로 세운 이유의 증명이다.
+     ⚠ **배너도 같이 본다** — 되돌림은 `bl` 만 건드리므로 배너 [B9] 는 초록이어야 한다
+     (빨개지면 두 형이 한 표를 공유하고 있다는 뜻이라 «불릿만 고쳤다» 가 거짓이 된다). */
+  blk('§R10 되돌림 일곱째 — 꼬리 두 마디(.95·.98)를 9회차 값으로 되돌리면 [B9] 가 빨개지고 [B5] 는 초록이다');
+  await page.evaluate(() => {
+    Object.keys(NTC_PROF).forEach((k) => NTC_PROF[k].forEach((p, i) => { p[1] = PROF0[k][i]; }));
+    /* 마디를 **자리(f)로 찾아** 되돌린다 — 색인으로 적으면 표에 마디가 하나 끼는 날 조용히 딴 값을 민다. */
+    for (const [f, v] of [[0.95, 0.348], [0.98, 0.270]]) {
+      const row = NTC_PROF.bl.find((p) => Math.abs(p[0] - f) < 1e-9);
+      if (row) row[1] = v;
+    }
+    pvNtcCache.clear();
+    openShopTab('pass');
+  });
+  await page.waitForTimeout(500);
+  const png10 = await shot(page, '#app', tmp);
+  const r10 = [];
+  for (const c of boxes) {
+    if (c.y < 0 || c.bottom > png10.height) continue;
+    const bg = bgRowFn(png10, Math.min(png10.width, c.x + c.w + 13));
+    const k = c.ban ? 'ban' : 'bl';
+    const ns = notchStats(png10, c, bg).filter((n) => n.dep > 20 && Math.abs(n.len - REF[k].len) <= 8);
+    if (!ns.length) continue;
+    const jBad = ns.flatMap((n) => n.jd.map((g, j) => (g == null ? 99 : Math.abs(g - REF_J[k][j]))));
+    const wOut = ns.flatMap((n) => n.wd.map((g, j) => (g == null ? 99 : Math.abs(g - REF[k].wd[j]))));
+    r10.push({ k, id: c.id, jMax: Math.max(...jBad), wMax: Math.max(...wOut) });
+  }
+  const rBl = r10.filter((r) => r.k === 'bl'), rBan = r10.filter((r) => r.k === 'ban');
+  ok(rBl.length > 0 && rBl.every((r) => r.jMax > J_TOL),
+    `[R10] 꼬리를 되돌리면 불릿 «이음 폭»([B9])이 창(±${J_TOL}) 밖이다 — `
+    + rBl.map((r) => `${r.id} 최대 |Δ| ${r.jMax.toFixed(2)}`).join(' · '));
+  ok(r10.length > 0 && r10.every((r) => r.wMax <= W_TOL),
+    `[R10b] 그때 «깊이별 폭»([B5])은 전부 초록이다 — [B9] 가 [B5] 로 대체되지 않는다는 증거 · `
+    + r10.map((r) => `${r.k}:이음${r.jMax.toFixed(2)}/폭${r.wMax.toFixed(2)}`).join(' '));
+  ok(rBan.length > 0 && rBan.every((r) => r.jMax <= J_TOL),
+    '[R10c] 그때 **배너 [B9] 는 초록**이다 — 되돌림이 «bl» 만 건드리므로 두 형이 표를 안 나눠 쓴다는 증거 · '
+    + rBan.map((r) => `${r.id} 최대 |Δ| ${r.jMax.toFixed(2)}`).join(' · '));
 
   blk('§Z 콘솔');
   ok(errs.length === 0, `[Z] 콘솔·페이지 에러 0건 — ${errs.length}`);
