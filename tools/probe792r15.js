@@ -35,6 +35,17 @@ const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 const R = 60;
 
+/* ── 결정성 손잡이(1000) — 평소에는 둘 다 꺼져 있고, `verify1000` 만 켠다 ──
+ *   P1000_KICK=<vx>,<vy>  부팅 프레임이 남기는 속도를 **결정적으로** 흉내 낸다(자연 표류 대신)
+ *   P1000_NOPIN=1         용사 자리 못박기를 뺀다(§R 되돌림 시험)
+ * 아무것도 안 주면 이 자의 출력은 판을 넘어 **바이트 동일**이어야 한다 — 그것이 1000 의 약속이다. */
+const KICK = (process.env.P1000_KICK || '').trim()
+  ? process.env.P1000_KICK.split(',').map(Number) : null;
+const NOPIN = process.env.P1000_NOPIN === '1';
+if (KICK && (KICK.length !== 2 || !KICK.every(Number.isFinite))) {
+  console.error('P1000_KICK 은 «<vx>,<vy>» 두 수다 — 예: P1000_KICK=600,-400'); process.exit(3);
+}
+
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 const note = m => console.log('  (기록) ' + m);
@@ -69,18 +80,35 @@ const note = m => console.log('  (기록) ' + m);
   await page.waitForTimeout(1100);
   await page.evaluate(() => { window.requestAnimationFrame = () => 0; });
 
-  const out = await page.evaluate((R) => {
+  const out = await page.evaluate(({ R, kick, nopin }) => {
     let _rs = 0x2f6e2b1 >>> 0;
     Math.random = () => { _rs = (Math.imul(_rs, 1664525) + 1013904223) >>> 0; return _rs / 4294967296; };
     localStorage.clear(); Object.assign(S, DEF());
     S.stage = 20; S.best = 20; S.guide.idx = 99;
     if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
     spawnStage();
+    /* 부팅 프레임이 남긴 속도를 **결정적으로** 흉내 낸다(`verify1000` 전용 · 928 `--shift` 선례).
+       자연 표류를 되돌림 시험의 재료로 쓰면 두 판이 우연히 가까이 서서 시험 자신이 플레이키가 된다(928-④). */
+    if (kick) { player.vx = kick[0]; player.vy = kick[1]; }
     step(1 / 60); draw();
     const ox = camOx, oy = camOy;
 
     const FXMAP = { shots, ghosts, bolts, zones, booms, drones, parts, rings };
     const clearFx = () => { for (const n in FXMAP) FXMAP[n].length = 0; };
+
+    /* ── 용사 자리 못박기(1000) ──────────────────────────────────────────────
+       부팅 프레임 수는 **벽시계**를 탄다(928-②) — `goto` 뒤 1100ms 동안 제품의 제 루프가
+       판마다 다른 프레임 수로 돌고, `requestAnimationFrame` 을 눕히는 것은 그 **뒤**다.
+       ⚠ `spawnStage()` 가 x·y 는 WORLD 중심으로 되돌려 주므로 «자리는 이미 못박혀 있다» 로
+       읽기 쉽지만, **속도는 안 지운다** — 남은 vx·vy 가 바로 다음 `step()` 에서 용사를 몇 px 씩
+       다른 자리로 옮기고, 조준각 `atan2(표적 − 용사)` 가 그만큼 갈린다
+       (실측 부팅 직후 vx 49.99 / 141.86 / 91.33 · vy 189.6 / −180.3 / −207.3 ⇒
+        첫 step 뒤 자리 (961.2, 1538.9) / (962.2, 1533.3) / (960.0, 1534.2)).
+       ⇒ 넷을 **같이** 못박고(928 선례와 같은 네 값), 발을 만드는 모든 자리가 이 한 곳을 지나게 한다. */
+    const seatPlayer = () => {
+      if (nopin) return;   /* `verify1000` §R 되돌림 시험만 켠다 — 못박기를 뺀 자가 정말 갈리는지 */
+      player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+    };
 
     let foe = null;
     const putFoe = (fx, fy) => {
@@ -92,6 +120,8 @@ const note = m => console.log('  (기록) ' + m);
         foe.x = fx - ox; foe.y = fy - oy; foe.born = 9;
         foe.hp = 1e12; foe.max = 1e12; foe.sp = 0; foe.slow = 0; foe.dmg = 0;
       }
+      /* 표적을 세운 뒤에 못박는다 — 위 준비 루프(`step`)가 옮겨 놓은 것까지 되돌려야 한다 */
+      seatPlayer();
       return foe;
     };
     putFoe(); orbitAng = 0;
@@ -124,8 +154,7 @@ const note = m => console.log('  (기록) ' + m);
     }
 
     /* ── 찍힌 픽셀 — 같은 종을 두 각으로 세워 꼬리 방위각을 잰다 ── */
-    putFoe(); clearFx();
-    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+    putFoe(); clearFx();   /* 자리는 `putFoe` 안 `seatPlayer()` 가 못박는다(1000) — 사본을 두지 않는다 */
     const CX = Math.round(player.x + ox + 180), CY = Math.round(player.y + oy - 22);
     const bx = Math.round((CX - R) * SC), by = Math.round((CY - R) * SC);
     const bw = Math.round(2 * R * SC), bh = Math.round(2 * R * SC);
@@ -180,7 +209,7 @@ const note = m => console.log('  (기록) ' + m);
     }
     clearFx();
     return res;
-  }, R);
+  }, { R, kick: KICK, nopin: NOPIN });
 
   /* ── §2 제품 — 이 종은 실제로 «떨어지는가» ── */
   console.log('\n§2 제품 — `meteor` 가 게임에서 실제로 하는 일');
