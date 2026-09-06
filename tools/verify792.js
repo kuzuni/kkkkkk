@@ -106,9 +106,13 @@ const TH_MIN = 9, TH_MAX = 15, ASYM_MAX = 3.0, DWARM_MAX = 30;
    링만 있는 종 0 ~ 0.001 ↔ 제 손으로 반투명 부품을 그리는 종 0.062(운석 꼬리) · 0.127(창 잔광) ·
    0.158(화구) · 0.375(병 불빛). 빈 구간 한가운데를 잡는다(825 규칙). */
 const FAR_MAX = 0.03;
-/* [E1] 덩치 밴드 — **10회차 비평가 CV 가 준 목표 문장 그대로**다: «대각 중앙값 ±25% 밖 7종».
-   [B8]·[B9] 와 같은 자리(관측값이 아니라 목표를 박는다). [E2] 는 이 값에서 파생한다. */
-const DIAG_TOL = 0.25;
+/* [E1] 덩치 밴드 — **10회차 비평가 CV 가 준 목표 문장 그대로**다: «중앙값 ±25% 밖 7종».
+   [B8]·[B9] 와 같은 자리(관측값이 아니라 목표를 박는다). [E2] 는 이 값에서 파생한다.
+   ⚑ 995 — 문턱(±25%)은 **한 글자도 안 건드렸다**. 바뀐 것은 «무엇의 ±25%» 인가 하나뿐이고
+     (대각 → **최대 변**), 이름도 그에 맞춰 옮겼다(`DIAG_TOL` → `BULK_TOL` — 이름이 눈금을
+     거짓말하면 다음 회차가 또 대각을 읽는다). 넓혀서 초록으로 되돌리는 것이 995 가 고치는
+     병 그 자체이므로(979-②) 값은 못 건드린다. */
+const BULK_TOL = 0.25;
 /* [F1] ④ 뜻 — 문턱 둘. **관측값이 아니라 «빈 구간 한가운데»** 다(825 · [P1]·FAR_MAX 와 같은 규칙):
    반경 변동은 원반·고리 무리(화구 3.3 · 참격 고리(수리 전) 3.3~4.9 · 검기 14.8%) 와
    날·창 무리(갈퀴 69.8 ~ 천벌의 창 530%) 사이가 비어 있고, 테이퍼도 균일 폭 띠(0.79~0.98) 와
@@ -116,6 +120,10 @@ const DIAG_TOL = 0.25;
 const RVAR_MIN = 25, TAPER_MAX = 0.65;
 
 let pass = 0, fail = 0;
+/* 995 — [R5] 가 «지금 트리» 와 «표를 비운 사본» 을 **견주는** 항이 되면서 [E1] 이 잰 수를
+   밖으로 들고 나온다(예전엔 사본 하나만 보고 «빨간가» 만 물었다 — 지금은 [E1] 자신이
+   빨간 자리라 그 물음이 뜻을 잃는다). null 이면 [E1] 이 못 잰 것이니 [R5] 도 빨갛다. */
+let bulkBadNow = null, bulkSpNow = null;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 
 async function measure(browser, url) {
@@ -510,11 +518,21 @@ async function measure(browser, url) {
          눈금에서 빠지는데 **눈은 그것을 덩치로 센다**. 12회차 비평 2인(CX·CY)이 각자 렌더한
          대조 시트에서 `boom` +32.5/+26.3% · `flask` +32.6/+35.1% 를 잰 것이 그 몫이고,
          [E1] 은 같은 트리에서 «밖 0종» 이었다(989 등재문).
-         ⇒ 눈금 = **본체 ∪ «제 손으로 깐 반투명 부품»** 의 bbox 대각.
+         ⇒ 상자 = **본체 ∪ «제 손으로 깐 반투명 부품»**.
          ⚠ 부품의 정의를 자에 새로 적지 않는다 — [B8s] 가 `fFar` 로 **이미 세고 있는 바로 그 화소**
            (본체에서 `CBAND`px 밖 후광)를 그대로 쓴다. 공용 링은 설계 두께 12px 라 CBAND 안이라
            안 들어온다(그래서 링을 가진 15종은 `own` 이 `diag` 와 글자 그대로 같다).
-         ⚠ 본체 대각(`diag`)은 **지우지 않고 같이 들고 간다** — 아래 표·[E2]·`verify982` 가 읽는다. */
+         ⚠ 본체 대각(`diag`)은 **지우지 않고 같이 들고 간다** — 아래 표·[E2]·`verify982` 가 읽는다.
+         ⚑⚑ **995 — 상자를 «한 수» 로 접는 법이 틀려 있었다(잠복 게이트).** 989 까지는 그 상자를
+         **대각**으로 접었는데 `대각 = 최대변 × √(1 + (최소변/최대변)²)` 이라 가산분이 **종횡비에
+         통째로 달려 있다**: 정사각형 `stone`·`shuri` 에 **+41.4%** · 가느다란 `lance` 에 **+1.0%**.
+         14회차 비평 2인(CZ·DA)이 «작다» 고 지목한 둘이 정확히 정사각형이고 «크다» 고 지목한 둘이
+         정확히 조각이라, 대각은 **눈이 보는 스프레드를 그 자리에서만 골라 눌러 준다**(밖 0종).
+         ⇒ 눈금 = **최대 변**(`bulk` = max(w,h) — 그 상자가 화면에서 뻗는 길이). 셋 중 이것만이
+           2인이 «눈으로» 지목한 넷(작다 stone·shuri / 크다 lance·arrow)을 **그대로 도로 낸다**
+           (기하평균은 `lance` 를 «가장 작은 종» 으로 뒤집어 놓는다 — 아래 [E1n] 대조표).
+         ⚠ 다른 접는 법 셋(대각 · 기하평균 · 잉크 √)은 **지우지 않고 [E1n] 에 같이 찍는다** —
+           눈금을 갈아 끼우는 것이 곧 되돌림 경로이므로 그 표가 되돌림 방법 자체다. */
       let bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1;
       let ox0 = 1e9, oy0 = 1e9, ox1 = -1, oy1 = -1;
       let vx0 = 1e9, vy0 = 1e9, vx1 = -1, vy1 = -1;      /* 989 — 눈이 보는 상한(공용 링까지) · 기록만 */
@@ -565,7 +583,13 @@ async function measure(browser, url) {
       rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off, dBase, rvar, taper,
                    bbw, bbh, diag: +Math.hypot(bbw, bbh).toFixed(1),
                    own: +Math.hypot(obw, obh).toFixed(1),
+                   /* 995 — 같은 상자를 접는 법 셋. 판정은 `bulk`(최대 변) 하나가 쓰고
+                      나머지 둘은 [E1n] 대조표가 읽는다(눈금을 갈아 끼우는 되돌림 경로). */
+                   obw, obh,
+                   bulk: Math.max(obw, obh),
+                   ownGeo: +Math.sqrt(obw * obh).toFixed(1),
                    vis: +Math.hypot(vbw, vbh).toFixed(1),
+                   visMax: Math.max(vbw, vbh),          /* 995 — 이웃 «상자» 도 같은 법으로 접는다 */
                    dL: nb ? +((lb - lg) / nb).toFixed(1) : 0,
                    fSoft: +(soft / Math.max(1, ink)).toFixed(4),
                    fSpec: +(sp2 / Math.max(1, ink)).toFixed(4),
@@ -922,31 +946,57 @@ if (require.main === module) (async () => {
          '[E0] 측정 상자가 잉크를 안 자른다 — 사다리에서 고른 상자 R' + (out.box ? out.box.R : '?') +
          '(' + (out.box ? out.box.bw : '?') + '기기px) · 테두리에 닿는 화소 ' +
          (out.box ? out.box.clip : '?') + ' (R60 이면 meteor 30화소 — **잘린 값은 상자 크기로 수렴해 밴드 안으로 읽힌다**)');
-      const dgs = ids.map(i => out.rows[i].own).sort((a, b) => a - b);
-      const dMed = dgs[Math.floor((dgs.length - 1) / 2)];
-      const dLo = +(dMed * (1 - DIAG_TOL)).toFixed(1), dHi = +(dMed * (1 + DIAG_TOL)).toFixed(1);
-      const dBad = ids.filter(i => out.rows[i].own < dLo || out.rows[i].own > dHi);
-      ok(dBad.length === 0,
-         '[E1] ③ 덩치 — **본체 + 제 손 부품** 대각이 중앙값 ' + dMed + 'px 의 ±' + Math.round(DIAG_TOL * 100) +
-         '% (' + dLo + '~' + dHi + ') 안 · 밖 ' + dBad.length + '종' +
-         (dBad.length ? ' (' + dBad.map(i => i + ':' + out.rows[i].own).join(' · ') + ')' : '') +
-         ' · 본체만 재면(옛 눈금) 밖 ' +
-         (() => { const g = ids.map(i => out.rows[i].diag).sort((a, b) => a - b);
-                  const m = g[Math.floor((g.length - 1) / 2)];
-                  return ids.filter(i => out.rows[i].diag < m * (1 - DIAG_TOL) ||
-                                         out.rows[i].diag > m * (1 + DIAG_TOL)).length; })() + '종');
+      /* ⚑⚑ 995 — 눈금이 «대각» 에서 **«최대 변»** 으로 바뀌었다(measure 주석). 상자(989)와
+         문턱(±25% · CV 목표)은 그대로다. 이 항이 **빨간 것이 정상**이다 — 덩치 배율표
+         (`SHOT_SC`)가 대각 눈금 위에서 맞춰진 값이라 최대 변으로 재면 밴드가 열린다.
+         닫는 것은 792 의 몫이고(배율표), 995 의 몫은 **눈금이 거짓 초록을 만들지 않는 것**이다. */
+      const bulkBand = (key) => {
+        const g = ids.map(i => out.rows[i][key]).sort((a, b) => a - b);
+        const m = g[Math.floor((g.length - 1) / 2)];
+        const lo = +(m * (1 - BULK_TOL)).toFixed(1), hi = +(m * (1 + BULK_TOL)).toFixed(1);
+        return { m, lo, hi, bad: ids.filter(i => out.rows[i][key] < lo || out.rows[i][key] > hi),
+                 sp: +(g[g.length - 1] / Math.max(1, g[0])).toFixed(2), min: g[0], max: g[g.length - 1] };
+      };
+      const bk = bulkBand('bulk');
+      bulkBadNow = bk.bad.length; bulkSpNow = bk.sp;
+      ok(bk.bad.length === 0,
+         '[E1] ③ 덩치 — **본체 + 제 손 부품** 상자의 **최대 변**이 중앙값 ' + bk.m + 'px 의 ±' +
+         Math.round(BULK_TOL * 100) + '% (' + bk.lo + '~' + bk.hi + ') 안 · 밖 ' + bk.bad.length + '종' +
+         (bk.bad.length ? ' (' + bk.bad.map(i => i + ':' + out.rows[i].bulk).join(' · ') + ')' : '') +
+         ' · 스프레드 ' + bk.sp + '배 (' + bk.min + '~' + bk.max + ')');
+      /* ⚑ 995 [E1n] — **같은 상자를 다르게 접은 표**(기록만). 눈금은 «측정» 이 아니라 «선택» 이라
+         (14회차 §눈금) 고른 뒤에도 나머지를 지우지 않고 나란히 찍는다: 되돌리려면 위 `bulkBand('bulk')`
+         를 이 표의 다른 열로 바꾸면 그만이다. ⚠ **대각 열이 «밖 0종» 인 것이 995 가 등재된 이유**다 —
+         그 0 은 규격이 선 증거가 아니라 정사각형에만 +41.4% 를 얹는 산수가 만든 것이다. */
+      {
+        const rows4 = [['최대변(판정)', 'bulk'], ['대각(옛 눈금)', 'own'], ['기하평균', 'ownGeo'],
+                       ['잉크 √면적', 'inkR']];
+        for (const i of ids) out.rows[i].inkR = +Math.sqrt(out.rows[i].hard).toFixed(1);
+        console.log('  (기록) [E1n] 같은 상자를 접는 법 — 중앙값 · 최소~최대 · 스프레드 · ±' +
+                    Math.round(BULK_TOL * 100) + '% 밖');
+        for (const [nm, key] of rows4) {
+          const b = bulkBand(key);
+          console.log('           ' + nm.padEnd(14) + String(b.m).padStart(7) + '  ' +
+                      (b.min + '~' + b.max).padStart(13) + '  ' + (b.sp + '배').padStart(7) +
+                      '  밖 ' + b.bad.length + '종' + (b.bad.length ? ' (' + b.bad.join(' · ') + ')' : ''));
+        }
+      }
       /* ⚑ 989 — **이웃 눈금을 같이 찍는다(기록만).** [E1] 의 눈금은 «공용 링 제외» 라 CBAND(18px)에
          **계단**이 있다 — 제 손 부품의 뻗음이 그 문턱을 넘나들면 한 종의 값이 «본체» 와
          «본체+부품» 사이를 뛴다(실측: `boom` 은 배율 0.9 근처가 그 자리다). 그래서 문턱이 하나도
          없는 눈금(**보이는 잉크 전부** — 비평가가 대조 시트에서 재는 것이 이 값이다)을 나란히
-         찍어 둔다. 판정은 [E1] 하나뿐이고 이 줄은 **다음 회차 채점의 대조표**다. */
+         찍어 둔다. 판정은 [E1] 하나뿐이고 이 줄은 **다음 회차 채점의 대조표**다.
+         ⚑ 995 — 이 이웃은 **«상자»** 축이라 «접는 법» 축([E1n])과 서로 다른 물음이다. 두 축이
+           섞이지 않게 여기도 같은 법(최대 변)으로 접는다 — 안 그러면 «상자를 넓혀서» 생긴 차이와
+           «대각이 정사각형을 부풀려서» 생긴 차이가 한 수에 겹친다. */
       {
-        const vs = ids.map(i => out.rows[i].vis).sort((a, b) => a - b);
+        const vs = ids.map(i => out.rows[i].visMax).sort((a, b) => a - b);
         const vM = vs[Math.floor((vs.length - 1) / 2)];
-        const vBad = ids.filter(i => out.rows[i].vis < vM * (1 - DIAG_TOL) || out.rows[i].vis > vM * (1 + DIAG_TOL));
-        console.log('  (기록) [E1] 이웃 눈금 — **보이는 발 전부**(공용 링까지) 대각 중앙값 ' + vM +
-          'px · ±' + Math.round(DIAG_TOL * 100) + '% 밖 ' + vBad.length + '종' +
-          (vBad.length ? ' (' + vBad.map(i => i + ':' + out.rows[i].vis).join(' · ') + ')' : '') +
+        const vBad = ids.filter(i => out.rows[i].visMax < vM * (1 - BULK_TOL) ||
+                                     out.rows[i].visMax > vM * (1 + BULK_TOL));
+        console.log('  (기록) [E1v] 이웃 상자 — **보이는 발 전부**(공용 링까지) 최대 변 중앙값 ' + vM +
+          'px · ±' + Math.round(BULK_TOL * 100) + '% 밖 ' + vBad.length + '종' +
+          (vBad.length ? ' (' + vBad.map(i => i + ':' + out.rows[i].visMax).join(' · ') + ')' : '') +
           ' · 최소 ' + vs[0] + ' ~ 최대 ' + vs[vs.length - 1]);
       }
       /* ⚑⚑ 13회차 [F1] — **④ 뜻**: «주변 참격» 이 도는가. 12회차 2인 공통 ⓑ 를 자로 옮긴 자리다
@@ -1024,12 +1074,12 @@ if (require.main === module) (async () => {
       console.log('  (기록) 후광을 굽는 첫 프레임 ' + out.bake + 'ms — 종당 한 번뿐(캐시)');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
-      console.log('\n  [표] 종별 — 덩치대각(본체+제손) · 본체대각(bbox) · 본체잉크 · ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫' +
+      console.log('\n  [표] 종별 — 덩치최대변(본체+제손) · 본체대각(bbox) · 본체잉크 · ink · fSoft / fSpec · 후광중심어긋남 · 본체ΔL · α최빈칸몫 · 램프몫' +
                   ' · 두께p90/p10 · 비대칭 · 먼몫 · 후광R−B / 본체R−B');
       for (const id of ids) {
         const r = out.rows[id];
         console.log('        ' + id.padEnd(9) + r.sh.padEnd(10) +
-                    String(r.own).padStart(7) +
+                    (r.bulk + '(' + r.obw + '×' + r.obh + ')').padStart(14) +
                     (r.diag + '(' + r.bbw + '×' + r.bbh + ')').padStart(15) +
                     String(r.hard).padStart(7) +
                     String(r.ink).padStart(7) + '  ' +
@@ -1097,22 +1147,31 @@ if (require.main === module) (async () => {
          '[R4] 링을 끄면 두께·대칭이 흩어진다 — 링 자산 ' + Object.keys(rAura.out.rings || {}).length +
          '종(0) · 장면 두께 밴드 밖 ' + bad2.length + '종 ≥ 8 · 비대칭 ' + as2.length + '종 ≥ 5 (잰 종 ' + ks2.length + ')');
     }
-    /* ⚑ [R5] — 11회차. 배율표를 **비우면** 덩치가 수리 전으로 돌아간다(밴드 밖 6종).
-       ⚠ 문턱을 «≥ 6» 이 아니라 «≥ 4» 로 둔다 — 밴드는 **중앙값에 매여 있어** 표를 비우면
-         중앙값 자체도 141.8 로 같이 움직이므로, 되돌린 세계에서 밖으로 나가는 종 수는
-         관측값 6 에 딱 붙여 박을 값이 아니다(825 «관측값을 문턱으로 박지 마라»).
-         그래도 «표가 없으면 밴드가 깨진다» 는 명제는 4 로도 충분히 못박힌다(수리 후는 0 이다). */
+    /* ⚑ [R5] — 11회차. 배율표를 **비우면** 덩치가 수리 전으로 돌아간다.
+       ⚑⚑ **995 가 이 항의 물음을 바꿨다.** 11~14회차의 물음은 «비우면 [E1] 이 빨개지는가» 였고,
+         그것은 [E1] 이 **수리 후 초록**이라는 전제 위에서만 뜻이 있었다. 995 가 눈금을 고친
+         지금은 [E1] 이 **지금 트리에서도 빨갛다**(배율표가 대각 눈금 위에서 맞춰진 값이라) —
+         그 전제가 사라졌으므로 «빨개지는가» 는 언제나 참인 빈 물음이다.
+       ⇒ 물음을 **견줌**으로 바꾼다: «표가 있는 쪽이 없는 쪽보다 **덜 벌어져 있는가»**.
+         (밖 종 수 · 스프레드 둘 중 하나라도 표 쪽이 나으면 표는 실제로 그 축에 닿아 있다.)
+       ⚠ 관측값을 문턱으로 박지 않는다(825) — 문턱은 «사본보다 낫다» 는 **부등호 하나**뿐이라
+         회차마다 값이 움직여도 뜻이 안 상한다. 792 가 배율표로 [E1] 을 닫으면 이 항은
+         그대로 더 크게 초록이 된다(밖 0종 < 사본 n종). */
     fs.writeFileSync(NEG_SC, killLine(src, TAG_SC, `const SHOT_SC = {};`), 'utf8');
     const rSc = await measure(browser, 'file://' + NEG_SC);
     if (rSc.out && rSc.out.__err) ok(false, '[R5] 사본 측정 예외 — ' + rSc.out.__err);
+    else if (bulkBadNow === null) ok(false, '[R5] [E1] 이 못 재서 견줄 수가 없다');
     else {
       const ks3 = Object.keys(rSc.out.rows);
-      const dg3 = ks3.map(i => rSc.out.rows[i].diag).sort((a, b2) => a - b2);
+      const dg3 = ks3.map(i => rSc.out.rows[i].bulk).sort((a, b2) => a - b2);
       const md3 = dg3[Math.floor((dg3.length - 1) / 2)];
-      const bad3 = ks3.filter(i => rSc.out.rows[i].diag < md3 * (1 - DIAG_TOL) ||
-                                   rSc.out.rows[i].diag > md3 * (1 + DIAG_TOL));
-      ok(bad3.length >= 4, '[R5] 덩치 배율표를 비우면 [E1] 이 빨개진다 — 밴드 밖 ' + bad3.length +
-         '종 ≥ 4 (중앙값 ' + md3 + 'px · ' + bad3.join(' · ') + ')');
+      const bad3 = ks3.filter(i => rSc.out.rows[i].bulk < md3 * (1 - BULK_TOL) ||
+                                   rSc.out.rows[i].bulk > md3 * (1 + BULK_TOL));
+      const sp3 = +(dg3[dg3.length - 1] / Math.max(1, dg3[0])).toFixed(2);
+      ok(bad3.length > bulkBadNow || sp3 > bulkSpNow,
+         '[R5] 덩치 배율표가 그 축에 닿아 있다 — 표를 비운 사본이 더 벌어진다 · 밴드 밖 ' +
+         bulkBadNow + '종 → ' + bad3.length + '종 · 스프레드 ' + bulkSpNow + '배 → ' + sp3 +
+         '배 (사본 중앙값 ' + md3 + 'px · 밖 ' + bad3.join(' · ') + ')');
     }
     /* ⚑ [R6] — 13회차. **나선을 끄면** [F1] 이 빨개진다(값 두 개만 되돌린다 — 획·반지름·토막 수는
        그대로다). 이것이 «[F1] 의 초록이 처방이 닿은 자리에서 온다» 는 증거다.

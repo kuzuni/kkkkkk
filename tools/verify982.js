@@ -27,7 +27,8 @@
  * 절:
  *   [A] 축   — 재질 무리 가설의 기각이 지금도 참인가(축이 바뀌면 이 항이 먼저 빨개진다).
  *   [B] 하한 — 17종 전부가 중앙값 × 0.75 이상. 위쪽은 원형도 천장을 안 넘는가(근거 항).
- *   [C] 대가 — 792 [E1] 대각 밴드 · 710 분간(IoU) · **손 안 댄 13종의 밀도 Δ0**.
+ *   [C] 대가 — 792 [E1] 덩치(**최대 변** · 995 이관 — 되돌림 사본과 견준다) · 710 분간(IoU) ·
+ *              **손 안 댄 13종의 밀도 Δ0**.
  *   [D] 선언 — `SHOT_FILL` 이 한 곳에서만 선언되고 한 곳에서만 읽힌다(402 «사본을 지운다»).
  *   [R] 되돌림 시험 — 표를 비운 사본에서 [B1] 이 **실제로** 빨개진다.
  *
@@ -59,8 +60,9 @@ const DISK = Math.PI / 4;
 /* «방사 발광 재질» 목록은 자에 손으로 안 적는다 — 제품에게 물어서 만든 `fFar` 로 가른다
    (`verify792` [B8s] 와 **같은 문턱**이라 두 자가 같은 무리를 본다). */
 const FAR_MAX = 0.03;
-/* [C1] — 792 [E1] 과 같은 값. 이 자가 «대가 0» 을 말하려면 그쪽과 같은 자를 써야 한다. */
-const DIAG_TOL = 0.25;
+/* [C1] — 792 [E1] 과 같은 값. 이 자가 «대가 0» 을 말하려면 그쪽과 같은 자를 써야 한다.
+   ⚑ 995 — 792 가 이름을 `BULK_TOL` 로 옮겼다(눈금이 대각 → 최대 변). 값은 그대로 ±25%. */
+const BULK_TOL = 0.25;
 /* [C2] — 710 [C1] · 792 [D1] 과 같은 문턱. */
 const IOU_MAX = 0.90;
 /* [C3]·[C4] 문턱 — «표에 없는 종이 안 움직였는가» 를 **Δ0 으로 물으면 자가 스스로 플레이키다**.
@@ -108,7 +110,7 @@ const med = xs => { const s = xs.slice().sort((a, b) => a - b); return s[Math.fl
       const ids = Object.keys(out.rows);
       const rows = ids.map(i => ({ i, sh: out.rows[i].sh, d: dens(out.rows[i]),
                                    hard: out.rows[i].hard, bbw: out.rows[i].bbw, bbh: out.rows[i].bbh,
-                                   diag: out.rows[i].diag, own: out.rows[i].own, fFar: out.rows[i].fFar }));
+                                   diag: out.rows[i].diag, own: out.rows[i].own, bulk: out.rows[i].bulk, fFar: out.rows[i].fFar }));
       const all = rows.map(r => r.d);
       const dMed = med(all);
       const LO = +(dMed * (1 - DENS_TOL)).toFixed(4);
@@ -149,26 +151,52 @@ const med = xs => { const s = xs.slice().sort((a, b) => a - b); return s[Math.fl
       /* ⚑ 989 이관 — [E1] 의 **눈금이 바뀌었다**(본체 → 본체 + 종이 제 손으로 깐 반투명 부품).
          옛 눈금(`diag`)을 여기서 계속 재면 이 항은 «792 의 판정» 이 아니라 **792 가 버린 자**를
          지키게 된다 — 989 뒤 실제로 밖 4종으로 빨개졌고 그 넷(whirl·arrow·bounce·gale)은
-         989 가 한 글자도 안 건드린 종이다. 값은 `verify792` 의 measure 가 돌려준 것 그대로다(402). */
-      const dgs = rows.map(r => r.own);
-      const gMed = med(dgs);
-      const gLo = +(gMed * (1 - DIAG_TOL)).toFixed(1), gHi = +(gMed * (1 + DIAG_TOL)).toFixed(1);
-      const gBad = rows.filter(r => r.own < gLo || r.own > gHi);
-      ok(gBad.length === 0,
-         '[C1] 대가 — 792 [E1] 덩치 밴드가 그대로다 (중앙값 ' + gMed + 'px · ' + gLo + '~' + gHi +
-         ' · 밖 ' + gBad.length + '종' + (gBad.length ? ' ' + gBad.map(r => r.i + ':' + r.own).join(' · ') : '') +
-         ') — 획을 부풀리면 bbox 도 같이 커진다');
+         989 가 한 글자도 안 건드린 종이다. 값은 `verify792` 의 measure 가 돌려준 것 그대로다(402).
+         ⚑⚑ **995 이관 — 접는 법이 «대각» 에서 «최대 변»(`bulk`)으로 바뀌었다**(같은 이유로 한 번 더:
+         대각은 정사각형 종을 +41.4% 부풀려 밴드를 인위적으로 좁힌다 — `verify792` measure 주석).
+         ⚠ **묻는 문장도 같이 바뀌었다.** 옛 [C1] 은 792 의 **절대 밴드**를 여기서 한 번 더 물었는데,
+           995 뒤 그 밴드는 792 자신이 배율표로 닫을 때까지 **빨간 것이 정상**이라(등재 995) 그대로
+           두면 982 는 «남의 미완» 때문에 빨개진다 — 982 가 한 글자도 안 건드린 종 때문에.
+         ⇒ 982 가 질 수 있는 것은 **«내 획 처방이 덩치를 더 벌렸는가»** 하나뿐이므로 자기 되돌림
+           사본(`SHOT_FILL` 빈 표)과 **견준다**. 792 가 밴드를 닫아도 이 항은 그대로 초록이고,
+           982 가 획을 부풀려 덩치를 밀면 그때 빨개진다(문턱은 부등호 하나 — 825). */
+      fs.writeFileSync(NEG_FILL, src.replace(new RegExp(TAG_FILL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*'),
+                                             'const SHOT_FILL = {};'));
+      const neg = await measure(browser, 'file://' + NEG_FILL);
+      const negOk = !(neg.out && neg.out.__err);
+      if (!negOk) ok(false, '[R] 되돌림 측정 블록 예외 — ' + neg.out.__err);
+      /* ⚠ **묻는 것은 [E1] 이 묻는 것과 같은 것 하나뿐이다 — «밴드 밖 종»**(개수가 아니라 이름).
+         스프레드는 같이 찍되 판정에 안 넣는다: 획을 패딩하면 그 종의 bbox 가 몇 px 커지므로
+         **밖에 이미 나가 있는 종의 값이 조금 더 커지는 것**은 이 처방의 정의상 따라오는 몫이고,
+         그것까지 부등호로 묶으면 문턱이 곧 손 상수가 된다(825). 판정이 잡는 것은 **«안에 있던
+         종이 밖으로 나갔는가»** — 그것이 «내 획이 [E1] 의 판정을 더 나쁘게 만들었는가» 다. */
+      const bulkBand = (rs) => {
+        const g = rs.map(r => r.bulk).sort((a, b) => a - b);
+        const m = g[Math.floor((g.length - 1) / 2)];
+        return { m, out: rs.filter(r => r.bulk < m * (1 - BULK_TOL) || r.bulk > m * (1 + BULK_TOL))
+                           .map(r => r.i || r.sh),
+                 sp: +(g[g.length - 1] / Math.max(1, g[0])).toFixed(2) };
+      };
+      if (negOk) {
+        const cur = bulkBand(rows);
+        const nRows = Object.keys(neg.out.rows).map(i => Object.assign({ i }, neg.out.rows[i]));
+        const nb = bulkBand(nRows);
+        const newOut = cur.out.filter(i => nb.out.indexOf(i) < 0);
+        ok(newOut.length === 0,
+           '[C1] 대가 — 획 처방이 792 [E1] 덩치(최대 변) 밴드에서 **안에 있던 종을 밖으로 내보내지 ' +
+           '않았다** · 새로 밖 ' + newOut.length + '종' + (newOut.length ? ' (' + newOut.join(' · ') + ')' : '') +
+           ' · 밖 [' + nb.out.join('·') + '](되돌림) → [' + cur.out.join('·') + '](제품)' +
+           ' · (기록) 스프레드 ' + nb.sp + '배 → ' + cur.sp + '배 · 중앙값 ' + nb.m + ' → ' + cur.m + 'px' +
+           ' (⚠ 절대 밴드는 792 [E1] 이 든다 — 995 뒤 그것은 배율표를 닫을 때까지 빨갛다)');
+      }
       ok(out.worst.iou <= IOU_MAX,
          '[C2] 대가 — 710 분간이 안 되감겼다 · 실루엣 IoU 최댓값 ' + out.worst.iou + ' ≤ ' + IOU_MAX +
          ' (최악 쌍 ' + out.worst.a + '↔' + out.worst.b + ')');
       ok(errs.length === 0, '[G1] 콘솔/페이지 오류 0건 (실측 ' + errs.length + ')');
 
       /* ---- [R] 되돌림 + [C3] 범위 ---- */
-      fs.writeFileSync(NEG_FILL, src.replace(new RegExp(TAG_FILL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*'),
-                                             'const SHOT_FILL = {};'));
-      const neg = await measure(browser, 'file://' + NEG_FILL);
-      if (neg.out && neg.out.__err) { ok(false, '[R] 되돌림 측정 블록 예외 — ' + neg.out.__err); }
-      else {
+      /* ⚑ 995 — 되돌림 사본은 위 [C1] 이 이미 재 두었다(한 번만 굽는다 · 402 «사본을 지운다»). */
+      if (negOk) {
         const nd = {};
         for (const i of Object.keys(neg.out.rows)) nd[i] = dens(neg.out.rows[i]);
         const nAll = Object.values(nd);
