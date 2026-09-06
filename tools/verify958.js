@@ -381,9 +381,12 @@ console.log('\n[9] 2회차 — `probe352.py` 세 축(테두리 두께 · 구분�
   ok('[9-C] 소스가 존재 확인 뒤에 연다', /os\.path\.exists\(CAP7\)/.test(S352));
 
   /* ---- 래칫 — 남은 넷의 이름 ---- */
+  /* 958 3회차 이관 — 못박던 뜻은 «2회차까지 닫은 둘이 주홍에 없다» 이고 «넷» 은 그 시점의
+     잔량이었다. 3회차가 `probe449` 를 닫아 셋이 되므로 **뜻은 그대로 두고** 잔량은 열었다 —
+     지금 남은 셋의 **이름**은 [10-u] 가 든다(래칫은 언제나 마지막 회차가 든다). */
   const brk4 = P.census().filter((x) => x.verdict === 'B').map((x) => x.file).sort();
-  ok('[9-D] 주홍 넷이 **이름으로** 남았다 (958 이 여섯 중 둘을 닫았다)',
-    brk4.join(' ') === 'probe449.py scanA4.py scanA4b.py scan335.py'.split(' ').sort().join(' '),
+  ok('[9-D] 주홍에 **1·2회차가 닫은 둘이 없다** (`probe384` · `probe352`) · 잔량은 그때 넷',
+    brk4.length <= 4 && !['probe384.py', 'probe352.py'].some((f) => brk4.includes(f)),
     brk4.join(' '));
 
   /* ---- 되돌림 ---- */
@@ -393,6 +396,98 @@ console.log('\n[9] 2회차 — `probe352.py` 세 축(테두리 두께 · 구분�
     B && D && Math.abs(B[0]) > 0.02 && Math.abs(D[0]) > 0.05);
   ok('[9-R3] ref 지문도 되돌아간다 — 옛 자는 테두리 넷이 **전부** 정수다',
     bi && [1, 2, 3, 4, 5, 6, 7, 8].every((k) => /^\d+$/.test(bi[k])));
+}
+
+/* ── [10] 3회차 — `tools/probe449.py` ─────────────────────────────────── */
+console.log('\n[10] 3회차 — `probe449.py` 두 축(코너 광선 0.5px · 알약 윤곽/세로 모서리 1px)이 격자에서 풀렸는가');
+{
+  const S449 = fs.readFileSync(path.join(TOOLS, 'probe449.py'), 'utf8');
+  const run449 = (extra) => String(py(['tools/probe449.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+  const PH = run449(['--physics']);
+  const COV = run449([]);
+  const INT = run449(['--int']);
+
+  /* ---- ⓐ 광선 축 — 942 5회차와 «같은 자» 를 부른다(사본 0) ---- */
+  const lay = (mode, who) => {
+    const l = PH.split('\n').find((x) => new RegExp(`^\\s+${mode}\\s+${who}\\s`).test(x));
+    return l ? l.trim().split(/\s+/).slice(2).map((t) => [t[0], parseFloat(t.slice(1))]) : null;
+  };
+  const iR = lay('int', 'ref'), cR = lay('cov', 'ref'), cC = lay('cov', 'cap');
+  ok('[10-a] ⚑ **걸음을 먼저 봤다** — 이 자의 광선은 0.5px 이라 942 의 팔레트 길이 **온다**(958 1회차가 1px 에서 기각한 그 길)',
+    /걸음이 \*\*0\.5px\*\*/.test(S449) && /runs_from\(cols, mode=m, step=step, pal=PAL\)/.test(S449));
+  ok('[10-b] 그 길이 번진 판에서 «없는 층» 을 세우던 것을 닫는다 (층 6 → 4)',
+    iR && cR && iR.length > cR.length && cR.length === 4, iR && cR ? `${iR.length} → ${cR.length}` : 'nul');
+  ok('[10-c] 두 판이 같은 차례·같은 두께로 모인다 (참값 S3 K7 D4 B7)',
+    cR && cC && cR.every(([c], i) => c === 'SKDB'[i])
+    && cR.every((v, i) => Math.abs(v[1] - cC[i][1]) <= 0.30),
+    cR && cR.map((l) => l[0] + l[1].toFixed(2)).join(' '));
+  ok('[10-d] ⚑ **사본을 안 만들었다** — 층 셈이 이 파일에 없다(`probe409g` 를 부른다)',
+    /from probe409g import runs_from, phys_cols/.test(S449) && !/def runs_from|def _proj/.test(S449));
+  ok('[10-e] ⚠ 팔레트를 **이 자의 것**으로 넘긴다 — 셸 트랙 `S` 가 409 계열과 다른 색이다',
+    /\('S', \(97, 80, 60\)\)/.test(S449) && /pal=PAL/.test(S449));
+
+  /* ---- ⓑ 모서리 축 — 932 처방 ⓐ ---- */
+  const eb = PH.match(/부호 편향\s+옛\s*([-+]?[\d.]+)\s*→\s*새\s*([-+]?[\d.]+)\s*px\*\*\s+\(판 사이 \|Δ\| ([\d.]+) → ([\d.]+)\)/);
+  ok('[10-f] 모서리 축 재현이 돈다 (걸음 1px — 여기는 팔레트 길이 못 온다)', !!eb, eb && eb.slice(1).join(' '));
+  ok('[10-g] 옛 자는 번진 판에서 **한 방향으로** 0.5px 넘게 깎인다', eb && parseFloat(eb[1]) < -0.5, eb && eb[1]);
+  ok('[10-h] 새 자는 그 편향이 1/5 아래다', eb && Math.abs(parseFloat(eb[2])) < Math.abs(parseFloat(eb[1])) / 5,
+    eb && `${eb[1]} → ${eb[2]}`);
+  const fp = (who, mode) => {
+    const m = PH.match(new RegExp(`${who} ${mode}\\s+0\\.5배수 (\\d+)/(\\d+)`));
+    return m ? [+m[1], +m[2]] : null;
+  };
+  const cCap = fp('cap', 'cov'), rInt = fp('ref', 'int'), rCov = fp('ref', 'cov');
+  ok('[10-i] ⚑ 칼같은 판은 새 자도 0.5 배수다 (계단에는 부분 화소 정보가 없다)',
+    cCap && cCap[0] === cCap[1] && cCap[1] > 0, cCap && cCap.join('/'));
+  ok('[10-j] 번진 판 — 옛 자 **전부** 0.5 배수 ↔ 새 자 **하나도** 아니다',
+    rInt && rCov && rInt[0] === rInt[1] && rCov[0] === 0, `${rInt && rInt.join('/')} ↔ ${rCov && rCov.join('/')}`);
+
+  /* ---- ref 실측 — ⚑⚑ 437 을 독립으로 재확인한다 ---- */
+  const vI = INT.match(/알약 세로 (\d+)\.\.(\d+) \(h (\d+)\)/);
+  const vC = COV.match(/부분화소 알약 세로 \*\*([\d.]+)\.\.([\d.]+)\*\* \(h \*\*([\d.]+)\*\*\)/);
+  const oI = INT.match(/알약 윤곽 x = ([\d.]+)/);
+  const oC = COV.match(/부분화소 알약 윤곽 x = \*\*([\d.]+)\*\*/);
+  ok('[10-k] ref 알약 세로가 격자에서 풀렸다', vI && vC && Math.abs(+vC[3] - Math.round(+vC[3])) > 1e-9,
+    vI && vC && `${vI[3]} → ${vC[3]}`);
+  ok('[10-l] ⚑⚑ **437 을 독립으로 재확인한다** — 옛 정수 자는 85(폐기된 옛 값) · 새 자는 **84.0±0.2**(437 이 확정한 칸 84)',
+    vI && vC && +vI[3] === 85 && Math.abs(+vC[3] - 84) <= 0.2, vI && vC && `${vI[3]} → ${vC[3]}`);
+  ok('[10-m] 알약 윤곽도 격자에서 풀렸다 (옛 자는 «마지막 K 표본 + 0.5» 라 언제나 x.5)',
+    oI && oC && Math.abs(+oI[1] * 2 - Math.round(+oI[1] * 2)) < 1e-9
+    && Math.abs(+oC[1] * 2 - Math.round(+oC[1] * 2)) > 1e-9, oI && oC && `${oI[1]} → ${oC[1]}`);
+
+  /* ---- 보존·불변 ---- */
+  const cut = (t) => t.split('\n').filter((l) => /셸 검정 \d+\.\.|상·하 검정 런|가로 단면 \(x|세로 단면 \(y/.test(l)
+    || /^\s+[A-Z][0-9]+ /.test(l)).join('\n');
+  ok('[10-n] ⚑⚑ 두 모드의 «어느 런인가» 줄이 **글자까지 같다** — 표본·분류·창을 안 건드렸다',
+    cut(COV) === cut(INT) && cut(INT).length > 0);
+  ok('[10-o] `--int` 가 옛 값을 되살린다 (자릿수만 넓혔다 — 값은 한 자도 안 다르다)',
+    /K1\.50 D5\.50 F1\.50 B5\.50/.test(INT) && /첫실런/.test(INT));
+  ok('[10-p] 창·걸음·코너가 그대로다 (depth 24 · step 0.5 · R 30 · 각도 6종)',
+    /depth=24\.0, step=0\.5/.test(S449) && /^R = 30$/m.test(S449)
+    && /DEGS = \[0, 15, 30, 45, 60, 75\]/.test(S449));
+  ok('[10-q] «어느 런인가» 규칙이 그대로다 (`first_solid` 문턱 1.5 · 세로 K 런 n≥4)',
+    /def first_solid\(rs, mn=1\.5\)/.test(S449) && /if ch == 'K' and n >= 4/.test(S449));
+  ok('[10-r] 옛 자가 `--int` 로 살아 있다', /MODE = 'int' if '--int' in sys\.argv else 'cov'/.test(S449));
+
+  /* ---- 공용 부품 확장이 **덧붙임**인가 ---- */
+  const G = fs.readFileSync(path.join(TOOLS, 'probe409g.py'), 'utf8');
+  ok('[10-s] 공용 자의 팔레트 인자는 덧붙임이다 — 안 주면 옛 걸음 그대로',
+    /def runs_from\(cols, mode='cov', step=0\.5, pal=None\)/.test(G)
+    && /P = PAL if pal is None else pal/.test(G)
+    && /def cls\(c, pal=None\)/.test(G));
+  ok('[10-t] ⚠ 팔레트에 색을 **더하지** 않았다 (409 계열 다섯의 `cls()` 가 흔들린다)',
+    (G.match(/\('[KBFDRS]', \(/g) || []).length === 6);
+
+  /* ---- 래칫 ---- */
+  const brk3 = P.census().filter((x) => x.verdict === 'B').map((x) => x.file).sort();
+  ok('[10-u] 주홍 셋이 **이름으로** 남았다 (958 이 여섯 중 셋을 닫았다)',
+    brk3.join(' ') === ['scan335.py', 'scanA4.py', 'scanA4b.py'].sort().join(' '), brk3.join(' '));
+
+  /* ---- 되돌림 ---- */
+  ok('[10-R1] 옛 자를 [10-b] 의 자로 재면 떨어진다 (층 개수부터 다르다)', iR && iR.length !== 4, iR && iR.length);
+  ok('[10-R2] 옛 자를 [10-h] 의 자로 재면 떨어진다', eb && !(Math.abs(parseFloat(eb[1])) < 0.12));
+  ok('[10-R3] 옛 자를 [10-l] 의 자로 재면 떨어진다 (85 는 84±0.2 밖이다)', vI && Math.abs(+vI[3] - 84) > 0.2);
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */

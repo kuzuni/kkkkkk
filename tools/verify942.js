@@ -155,8 +155,16 @@ console.log('\n[5] 불변 — 옛 자를 «무르게 푼» 것이 아니다');
 {
   const src = fs.readFileSync(path.join(TOOLS, 'probe409g.py'), 'utf8');
   ok('[5-a] 문턱이 그대로다 (`EDGE_T = 45`)', /EDGE_T\s*=\s*45\b/.test(src));
+  /* 958 3회차 이관 — 못박던 뜻은 «분류가 최근접 팔레트 6색 그대로다» 이고, `def cls(c)` 라는
+     **글자**는 그 시점의 서명이었다. 958 3회차가 `probe449` 에게 팔레트를 넘겨줄 수 있게
+     **덧붙임 인자**(`pal=None`)를 달았으므로 서명만 열고, «안 주면 이 파일의 PAL 그대로» 를
+     묻는 항을 한 줄 더 넣었다(그 기본값이 사라지면 [5-b2] 가 곧바로 빨개진다). */
   ok('[5-b] 분류가 그대로다 (`cls()` = 최근접 팔레트 · PAL 6색)',
-    /def cls\(c\)/.test(src) && (src.match(/\('[KBFDRS]', \(/g) || []).length === 6);
+    /def cls\(c(?:, pal=None)?\)/.test(src) && (src.match(/\('[KBFDRS]', \(/g) || []).length === 6);
+  ok('[5-b2] 팔레트 인자는 **덧붙임**이다 — 안 주면 이 파일의 PAL 그대로다 (옛 걸음 불변)',
+    !/def cls\(c, pal\)/.test(src)
+    && /for ch, rc in \(PAL if pal is None else pal\)/.test(src)
+    && /P = PAL if pal is None else pal/.test(src));
   ok('[5-c] 시작점이 그대로다 (`apex()` 문턱 교차 보간 · 걸음 0.5)',
     /d = apex\(px, bx, by, corner, span\)/.test(src) && /step = 0\.5/.test(src));
   ok('[5-d] ⚑ **옛 자가 살아 있다**(`--int`) — 지문을 매 실행 다시 찍을 수 있다(§3·§R 의 근거)',

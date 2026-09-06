@@ -51,9 +51,10 @@ def lum(px, x, y):
     return (c[0] + c[1] + c[2]) / 3.0
 
 
-def cls(c):
+def cls(c, pal=None):
+    # 958 3회차 — `pal` 은 **덧붙임**이다. 안 주면 이 자의 PAL 그대로라 옛 걸음이 한 칸도 안 바뀐다.
     best, bd = '?', 1 << 30
-    for ch, rc in PAL:
+    for ch, rc in (PAL if pal is None else pal):
         d = sum((int(a) - int(b)) ** 2 for a, b in zip(c, rc))
         if d < bd:
             best, bd = ch, d
@@ -152,14 +153,20 @@ def _proj(c, p1, p2):
     return tc, res
 
 
-def runs_from(cols, mode='cov', step=0.5):
+def runs_from(cols, mode='cov', step=0.5, pal=None):
     """표본 색의 줄 `cols` → 층 [(클래스, 두께)]. **자의 알맹이는 여기 하나뿐**이라
-       그림 없이도(합성 프로파일로) 같은 자를 돌릴 수 있다(`--physics`)."""
-    RGB = dict(PAL)
+       그림 없이도(합성 프로파일로) 같은 자를 돌릴 수 있다(`--physics`).
+
+       ⚑ 958 3회차 — `pal` 은 **덧붙임**이다(안 주면 이 자의 PAL 그대로 = 옛 걸음 불변).
+       `probe449.py` 는 같은 층 이름을 쓰면서 셸(트랙) `S` 만 다른 색(#61503C)이라,
+       팔레트를 못 주면 그 자가 자기 트랙을 남의 색으로 분류하게 된다 —
+       ⚠ PAL 에 색을 더해 푸는 길은 막혀 있다(409 계열 다섯 자의 `cls()` 가 같이 흔들린다)."""
+    P = PAL if pal is None else pal
+    RGB = dict(P)
     # ① 층의 차례 — 옛 자와 **글자 그대로 같은 규칙**(표본을 이긴 클래스).
     runs, owner = [], []
     for c in cols:
-        ch = cls(c)
+        ch = cls(c, pal)
         if runs and runs[-1][0] == ch:
             runs[-1][1] += step
         else:
