@@ -117,7 +117,18 @@ const TALLY = () => {
     lvSum = 0;
     for (const x of RELICS) { const o = S.own[x.id]; const l = o ? (o.l || 0) : 0; lv[x.id] = l; lvSum += l; }
   } catch (e) { lv = {}; lvSum = -1; }
-  return { gain: gain.length, onCard, other, glyph, gsz, gsp, ages, lv, lvSum,
+  /* ⚑ 976 — **이 표본이 틱 주기의 어디에 섰나**를 표가 스스로 적는다(두 사법 모두).
+     `since` = 직전 소환 틱으로부터의 ms · `iv` = 최근 네 주기의 **실측** 중앙값
+     (선언 `h.iv` 60ms 는 이 러너에서 36~603ms 로 흔들려 눈금이 못 된다 — `probe976` [1]). */
+  let tick = null;
+  try { const T = window.__tick976; if (T && T.at.length) {
+    const a = T.at, g = [];
+    for (let i = Math.max(1, a.length - 4); i < a.length; i++) g.push(a[i] - a[i - 1]);
+    g.sort((x, y) => x - y);
+    tick = { n: a.length, since: Math.round(performance.now() - a[a.length - 1]),
+             iv: g.length ? g[Math.floor(g.length / 2)] : 0, eggs: T.egg.length };
+  } } catch (e) {}
+  return { tick, gain: gain.length, onCard, other, glyph, gsz, gsp, ages, lv, lvSum,
            gainAll: gainAll.length, agesAll, page: window.__capPage || '?',
            pay: pay.length, payOut, bead: bead.length, text: text.length, flash: flash.length,
            id: w.id || '', ic: w.ic || '', name: w.name || '',
@@ -276,10 +287,20 @@ async function open(sd) {
     try { RELICS.slice(0, 4).forEach(r => { S.own[r.id] = { n: 0, l: 3 }; }); } catch (e) {}
     /* 당첨 유물을 기록해 둔다 — 정답표·비평 프롬프트가 «어느 칸을 보라» 를 말할 수 있게 */
     window.__cap683 = {};
+    /* ⚑ 976 — **틱 시각·간격을 페이지가 스스로 적는다.** 위상을 고르려면(아래 `sceneB`) «방금 틱이
+       언제였고 다음 틱까지 얼마인가» 를 페이지 안에서 알아야 한다. `rwSummonFx(it, first, iv)` 의
+       `iv` 가 바로 **다음 틱까지의 간격**이다 — `rwHoldTick` 이 `h.iv` 를 먼저 갱신해서 넘기고
+       같은 값으로 타이머를 건다(index.html `rwHoldTick`). `js` 는 그 틱의 JS 버스트 길이다
+       (표본이 «틱 직후» 로 쏠리는 기계를 설명하는 값 — 등재 976). */
+    window.__tick976 = { at: [], iv: [], js: [], first: [], mo: [], egg: [] };
     const o = window.rwSummonFx;
     window.rwSummonFx = function (it, first, iv) {
       if (it) { window.__cap683.id = it.id; window.__cap683.ic = it.ic; window.__cap683.name = it.n; }
-      return o.apply(this, arguments);
+      const T = window.__tick976, t0 = performance.now();
+      T.at.push(Math.round(t0)); T.iv.push(Math.round(iv || 0)); T.first.push(!!first);
+      const r = o.apply(this, arguments);
+      T.js.push(Math.round(performance.now() - t0));
+      return r;
     };
     uiDirty = true; if (typeof renderUI === 'function') renderUI();
     openRelw();
@@ -287,7 +308,19 @@ async function open(sd) {
        MutationObserver 는 마이크로태스크라 얼림(타이머 미루기)과 무관하게 정확하다. */
     const FXL = document.getElementById('fxl');
     if (FXL) new MutationObserver(ms => {
-      for (const m of ms) for (const n of m.addedNodes) { try { n.__born = performance.now(); } catch (e) {} }
+      const t = Math.round(performance.now());
+      for (const m of ms) for (const n of m.addedNodes) {
+        try { n.__born = performance.now(); } catch (e) {}
+        /* ⚑ 976 — **획득 알이 태어난 시각**을 따로 적는다. 975 가 본 «나이 최솟값» 은 소환 틱이 아니라
+           이 목록의 마지막 값에서 잰 나이다 — 둘이 같은 수가 아니라는 것이 976 의 답이다. */
+        try { const T = window.__tick976;
+          if (T && /fx-rlic/.test((n.className || '') + '')) T.egg.push(t); } catch (e) {}
+      }
+      /* ⚑ 976 — 무더기는 **한 시각**으로 접는다(문턱 25ms — 가장 짧은 틱 간격 `TR_HOLD_IVMIN` 60ms 의
+         절반 아래라 서로 다른 틱을 접을 수 없다). 위 `rwSummonFx` 훅과 **서로 다른 두 자**이고,
+         둘이 같은 수를 내는지가 곧 자기검산이다(`probe976` [1] — 실측은 안 같고, 그게 결론이다). */
+      try { const T = window.__tick976; if (T) {
+        if (!T.mo.length || t - T.mo[T.mo.length - 1] > 25) T.mo.push(t); } } catch (e) {}
     }).observe(FXL, { childList: true });
   });
   await p.waitForTimeout(600);
@@ -352,6 +385,9 @@ async function shotA(T, idx) {
    ⚠ `--b-legacy` 는 **옛 방식(프레임마다 새 브라우저)** 을 그대로 남겨 둔 것이다 — 되돌림 시험
      전용(`tools/verify975.js` §R)이고 채점용 캡처에 쓰면 안 된다. */
 const LEGACY_B = process.argv.includes('--b-legacy');
+/* ⚠ 976 — `--b-nophase` 는 **얼리는 순간만** 975 방식(폴링이 떨어진 자리)으로 되돌린다.
+   되돌림 시험 전용(`tools/verify976.js` §R)이고 채점용 캡처에 쓰면 안 된다. */
+const NOPHASE = process.argv.includes('--b-nophase');
 
 /* 한 홀드 안에서 «페이지 시각 T» 까지 실시간으로 누르고 있는다.
    ⚠ 시각의 기준은 **페이지 시계**여야 한다(Node 쪽 `Date.now()` 로 세면 CDP 왕복·스크린샷이
@@ -397,6 +433,54 @@ const FREEZE_TALLY = ({ tally }) => {
   return r;
 };
 
+/* ⚑⚑ 976 — **표본을 «틱 주기의 어디서» 뜨는지 우리가 고른다.**
+   975 까지의 표본은 「Node 가 폴링하다 목표 시각을 넘으면 그 자리에서 `evaluate` 로 얼린다」였다.
+   그 순간은 우리가 고른 시각이 아니라 **러너 왕복이 떨어진 자리**이고, 재 보니 틱 직후에 쏠린다
+   (`probe976` — 지금 방식 위상 중앙값 3.5% · 첫 사분면 12/12). 그러면 네 장이 늘 «갓 태어난 알»
+   국면만 보여 주므로 683 ① 「틱마다 새로 터지는가」를 **고르게** 볼 수 없다.
+   ⇒ 얼리는 시각을 **페이지 안에서** 정한다: 다음 틱을 기다렸다가 그 틱의 `iv`(= 다음 틱까지의
+   간격) 의 `frac` 만큼 지난 뒤 얼린다. Node 왕복이 위상에 안 섞인다(왕복은 «기다리는 동안» 이지
+   «얼리는 순간» 이 아니다).
+   ⚠ **사양을 굳히는 것이 아니다**(232-① · 등재 976) — 「겹침이 몇 알인가」는 제품의 값이고 683
+     채점이 볼 축이다. 이 자는 «위상을 고르게 덮었는가» 만 말한다.
+   ⚠ 틱이 안 오면(홀드가 끊겼다·팝업이 닫혔다) `wait` ms 뒤 **그 자리에서** 얼리고 `ph.ms = -1` 로
+     밝힌다 — 조용히 옛 자리로 돌아가면 그것이 헛초록이다. */
+/* ⚠ **«주기의 몇 %» 로 겨누는 길은 이 러너에서 막혀 있다**(976 1회차에 실제로 해 보고 버렸다) —
+   선언 60ms 가 실측 21~652ms 로 흔들려 «주기» 라는 눈금 자체가 매 틱 달라지고, 추정에서 뽑은
+   목표는 실측 위상 0.43~0.99 로 흩어졌다(겨눈 0.125 가 43% 에 떨어졌다). ⇒ 겨누는 값을
+   **소환 뒤 절대 ms** 로 바꿨다: 「이 프레임은 그 알이 태어난 지 X ms 인 순간」이다.
+   눈금 넷은 알 수명(`RW_GAIN` 380ms · 666 봉투)을 네 토막으로 덮는다. */
+const PHASE_MS = [10, 40, 100, 200];
+const PHASE_FREEZE_TALLY = ({ tally, off, wait }) => new Promise(res => {
+  const T = window.__tick976 || { at: [] };
+  const n0 = T.at.length, t0 = performance.now();
+  const grab = ph => {
+    const held = window.__capFreeze();
+    const r = eval('(' + tally + ')')();
+    r.at = Math.round(performance.now() - (window.__capT0 || 0));
+    r.held = held; r.ph = ph;
+    res(r);
+  };
+  /* **닻을 옮기지 않는다.** 겨누는 것은 «마지막 틱으로부터» 가 아니라 «이 틱이 낳은 알의 나이» 라,
+     기다리는 사이에 새 틱이 와도 그대로 기다린다 — 그 새 틱들이 곧 683 이 보고 싶어 하는 «겹침» 이다
+     (몇 개가 겹치는지는 제품의 값이고 이 자는 안 정한다 · 232-①). 그 수를 `newTicks` 로 밝힌다. */
+  let anchor = -1;
+  const spin = () => {
+    if (anchor < 0 && T.at.length > n0) anchor = T.at.length - 1;
+    if (anchor >= 0) {
+      const d = performance.now() - T.at[anchor];
+      if (d >= off) return grab({ ms: Math.round(d), off, k: anchor, late: false,
+                                 newTicks: T.at.length - 1 - anchor });
+      if (performance.now() - t0 > wait) return grab({ ms: Math.round(d), off, k: anchor, late: true,
+                                 newTicks: T.at.length - 1 - anchor });
+      return setTimeout(spin, Math.max(2, Math.min(8, off - d)));
+    }
+    if (performance.now() - t0 > wait) return grab({ ms: -1, off, k: -1, late: true, newTicks: 0 });
+    setTimeout(spin, 4);
+  };
+  spin();
+});
+
 /* 새 방식 — 한 브라우저, 한 홀드, 네 프레임 */
 async function sceneB() {
   const { b, p, errs } = await open(SEED);
@@ -416,7 +500,15 @@ async function sceneB() {
   let target = HOLDS[0];
   for (let i = 0; i < HOLDS.length; i++) {
     const last = await holdUntil(p, cdp, c, target);
-    const info = await p.evaluate(FREEZE_TALLY, { tally: TALLY.toString() });
+    /* ⚑⚑ 976 — **얼리는 순간을 우리가 고른다.** 종전(NOPHASE)은 「Node 폴링이 목표를 넘은 그 자리」라
+       표본이 **알이 갓 태어난 자리에 몰렸다**(`probe976` 실측 — 나이 ≤5ms 가 5/16 = 31%, 고르면 4%).
+       ⇒ 다음 틱을 기다렸다가 그 틱의 «최근 실측 주기 × frac» 만큼 지난 뒤 페이지 안에서 얼린다.
+       ⚠ 이것은 **사양이 아니다** — 「알이 몇 개 겹쳐 있어야 하는가」는 제품의 값이고 683 채점의 몫이다.
+         이 자가 고치는 것은 «네 장이 주기의 같은 자리만 본다» 는 표본 쪽 결함뿐이다(등재 976). */
+    const info = NOPHASE
+      ? await p.evaluate(FREEZE_TALLY, { tally: TALLY.toString() })
+      : await p.evaluate(PHASE_FREEZE_TALLY,
+          { tally: TALLY.toString(), off: PHASE_MS[i % PHASE_MS.length], wait: 900 });
     if (process.env.CAP683_DEBUG) console.error('[dbg] B' + (i + 1) + ' target=' + target + ' lastPoll=' + last + ' at=' + info.at);
     const { file, px } = await frame(p, info, 'B', i + 1);
     await p.evaluate(() => window.__capResume());
@@ -484,7 +576,11 @@ async function diffPx(p, fa, fb) {
 
 const SCENE = (() => { const i = process.argv.indexOf('--scene'); return i > 0 ? (process.argv[i + 1] || 'AB').toUpperCase() : 'AB'; })();
 
-(async () => {
+/* ⚑ 976 — 이 파일은 **실행도 되고 require 도 된다.** `probe976` 이 「지금 방식 ↔ 위상 지정」을
+   견주려면 이 자의 `open()`·`holdUntil()` 을 **그대로** 써야 한다(사본을 뜨면 재는 대상이 사본이
+   되어 «자를 재는 자» 가 거짓이 된다 — 402 «사본을 지운다»). 그래서 아래 본체는 직접 실행일
+   때만 돈다. */
+async function main() {
   const BASE = await baseline();
   const A = [], B = [];
   if (SCENE.includes('A')) for (let i = 0; i < STOPS.length; i++) A.push(await shotA(STOPS[i], i + 1));
@@ -545,9 +641,33 @@ const SCENE = (() => { const i = process.argv.indexOf('--scene'); return i > 0 ?
     console.log('씬 B DOM 알(보임/전체 · 나이 전체): '
       + B.map((r, i) => 'B' + (i + 1) + ' ' + r.info.gain + '/' + r.info.gainAll
         + '[' + ageCell(r.info.agesAll) + ']').join(' · '));
+    /* ⚑⚑ 976 — **자기검산 여섯째 줄: 표본 위상.** 네 장이 「알이 갓 태어난 자리」만 보면
+       683 ① 「틱마다 새로 터지는가」를 고르게 볼 수 없다(975 가 남긴 곁다리 · `probe976` 실측
+       나이 ≤5ms 가 5/16 = 31%). 겨눈 나이와 실제 나이를 **값으로** 나란히 적는다(58 38회차 —
+       판정을 말로만 적지 않는다).
+       ⚠ 「알이 몇 개 겹쳐 있는가」는 여기서 판정하지 않는다(제품의 값 · 683 채점 몫 · 232-①). */
+    const ph = B.map(r => r.info.ph), tk = B.map(r => r.info.tick);
+    const band = [0, 40, 100, 200], bn = a => { let i = 0; while (i < 3 && a >= band[i + 1]) i++; return i; };
+    const minAge = B.map(r => (r.info.agesAll && r.info.agesAll.length) ? r.info.agesAll[0] : -1);
+    const cov = new Set(minAge.filter(a => a >= 0).map(bn)).size;
+    console.log('씬 B 표본 위상(겨눈 나이 → 실측 · 네 장이 알 수명을 고르게 덮어야 한다): '
+      + B.map((r, i) => 'B' + (i + 1) + ' ' + (ph[i] ? ph[i].off + '→' + ph[i].ms + 'ms'
+          + (ph[i].late ? '(놓침)' : '') + (ph[i].ms > 380 ? '(수명 넘김)' : '')
+          + (ph[i].newTicks ? '+틱' + ph[i].newTicks : '') : '겨눔 없음')
+          + '/직전 틱 ' + (tk[i] ? tk[i].since + 'ms' : '–')).join(' · ')
+      + ' — 겨눈 눈금 ' + (NOPHASE ? '없음(--b-nophase · 975 방식)' : PHASE_MS.join('·') + 'ms'));
+    /* ⚠ 한 실행의 4/4 는 러너 기분에 달렸다(스핀이 렌더 뒤로 밀린다) — 여기서는 «한 토막에
+       뭉쳤는가» 까지만 판정하고, «고르게 덮는가» 는 표본 12~16개를 쓰는 `probe976` [3c] 가 센다. */
+    console.log('씬 B 알 나이 최솟값(위 위상의 결과 — 사양 아님, 683 채점의 재료): '
+      + minAge.map(a => a < 0 ? '–' : a + 'ms').join(' · ')
+      + ' — 수명 네 토막(0~40·40~100·100~200·200~) ' + cov + '/4 '
+      + (cov >= 2 ? '✅' : '**한 토막에 뭉침 ❌**'));
     console.log('씬 B 봉투: 브라우저 ' + (LEGACY_B ? HOLDS.length + '회(--b-legacy · 옛 방식)' : '1회(한 홀드)')
       + ' · 얼림은 되돌림식(타이머 미루기 + 시계 정지 + 애니 pause/play)');
   }
   console.log('콘솔 에러: ' + A.concat(B).reduce((s, r) => s + r.errs, 0) + '건');
   console.log('캡처: ' + path.join(OUT, '683-' + ROUND + '-*.png'));
-})();
+}
+
+module.exports = { open, holdUntil, TALLY, FREEZE_TALLY, PHASE_FREEZE_TALLY, SEED, HOLDS, GAPS, PHASE_MS };
+if (require.main === module) main();

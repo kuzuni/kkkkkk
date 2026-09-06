@@ -1,0 +1,210 @@
+/* 작업 976 — 재현: **씬 B 표본이 «틱 직후» 로 쏠리는가**(하네스 · 975 1회차 곁다리 등재)
+ *
+ *   node tools/probe976.js [--n 12] [--gap 200] [--no-shot]
+ *
+ * 등재문이 갈래 둘을 세웠다:
+ *   ⓐ 우리 `evaluate`(얼림+표)가 **틱의 JS 버스트 직후**에 실행돼 생기는 표본 편향
+ *   ⓑ 제품이 정말 틱마다 한 알을 새로 놓고 앞 알을 빨리 걷는다(= 제품 값)
+ * 가르는 자도 등재문이 적어 놨다 — **얼리지 않고 틱 시각을 길게 기록한 뒤 «표본 시각 − 직전 틱
+ * 시각» 분포를 그린다. 고르면 ⓑ, 0 부근에 몰리면 ⓐ.**
+ *
+ * ⚠ 이 자는 `tools/cap683.js` 의 `open()`·`holdUntil()`·`FREEZE_TALLY` 를 **require 해서 그대로**
+ *   쓴다. 사본을 뜨면 「자를 재는 자」가 사본을 재게 되어 판정이 통째로 거짓이 된다(402 «사본을 지운다»).
+ *
+ * 사법 둘을 같은 페이지 규격으로 나란히 돌린다:
+ *   ⓐ «지금 방식» — Node 가 폴링하다 목표를 넘으면 그 자리에서 `evaluate` 로 얼린다(975 까지의 씬 B)
+ *   ⓑ «위상 지정» — 다음 틱을 기다렸다 그 틱의 `iv` 의 `frac` 만큼 지난 뒤 **페이지 안에서** 얼린다
+ * 두 사법 다 프레임마다 스크린샷을 찍는다(얼림 1~2초가 위상에 섞이는지까지 같이 보려는 것 —
+ * `--no-shot` 으로 뺄 수 있다).
+ */
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+const { open, holdUntil, FREEZE_TALLY, PHASE_FREEZE_TALLY, PHASE_MS, SEED } = require('./cap683');
+
+const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? +process.argv[i + 1] : d; };
+const N = arg('--n', 12);
+const GAP = arg('--gap', 200);
+const SHOT = !process.argv.includes('--no-shot');
+
+/* 표본이 들고 오는 것 — 「지금 시각」과 「그때까지의 틱 목록」뿐이다(그림은 안 센다). */
+const LIGHT = () => {
+  const T = window.__tick976 || { at: [], iv: [], js: [], mo: [] };
+  /* ⚠ 칸 이름을 `at` 로 쓰면 안 된다 — `FREEZE_TALLY` 가 그 칸에 «표본의 페이지 시각» 을 덮어쓴다
+     (한 번 밟았다). 틱 목록은 `tk`. */
+  return { pn: Math.round(performance.now()),
+           tk: T.at.slice(), iv: T.iv.slice(), js: T.js.slice(), mo: T.mo.slice(), egg: T.egg.slice() };
+};
+
+let pass = 0, fail = 0;
+const ok = (c, m) => { console.log((c ? '  ✅ ' : '  ❌ ') + m); c ? pass++ : fail++; };
+const med = v => { if (!v.length) return NaN; const s = [...v].sort((a, b) => a - b);
+  return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
+
+async function run(mode) {
+  const { b, p, errs } = await open(SEED);
+  const el = await p.$('#rwBasin');
+  const bb = await el.boundingBox();
+  const cdp = await p.context().newCDPSession(p);
+  const c = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 };
+  await p.evaluate(() => {
+    window.__capT0 = 0;
+    document.getElementById('rwBasin').addEventListener('pointerdown',
+      () => { if (!window.__capT0) window.__capT0 = performance.now(); }, true);
+  });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
+  const out = [];
+  const tmp = path.join(os.tmpdir(), 'probe976-' + mode + '.png');
+  let target = 560;                                   /* cap683 의 첫 눈금과 같은 자리에서 시작한다 */
+  for (let i = 0; i < N; i++) {
+    await holdUntil(p, cdp, c, target);
+    const info = mode === 'asis'
+      ? await p.evaluate(FREEZE_TALLY, { tally: LIGHT.toString() })
+      : await p.evaluate(PHASE_FREEZE_TALLY,
+          { tally: LIGHT.toString(), off: PHASE_MS[i % PHASE_MS.length], wait: 900 });
+    if (SHOT) await p.screenshot({ path: tmp });      /* 얼려 있는 1~2초를 그대로 재현한다 */
+    await p.evaluate(() => window.__capResume());
+    out.push(info);
+    target = info.at + GAP;
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }).catch(() => {});
+  const last = out[out.length - 1];
+  await b.close();
+  try { fs.unlinkSync(tmp); } catch (e) {}
+  return { out, ticks: last.tk, ivs: last.iv, js: last.js, mo: last.mo, eggs: last.egg, errs: errs.length };
+}
+
+/* 표본 하나의 위상 — «표본 시각 − 직전 틱 시각», 그 틱의 **실측** 간격으로 나눈 값.
+   ⚠ 마지막 틱 뒤의 표본은 «그 주기가 얼마였는지» 를 아직 모른다 — 선언값으로 때우면 251% 같은
+     값이 나온다(1회차에 실제로 나왔다). 그런 표본은 `frac` 을 안 낸다(`null`). */
+function phase(sample, ticks) {
+  const pn = sample.pn;
+  let k = -1;
+  for (let i = 0; i < ticks.length; i++) if (ticks[i] <= pn) k = i; else break;
+  if (k < 0) return null;
+  const ms = pn - ticks[k];
+  const ivAct = (k + 1 < ticks.length) ? ticks[k + 1] - ticks[k] : null;
+  return { k, ms, iv: ivAct, frac: ivAct > 0 ? ms / ivAct : null };
+}
+
+/* 975 가 본 값 그대로 — «표본 시각 − **직전 알**이 태어난 시각»(= 표의 «나이» 최솟값) */
+const eggAge = (sample, eggs) => {
+  let b = null;
+  for (const t of eggs) if (t <= sample.pn) b = t; else break;
+  return b == null ? null : sample.pn - b;
+};
+
+const quad = f => Math.max(0, Math.min(3, Math.floor(f * 4)));
+function table(name, r) {
+  console.log('\n' + name);
+  console.log('| # | 표본 t(ms) | 직전 틱 # | 틱 위상 ms | 그 틱 실측 주기 | 틱 위상 % | 사분면 | 직전 알 나이 ms |');
+  console.log('|---|---|---|---|---|---|---|---|');
+  const ph = [], ages = [];
+  r.out.forEach((s, i) => {
+    const q = phase(s, r.ticks), a = eggAge(s, r.eggs);
+    ph.push(q); ages.push(a);
+    console.log('| ' + (i + 1) + ' | ' + s.at + ' | ' + (q ? q.k : '–') + ' | ' + (q ? q.ms : '–')
+      + ' | ' + (q && q.iv ? q.iv + 'ms' : '–') + ' | ' + (q && q.frac != null ? (q.frac * 100).toFixed(1) + '%' : '–')
+      + ' | ' + (q && q.frac != null ? 'Q' + (quad(q.frac) + 1) : '–')
+      + ' | ' + (a == null ? '–' : a) + ' |');
+  });
+  const fr = ph.filter(x => x && x.frac != null).map(x => x.frac);
+  const qc = [0, 0, 0, 0];
+  fr.forEach(f => qc[quad(f)]++);
+  const ag = ages.filter(a => a != null);
+  console.log('사분면 분포(Q1 0~25% · Q2 25~50% · Q3 50~75% · Q4 75~100%): '
+    + qc.map((n, i) => 'Q' + (i + 1) + ' ' + n).join(' · ') + ' (셈에 든 표본 ' + fr.length + '개)'
+    + ' · 틱 위상 중앙값 ' + (med(fr) * 100).toFixed(1) + '%'
+    + ' · 직전 알 나이 중앙값 ' + med(ag) + 'ms');
+  return { ph, fr, qc, ages: ag, out: r.out };
+}
+
+(async () => {
+  console.log('# 976 재현 — 씬 B 표본 위상 (시드 ' + SEED + ' · 표본 ' + N + '개 · 간격 ' + GAP
+    + 'ms · 스크린샷 ' + (SHOT ? '있음' : '없음') + ')');
+
+  const A = await run('asis');
+  const B = await run('phase');
+
+  /* [1] 자 자신부터 — 「틱」과 「알」은 같은 수가 아니다 */
+  console.log('\n[1] 틱·알 목록 (rwSummonFx 훅 ↔ #fxl MutationObserver ↔ 획득 알 탄생)');
+  const ivAct = A.ticks.slice(1).map((t, i) => t - A.ticks[i]);
+  const eggGap = A.eggs.slice(1).map((t, i) => t - A.eggs[i]);
+  console.log('  소환 틱(훅) ' + A.ticks.length + '회 · 실측 주기 ' + ivAct.join('·') + 'ms (중앙값 '
+    + med(ivAct) + 'ms · 선언 ' + A.ivs.slice(-1)[0] + 'ms)');
+  console.log('  #fxl 무더기(관찰자) ' + A.mo.length + '회 · 획득 알 탄생 ' + A.eggs.length + '개 · 알 사이 간격 중앙값 '
+    + med(eggGap) + 'ms');
+  console.log('  틱의 JS 버스트 길이 중앙값 ' + med(A.js) + 'ms (' + A.js.slice(0, 6).join('·') + '…)');
+  ok(A.ticks.length >= 6 && ivAct.length >= 5 && med(ivAct) >= 30 && med(ivAct) <= 600,
+    '[1a] 홀드가 실제로 돌았다 — 틱 ' + A.ticks.length + '회 · 주기 중앙값 ' + med(ivAct) + 'ms');
+  ok(A.eggs.length >= A.ticks.length,
+    '[1b] ★ **알은 틱보다 자주 태어난다** — 틱 ' + A.ticks.length + '회 ↔ 알 ' + A.eggs.length
+    + '개(무더기 ' + A.mo.length + '회). 「나이 최솟값」이 재는 것은 **틱 위상이 아니라 알 간격**이다');
+  ok(med(A.js) < med(ivAct),
+    '[1c] 틱의 JS 버스트(' + med(A.js) + 'ms)가 주기(' + med(ivAct) + 'ms)보다 짧다 — 주 스레드가 주기 내내 바쁜 것은 아니다');
+
+  const ta = table('[2] 사법 ⓐ «지금 방식»(975 까지의 씬 B — Node 폴링이 떨어진 자리에서 얼린다)', A);
+  const tb = table('[3] 사법 ⓑ «위상 지정»(다음 틱 + frac × 실측 주기 뒤에 **페이지 안에서** 얼린다 · 지정 '
+    + PHASE_MS.join('·') + 'ms)', B);
+
+  console.log('\n[4] 판정 — 등재문의 갈래 ⓐ(표본 편향) ↔ ⓑ(제품 값)');
+  const band = [0, 40, 100, 200], bn = a => { let i = 0; while (i < 3 && a >= band[i + 1]) i++; return i; };
+  const fresh = v => v.filter(a => a <= 5).length;                 /* «갓 태어난 알» = 나이 ≤5ms */
+  const mAge = med(ta.ages), mGap = med(eggGap);
+  const expect = ta.ages.length * 6 / (mGap || 1);                 /* 고르게 떨어졌다면 나올 수 */
+  const spike = fresh(ta.ages) >= 3 && fresh(ta.ages) >= 3 * expect;
+  console.log('  지금 방식 알 나이: 중앙값 ' + mAge + 'ms · **나이 ≤5ms 가 ' + fresh(ta.ages) + '/'
+    + ta.ages.length + '**(알 간격 중앙값 ' + mGap + 'ms 에 고르게 떨어졌다면 ' + expect.toFixed(1) + '개)');
+  console.log('  지금 방식 틱 위상: 첫 사분면 ' + ta.qc[0] + '/' + ta.fr.length + ' · 중앙값 '
+    + (med(ta.fr) * 100).toFixed(1) + '%');
+  console.log('  ⇒ **둘 다 반쪽씩 맞다**: ' + (spike
+    ? 'ⓐ 가 맞는 쪽 — 표본에 「알이 갓 태어난 자리」 스파이크가 있다(' + fresh(ta.ages) + '/'
+      + ta.ages.length + ' ↔ 기대 ' + expect.toFixed(1) + '). '
+    : 'ⓐ 의 스파이크는 이 실행에서 안 나왔다. ')
+    + '단 «표본이 언제나 틱 직후» 는 **아니다** — 나이 중앙값 ' + mAge + 'ms · 첫 사분면 '
+    + ta.qc[0] + '/' + ta.fr.length + '. 나머지는 ⓑ(제품이 틱마다 한 알을 놓고 앞 알을 걷는다)로 설명된다');
+  ok(ta.ages.length >= 8, '[2a] 나이를 잴 수 있는 표본이 ' + ta.ages.length + '개(≥8) — 분포를 말할 근거가 있다');
+  ok(spike,
+    '[2b] ★ **등재문 ⓐ 의 절반이 재현됐다** — 지금 방식의 나이 ≤5ms 가 ' + fresh(ta.ages) + '/'
+    + ta.ages.length + ' (고르면 ' + expect.toFixed(1) + '개). 표본이 «알이 태어나는 그 순간» 에 붙는 자리가 있다');
+  ok(mAge > 5 && ta.qc[0] <= ta.fr.length * 0.5,
+    '[2c] ★ **등재문의 «대개 0~45ms» 는 정정된다** — 나이 중앙값 ' + mAge + 'ms · 틱 위상 첫 사분면 '
+    + ta.qc[0] + '/' + ta.fr.length + '(≤50%). 쏠림은 «스파이크» 지 «전부» 가 아니다');
+  /* ⚠ **«나이 ≤5ms 를 0 으로 만든다» 는 목표가 아니다**(1회차에 그렇게 적었다가 값에 반증당했다).
+     겨눈 알을 기다리는 사이 새 틱이 오면 그 프레임의 «가장 어린 알» 은 당연히 갓 태어난 알이고,
+     그것이 바로 683 이 보려는 겹침이다. 고쳐야 할 것은 «우연히 그 자리에 붙는 것» 이다. */
+  const freshRows = tb.out.map((s, i) => ({ i, a: eggAge(s, B.eggs), ph: s.ph }))
+                          .filter(x => x.a != null && x.a <= 5);
+  const explained = freshRows.filter(x => x.ph && (x.ph.off <= 10 || x.ph.newTicks >= 1));
+  ok(freshRows.length === explained.length,
+    '[3a] ★ 위상 지정에서 «갓 태어난 알» 프레임은 **전부 설명된다** — ' + freshRows.length + '건 중 '
+    + explained.length + '건이 「10ms 눈금」이거나 「기다리는 사이 새 틱이 온」 프레임이다'
+    + '(지금 방식은 ' + fresh(ta.ages) + '건이 우연히 붙었다)');
+  /* ⚠ **«늘 살아 있다» 는 못 건다** — 러너가 스핀을 렌더 뒤로 밀면 겨눈 알이 수명(380ms)을 넘겨
+     죽은 뒤에 얼리는 판이 생긴다(실측 12판 중 2판). 그 판은 «수명 넘김» 으로 밝히면 되고,
+     문턱은 «대부분 살아 있다» 로 건다 — 여기서 100% 를 요구하면 초록이 러너 기분에 달린다. */
+  const alive = tb.out.filter(s => s.ph && s.ph.ms >= 0 && s.ph.ms <= 380).length;
+  ok(alive >= Math.ceil(tb.out.length * 0.7),
+    '[3a2] 겨눈 알이 대개 프레임에 살아 있다 — ' + alive + '/' + tb.out.length + ' (수명 380ms 안 · 겨눈 나이 '
+    + tb.out.map(s => s.ph ? s.ph.ms : '–').join('·') + 'ms)');
+  const errs = tb.out.map((s, i) => (s.ph && s.ph.ms >= 0) ? Math.abs(s.ph.ms - PHASE_MS[i % PHASE_MS.length]) : null)
+                     .filter(x => x != null);
+  /* 겨눈 값보다 늦게 서는 몫은 **러너의 것**이다 — 스핀의 `setTimeout` 이 그 프레임의 렌더 뒤로
+     밀린다(실측 중앙 40ms 안팎). 눈금이 «정확히 X ms» 가 아니라 «X ms 언저리» 인 이유이고,
+     그래도 네 눈금이 서로 안 섞이면 목적(수명 네 토막)은 달성된다. */
+  ok(med(errs) <= 80,
+    '[3b] 겨눈 나이 언저리에 선다 — |실측 − 겨눔| 중앙값 ' + med(errs) + 'ms ≤ 80 (' + errs.length
+    + '개 · 겨눔 ' + PHASE_MS.join('·') + 'ms)');
+  const covB = new Set(tb.ages.map(bn)).size, covA = new Set(ta.ages.map(bn)).size;
+  ok(covB >= 3,
+    '[3c] ★ 위상 지정이 알 수명을 고르게 덮는다 — 네 토막(0~40·40~100·100~200·200~) ' + covB
+    + '/4 (지금 방식 ' + covA + '/4)');
+  const late = tb.out.filter(s => s.ph && s.ph.late).length;
+  console.log('  · 겨눈 자리를 놓친 표본 ' + late + '/' + tb.out.length
+    + ' · 기다리는 사이 새로 온 틱 ' + tb.out.map(s => s.ph ? s.ph.newTicks : '–').join('·')
+    + ' (그 틱들이 곧 683 이 보려는 겹침이다 — 몇 개여야 하는지는 이 자가 안 정한다)');
+  ok(A.errs === 0 && B.errs === 0, '[4a] 콘솔 에러 0건 — ⓐ ' + A.errs + ' · ⓑ ' + B.errs);
+
+  console.log('\nPROBE976 ' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
+  process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });
