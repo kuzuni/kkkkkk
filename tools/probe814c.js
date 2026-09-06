@@ -48,12 +48,50 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : fail++; };
 const f1 = (n) => (n === null || n === undefined ? '—' : n.toFixed(2));
 
-/* 연출 노드 수거 무력화 — 4회차가 세운 것과 같은 것(probe814b 머리말) */
+/* 연출 노드 수거 무력화 — 4회차가 세운 것과 같은 것(probe814b 머리말)
+   ⚑⚑ **14회차 정정 — 이 무력화에 구멍이 하나 있었고 그것이 8~13회차의 «Lv. n» 값을 통째로 만들었다.**
+   `cap814` 는 10회차에 이미 이 구멍을 막았는데(«`.fx-keep` 는 걷히게 둔다») **여기로 옮겨오지 않았다.**
+   `remove()` 를 통째로 막으면 «한 자리에 한 장» 을 지키는 **명시적 걷기**까지 같이 막힌다 —
+   50 코스튬 [강화]는 `renderUI()` 앞뒤로 값 줄 패치를 **두 번** 뜨고(앞 장은 옛 카드에서 뜬 것)
+   뒷장이 앞장을 걷는데, 그 걷기가 막혀 **낡은 사본이 살아 있는 사본 «위/옆»에 겹쳐** 찍혔다.
+   낡은 사본은 `fxCvLit` 이 안 걸려 **순백(255,255,255)** 이라 p99(분자)를 **1.000 에 못박는다.**
+   실측(14회차) — 구멍이 있을 때 «Lv. n» 워시봉 상자에 L≥0.99 화소 **69개** · 분자 1.000 · **5.10:1**,
+   구멍을 막으면 **0개** · 분자 **0.592**(= `#FFC02E` 의 L 0.5977) · **3.07:1**.
+   ⚠ **제품에는 그 낡은 사본이 없다** — 실런타임(무력화·정지 없음) rAF 표본에서 값 줄 패치는
+     **언제나 1장**이고 색이 원본과 같다(0~200ms `rgb(255,192,46)` = `#FFC02E`).
+     즉 5.08/5.03 은 «하네스가 제품보다 좋게 보이게» 만든 값이었다(10회차 구멍의 부호만 반대다).
+   ⚑ **가르는 축은 «무엇을 걷는가» 가 아니라 «언제 걷는가» 다**(cap814 10회차의 `.fx-keep` 예외는
+     이 자에서는 과했다 — 그것을 그대로 옮기면 **살아 있는 사본까지** 자기 타이머에 걷혀
+     [P5]~[P7] 이 잴 것을 잃는다). 제품의 두 걷기는 시각이 갈린다:
+       · **규약 걷기** — `fxFlashRekeep` 이 `renderUI()` 뒤에 앞 장을 걷는다. **클릭 핸들러 «안»**,
+         즉 `btn.click()` 이 반환하기 전에 **동기로** 끝난다.
+       · **타이머 걷기** — `fxBye()` 의 `setTimeout`. 클릭이 반환한 **뒤**에 온다.
+     ⇒ 무력화를 **클릭이 반환한 직후에 켠다**(`__fxFreeze(true)`). 그러면 규약 걷기는 그대로
+       일어나 낡은 사본이 사라지고, 타이머 걷기만 막혀 봉우리 한 장이 온전히 남는다.
+   회귀는 [P13](사본이 줄마다 1장) + [P5]~[P7](그 1장이 살아 있는 장이다).
+   ⚠ **«클릭이 반환한 뒤» 만으로는 못 닫는다 — 실측으로 흔들렸다(14회차 2회 실행).** 규약 걷기가
+     항상 클릭 «안» 에서 끝나는 것은 아니어서, 시각으로만 가르면 낡은 사본이 남는 판이 섞인다.
+     ⇒ 시각 문(門) 위에 **결정적 청소** 한 겹을 더 얹는다 — `__fxDedupe()` 가 «줄 종류마다 마지막
+       한 장만» 남기고 앞 장을 **네이티브** `removeChild` 로 걷는다(제품의 규약과 같은 규칙이고,
+       이미 걷혔으면 아무 일도 안 한다). 짝은 **글자가 아니라 줄 종류**로 짓는다 — 낡은 사본은
+       «Lv. 12», 새 사본은 «Lv. 13» 이라 글자로 짝지으면 둘 다 남는다(13회차가 밟은 함정). */
 const FREEZE = () => {
-  const inFx = (n) => { try { return !!(n && n.parentNode && n.parentNode.id === 'fxl'); } catch (_) { return false; } };
+  let on = false;
   const R = Element.prototype.remove, RC = Node.prototype.removeChild;
+  const kind = (n) => { const s = (n.textContent || '').replace(/\s+/g, ' ').trim();
+    return /^Lv\./.test(s) ? 'lv' : /^\d+\s*\/\s*\d+$/.test(s) ? 'bar' : 'badge'; };
+  window.__fxFreeze = (v) => { on = !!v; };
+  window.__fxDedupe = () => {
+    const L2 = document.getElementById('fxl'); if (!L2) return 0;
+    const ks = [...L2.querySelectorAll('.fx-keep')], last = new Map();
+    for (const k of ks) last.set(kind(k), k);
+    let n = 0;
+    for (const k of ks) if (last.get(kind(k)) !== k && k.parentNode === L2) { RC.call(L2, k); n++; }
+    return n;
+  };
+  const inFx = (n) => { try { return on && !!(n && n.parentNode && n.parentNode.id === 'fxl'); } catch (_) { return false; } };
   Element.prototype.remove = function () { if (inFx(this)) return; return R.call(this); };
-  Node.prototype.removeChild = function (c) { if (this && this.id === 'fxl') return c; return RC.call(this, c); };
+  Node.prototype.removeChild = function (c) { if (on && this && this.id === 'fxl') return c; return RC.call(this, c); };
 };
 
 const srgb = (v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
@@ -176,6 +214,9 @@ async function shotPeak(p, tag, peakArg) {
   await p.evaluate((peak) => {
     const btn = document.querySelector('#bCos [data-cosup]'); if (!btn) throw new Error('[강화] 없음');
     btn.click();
+    /* 14회차 — **여기서** 무력화를 켠다(머리말 ⚑). 클릭 핸들러 안의 «규약 걷기» 는 이미 끝났고,
+       이 뒤에 오는 것은 `fxBye()` 의 타이머 걷기뿐이다. */
+    if (window.__fxFreeze) window.__fxFreeze(true);
     /* 봉우리로 감고 정지. `fxFlash`·`fxCvSwap` 둘 다 이 한 줄에 걸린다(자를 두 벌 만들지 않는다). */
     for (const a of document.getAnimations()) {
       try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
@@ -183,6 +224,18 @@ async function shotPeak(p, tag, peakArg) {
     }
   }, peakAt);
   await p.waitForTimeout(120);
+  /* 낡은 사본 결정적 청소 — **여기서** 부른다(머리말 ⚠). 클릭 직후에 부르면 `fxFlashRekeep` 이
+     아직 안 뜬 판에서는 지울 것이 없어 그냥 지나가고, 그 뒤에 뜬 새 사본이 낡은 사본 «옆»에
+     남는다(실측: 같은 트리에서 3.07 ↔ 4.59 로 갈렸다). 다 뜬 뒤에 부르면 결정적이다. */
+  /* 청소 뒤에는 **다시 감는다** — 그 사이에 새로 뜬 사본은 감긴 적이 없어 «실시간으로 흐른 색»
+     으로 남는다(probe814d 머리말 ⚑ · 실측 L 0.912). 청소 → 재감기 → 찍기. */
+  await p.evaluate((peak) => {
+    if (window.__fxDedupe) window.__fxDedupe();
+    for (const a of document.getAnimations()) {
+      try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
+        if (d) { a.currentTime = d * peak; a.pause(); } } catch (_) {}
+    }
+  }, peakAt);
   const f = path.join(TMP, tag + '.png');
   await p.screenshot({ path: f });
   return PNG.sync.read(fs.readFileSync(f));
@@ -203,9 +256,17 @@ async function measure(file, tag, peak) {
     const flash = L2 ? L2.querySelector('.fx-flash') : null;
     const txt = (n) => (n.textContent || '').replace(/\s+/g, ' ').trim();
     const anim = (n) => { try { return n.getAnimations().map((a) => a.animationName || (a.effect && a.effect.getKeyframes ? 'css' : '?')).join('+'); } catch (_) { return ''; } };
+    /* 14회차 — 사본이 **그 프레임에 무슨 색을 선언하고 있는가**. 애니가 정지돼 있으므로
+       `getComputedStyle` 이 곧 그 시각의 보간색이다(추정 없음 — 890 이 세운 방식). */
+    const LV = /^Lv\./, BAR = /^\d+\s*\/\s*\d+$/;
+    const pick = (re) => { for (const k of keeps) { if (!re.test(txt(k))) continue;
+      const inner = k.querySelector('*') || k; return getComputedStyle(inner).color; } return ''; };
     return {
       keeps: keeps.map((k) => ({ txt: txt(k), cls: (k.firstElementChild || {}).className || '',
                                  anim: k.firstElementChild ? anim(k.firstElementChild) : '' })),
+      lvColor: pick(LV), barColor: pick(BAR),
+      lvKeeps: keeps.filter((k) => LV.test(txt(k))).length,
+      barKeeps: keeps.filter((k) => BAR.test(txt(k))).length,
       flashBg: flash ? getComputedStyle(flash).backgroundColor : '',
       /* 그리는 순서가 곧 위아래 — 패치가 플래시 «뒤» 에 있어야 그 위에 그려진다 */
       keepAfterFlash: !!(flash && keeps.length && keeps.every((k) => (flash.compareDocumentPosition(k) & 4) !== 0))
@@ -249,23 +310,48 @@ async function measure(file, tag, peak) {
     + '. ⚠ 12회차에 자를 두 번 조였다 — 프레임(워시 봉우리 신설)과 열창(keep-out 배지 제외)');
   ok(pBar.r >= 3.0, '[P2] «n/500» 이 연출 중에도 3.0:1 이상 — **최악 ' + f1(pBar.r) + ':1** '
     + '(크기봉 ' + f1(kBar.r) + ' · 워시봉 ' + f1(wBar.r) + ' · 7회차 2.30~2.63)');
-  /* ⚑ [P3] — **사본이 약속한 것은 «글리프» 하나다.** 사본은 글자를 워시 «위» 에 다시 그리므로
-     글리프 채움은 정지와 **같은 밝기**로 돌아온다. 하지만 그 글자가 **앉은 면**(바·카드)은 여전히
-     워시 밑이라 합성비는 정지에 못 미친다 — 남는 몫이 `--flash-k` 가 미는 자리이고, 그러고도
-     남는 것은 «바 색» 축(2인 각자 «이 작업 밖» 으로 못박았다)이다.
-     ⇒ 이 항은 «정지와 같아졌는가» 가 아니라 **«사본이 제 몫을 다했는가»** 를 묻는다. 문턱을
-       실측값 옆에 붙여 만들지 않는다(863 계보 — 문턱에 붙은 항은 다음 손잡이에 바로 빨개진다). */
-  const dLv = Math.abs(pLv.fg - sLv.fg), dBar = Math.abs(pBar.fg - sBar.fg);
-  console.log('  · 글리프 채움 L — «Lv» 정지 ' + sLv.fg.toFixed(3) + ' → 연출 ' + pLv.fg.toFixed(3)
-    + ' (Δ' + dLv.toFixed(3) + ') · «n/500» 정지 ' + sBar.fg.toFixed(3) + ' → 연출 ' + pBar.fg.toFixed(3)
-    + ' (Δ' + dBar.toFixed(3) + ')');
-  ok(dLv <= 0.02 && dBar <= 0.02,
-    '[P3] ★ 사본이 **글리프 채움을 정지와 같은 밝기**로 되돌린다 — Δ ' + dLv.toFixed(3) + ' · '
-    + dBar.toFixed(3) + ' (≤0.02). 남는 몫은 «글자가 앉은 면» 이고 그것이 `--flash-k` 와 «바 색» 축이다');
-  ok(pLv.r > sLv.r * 0.6 && pBar.r > sBar.r * 0.6,
-    '[P4] 합성비도 정지의 60% 위로 돌아왔다 — «Lv» ' + f1(pLv.r) + '/' + f1(sLv.r) + ' = '
-    + (pLv.r / sLv.r * 100).toFixed(0) + '% · «n/500» ' + f1(pBar.r) + '/' + f1(sBar.r) + ' = '
-    + (pBar.r / sBar.r * 100).toFixed(0) + '% (7회차 CY 실측은 −70.8% · −48.9% 였다)');
+  /* ⚑⚑ [P3] — **14회차에 방향을 뒤집었다(333 처방 — 자리를 비우지 않는다).**
+     옛 항은 «사본이 글리프 채움을 **정지와 같은 밝기**로 되돌린다(Δ≤0.02)» 였고, 8~13회차 내내
+     Δ0.000 으로 초록이었다. 그 초록은 **하네스가 안 걷은 낡은 순백 사본**이 만든 것이다
+     (머리말 ⚑⚑ — 구멍을 막으면 그 상자에 L≥0.99 화소가 **0개**다).
+     제품은 애초에 그것을 약속한 적이 없다 — `@keyframes fxCvLit{0%{color:#FFC02E}30%{…}}` 가
+     **앞 102ms 를 앰버로 선언**한다(«방금 갱신됐다» 를 말하는 색이다). 그러니 옛 항은
+     «제품이 안 한 약속» 을 재고 있었고, 그것이 초록이었던 것은 자의 결함이었다.
+     ⇒ 물을 것은 **«사본이 워시에 안 먹히는가»** 다: 찍힌 채움이 그 프레임에 제품이 **선언한 색**
+       그대로여야 한다(선언색은 정지된 애니의 `getComputedStyle` 에서 읽는다 — 추정 없음).
+       워시가 사본을 먹으면 찍힌 값이 선언색보다 **어두워진다** = 빨강.
+     ⚠ 그래서 «앰버라서 대비가 낮다» 는 **자의 결함이 아니라 제품의 선언**이고, 그 판단은
+       채점(④)과 `fxCvLit` 색 축(ED 처방)의 몫이다 — 이 항은 그 축을 가리기만 하고 안 삼킨다. */
+  const rgbL = (s) => { const m = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(s || ''); return m ? L(+m[1], +m[2], +m[3]) : null; };
+  const decLv = rgbL((pLv === wLv ? wash : cur).dom.lvColor), decBar = rgbL((pBar === wBar ? wash : cur).dom.barColor);
+  const dLv = decLv === null ? null : Math.abs(pLv.fg - decLv), dBar = decBar === null ? null : Math.abs(pBar.fg - decBar);
+  console.log('  · 글리프 채움 L — «Lv» 정지 ' + sLv.fg.toFixed(3) + ' → 판정 프레임 ' + pLv.fg.toFixed(3)
+    + ' (제품 선언 ' + (decLv === null ? '—' : decLv.toFixed(3)) + ' · Δ' + (dLv === null ? '—' : dLv.toFixed(3)) + ')'
+    + ' · «n/500» 정지 ' + sBar.fg.toFixed(3) + ' → 판정 프레임 ' + pBar.fg.toFixed(3)
+    + ' (제품 선언 ' + (decBar === null ? '—' : decBar.toFixed(3)) + ' · Δ' + (dBar === null ? '—' : dBar.toFixed(3)) + ')');
+  ok(dLv !== null && dBar !== null && dLv <= 0.03 && dBar <= 0.03,
+    '[P3] ★ **사본이 워시에 안 먹힌다** — 찍힌 채움이 그 프레임의 **제품 선언색** 그대로다 (Δ '
+    + (dLv === null ? '—' : dLv.toFixed(3)) + ' · ' + (dBar === null ? '—' : dBar.toFixed(3)) + ' ≤0.03). '
+    + '⚑ 14회차 방향 전환 — 옛 항(«정지와 같은 밝기 Δ≤0.02»)은 **하네스가 안 걷은 낡은 순백 사본**이 초록으로 만든 것이었다');
+  ok((wash.dom.lvKeeps === 1 && wash.dom.barKeeps === 1),
+    '[P13] ★ **정지 벌에 값 줄 사본이 줄마다 1장뿐이다** — «Lv» ' + wash.dom.lvKeeps + '장 · «n/500» '
+    + wash.dom.barKeeps + '장. 2장이면 `renderUI()` 앞 사본이 안 걷힌 것이고, 그 낡은 사본은 '
+    + '`fxCvLit` 이 없어 **순백**이라 p99 를 1.000 에 못박는다(8~13회차의 5.08/5.03 이 그 값이다). '
+    + '실런타임 제품은 언제나 1장이다([P12] 계열)');
+  /* ⚑ [P4] — **14회차에 분모를 갈아 끼웠다(333 처방).** 옛 항은 «정지 대비비의 60% 위» 를 물었는데,
+     정지의 분자는 **순백**이고 판정 프레임의 분자는 `fxCvLit` 이 **선언한 앰버**다(위 [P3]).
+     그러니 옛 비는 «워시가 먹은 몫» 과 «제품이 일부러 칠한 색» 을 한 수에 섞어 놓고 있었고,
+     구멍이 막히자 45% 로 빨개진다 — 그 45% 의 대부분은 워시가 아니라 **선언색**이다.
+     ⇒ 이 항이 물어야 하는 것은 **워시가 «면» 에서 먹는 몫** 하나다: 같은 선언색으로 워시가
+       0 일 때 닿을 수 있는 천장 = (선언색 + .05) ÷ (**정지** 바닥 + .05) 을 분모로 삼는다.
+       색을 바꿀지는 ④ 와 `fxCvLit` 축(ED 처방)의 몫이고 이 항은 거기 손대지 않는다. */
+  const capOf = (dec, still) => (dec === null ? null : (dec + 0.05) / (still.bg + 0.05));
+  const cLv = capOf(decLv, sLv), cBar = capOf(decBar, sBar);
+  ok(cLv !== null && cBar !== null && pLv.r > cLv * 0.6 && pBar.r > cBar * 0.6,
+    '[P4] **워시가 «면» 에서 먹는 몫이 40% 아래다** — «Lv» ' + f1(pLv.r) + '/' + f1(cLv) + '(워시 0 천장) = '
+    + (cLv ? (pLv.r / cLv * 100).toFixed(0) : '—') + '% · «n/500» ' + f1(pBar.r) + '/' + f1(cBar) + ' = '
+    + (cBar ? (pBar.r / cBar * 100).toFixed(0) : '—') + '% (≥60%). '
+    + '⚑ 14회차 분모 전환 — 옛 분모(정지 대비비)는 «워시가 먹은 몫» 에 «제품이 선언한 색» 을 섞고 있었다');
 
   console.log('\n[2] 사본이 «새 값 + 도는 팝» 을 들고 있는가 (7회차 §4-8-1 이 적어 둔 함정)');
   const kt = cur.dom.keeps.map((k) => k.txt);
@@ -393,14 +479,25 @@ async function measure(file, tag, peak) {
         const N = await measure(tmp, tag);
         const nLv = ratio(N.img, N.post.lv), nBar = ratio(N.img, N.post.bar);
         console.log('  · [' + tag + '] ' + why + ' — «Lv» ' + f1(nLv.r) + ':1 · «n/500» ' + f1(nBar.r) + ':1');
-        if (tag === 'R-e') ok(nLv.r <= kLv.r - 0.40 && nBar.r <= kBar.r - 0.40,
-          '[R-e] 두 손잡이를 빼면 **두 줄이 같이 내려간다** — «Lv» ' + f1(nLv.r) + ' (지금 ' + f1(kLv.r)
-          + ' · Δ' + f1(kLv.r - nLv.r) + ') · «n/500» ' + f1(nBar.r) + ' (지금 ' + f1(kBar.r)
-          + ' · Δ' + f1(kBar.r - nBar.r) + ') — 둘 다 Δ≥0.40'
+        /* ⚑⚑ [R-e] — **14회차에 둘로 갈랐다(726 처방 «지우지 않고 둘로 가른다»).**
+           옛 항은 «두 줄이 **같이** 내려간다» 였고 구멍이 막히기 전에는 초록이었다. 구멍을 막고
+           재니 **«Lv. n» 은 손잡이를 빼면 오히려 0.06 «올라간다»** — 이유가 실재하고 뚜렷하다:
+           `--flash-keep` 이 워시 위에 다시 그리는 글자는 `fxCvLit` 의 **앰버**(L 0.592)인데,
+           손잡이를 빼면 그 자리에 남는 것은 워시 밑의 **흰** 원본이라 분자가 더 밝다.
+           ⇒ **이 두 손잡이의 축은 «n/500» 하나다.** «Lv. n» 의 축은 `fxCvLit` **색**이고
+             그것은 이 항이 아니라 ④ 채점과 ED 처방이 다툴 자리다(12·13·14회차의 그 자리). */
+        if (tag === 'R-e') { ok(nBar.r <= kBar.r - 0.40,
+          '[R-e] 두 손잡이를 빼면 **«n/500» 이 내려간다** — ' + f1(nBar.r) + ' (지금 ' + f1(kBar.r)
+          + ' · Δ' + f1(kBar.r - nBar.r) + ' ≥0.40)'
           + '. ⚠ 문턱을 «3.0 미만» 에서 **Δ** 로 갈아 끼웠다(12회차): 878 이 `#bCos .sk-bar` 를 어둡게 해'
           + ' 7회차 판조차 3.32·3.57 로 3.0 위에 서므로 옛 문턱은 «이 두 손잡이가 무엇을 버는가» 를'
-          + ' 더 이상 묻지 못한다. **절대 3.0 바닥은 이제 바 색이 지키고 그 항은 `verify878` [R] 이 든다** —'
-          + ' 여기가 물을 것은 그 바닥 «위에서» 손잡이가 버는 몫이다(333 처방: 자리를 비우지 않고 축을 바꾼다)');
+          + ' 더 이상 묻지 못한다. **절대 3.0 바닥은 이제 바 색이 지키고 그 항은 `verify878` [R] 이 든다**');
+          ok(Math.abs(nLv.r - kLv.r) < 0.40,
+          '[R-e2] ★ **«Lv. n» 은 이 두 손잡이의 축이 아니다** — 빼도 ' + f1(nLv.r) + ' ↔ 지금 '
+          + f1(kLv.r) + ' (|Δ| ' + f1(Math.abs(nLv.r - kLv.r)) + ' < 0.40). '
+          + '`--flash-keep` 이 워시 위에 다시 그리는 글자가 `fxCvLit` 의 **앰버**라 분자가 안 오른다 — '
+          + '이 줄의 축은 **색**(ED 처방)이지 이 두 손잡이가 아니다. '
+          + '⚑ 14회차에 옛 [R-e](«두 줄이 같이 내려간다»)에서 갈라 냈다 — 그 초록은 낡은 순백 사본의 것이었다'); }
         else ok(nBar.r < kBar.r,
           '[R-f] 세기(`--flash-k`)를 빼면 «n/500» 이 내려간다 — ' + f1(nBar.r) + ' < 지금 ' + f1(kBar.r)
           + ' (라벨만 올려서는 못 닫힌다는 CX 스윕의 재확인)');
