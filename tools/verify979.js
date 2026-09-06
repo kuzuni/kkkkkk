@@ -25,8 +25,12 @@ const OLD_TIMING = 'cubic-bezier(.34,1.56,.64,1)';
 const NAME = 'fxCvSwapS';
 const EPS_PEAK = 0.01;          /* 등재문이 준 항등 허용치 */
 const REACCEL_MAX = 3.0;        /* 894 [B5] 와 같은 문턱 — 894 판 1.00~1.72, 옛 판 13.79 */
-/* 자매 — 같은 오버슛 약칭 × 되돌아오는 팝. **줄이지 마라**(늘어나면 [B5] 가 빨개진다) */
-const SIBLINGS = ['fxCvSwap', 'fxPop', 'fxHit', 'fxToastIn'];
+/* 자매 — 같은 오버슛 약칭 × 되돌아오는 팝. 이 목록은 **래칫**이다(늘어나면 [B5] 가 빨개진다).
+   ⚑ 983 이관(2026-09-06) — 넷 중 셋(`fxCvSwap`·`fxPop`·`fxHit`)이 같은 처방으로 갈렸다.
+     래칫은 «줄어들 때만» 줄인다 — 자리를 비우는 것이 아니라 **더 조이는 것**이고,
+     남은 하나 `fxToastIn` 은 894 §5-2 가 «등장 구간 오버슛 = 바운스 축» 으로 판정해 둔 자리다.
+     ⚠ 이 목록을 다시 늘려서 초록으로 만들지 마라 — 그 순간 «결함이 있어야 통과하는 자» 가 된다. */
+const SIBLINGS = ['fxToastIn'];
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : fail++; };
