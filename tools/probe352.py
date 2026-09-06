@@ -291,7 +291,21 @@ def sep(px, x, ytop, tag):
     lo, hi, top = sep_sub(px, x, ytop, best)
     print('   %-4s ▸ 부분화소 y %.2f~%.2f (h **%.2f**) · 상변에서 **+%.2f**  (CSS 54 · top 16)'
           % ('', lo, hi, hi - lo, top))
+    # 968 — 원점을 **리터럴이 아니라 같은 자로** 잰다. 위 줄의 `ytop` 은 손으로 적은 정수라
+    #   ① 낡으면 조용히 틀리고(437 이 바 상변을 1961 → 1960 으로 옮겼다) ② ref 는 정수라
+    #   부분화소 상변(2020.75)과 0.25 어긋난다. 둘 다 «제품이 밀렸다» 로 오독된다.
+    #   ⚠ 위 줄들은 한 글자도 안 건드렸다 — 이 줄은 **덧붙인 검산**이다.
+    o = outer_top(px, x, ytop)
+    print('   %-4s ▸ 원점을 같은 자로: 셸 바깥 상변 %.2f ⇒ 오프셋 **+%.2f** · 하변 **+%.2f**'
+          % ('', o, lo - o, hi - o))
     return top, hi - lo
+
+
+def outer_top(px, x, ytop):
+    """셸 바깥 상변(P 크림 → K 검정)의 **부분화소** 자리 — ⓑ 가 두께를 낼 때 쓰는 그 교차다."""
+    pre = 10
+    cols = [px[x, ytop - pre + i] for i in range(pre + 14)]
+    return _cross(cols, pre, 'P', 'K') + ytop - pre
 
 
 def sep_sub(px, x, ytop, best):
@@ -525,7 +539,11 @@ def main():
     print('\n ⓒ `.stab-sep` 구분선 — x777(ref) / x775(cap)')
     sep(ref7, 777, 2021, 'ref')
     if has:
-        sep(cap7, 775, 1961, 'cap')
+        # 968 — cap 원점 1961 → **1960**. 437 이 바 상변을 1961 → 1960 으로 옮겼는데(바로 위
+        #   ⓪ 줄이 그렇게 적고 있다) 이 리터럴만 안 따라와 «+22» 를 찍었고, CSS 항등식
+        #   (테두리 7 + top 16 = 23)과의 그 1.00px 이 968 등재문의 «0.86px» 로 굳었다.
+        #   원점을 고치면 cap 이 **+23.00 = 항등식 Δ0.00** 이다(같은 줄의 새 검산과 일치).
+        sep(cap7, 775, 1960, 'cap')
 
 
 if __name__ == '__main__':
