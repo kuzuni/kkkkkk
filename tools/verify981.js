@@ -48,10 +48,12 @@ const SRC = path.join(ROOT, 'index.html');
        한 번에 목표(0.60)를 걸면 이 자는 열 회차 내내 빨간 채로 아무것도 안 지킨다(348).
        ⚠ **올리지 마라.** 회차가 값을 못 내렸으면 그것은 그 회차가 못 한 것이지 자의 결함이 아니다. */
 const COMPLAIN = 0.60;
-const IOU_RATCHET = 0.73;     /* 3회차 실측 0.714(`curve↔boomer`) — 2회차 0.725(`shuri↔whirl`) — 1회차 0.848 · 수리 전 0.872.
-                                 ⚠ 3회차가 그 둘을 갈랐다(주변참격을 «참격 고리» 로) — 이제 최악은
-                                 **굽은 띠 둘**(초승달 ↔ 부메랑)이고 그것이 4회차의 과녁이다. */
-const OVER_RATCHET = 17;      /* 3회차 실측 16 · 2회차 18 — 1회차 20 이었고 그 사이 **982 1회차가 24 로 올렸다**
+const IOU_RATCHET = 0.71;     /* 4회차 실측 0.697(`bounce↔flask`) — 3회차 0.714(`curve↔boomer`) — 2회차 0.725 —
+                                 1회차 0.848 · 수리 전 0.872.
+                                 ⚑ 4회차가 초승달을 «뿔이 선 손톱달» 로 갈라 `curve` 쌍 넷을 통째로 내렸다.
+                                 ⚠ **이제 최악은 초승달이 아니다** — 남은 둘은 `ball↔bottle` 0.697(둥근 몸통 둘)과
+                                 `rock↔fire` 0.697 이고, 그 둘이 5회차의 과녁이다. */
+const OVER_RATCHET = 14;      /* 4회차 실측 13 · 3회차 16 · 2회차 18 — 1회차 20 이었고 그 사이 **982 1회차가 24 로 올렸다**
                                  (성긴 실루엣을 부풀린 대가로 서로 닮았다. 내 변경 전 HEAD 에서 이 항이
                                  이미 빨갰고, 수리 전 트리 실행으로 그것을 못박았다 — 회차 기록 §2회차 ①).
                                  ⚠ 아래 옛 주석의 «여유 1칸» 은 그대로다.
@@ -66,7 +68,10 @@ const ROCK_MAX = 0.75;        /* [C1] — 1회차가 `rock` 에서 실제로 닫
 const R2_MAX = { gem: 0.66,        /* 실측 0.618 (수리 전 0.787 — `fire` 와) */
                  rockfall: 0.70,   /* 실측 0.649 (수리 전 0.831 — `gem` 과) */
                  cross: 0.66,      /* 3회차 실측 0.642 ↔ `fire` (수리 전 0.725 ↔ `star`) */
-                 bottle: 0.72 };   /* 실측 0.697 (수리 전 0.848 — `ball` 과 · 전 136쌍 최악이었다) */
+                 bottle: 0.72,     /* 실측 0.697 (수리 전 0.848 — `ball` 과 · 전 136쌍 최악이었다) */
+                 moon: 0.68 };     /* 4회차 실측 0.645 ↔ `lance` (수리 전 0.714 ↔ `bmr` · 전 136쌍 최악이었다).
+                                      ⚠ 이 종은 **0.60 위 목록에서 넷이 한꺼번에** 빠진 자리다
+                                      (bmr .714 · arc .693 · spear .608 · ball .607 → 전부 0.60 아래). */
 const D1_MAX = 0.90;          /* 792 [D1] 과 같은 값 — 되감기 금지 축 */
 const DIAG_TOL = 0.25;        /* 792 [E1] 과 같은 값 */
 
@@ -76,6 +81,7 @@ const DIAG_TOL = 0.25;        /* 792 [E1] 과 같은 값 */
 const NEG_ROCK = path.join(ROOT, '.v981-neg-rock-' + process.pid + '.html');
 const NEG_CVX  = path.join(ROOT, '.v981-neg-cvx-'  + process.pid + '.html');   /* [R2] — 오목을 지운 볼록 사본 */
 const NEG_SEG  = path.join(ROOT, '.v981-neg-seg-'  + process.pid + '.html');   /* [R3] — 참격 고리를 4토막으로 되돌린 사본 */
+const NEG_FAT  = path.join(ROOT, '.v981-neg-fat-'  + process.pid + '.html');   /* [R4] — 초승달을 도로 살찌운 사본 */
 /* ⚠ 줄 전체가 아니라 **머리**만 붙잡는다(792 9회차 교훈 — 줄이 길어지면 자가 먼저 죽는다). */
 const TAG_ROCK = `      const rr = [`;
 const OLD_ROCK = `      const rr = [9.8,7.7,9.4,6.9,10.0,8.1];`;
@@ -147,6 +153,20 @@ function holePx(px, bw) {
      '[C4c] 운석 불꼬리가 **본체 문턱(α .55) 아래**다 — 선언 α 0.' + tail[1] +
      ' ≤ 0.50 (올리면 쐐기가 깎은 자리를 도로 메운다 · 알파는 겹치면 1−(1−a)(1−b) 로 **더해진다**)');
 
+  /* ── [C6] 4회차의 선언 한 줄 — 초승달이 «뿔이 서 있는가» 를 픽셀 전에 산수로 묻는다 ──
+     뿔이 서려면 **파낸 원이 바깥 원보다 커야** 한다(작으면 두 호의 끝이 안 만나 `closePath()` 가
+     직선으로 뭉툭하게 막는다 = 옛 «굽은 막대»). 그리고 분간을 지탱하는 것은 **등두께**다 —
+     후보 탐색표(`node tools/try981.js --fam cres --vs moon`)가 0.15 에서 최악 0.58~0.60,
+     0.45 로 살찌우면 **0.758** 을 낸다([R4] 가 그것을 제품으로 찍는다). */
+  {
+    const mm = src.match(/const M_R = ([\d.]+), M_CXK = ([\d.]+), M_RAK = ([\d.]+)/);
+    const cxk = mm ? +mm[2] : 0, rak = mm ? +mm[3] : 0;
+    const back = mm ? +(1 - (rak - cxk)).toFixed(3) : 9;   /* 등(바깥 원호) 쪽 두께 · 바깥 반지름 = 1 */
+    ok(!!mm && rak > 1 && Math.abs(1 - rak) < cxk && cxk < 1 + rak && back > 0 && back <= 0.22,
+       '[C6] 초승달에 **뿔이 서 있다** — 파낸 원 ' + (rak || '?') + '배 > 1(바깥 원) · 두 원이 만난다 · ' +
+       '등두께 ' + back + ' ≤ 0.22 (살찌우면 굽은 띠 무리로 되돌아간다 — [R4])');
+  }
+
   /* ── 본 측정 ── */
   const cur = await pairsOf(browser, 'file://' + SRC);
   if (cur.__err) { ok(false, '[측정] 블록 예외 — ' + cur.__err); }
@@ -176,12 +196,12 @@ function holePx(px, bw) {
        '쌍 전부 ≤ ' + ROCK_MAX + ' (981 이전 boom 0.872 · meteor 0.813 · rico 0.800) · 넘는 쌍 ' +
        rkBad.length + (rkBad.length ? ' (' + rkBad.map(p => p.sa + '↔' + p.sb + ':' + p.iou.toFixed(3)).join(' · ') + ')' : ''));
 
-    /* ── [C3] 2회차가 닫은 세 자리 ── */
+    /* ── [C3] 앞 회차들이 닫은 자리 ── (2회차 gem·rockfall·bottle · 3회차 cross · 4회차 moon) */
     for (const sh of Object.keys(R2_MAX)) {
       const ps = withSh(pairs, sh);
       const bad = ps.filter(p => p.iou > R2_MAX[sh]);
       ok(bad.length === 0,
-         '[C3-' + sh + '] 2회차가 닫은 자리 — ' + sh + ' 가 낀 ' + ps.length + '쌍 전부 ≤ ' +
+         '[C3-' + sh + '] 앞 회차가 닫은 자리 — ' + sh + ' 가 낀 ' + ps.length + '쌍 전부 ≤ ' +
          R2_MAX[sh] + ' · 최악 ' + (ps[0] ? ps[0].sa + '↔' + ps[0].sb + ':' + ps[0].iou.toFixed(3) : '-') +
          (bad.length ? ' · 넘는 쌍 ' + bad.map(p => p.sa + '↔' + p.sb + ':' + p.iou.toFixed(3)).join(' · ') : ''));
     }
@@ -312,12 +332,43 @@ function holePx(px, bw) {
     } finally { try { fs.unlinkSync(NEG_SEG); } catch (_) {} }
   }
 
+  /* ── [R4] 4회차의 되돌림 시험 — «얇은 손톱달이 일하고 있다» ──
+     한 값만 바꾼다: 파낸 원을 2.25 → **1.95** 배로(= 등두께 0.15 → **0.45** 로 살찐 옛 꼴).
+     형상 가족·크기·자리·층은 그대로이므로 이 판이 빨개지면 원인은 «등두께» 하나뿐이다.
+     ⚑ 왜 이 값인가 — 후보 탐색표가 `cres d1.40 r1.95` 를 **0.758 ↔ arc** 로 찍는다(수리 전 0.714 보다도
+       높다). 즉 «굽은 띠 무리» 는 이 종이 얇지 않은 한 반드시 되돌아온다.
+     ⚠ 뿔 각·잉크 무게중심은 이 한 값에서 **파생**되므로(제품이 `Math.acos` 로 낸다) 사본이
+       스스로 닫힌다 — 되돌림 사본에 손으로 적을 상수가 하나도 없다(368·861 처방). */
+  if (!/M_RAK = 2\.25/.test(src)) {
+    ok(false, '[R4-0] 되돌림 앵커(`M_RAK = 2.25`)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
+  } else {
+    fs.writeFileSync(NEG_FAT, src.replace('M_RAK = 2.25', 'M_RAK = 1.95'), 'utf8');
+    try {
+      const neg = await pairsOf(browser, 'file://' + NEG_FAT);
+      if (neg.__err) { ok(false, '[R4] 되돌림 사본 측정 예외 — ' + neg.__err); }
+      else {
+        const nWorst = withSh(neg.pairs, 'moon')[0];
+        const nOver = withSh(neg.pairs, 'moon').filter(p => p.iou > COMPLAIN);
+        const nowWorst = withSh(cur.pairs || [], 'moon')[0];
+        const jump = (nWorst ? nWorst.iou : 0) - (nowWorst ? nowWorst.iou : 0);
+        ok(!!nWorst && nWorst.iou > R2_MAX.moon && nOver.length >= 2 && jump >= 0.05,
+           '[R4] 되돌림 시험 — 초승달을 **도로 살찌우면**(등두께 0.15 → 0.45) [C3-moon] 이 실제로 빨개진다: ' +
+           'moon 최악 ' + (nowWorst ? nowWorst.iou.toFixed(3) : '?') + ' → ' +
+           (nWorst ? nWorst.sa + '↔' + nWorst.sb + ' ' + nWorst.iou.toFixed(3) : '?') +
+           ' (+' + jump.toFixed(3) + ' ≥ 0.05 · 문턱 ' + R2_MAX.moon + ') · ' +
+           COMPLAIN + ' 위 moon 쌍 ' + nOver.length + '개 ≥ 2 (' +
+           nOver.slice(0, 4).map(p => p.sa + '↔' + p.sb + ':' + p.iou.toFixed(3)).join(' · ') + ')');
+      }
+    } finally { try { fs.unlinkSync(NEG_FAT); } catch (_) {} }
+  }
+
   await browser.close();
   console.log('\nVERIFY981 ' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
   process.exit(fail ? 1 : 0);
 })().catch((e) => {
   try { fs.unlinkSync(NEG_ROCK); } catch (_) {}
   try { fs.unlinkSync(NEG_CVX); } catch (_) {}
+  try { fs.unlinkSync(NEG_FAT); } catch (_) {}
   try { fs.unlinkSync(NEG_SEG); } catch (_) {}
   console.log('VERIFY981 오류 — ' + e.message); process.exit(1);
 });
