@@ -74,6 +74,12 @@ const TALLY = () => {
   const flash = L.filter(n => /fx-flash/.test(cls(n)));
   const text = L.filter(n => /fx-plus|fx-delta/.test(cls(n)));
   const bead = L.filter(n => /fx-spark/.test(cls(n)) && !/fx-rlic|fx-cic/.test(cls(n)));
+  /* ⚑⚑ 980 — **여섯째 갈래: 795 라벨 패치(`.fx-keep`).** 종전의 다섯 갈래(획득·지불·플래시·구슬·글자)는
+     `.fx-keep` 를 **어디에도 안 셌다** — 그래서 A8(340ms)처럼 «획득 0 · 플래시 0» 인 프레임에
+     **불투명도 1 짜리 노드가 당첨 카드를 통째로 덮고 있어도** 표가 «연출 0» 으로 읽혔고,
+     683 비평 브리핑이 그 프레임을 «사실상 정착 화면» 이라고 적었다(등재 980 · `probe980` [1]).
+     ⚠ 표가 못 보는 갈래가 있으면 그 갈래는 **없는 것이 된다** — 1회차의 «가시성 문턱» 사고와 같은 꼴이다. */
+  const keep = L.filter(n => /fx-keep/.test(cls(n)));
   const w = window.__cap683 || {};
   const card = w.id ? document.querySelector('[data-rw="' + w.id + '"]') : null;
   const cr = card ? card.getBoundingClientRect() : null;
@@ -93,6 +99,10 @@ const TALLY = () => {
   const gsp = (gain.length && cr) ? Math.round(Math.max(...gain.map(n => { const b = n.getBoundingClientRect();
     return Math.hypot(b.x + b.width / 2 - (cr.x + cr.width / 2), b.y + b.height / 2 - (cr.y + cr.height / 2)); }))) : 0;
   const payOut = pay.filter(n => !inBox(n, br, 2)).length;
+  /* 980 — 그 패치가 **당첨 카드를 덮는가**(상자 겹침 · 중심이 아니라 면이다 — 카드와 같은 크기다) */
+  const hit = (n, r) => { if (!r) return false; const b = n.getBoundingClientRect();
+    return b.x < r.x + r.width && b.x + b.width > r.x && b.y < r.y + r.height && b.y + b.height > r.y; };
+  const keepOn = keep.filter(n => hit(n, cr)).length;
   /* ⚑ 975 — **알마다 나이(ms)**. 「한 홀드의 연속 네 장」인지는 «몇 알인가» 로는 안 보인다 —
      네 장이 전부 «갓 태어난 틱»(나이 0) 이면 그것이 바로 등재 975 가 잡은 얼굴이다.
      나이는 그 노드에 걸린 애니의 `currentTime` 최댓값으로 잰다(얼려 놓고 재므로 멈춘 값이다). */
@@ -131,6 +141,7 @@ const TALLY = () => {
   return { tick, gain: gain.length, onCard, other, glyph, gsz, gsp, ages, lv, lvSum,
            gainAll: gainAll.length, agesAll, page: window.__capPage || '?',
            pay: pay.length, payOut, bead: bead.length, text: text.length, flash: flash.length,
+           keep: keep.length, keepOn,
            id: w.id || '', ic: w.ic || '', name: w.name || '',
            card: cr ? { x: Math.round(cr.x), y: Math.round(cr.y), w: Math.round(cr.width), h: Math.round(cr.height) } : null };
 };
@@ -167,8 +178,44 @@ async function paintedPx(p, file, box) {
 /* ⚑⚑ 3회차 신설 — **기준선.** 2회차의 «찍힌 잉크 px» 는 카드 상자 안 밝은 픽셀을 통째로 세서
    **카드 자기 아이콘까지** 포함했다(비평가 지적: «A8 은 0알인데 7,030px — 그 열은 파티클을 못 가려낸다»).
    ⇒ 연출이 하나도 없는 정착 화면을 한 장 찍어 **칸마다** 기준선을 만들고, 표에는 **Δ(그 프레임 − 기준선)**
-   을 적는다. 그러면 «알이 0인데 값이 크다» 가 구조적으로 안 나온다. */
-async function baseline() {
+   을 적는다. 그러면 «알이 0인데 값이 크다» 가 구조적으로 안 나온다.
+   ⚑⚑⚑ **980 — 그 기준선이 «다른 상태의 화면» 이었다(하네스 결함).** 3회차의 기준선은 **소환을
+     한 번도 안 한** 별개 페이지였다. 그런데 당첨 칸은 그 소환으로 **미보유 → 보유**가 되므로
+     (`.rw-c.off` = 회색 · `grayscale(.85) brightness(.5)`), 기준선의 그 칸은 회색이고 **모든 A
+     프레임의 그 칸은 밝다** — Δ 는 «연출이 더한 잉크» 가 아니라 **«칸이 켜졌다»** 를 같이 셌다.
+     `probe980` [3]·[4] 실측(시드 20260902 · 당첨 rl5): 소환 전 **89px** ↔ 소환 뒤 «연출 0» **7,305px**
+     ⇒ 현행 Δ(A8) **7,205px** ↔ 참값 **−11px**(655배). 683 비평 브리핑이 «파티클 몫 ≈ Δ − 8000» 이라는
+     **손 상수**를 적어야 했던 이유가 이 8,000 이다.
+   ⇒ 기준선을 **프레임마다** 그 프레임 자신에게서 뜬다: 같은 순간의 화면에서 **연출 레이어(`#fxl`)만
+     숨긴 쌍둥이**를 한 장 더 찍고 Δ = (프레임 − 쌍둥이). 카드 상태·레벨·보유·눌림이 두 장에 똑같이
+     들어 있으므로 **남는 것은 연출 레이어가 그린 것뿐**이고, 씬 B 처럼 프레임마다 상태가 달라지는
+     자리에서도 같은 자가 그대로 옳다(옛 기준선은 B 에서도 같은 오염을 안고 있었다).
+   ⚠ **숨기기는 `visibility` 여야 한다 — `display:none` 은 파괴적이다.** `probe980` 실측:
+     `display:none` 으로 숨겼다 되살리면 CSS 애니메이션이 렌더 트리에서 빠지며 **취소**되고,
+     되살아날 때 t=0 부터 다시 돌아 그 프레임이 통째로 바뀐다(카드 상자 안 19,254px 어긋남).
+     `visibility:hidden` 은 렌더 트리에 남으므로 애니가 안 끊기고 되살림이 **화소까지 0 차이**다.
+   ✅ **되돌림** — `twinPx()` 호출을 지우고 `r.px0` 를 옛 `baseline()` 값으로 되돌리면 3회차 판이다. */
+/* ⚑⚑ 980 — **예열(버리는 첫 장).** 이 페이지의 **첫 스크린샷은 우리가 부탁한 상태가 아니다**:
+   `a.pause()`·`a.finish()`·`a.currentTime = T` 는 즉시 반영되지만 `#fxl` 은 합성 레이어라
+   (`transform:translateZ(0); will-change:transform`) **한 번 그려 봐야** 그 값이 화면에 선다.
+   `probe980` [6] 실측(시드 20260902 · 카드+24 상자 밝은 px, 첫 장 → 둘째 장):
+     T=0 3,521→2,799 · 40 5,994→5,994 · 80 5,526→4,814 · 130 5,734→5,008 · 180 6,287→5,623 ·
+     240 7,133→6,393 · 290 8,011→7,250 · **340 8,062→7,293** — 둘째와 셋째 장은 **언제나 같다**.
+   ⚠ 차이는 알(파티클)이 아니다 — 알이 **0개**인 240·290·340 에서도 +740~770px 로 같다.
+     그 몫은 카드 자신의 **`.fx-hit` 팝**(`transform:scale(1.05)` · `fxHit .26s`)이다:
+     정착 잉크 7,293 × (1.05² − 1) = **748px** 로 실측과 맞는다. 즉 첫 장은 위 3회차 머리말이
+     «끝난 상태로 보낸다» 고 적어 둔 바로 그 `finish()` 가 **아직 안 그려진** 그림이다.
+   ⇒ 첫 장은 버리고 **둘째 장부터** 쓴다. 버린 장의 잉크는 정답표 꼬리에 그대로 적는다
+     (조용히 버리면 다음 세션이 같은 것을 다시 배운다 — 58 38회차 «흐리게 잴 바에는 흐린 값을 밝혀라»).
+   ✅ **되돌림** — `warmPx()` 호출 한 줄을 지우면 첫 장이 다시 정답표의 프레임이 된다. */
+/* ⚠ 980 — `--twin-legacy` 는 **옛 기준선(소환 전 별개 페이지) + 예열 없음** 을 그대로 남겨 둔 것이다.
+   되돌림 시험 전용(`tools/verify980.js` §R)이고 채점용 캡처에 쓰면 안 된다 — 975 의 `--b-legacy` 와 같은 꼴.
+   이 깃발로 돌리면 Δ(A8)가 −14px 에서 **7,000px 대**로 되돌아간다(= 등재 980 이 잡은 얼굴). */
+const TWIN_LEGACY = process.argv.includes('--twin-legacy');
+
+/* 옛 기준선(3회차) — 소환을 한 번도 안 한 별개 페이지에서 칸마다 밝은 px 를 센다.
+   ⚠ 이 자가 «정착» 이라고 부르는 화면에는 **당첨 칸이 아직 미보유(회색)** 로 들어 있다(등재 980). */
+async function baselineLegacy() {
   const { b, p } = await open(SEED);
   await p.evaluate(() => {
     try { document.getAnimations().forEach(a => { a.pause(); try { a.finish(); } catch (_) { a.currentTime = 1e7; } }); } catch (e) {}
@@ -190,6 +237,32 @@ async function baseline() {
   await b.close();
   try { fs.unlinkSync(file); } catch (e) {}
   return out;
+}
+
+async function warmPx(p, box) {
+  if (TWIN_LEGACY) return -1;                               /* 되돌림 시험 — 예열 없이 첫 장을 쓴다 */
+  fs.mkdirSync(OUT, { recursive: true });
+  const file = path.join(OUT, '683-' + ROUND + '-warm.png');
+  await p.screenshot({ path: file });
+  const px = await paintedPx(p, file, box);
+  try { fs.unlinkSync(file); } catch (e) {}
+  return px;
+}
+
+async function twinPx(p, tag, box) {
+  if (TWIN_LEGACY) return NaN;                              /* 되돌림 시험 — 옛 «소환 전» 기준선을 쓴다 */
+  const prev = await p.evaluate(() => { const L = document.getElementById('fxl');
+    const q = L.style.visibility; L.style.visibility = 'hidden'; return q; });
+  fs.mkdirSync(OUT, { recursive: true });
+  /* 씬 A 의 마지막 눈금 쌍둥이만 **남긴다** — 비평가가 «연출 0 인 그 카드» 를 눈으로 대조할
+     기준 프레임이다(등재 980 의 처방 «진짜 정착 프레임을 한 장 더 찍어 기준선으로 삼는다»). */
+  const keepFile = tag === 'Asettle';
+  const file = path.join(OUT, '683-' + ROUND + '-' + (keepFile ? 'Asettle' : 'twin') + '.png');
+  await p.screenshot({ path: file });
+  const px = await paintedPx(p, file, box);
+  await p.evaluate(q => { document.getElementById('fxl').style.visibility = q; }, prev);
+  if (!keepFile) { try { fs.unlinkSync(file); } catch (e) {} }
+  return px;
 }
 
 const FREEZE = () => {
@@ -361,10 +434,12 @@ async function shotA(T, idx) {
   }, { T, sd: SEED, tally: TALLY.toString(), freeze: FREEZE.toString(), seedfn: SEEDFN.toString() });
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '683-' + ROUND + '-A' + idx + '.png');
+  const warm = await warmPx(p, grow(info.card));            /* 980 — 예열(버리는 첫 장) · 위 머리말 */
   await p.screenshot({ path: file });
   const px = await paintedPx(p, file, grow(info.card));
+  const px0 = await twinPx(p, idx === STOPS.length ? 'Asettle' : 'A' + idx, grow(info.card));
   await b.close();
-  return { T, file, info, px, errs: errs.length };
+  return { T, file, info, px, px0, warm, errs: errs.length };
 }
 
 /* 씬 B — 연속(홀드). **한 번의 `open()` 안에서, 끊지 않은 한 홀드의 네 시각을 이어서 찍는다.**
@@ -420,9 +495,14 @@ async function holdUntil(p, cdp, c, target) {
 async function frame(p, info, tag, idx) {
   fs.mkdirSync(OUT, { recursive: true });
   const file = path.join(OUT, '683-' + ROUND + '-' + tag + idx + '.png');
+  /* 980 — 예열 · 그리고 «연출 0» 쌍둥이(위 두 머리말). 씬 B 는 **한 홀드가 살아 있어야** 하는데
+     둘 다 얼어 있는 동안 벌어지고 `visibility` 는 애니를 안 끊으므로 홀드가 안 다친다
+     (`verify975` 의 «한 페이지·실측 t 증가·화소 동일 0쌍» 이 그것을 계속 지킨다). */
+  const warm = await warmPx(p, grow(info.card));
   await p.screenshot({ path: file });
   const px = await paintedPx(p, file, grow(info.card));
-  return { file, px };
+  const px0 = await twinPx(p, tag + idx, grow(info.card));
+  return { file, px, px0, warm };
 }
 
 const FREEZE_TALLY = ({ tally }) => {
@@ -510,9 +590,9 @@ async function sceneB() {
       : await p.evaluate(PHASE_FREEZE_TALLY,
           { tally: TALLY.toString(), off: PHASE_MS[i % PHASE_MS.length], wait: 900 });
     if (process.env.CAP683_DEBUG) console.error('[dbg] B' + (i + 1) + ' target=' + target + ' lastPoll=' + last + ' at=' + info.at);
-    const { file, px } = await frame(p, info, 'B', i + 1);
+    const { file, px, px0, warm } = await frame(p, info, 'B', i + 1);
     await p.evaluate(() => window.__capResume());
-    out.push({ T: target, file, info, px, errs: errs.length });
+    out.push({ T: target, file, info, px, px0, warm, errs: errs.length });
     if (i < GAPS.length) target = info.at + GAPS[i];   /* 다음 목표 = 직전 «실측» + 간격 */
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }).catch(() => {});
@@ -538,10 +618,10 @@ async function sceneBLegacy() {
     const T = HOLDS[i];
     await holdUntil(p, cdp, c, T);
     const info = await p.evaluate(FREEZE_TALLY, { tally: TALLY.toString() });
-    const { file, px } = await frame(p, info, 'B', i + 1);
+    const { file, px, px0, warm } = await frame(p, info, 'B', i + 1);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }).catch(() => {});
     await b.close();
-    out.push({ T, file, info, px, errs: errs.length });
+    out.push({ T, file, info, px, px0, warm, errs: errs.length });
   }
   return out;
 }
@@ -553,7 +633,8 @@ const row = (tag, i, r) => '| ' + tag + (i + 1) + ' | ' + r.T + ' | ' + r.info.n
   + ' | ' + JSON.stringify(r.info.card) + ' | ' + r.info.gain + ' | ' + ageCell(r.info.ages)
   + ' | ' + r.info.onCard + ' | ' + r.info.other
   + ' | ' + r.info.glyph + ' | ' + (r.info.at != null && r.info.at >= 0 ? r.info.at : r.T) + ' | ' + r.info.gsz + 'px | ' + r.info.gsp + 'px | ' + r.dpx
-  + ' | ' + r.info.pay + ' | ' + r.info.bead + ' | ' + r.info.text + ' | ' + r.info.flash + ' |';
+  + ' | ' + r.info.pay + ' | ' + r.info.bead + ' | ' + r.info.text + ' | ' + r.info.flash
+  + ' | ' + (r.info.keepOn != null ? r.info.keepOn : '?') + ' |';
 
 /* ⚑ 975 — 프레임 쌍의 **픽셀 동일** 여부. 「한 홀드의 연속 네 장」이라면 두 장이 화소까지 같을 수
    없다(등재 975 의 얼굴이 바로 그것이었다). 새 의존을 안 들이려고 `paintedPx` 와 같은 방법으로
@@ -581,15 +662,16 @@ const SCENE = (() => { const i = process.argv.indexOf('--scene'); return i > 0 ?
    되어 «자를 재는 자» 가 거짓이 된다 — 402 «사본을 지운다»). 그래서 아래 본체는 직접 실행일
    때만 돈다. */
 async function main() {
-  const BASE = await baseline();
   const A = [], B = [];
   if (SCENE.includes('A')) for (let i = 0; i < STOPS.length; i++) A.push(await shotA(STOPS[i], i + 1));
   if (SCENE.includes('B')) B.push(...(LEGACY_B ? await sceneBLegacy() : await sceneB()));
-  /* 기준선을 빼서 «파티클·플래시가 더한 잉크» 만 남긴다(위 baseline 머리말) */
-  for (const r of A.concat(B)) {
-    const b0 = BASE[r.info.id];
-    r.dpx = (Number.isFinite(b0) && Number.isFinite(r.px)) ? (r.px - b0) : r.px;
-  }
+  /* 기준선을 빼서 «연출 레이어가 더한 잉크» 만 남긴다 — 기준선은 **그 프레임 자신의 쌍둥이**다
+     (위 `twinPx` 머리말 · 등재 980. 옛 «소환 전 별개 페이지» 기준선은 «칸이 켜졌다» 를 같이 셌다). */
+  const BASE = TWIN_LEGACY ? await baselineLegacy() : null;
+  for (const r of A.concat(B))
+    r.dpx = TWIN_LEGACY
+      ? (Number.isFinite(BASE[r.info.id]) && Number.isFinite(r.px) ? r.px - BASE[r.info.id] : r.px)
+      : ((Number.isFinite(r.px0) && Number.isFinite(r.px)) ? (r.px - r.px0) : r.px);
   console.log('\n# 683 ' + ROUND + ' 정답표 (시드 ' + SEED + ')');
   console.log('\n«획득» = 683 이 신설한 획득 이미터(`.fx-rlic`, 원점 = 획득 유물 카드)');
   console.log('«지불» = 666 의 지불 이미터(`.fx-cic`, 원점 = 소환 버튼) — 이 작업이 안 건드린 축\n');
@@ -597,14 +679,39 @@ async function main() {
      머리글에는 5번째로 적었다). 그러면 «다른 칸 침범 1 · 글리프 일치 0» 같은 **거짓 읽기**가 나온다
      (실제 값은 «침범 0 · 일치 1» 이었다). 683 이 다섯 번 배운 «표와 그림 중 하나가 거짓이면 표부터
      의심하라»(LESSONS 666-⑧)가 이 표 자신에게 걸린 자리라, 머리글을 줄의 차례에 맞춘다. */
-  console.log('| # | t(ms) | 당첨 유물 | 당첨 카드 상자 | 획득 알 | 나이(ms) | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 실측 t | 평균 크기 | 최대 반경 | **찍힌 잉크 Δpx** | 지불 알 | 구슬 | 글자 | 플래시 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('| # | t(ms) | 당첨 유물 | 당첨 카드 상자 | 획득 알 | 나이(ms) | 그 카드 위 | 다른 칸 침범 | 글리프 일치 | 실측 t | 평균 크기 | 최대 반경 | **찍힌 잉크 Δpx** | 지불 알 | 구슬 | 글자 | 플래시 | 패치 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   A.forEach((r, i) => console.log(row('A', i, r)));
   B.forEach((r, i) => console.log(row('B', i, r)));
   console.log('\nA = 단발(트리거 = 0ms · `currentTime` 으로 감은 정확한 시각) · B = 연속 홀드(한 브라우저·한 홀드의 실시간 ms)');
   const c = (A[0] || B[0]).info.card;
   console.log('당첨 카드 상자: ' + JSON.stringify(c));
-  console.log('기준선(연출 0인 정착 화면, 칸별 밝은 px): ' + JSON.stringify(BASE));
+  /* ⚑ 980 — 기준선은 «칸별 한 벌» 이 아니라 **프레임마다 한 장**이다(그 프레임의 연출 레이어만 숨긴 쌍둥이). */
+  console.log(TWIN_LEGACY
+    ? '기준선(--twin-legacy · 옛 방식 = 소환 **전** 별개 페이지, 칸별 밝은 px): ' + JSON.stringify(BASE)
+    : '기준선(프레임마다 뜬 «연출 0» 쌍둥이 · 카드+24 상자 밝은 px): '
+      + A.concat(B).map((r, i) => (i < A.length ? 'A' + (i + 1) : 'B' + (i - A.length + 1)) + ' ' + r.px0).join(' · '));
+  console.log('**찍힌 잉크 Δpx** 의 부호(980) — 양수 = 연출 레이어가 밝은 잉크를 **더했다**(알·플래시 테) · '
+    + '음수 = 연출이 카드 자신의 잉크를 **덮어 어둡게 했다**(워시 `rgba(255,193,64,.26)` · 알이 아이콘 위에 겹친 몫). '
+    + '0 에 가까우면 그 프레임의 연출은 화면에 거의 없다.');
+  console.log('예열(버린 첫 장 ↔ 쓴 둘째 장 · 밝은 px — 합성 레이어가 `finish()`/`currentTime` 을 그리는 데 한 프레임이 든다): '
+    + A.concat(B).map((r, i) => (i < A.length ? 'A' + (i + 1) : 'B' + (i - A.length + 1))
+        + ' ' + r.warm + '→' + r.px).join(' · '));
+  /* ⚑⚑ 980 — **자기검산: 씬 A 의 마지막 눈금은 «정착» 이 아니다.**
+     683 비평 브리핑이 «A8(340ms)은 알 0 · 플래시 0 이라 사실상 «정착 화면» 이다 — 기준 프레임으로 써라»
+     라고 적어 왔는데, 그 프레임에는 **불투명도 1 짜리 `.fx-keep` 패치가 당첨 카드를 덮고** 있었다.
+     표가 그것을 못 본 이유는 세는 갈래에 없었기 때문이다(위 TALLY 980 머리말).
+     ⇒ 이제 표가 스스로 말한다 — 진짜 정착 프레임은 `683-<라운드>-Asettle.png`(연출 레이어만 숨긴 쌍둥이)다. */
+  if (A.length) {
+    const last = A[A.length - 1];
+    console.log('씬 A 마지막 눈금(A' + A.length + ' · ' + last.T + 'ms)이 «정착» 인가: 연출 레이어에 남은 패치 '
+      + last.info.keep + '개(그 중 당첨 카드를 덮는 것 ' + last.info.keepOn + '개) · Δ ' + last.dpx + 'px — '
+      + (last.info.keepOn
+          ? ('**정착 아님 ❌ — 기준 프레임은 '
+             + (TWIN_LEGACY ? '쌍둥이다(이 실행은 `--twin-legacy` 라 안 떴다)'
+                            : '`683-' + ROUND + '-Asettle.png` 를 써라') + '**')
+          : '정착 ✅'));
+  }
   /* ⚑⚑ 975 — **자기검산 세 줄.** 종전의 «레벨 합» 한 줄은 서로 다른 실행의 합을 견주는 줄이라
      네 장이 독립이어도 그럴듯했다(등재 975). ⇒ ① 실측 t 증가 ② 칸별 레벨 비감소 + 합 증가
      ③ 프레임 쌍 픽셀 동일 0쌍 — 셋 다 «한 홀드» 가 아니면 즉시 깨진다.
@@ -669,5 +776,10 @@ async function main() {
   console.log('캡처: ' + path.join(OUT, '683-' + ROUND + '-*.png'));
 }
 
-module.exports = { open, holdUntil, TALLY, FREEZE_TALLY, PHASE_FREEZE_TALLY, SEED, HOLDS, GAPS, PHASE_MS };
+/* ⚑ 980 — `FREEZE`·`STOPS`·`SEEDFN`·`grow`·`paintedPx` 도 내보낸다. `probe980` 이 «씬 A 의 마지막
+   눈금이 정착인가» 를 물으려면 **이 자의 조리법 그대로** 프레임을 떠야 한다 — 사본을 뜨면 재는
+   대상이 사본이 되어 «자를 재는 자» 가 거짓이 된다(402 «사본을 지운다» · 976 이 같은 이유로
+   `open`·`holdUntil` 을 내보냈다). */
+module.exports = { open, holdUntil, TALLY, FREEZE, FREEZE_TALLY, PHASE_FREEZE_TALLY,
+                   SEED, SEEDFN, STOPS, HOLDS, GAPS, PHASE_MS, grow, paintedPx };
 if (require.main === module) main();
