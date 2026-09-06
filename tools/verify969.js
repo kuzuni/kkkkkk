@@ -241,12 +241,14 @@ const banner = (g) => g.cards.find((c) => c.cls.includes('ban1'));
     ok(rows.length >= 3 && rows.every((r) => Math.abs(r.afH - r.h) < 0.01),
       '[5-a] 제비꼬리 높이 = **그 리본 테두리 상자 높이** — 형마다 손으로 다시 안 적는다(402)',
       rows.map((r) => `${r.id}.${r.k} ${p2(r.afH)}/${p2(r.h)}`).join(' · '));
-    const decl = rows.map((r) => r.afDecl);
-    ok(!/height\s*:\s*\d/.test(fs.readFileSync(SRC, 'utf8')
-      .split('.pvc>.rb2::after')[1].split('}')[0] || ''),
-      '[5-b] 선언에 «height:<수>» 가 **0건** — 사본을 지웠다(파생이라는 사실을 선언이 말한다)',
-      (fs.readFileSync(SRC, 'utf8').split('.pvc>.rb2::after')[1] || '').split('}')[0].slice(0, 90));
-    void decl;
+    /* 선언 쪽 — 제비꼬리 규칙 **전부**(불릿·배너)를 소스에서 뽑아 «height:<수>» 가 0건인지 센다.
+       ⚠ 주석 안의 «height:76px» 에 안 걸리게 **규칙 본문 `{…}` 만** 본다(주석은 `{` 앞에서 끝난다). */
+    const css = fs.readFileSync(SRC, 'utf8');
+    const decls = (css.match(/\.pvc[^{}\n]*::after\s*(?:,[^{}\n]*)?\{[^}]*\}/g) || [])
+      .filter((r) => /\.rb[12]?::after/.test(r));
+    ok(decls.length > 0 && !decls.some((r) => /height\s*:\s*[\d.]/.test(r.slice(r.indexOf('{')))),
+      '[5-b] 제비꼬리 선언에 «height:<수>» 가 **0건** — 사본을 지웠다(파생이라는 사실을 선언이 말한다)',
+      `규칙 ${decls.length}개 · ` + decls.map((r) => r.split('{')[0].trim()).join(' / '));
   }
 
   /* ── [R2] 옛 손 상수를 되먹이면 배너 꼬리가 자기 띠보다 길어진다 ───────── */
