@@ -32,6 +32,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품 */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -102,26 +103,26 @@ const SETTLE = () => {
 
 /* ⚠ 주입을 «핀» 으로 박는다 — 10 상점(`renderShop()`)은 틱마다 `.on` 을 상태에서 다시 그려
    rect 는 끝 칸인데 **찍힌 픽셀은 셸**인 순간을 만든다(probe462 1회차가 그렇게 읽혔다). */
-const SETON = ([sel, i]) => {
-  clearInterval(window.__pin462v);
-  const bar = document.querySelector(sel);
-  if (!bar) return false;
-  if (i == null) return true;
-  if (![...bar.querySelectorAll(':scope > .stab')][i]) return false;
-  const apply = () => {
-    const b = document.querySelector(sel);
-    if (!b) return;
-    const cells = [...b.querySelectorAll(':scope > .stab')];
-    if (!cells[i]) return;
-    cells.forEach((c, j) => {
-      c.classList.toggle('on', j === i);
-      const ink = c.querySelector('i');
-      if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-    });
-  };
-  apply();
-  window.__pin462v = setInterval(apply, 16);
-  return true;
+/* 967 — `SETON`(사본 + 자기 핀)은 **선언째 지웠다**(402 · 963). 심는 손잡이는 공용 부품
+   `__stab967`(`tools/stab967.js`) 하나다.
+
+   ⚑ 이 자는 **주입과 읽기 사이에 캡처가 들어간다** — 캡처는 프로세스 밖으로 나갔다 오므로
+      «한 틱» 으로 접을 수 없다(967 등재문 갈래 ⓑ). 두 겹으로 짠다:
+        ① `hold()` — 핀(16ms 재주입)이 캡처 구간을 붙든다  ← 옛 `SETON` 이 하던 일
+        ② `held()` — **캡처 직후 되읽어 «그 사이 안 바뀌었다» 를 점수 줄로** 세운다  ← 새로 생긴 것
+      ①만으로는 핀 틱 사이 <16ms 창이 남고, 그 창에 찍힌 판은 **다른 칸 그림을 이 칸이라고** 채점한다.
+      기하만 읽는 자리(캡처가 없는 자리)는 핀도 필요 없다 — `__stab967.set` 을 읽기 evaluate
+      **안에서** 부르면 그것으로 한 틱이다. */
+/* `hold` 는 **붙든 칸**을 돌려준다(못 붙들면 <0). `i` 가 null 이면 «자연 활성» 이라 심지 않고
+   지금 켜져 있는 칸을 그대로 쓴다 — 그 자리는 제품이 소유하므로 제품이 지킨다.
+   `held` 는 그 «붙든 칸» 과 캡처 뒤의 칸을 견준다. */
+const hold = (page, bar, i) => page.evaluate(([s, k]) => window.__stab967.pin(s, k), [bar, i]);
+const held = async (page, bar, want, tag) => {
+  const on = await page.evaluate(([s]) => window.__stab967.on(s), [bar]);
+  await page.evaluate(() => window.__stab967.unpin());
+  ok('[전제] ' + tag + ' — 캡처 사이에 활성이 안 바뀌었다 (967)', on === want,
+    '붙든 칸 ' + (want + 1) + ' → 캡처 뒤 칸' + (on + 1));
+  return on === want;
 };
 
 async function shoot(page) {
@@ -217,6 +218,7 @@ async function scan(page, p, cor, degs, near) {
     page.on('pageerror', e => cerr.push(String(e)));
     page.on('console', m => { if (m.type() === 'error') cerr.push(m.text()); });
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
     await page.goto('file://' + path.resolve(ROOT, 'index.html'));
     await page.waitForTimeout(1400);
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
@@ -230,11 +232,11 @@ async function scan(page, p, cor, degs, near) {
     await page.evaluate(() => { goTab('hero', true); heroSubGo('eq'); });
     await page.waitForTimeout(900);
     await page.evaluate(SETTLE);
-    const rd = async (i) => {
-      await page.evaluate(SETON, ['#eqTabs', i]);
-      await page.waitForTimeout(200);
-      return page.evaluate(() => getComputedStyle(document.querySelector('#eqTabs > .stab.on'), '::after').boxShadow);
-    };
+    /* 967 — 켜기와 읽기가 한 evaluate 다(선언만 읽으므로 캡처가 없다 = 핀 불필요). */
+    const rd = (i) => page.evaluate(([s, k]) => {
+      if (window.__stab967.set(s, k) !== k) return null;
+      return getComputedStyle(document.querySelector(s + ' > .stab.on'), '::after').boxShadow;
+    }, ['#eqTabs', i]);
     const shEnd = await rd(0), shEnd4 = await rd(3), shMid = await rd(1);
     /* 409 13회차 이관 (2026-08-31) — 세 띠의 세로 인셋이 **7/14 → 5/12** 로 내려갔다(가운데 칸의
        `::before` 와 같은 값 — 그래야 [3] 의 «가운데 칸과 ±1.0» 이 산다). 문자열만 갈아 끼운다. */
@@ -257,35 +259,43 @@ async function scan(page, p, cor, degs, near) {
 
       /* 가운데 칸(목표값) 먼저 — 같은 진입·같은 프레임에서 잰다 */
       let mid = null;
-      if (midI != null && await page.evaluate(SETON, [sel, midI])) {
+      const midOn = midI == null ? -1 : await hold(page, sel, midI);
+      if (midOn === midI) {
         await page.waitForTimeout(400); await page.evaluate(SETTLE);
-        const q = await page.evaluate(s => {
+        const q = await page.evaluate(([s]) => {
           const on = document.querySelector(s + ' > .stab.on'); if (!on) return null;
           const b = on.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height };
-        }, sel);
-        if (q) { await page.evaluate(SETON, [sel, midI]); await shoot(page); mid = { L: await scan(page, q, 'BL', DEGS), R: await scan(page, q, 'BR', DEGS) }; }
+        }, [sel]);
+        if (q) {
+          await shoot(page);
+          await held(page, sel, midOn, hn + ' 가운데 칸' + (midOn + 1) + '(목표값)');
+          mid = { L: await scan(page, q, 'BL', DEGS), R: await scan(page, q, 'BR', DEGS) };
+        } else await page.evaluate(() => window.__stab967.unpin());
       }
 
       for (const endI of endIs) {
-        if (!await page.evaluate(SETON, [sel, endI])) {
-          ok('[전제] ' + hn + ' 칸' + (endI + 1) + ' 을 활성으로 만들 수 있다', false, '칸 없음'); continue;
+        /* 967 — `endI` 가 null 이면 «자연 활성»(제품이 켠 칸 그대로)이라 붙든 칸을 되받아 쓴다. */
+        const onI = await hold(page, sel, endI);
+        if (onI < 0 || (endI != null && onI !== endI)) {
+          ok('[전제] ' + hn + ' 칸' + (endI == null ? '(자연)' : endI + 1) + ' 을 활성으로 만들 수 있다',
+            false, onI === -2 ? '칸 없음' : '켠 칸이 되돌려졌다 → 칸' + (onI + 1)); continue;
         }
         await page.waitForTimeout(400); await page.evaluate(SETTLE);
-        const p = await page.evaluate(s => {
+        const p = await page.evaluate(([s]) => {
           const on = document.querySelector(s + ' > .stab.on'); if (!on) return null;
           const b = on.getBoundingClientRect();
           const cs = getComputedStyle(on, '::before');
           return { x: b.x, y: b.y, w: b.width, h: b.height, l: cs.left, r: cs.right,
             label: (on.querySelector('i') || {}).textContent || '' };
-        }, sel);
+        }, [sel]);
         if (!p) { ok('[전제] ' + hn + ' 활성 칸을 읽었다', false, '없음'); continue; }
         const touch = p.l === '0px' ? 'L' : (p.r === '0px' ? 'R' : null);
-        if (!touch) continue;
+        if (!touch) { await page.evaluate(() => window.__stab967.unpin()); continue; }
         const tag = hn + ' 칸' + (endI == null ? '(자연)' : endI + 1) + '«' + p.label + '»';
         const farB = touch === 'L' ? 'BR' : 'BL', farT = touch === 'L' ? 'TR' : 'TL';
         const nearB = touch === 'L' ? 'BL' : 'BR';
-        await page.evaluate(SETON, [sel, endI]);
         await shoot(page);
+        await held(page, sel, onI, tag);
 
         /* [2] 반대 면 아래 코너 */
         const F = await scan(page, p, farB, DEGS);
@@ -359,26 +369,32 @@ async function scan(page, p, cor, degs, near) {
     console.log('\n[R] 되돌림 — 두 겹을 빼면 납작해진다 · 등재문 ⓐ 는 순서가 뒤집힌다 · 배경은 아래 코너와 무관하다');
     await page.evaluate(() => { goTab('hero', true); heroSubGo('eq'); });
     await page.waitForTimeout(900); await page.evaluate(SETTLE);
-    await page.evaluate(SETON, ['#eqTabs', 0]);
+    /* 967 — [R] 은 주입·캡처를 되풀이하므로 절 전체를 핀으로 붙들고, 캡처마다 되읽어 문다. */
+    ok('[R] 전제 — 06 장비 첫 칸을 붙들었다 (967)', await hold(page, '#eqTabs', 0) === 0);
     await page.waitForTimeout(400); await page.evaluate(SETTLE);
     const pe = await page.evaluate(() => {
       const on = document.querySelector('#eqTabs > .stab.on');
       const b = on.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height };
     });
+    /* 캡처마다 «그 사이 안 바뀌었다» 를 묻되 핀은 절이 끝날 때까지 유지한다. */
+    const stillOn = async (tag) => {
+      const on = await page.evaluate(([s]) => window.__stab967.on(s), ['#eqTabs']);
+      ok('[전제] ' + tag + ' — 캡처 사이에 활성이 안 바뀌었다 (967)', on === 0, '캡처 뒤 칸' + (on + 1));
+    };
     const inject = async (css) => {
       await page.evaluate(c => {
         const s = document.createElement('style'); s.id = 'v462r'; s.textContent = c; document.head.appendChild(s);
       }, css);
       await page.waitForTimeout(220);
-      await page.evaluate(SETON, ['#eqTabs', 0]);
       await shoot(page);
+      await stillOn('[R] 주입판');
       const r = await scan(page, pe, 'BR', DEGS);
       await page.evaluate(() => { const s = document.getElementById('v462r'); if (s) s.remove(); });
       await page.waitForTimeout(120);
       return r;
     };
-    await page.evaluate(SETON, ['#eqTabs', 0]);
     await shoot(page);
+    await stillOn('[R] 기준판');
     const now = await scan(page, pe, 'BR', DEGS);
     const rOff = await inject(OFF);
     /* ⚑ **409 8회차 이관** — 8회차가 끝 칸 `::before` 를 «닿는 면 기둥» 으로 마스크하면서, 이 코너의
@@ -396,14 +412,14 @@ async function scan(page, p, cor, degs, near) {
     ok('R3 `::after` **배경**을 꺼도 아래 코너는 Δ0 (`verify409` [8-Δ] 가 여전히 참 — 배경이 아니라 그림자로 그렸다)',
       rBg.a.every((r, i) => r[0] === now.a[i][0] && Math.abs(r[1] - now.a[i][1]) <= 0.5),
       rBg.a.map(r => r[0] + r[1].toFixed(1)).join(' '));
-    await page.evaluate(SETON, ['#eqTabs', 0]);
     await shoot(page);
+    await stillOn('[R] 원복판');
     const back = await scan(page, pe, 'BR', DEGS);
     ok('R4 주입을 걷으면 원복 (주입이 남지 않았다)',
       back.a.every((r, i) => r[0] === now.a[i][0] && Math.abs(r[1] - now.a[i][1]) <= 0.5),
       back.a.map(r => r[0] + r[1].toFixed(1)).join(' '));
 
-    await page.evaluate(() => clearInterval(window.__pin462v));
+    await page.evaluate(() => window.__stab967.unpin());   /* 967 */
     console.log('\n[C] 콘솔');
     ok('콘솔 에러 0건', cerr.length === 0, cerr.length + '건' + (cerr[0] ? ' · ' + cerr[0].slice(0, 90) : ''));
 

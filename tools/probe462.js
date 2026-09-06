@@ -30,6 +30,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품 */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -94,26 +95,15 @@ const SETTLE = () => {
 /* ⚠ **주입을 «핀» 으로 박는다** — 10 상점(`renderShop()`)은 틱마다 `.on` 을 상태에서 다시 그려
    rect 는 끝 칸인데 **찍힌 픽셀은 셸**인 순간을 만든다(1회차에 10 상점 칸3 이 통째로 `S`/`R`
    = 바 배경·셸 림으로 읽혔다). 한 번 켜는 것으로는 부족해서 16ms 간격으로 계속 되켠다. */
-const SETON = ([sel, i]) => {
-  clearInterval(window.__pin462);
-  const bar = document.querySelector(sel);
-  if (!bar) return false;
-  if (i == null) return true;
-  const apply = () => {
-    const b = document.querySelector(sel);
-    if (!b) return;
-    const cells = [...b.querySelectorAll(':scope > .stab')];
-    if (!cells[i]) return;
-    cells.forEach((c, j) => {
-      c.classList.toggle('on', j === i);
-      const ink = c.querySelector('i');
-      if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-    });
-  };
-  if (![...bar.querySelectorAll(':scope > .stab')][i]) return false;
-  apply();
-  window.__pin462 = setInterval(apply, 16);
-  return true;
+/* 967 — `SETON`(사본 + 자기 핀)은 **선언째 지웠다**(402 · 963). 심는 손잡이는 공용 부품
+   `__stab967`(`tools/stab967.js`) 하나다. 이 자는 주입과 읽기 사이에 **캡처**가 들어가 «한 틱» 으로
+   못 접으므로, 핀으로 붙들고(`hold`) **캡처 직후 되읽어**(`held`) 어긋난 판은 값을 안 찍고 신고한다.
+   `hold` 는 붙든 칸을 돌려준다(<0 = 못 붙듦 · `i` 가 null 이면 «자연 활성» 이라 심지 않는다). */
+const hold = (page, bar, i) => page.evaluate(([s, k]) => window.__stab967.pin(s, k), [bar, i]);
+const held = async (page, bar, want, tag) => {
+  const on = await page.evaluate(([s]) => window.__stab967.on(s), [bar]);
+  if (on !== want) console.log('   ⚠⚠ ' + tag + ' — 못 쟀다: 캡처 사이에 활성이 칸' + (on + 1) + ' 로 바뀌었다 (967)');
+  return on === want;
 };
 
 async function shoot(page) {
@@ -184,6 +174,8 @@ const cell = (s) => { const r = afterK(s); return 'K' + r.k.toFixed(1) + ' ' + r
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
+    await stabInstall(page);                                  /* 967 */
     await page.goto('file://' + path.resolve(ROOT, 'index.html'));
     await page.waitForTimeout(1400);
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
@@ -201,7 +193,12 @@ const cell = (s) => { const r = afterK(s); return 'K' + r.k.toFixed(1) + ' ' + r
       await page.waitForTimeout(700);
       for (const endI of endIs) {
       const hname = hname0 + ' 칸' + (endI == null ? '(자연)' : endI + 1);
-      if (!await page.evaluate(SETON, [sel, endI])) { console.log('\n▣ ' + hname + ' — 칸 없음(건너뜀)'); continue; }
+      const onI = await hold(page, sel, endI);
+      if (onI < 0 || (endI != null && onI !== endI)) {
+        console.log('\n▣ ' + hname + (onI === -2 ? ' — 칸 없음(건너뜀)'
+          : ' — ⚠⚠ 못 쟀다: 켠 칸이 칸' + (onI + 1) + ' 로 되돌려졌다 (제품이 이 자리를 소유한다 — 963·967)'));
+        continue;
+      }
       await page.waitForTimeout(400);
       await page.evaluate(SETTLE);
       const p = await page.evaluate(s => {
@@ -228,11 +225,11 @@ const cell = (s) => { const r = afterK(s); return 'K' + r.k.toFixed(1) + ' ' + r
           const s = document.createElement('style'); s.id = 'v462'; s.textContent = c; document.head.appendChild(s);
         }, css);
         await page.waitForTimeout(200);
-        /* ⚠ 찍기 **직전에** 다시 켠다 — 10 상점은 `renderShop()` 이 틱마다 `.on` 을 되돌려
-           rect 는 끝 칸인데 찍힌 픽셀은 셸인 순간을 잡는다(449 §5-1 의 같은 함정). */
-        await page.evaluate(SETON, [sel, endI]);
+        /* ⚠ 찍는 동안 핀이 붙들고 있다(967 — 옛 «찍기 직전에 다시 켠다» 를 대신한다).
+           핀만으로는 16ms 창이 남으므로 **캡처 직후 되읽어** 어긋난 판은 신고한다. */
         await shoot(page);
-        for (const cor of CORS) {
+        const okShot = await held(page, sel, onI, hname + ' ' + vname.slice(0, 2));
+        if (okShot) for (const cor of CORS) {
           const cells = [];
           for (const dg of DEGS) {
             const s = await ray(page, p, cor, dg);
@@ -246,7 +243,8 @@ const cell = (s) => { const r = afterK(s); return 'K' + r.k.toFixed(1) + ' ' + r
       }
 
       /* M — 같은 호스트의 **가운데 칸**(목표값). 끝 칸과 같은 면·같은 코너를 잰다. */
-      if (midI != null && await page.evaluate(SETON, [sel, midI])) {
+      const midOn = midI == null ? -1 : await hold(page, sel, midI);
+      if (midOn === midI) {
         await page.waitForTimeout(220);
         const q = await page.evaluate(s => {
           const on = document.querySelector(s + ' > .stab.on') || document.querySelector(s + ' .stab.on');
@@ -255,9 +253,9 @@ const cell = (s) => { const r = afterK(s); return 'K' + r.k.toFixed(1) + ' ' + r
           return { x: b.x, y: b.y, w: b.width, h: b.height };
         }, sel);
         if (q) {
-          await page.evaluate(SETON, [sel, midI]);
           await shoot(page);
-          for (const cor of CORS) {
+          const okMid = await held(page, sel, midOn, hname + ' 가운데 칸(목표)');
+          if (okMid) for (const cor of CORS) {
             const cells = [];
             for (const dg of DEGS) cells.push(dg + '°:' + cell(await ray(page, q, cor, dg)));
             console.log('   ' + cor + '  M   ' + cells.join(' | ') + '   ← 가운데 칸(목표)');
@@ -266,6 +264,6 @@ const cell = (s) => { const r = afterK(s); return 'K' + r.k.toFixed(1) + ' ' + r
       }
       }
     }
-    await page.evaluate(() => clearInterval(window.__pin462));
+    await page.evaluate(() => window.__stab967.unpin());   /* 967 */
   } finally { await browser.close(); }
 })();

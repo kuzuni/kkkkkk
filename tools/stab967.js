@@ -71,10 +71,12 @@ const INSTALL = () => {
     /* 캡처처럼 **틱을 넘길 수밖에 없는** 구간용 핀 — 16ms 마다 다시 심는다.
        ⚠ 핀은 되돌림을 «덮는» 장치이지 없애는 장치가 아니다(핀 틱 사이 <16ms 창이 남는다).
           그래서 핀을 쓴 자리는 **캡처 직후 `on()` 으로 되읽어 점수 줄로 물어야** 한다. */
+    /* 돌려주는 값은 **붙든 칸**이다(못 붙들었으면 -1/-2). `i` 가 null 이면 «자연 활성» 이라
+       심지도 붙들지도 않고 지금 켜져 있는 칸만 알려 준다 — 제품이 소유한 자리는 제품이 지킨다. */
     pin(sel, i) {
       this.unpin();
       const first = this.set(sel, i);
-      if (first !== i) return first;
+      if (i == null || first !== i) return first;
       window.__stab967pin = setInterval(() => { try { window.__stab967.set(sel, i); } catch (_) {} }, 16);
       return first;
     },

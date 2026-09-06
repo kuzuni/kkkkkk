@@ -21,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품 */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -44,25 +45,25 @@ const SETTLE = () => {
     requestAnimationFrame(() => requestAnimationFrame(() => r(P.length)))));
 };
 
-const SETON = ([sel, i]) => {
-  clearInterval(window.__pin468v);
-  const bar = document.querySelector(sel);
-  if (!bar) return false;
-  const apply = () => {
-    const b = document.querySelector(sel);
-    if (!b) return;
-    const cells = [...b.querySelectorAll(':scope > .stab')];
-    if (!cells[i]) return;
-    cells.forEach((c, j) => {
-      c.classList.toggle('on', j === i);
-      const ink = c.querySelector('i');
-      if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-    });
-  };
-  if (![...bar.querySelectorAll(':scope > .stab')][i]) return false;
-  apply();
-  window.__pin468v = setInterval(apply, 16);
-  return true;
+/* 967 — `SETON`(사본 + 자기 핀)은 **선언째 지웠다**(402 · 963). 심는 손잡이는 공용 부품
+   `__stab967`(`tools/stab967.js`) 하나다.
+
+   ⚑ 이 자는 **주입과 읽기 사이에 캡처가 들어간다** — 캡처는 프로세스 밖으로 나갔다 오므로
+      «한 틱» 으로 접을 수 없다(967 등재문 갈래 ⓑ). 그래서 두 겹으로 짠다:
+        ① `hold()` — 핀(16ms 재주입)으로 캡처 구간을 붙든다  ← 옛 `SETON` 이 하던 일
+        ② `held()` — **캡처 직후 되읽어 «그 사이 안 바뀌었다» 를 점수 줄로** 세운다  ← 새로 생긴 것
+      ①만으로는 핀 틱 사이 <16ms 창이 남고, 그 창에 찍힌 판은 **다른 칸 그림을 이 칸이라고** 채점한다
+      (963 이 verify379 에서 겪은 «조용한 대체» 의 캡처판). ②가 그 판을 빨갛게 만든다. */
+/* `hold` 는 **붙든 칸**을 돌려준다(못 붙들면 <0). `i` 가 null 이면 «자연 활성» 이라 심지 않고
+   지금 켜져 있는 칸을 그대로 쓴다 — 그 자리는 제품이 소유하므로 제품이 지킨다.
+   `held` 는 그 «붙든 칸» 과 캡처 뒤의 칸을 견준다. */
+const hold = (page, bar, i) => page.evaluate(([s, k]) => window.__stab967.pin(s, k), [bar, i]);
+const held = async (page, bar, want, tag) => {
+  const on = await page.evaluate(([s]) => window.__stab967.on(s), [bar]);
+  await page.evaluate(() => window.__stab967.unpin());
+  ok('[전제] ' + tag + ' — 캡처 사이에 활성이 안 바뀌었다 (967)', on === want,
+    '붙든 칸 ' + (want + 1) + ' → 캡처 뒤 칸' + (on + 1));
+  return on === want;
 };
 
 async function shoot(page) {
@@ -146,6 +147,7 @@ function afterK(s) {
     const cerr = [];
     page.on('console', m => { if (m.type() === 'error') cerr.push(m.text()); });
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
     await page.goto('file://' + path.resolve(ROOT, 'index.html'));
     await page.waitForTimeout(1400);
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
@@ -190,14 +192,14 @@ function afterK(s) {
     const targets = [];
     const mids = [];
     for (let i = 0; i < nCells; i++) {
-      if (!await page.evaluate(SETON, [bar, i])) continue;
-      await page.waitForTimeout(180);
-      const p = await page.evaluate(s => {
+      /* 967 — 켜기와 읽기가 **한 evaluate** 다(기하 유도에는 캡처가 없으므로 핀도 필요 없다). */
+      const p = await page.evaluate(([s, k]) => {
+        if (window.__stab967.set(s, k) !== k) return null;
         const on = document.querySelector(s + ' > .stab.on');
         if (!on) return null;
         const b = on.getBoundingClientRect();
         return { x: b.x, y: b.y, w: b.width, h: b.height, label: (on.querySelector('i') || {}).textContent || '' };
-      }, bar);
+      }, [bar, i]);
       if (!p || !sepBox) continue;
       const hit = p.x < sepBox.x + sepBox.w && p.x + p.w > sepBox.x;
       if (hit) {
@@ -218,10 +220,10 @@ function afterK(s) {
     let target = null;
     console.log('\n[4] 목표값 — 안 걸치는 칸에서 «검정 링 뒤 첫 실런» 을 뽑는다');
     for (const [i, side, p] of mids) {
-      await page.evaluate(SETON, [bar, i]);
+      await hold(page, bar, i);
       await page.waitForTimeout(200); await page.evaluate(SETTLE);
-      await page.evaluate(SETON, [bar, i]);
       await shoot(page);
+      await held(page, bar, i, '[4] 칸' + (i + 1) + '«' + p.label + '» ' + side);
       const s = await scan(page, p, side);
       const r = afterK(s);
       console.log('    칸' + (i + 1) + '«' + p.label + '» ' + side + ' — ' + fmt(s));
@@ -232,11 +234,11 @@ function afterK(s) {
 
     console.log('\n[2][4] 걸치는 칸 — 코너 띠 안 구분선색 0 · 단면은 목표값과 같다');
     for (const [i, side, p] of targets) {
-      await page.evaluate(SETON, [bar, i]);
+      await hold(page, bar, i);
       await page.waitForTimeout(220); await page.evaluate(SETTLE);
-      await page.evaluate(SETON, [bar, i]);
       await shoot(page);
       const tag = '칸' + (i + 1) + '«' + p.label + '» ' + side;
+      await held(page, bar, i, '[2][4] ' + tag);
       const n = await stripCount(page, p, side);
       ok('[2] ' + tag + ' — 코너 띠 ' + STRIP + 'px 안 구분선색이 **0px²** 다', n === 0, n + 'px²');
       const s = await scan(page, p, side);
@@ -266,10 +268,10 @@ function afterK(s) {
       }, [bar, SEP]);
     };
     for (const [i, , p] of mids) {
-      await page.evaluate(SETON, [bar, i]);
+      await hold(page, bar, i);
       await page.waitForTimeout(220); await page.evaluate(SETTLE);
-      await page.evaluate(SETON, [bar, i]);
       const v = await sepVisible();
+      await held(page, bar, i, '[3] 칸' + (i + 1) + '«' + p.label + '»');
       ok('[3] 칸' + (i + 1) + '«' + p.label + '» 활성 — 구분선 ' + v.w + '×' + v.h
         + ' 이 ≥' + SEP_MIN + 'px² 로 보인다', v.n >= SEP_MIN, v.n + 'px²');
     }
@@ -277,10 +279,10 @@ function afterK(s) {
     console.log('\n[R] 되돌림 — z 를 auto 로 되돌리면 침범이 되살아난다 (자가 공허하지 않다)');
     await page.addStyleTag({ content: '.stab.on{z-index:auto!important}' });
     for (const [i, side, p] of targets) {
-      await page.evaluate(SETON, [bar, i]);
+      await hold(page, bar, i);
       await page.waitForTimeout(220); await page.evaluate(SETTLE);
-      await page.evaluate(SETON, [bar, i]);
       await shoot(page);
+      await held(page, bar, i, '[R] 칸' + (i + 1) + '«' + p.label + '» ' + side);
       const n = await stripCount(page, p, side);
       const s = await scan(page, p, side);
       ok('[R] 칸' + (i + 1) + '«' + p.label + '» ' + side + ' — 되돌리면 코너 띠에 구분선색이 **다시 300px² 넘게** 든다',
@@ -293,10 +295,10 @@ function afterK(s) {
       });
     });
     for (const [i, side, p] of targets) {
-      await page.evaluate(SETON, [bar, i]);
+      await hold(page, bar, i);
       await page.waitForTimeout(220); await page.evaluate(SETTLE);
-      await page.evaluate(SETON, [bar, i]);
       await shoot(page);
+      await held(page, bar, i, '[R] 원복 칸' + (i + 1) + '«' + p.label + '»');
       const n = await stripCount(page, p, side);
       ok('[R] 칸' + (i + 1) + '«' + p.label + '» — 주입을 걷으면 원복 (0px²)', n === 0, n + 'px²');
     }

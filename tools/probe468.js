@@ -24,6 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { install: stabInstall } = require('./stab967');   /* 967 — 활성 주입 공용 부품 */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -49,25 +50,14 @@ const SETTLE = () => {
 };
 
 /* 칸 활성화를 «핀» 으로 박는다 — 462 §5 함정(틱마다 `.on` 이 상태에서 되돌아온다). */
-const SETON = ([sel, i]) => {
-  clearInterval(window.__pin468);
-  const bar = document.querySelector(sel);
-  if (!bar) return false;
-  const apply = () => {
-    const b = document.querySelector(sel);
-    if (!b) return;
-    const cells = [...b.querySelectorAll(':scope > .stab')];
-    if (!cells[i]) return;
-    cells.forEach((c, j) => {
-      c.classList.toggle('on', j === i);
-      const ink = c.querySelector('i');
-      if (ink) { ink.classList.toggle('ol4', j === i); ink.classList.toggle('ol3', j !== i); }
-    });
-  };
-  if (![...bar.querySelectorAll(':scope > .stab')][i]) return false;
-  apply();
-  window.__pin468 = setInterval(apply, 16);
-  return true;
+/* 967 — `SETON`(사본 + 자기 핀)은 **선언째 지웠다**(402 · 963). 심는 손잡이는 공용 부품
+   `__stab967`(`tools/stab967.js`) 하나다. 이 자는 주입과 읽기 사이에 **캡처**가 들어가 «한 틱» 으로
+   못 접으므로, 핀으로 붙들고(`hold`) **캡처 직후 되읽어**(`held`) 어긋난 판은 값을 안 찍고 신고한다. */
+const hold = (page, bar, i) => page.evaluate(([s, k]) => window.__stab967.pin(s, k), [bar, i]);
+const held = async (page, bar, want, tag) => {
+  const on = await page.evaluate(([s]) => window.__stab967.on(s), [bar]);
+  if (on !== want) console.log('  ⚠⚠ ' + tag + ' — 못 쟀다: 캡처 사이에 활성이 칸' + (on + 1) + ' 로 바뀌었다 (967)');
+  return on === want;
 };
 
 async function shoot(page) {
@@ -156,6 +146,7 @@ const CELLS = [
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+    await stabInstall(page);                                  /* 967 */
     await page.goto('file://' + path.resolve(ROOT, 'index.html'));
     await page.waitForTimeout(1400);
     await page.evaluate(() => { const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
@@ -201,11 +192,12 @@ const CELLS = [
       }, [dom, css]);
 
       for (const [i, side, label] of CELLS) {
-        if (!await page.evaluate(SETON, ['#eqTabs', i])) { console.log('  ' + label + ' — 칸 없음'); continue; }
+        const onI = await hold(page, '#eqTabs', i);
+        if (onI !== i) { console.log('  ' + label + (onI === -2 ? ' — 칸 없음' : ' — ⚠⚠ 못 쟀다: 켠 칸이 칸' + (onI + 1) + ' 로 되돌려졌다 (967)')); continue; }
         await page.waitForTimeout(220);
         await page.evaluate(SETTLE);
-        await page.evaluate(SETON, ['#eqTabs', i]);
         await shoot(page);
+        if (!await held(page, '#eqTabs', i, label)) continue;
         const p = await page.evaluate(() => {
           const on = document.querySelector('#eqTabs > .stab.on');
           if (!on) return null;
@@ -224,10 +216,10 @@ const CELLS = [
 
       /* ③ **음성항** — 구분선이 안 덮이는 상태(칸1 활성)에서는 그대로 다 보여야 한다.
          이 항이 없으면 «구분선을 통째로 숨긴다»(등재문 ⓒ 의 무른 판본)도 ①② 를 통과한다. */
-      await page.evaluate(SETON, ['#eqTabs', 0]);
+      await hold(page, '#eqTabs', 0);
       await page.waitForTimeout(220);
-      await page.evaluate(SETON, ['#eqTabs', 0]);
       await shoot(page);
+      await held(page, '#eqTabs', 0, '③ 음성항(칸1 활성)');
       const vis = await page.evaluate(sep => {
         const g = window.__v468;
         const r = document.querySelector('#eqTabs > .stab-sep').getBoundingClientRect();
