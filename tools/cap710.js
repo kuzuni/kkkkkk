@@ -27,6 +27,10 @@ const { chromium } = pw();
 const SRC = path.resolve(__dirname, '../index.html');
 const OUT = process.argv[2] || path.resolve(__dirname, '../docs/shots/710-contrast.png');
 
+/* ⚑ 996 위상 손잡이 — 기본값 0 이 «시트가 쓰는 위상» 이다(눈금 불변 · 695 `freeze`·rul504 `immortal` 선례).
+   `CAP710_ORBIT=<rad>` 로만 움직이고, 움직이는 자는 `tools/probe996.js`(위상 스윕) 하나뿐이다. */
+const ORB = process.env.CAP710_ORBIT === undefined ? 0 : Number(process.env.CAP710_ORBIT);
+
 /* 수리 전에 «한 그림» 이던 무리 — 그 묶음 그대로 한 줄에 놓는다 */
 const ROWS = [
   ['slash', 'multi', 'whirl', 'gale'],     /* 수리 전: 전부 k='slash' — IoU 1.000 */
@@ -44,7 +48,42 @@ const ROWS = [
   await page.waitForTimeout(1200);
   await page.evaluate(() => { window.requestAnimationFrame = () => 0; });
 
-  const info = await page.evaluate((ROWS) => {
+  const info = await page.evaluate(({ ROWS, ORB }) => {
+    /* ⚑⚑ 996 — **이 시트는 같은 트리에서 판마다 다른 그림을 찍고 있었다.** 네 번 찍으면 여섯 칸이
+       판마다 수천 화소 흔들렸다(실측: `spiral` 12,626 · `gale` 11,440 · `whirl` 6,363 ·
+       `arrow` 3,780 · `curve` 3,452 · `rico` 1,552 · 나머지 11칸은 0).
+       792 는 «회차마다 다시 찍어 2인이 채점» 하는 행이라, 점수가 움직였을 때
+       «처방이 먹혔나» 와 «위상이 달랐나» 를 그 여섯 칸에서는 가를 수가 없었다.
+       ⚠ **등재문(996)의 뿌리 지목은 절반만 맞았다** — `performance.now` **하나만** 얼리면
+         여섯 칸이 여섯 칸 그대로다(실측 3판: `gale` 8,521 · `spiral` 9,316 …).
+         손잡이는 셋이고 **셋이 서로 다른 것을 잡는다**(각각 빼 보고 확인했다):
+         ① `Math.random` 씨앗 — 배경 소품이 판마다 다른 자리에 선다(`arrow`·`curve`·`rico`
+            칸의 위·왼 띠가 그것이다. 씨앗을 빼면 그 세 칸이 되살아난다).
+         ② `orbitAng` 핀 — **이것이 세 큰 칸의 뿌리다.** `whirl`·`gale`(`orbitAng*0.3`)과
+            `spiral`(`orbitAng*0.7`)은 **시전각을 이 누산기에서 읽는다**(index.html 26314·26341·26592).
+            `orbitAng` 는 `step()` 이 `dt*2.4` 씩 밀어 올리는데(26941·26964), 위 `waitForTimeout(1200)`
+            동안 제품의 rAF 가 **몇 프레임 돌지가 판마다 다르다** ⇒ 각이 판마다 다른 값으로 굳는다
+            (실측 3판: `whirl` a = 0.876 / 0.912 / 0.972). 15회차의 «두 자리에 시전해 각이 안 변한
+            종만 그 각을 싣는다» 는 **한 판 안에서만** 참이라 이 드리프트를 못 본다.
+         ③ `performance.now` 얼림 — **이 시트의 17종에서는 재 본 만큼 효과가 없었다**(빼도 3판
+            0 흔들림). 등재문이 뿌리로 지목한 것이 이것인데 실측은 ①② 가 본체라고 말한다.
+            그래도 세워 두는 이유는 **형제 자와 같은 위상**이기 때문이다 — `verify792`·
+            `probe792r13`·`probe792r15` 가 전부 `1e6` 에 세우므로, 안 세우면 «채점한 그림» 과
+            «자가 잰 그림» 이 다른 위상이 된다. 접촉형(`aura` 반경은 `sin(performance.now()/220)`,
+            index.html 28624)이 시트에 들어오는 날 ③ 이 없으면 그 칸이 곧바로 흔들린다.
+       ⚠ `auraTick` 은 안 건드렸다 — 핀에 넣어 봤지만 아무것도 바꾸지 않았다.
+       ⚠⚠ **남은 잔여 하나는 이 수리가 아니다 — `999` 로 따로 등재했다.** 좌하단 한 블록
+         (화소 x ≤ 88 · y ≥ 1838 · 86×85)이 **다섯 판에 한 판꼴로** 갈린다. 위 셋과 무관함은
+         셋을 다 세운 자에서도 10판 중 2판이 갈린 것으로 확인했고, 갈린 판에서도
+         `floorCv` 조밀 해시·전 배열 길이·`cam` 이 전부 같았다. 캔버스에서 직접 읽어도(스크린샷을
+         거치지 않아도) 같은 자리가 갈리므로 **합성기가 아니라 그려진 내용**이다. 뿌리는 999 몫이다.
+         `probe996`·`verify996` 은 그 블록을 «지우지 않고» 안팎을 갈라 둘 다 찍는다.
+       ⚠ **위상을 고르는 것이 이 수리의 값이다**(등재문 경고). 고른 자리가 최악이 아님은
+         `probe996` 의 위상 스윕이 재고 `verify996` [3] 이 그 바닥·천장으로 못박는다. */
+    let _rs = 0x2f6e2b1 >>> 0;
+    Math.random = () => { _rs = (Math.imul(_rs, 1664525) + 1013904223) >>> 0; return _rs / 4294967296; };
+    performance.now = () => 1e6;
+    orbitAng = ORB;
     localStorage.clear(); Object.assign(S, DEF());
     S.stage = 20; S.best = 20; S.guide.idx = 99;
     spawnStage();
@@ -171,7 +210,7 @@ const ROWS = [
              clip: { x: Math.round(r.left), y: Math.round(r.top),
                      w: Math.round(r.width), h: Math.round(r.height) },
              maxY: (Y0 + (ROWS.length - 1) * DY + 90) * SC / (cvs.height / r.height) };
-  }, ROWS);
+  }, { ROWS, ORB });
 
   /* ⚠ 3회차 — 아래를 «maxY 로 잘라 주는» 친절이 5번째 줄을 다시 삼켰다(비평가 F).
      캔버스 전체를 찍는다. 빈 아래쪽 여백은 채점을 방해하지 않지만 잘린 줄은 채점을 막는다. */
