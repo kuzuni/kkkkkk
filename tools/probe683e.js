@@ -6,7 +6,7 @@
  * ── 무엇을 묻는가 ─────────────────────────────────────────────────────────
  * §13-5-3 1번의 처방문은 **두 문장**이다. 자는 그 둘을 갈라 각각 참·거짓을 묻는다:
  *
- *   [2] «지금 알이 밑 글리프를 어둡게 한다» — CT 「글리프 휘도 −84.4%」 · CU 「−79.2% ·
+ *   [2] «(14회차 이전) 알이 밑 글리프를 어둡게 한다» — CT 「글리프 휘도 −84.4%」 · CU 「−79.2% ·
  *       잉크:판 10.66:1 → 2.07:1 극성 반전」 을 **같은 마스크**로 재현한다.
  *       마스크는 정착 프레임에서 **한 번만** 뜬다(10회차 생존자 편향 규약 · `probe683c` §10-3).
  *   [3] «`mix-blend-mode:screen` 을 걸면 낫는가» — **안 낫는다(그리고 이유가 처음 생각과 다르다).**
@@ -28,6 +28,21 @@
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
+/* ⚑⚑ **997 이관 — 이 자는 «자기 자신» 을 견주고 있었다.** `VARIANT.BASE` 가 «아무것도 안 덮음» 이라
+   14회차가 FLIP 을 **제품에 심은 순간** BASE ≡ FLIP 이 됐다(실측: [2-a] 잉크 −50% 를 물었는데
+   정착 대비 **+5.2%** · [4-b] «FLIP 이 현행보다 밝다» 가 t0 Δ0.0). 자가 죽은 게 아니라
+   **견줄 상대가 사라진** 것이다 — 그래서 사본을 «13회차 상태»(검은 채움 + 여덟 방향 흰 테)로
+   **주입해서** 적는다. 값은 손으로 안 적고 **제품 사슬에서 파생**시킨다(402 «표 두 벌» 금지 ·
+   `verify753` [B2c] 가 같은 파생을 쓴다 — 되돌리는 자리는 둘뿐: `invert(1)` 을 빼고 테 색을 흰색으로).
+   ⚠ SCREEN 도 같이 옮겼다 — 처방문의 물음은 «13회차 알에 screen 을 걸면 낫는가» 이므로
+     사본은 **13회차 사슬 + `mix-blend-mode:screen`** 이어야 한다(제품 위에 걸면 FLIP 이 이미
+     극성을 고쳐 둔 뒤라 [5-c] 가 «screen 도 정상» 으로 헛빨강이 된다).
+   ⚠ 문턱은 한 칸도 안 넓혔다(333 처방 — 재는 나무만 그 물음이 사는 나무로 옮겼다). */
+/* ⚑ **994 이관** — 이 자는 `currentTime` 을 태생 프레임(t0)부터 재는데 994 가 태생 α 를 `.10` 으로
+   낮춰(10% 에 `.55`) **태생 프레임의 씻김이 거의 사라졌다**. 사본 셋 전부에 되돌림 키프레임을
+   같이 건다(`probe683d` [2]·[3] · `probe683c` [3-a] · `verify753` [B2] 가 그렇게 이관됐다 ·
+   곡선은 공용 부품 `tools/kf994.js` 가 제품에서 파생한다 — 봉우리를 누가 옮겨도 사본이 따라온다). */
+const KF14 = require('./kf994').kfPre994();
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
 const URL = 'file://' + SRC.replace(/\\/g, '/');
@@ -43,10 +58,11 @@ const ev = async (p, fn, arg) => { try { return await p.evaluate(fn, arg); }
   catch (e) { console.log('  ⚠ evaluate 예외: ' + e.message.split('\n')[0]); return null; } };
 const r2 = v => (v == null ? '—' : Math.round(v * 100) / 100);
 
-/* 세 사본 — 제품 CSS 를 덮어쓰는 주입 한 장(`__p5v`). BASE 는 아무것도 안 덮는다. */
+/* 세 사본 — 제품 CSS 를 덮어쓰는 주입 한 장(`__p5v`).
+   **BASE·SCREEN 은 실행 시각에 제품 사슬에서 파생**한다(아래 «13회차 사슬» 절 · 997). */
 const VARIANT = {
-  BASE:   '',
-  SCREEN: '.fx-spark.fx-rlic{mix-blend-mode:screen}',
+  BASE:   null,
+  SCREEN: null,
   /* FLIP — 채움 흰색(`brightness(0) invert(1)`) + 여덟 방향 **어두운** 테 + 같은 글로우.
      겹 수·두께·글로우 순서는 5회차 것을 한 값도 안 바꾼다(바뀌는 것은 «어느 쪽이 밝은가» 뿐). */
   FLIP:   '.fx-spark.fx-rlic{filter:brightness(0) invert(1)'
@@ -58,10 +74,14 @@ const VARIANT = {
 };
 
 /* 프레임 한 장 — `probe683d` 의 SHOT 과 같은 규약(같은 것을 재려면 같은 자리를 얼린다). */
-const SHOT = async ({ T, RID, VAR, NOGAIN }) => {
+const SHOT = async ({ T, RID, VAR, NOGAIN, KF }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__p5to) { window.__p5to = window.setTimeout; window.__p5ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
+  /* 994 되돌림 키프레임 — **스폰 전에** 갈아야 한다(키프레임은 애니가 붙을 때 굳는다). */
+  const k9 = document.getElementById('__p5kf'); if (k9) k9.remove();
+  if (KF) { const t = document.createElement('style'); t.id = '__p5kf';
+    t.textContent = KF; document.head.appendChild(t); }
   const old = document.getElementById('__p5v'); if (old) old.remove();
   let css = VAR || '';
   if (NOGAIN) css += '.fx-spark.fx-rlic{display:none !important}';
@@ -97,10 +117,63 @@ const SHOT = async ({ T, RID, VAR, NOGAIN }) => {
     renderRelw(); return has(RID) ? oLv(RID) : null; }, ID);
 
   const shot = async o => {
-    const st = await ev(p, SHOT, Object.assign({ RID: ID, T: 0 }, o));
+    const st = await ev(p, SHOT, Object.assign({ RID: ID, T: 0, KF: KF14 }, o));
     if (!st) return null;
     return { st, png: (await p.screenshot()).toString('base64') };
   };
+
+  /* ── [0] 13회차 사슬 — 사본을 **제품에서 파생**한다(997) ─────────────────
+     되돌리는 자리는 둘뿐이다: ① `invert(1)` 을 뺀다(채움 흰색 → 검정) ② **테** 색을 흰색으로.
+     ⚠ 글로우(마지막 겹)는 14회차가 한 값도 안 건드렸으므로 **그대로 둔다** — 그래서 색 치환은
+       `lastIndexOf('drop-shadow(')` 앞의 테 구간에만 건다(`verify753` [B2c] 와 같은 가름). */
+  blk('0] 사본 — «13회차 상태»(검은 채움 + 여덟 방향 흰 테)를 제품 사슬에서 파생한다 (997)');
+  await ev(p, SHOT, { RID: ID, T: 0, KF: KF14 });
+  const chain = await ev(p, () => {
+    const nd = document.querySelector('#fxl .fx-rlic'); if (!nd) return null;
+    const f = getComputedStyle(nd).filter || '';
+    const cut = f.lastIndexOf('drop-shadow(');
+    return { full: f.replace(/\s+/g, ' ').trim(),
+             ring: cut > 0 ? f.slice(0, cut).replace(/\s+/g, ' ').trim() : '',
+             tail: cut > 0 ? f.slice(cut).replace(/\s+/g, ' ').trim() : '',
+             n: (f.match(/drop-shadow\(/g) || []).length };
+  });
+  const pre14 = (chain && chain.ring && chain.tail)
+    ? (chain.ring.replace(/\binvert\(1\)\s*/i, '').replace(/rgba?\([^)]*\)|#[0-9A-Fa-f]{3,8}/g, '#FFF')
+       + ' ' + chain.tail).replace(/\s+/g, ' ').trim()
+    : null;
+  VARIANT.BASE = pre14 ? '.fx-spark.fx-rlic{filter:' + pre14 + '}' : null;
+  VARIANT.SCREEN = pre14 ? VARIANT.BASE + '.fx-spark.fx-rlic{mix-blend-mode:screen}' : null;
+  /* ⚠ 판정은 **`pre14`(파생값)가 아니라 실제로 주입되는 `VARIANT.BASE`** 를 읽는다 —
+     자 1판이 파생값을 물어서, 사본을 제품과 같게 바꿔 놓은 되돌림 사본에서도 [0] 두 항이
+     초록으로 남았다(빨개진 것은 [2]·[4]·[5] 뿐). «무엇을 재는가» 는 **주입되는 문자열**이다. */
+  const baseF = VARIANT.BASE ? VARIANT.BASE.replace(/^[^{]*\{\s*filter\s*:/, '').replace(/\}\s*$/, '').trim() : null;
+  const ringOf = s => (s && s.lastIndexOf('drop-shadow(') > 0) ? s.slice(0, s.lastIndexOf('drop-shadow(')) : '';
+  info('제품 사슬', chain ? (chain.full.slice(0, 96) + (chain.full.length > 96 ? '…' : '')
+    + ' · 겹 ' + chain.n) : '측정 실패');
+  info('13회차 사본', baseF ? (baseF.slice(0, 96) + (baseF.length > 96 ? '…' : '')) : '파생 실패');
+  ok(!!baseF && !/invert\(1\)/i.test(baseF) && /brightness\(0\)/.test(baseF)
+     && (ringOf(baseF).match(/#FFF/g) || []).length === 8,
+     '0-a ★ 사본이 «검은 채움 + 흰 테 여덟 겹» 이다(값은 제품에서 파생 · 손 상수 0개)',
+     baseF ? ('invert ' + (/invert\(1\)/i.test(baseF) ? '있음' : '없음') + ' · 흰 테 '
+       + (ringOf(baseF).match(/#FFF/g) || []).length + '겹') : '파생 실패');
+  /* ⚑ **이 항이 997 그 자체다** — 사본이 제품과 같아지면(누가 극성을 되돌리거나, 사본 파생이
+     조용히 비면) 이 자의 [2]·[4]·[5] 는 전부 «자기 자신» 을 견주게 된다. 그때 빨개진다. */
+  ok(!!baseF && !!chain && baseF !== chain.full && /invert\(1\)/i.test(chain.full),
+     '0-b ★ **되돌림 감시** — 사본이 제품 사슬과 실제로 다르다(BASE ≢ 제품 · 997 재발 방지)',
+     chain ? ('제품 invert ' + (/invert\(1\)/i.test(chain.full) ? '있음' : '**없음**')
+       + ' · 사본 ' + (baseF === chain.full ? '**같다**' : '다르다')) : '측정 실패');
+  /* screen 사본도 **같은 13회차 사슬** 위에 서야 처방문의 물음이 된다(그 위에 blend 한 줄만 더한다). */
+  ok(!!VARIANT.SCREEN && !!baseF && VARIANT.SCREEN.indexOf(baseF) >= 0
+     && /mix-blend-mode:\s*screen/.test(VARIANT.SCREEN),
+     '0-d ★ screen 사본이 «13회차 사슬 + `mix-blend-mode:screen`» 이다(제품 위가 아니다)',
+     VARIANT.SCREEN ? ('13회차 사슬 ' + (VARIANT.SCREEN.indexOf(baseF) >= 0 ? '포함' : '**빠짐**')
+       + ' · blend ' + (/mix-blend-mode:\s*screen/.test(VARIANT.SCREEN) ? '있음' : '**없음**')) : '파생 실패');
+  info('994 되돌림 키프레임', KF14 ? KF14.replace(/\s+/g, ' ').slice(0, 110) : '없음');
+  ok(!!KF14 && !/\d+%\{opacity:[.\d]+\}/.test(KF14),
+     '0-c ★ 사본 셋이 «태생 α 램프를 되돌린» 나무에서 돈다(994 이관 · `tools/kf994.js` 파생)',
+     KF14 ? ('램프 ' + (/\d+%\{opacity:[.\d]+\}/.test(KF14) ? '남음' : '걷힘')) : '파생 실패');
+  if (!pre14) { console.log('\nPROBE683E ' + pass + '/' + (pass + fail) + ' FAIL — 사본을 못 세웠다');
+    await browser.close(); process.exit(1); }
 
   /* ── [1] 잉크·판 마스크 — 정착 프레임에서 **한 번만** 뜬다 ───────────── */
   blk('1] 마스크 — 정착 프레임의 «글리프 잉크 ↔ 그 판»(한 번만 뜬다 · 10회차 규약)');
@@ -181,8 +254,13 @@ const SHOT = async ({ T, RID, VAR, NOGAIN }) => {
       + (scr[T].inverted ? ' · **극성 반전**' : '')) : '측정 실패'); }
   /* 3-a — **격리의 직접 증거**: `#fxl` 안에 검은 판을 하나 넣고 screen 을 걸어 본다.
      그룹 밖(카드)에 닿는다면 카드 색이 그대로 나와야 하는데, 실제로는 **검정이 그대로 남는다**. */
+  /* ⚠ **레이어를 먼저 비운다(997)** — 이 항은 «그룹 **밖**(카드)에 닿는가» 하나만 묻는데, 앞 절이
+     남긴 알·플래시 판이 같은 그룹 안에 있으면 screen 이 **그것들과** 섞여 표본 화소가 위상마다
+     달라진다(실측: 같은 트리 연속 두 판이 rgb 0,0,0 ↔ 44,25,22 — 문턱 24 를 넘나든다).
+     비우고 재면 판정이 «격리되어 있으면 검정, 아니면 카드 색» 둘 중 하나로 굳는다. */
   const isoPix = await ev(p, () => {
     const L = document.getElementById('fxl'); if (!L) return null;
+    while (L.firstChild) L.removeChild(L.firstChild);
     const el = document.querySelector('[data-rw="rl0"]'); const r = el.getBoundingClientRect();
     const d = document.createElement('div'); d.id = '__p5iso';
     d.style.cssText = 'position:absolute;left:' + Math.round(r.x + 20) + 'px;top:' + Math.round(r.y + 20)
