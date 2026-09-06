@@ -597,7 +597,20 @@ async function sweep(opt) {
        그 쪽들에서만 나온 «처음 보는» 노드 수(= 이 처방이 넓힌 스코프의 크기) */
     scrolled: sc.screens, extraPages: sc.pages, pots: sc.pots, capped: sc.capped, maxpg: MAXPG, noscroll: NOSCROLL,
     belowFold: measured.filter((r) => r.page > 0).length,
-    belowJudged: measured.filter((r) => r.page > 0 && r.judged).length };
+    belowJudged: measured.filter((r) => r.page > 0 && r.judged).length,
+    /* ⚑ 973 — **낱장(row)을 옵션으로 내준다.** 위 집계는 «몇 개인가» 만 답하므로 «판정이 90개
+       줄었다» 를 받은 세션이 **어느 화면·어느 그림이 빠졌는지** 를 물으려면 스윕을 한 벌 더 적어야
+       했다(자를 두 벌로 적으면 한쪽만 늙는다 — 13회차 [R12]). `opt.rows` 를 켠 호출에만 붙이므로
+       기존 호출(게이트 `verify356` [S3] · CLI `--json`)의 반환은 **한 글자도 안 바뀐다**.
+       ⚠ 판정 스코프의 산수(`inScope`·`occ`·`judged`)는 여기서 새로 계산하지 않는다 — 위에서
+         이미 붙인 필드를 그대로 내보낸다(사본을 만들면 그것이 곧 두 번째 자다). */
+    rows: opt.rows ? measured.map((r) => ({ screen: r.screen, page: r.page, sel: r.sel, cls: r.cls,
+      tag: r.tag, src: r.src, fit: r.fit, w: r.w, h: r.h, ink: r.ink,
+      inScope: !!r.inScope, occ: !!r.occ, judged: !!r.judged, dev: r.dev,
+      ref: r.ref ? { asp: r.ref.asp, fw: r.ref.fw, fh: r.ref.fh } : null })) : undefined,
+    /* 973 — 기준표가 실제로 잰 그림 수 / 스윕이 만난 그림 수. 앞이 뒤보다 작으면 그만큼이
+       «원본비 없음» 으로 판정 밖으로 빠진 것이다(판정 스코프가 줄어드는 두 통로 중 하나). */
+    srcSeen: srcs.length, srcRef: refAsp.size };
 }
 
 /* 530 — 재현자(`probe530`)가 **같은** 정지·정규화를 쓰게 내놓는다(두 벌로 적으면 한쪽만 늙는다) */
