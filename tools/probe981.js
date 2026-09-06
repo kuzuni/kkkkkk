@@ -198,6 +198,12 @@ async function measure(browser, url) {
   return out;
 }
 
+/* ⚑ 자(`verify981`)가 **같은 자**를 쓰도록 내보낸다 — 재는 법을 두 벌 적으면 그것이 곧
+   어긋남이다(402 «사본을 지운다» · 792 가 `probe792` ↔ `verify792` 에서 겪은 자리). */
+module.exports = { measure, normalize, alignedIoU, raster, iouOf, N, R_NORM, STEPS, URL };
+
+if (require.main !== module) return;
+
 (async () => {
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const out = await measure(browser, URL);
