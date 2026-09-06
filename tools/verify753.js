@@ -369,7 +369,7 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
     for (const nd of document.querySelectorAll('#fxl .fx-rlic')) nd.style.visibility = h ? 'hidden' : '';
   });
   const pInk = (geo && fired) ? await inkEgg() : null;          /* 그려진 그대로(합본 — [B4] 기록용) */
-  let rInk = null, gInk = null;
+  let rInk = null, gInk = null, bInk = null;
   if (geo && fired && layers && layers.ring) {
     await paint(layers.ring); await p.waitForTimeout(80);
     rInk = await inkEgg();                                       /* 불투명 흰 테까지 */
@@ -392,11 +392,58 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
        + ' — 820: 후광을 뺀 **같은 마스크**끼리 잰다',
        'Δ ' + g.dx.toFixed(2) + ', ' + g.dy.toFixed(2) + ' = ' + g.d.toFixed(2) + 'px');
   }
-  if (icInk && rInk) {
-    const r = dOf(rInk, icInk);
+  /* ⚑⚑ 683 11회차 — **[B2] 를 둘로 갈랐다(지우지 않았다 · 333 처방).**
+     이 항은 «후광이 대칭인가» 를 묻는데 재는 것은 «화면에 그려진 알» 이었다. 둘은 **전경이 없을
+     때만** 같은 말이다 — 683 11회차가 `.fx-keep-top`(89 유물 «Lv.n» 라벨 패치)을 알 «위» 로
+     올리면서 라벨 글리프가 알의 아래 테를 **정당하게** 가린다(그래야 되살린 글자를 알이 다시
+     안 씻는다 · `probe683d` [3]). 그 순간 이 한 항이 두 가지를 한 숫자에 섞는다:
+       ⓐ **알 자신이 중심에 대칭으로 그려졌는가**(820 이 묻고 싶었던 것) — [B2]
+       ⓑ **전경이 먹는 몫이 얼마인가**(11회차가 새로 만든 대가) — [B2b] 래칫
+     ⇒ ⓐ 는 전경을 숨기고 재고(= 종전의 뜻 그대로 · 실측 0.50px), ⓑ 는 그려진 그대로 재서
+       **조이는 쪽으로만 다시 적는다**(실측 2.50px → 문턱 3.0). 문턱을 넓혀 초록을 산 것이 아니라
+       **한 항이 답하던 두 물음을 각자의 항으로 갈랐다** — ⓐ 의 문턱(EPS_C 2.0)은 한 칸도 안 넓혔고,
+       [B3] 되돌림(3px 밀기)이 잡는 것도 ⓐ 축 그대로다.
+     되돌림: `index.html` 의 `.fx-keep.fx-keep-top` 선언을 지우면 ⓑ 가 0.50 으로 내려간다. */
+  const EPS_FG = 3.0;
+  /* §R 사본 — 11회차 선언 한 줄(`.fx-keep.fx-keep-top{z-index:1}`)만 되돌리고 **같은 절차로 다시 띄워** 잰다.
+     ⚠ 살아 있는 프레임에서 패치를 `display:none` 으로 지워 재는 길은 **안 쓴다** — 첫 시안이 그렇게 했다가
+       그 사이의 페인트 왕복에 알이 움직여 «전경 몫» 자리에 그 이동이 섞였다(−6.00px 라는 없는 수).
+     ⚠ `visibility` 로도 못 끈다 — 패치 사본은 `getComputedStyle` 전 항을 인라인으로 물려받아
+       **`visibility:visible` 을 자기가 들고 있다**(그릇만 숨겨도 안 숨는다). */
+  if (geo && fired && layers && layers.ring) {
+    await ev(p, () => { const s = document.createElement('style'); s.id = '__r683r11';
+      s.textContent = '.fx-keep.fx-keep-top{z-index:auto}'; document.head.appendChild(s); });
+    const re = await ev(p, id => {
+      const it = RELICS.find(r => r.id === id); if (!it) return false;
+      const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+      rwSummonFx(it, true);
+      for (const a of document.getAnimations()) {
+        const t = a.effect && a.effect.target;
+        if (t && L && L.contains(t)) { try { a.pause(); a.currentTime = 0; } catch (_) {} }
+      }
+      return document.querySelectorAll('#fxl .fx-rlic').length === 1;
+    }, geo.id);
+    if (re) { await paint(layers.ring); await p.waitForTimeout(80); bInk = await inkEgg(); await paint(''); }
+    await ev(p, () => { const s = document.getElementById('__r683r11'); if (s) s.remove(); });
+  }
+  if (icInk && bInk) {
+    const r = dOf(bInk, icInk);
     ok(r.d <= EPS_C,
-       'B2 ★ **그려진 알(불투명 흰 테까지)도 중심이 같다** — 후광이 대칭이라는 뜻(820 신설)',
+       'B2 ★ **후광 자체가 중심에 대칭이다**(±' + EPS_C + 'px · 820 이 묻던 그 성질) — '
+       + '683 11회차: 전경 한 줄을 되돌린 사본에서 잰다',
        'Δ ' + r.dx.toFixed(2) + ', ' + r.dy.toFixed(2) + ' = ' + r.d.toFixed(2) + 'px');
+  }
+  if (icInk && rInk && bInk) {
+    const r = dOf(rInk, icInk), b = dOf(bInk, icInk);
+    ok(r.d <= EPS_FG,
+       'B2b ★ **전경(`.fx-keep-top` 라벨 패치)이 먹는 몫 래칫**(≤' + EPS_FG + 'px · 683 11회차 신설 · 실측 2.50) — '
+       + '그려진 그대로의 알 중심. 늘면 라벨이 알을 더 가린 것이다(조이는 쪽으로만 다시 적어라)',
+       '그린 대로 ' + r.d.toFixed(2) + 'px ↔ 후광 자체 ' + b.d.toFixed(2) + 'px · 전경 몫 '
+       + (r.d - b.d).toFixed(2) + 'px');
+    ok(Math.abs(r.d - b.d) >= 0.5,
+       'B2c ★ **되돌림 시험** — 11회차 선언을 되돌리면 [B2b] 가 실제로 움직인다(≥0.5px). '
+       + '안 움직이면 이 자는 «언제나 초록» 인 헛초록이다',
+       '차 ' + Math.abs(r.d - b.d).toFixed(2) + 'px');
   }
   /* 되돌림 시험 — 자가 «자리» 를 정말 재는지. 3px 밀면 [B1] 이 빨개져야 한다(334 처방). */
   if (geo && fired && gInk) {

@@ -77,6 +77,10 @@ const READ = ID => {
     host, lab, patch: R(kLab.length ? kLab[0].querySelector('u') : null),
     csLab: cs(u), csPatch: cs(kLab.length ? kLab[0].querySelector('u') : null),
     keepZ: kLab.length ? getComputedStyle(kLab[0]).zIndex : null,
+    /* ⚑ 683 11회차 — z 를 받은 그릇이 **라벨 패치뿐인가**(스코프의 짝. 아래 [H1c]) */
+    zAll: keeps.map(n => ({ lab: !!(n.querySelector && n.querySelector('u')),
+                            top: n.classList.contains('fx-keep-top'),
+                            z: getComputedStyle(n).zIndex })),
     /* 라벨이 호스트 밖으로 걸친 양 — 뿌리가 «자리» 라는 근거([A]) */
     over: (host && lab) ? (lab.y + lab.h) - (host.y + host.h) : 0,
   };
@@ -135,9 +139,28 @@ const READ = ID => {
      K && K.csPatch ? ('«' + K.csPatch.text + '»') : '측정 실패');
 
   blk('H] z — 패치에 z 를 주지 않는다(주면 뒤따라 붙는 스파크가 이 밑으로 깔린다)');
-  ok(!!K && K.keepZ === 'auto' && K.csPatch && K.csPatch.zIndex === 'auto',
-     'H1 ★ 그릇·복제본 둘 다 `z-index:auto` — 순서만으로 위아래를 정한다(`.fx-keep` 규약)',
-     K ? ('그릇 ' + K.keepZ + ' · 복제본 ' + (K.csPatch ? K.csPatch.zIndex : '?')) : '측정 실패');
+  /* ⚑⚑ 683 11회차 — **[H1] 의 방향을 뒤집었다(지우지 않았다 · 333 처방).**
+     795 는 «그릇·복제본 둘 다 auto» 로 못을 박았고 그 근거는 `.fx-keep` 규약(«z 를 주면 뒤따라 붙는
+     스파크가 이 판때기 밑으로 깔린다»)이었다. 11회차가 재현으로 그 규약의 **예외 하나**를 열었다:
+     라벨 패치는 판때기가 아니라 **투명한 그릇 + 글리프 잉크**라, 깔리는 것은 «글자 위» 뿐이고
+     그 대가로 알이 되살린 글자를 다시 씻는 것을 막는다(`probe683d` [3] — «4.5:1 미만» 31% → 21%).
+     ⇒ 항을 지우지 않고 **셋으로** 적는다: 복제본은 여전히 auto(그림은 그대로) · 그릇만 한 칸 ·
+       그리고 **그 한 칸을 받은 것이 라벨 패치뿐인가**(스코프의 짝 — 없으면 840 뱃지·814 잉크가
+       조용히 같이 올라가도 아무 자도 안 짖는다).
+     되돌림: `index.html` 의 `.fx-keep.fx-keep-top` 선언을 지우면 [H1b] 가 빨개진다
+     (`verify753` [B2c] 가 그 되돌림을 화소로도 시험한다). */
+  ok(!!K && K.csPatch && K.csPatch.zIndex === 'auto',
+     'H1 ★ **복제본**은 여전히 `z-index:auto` — 그림은 한 항도 안 바뀐다(패치 안에서 층을 만들지 않는다)',
+     K && K.csPatch ? ('복제본 ' + K.csPatch.zIndex) : '측정 실패');
+  ok(!!K && K.keepZ === '1',
+     'H1b ★ **그릇만 한 칸 위로**(683 11회차) — 라벨 패치는 알 «위» 에 선다. `auto` 로 돌아가면 '
+     + '알이 되살린 글자를 다시 씻는다(`verify753` [B2b] 가 그 대가를 래칫으로 잡는다)',
+     K ? ('그릇 ' + K.keepZ) : '측정 실패');
+  const zBad = (K && K.zAll) ? K.zAll.filter(n => (n.top || n.z !== 'auto') && !n.lab) : ['측정 실패'];
+  ok(zBad.length === 0,
+     'H1c ★ **스코프의 짝** — z 를 받은 그릇은 «글자 라벨» 패치뿐이다(840 뱃지·814 잉크는 auto 그대로. '
+     + '그 둘은 불투명한 그림이라 `.fx-keep` 의 금지가 그대로 옳다)',
+     zBad.length ? ('라벨 아닌데 올라간 그릇 ' + zBad.length + '개') : ('그릇 ' + (K.zAll ? K.zAll.length : 0) + '개 전수 확인'));
 
   blk('G] 여러 칸 — 새 칸의 플래시가 남의 칸 패치를 안 걷는다');
   const G = await ev(p, () => {
