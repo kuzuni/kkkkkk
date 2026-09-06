@@ -170,23 +170,28 @@ const med = xs => { const s = xs.slice().sort((a, b) => a - b); return s[Math.fl
          **밖에 이미 나가 있는 종의 값이 조금 더 커지는 것**은 이 처방의 정의상 따라오는 몫이고,
          그것까지 부등호로 묶으면 문턱이 곧 손 상수가 된다(825). 판정이 잡는 것은 **«안에 있던
          종이 밖으로 나갔는가»** — 그것이 «내 획이 [E1] 의 판정을 더 나쁘게 만들었는가» 다. */
-      const bulkBand = (rs) => {
-        const g = rs.map(r => r.bulk).sort((a, b) => a - b);
-        const m = g[Math.floor((g.length - 1) / 2)];
-        return { m, out: rs.filter(r => r.bulk < m * (1 - BULK_TOL) || r.bulk > m * (1 + BULK_TOL))
-                           .map(r => r.i || r.sh),
-                 sp: +(g[g.length - 1] / Math.max(1, g[0])).toFixed(2) };
-      };
+      /* ⚑⚑ 1001 이관 — **접는 법·견주는 법을 여기서 다시 적지 않는다**(402 «사본을 지운다»).
+         이 자리는 989 → 995 → 998 이 **세 번 연속으로 고친 사본**이었다: 눈금이 본체 → 본체+반투명
+         부품으로(989), 대각 → 최대 변으로(995) 옮길 때마다 인라인 산수만 뒤처져 «792 가 버린 자»
+         를 지켰다. 998 이 그 산수를 부품 `tools/bulk998.js` 한 벌로 빼 뒀고 `verify981` [D2] 가
+         먼저 갈아 끼웠다 — 여기가 그 **네 번째이자 마지막 사본**이다(제품 0줄).
+         ⚠ `verify995` 의 인라인 접기는 사본이 아니다 — 그 자의 일이 «네 접는 법을 나란히 견주는
+           것» 이라 부품 하나로 묶으면 그 물음 자체를 잃는다. 건드리지 마라.
+         ⚠ 눈금(`bulk` = 최대 변)과 밴드 반폭(`BULK_TOL`)은 **792 가 고른다** — 부품은 픽셀도
+           문턱도 안 만들고, 재는 자는 위 `measure`(= `verify792.measure`) 하나뿐이다. */
+      const B998 = require('./bulk998');
+      const bulkBand = (rs) => B998.band(rs, BULK_TOL, 'bulk');
       if (negOk) {
-        const cur = bulkBand(rows);
-        const nRows = Object.keys(neg.out.rows).map(i => Object.assign({ i }, neg.out.rows[i]));
-        const nb = bulkBand(nRows);
-        const newOut = cur.out.filter(i => nb.out.indexOf(i) < 0);
+        const cur = bulkBand(out.rows);
+        const nb = bulkBand(neg.out.rows);
+        /* 되돌림 판이 하나뿐이라 «판 전부에서 안» = «이 판에서 안» 이다(부품 `newOut` 의 정의). */
+        const newOut = B998.newOut(cur, [nb]);
         ok(newOut.length === 0,
            '[C1] 대가 — 획 처방이 792 [E1] 덩치(최대 변) 밴드에서 **안에 있던 종을 밖으로 내보내지 ' +
            '않았다** · 새로 밖 ' + newOut.length + '종' + (newOut.length ? ' (' + newOut.join(' · ') + ')' : '') +
            ' · 밖 [' + nb.out.join('·') + '](되돌림) → [' + cur.out.join('·') + '](제품)' +
            ' · (기록) 스프레드 ' + nb.sp + '배 → ' + cur.sp + '배 · 중앙값 ' + nb.m + ' → ' + cur.m + 'px' +
+           ' · 밴드 ' + cur.lo + '~' + cur.hi +
            ' (⚠ 절대 밴드는 792 [E1] 이 든다 — 995 뒤 그것은 배율표를 닫을 때까지 빨갛다)');
       }
       ok(out.worst.iou <= IOU_MAX,

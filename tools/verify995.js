@@ -44,7 +44,14 @@ const { measure } = require('./verify792');
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 const V792 = path.join(ROOT, 'tools', 'verify792.js');
-const V982 = path.join(ROOT, 'tools', 'verify982.js');
+/* ⚑ 1001 — **인자로 다른 982 사본을 물릴 수 있다**(998 이 `verify981` 에 준 것과 같은 손잡이).
+   그것이 [B4] 의 되돌림 시험이다: 1001 이전 꼴(인라인 접기)로 되돌린 사본을 물리면 [B4] 가
+   실제로 빨개진다 — `node tools/verify995.js <982사본>` · 굽는 쪽은 `tools/verify1001.js` [R3]. */
+const V982 = process.argv[2] && !/^--/.test(process.argv[2])
+             ? path.resolve(process.argv[2]) : path.join(ROOT, 'tools', 'verify982.js');
+/* 1001 이관 — 982 [C1] 의 접는 산수가 부품으로 갔다. [B4] 가 «부품이 실제로 그 눈금으로 접는가»
+   까지 봐야 «`B998.band(…)` 라고 부르기만 하는 빈 껍데기» 로 초록이 되지 않는다. */
+const B998F = path.join(ROOT, 'tools', 'bulk998.js');
 
 /* [E1] 밴드 — 792 가 든 값 그대로다(±25% · 10회차 비평가 CV 목표). 여기서 다시 고르지 않는다. */
 const BULK_TOL = 0.25;
@@ -89,8 +96,17 @@ const fold = (rows, ids, key) => {
     ok(!/DIAG_TOL/.test(s792.replace(/`DIAG_TOL`/g, '')) && !/DIAG_TOL/.test(s982),
        '[B3] 이름이 눈금을 말한다 — `DIAG_TOL` 이 792·982 어디에도 없다(`BULK_TOL`). ' +
        '이름이 거짓말하면 다음 회차가 또 대각을 읽는다');
-    ok(/r\.bulk < m \* \(1 - BULK_TOL\)/.test(s982) && /\[C1\] 대가/.test(s982),
-       '[B4] 982 [C1] 도 **같은 눈금**을 읽는다 — 눈금이 둘이면 두 자가 서로 다른 덩치를 지킨다(402)');
+    /* ⚑ 1001 이관 — 묻는 것은 그대로 «982 [C1] 도 같은 눈금을 읽는가» 이고, **자리만 옮겼다**.
+       인라인 산수(`r.bulk < m * (1 - BULK_TOL)`)를 그대로 물으면 998 이 그 산수를 부품
+       `tools/bulk998.js` 로 뺀 순간 이 항이 «남의 정리» 때문에 빨개진다 — 989 → 995 → 998 →
+       1001 이 네 번 고친 것이 바로 그 사본이다. ⇒ 부품을 **어떤 눈금으로 부르는가**를 묻되,
+       부품이 실제로 그 열쇠로 접는지까지 같이 본다(안 그러면 이름만 부르는 껍데기로 초록이 된다). */
+    const sB998 = fs.readFileSync(B998F, 'utf8');
+    ok(/B998\.band\(\s*rs\s*,\s*BULK_TOL\s*,\s*'bulk'\s*\)/.test(s982) && /\[C1\] 대가/.test(s982) &&
+       /rows\[i\]\[k\]\s*<\s*lo/.test(sB998) && /const k = key \|\| 'bulk';/.test(sB998),
+       '[B4] 982 [C1] 도 **같은 눈금**을 읽는다 — 1001 이관: 인라인 산수가 부품 ' +
+       '`bulk998.band(rs, BULK_TOL, \'bulk\')` 로 갔고 그 부품이 실제로 그 열쇠로 접는다 ' +
+       '(눈금이 둘이면 두 자가 서로 다른 덩치를 지킨다 — 402)');
     ok(/\[E1n\] 같은 상자를 접는 법/.test(s792) &&
        /\['최대변\(판정\)', 'bulk'\]/.test(s792) && /\['대각\(옛 눈금\)', 'own'\]/.test(s792),
        '[B5] 버린 접는 법 셋이 [E1n] 표에 기록으로 남아 있다 — **되돌림 방법이 곧 그 표**다 ' +
