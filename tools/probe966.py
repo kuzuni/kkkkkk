@@ -181,9 +181,28 @@ def ladder(a, cl, cr, ctop, cbot, s, label, quiet=False):
             i = int(c - base) + 1
             want_down = not want_down
         out['rungs'] = rungs
-        for n, key in enumerate(['rb1_top', 'rb1_bot', 'rb2_top', 'rb2_bot', 'card_bot_in']):
-            if n < len(rungs):
+        # ⚑ 969 — **이름표가 틀려 있었다(자 부패).** 사다리 한 칸은 «리본 한 장» 이 아니라 «검정 교차
+        #   한 번» 이고 리본 한 장은 네 칸(바깥 윗변 · 안쪽 윗변 · 안쪽 아랫변 · 바깥 아랫변)을 낸다.
+        #   옛 표는 rungs[0..4] 에 rb1_top·rb1_bot·rb2_top·rb2_bot·card_bot_in 을 그대로 얹어 ref 의
+        #   «리본1 안쪽 윗변 264.33» 을 «리본1 아랫변» 으로, «리본1 바깥 아랫변 195.88» 을 «리본2 아랫변»
+        #   으로 불렀고, 그 이름으로 Δ 표가 «리본2 윗변 +45.59» 같은 헛값을 찍었다(966 §2-1 은 raw rungs 를
+        #   손으로 읽었기에 옳았다 — 사람이 표를 안 믿어서 안 속은 자리다).
+        # ⇒ 사다리가 «리본 두 장» 모양일 때만 이름을 붙인다: 여덟 칸이 내림차순이고 테 두께(바깥→안쪽)가
+        #   4..14 우리px. 우리 캡처는 창에 라벨·판 잉크가 끼어들어 21 칸이 나오므로 모양이 깨져 이름이
+        #   안 붙고 `rungs` 만 남는다 — 그 짝짓기는 DOM 자리를 아는 게이트가 한다(`verify969.js` pickRung()).
+        names = ['rb1_top', 'rb1_in_top', 'rb1_in_bot', 'rb1_bot',
+                 'rb2_top', 'rb2_in_top', 'rb2_in_bot', 'rb2_bot']
+        shaped = (len(rungs) >= 8
+                  and all(rungs[i] > rungs[i + 1] for i in range(7))
+                  and all(4.0 <= rungs[i] - rungs[i + 1] <= 14.0 for i in (0, 2, 4, 6)))
+        out['rungs_shaped'] = shaped
+        if shaped:
+            for n, key in enumerate(names):
                 out[key] = rungs[n]
+            out['rb1_h'] = rungs[0] - rungs[3]
+            out['rb2_h'] = rungs[4] - rungs[7]
+            if len(rungs) > 8:
+                out['card_bot_in'] = rungs[8]
 
     # ── 카드 «바닥 검정 테» 두께 — 원점 편향을 눈에 보이게 하는 곁축 ─────
     #   윗쪽 축은 전부 «바닥 **외곽**선» 이 원점인데(GZ·HA 규약) ref 는 화소, 우리는 DOM 상자에서 온다.
@@ -284,8 +303,12 @@ def dom_ladder(c):
 AXES = [('gap', '알약↔리본1 틈'), ('last_bot', '마지막 알약 아랫변 ←카드바닥'),
         ('rb_top', '리본1 윗변 ←카드바닥'), ('ph', '알약 높이'),
         ('pitch', '알약 피치'), ('inter', '알약 사이 틈'), ('band_to_p1', '밴드↔첫 알약'),
-        ('rb1_bot', '리본1 아랫변 ←카드바닥'), ('rb2_top', '리본2 윗변 ←카드바닥'),
-        ('rb2_bot', '리본2 아랫변 ←카드바닥'), ('bot_border', '바닥 검정 테 두께')]
+        ('rb1_bot', '리본1 아랫변 ←카드바닥'), ('rb1_h', '리본1 띠 높이'),
+        ('rb2_top', '리본2 윗변 ←카드바닥'), ('rb2_bot', '리본2 아랫변 ←카드바닥'),
+        ('rb2_h', '리본2 띠 높이'), ('bot_border', '바닥 검정 테 두께')]
+# ⚠ 969 — 이 여섯 축은 «사다리가 리본 두 장 모양일 때만» 이름이 붙는다(위 `rungs_shaped`).
+#   우리 캡처는 모양이 깨지므로 Δ 표에서 그 줄이 **안 찍히는 것이 정상**이다(옛 표는 그 자리에
+#   엉뚱한 칸을 짝지어 «리본2 윗변 +45.59» 를 찍었다). 우리 쪽 리본 높이는 `verify969.js` 가 잰다.
 
 
 def pick(o):
