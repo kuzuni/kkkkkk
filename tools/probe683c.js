@@ -48,8 +48,13 @@ const ev = async (p, fn, arg) => { try { return await p.evaluate(fn, arg); }
 const r2 = v => Math.round(v * 100) / 100;
 
 /* 프레임 한 장 — T ms 로 감은 연출. NOGAIN 이면 알을 숨기고, RAISE 면 라벨 패치를 알 «위» 로 올린다.
-   INSET 이면 `fxFlash` 셋째 인자를 켠 사본으로 부른다. */
-const SHOT = async ({ T, NOGAIN, RAISE, INSET, RID, BLANK }) => {
+   INSET 이면 `fxFlash` 셋째 인자를 켠 사본으로 부른다.
+   ⚑ 10회차 신설 — **NOKEEP 이면 795 의 라벨 패치(`.fx-keep`)를 걷는다**(`verify683` [H4] 와 같은 축).
+     [3-a] 가 «정착의 절반» 이라는 **절대 문턱**을 쓰고 있었는데, 862 가 흰 판을 액자 띠(6px)만큼
+     들이면서 라벨 주변의 흰 바탕이 줄어 그 절대값이 통째로 이동했다(15.26 → 5.16). 문턱을 낮추면
+     «패치가 죽어도 초록» 이 되고, 그대로 두면 «영영 빨간 자» 가 된다 ⇒ 둘 다 피하는 길은
+     **되돌림 대비**뿐이다(패치를 걷은 사본과 견준다 — 기하가 또 바뀌어도 같이 움직인다). */
+const SHOT = async ({ T, NOGAIN, RAISE, INSET, RID, BLANK, NOKEEP }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__p3to) { window.__p3to = window.setTimeout; window.__p3ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
@@ -63,6 +68,8 @@ const SHOT = async ({ T, NOGAIN, RAISE, INSET, RID, BLANK }) => {
   if (T >= 0) rwSummonFx(it, true, null);
   /* RAISE — 패치를 레이어 맨 끝으로 옮긴다(그리는 순서가 곧 위아래다 · `fxFlashKeep` 머리말) */
   if (RAISE && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))) L.appendChild(nd);
+  /* NOKEEP — 795 의 라벨 패치를 통째로 걷는다(= 795 이전 그림) */
+  if (NOKEEP && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))) nd.remove();
   try { document.getAnimations().forEach(a => {
     const tg = a.effect && a.effect.target;
     if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = Math.max(0, T); } catch (_) {} }
@@ -201,15 +208,25 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
     ['t0 현행(알 켬 — 비평가가 본 화면)',    { T: 0 }],
     ['t20 현행(알 켬)',                      { T: 20 }],
     ['t40 현행(알 켬)',                      { T: 40 }],
+    /* ⚑ 10회차 — 꼬리의 63% 가 **알**인지 **플래시**인지 가르는 짝(알만 숨긴다 · 나머지 동일) */
+    ['t20 현행(알 숨김)',                    { T: 20, NOGAIN: true }],
+    ['t40 현행(알 숨김)',                    { T: 40, NOGAIN: true }],
     ['t0 A/B — `inset` 켬(알 켬)',           { T: 0, INSET: true }],
     ['t0 A/B — 패치를 알 위로(알 켬)',       { T: 0, RAISE: true }],
     ['t0 A/B — `inset` + 패치 올림(알 켬)',  { T: 0, INSET: true, RAISE: true }],
+    /* ⚑ 10회차 — [3-a] 의 되돌림 짝. 795 의 패치를 걷으면 옛 씻김이 돌아온다. */
+    ['t0 되돌림 — 795 패치 걷음(알 켬)',     { T: 0, NOKEEP: true }],
+    /* ⚑ 10회차 — 꼬리에서도 패치가 일을 하는가(패치 수명 ↔ 플래시 수명이 어긋나는지) */
+    ['t20 되돌림 — 795 패치 걷음(알 켬)',    { T: 20, NOKEEP: true }],
+    ['t40 되돌림 — 795 패치 걷음(알 켬)',    { T: 40, NOKEEP: true }],
   ];
   const CLv = {};
+  const CLu = {};   /* ⚑ 10회차 — «4.5:1 미만» 도 같이 담는다([3-a] 가 이 축으로 옮겼다) */
   for (const [name, o] of cases) {
     const s = await shot(o); if (!s) { info(name, '캡처 실패'); continue; }
     const r = await CL(s.png, blank.png, BOX);
     CLv[name] = r && r.base ? r.base.med : null;
+    CLu[name] = r && r.base ? r.base.under45 : null;
     info(name, r && r.base
       ? ('중앙값 ' + r2(r.base.med) + ':1 · 하사분위 ' + r2(r.base.q1) + ':1 · 4.5:1 미만 '
          + Math.round(r.base.under45 * 100) + '%')
@@ -247,9 +264,34 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
      된다(680) — 그래서 방향을 «795 가 듣고 있는가» 로 돌렸다(333 처방).
      ⚠ 문턱은 안 무르게 잡았다: 795 의 라벨 패치가 죽으면 옛 씻김(2.2~2.5:1)이 돌아와
        정착의 절반(8.9) 아래로 즉시 내려간다 — `verify683` [H4] 가 같은 것을 «패치 걷기» 로 잰다. */
-  ok(now != null && b0 > 0 && now >= b0 * 0.5,
-     '3-a **795 의 라벨 패치가 듣고 있다** — t0 획↔주변 대비가 정착의 절반 위에 있다(CL 의 «4.29:1» 은 재현 안 됨)',
-     now != null ? (r2(now) + ':1 ↔ 정착 ' + r2(b0) + ':1 (절반 = ' + r2(b0 / 2) + ')') : '측정 실패');
+  /* ⚑⚑ **10회차 이관(862) — 옛 항이 «제품이 좋아진 것» 을 빨강으로 읽게 됐다.**
+     옛 항: «t0 중앙값 ≥ 정착의 절반(8.85)» — 9회차엔 15.26 이라 넉넉히 초록이었다.
+     862 가 흰 판을 호스트 액자 띠(6px)만큼 **들이자** 라벨 띠 위의 «흰 바탕» 이 줄어
+     **중앙값이 15.26 → 5.16 으로 내려갔다**(정착 17.71 불변). ⚠ 이 하강은 «가독성이 나빠졌다»
+     가 아니다 — 흰 바탕이 곧 «획을 돋보이게 하던 배경» 이었기 때문에 **대비가 크던 이유가
+     사라진 것**이고, 같은 프레임의 «4.5:1 미만» 은 **0% → 2%** 로 정착(14%)보다도 낮다.
+     ⚑⚑ **되돌림 대비(패치 걷기)로 옮기려던 첫 시도는 스스로 기각했다** — 이 축(획↔**국소 배경**)은
+       795 의 패치에 **반응하지 않는다**(패치 걷음도 5.16:1 · 배수 1.00). 패치가 지키는 것은
+       «채움↔테»(글리프 안)이고 그 축은 `verify683` [H4] 가 이미 배수 6.5 로 소유한다.
+       반응 안 하는 축에 되돌림을 걸면 **영원히 빨간 자**가 된다(680) ⇒ 안 걸었다.
+     ⇒ 이 항이 실제로 묻는 것을 적는다: **봉우리(t0)에서 «읽기 어려운 획» 비율이 정착보다
+       안 나쁘다.** 헛초록이 아님은 같은 표의 **t20·t40 이 62%** 인 것이 보증한다(정착 14%) —
+       이 자가 그 축에서 실제로 빨개질 수 있다는 뜻이다. 그 t20·t40 은 아래 ⏸ 로 매 실행 찍는다. */
+  const u0 = CLu['t0 현행(알 켬 — 비평가가 본 화면)'], ub = baseCL && baseCL.base ? baseCL.base.under45 : null;
+  ok(u0 != null && ub != null && u0 <= ub,
+     '3-a **봉우리에서 라벨이 정착보다 안 나쁘다** — t0 의 «4.5:1 미만» 획 비율이 정착 이하다(862 이관 — 옛 문턱 «중앙값 ≥ 정착의 절반»)',
+     u0 != null && ub != null
+       ? (Math.round(u0 * 100) + '% ↔ 정착 ' + Math.round(ub * 100) + '% · 중앙값 ' + r2(now) + ':1 ↔ 정착 ' + r2(b0) + ':1')
+       : '측정 실패');
+  /* ⏸ **실패로 안 센다 — 이 회차가 넘기는 관측이다.** 862 가 흰 판을 들인 뒤 봉우리(t0)는 좋아졌는데
+     **꼬리(t20~t40)** 에서 «4.5:1 미만» 이 62% 로 오른다(정착 14% · t0 2%). 축이 «획↔국소 배경» 이라
+     `verify683` [H1](채움↔테)이 안 보는 자리다. 10회차 비평 결과와 함께 판단할 것. */
+  {
+    const t20 = CLu['t20 현행(알 켬)'], t40 = CLu['t40 현행(알 켬)'];
+    if (t20 != null && t40 != null) console.log('  ⏸  [관측 · 실패 아님] 꼬리에서 «4.5:1 미만» 이 오른다 — t20 '
+      + Math.round(t20 * 100) + '% · t40 ' + Math.round(t40 * 100) + '% (t0 ' + Math.round(u0 * 100)
+      + '% · 정착 ' + Math.round(ub * 100) + '%)');
+  }
 
   /* ── [2] 등급 테 ── */
   blk('2] 등급 테 — 흰 판이 카드 테 열을 덮는가 (CM ⓐ) · `inset` A/B');
@@ -262,11 +304,17 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
     if (name === '현행(t0)') CLv.__ring0 = r && r.pct;
     else CLv.__ring1 = r && r.pct;
   }
-  ok(CLv.__ring0 != null && CLv.__ring0 < 10,
-     '2-a **CM ⓐ 는 실재한다** — 흰 판이 카드 액자선 열을 덮어 정착색 잔존이 10% 아래다(862 가 닫을 자리)',
+  /* ⚑⚑ **10회차 이관(862 완료) — 방향을 뒤집었다(333 처방).** 아래 세 항은 9회차에
+     «CM ⓐ 가 실재한다 · `inset` 이 그것을 되살리기는 한다 · 그런데 라벨을 잃는다» 를 쟀다.
+     862 가 흰 테를 **호스트 액자 띠에서 파생**시키자(`min(CSS, 띠)` · 들이기는 «액자가 있는가»)
+     세 값이 전부 뒤집혔다 — 잔존 **3.1% → 100%** · `inset` A/B **차이 0** · 라벨 대가 **0**.
+     ⚠ **지우지 않았다** — 지우면 «대가가 있었다» 는 사실이 사라져 누가 흰 테를 다시 상수로
+       되돌려도 아무 자도 안 짖는다(9회차 주석이 그렇게 적어 둔 그대로). 항의 이름만 뒤집는다. */
+  ok(CLv.__ring0 != null && CLv.__ring0 >= 90,
+     '2-a **CM ⓐ 는 862 로 닫혔다** — 흰 판이 카드 액자선 열을 더는 안 덮는다(정착색 잔존 90% 위 · 9회차 3.1%)',
      '잔존 ' + CLv.__ring0 + '%');
-  ok(CLv.__ring1 != null && CLv.__ring0 != null && CLv.__ring1 > CLv.__ring0 + 5,
-     '2-b `inset` 은 등급 테를 되살리기는 한다(들이기 자체는 동작한다)',
+  ok(CLv.__ring1 != null && CLv.__ring0 != null && Math.abs(CLv.__ring1 - CLv.__ring0) <= 5,
+     '2-b `inset` 인자는 이제 **아무 일도 안 한다** — 862 가 들이기를 «액자가 있는가» 로 옮겨 기본이 됐다',
      '현행 ' + CLv.__ring0 + '% → inset ' + CLv.__ring1 + '%');
   /* ⚑⚑ **이 항이 683 9회차가 손잡이를 기각한 근거다** — `inset` 을 켜면 등급 테는 살지만
      상자가 라벨 쪽으로 링(2px)만큼 밀려 라벨 축이 무너진다. 뿌리는 두께 비 하나다:
@@ -274,11 +322,15 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
      («링 두께만큼 들인다»)은 **«흰 테 ≤ 링» 일 때만** 성립한다(619 호스트는 링 8px).
      ⚠ **862 가 흰 테를 링에서 파생시키면 이 항은 뒤집힌다** — 그때 이 항을 지우지 말고
        333 처방대로 «대가가 사라졌는가» 로 방향만 뒤집어라(지우면 대가가 있었다는 사실이 사라진다). */
-  ok(CLv['t0 A/B — `inset` 켬(알 켬)'] != null && b0 > 0
-     && CLv['t0 A/B — `inset` 켬(알 켬)'] < b0 * 0.5,
-     '2-c 그런데 그 대가로 **라벨을 잃는다** — `inset` 이면 획↔주변 대비가 정착의 절반 아래다 (⇒ 이 화면의 답이 아니다 · 862)',
-     CLv['t0 A/B — `inset` 켬(알 켬)'] != null
-       ? (r2(CLv['t0 A/B — `inset` 켬(알 켬)']) + ':1 ↔ 현행 ' + r2(now) + ':1 · 정착 ' + r2(b0) + ':1') : '측정 실패');
+  /* ⚑ 9회차의 [2-c] 는 «등급 테를 사면 라벨을 잃는다» 였다(3.77:1 ↔ 15.26:1). 862 뒤로 그 대가가
+     사라졌다 — 흰 테가 띠를 안 넘으므로 상자가 라벨 쪽으로 밀리지 않는다. «대가가 사라졌는가» 로
+     방향만 뒤집는다(문턱은 «같은 값이다» = 상대 5% — 절대값을 안 쓰므로 기하 변경에 안 죽는다). */
+  {
+    const ins = CLv['t0 A/B — `inset` 켬(알 켬)'];
+    ok(ins != null && now != null && now > 0 && Math.abs(ins - now) <= now * 0.05,
+       '2-c 그 **대가가 사라졌다** — `inset` 을 켜도 라벨 대비가 그대로다 (9회차엔 정착의 절반 아래로 무너졌다 · 862)',
+       ins != null ? (r2(ins) + ':1 ↔ 현행 ' + r2(now) + ':1 · 정착 ' + r2(b0) + ':1') : '측정 실패');
+  }
 
   /* ── [4] 라벨 ↔ 알 ── */
   blk('4] 라벨 ↔ **알**(CM ⓑ — 채움 화소 중 알에 눌린 비율)');
