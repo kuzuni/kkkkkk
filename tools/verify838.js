@@ -60,6 +60,9 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
      한 장으로 읽으면 «기본 시드에서만» 초록·빨강인 항이 또 생긴다 — [C2] 가 그래서 11회차에 이관됐다. */
   const excS = runs.map(r => r.gapExcess), excMed = med(excS);
   const clrS = runs.map(r => r.clrMin), clrMed = med(clrS);
+  /* ⚑⚑ 14회차 — **[G1]·[G2] 도 같은 세 장으로 읽는다**(비 계열 축 · LESSONS 882-②). */
+  const spS = runs.map(r => r.rSpread), spMed = med(spS);
+  const ecS = runs.map(r => r.ecc), ecMed = med(ecS);
   if (A.err || B.err) { ok(false, 'V0 표본을 못 얻었다', (A.err || '') + ' ' + (B.err || '')); }
   else {
     console.log('  · 씬 A ' + Math.round(A.geo.bw) + '×' + Math.round(A.geo.bh) + ' · 알 ' + A.n
@@ -130,6 +133,17 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
        'E2 반경 예산이 **흑자**다 — 알들이 요구하는 호 ' + p2(arcNeed) + '° ≤ 쓸 수 있는 호 ' + p2(arcHave) + '°',
        'DG 5회차 손익분기 «14알 R41 ⇒ 324° 요구 ↔ 280° 공급 = 44° 적자» · n ' + A.n
        + ' · 지름 ' + p2(A.maxD) + ' · 끝반경 ' + p2(A.rE) + 'px');
+    /* ── [G] 봉투 모양(14회차 신설) ─────────────────────────────────
+       13회차 채점 2인의 **새 1순위**를 그 두 사람이 쓴 자로 그대로 세운다(「봉투가 원이 아니라 직사각형」):
+       DN «|Δx|max 103.5 / |Δy|max 43.6 = 편심 2.37:1 · 산포 ×3.32 · 끝점 다섯이 두 수평 레일 위» ·
+       DO «반경 최대/최소 ×3.61 · CV 0.457 · 원 적합 잔차가 반경의 45.7%».
+       ⚠ 문턱은 «결과에 맞춘 값» 이 아니라 **개체차의 폭**에서 나온다 — 길이 지터 `dFrac`(0.90~1.00)이
+         산포 ×1.11 을 만들고 탄생 링의 방향차가 그 위에 얹힌다(실측 ×1.19). ×1.45 는 그 위 한 칸이고,
+         **수리 전 그림(×2.84)은 여전히 빨갛다**(아래 [R6] 이 사본으로 못박는다 · 333 처방). */
+    ok(spMed <= 1.45, 'G1 봉투가 **원**이다 — 끝 반경 최대÷최소(시드 3장 중앙값) ≤ 1.45 · ×' + p2(spMed),
+       '표본 ' + spS.map(p2).join(' / ') + ' · 14회차 전 ×2.84 · 13회차 채점 DN ×3.32 · DO ×3.61 · CV ' + p2(A.rCV));
+    ok(ecMed <= 1.35, 'G2 그 원이 **한쪽으로 안 늘어난다** — 편심 |Δx|max/|Δy|max(중앙값) ≤ 1.35 · ' + p2(ecMed) + ':1',
+       '표본 ' + ecS.map(p2).join(' / ') + ' · 14회차 전 2.53:1 · 13회차 채점 DN 2.37:1 · 호스트 상자 자체는 3.93:1');
     ok(B.body >= 3, 'D1 대조군(점 대상)은 종전대로 여러 몸길이 — ' + p2(B.body) + ' 몸길이', '수리 전 4.8');
     ok(A.errs.length === 0 && B.errs.length === 0, 'D2 콘솔 에러 0',
        [...A.errs, ...B.errs].slice(0, 2).join(' | '));
@@ -180,6 +194,26 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
         ok(exc3.length === 3 && m3med > 65,
            'R5b 12회차를 되돌린 사본은 초과 공백이 여전히 문턱 위 — ' + p2(m3med) + '°',
            '표본 ' + exc3.map(p2).join(' / ') + ' · 지금 트리 중앙값 ' + p2(excMed) + '° · 문턱 65°');
+      }
+    }
+    /* ⚑⚑ 14회차 되돌림 — **«한 값 R» 을 끈 사본**에서 봉투가 다시 상자를 베끼는지 본다.
+       끄는 자리는 한 줄이다(`ARNG` 이 0 이면 길이·탄생 링이 종전 `room` 기준으로 되돌아간다).
+       ⚠ 안 걸리면 이 자는 «이미 참인 것» 을 굳힌 것이다 — 12회차 [R5] 와 같은 규약. */
+    {
+      const code4 = fs.readFileSync(SRC, 'utf8');
+      const m4 = /if\(w\[k\] >= 1\) rng = Math\.min\(rng, dps\[k\]\);/.exec(code4);
+      ok(!!m4, 'R6a 14회차의 «한 값 R» 선언을 찾았다', m4 ? m4[0] : '못 찾음');
+      if (m4) {
+        fs.writeFileSync(TMP, code4.replace(m4[0], 'if(false) rng = Math.min(rng, dps[k]);'));
+        const sp4 = [], ec4 = [];
+        for (const sd of [undefined, ...C2SEEDS]) {
+          const r4 = await runScene(SCENES[0], TMP, sd === undefined ? undefined : { seed: sd });
+          if (!r4.err) { sp4.push(r4.rSpread); ec4.push(r4.ecc); }
+        }
+        ok(sp4.length === 3 && med(sp4) > 1.45 && med(ec4) > 1.35,
+           'R6b 그 사본은 봉투가 다시 **상자 모양** — 산포 ×' + p2(med(sp4)) + ' · 편심 ' + p2(med(ec4)) + ':1',
+           '표본 산포 ' + sp4.map(p2).join(' / ') + ' · 편심 ' + ec4.map(p2).join(' / ')
+           + ' · 지금 트리 ×' + p2(spMed) + ' / ' + p2(ecMed) + ':1');
       }
     }
     /* ⚑ 6회차 되돌림 — 신고 **둘만** 걷는다(제품 상수는 그대로). 5회차의 그림으로 돌아가

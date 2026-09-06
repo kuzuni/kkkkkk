@@ -12765,7 +12765,7 @@
      ⚠ 단련(`.tb` 340×173 — 686 이 키웠다)·룬(`.rbt.b1` 420×112)도 670·687 이후 버튼에 «(아이콘)
        수량» 을 이고 있어 같은 결손이었고 **818 이 같은 신고로 닫았다**(각 선언 옆 머리말).
        세 자리의 답이 «수량 하나만 신고» 로 같고 **대가만 달랐다**: 훈련 −3% · 룬 −0% · 단련 −28%. */
-  .tr-card>.cb{--burst-keep:i;--burst-from:s;--burst-n:6;--burst-fit:.18;--burst-ease:1;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
+  .tr-card>.cb{--burst-keep:i;--burst-from:s;--burst-n:5;--burst-fit:.18;--burst-ease:1;left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
     justify-content:center;gap:8px;padding-right:11px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
@@ -44492,6 +44492,26 @@ const FXB_FITS = 0.22, FXB_SZMIN = 16, FXB_KSTEPF = 0.70, FXB_BR = 0.34, FXB_FOK
    `FXB_ABIN` = 원을 몇 칸으로 훑는가(5°) — 알 하나가 먹는 각(끝반경 56·지름 16 에서 16.7°)보다
    촘촘해야 얕은 섹터의 경계가 한 칸에 뭉개지지 않는다. */
 const FXB_FAIR = 0.5, FXB_ABIN = 72;
+/* ⚑⚑ 838 14회차 — **사거리를 «한 값 R» 로 고정한다**(13회차 채점 2인의 새 1순위 · 두 사람이 각각 다른 자로
+   재서 같은 수를 냈다: DN «|Δx|max 103.5 / |Δy|max 43.6 = 편심 2.37:1 · 산포 ×3.32 · 끝점 다섯이 두 수평 레일
+   위» · DO «f8 중심 10개 중 8개가 y=868.7 또는 944.6 에서 ±3px 안 · 반경 최대/최소 ×3.61 · CV 0.457»).
+   재현이 그 둘을 그대로 찍었다(`probe838` 14회차: 산포 ×2.84 · **CV 0.45** · 편심 **2.53:1**).
+   ⚑ **뿌리는 3회차의 처방 자신이다** — «이동량을 상자 대각이 아니라 그 방향으로 남은 거리(`rayRoom`)에서
+     뽑는다» 가 2회차의 «클램프가 각도를 지운다» 를 고쳤지만, 그 대가로 **끝점이 가둠 상자의 네 변을 베낀다**
+     (훈련 버튼 310×106 = 원점→벽 예산 위 48.6 · 아래 57.4 · 왼 119.1 · 오른 190.9px = **3.93:1**).
+     12회차 전에는 알이 뭉쳐 있어 이 레일이 안 보였고, 배분이 온 호로 펴자 드러났다.
+   ⇒ **길이만** 한 값으로 뽑는다 — 방향 선택(구멍 회피 · A5 · 배분)은 한 줄도 안 건드린다(3회차를 되돌리는
+     것이 아니다). R 은 손 상수가 아니라 **그 호스트의 기하에서 파생**한다: `AWARP` 가 이미 훑는 72칸 중
+     **가중치가 포화한 칸**(= 제품 자신이 «충분히 깊다» 고 판정한 방향)의 **가장 얕은 방** = 내접 반경이다.
+     DN 의 처방(«내접원 43px 로 통일 — 산포 3.32 → 1.0»)이 이 값이고, 그 위로는 벽에 닿으므로 못 간다.
+   ⚑ **두 사람의 나머지 반쪽(«벽 앞에서 조기 페이드/수명»)은 이 자리에서 필요가 없다** — R 을 내접 반경으로
+     잡으면 «R 을 못 내주는 방향» 자체가 (쐐기 밖에는) 없다. 수명을 건드리는 길은 619 14회차의 «틱 안에서
+     사그라든다» 와 681 의 생명 시계를 동시에 만지므로, 필요해질 때 그 두 행과 한 벌로 잡는다.
+   ⚠ **탄생 반경도 같이 내려야 한다** — 사거리는 «끝 반경 − 탄생 반경» 이라 R 을 122px 에서 45px 로 접으면
+     22px 짜리 탄생 링이 이동의 절반을 먹는다([A1]·[A3] 가 그 자리에서 빨개진다). 몫(`FXB_BR` 0.34)을
+     R 기준 `FXB_BRU` 로 낮춘다 — 값은 «C1(끝÷탄생 ≥ 3.00) 을 지키는 몫» 에서 나온다(1/0.22 = 4.5).
+   ⚠ 신고 안 한 호스트(09·12·17·장비·코스튬·우편·퀘스트)와 점 대상은 `ARNG` 가 0 이라 **한 값도 안 바뀐다**. */
+const FXB_BRU = 0.20;
 /* ⚑ 838 6회차 — `FXB_FITS` 는 **호스트가 좁혀 신고할 수 있다**(`--burst-fit`, 0<v≤`FXB_FITS`).
    5회차 채점 2인(DF·DG)의 남은 1순위가 «반경이 모자란다 — 알을 Ø11(DF)/Ø15.5(DG) 로» 였고, 그 자리는
    씬 A(훈련 `.tr-card>.cb` 310×106) 다. 값을 **전역으로** 내리면 단련(496×173)·룬(420×112)에서
@@ -44974,7 +44994,7 @@ function fxBurst(t, col, n, strict, iv, ic){
      ⚠ 난수는 한 번도 더 안 뽑는다(아래 `jitA` 는 종전 그 자리 그대로) — 신고 안 한 호스트
        (09·12·17·장비·코스튬·우편·퀘스트)와 점 대상은 **한 값도 안 바뀐다**(`AWARP` 가 null).
      ⚠ 사다리(`FXB_KTRY`)·A5·융합 회피는 **그대로 남는다** — 이것은 밑각의 배분이고 그 셋은 안전망이다. */
-  const AWARP = (() => {
+  const ADIS = (() => {
     if(!(fo && r) || cnt < 2) return null;
     /* 대표 알 지름 — 아래 루프의 크기 산수를 **난수 없이** 한 번 되짚는다(24~34 의 중앙 29) */
     let nsz = Math.round(29 * hsc * szs);
@@ -45000,7 +45020,7 @@ function fxBurst(t, col, n, strict, iv, ic){
       }
       return Math.max(0, tt === Infinity ? 0 : tt);
     };
-    const w = [], cum = []; let tot = 0;
+    const w = [], cum = [], dps = []; let tot = 0;
     for(let k = 0; k < FXB_ABIN; k++){
       const th = (k + 0.5) / FXB_ABIN * Math.PI * 2;
       /* «쓸 수 있는 여유» = 발원 원반(A5 와 같은 값)을 벗어난 뒤 남는 길이.
@@ -45009,19 +45029,30 @@ function fxBurst(t, col, n, strict, iv, ic){
          정작 중간 깊이의 부채가 비었다(초과 공백 중앙값 70.7° → **73.8°**).
          두 사람이 적은 것은 «깊을수록 많이» 가 아니라 **«얕으면 심지 마라»** 다 ⇒ 문턱 한 표.
          경계가 한 칸에 뚝 끊기지 않게 문턱 아래 4분의 1 구간만 선형으로 눕힌다. */
-      const room = dep(Math.cos(th), Math.sin(th)) - fo.r * FXB_FOK - (FXB_SZMIN + 4) / 2;
+      const dp = dep(Math.cos(th), Math.sin(th));
+      const room = dp - fo.r * FXB_FOK - (FXB_SZMIN + 4) / 2;
       const v = clamp(room / Math.max(1, FXB_FAIR * nsz), 0, 1);
-      w.push(v); tot += v; cum.push(tot);
+      w.push(v); tot += v; cum.push(tot); dps.push(dp);
     }
     /* 온 원이 다 얕으면 배분할 것이 없다 — 종전 등간격 그대로(5회차의 «가장 깊은 방향» 이 받는다) */
     if(tot <= 1e-6) return null;
-    return (u) => {
-      const x = (((u % 1) + 1) % 1) * tot;
-      let k = 0; while(k < FXB_ABIN - 1 && cum[k] < x) k++;
-      const lo = k ? cum[k - 1] : 0, f = w[k] > 1e-9 ? clamp((x - lo) / w[k], 0, 1) : 0.5;
-      return (k + f) / FXB_ABIN * Math.PI * 2;
+    /* ⚑ 14회차 — **사거리 R = «제품이 쓸 수 있다고 판정한 방향» 의 내접 반경**(위 `FXB_BRU` 머리말).
+       가중치가 포화한 칸(w = 1 = 여유가 `FXB_FAIR` 몸길이를 넘는 방향)만 본다 — 반쯤 얕은 칸까지 세면
+       R 이 그 칸에 끌려 내려가 온 링이 같이 짧아진다. 포화한 칸이 하나도 없으면 0 = 이 회차는 안 건다. */
+    let rng = Infinity;
+    for(let k = 0; k < FXB_ABIN; k++) if(w[k] >= 1) rng = Math.min(rng, dps[k]);
+    return {
+      rng: rng === Infinity ? 0 : rng,
+      warp: (u) => {
+        const x = (((u % 1) + 1) % 1) * tot;
+        let k = 0; while(k < FXB_ABIN - 1 && cum[k] < x) k++;
+        const lo = k ? cum[k - 1] : 0, f = w[k] > 1e-9 ? clamp((x - lo) / w[k], 0, 1) : 0.5;
+        return (k + f) / FXB_ABIN * Math.PI * 2;
+      },
     };
   })();
+  const AWARP = ADIS && ADIS.warp;                 /* 12회차의 밑각 배분(이름·동작 불변) */
+  const ARNG = ADIS ? ADIS.rng : 0;                /* 14회차의 «한 값 R»(0 이면 종전 그대로) */
   for(let i=0;i<cnt;i++){
     const el = document.createElement('s');
     /* 16회차 — 산포 95~195 는 카드 밖까지 흩어져 «±450px 드리프트» 로 읽혔다(Z ②) → 80~150.
@@ -45043,7 +45074,10 @@ function fxBurst(t, col, n, strict, iv, ic){
        초과분을 clamp 가 **각도째 지웠다** — 비평 2인이 각각 그 서명을 찍었다(CZ «E1·E2·E3 요청 각도가
        22.6° 차인데 끝 x 는 폭 1.3px» · DA «f8 에 4알이 x=68±0.5 한 줄»). 비율만 여기서 뽑고
        길이는 방향이 정해진 뒤에 곱한다(같은 알은 후보를 바꿔도 같은 비율을 쓴다 — 난수 흐름 불변). */
-    const dFrac = (r && fo) ? rnd(0.82, 1.00) : 0;   /* 3회차 2차 — 0.60~1.00 은 이동을 절반으로 깎았다(65 → 30px). 벽에 «붙지만 않으면» 각도는 산다 */
+    /* ⚑ 14회차 — 3회차의 폭 0.82~1.00 은 «벽까지 얼마나» 의 개체차였는데, R 이 한 값이 된 지금은
+       이 폭이 **곧 산포**다(0.82 ⇒ ×1.22). 개체차는 남기되(15회차 «판때기» 금지) 두 사람이 요구한
+       «한 값» 에 맞춰 좁힌다 — 난수를 뽑는 자리·횟수는 그대로라 신고 안 한 호스트는 불변. */
+    const dFrac = (r && fo) ? rnd(0.90, 1.00) : 0;   /* 3회차 2차 — 0.60~1.00 은 이동을 절반으로 깎았다(65 → 30px). 벽에 «붙지만 않으면» 각도는 산다 */
     const d = r ? 0 : rnd(80, 150);
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
@@ -45210,6 +45244,9 @@ function fxBurst(t, col, n, strict, iv, ic){
       /* 3회차 — 신고 호스트는 **탄생 반경도 «갈 곳» 을 따라간다**: 방이 좁은 방향(가격 숫자 쪽)에서
          22px 링을 고집하면 태어나는 자리가 이미 구멍 안이라 그 방향이 통째로 버려진다. */
       const room = fo ? rayRoom(p.x, p.y, ux, uy) : 0;
+      /* ⚑ 14회차 — **길이는 방향이 아니라 R 이 정한다**(위 `FXB_BRU` 머리말). 벽이 R 보다 가까우면
+         그 벽까지가 그대로 상한이다(스필 0 은 구조적으로 그대로 · [B1]·[B2] 불변). */
+      const reach = (fo && ARNG > 0) ? Math.min(room, ARNG) : room;
       /* ⚑⚑ 838 5회차 — **발원 원반을 벗어나야 «나온다» 로 읽힌다.** 4회차 채점에서 비평 2인이
          각각 같은 것을 셌다(DD «13알 중 3알이 250ms 에도 원점 25px 안 · 9알이 코인 지름 52 언저리» ·
          DE «110ms 에 12알 중 6알이 아직 발원 25px 안»). 그 알들은 «안 움직이는 알» 이 아니라
@@ -45224,14 +45261,14 @@ function fxBurst(t, col, n, strict, iv, ic){
          되돌아온다(1차 시도 빈 각 185°). 등재문이 연 갈래를 여기서도 쓴다 — **상자가 좁으면
          다른 축(알 크기)으로 갚는다**: 그 방향에서 «발원 원반을 벗어날 수 있는 가장 큰 알» 을 구하고,
          그것이 최소 크기(`FXB_SZMIN`)보다 작을 때만 그 방향을 버린다. */
-      const roomSz = fo ? 2 * (room - fo.r * FXB_FOK) - 4 : Infinity;
+      const roomSz = fo ? 2 * (reach - fo.r * FXB_FOK) - 4 : Infinity;   /* 14회차 — 알이 실제로 닿는 자리(= reach)에서 잰다 */
       const roomOk = !fo || roomSz >= FXB_SZMIN;
       const deepest = fo && (!fbR || room > fbR.room);            /* 전부 얕을 때 쓸 «가장 깊은 방향» */
-      const br = fo ? Math.min(FXB_RMIN, room * FXB_BR) : 0;
+      const br = fo ? Math.min(FXB_RMIN, ARNG > 0 ? reach * FXB_BRU : room * FXB_BR) : 0;   /* 14회차 — 탄생 링도 R 에서 파생 */
       sx0 = clamp(p.x + (fo ? ux*br : Math.cos(ang)*rx)*jt*rr, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» · rr 은 619 6회차(strict 외 1) */
       sy0 = clamp(p.y + (fo ? uy*br : Math.sin(ang)*ry)*jt*rr, by0, by1);
       /* 끝점은 «남은 방» 의 60~100% — 벽에 붙지 않으므로 각도 정보가 살아 있다(2회차의 x=68 정렬이 이 자리다) */
-      const dv = fo ? Math.max(0, room - Math.hypot(sx0 - p.x, sy0 - p.y)) * dFrac : d;
+      const dv = fo ? Math.max(0, reach - Math.hypot(sx0 - p.x, sy0 - p.y)) * dFrac : d;
       ex = (r && !fo) ? sx0 : clamp(sx0 + ux*(fo ? dv : d), bx0, bx1);
       ey = (r && !fo) ? sy0 : clamp(sy0 + uy*(fo ? dv : d), by0, by1);
       /* ⚑ 838 — 당김 사다리(위 `FXB_KMAX` 머리말). 큰 칸부터 넣고 걸리면 내려간다 ·

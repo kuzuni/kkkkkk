@@ -53,6 +53,15 @@ const info = (k, v) => console.log('       · ' + k + ': ' + v);
     info('이웃 장 IoU', s.pairIoU.map(v => p2(v)).join(' · ') + ' (최대 ' + p2(s.iouPeak) + ')');
     info('각도', '가장 큰 빈 각 ' + p2(s.fanGap) + '° · 2px 띠 최대 정렬 ' + s.pile + '알 · 스필 ' + p2(s.spill) + 'px'
          + ' · 발원 원반(r' + p2(s.geo.fr) + ') 안에서 끝난 알 ' + s.stuck + '개');
+    /* ⚑ 14회차 신설 — 13회차 채점 2인의 새 1순위(「봉투가 원이 아니라 직사각형」)를 그 두 사람이 쓴 자로 찍는다 */
+    info('봉투 모양', '끝 반경 ' + p2(s.rEMin) + '~' + p2(s.rEMax) + 'px = **산포 ×' + p2(s.rSpread)
+         + '** (CV ' + p2(s.rCV) + ') · 편심 |Δx|max/|Δy|max = **' + p2(s.ecc) + ':1**'
+         + '  [DN ×3.32 · 2.37:1 / DO ×3.61 · CV 0.457]');
+    /* ⚑ 14회차 신설 — 13회차 곁다리 관측(자는 «쉬는 액자» · 사람은 «눌린 액자» 를 잰다) */
+    if (s.geo.press)
+      info('눌린 액자', Math.round(s.geo.press.bw) + '×' + Math.round(s.geo.press.bh) + ' @('
+           + Math.round(s.geo.press.bx) + ',' + Math.round(s.geo.press.by) + ') · 그 액자 기준 스필 **'
+           + p2(s.spillP) + 'px** (쉬는 액자 ' + p2(s.spill) + 'px)  [DO «밑변을 3px 넘는다» 확인 요청]');
     console.log('\n| 알 | 최대 지름 | 총 이동 | 몸길이 | 경로 길이 | 최대 이웃 IoU |');
     console.log('|---|---|---|---|---|---|');
     s.per.forEach((e, i) => console.log('| #' + (i + 1) + ' | ' + p2(e.maxD) + ' | ' + p2(e.net) + ' | '

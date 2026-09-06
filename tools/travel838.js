@@ -98,6 +98,11 @@ function summarize(env, org) {
     const over = org.bx === undefined ? 0 : Math.max(...pts.map(p2 => Math.max(
       org.bx - (p2.cx - p2.w / 2), (p2.cx + p2.w / 2) - (org.bx + org.bw),
       org.by - (p2.cy - p2.w / 2), (p2.cy + p2.w / 2) - (org.by + org.bh))));
+    /* ⚑ 14회차 — 같은 산수를 **눌린 액자**에 댄다(위 `press` 머리말 · 13회차 곁다리 관측) */
+    const P = org.press;
+    const overP = !P ? over : Math.max(...pts.map(p2 => Math.max(
+      P.bx - (p2.cx - p2.w / 2), (p2.cx + p2.w / 2) - (P.bx + P.bw),
+      P.by - (p2.cy - p2.w / 2), (p2.cy + p2.w / 2) - (P.by + P.bh))));
     /* ⚑ 12회차 — **수명 후반(t=70→250)의 이동 속도**(DM 이 잰 그 축 · px/ms).
        격자 시각에서 자리를 찾으므로 STOPS 를 바꿔도 따라온다(없으면 앞뒤 끝을 쓴다). */
     const iA = Math.max(0, STOPS.indexOf(70)), iB = STOPS.indexOf(250) < 0 ? last : STOPS.indexOf(250);
@@ -108,7 +113,7 @@ function summarize(env, org) {
        [A4](총 이동 ÷ 지름)와 다른 것을 묻는다 — 총 이동은 «태어난 자리» 부터 세지만
        사람이 보는 것은 «코인 밖으로 얼마나 나왔나» 다. 발원 원반은 A5 와 같은 값(`fr × 0.72`). */
     const clr = maxD > 0 && org.fr ? (rE - org.fr * 0.72) / maxD : 0;
-    return { maxD, net, pth, r0, rE, over, pts, body: maxD > 0 ? net / maxD : 0, ious, iouMax: Math.max(...ious),
+    return { maxD, net, pth, r0, rE, over, overP, pts, body: maxD > 0 ? net / maxD : 0, ious, iouMax: Math.max(...ious),
              lateV, clr };
   });
   const pairIoU = per[0].ious.map((_, k) => mean(per.map(p => p.ious[k])));
@@ -161,6 +166,18 @@ function summarize(env, org) {
     /* ⚑ 838 5회차 — 비평 2인이 4회차에서 **직접 센 수**: 끝나도 발원 원반 안에 있는 알(DD 3알 · DE 2~6알) */
     stuck: org.fr ? per.filter(p => p.rE < org.fr * 0.72).length : 0,   /* 그린 원반 ≈ 상자의 0.72(제품 `FXB_FOK` 와 같은 값 · DD 실측 52/71) */
     spill: Math.max(...per.map(p => p.over)),      /* 호스트 상자 밖으로 나간 잉크(px · 음수면 안쪽) */
+    spillP: Math.max(...per.map(p => p.overP)),   /* ⚑ 14회차 — 같은 잉크를 **눌린 액자**로 잰 값(13회차 곁다리 관측) */
+    /* ⚑⚑ 14회차 신설 — **13회차 채점 2인이 각각 다른 자로 재서 같은 수를 낸 그 두 축**(「봉투가 원이 아니라 직사각형」).
+       DN «|Δx|max 103.5 / |Δy|max 43.6 = 편심 2.37:1 · 산포 ×3.32» · DO «반경 최대/최소 ×3.61 · CV 0.457».
+       ⚠ 덧붙이는 값이라 기존 수는 한 자리도 안 움직인다(위 12회차 두 축과 같은 규약).
+       ⚠ 눈금을 «원 적합 잔차» 가 아니라 **비(比)** 로 적는다 — 두 사람이 실제로 쓴 자가 비였고,
+         비는 호스트 크기가 바뀌어도 뜻이 안 갈린다(402 «사본을 지운다» 와 같은 이유). */
+    rEMax: Math.max(...per.map(p => p.rE)), rEMin: Math.min(...per.map(p => p.rE)),
+    rSpread: Math.max(...per.map(p => p.rE)) / Math.max(1e-9, Math.min(...per.map(p => p.rE))),
+    ecc: Math.max(...per.map(p => Math.abs(p.pts[last].cx - org.x)))
+       / Math.max(1e-9, Math.max(...per.map(p => Math.abs(p.pts[last].cy - org.y)))),
+    rCV: (() => { const v = per.map(p => p.rE), m = mean(v);
+      return Math.sqrt(mean(v.map(x => (x - m) * (x - m)))) / Math.max(1e-9, m); })(),   /* DO 의 0.457 */
   };
 }
 
@@ -218,7 +235,7 @@ async function runScene(scene, src, opts) {
     if (o.init) await page.evaluate(src2 => { (new Function(src2))(); }, o.init);   /* 883 — 자 손잡이 */
 
     /* 발원 중심·호스트 상자는 **트리거 전**에 잡는다(621 눌림이 프레임마다 호스트를 키운다 — LESSONS 681-⑥) */
-    const geo = await page.evaluate((sel) => {
+    const geo = await page.evaluate(async (sel) => {
       const el = document.querySelector(sel); if (!el) return null;
       const r = el.getBoundingClientRect();
       const a = document.getElementById('app'), ar = a ? a.getBoundingClientRect() : null;
@@ -252,8 +269,24 @@ async function runScene(scene, src, opts) {
             holes.push({ x: rk.x / sc, y: rk.y / sc, w: rk.width / sc, h: rk.height / sc });
         }
       } catch (e) {}
+      /* ⚑ 838 14회차 — **«눌린 프레임» 의 호스트 상자**(13회차 곁다리 관측 · DO «f8 우하단 알이 띠 밑변을
+         3px 넘는다» ↔ 자([B1]) −5.44px). 자는 호스트를 **트리거 전**(쉬는 자세)에 잡는데 사람은
+         621 눌림(`jz-dn` = `scale:.94` + `translate:0 8px`)이 걸린 프레임을 잰다 — 즉 두 자가 **다른 액자**를
+         재고 있었다. 갈림을 없애려고 상수를 손으로 적지 않고 **제품의 그 클래스를 그대로 걸어** 잰다
+         (402 «사본을 지운다» · 트리거 전이라 난수·표본은 한 자리도 안 바뀐다). */
+      let pb = null;
+      try {
+        const had = el.classList.contains('jz-dn');
+        if (!had) el.classList.add('jz-dn');
+        /* `.jz-dn` 은 `transition:scale .06s` 이라 **거는 즉시 읽으면 쉬는 자세**가 나온다 — 다 앉을 때까지 기다린다 */
+        await new Promise(res => setTimeout(res, 120));
+        const rp = el.getBoundingClientRect();
+        pb = { bx: rp.x / sc, by: rp.y / sc, bw: rp.width / sc, bh: rp.height / sc };
+        if (!had) el.classList.remove('jz-dn');
+        await new Promise(res => setTimeout(res, 120));   /* 트리거 전에 쉬는 자세로 되돌려 놓는다 */
+      } catch (e) {}
       return { x: ox / sc, y: oy / sc, fr: fr / sc, fi: fi / sc, holes,
-               bx: r.x / sc, by: r.y / sc, bw: r.width / sc, bh: r.height / sc };
+               bx: r.x / sc, by: r.y / sc, bw: r.width / sc, bh: r.height / sc, press: pb };
     }, scene.btn);
     if (!geo) return { err: '호스트 없음: ' + scene.btn, errs };
 
