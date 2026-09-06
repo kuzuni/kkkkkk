@@ -100,9 +100,11 @@ const TAG_ROCK = `      const rr = [`;
 const OLD_ROCK = `      const rr = [9.8,7.7,9.4,6.9,10.0,8.1];`;
 
 /* ⚑ 998 — **되돌림 앵커는 한 곳에서만 선언한다**(402 «사본을 지운다»).
-   아래 [D2] 가 네 판을 **다 구워서** 견주기 때문에, 앵커를 [R1]~[R4] 와 여기에 두 벌로 적으면
+   아래 [D2] 가 이 표의 판을 **다 구워서** 견주기 때문에, 앵커를 [R*] 절과 여기에 두 벌로 적으면
    그 순간 «자기 자신을 견주는» 사본이 하나 더 생긴다(997 이 바로 그 자리였다).
-   ⇒ 굽는 법은 이 표뿐이고 [D2]·[R1]~[R4] 가 **같은 표를 읽는다**.
+   ⇒ 굽는 법은 이 표뿐이고 [D2]·[R1]~[R5] 가 **같은 표를 읽는다**.
+   ⚑ **회차가 처방을 하나 더 얹으면 여기에 한 줄 더한다** — 그래야 [D2] 의 «전부에서 안» 이
+     그 회차까지 셈에 넣는다(5회차 `two` 가 그렇게 들어왔다).
    ⚠ 표에 종을 더할 때는 «한 값만 바꾼다» 를 지켜라 — 두 값을 같이 되돌리면 그 판이 빨개져도
      원인이 무엇인지 못 말한다([R2]~[R4] 주석이 각자 그 이유를 적고 있다). */
 const REVERTS = [
@@ -118,6 +120,9 @@ const REVERTS = [
   { key: 'fat', what: '초승달을 도로 살찌워',
     has: s => /M_RAK = 2\.25/.test(s),
     apply: s => s.replace('M_RAK = 2.25', 'M_RAK = 1.95') },
+  { key: 'two', what: '도약탄 셋째 마디를 지워 두 마디로',
+    has: s => /BE2R = 6/.test(s),
+    apply: s => s.replace('BE2R = 6', 'BE2R = 0') },
 ];
 const RV = k => REVERTS.find(r => r.key === k);
 
@@ -295,8 +300,8 @@ function holePx(px, bw) {
           배율표(`SHOT_SC`)로 [E1] 을 닫을 때까지 **981 이 «남의 미완» 때문에 빨갛다**.
           밖 다섯 중 넷은 981 이 한 획도 안 건드린 종이다(982 [C1] 이 989·995 에서 똑같이 겪었다).
        ⇒ **981 이 질 수 있는 것 하나만 묻는다 — «내 처방이 밴드 안에 있던 종을 밖으로 냈는가».**
-          [R1]~[R4] 의 네 되돌림 판을 **다 굽고**(998 등재문 ⓐ), **네 판 전부에서 «안»** 이던 종이
-          제품에서 밖이면 빨강이다. 802 의 배율·꼬리 같은 남의 손잡이는 이 물음에 안 걸린다.
+          [R*] 의 되돌림 판을 **다 굽고**(998 등재문 ⓐ · `REVERTS` 표), **그 판 전부에서 «안»** 이던
+          종이 제품에서 밖이면 빨강이다. 802 의 배율·꼬리 같은 남의 손잡이는 이 물음에 안 걸린다.
        ⚠ **«한 판에서라도 밖» 이던 종은 안 센다** — 그 종은 내 처방이 아니라도 밖이라는 뜻이고,
           그것까지 세면 이 자는 다시 «남의 미완» 을 지키는 자가 된다.
        ⚠ 절대 밴드(밖 5종)는 **792 [E1] 이 든다** — 여기서 두 번 묻지 않는다. 값은 (기록)으로만 찍는다. */
@@ -317,13 +322,14 @@ function holePx(px, bw) {
       try {
         const r = await V792.measure(browser, 'file://' + f);
         if (!r.out || r.out.__err || !r.out.rows) { negErr.push(rv.key + ' 측정 예외'); continue; }
-        negs.push(Object.assign({ key: rv.key, rows: r.out.rows }, bulkBand(r.out.rows)));
+        /* ⚠ 접는 법이 돌려주는 `key`(= 눈금 이름)를 덮지 않게 **판 이름은 뒤에 얹는다** */
+        negs.push(Object.assign(bulkBand(r.out.rows), { rv: rv.key, rows: r.out.rows }));
       } finally { try { fs.unlinkSync(f); } catch (_) {} }
     }
-    /* «네 판 전부에서 안» 이던 종 ∩ «제품에서 밖» = 내 처방이 낸 종 (부품 `bulk998.newOut`) */
+    /* «되돌림 판 전부에서 안» 이던 종 ∩ «제품에서 밖» = 내 처방이 낸 종 (부품 `bulk998.newOut`) */
     const newOut = B998.newOut(cb, negs);
     ok(cb.ids.length === 17 && negs.length === REVERTS.length && newOut.length === 0,
-       '[D2] 되감기 금지 — **792 의 자에게 직접 물었다**(눈금 = 최대 변 `bulk`): 내 네 처방이 [E1] ' +
+       '[D2] 되감기 금지 — **792 의 자에게 직접 물었다**(눈금 = 최대 변 `bulk`): 내 처방들이 [E1] ' +
        '덩치 밴드(중앙값 ' + cb.m + ' 의 ±' + Math.round(BULK_TOL * 100) + '% = ' + cb.lo + '~' + cb.hi +
        ') **안에 있던 종을 밖으로 내지 않았다** · 잰 종 ' + cb.ids.length + ' · 되돌림 판 ' +
        negs.length + '/' + REVERTS.length + (negErr.length ? '(' + negErr.join(' · ') + ')' : '') +
@@ -339,7 +345,7 @@ function holePx(px, bw) {
         dOut.length + '종) — 998 이 갈아 낸 것이 이 차다');
       for (const n of negs) {
         const mv = cb.ids.filter(i => n.rows[i] && n.rows[i].bulk !== e1rows[i].bulk);
-        console.log('       (기록) 되돌림 ' + n.key.padEnd(5) + ' 밖 [' + n.out.join('·') + '] · 중앙값 ' + n.m +
+        console.log('       (기록) 되돌림 ' + n.rv.padEnd(5) + ' 밖 [' + n.out.join('·') + '] · 중앙값 ' + n.m +
           ' · 덩치가 움직인 종 ' + (mv.length ? mv.map(i => i + ' ' + n.rows[i].bulk + '→' + e1rows[i].bulk).join(' · ') : '없음'));
       }
     }
@@ -470,10 +476,10 @@ function holePx(px, bw) {
      ⚠ 자리·크기·색·층은 한 글자도 안 바꾼다 — 이 판이 빨개지면 원인은 «마디 수» 하나뿐이다.
      ⚠ `SHOT_SC` 는 되돌리지 않는다(정렬 IoU 는 크기를 지우므로 답이 안 바뀐다) —
        되돌릴 값을 둘로 늘리면 «둘 중 무엇이 일했나» 를 이 자가 못 가린다. */
-  if (!/BE2R = 6/.test(src)) {
+  if (!RV('two').has(src)) {                        /* 998 — 같은 표(REVERTS) */
     ok(false, '[R5-0] 되돌림 앵커(`BE2R = 6`)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
   } else {
-    fs.writeFileSync(NEG_TWO, src.replace('BE2R = 6', 'BE2R = 0'), 'utf8');
+    fs.writeFileSync(NEG_TWO, RV('two').apply(src), 'utf8');
     try {
       const neg = await pairsOf(browser, 'file://' + NEG_TWO);
       if (neg.__err) { ok(false, '[R5] 되돌림 사본 측정 예외 — ' + neg.__err); }

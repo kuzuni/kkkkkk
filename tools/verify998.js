@@ -69,10 +69,10 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
   ok(rvDecl === 1 && dup.length === 0,
      '[B4] 되돌림 앵커가 **한 벌**이다 — `REVERTS` 선언 ' + rvDecl + '곳 · 두 벌로 적힌 앵커 ' +
      dup.length + '개' + (dup.length ? ' (' + dup.join(' · ') + ')' : '') +
-     ' ([D2] 가 네 판을 다 굽기 때문에 두 벌로 적으면 «자기 자신을 견주는» 사본이 하나 더 생긴다 — 997)');
+     ' ([D2] 가 그 판을 다 굽기 때문에 두 벌로 적으면 «자기 자신을 견주는» 사본이 하나 더 생긴다 — 997)');
 
   ok(/negs\.length === REVERTS\.length/.test(v981),
-     '[B5] [D2] 가 **네 판을 다 구웠는지**를 자기 판정에 넣는다 — 한 판이라도 못 구우면 빨강 ' +
+     '[B5] [D2] 가 **표의 판을 다 구웠는지**를 자기 판정에 넣는다 — 한 판이라도 못 구우면 빨강 ' +
      '(사본이 적을수록 «전부에서 안» 이 헐거워진다: 0판이면 이 항은 아무것도 안 묻는 빈 물음이다)');
 
   /* ── [R] 되돌림 시험 — 부품을 합성 표로 굽는다(브라우저 없이 · 값은 제품 실측 꼴 그대로) ──
@@ -86,7 +86,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
     ok(cur0.m === 112 && cur0.out.length === 0,
        '[R0] 합성 기준판 — 중앙값 ' + cur0.m + ' · 밴드 ' + cur0.lo + '~' + cur0.hi + ' · 밖 0종');
 
-    /* ⓐ 내 처방이 «안에 있던 종»(e)을 밖으로 냈다 — 네 되돌림 판 전부에서 e 는 안이었다. */
+    /* ⓐ 내 처방이 «안에 있던 종»(e)을 밖으로 냈다 — 되돌림 판 전부에서 e 는 안이었다. */
     const negs = [base, base, base, base].map(o => B998.band(mk(o), TOL, 'bulk'));
     const curA = B998.band(mk(Object.assign({}, base, { e: 170 })), TOL, 'bulk');
     const outA = B998.newOut(curA, negs);
