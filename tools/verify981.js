@@ -52,8 +52,13 @@ const IOU_RATCHET = 0.71;     /* 4회차 실측 0.697(`bounce↔flask`) — 3회
                                  1회차 0.848 · 수리 전 0.872.
                                  ⚑ 4회차가 초승달을 «뿔이 선 손톱달» 로 갈라 `curve` 쌍 넷을 통째로 내렸다.
                                  ⚠ **이제 최악은 초승달이 아니다** — 남은 둘은 `ball↔bottle` 0.697(둥근 몸통 둘)과
-                                 `rock↔fire` 0.697 이고, 그 둘이 5회차의 과녁이다. */
-const OVER_RATCHET = 14;      /* 4회차 실측 13 · 3회차 16 · 2회차 18 — 1회차 20 이었고 그 사이 **982 1회차가 24 로 올렸다**
+                                 `rock↔fire` 0.697 이고, 그 둘이 5회차의 과녁이다.
+                                 ⚑ **5회차는 이 값을 못 내렸다 — 정직하게 그대로 둔다(348 «올리지도 내리지도 마라»).**
+                                 5회차가 잡은 것은 `ball` 쪽이고(0.697 → 0.515 · 그 종의 네 쌍이 통째로 0.60 아래),
+                                 남은 최악 `rock↔fire` 0.697 은 **손 안 댄 쌍**이 그 자리로 올라온 것이다
+                                 (착수 시점에도 같은 0.697 이었다). ⇒ **6회차의 과녁은 `rock↔fire` 하나**이고,
+                                 `rock` 은 [C1] 0.75 에 묶여 있으니 움직일 종은 `fire`(화구)다 — 인계 §⑥. */
+const OVER_RATCHET = 9;       /* 5회차 실측 **8** · 4회차 13 · 3회차 16 · 2회차 18 — 1회차 20 이었고 그 사이 **982 1회차가 24 로 올렸다**
                                  (성긴 실루엣을 부풀린 대가로 서로 닮았다. 내 변경 전 HEAD 에서 이 항이
                                  이미 빨갰고, 수리 전 트리 실행으로 그것을 못박았다 — 회차 기록 §2회차 ①).
                                  ⚠ 아래 옛 주석의 «여유 1칸» 은 그대로다.
@@ -69,9 +74,13 @@ const R2_MAX = { gem: 0.66,        /* 실측 0.618 (수리 전 0.787 — `fire` 
                  rockfall: 0.70,   /* 실측 0.649 (수리 전 0.831 — `gem` 과) */
                  cross: 0.66,      /* 3회차 실측 0.642 ↔ `fire` (수리 전 0.725 ↔ `star`) */
                  bottle: 0.72,     /* 실측 0.697 (수리 전 0.848 — `ball` 과 · 전 136쌍 최악이었다) */
-                 moon: 0.68 };     /* 4회차 실측 0.645 ↔ `lance` (수리 전 0.714 ↔ `bmr` · 전 136쌍 최악이었다).
+                 moon: 0.68,       /* 4회차 실측 0.645 ↔ `lance` (수리 전 0.714 ↔ `bmr` · 전 136쌍 최악이었다).
                                       ⚠ 이 종은 **0.60 위 목록에서 넷이 한꺼번에** 빠진 자리다
                                       (bmr .714 · arc .693 · spear .608 · ball .607 → 전부 0.60 아래). */
+                 ball: 0.56 };     /* 5회차 실측 **0.515** ↔ `bottle` (수리 전 0.686 ↔ 같은 종).
+                                      ⚠ 이 종도 **0.60 위 목록에서 넷이 한꺼번에** 빠졌다
+                                      (bottle .686 · rock .661 · fire .641 · rockfall .622 → 전부 0.60 아래) —
+                                      **비평가 선(0.60) 아래로 통째로 내려간 첫 종**이다(여유는 형제와 같은 한 칸). */
 const D1_MAX = 0.90;          /* 792 [D1] 과 같은 값 — 되감기 금지 축 */
 const DIAG_TOL = 0.25;        /* 792 [E1] 과 같은 값 */
 
@@ -82,6 +91,7 @@ const NEG_ROCK = path.join(ROOT, '.v981-neg-rock-' + process.pid + '.html');
 const NEG_CVX  = path.join(ROOT, '.v981-neg-cvx-'  + process.pid + '.html');   /* [R2] — 오목을 지운 볼록 사본 */
 const NEG_SEG  = path.join(ROOT, '.v981-neg-seg-'  + process.pid + '.html');   /* [R3] — 참격 고리를 4토막으로 되돌린 사본 */
 const NEG_FAT  = path.join(ROOT, '.v981-neg-fat-'  + process.pid + '.html');   /* [R4] — 초승달을 도로 살찌운 사본 */
+const NEG_TWO  = path.join(ROOT, '.v981-neg-two-'  + process.pid + '.html');   /* [R5] — 도약탄을 두 마디로 되돌린 사본 */
 /* ⚠ 줄 전체가 아니라 **머리**만 붙잡는다(792 9회차 교훈 — 줄이 길어지면 자가 먼저 죽는다). */
 const TAG_ROCK = `      const rr = [`;
 const OLD_ROCK = `      const rr = [9.8,7.7,9.4,6.9,10.0,8.1];`;
@@ -165,6 +175,24 @@ function holePx(px, bw) {
     ok(!!mm && rak > 1 && Math.abs(1 - rak) < cxk && cxk < 1 + rak && back > 0 && back <= 0.22,
        '[C6] 초승달에 **뿔이 서 있다** — 파낸 원 ' + (rak || '?') + '배 > 1(바깥 원) · 두 원이 만난다 · ' +
        '등두께 ' + back + ' ≤ 0.22 (살찌우면 굽은 띠 무리로 되돌아간다 — [R4])');
+  }
+
+  /* ── [C7] 5회차의 선언 한 줄 — 도약탄이 «세 마디로 어긋나 있는가» 를 픽셀 전에 산수로 묻는다 ──
+     두 마디는 «몸통 + 목»(화염병)과 **구별할 축이 없다**(탐색 실측: 두 마디 무리는 무엇을 골라도
+     최악 0.79 ↔ bottle · `node tools/try981.js --fam bead --vs ball`). 그래서 두 가지를 같이 묻는다:
+       ⓐ 마디가 셋이다(둘째 에코 반지름 > 0) — [R5] 가 이것을 0 으로 지워 되돌린다.
+       ⓑ 두 에코가 진행축을 사이에 두고 **반대쪽**이다(어긋남) — 일직선으로 늘어놓으면
+          `spear`·`arrow` 쪽으로 붙는다(탐색 0.55~0.57 · 어긋남을 준 자리는 0.507).
+     ⚠ ⓑ 를 «부호가 다르다» 로만 묻지 않고 **어긋난 폭**까지 본다 — 부호만 다르고 1px 이면 직선과 같다. */
+  {
+    const m1 = src.match(/const BE1X = (-?[\d.]+), BE1Y = (-?[\d.]+), BE1R = ([\d.]+)/);
+    const m2 = src.match(/const BE2X = (-?[\d.]+), BE2Y = (-?[\d.]+), BE2R = ([\d.]+)/);
+    const y1 = m1 ? +m1[2] : 0, y2 = m2 ? +m2[2] : 0, r2b = m2 ? +m2[3] : 0;
+    const zig = Math.abs(y1 - y2);
+    ok(!!m1 && !!m2 && r2b > 0 && y1 * y2 < 0 && zig >= 12,
+       '[C7] 도약탄이 **세 마디로 어긋나 있다** — 둘째 에코 반지름 ' + (r2b || 0) + ' > 0(마디 셋) · ' +
+       '두 에코가 진행축 반대쪽(y ' + y1 + ' ↔ ' + y2 + ') · 어긋난 폭 ' + zig + ' ≥ 12 ' +
+       '(둘째를 지우면 두 마디 = 병과 같은 그림으로 되돌아간다 — [R5])');
   }
 
   /* ── 본 측정 ── */
@@ -363,6 +391,36 @@ function holePx(px, bw) {
     } finally { try { fs.unlinkSync(NEG_FAT); } catch (_) {} }
   }
 
+  /* ── [R5] 5회차의 되돌림 시험 — «셋째 마디가 일하고 있다» ──
+     한 값만 바꾼다: 둘째 에코 반지름을 6 → **0**(제품이 `if(er <= 0) return` 으로 그 마디를 통째로
+     건너뛴다 — 후광 폴백까지 같은 값을 본다). 남는 것은 «큰 알 + 작은 알» 두 마디이고,
+     그것이 4회차까지의 꼴이자 화염병(몸통 + 목)과 **같은 그림**이다.
+     ⚠ 자리·크기·색·층은 한 글자도 안 바꾼다 — 이 판이 빨개지면 원인은 «마디 수» 하나뿐이다.
+     ⚠ `SHOT_SC` 는 되돌리지 않는다(정렬 IoU 는 크기를 지우므로 답이 안 바뀐다) —
+       되돌릴 값을 둘로 늘리면 «둘 중 무엇이 일했나» 를 이 자가 못 가린다. */
+  if (!/BE2R = 6/.test(src)) {
+    ok(false, '[R5-0] 되돌림 앵커(`BE2R = 6`)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
+  } else {
+    fs.writeFileSync(NEG_TWO, src.replace('BE2R = 6', 'BE2R = 0'), 'utf8');
+    try {
+      const neg = await pairsOf(browser, 'file://' + NEG_TWO);
+      if (neg.__err) { ok(false, '[R5] 되돌림 사본 측정 예외 — ' + neg.__err); }
+      else {
+        const nWorst = withSh(neg.pairs, 'ball')[0];
+        const nOver = withSh(neg.pairs, 'ball').filter(p => p.iou > COMPLAIN);
+        const nowWorst = withSh(cur.pairs || [], 'ball')[0];
+        const jump = (nWorst ? nWorst.iou : 0) - (nowWorst ? nowWorst.iou : 0);
+        ok(!!nWorst && nWorst.iou > R2_MAX.ball && nOver.length >= 2 && jump >= 0.05,
+           '[R5] 되돌림 시험 — 셋째 마디를 **지워 두 마디로 되돌리면** [C3-ball] 이 실제로 빨개진다: ' +
+           'ball 최악 ' + (nowWorst ? nowWorst.iou.toFixed(3) : '?') + ' → ' +
+           (nWorst ? nWorst.sa + '↔' + nWorst.sb + ' ' + nWorst.iou.toFixed(3) : '?') +
+           ' (+' + jump.toFixed(3) + ' ≥ 0.05 · 문턱 ' + R2_MAX.ball + ') · ' +
+           COMPLAIN + ' 위 ball 쌍 ' + nOver.length + '개 ≥ 2 (' +
+           nOver.slice(0, 4).map(p => p.sa + '↔' + p.sb + ':' + p.iou.toFixed(3)).join(' · ') + ')');
+      }
+    } finally { try { fs.unlinkSync(NEG_TWO); } catch (_) {} }
+  }
+
   await browser.close();
   console.log('\nVERIFY981 ' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
   process.exit(fail ? 1 : 0);
@@ -371,5 +429,6 @@ function holePx(px, bw) {
   try { fs.unlinkSync(NEG_CVX); } catch (_) {}
   try { fs.unlinkSync(NEG_FAT); } catch (_) {}
   try { fs.unlinkSync(NEG_SEG); } catch (_) {}
+  try { fs.unlinkSync(NEG_TWO); } catch (_) {}
   console.log('VERIFY981 오류 — ' + e.message); process.exit(1);
 });

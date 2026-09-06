@@ -108,8 +108,41 @@ function bandCands() {
   return out;
 }
 
-const FAMS = { cres: cresCands, ring: ringCands, band: bandCands,
-               all: () => [].concat(cresCands(), ringCands(), bandCands()) };
+/* 알 사슬(5회차 신설) — «큰 알 + 뒤로 작아지는 에코» 무리. 지금의 `ball`(두 마디)과
+   `bottle`(몸통 + 목)이 둘 다 이 무리 안이라 대조군이자 후보다.
+     n    마디 수(2~4)
+     k    한 마디마다 반지름이 곱해지는 비(작을수록 급히 줄어든다)
+     d    중심 간격 ÷ (두 반지름의 합) — 1 이면 «맞닿는다», 1 미만은 겹친 땅콩, 1 초과는 **떨어진다**
+     amp  진행축과 **직교**로 마디마다 번갈아 어긋나는 폭 ÷ 그 마디 반지름 (튀는 자국)
+   ⚠ 정렬 IoU 는 회전·미러·크기를 지우므로 «두 알이 맞닿았다» 는 병(몸통+목)과 같은 그림이다.
+     이 무리에서 갈리는 축은 **마디 수 · 떨어짐(d>1) · 지그재그(amp)** 셋뿐이다. */
+function beadCands() {
+  const out = [];
+  for (const n of [2, 3, 4]) {
+    for (let k = 0.50; k <= 0.85001; k += 0.05) {
+      for (let d = 0.80; d <= 1.60001; d += 0.10) {
+        for (const amp of [0, 0.6, 1.2]) {
+          if (n === 2 && amp === 1.2) continue;         /* 두 마디에서는 지그재그가 곧 회전이다 */
+          const cs = [];
+          let r = 1, x = 0;
+          for (let i = 0; i < n; i++) {
+            const rr = r * Math.pow(k, i);
+            if (i > 0) x -= d * (r * Math.pow(k, i - 1) + rr);
+            cs.push({ x, y: (i % 2 ? 1 : -1) * amp * rr, r: rr });
+          }
+          out.push(Object.assign({ id: 'bead n' + n + ' k' + k.toFixed(2) + ' d' + d.toFixed(2) + ' a' + amp.toFixed(1),
+                     note: (d > 1.001 ? '떨어짐' : d < 0.999 ? '겹침' : '맞닿음') + ' · 마디 ' + n },
+                     stamp((px, py) => cs.some(c => (px - c.x) * (px - c.x) + (py - c.y) * (py - c.y) <= c.r * c.r),
+                           n === 2 ? 3.2 : n === 3 ? 4.2 : 5.0)));
+        }
+      }
+    }
+  }
+  return out;
+}
+
+const FAMS = { cres: cresCands, ring: ringCands, band: bandCands, bead: beadCands,
+               all: () => [].concat(cresCands(), ringCands(), bandCands(), beadCands()) };
 
 /* ── 본문 ─────────────────────────────────────────────────────────────── */
 (async () => {
