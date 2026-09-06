@@ -65,6 +65,12 @@ const NEG_SC   = path.join(ROOT, '.v792-neg-sc-' + process.pid + '.html');
    ⚠ 앵커는 **정규식**이다 — 상수는 회차마다 다시 계산되는 값이라(형상이 밀리면 같이 민다)
      숫자를 손으로 박으면 다음 회차에 «사본이 낡았다» 로 조용히 빨개진다. */
 const NEG_SPIN = path.join(ROOT, '.v792-neg-spin-' + process.pid + '.html');
+/* ⚑ 15회차 — 운석의 **낙하를 끈 사본**([R7]). 시전이 박아 둔 수직각을 0 으로 되돌린다.
+   ⚠ 앵커는 정규식이고 **주석에는 그 문자열을 안 적는다** — 13회차에 되돌림 앵커를 주석에
+     그대로 적었더니 남의 자(`verify981` [R3])의 `src.replace` 가 주석을 대신 바꿔
+     사본이 원본과 같아졌다(그 회차 교훈). 앵커는 이름만 부른다. */
+const NEG_FALL = path.join(ROOT, '.v792-neg-fall-' + process.pid + '.html');
+const FALL_RE  = new RegExp('a:1\\.57(,\\s*fl0:)');
 const SPIRAL_RE = /C_RMP = [\d.]+, C_TIP = [\d.]+/;
 const TAG_SC   = `const SHOT_SC = { arc:`;
 
@@ -179,7 +185,11 @@ async function measure(browser, url) {
       if (done && shots.length) {
         const b = shots[0];
         specs[s.id] = { k: b.k, sh: b.sh, sa: b.sa, col: b.col, r: b.r, spin: b.spin,
-                        tx: b.tx, ty: b.ty, fl0: b.fl0 };
+                        tx: b.tx, ty: b.ty, fl0: b.fl0,
+                        /* ⚑ 15회차 [F3] — **그리기에는 안 쓴다**(아래 발은 a:0 그대로다 · 실루엣
+                           축은 17종이 같은 각이어야 견줄 수 있다). 여기 담는 것은 «제품이 이 종을
+                           어떻게 날리기로 했는가» 뿐이고, [F3] 이 그 값만 읽는다. */
+                        cA: b.a, cVx: b.vx, cVy: b.vy, cGy: b.gy, cY: b.y, cTy: b.ty };
       }
       clearFx();
     }
@@ -722,6 +732,9 @@ async function measure(browser, url) {
     const aura = (typeof AURA_SPR !== 'undefined')
       ? Array.from(AURA_SPR.entries()).filter(e => e[1]).map(e => String(e[0]).split('|')[0]) : [];
     return { rows, worst, n: ids.length, frame, bake: +bake.toFixed(1), nShot: 60, aura, cband: CBAND, rings: ringM,
+             /* 15회차 [F3] — «제품이 이 종을 어떻게 날리기로 했는가» 한 줄. 그리기와 무관하다. */
+             cast: specs.meteor ? { a: specs.meteor.cA, vx: specs.meteor.cVx, vy: specs.meteor.cVy,
+                                    gy: specs.meteor.cGy, y0: specs.meteor.cY, ty: specs.meteor.cTy } : null,
              box: { R, bw, clip: pick.over || 0, grew: !!pick.grew } };
   });
 
@@ -741,7 +754,7 @@ if (require.main === module) (async () => {
   console.log('=== VERIFY 792 — 스킬 이펙트 연출 규격(세 층) 통일 ===\n');
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const src = fs.readFileSync(SRC, 'utf8');
-  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE, NEG_AURA, NEG_SC, NEG_SPIN]) { try { fs.unlinkSync(f); } catch (_) {} } };
+  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE, NEG_AURA, NEG_SC, NEG_SPIN, NEG_FALL]) { try { fs.unlinkSync(f); } catch (_) {} } };
 
   try {
     /* ---- [C] 선언 ---- */
@@ -959,6 +972,31 @@ if (require.main === module) (async () => {
         console.log('  (기록) [F2] 방향별 반경 변동 % / 두께 테이퍼 — ' +
           ids.map(i => i + ':' + out.rows[i].rvar + '/' + out.rows[i].taper).join(' · '));
       }
+      /* ⚑⚑ 15회차 [F3] — **④ 뜻: 운석이 «떨어지는가»**. 이 항은 그림이 아니라 **제품의 결정**을 읽는다.
+         왜 그래야 하는가가 이 회차의 본체다 — 「`meteor` 가 낙하로 안 읽힌다」는 4·8·10·12·14회차에
+         **여섯 번** 2인 공통으로 올라온 792 최장수 지적인데, 재현(`probe792r15`)이 그 여섯 회차를
+         **전부 하네스 유령으로 기각했다**: 대조 시트(`cap710`)가 17종을 `a = 0` 으로 눕혀 세우는 바람에
+         운석이 **수평으로 누운 채** 채점됐다(꼬리 방위각 180.5° · 세로 성분 −0.008 = 비평가 열두 명이
+         적은 그 값). 제품의 각(π/2)으로 세우면 같은 자에서 **269.6° · 세로 성분 −1.000** 이다.
+         ⇒ 15회차의 처방은 **자**(시트가 제품 상수각을 싣게 한다)이고 **제품은 0줄**이다(338·341 꼴).
+         ⚠ 그러면 «제품이 정말 떨어진다» 를 무엇이 지키나 — 지금까지 **아무 자도 안 지켰다**.
+           작도를 눕히거나 중력을 지워도 [A]~[F2] 는 한 항도 안 빨개진다(전부 a=0 실루엣 축이다).
+           이 항이 그 자리다: 여섯 회차가 헛것을 쫓는 동안 **진짜로 지켜야 했던 것**을 못 박는다.
+         ⚠ 문턱은 관측값이 아니라 **뜻**이다(825): 각은 수직 ±0.05rad · vy > 0 · gy > 0 ·
+           출발이 착탄점보다 위. 값(690·815·1.57)은 114 가 13·14회차에 맞춘 것이라 여기 안 적는다 —
+           적으면 그 행이 값을 만질 때 이 자가 먼저 죽는다. */
+      {
+        const c = out.cast;
+        const fall = !!c && Math.abs(c.a - Math.PI / 2) < 0.05 && c.vy > 0 && c.vx === 0 &&
+                     c.gy > 0 && c.ty - c.y0 > 0;
+        ok(fall,
+           '[F3] ④ 뜻 — `meteor`(운석 낙하)가 **떨어진다**: 각 ' +
+           (c ? (c.a * 180 / Math.PI).toFixed(1) : '?') + '° (수직 ±2.9°) · vy ' +
+           (c ? c.vy.toFixed(0) : '?') + ' > 0 · 가로 흔들림 ' + (c ? c.vx : '?') + ' · 중력 ' +
+           (c ? c.gy.toFixed(0) : '?') + ' > 0 · 출발이 착탄보다 ' +
+           (c ? (c.ty - c.y0).toFixed(0) : '?') + 'px 위 ' +
+           '(4·8·10·12·14회차의 «낙하로 안 읽힌다» 는 **하네스가 눕혀 세운 그림**이었다 — `probe792r15`)');
+      }
       /* ⚑⚑ [E2] 는 **판정이 아니라 기록이다** — 처음엔 «[E1] 대각 밴드에서 파생한 면적 상한
          (1.25/0.75)² = 2.78» 로 세웠고, 그 자가 **묻는 질문 자체가 틀렸다**:
          면적 = 대각² × **채움 밀도**인데 밀도는 «얼마나 크게» 가 아니라 **«무슨 모양인가»** 다.
@@ -1093,6 +1131,23 @@ if (require.main === module) (async () => {
            '[R6] 나선을 끄면 [F1] 이 빨개진다 — 되돌린 판의 `cross` 반경 변동 ' + (r2 ? r2.rvar : '?') +
            '% < ' + RVAR_MIN + ' · 테이퍼 ' + (r2 ? r2.taper : '?') + ' > ' + TAPER_MAX +
            ' (= 12회차가 채점한 도넛)');
+      }
+    }
+
+    /* ⚑ [R7] — 15회차. **운석의 수직각을 0 으로 되돌리면 [F3] 이 빨개진다.**
+       [F3] 은 그림이 아니라 시전이 정한 값을 읽는 항이라 되돌림도 값 하나면 된다.
+       이 항이 없으면 [F3] 은 «지금 그대로» 를 초록으로 지나가는 자다(11회차 [R5] 와 같은 이유). */
+    if (!FALL_RE.test(src)) {
+      ok(false, '[R7-0] 되돌림 앵커(운석 시전의 수직각)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
+    } else {
+      fs.writeFileSync(NEG_FALL, src.replace(FALL_RE, 'a:0$1'), 'utf8');
+      const rFa = await measure(browser, 'file://' + NEG_FALL);
+      if (rFa.out && rFa.out.__err) ok(false, '[R7] 사본 측정 예외 — ' + rFa.out.__err);
+      else {
+        const c2 = rFa.out.cast;
+        ok(!!c2 && Math.abs(c2.a - Math.PI / 2) >= 0.05,
+           '[R7] 운석을 눕히면 [F3] 이 빨개진다 — 되돌린 판의 각 ' +
+           (c2 ? (c2.a * 180 / Math.PI).toFixed(1) : '?') + '° (= 4~14회차 비평가 열두 명이 채점한 그 그림)');
       }
     }
   } finally {

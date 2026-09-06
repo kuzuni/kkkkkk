@@ -7,6 +7,14 @@
  *
  * 실제 게임 캔버스에 실제 `shotBody()` 로 그린다(별도 미리보기 캔버스가 아니다) —
  * 배율(`SK_DRAW_SC`)·알파 층·바닥까지 화면과 같은 조건이라야 채점이 화면을 말한다.
+ * ⚑⚑ **15회차(792) — «같은 조건» 에 «각» 이 빠져 있었다.** 이 자는 17종을 전부 `a = 0` 으로 눕혀
+ *   세웠고, 그래서 `meteor`(운석 낙하)가 **수평으로 누운 채** 여섯 회차(4·8·10·12·14) 동안
+ *   비평가 열두 명에게 «낙하로 안 읽힌다» 를 받았다 — 제품은 내내 수직으로 떨어지고 있었다.
+ *   지금은 표적을 두 자리에 두고 두 번 시전해 **각이 안 변한 종(제품 상수각)만** 그 각을 싣는다.
+ *   ⚠ 조준각(표적 자리가 정하는 각)은 계속 0 으로 눕힌다 — 그것까지 실으면 «표적을 어디 뒀나» 가
+ *     시트를 돌리는 또 하나의 하네스 자유도가 된다. 자는 `tools/probe792r15.js`.
+ * ⚠ **실루엣 자**(`verify792` [D1]·[E1] · `probe792r13`)는 반대로 a = 0 을 유지해야 한다 —
+ *   종끼리 겹쳐 재는 자라 17종이 같은 각이어야 견줄 수 있다. 둘은 서로 반대가 맞다.
  * ⚠ 용사 근처는 «몸 겹침 감쇠»(near < 62)가 걸리므로 용사를 판 밖으로 치우고 그린다.
  *
  * 캡처는 커밋하지 않는다(2026-08-30 이력 정리 — `.gitignore` 가 `docs/shots/` 를 막는다).
@@ -47,27 +55,53 @@ const ROWS = [
     let guard = 0;
     while (enemies.length === 0 && guard++ < 600) step(1 / 60);
     const foe = enemies[0];
-    enemies.length = 0; spawnQ.length = 0;
-    if (foe) {
-      enemies.push(foe);
-      foe.x = 300 - ox; foe.y = 300 - oy; foe.born = 9;
-      foe.hp = 1e12; foe.max = 1e12; foe.sp = 0; foe.slow = 0; foe.dmg = 0;
-    }
+    const putFoe = (fx, fy) => {
+      enemies.length = 0; spawnQ.length = 0;
+      if (foe) {
+        enemies.push(foe);
+        foe.x = fx - ox; foe.y = fy - oy; foe.born = 9;
+        foe.hp = 1e12; foe.max = 1e12; foe.sp = 0; foe.slow = 0; foe.dmg = 0;
+      }
+    };
+    putFoe(300, 300);
 
     /* 종별로 «그 스킬이 실제로 만든 첫 발» 의 규격을 뽑는다 */
     const clearFx = () => { for (const a of [shots, ghosts, bolts, zones, booms, drones, parts, rings]) a.length = 0; };
-    const spec = {};
-    for (const s of SKILLS) {
-      clearFx();
-      let done = false;
-      try { done = castSkill(s); } catch (e) { done = false; }
-      if (done && shots.length) {
-        const b = shots[0];
-        spec[s.id] = { k: b.k, sh: b.sh, sa: b.sa, col: b.col, r: b.r, spin: b.spin,
-                       tx: b.tx, ty: b.ty, fl0: b.fl0 };
+    const castAll = (fx, fy) => {
+      const o = {};
+      for (const s of SKILLS) {
+        putFoe(fx, fy); clearFx();
+        let done = false;
+        try { done = castSkill(s); } catch (e) { done = false; }
+        if (done && shots.length) {
+          const b = shots[0];
+          o[s.id] = { k: b.k, sh: b.sh, sa: b.sa, col: b.col, r: b.r, spin: b.spin,
+                      a: b.a, tx: b.tx, ty: b.ty, fl0: b.fl0 };
+        }
       }
+      clearFx();
+      return o;
+    };
+
+    /* ⚑⚑ 792 15회차 — **각(`a`)을 «조준» 과 «제품 상수» 로 가른다.**
+       종전에는 17종을 전부 `a: 0` 으로 눕혔고, 그래서 `meteor`(운석 낙하)가 **수평으로 누운 채**
+       채점됐다 — 꼬리 방위각 180.5° · 세로 성분 −0.008(`probe792r15` 실측). 비평가 열두 명이
+       4·8·10·12·14회차에 걸쳐 «낙하로 안 읽힌다» 를 여섯 번 적었는데, 제품은 내내
+       `a: 1.57` · `vy > 0` · `gy > 0` 로 **떨어지고 있었다**. 여섯 회차가 하네스를 채점한 것이다.
+       ⚠ 그렇다고 «전부 진짜 각으로» 는 오답이다 — 조준각은 **표적을 어디 뒀는가**가 정하는 값이라
+         그것도 똑같이 하네스의 자유도다(같은 종이 −1.387 ↔ +0.681 로 돈다).
+       ⇒ 표적을 **두 자리**에 두고 두 번 시전해 **각이 안 변한 종만** 그 각을 싣는다.
+         손 목록이 아니라 제품에게 물으므로 종이 늘어도 저절로 맞는다.
+         실측(2026-09-06): 고정각 4종 — `whirl` 0 · `spiral` 0 · `gale` 0 · **`meteor` 1.57**.
+         셋은 이미 0 이라 **그림이 바뀌는 것은 운석 하나뿐**이고 나머지 16종은 화소 동일하다. */
+    const specA = castAll(300, 300), specB = castAll(760, 900);
+    const spec = {};
+    for (const id in specA) {
+      const sp = specA[id];
+      const fixed = specB[id] && specB[id].a === sp.a;
+      spec[id] = Object.assign({}, sp, { a: fixed ? sp.a : 0, aFixed: !!fixed });
     }
-    clearFx();
+    putFoe(300, 300); clearFx();
 
     /* 용사·적을 판 밖으로 — 몸 겹침 감쇠(near<62)와 실루엣 가림을 없앤다 */
     enemies.length = 0; spawnQ.length = 0;
@@ -96,7 +130,7 @@ const ROWS = [
         const sp = spec[id]; if (!sp) return;
         const sx = X0 + ci * DX, sy = Y0 + ri * DY;
         shots.push({ k: sp.k, sh: sp.sh, sa: sp.sa, x: sx - ox2, y: sy - oy2,
-                     vx: 0, vy: 0, a: 0, dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
+                     vx: 0, vy: 0, a: sp.a, dmg: 0, life: 9, pierce: 99, hit: [], col: sp.col,
                      spin: sp.spin === undefined ? undefined : 0.7, r: sp.r,
                      tx: sp.tx === undefined ? undefined : sx - ox2,
                      ty: sp.ty === undefined ? undefined : sy - oy2, fl0: sp.fl0 });
