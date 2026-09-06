@@ -48,9 +48,10 @@ const SRC = path.join(ROOT, 'index.html');
        한 번에 목표(0.60)를 걸면 이 자는 열 회차 내내 빨간 채로 아무것도 안 지킨다(348).
        ⚠ **올리지 마라.** 회차가 값을 못 내렸으면 그것은 그 회차가 못 한 것이지 자의 결함이 아니다. */
 const COMPLAIN = 0.60;
-const IOU_RATCHET = 0.74;     /* 2회차 실측 0.725(`shuri↔whirl`) — 1회차 0.848 · 수리 전 0.872.
-                                 ⚠ 이 종 둘(표창·주변참격)은 2회차가 **안 건드린 자리**다 — 3회차의 과녁이다. */
-const OVER_RATCHET = 19;      /* 2회차 실측 18 — 1회차 20 이었고 그 사이 **982 1회차가 24 로 올렸다**
+const IOU_RATCHET = 0.73;     /* 3회차 실측 0.714(`curve↔boomer`) — 2회차 0.725(`shuri↔whirl`) — 1회차 0.848 · 수리 전 0.872.
+                                 ⚠ 3회차가 그 둘을 갈랐다(주변참격을 «참격 고리» 로) — 이제 최악은
+                                 **굽은 띠 둘**(초승달 ↔ 부메랑)이고 그것이 4회차의 과녁이다. */
+const OVER_RATCHET = 17;      /* 3회차 실측 16 · 2회차 18 — 1회차 20 이었고 그 사이 **982 1회차가 24 로 올렸다**
                                  (성긴 실루엣을 부풀린 대가로 서로 닮았다. 내 변경 전 HEAD 에서 이 항이
                                  이미 빨갰고, 수리 전 트리 실행으로 그것을 못박았다 — 회차 기록 §2회차 ①).
                                  ⚠ 아래 옛 주석의 «여유 1칸» 은 그대로다.
@@ -64,6 +65,7 @@ const ROCK_MAX = 0.75;        /* [C1] — 1회차가 `rock` 에서 실제로 닫
    ⚠ 문턱이 아니라 **래칫**이다 — 다음 회차가 더 내리면 같이 내려 적어라(348 · 올리지는 마라). */
 const R2_MAX = { gem: 0.66,        /* 실측 0.618 (수리 전 0.787 — `fire` 와) */
                  rockfall: 0.70,   /* 실측 0.649 (수리 전 0.831 — `gem` 과) */
+                 cross: 0.66,      /* 3회차 실측 0.642 ↔ `fire` (수리 전 0.725 ↔ `star`) */
                  bottle: 0.72 };   /* 실측 0.697 (수리 전 0.848 — `ball` 과 · 전 136쌍 최악이었다) */
 const D1_MAX = 0.90;          /* 792 [D1] 과 같은 값 — 되감기 금지 축 */
 const DIAG_TOL = 0.25;        /* 792 [E1] 과 같은 값 */
@@ -73,6 +75,7 @@ const DIAG_TOL = 0.25;        /* 792 [E1] 과 같은 값 */
      이름에 pid 를 섞어 병렬 실행끼리 안 지운다(648). */
 const NEG_ROCK = path.join(ROOT, '.v981-neg-rock-' + process.pid + '.html');
 const NEG_CVX  = path.join(ROOT, '.v981-neg-cvx-'  + process.pid + '.html');   /* [R2] — 오목을 지운 볼록 사본 */
+const NEG_SEG  = path.join(ROOT, '.v981-neg-seg-'  + process.pid + '.html');   /* [R3] — 참격 고리를 4토막으로 되돌린 사본 */
 /* ⚠ 줄 전체가 아니라 **머리**만 붙잡는다(792 9회차 교훈 — 줄이 길어지면 자가 먼저 죽는다). */
 const TAG_ROCK = `      const rr = [`;
 const OLD_ROCK = `      const rr = [9.8,7.7,9.4,6.9,10.0,8.1];`;
@@ -99,6 +102,24 @@ async function pairsOf(browser, url) {
   return { pairs, rows: out.rows, ids, bw: out.bw, n: ids.length };
 }
 const withSh = (pairs, sh) => pairs.filter(p => p.sa === sh || p.sb === sh);
+
+/* 본체가 **감싼 배경**(구멍) 화소 수 — 테두리에서 배경을 물채우고 남는 배경이 구멍이다.
+   ⚑ 3회차가 «참격 고리» 로 얻은 것이 이것이다: 17종 중 구멍을 가진 종이 없어서, 구멍은
+     회전·미러·크기를 지워도 안 사라지는 **가장 센 축**이다([R3] 이 그 값을 찍는다). */
+function holePx(px, bw) {
+  const bh = Math.round(px.length / bw), seen = new Uint8Array(px.length), st = [];
+  const push = p => { if (!seen[p] && !px[p]) { seen[p] = 1; st.push(p); } };
+  for (let x = 0; x < bw; x++) { push(x); push((bh - 1) * bw + x); }
+  for (let y = 0; y < bh; y++) { push(y * bw); push(y * bw + bw - 1); }
+  while (st.length) {
+    const p = st.pop(), x = p % bw, y = (p - x) / bw;
+    if (x > 0) push(p - 1); if (x < bw - 1) push(p + 1);
+    if (y > 0) push(p - bw); if (y < bh - 1) push(p + bw);
+  }
+  let h = 0;
+  for (let p = 0; p < px.length; p++) if (!px[p] && !seen[p]) h++;
+  return h;
+}
 
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
@@ -163,6 +184,19 @@ const withSh = (pairs, sh) => pairs.filter(p => p.sa === sh || p.sb === sh);
          '[C3-' + sh + '] 2회차가 닫은 자리 — ' + sh + ' 가 낀 ' + ps.length + '쌍 전부 ≤ ' +
          R2_MAX[sh] + ' · 최악 ' + (ps[0] ? ps[0].sa + '↔' + ps[0].sb + ':' + ps[0].iou.toFixed(3) : '-') +
          (bad.length ? ' · 넘는 쌍 ' + bad.map(p => p.sa + '↔' + p.sb + ':' + p.iou.toFixed(3)).join(' · ') : ''));
+    }
+
+    /* ── [C5] 3회차가 얻은 축 — 참격 고리는 **구멍을 감싼다** ── */
+    {
+      const cid = cur.ids.find(i => cur.rows[i].sh === 'cross');
+      const hp = cid ? holePx(cur.rows[cid].body, cur.bw) : 0;
+      const others = cur.ids.filter(i => cur.rows[i].sh !== 'cross')
+                            .map(i => ({ sh: cur.rows[i].sh, h: holePx(cur.rows[i].body, cur.bw) }))
+                            .filter(o => o.h >= 300);
+      ok(hp >= 300,
+         '[C5] `cross`(주변 참격)의 본체가 **구멍을 감싼다** — 갇힌 배경 ' + hp + '화소 ≥ 300' +
+         ' (구멍을 가진 다른 종 ' + others.length + '개' +
+         (others.length ? ': ' + others.map(o => o.sh + ':' + o.h).join(' · ') : '') + ')');
     }
 
     ok(rawMax <= D1_MAX,
@@ -252,11 +286,38 @@ const withSh = (pairs, sh) => pairs.filter(p => p.sa === sh || p.sb === sh);
     } finally { try { fs.unlinkSync(NEG_CVX); } catch (_) {} }
   }
 
+  /* ── [R3] 3회차의 되돌림 시험 — «구멍이 축이다» ──
+     ⚑⚑ **처음에 세운 [R3] 은 다른 것을 물었고, 그 자가 내 설명을 기각했다.** 3회차는 «토막을 셋으로
+     둬서 4각 대칭을 깼다» 를 이유로 적었는데, 토막만 4 로 되돌린 사본에서 `star↔cross` 는
+     0.406 → **0.414**(+0.008)로 **꿈쩍도 안 했다**. 즉 표창과 갈린 것은 대칭 수가 아니라 **구멍**이다
+     (토막 수는 «회전감» 이라는 뜻의 몫이고 분간의 축이 아니다 — 제품 주석도 그렇게 고쳤다).
+     ⇒ 되돌림을 **획을 굵혀 고리를 메우는** 쪽으로 다시 세운다. 한 값(획 폭)만 바꾼다. */
+  if (!/ringArcs\(5\.5 \+ 2\*pad\)/.test(src)) {
+    ok(false, '[R3-0] 되돌림 앵커(`ringArcs(5.5 + 2*pad)`)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
+  } else {
+    fs.writeFileSync(NEG_SEG, src.replace('ringArcs(5.5 + 2*pad)', 'ringArcs(17 + 2*pad)'), 'utf8');
+    try {
+      const neg = await pairsOf(browser, 'file://' + NEG_SEG);
+      if (neg.__err) { ok(false, '[R3] 되돌림 사본 측정 예외 — ' + neg.__err); }
+      else {
+        const nid = neg.ids.find(i => neg.rows[i].sh === 'cross');
+        const nh = nid ? holePx(neg.rows[nid].body, neg.bw) : -1;
+        const nWorst = withSh(neg.pairs, 'cross')[0];
+        ok(nh < 300 && nWorst && nWorst.iou > R2_MAX.cross,
+           '[R3] 되돌림 시험 — 획을 굵혀 **구멍을 메우면** [C5]·[C3-cross] 가 실제로 빨개진다: ' +
+           '구멍 ' + nh + '화소 (< 300) · cross 최악 ' +
+           (nWorst ? nWorst.sa + '↔' + nWorst.sb + ' ' + nWorst.iou.toFixed(3) : '?') + ' > ' + R2_MAX.cross +
+           ' (메운 고리는 곧 볼록 원반이고, 볼록은 무엇이든 화구와 붙는다 — 2회차 ②의 그 법칙)');
+      }
+    } finally { try { fs.unlinkSync(NEG_SEG); } catch (_) {} }
+  }
+
   await browser.close();
   console.log('\nVERIFY981 ' + (fail ? 'FAIL' : 'PASS') + ' — ' + pass + '/' + (pass + fail));
   process.exit(fail ? 1 : 0);
 })().catch((e) => {
   try { fs.unlinkSync(NEG_ROCK); } catch (_) {}
   try { fs.unlinkSync(NEG_CVX); } catch (_) {}
+  try { fs.unlinkSync(NEG_SEG); } catch (_) {}
   console.log('VERIFY981 오류 — ' + e.message); process.exit(1);
 });

@@ -28943,41 +28943,41 @@ function draw(){
       for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.64,0.64); ctx.stroke(); }
       spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.15; ctx.lineCap = 'round';
                    for(const r of [7,13,19]){ ctx.beginPath(); ctx.arc(0,0,r,-0.34,0.34); ctx.stroke(); } });
-    }else if(sh === 'cross'){                    /* 주변 참격 — X 교차 참격 */
+    }else if(sh === 'cross'){                    /* 주변 참격 — 몸을 감아 도는 참격 «고리» */
       ctx.rotate(b.a);
       ctx.lineCap = 'round';
-      /* 비평가 B 1회차 ④ — 곧은 X 는 «정지한 십자» 로 읽힌다(«주변을 휘도는 참격» 이 안 산다).
-         두 날을 **같은 방향으로 휘어** 회전감을 준다 — 교차 실루엣은 그대로라 분간은 유지된다. */
-      /* 비평가 C·D 3회차 ④ — 굵기가 고른 두 선이라 «정지한 십자» 로 읽혔다. 두 날을 **뿌리에서
-         두껍고 끝으로 갈수록 가늘게**(꼬리를 끄는 초승달 날) 그려 도는 방향을 만든다.
-         교차 실루엣은 유지되므로 ①(분간)은 안 흔들린다. */
-      /* 982 ② — 두 날 사이가 비어 밀도 0.373 이었다. 날의 **면을 같은 색으로 한 번 더 둘러**
-         법선으로 pad 만큼 부풀린다(네 제어점은 그대로 — 교차 실루엣·꼬리 가늘어짐 불변). */
-      const blade = (rot, st, pd) => {
-        ctx.save(); ctx.rotate(rot);
-        ctx.fillStyle = st;
-        ctx.beginPath();
-        ctx.moveTo(-17,-11);
-        ctx.quadraticCurveTo(-1,-5, 17,10.5);
-        ctx.quadraticCurveTo(-1,8, -17,-3);
-        ctx.closePath(); ctx.fill();
-        if(pd){ ctx.strokeStyle = st; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-                ctx.lineWidth = 2*pd; ctx.stroke(); }
-        ctx.restore();
+      /* ⚑⚑ 981 3회차 — X 교차 두 날을 **토막 고리**로 바꾼다.
+         뿌리: 이 종과 표창(`shuri`)이 **둘 다 4각 대칭 · 채움 0.44 의 납작한 별**이라 회전·미러를
+         지우면 같은 그림이었다(정렬 IoU **0.725** — 2회차 마감 시점 전 136쌍 중 최악이고,
+         982 1회차가 이 종의 획을 pad 로 부풀리며 0.636 → 0.725 로 올라온 자리다).
+         표창은 «4각 별» 이 정체성이라 못 건드리므로 이쪽이 움직인다.
+         ⚑ 후보 탐색(2회차 §2 의 그 자)이 고른 형상이다 — **구멍이 이 자에서 가장 센 축**이다
+           (17종 중 구멍을 가진 종이 하나도 없다 · `verify981` [C5] 가 그것을 센다). 실측 0.725 → 0.642.
+         ⚠⚠ **«토막을 셋으로 둬서 4각 대칭을 깼다» 는 내 설명은 틀렸다 — 자가 기각했다.**
+           토막만 4 로 되돌린 사본에서 `star↔cross` 는 0.406 → **0.414**(+0.008)로 꿈쩍도 안 했다.
+           반면 획을 굵혀 **구멍을 메우면 0.995** 로 화구와 붙는다(`verify981` [R3]).
+           ⇒ 분간을 지탱하는 것은 **구멍 하나**다. 토막 수는 아래 «회전감»(뜻)의 몫이므로 셋으로 두되,
+             **구멍을 메우지 마라**(획을 굵히거나 틈을 없애는 것이 곧 이 회차를 되돌리는 것이다).
+         ⚑ 뜻도 이쪽이 맞다: 이 스킬은 «주변 참격» 이라 **플레이어를 감아 도는 참격**이 원래 그림이고,
+           1·3회차 비평이 «정지한 십자로 읽힌다» 며 두 번 지적한 것이 바로 그 회전감이다.
+         ⚠ 크기는 **대각 예산**이 정한다 — 고리의 bbox 대각은 `2·(R + W/2)·√2` 라 R 을 키우면 금방
+           792 [E1] 밴드 상한(중앙값 145px 의 +25%)을 넘는다. R 11.5 · 획 7.4 에서 172px 다. */
+      const C_R = 11.5, C_SEG = 3, C_GAP = 0.35;
+      /* 982 ② — 획 폭은 **`pad` 를 더해** 낸다(표에 이 종이 있다). 형상(반지름·토막·틈)은 불변이다. */
+      const ringArcs = (w) => {
+        ctx.lineWidth = w;
+        const seg = 6.28319 / C_SEG;
+        for(let i=0;i<C_SEG;i++){
+          const a0 = i*seg, a1 = a0 + seg - C_GAP;
+          ctx.beginPath(); ctx.arc(0,0,C_R,a0,a1); ctx.stroke();
+        }
       };
-      halo(() => { blade(0,    'rgba(150,220,255,.42)', pad);
-                   blade(1.57, 'rgba(150,220,255,.42)', pad); });
-      ctx.save(); ctx.scale(0.82,0.82);
-      blade(0,    b.col, pad / 0.82);
-      blade(1.57, b.col, pad / 0.82);
-      ctx.restore();
-      /* 792 ③ — 날의 «서슬». 두 날의 뿌리 쪽(두꺼운 쪽)에만 얹어 도는 방향을 한 번 더 세운다. */
-      spec(() => { ctx.strokeStyle = SPEC; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
-                   for(const rot of [0,1.57]){
-                     ctx.save(); ctx.rotate(rot);
-                     ctx.beginPath(); ctx.moveTo(-13.5,-7.6); ctx.quadraticCurveTo(-3,-3.4, 5,1.8); ctx.stroke();
-                     ctx.restore();
-                   } });
+      halo(() => { ctx.strokeStyle = 'rgba(150,220,255,.42)'; ctx.lineCap = 'round';
+                   ringArcs(5.5 + 2*pad + 3.4); });
+      ctx.strokeStyle = b.col; ringArcs(5.5 + 2*pad);
+      /* 792 ③ — 날의 «서슬». 고리의 **마루**(반지름 C_R 의 원)를 그대로 따라간다
+         (`verify856` [B11] 이 «③층이 본체 마루를 따라가는가» 를 그 축으로 잰다). */
+      spec(() => { ctx.strokeStyle = SPEC; ctx.lineCap = 'round'; ringArcs(1.8); });
     }else if(sh === 'wing'){                     /* 폭풍의 칼날 — 호 + 뒷깃 세 줄 */
       ctx.rotate(b.a);
       ctx.lineCap = 'round';
