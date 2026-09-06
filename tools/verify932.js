@@ -79,8 +79,15 @@ const FIXED942 = ['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py'
    ⚑ 여기서 처방이 한 겹 깊어졌다 — 두께 문턱은 **스윕값이 아니라 이웃 두 고원의 한복판**이고
    (스윕값을 쓰면 칼같은 판까지 +0.214 밀린다), 그 한복판 교차는 선별 경계 쌍의 **안쪽**에
    있을 수 있다(4회차 `scan335` 는 바깥이었다 — 방향까지 갈렸다). 자는 `tools/verify958.js` §[12]. */
-const FIXED958 = ['probe384.py', 'probe352.py', 'probe449.py', 'scan335.py', 'scanA4.py'];
-const BRK = ['scanA4b.py'];
+/* ⚛ 958 6회차 — `scanA4b.py` 가 B 에서 빠졌다(노란 밴드 두께를 «마스크를 통과한 표본의 런»
+   에서 **두 모서리의 차**로 · 932 처방 ⓐ · 걸음 0.5px). 번진 판 부호 편향 **−1.667 → −0.007px**.
+   ⚑ 여기서 문턱이 **밝기에서 색으로** 옮겨 갔다 — 이웃이 청록·검정으로 서로 달라 한 채널로는
+   두 모서리가 같은 자로 안 잡힌다. 사영 몫 t = 0.5 가 색 공간의 «고원 한복판» 이다.
+   ⚠ 그리고 이웃 고원은 «바깥 4칸» 밖에 있다(마스크가 엄해 경계가 이미 램프 한복판 — 4칸으로
+   끊으면 램프 색을 고원으로 오인해 −0.55px 밀린다). 자는 `tools/verify958.js` §[13].
+   ⚑⚑ **이로써 942·958 이 넘겨받은 여섯이 전부 닫혔다 — 주홍 B 가 0 이다.** */
+const FIXED958 = ['probe384.py', 'probe352.py', 'probe449.py', 'scan335.py', 'scanA4.py', 'scanA4b.py'];
+const BRK = [];
 
 /* ⚠ 선별기의 `frac` 신호는 **관용구 이름**만 본다. 면역 판정의 근거는 그보다 넓다 —
    커버리지 적분(`r_cov`)·색 사영 교차(`_cross`)처럼 이름이 다른 사본이 있다.
@@ -135,7 +142,7 @@ console.log('\n[2] 전수 — 미판정 0 · 판정 무효 0 · 빨강 래칫');
     FIXED942.length > 0 && FIXED942.every(f => !BRK.includes(f) && S.includes(f)),
     FIXED942.join(' '));
   /* 958 도 같은 자리를 같은 규칙으로 지킨다 — 처방이 달라서 목록만 갈랐다(위 주석). */
-  ok('[2-i] 958 이 갈아 끼운 다섯도 이름으로 있고 이제 면역이다 (주홍 6 → 5 → 4 → 3 → 2 → **1**)',
+  ok('[2-i] 958 이 갈아 끼운 여섯도 이름으로 있고 이제 면역이다 (주홍 6 → 5 → 4 → 3 → 2 → 1 → **0**)',
     FIXED958.length > 0 && FIXED958.every(f => !BRK.includes(f) && S.includes(f)),
     FIXED958.join(' '));
   const bad = S.filter(f => !FRAC_DEEP.test(fs.readFileSync(path.join(TOOLS, f), 'utf8')));
