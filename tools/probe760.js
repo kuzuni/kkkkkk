@@ -16,14 +16,16 @@
                   (자 안의 §R4·§R5 미끼는 «대조기가 살아 있는가» 를, 여기 [4] 는 «제품이 되살아나면
                    빨개지는가» 를 본다 — 두 방향을 다 세워야 헛초록이 아니다.)
 */
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const G756 = require('./gitrev756');           /* 756 — 얕은 클론에서 고정 SHA 를 데려오는 공용 부품 */
 
 const TOOLS = __dirname;
 const GATE = path.join(TOOLS, 'verify188.js');
 /* 수리 직전 커밋 — 이 자를 나중에 돌리는 세션도 같은 «수리 전» 을 본다.
-   ⚠ 756 이 등재한 «얕은 클론» 문제를 피한다: 그 SHA 가 없으면 [1] 은 **건너뛴다**(빨강이 아니다). */
+   ⚠ 756 이 등재한 «얕은 클론» 문제를 부품에 맡긴다(965): 창 밖이면 **먼저 판고**,
+   그래도 없을 때만 갈린다 — 얕으면 ⏸ 보류(안 셈) · 얕지 않은데 없으면 **빨강**이다. */
 const BASE = process.env.PROBE760_BASE || '4075c67';
 
 let pass = 0, fail = 0, skip = 0;
@@ -48,12 +50,15 @@ process.on('exit', () => TRASH.forEach(rm));
 
   /* ── [1] 재현 — 수리 전 판은 보고서를 못 찍는다 ─────────────────────────────── */
   sec('[1] 재현 — 수리 전 `verify188.js` 는 ③ 한복판에서 죽는다');
-  let old = null;
-  try { old = execFileSync('git', ['show', BASE + ':tools/verify188.js'], { cwd: path.join(TOOLS, '..'), encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }); }
-  catch (e) { old = null; }
-  if (!old) {
+  const g = G756.show(BASE, 'tools/verify188.js', { cwd: path.join(TOOLS, '..'), maxBuffer: 32 * 1024 * 1024 });
+  const old = g.ok ? g.buf.toString('utf8') : null;
+  if (g.how) console.log('  · ' + BASE + ' 를 판아 왔다 —' + g.how);
+  if (!old && g.env) {
     skip++;
-    console.log('  · 건너뜀 — `' + BASE + ':tools/verify188.js` 를 못 읽는다(얕은 클론 · 756). [2]~[4] 만 판정한다.');
+    console.log('  · ' + G756.skipNote(g) + ' — [2]~[4] 만 판정한다.');
+  } else if (!old) {
+    /* 얕지 않은데도 없다 = 환경이 아니다. 756 규약 ②의 안전핀 — 건너뛰기가 게이트 부패를 못 덮는다. */
+    ok(false, '  [1-0] 수리 전 판(`' + BASE + ':tools/verify188.js`)을 꺼낸다', g.why);
   } else {
     ok(/trDeltaTxt\(/.test(old), '  [1-a] 수리 전 판이 `trDeltaTxt()` 를 부른다(660 이 선언째 지운 함수)');
     const f = tmp('old', old); TRASH.push(f);
@@ -125,6 +130,6 @@ process.on('exit', () => TRASH.forEach(rm));
   rm(f4);
 
   console.log('\nPROBE760 ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS') +
-              (skip ? '  (건너뜀 ' + skip + '건 — 얕은 클론)' : ''));
+              (skip ? '  (⏸ 보류 ' + skip + '건 — 환경/얕은 클론)' : ''));
   process.exit(fail ? 1 : 0);
 })();

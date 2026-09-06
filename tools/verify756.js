@@ -227,19 +227,53 @@ ok(offenders.length === 0,
    'D1 래칫 — 런타임에 `git show` 를 직접 부르는 자가 부품 밖에 **0개**',
    offenders.length ? offenders.join(' · ') : '허용표 ' + Object.keys(ALLOW).length + '개 외 0건');
 
-/* 756 이 옮긴 네 자리가 실제로 부품을 문다 */
-for (const f of ['probe708.js', 'probe539.js', 'probe716.js', 'probe356r23.js']) {
+/* [D3] 스윕이 **실제로 잡는가** — 헛초록 방지(756 교훈 ④ «되돌림 시험도 한 번은 빨개지는지 봐야 한다»).
+   부품을 문 자에서 `require` 한 줄만 걷어낸 사본이 다시 «부품 밖» 으로 세어져야 한다.
+   ⚠ 파일을 안 쓴다 — 스캐너가 보는 것이 «코드 문자열» 이라 문자열로 되돌리면 충분하다(951 «문자열 배선»). */
+{
+  /* 스캐너를 그대로 떼어 낸다 — 위 루프와 **같은 세 줄**이라 자를 두 벌로 안 적는다(13회차 [R12]). */
+  const isOffender = (src) => {
+    const code = codeOf(src);
+    if (!CALLS_SHOW.test(code)) return false;
+    return !/require\(['"]\.\/gitrev756['"]\)/.test(code);
+  };
+  const DIRECT_STR = "const s = execSync('git show ' + rev + ':index.html');";
+  const DIRECT_ARR = "const s = execFileSync('git', ['show', rev + ':index.html']);";
+  ok(isOffender(DIRECT_STR), 'D3-a 문자열 꼴 직행(`execSync(\'git show …\')`)을 **잡는다**');
+  ok(isOffender(DIRECT_ARR), 'D3-b 배열 꼴 직행(`execFileSync(\'git\', [\'show\', …])`)을 **잡는다**' +
+     ' — 756 교훈 ① 이 통째로 놓쳤던 꼴이다');
+  ok(!isOffender("const G = require('./gitrev756');\n" + DIRECT_ARR),
+     'D3-c 부품을 문 자는 **안 잡는다**(면제가 실제로 동작한다)');
+  ok(!isOffender('/* ' + DIRECT_ARR + ' */\nconsole.log(1);'),
+     'D3-d 주석뿐인 인용은 **안 잡는다**(codeOf 가 살아 있다 — 756 교훈 ①의 과대 쪽)');
+}
+
+/* 756 이 옮긴 네 자리 + 965 가 옮긴 두 자리가 실제로 부품을 문다 */
+for (const f of ['probe708.js', 'probe539.js', 'probe716.js', 'probe356r23.js',
+                 'probe760.js', 'probe888.js']) {
   const src = fs.readFileSync(path.join(TOOLS, f), 'utf8');
   ok(/require\(['"]\.\/gitrev756['"]\)/.test(codeOf(src)),
      'D2 ' + f + ' 가 고정 SHA 를 부품으로 꺼낸다');
+}
+
+/* [D2b] «require 만 얹고 직행은 그대로» 는 D1 을 초록으로 만든다 — 그 구멍을 막는다(965).
+   ⚠ `probe356r23` 은 여기 없다: 그 자는 부품으로 **판 뒤에**(`digPre()`) 직접 꺼내는 것이 설계다
+   (verify631 A7 이 그 위임을 지킨다) — 직행이 남아 있는 것이 정상이라 이 항의 대상이 아니다. */
+for (const f of ['probe708.js', 'probe539.js', 'probe716.js', 'probe760.js', 'probe888.js']) {
+  const code = codeOf(fs.readFileSync(path.join(TOOLS, f), 'utf8'));
+  ok(!CALLS_SHOW.test(code),
+     'D2b ' + f + ' 에 `git show` **직행이 한 자리도 없다**(면제만 얹고 직행을 남기지 못한다)');
 }
 
 /* ─────────────── [E] 보류가 조용하지 않다 ─────────────── */
 const holders = [
   { f: 'probe708.js', sum: /PROBE708/ },
   { f: 'probe539.js', sum: /PROBE539/ },
-  { f: 'probe716.js', sum: /PROBE716/ }
+  { f: 'probe716.js', sum: /PROBE716/ },
+  { f: 'probe760.js', sum: /PROBE760/ }        /* 965 — 부품 뒤로 옮기며 «환경 ↔ 진짜 없음» 갈림이 생겼다 */
 ];
+/* ⚠ `probe888` 은 여기 없다 — 점수를 안 내는 **표 찍는 자**라 보류가 초록에 섞일 자리가 없다.
+   대신 그 자의 안전핀은 **종료 코드**다: 환경이면 보류하고 0, 그 SHA 가 진짜 없으면 1 로 죽는다(965). */
 for (const h of holders) {
   const src = fs.readFileSync(path.join(TOOLS, h.f), 'utf8');
   const code = codeOf(src);

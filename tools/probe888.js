@@ -24,6 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const G756 = require('./gitrev756');           /* 756 — 얕은 클론에서 고정 SHA 를 데려오는 공용 부품 */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { settle } = require('./probe351lib');
@@ -80,9 +81,20 @@ async function measure(browser, file, h) {
 (async () => {
   const shas = process.argv.slice(2);
   const targets = [{ tag: 'HEAD(작업 트리)', file: path.join(ROOT, 'index.html'), tmp: null }];
+  /* 사본은 부품(756)을 지나 꺼낸다 — 얕은 클론이면 **먼저 판고**, 그래도 없을 때만 갈린다(965).
+     ⚠ 갈림이 이 자의 안전핀이다: 얕으면 ⏸ 보류(그 대상만 건너뛴다) · 얕지 않은데 없으면
+     그 SHA 는 **진짜 없는 것**(지워졌거나 오타)이라 빨강이다 — 조용히 건너뛰면 오타가 초록이 된다. */
+  let skip = 0, bad = 0;
   for (const s of shas) {
+    const g = G756.show(s, 'index.html', { cwd: ROOT, maxBuffer: 1 << 28 });
+    if (!g.ok) {
+      if (g.env) { skip++; console.log('\n■ ' + s + ' — ' + G756.skipNote(g)); }
+      else { bad++; console.log('\n■ ' + s + ' — ✗ 사본을 못 꺼낸다: ' + g.why); }
+      continue;
+    }
+    if (g.how) console.log('\n· ' + s + ' 를 판아 왔다 —' + g.how);
     const tmp = path.join(ROOT, '.p888-' + s + '.html');
-    fs.writeFileSync(tmp, execFileSync('git', ['show', s + ':index.html'], { cwd: ROOT, maxBuffer: 1 << 28 }));
+    fs.writeFileSync(tmp, g.buf);
     const subj = execFileSync('git', ['log', '-1', '--format=%h %s', s], { cwd: ROOT, encoding: 'utf8' }).trim();
     targets.push({ tag: subj.slice(0, 72), file: tmp, tmp });
   }
@@ -103,4 +115,8 @@ async function measure(browser, file, h) {
     for (const t of targets) if (t.tmp) fs.unlinkSync(t.tmp);
   }
   console.log('\n※ F = 420 이 상수로 못박은 파생값(등재 당시 566 · 짧은 구간). 여백 = 팝업 하변 ↔ 버튼 상변.');
+  console.log('PROBE888 대상 ' + targets.length + '건' +
+              (skip ? ' · ⏸ 보류 ' + skip + '건(환경 — 세지 않는다)' : '') +
+              (bad ? ' · ✗ ' + bad + '건(그 SHA 가 진짜 없다)' : ''));
+  process.exit(bad ? 1 : 0);
 })().catch((e) => { console.error('PROBE888 CRASH', e); process.exit(2); });
