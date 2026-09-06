@@ -2321,8 +2321,15 @@ function writeReport(rep) {
       return f.filter((v, i) => !(ws[i] && SW > 0 && ws[i].stage >= SW)); };
     const lateN     = med(runs.map(r => lateWallOf(r).length));
     const lateSeatN = med(runs.map(r => lateSeatOf(r).length));
-    const lateGap   = med(runs.map(lateGapOf).filter(v => v > 0));
-    const lateGapT  = med(runs.map(lateGapTOf).filter(v => v > 0));
+    /* ⚑⚑ 199 42회차 — **간격은 «배정» 벽이 둘 이상일 때만 찍는다.** 41회차 초판은 시드별
+       간격 중 «값이 난 것»(> 0)만 골라 p50 을 냈는데, 그러면 **배정 p50 이 1개인 정책에도
+       수가 찍힌다** — 24시드 대충이 실제로 그랬다(문턱 위 벽 2 · 배정 **1** · 그런데 간격
+       ×2.13 · +30.9%). 그 수는 «배정이 둘인 소수 시드» 만의 값이라 정책의 수가 아니다.
+       13회차 JJ 가 `spanOf` 에 못박은 그 규약(«배정 벽 2개 미만 = 미정의»)이 말미 축에도
+       그대로 걸린다 — 창 역량(`win199`)의 «가능» 은 **벽** 수로 여는 필요조건이고, ① 간격은
+       그 위에 **배정** 수를 따로 요구한다. 둘을 같은 수로 읽으면 «미정의» 가 측정치가 된다. */
+    const lateGap   = lateSeatN >= WIN.MIN_LATE ? med(runs.map(lateGapOf).filter(v => v > 0)) : 0;
+    const lateGapT  = lateSeatN >= WIN.MIN_LATE ? med(runs.map(lateGapTOf).filter(v => v > 0)) : 0;
     const lateFaceS = med(runs.map(r => lateFaceOf(r).reduce((a, b) => a + b, 0)));
     const lateFaceC = med(runs.map(r => lateFaceOf(r).length));
     if (WINV.can === true) {
