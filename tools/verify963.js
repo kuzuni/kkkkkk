@@ -141,20 +141,35 @@ const dup = arr => arr.length !== new Set(arr).size;
     ok('[2-a] 같은 틱 — ' + (N * n) + '회 전부 «켠 칸» 을 돌려준다 (어긋남 0)',
       miss === 0, miss + '건 어긋남');
 
-    /* 같은 틱 값이 «최종값» 인가 — 전환이 없으니 rAF 2회를 더 기다려도 상자가 같아야 한다.
-       (이 항이 없으면 «빠르지만 덜 그려진 값» 을 굳혔을 수 있다.) */
-    const box = await page.evaluate(async ([sel, i]) => {
-      const cells = [...document.querySelectorAll(sel + ' > .stab')];
-      cells.forEach((c, j) => c.classList.toggle('on', j === i));
-      const a = cells[i].getBoundingClientRect();
+    /* 같은 틱 값이 «최종값» 인가 — 이것이 «한 틱이면 충분하다» 의 근거다.
+       ⚠ 이 항을 살아 있는 바에서 재면 안 된다 — rAF 2회를 기다리는 동안 **제품이 되돌려**
+         알약(288.16)이 맨 칸(264.66)으로 바뀐다. 그러면 이 자가 판마다 갈린다(실측 2/4 회 빨강).
+         측정 대상은 «전환이 있는가» 하나이므로, 제품이 소유하지 않는 **합성 바**에서 잰다
+         (verify379 [2] 가 `.sp2` 를 심어 쓰는 것과 같은 손잡이). */
+    const box = await page.evaluate(async () => {
+      const host = document.createElement('div');
+      host.className = 'stabs sp3'; host.id = '__t963';
+      host.style.cssText = 'position:absolute;left:143px;top:300px;width:794px';
+      host.innerHTML = '<div class="stab"><i>가</i></div><div class="stab"><i>나</i></div>'
+        + '<div class="stab"><i>다</i></div>';
+      document.getElementById('app').appendChild(host);
+      const cells = [...host.querySelectorAll(':scope > .stab')];
+      cells.forEach((c, j) => c.classList.toggle('on', j === 1));
+      const a = cells[1].getBoundingClientRect();
       const now = { l: a.x, w: a.width };
+      const cs = getComputedStyle(cells[1]);
+      const tr = cs.transitionDuration + ' / ' + cs.animationDuration;
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-      const b = cells[i].getBoundingClientRect();
-      return { now, later: { l: b.x, w: b.width }, on: cells.findIndex(c => c.classList.contains('on')) };
-    }, [BAR, 1]);                                   /* 칸2 — 되돌림에 안 걸리는 가운데 칸 */
+      const b = cells[1].getBoundingClientRect();
+      const later = { l: b.x, w: b.width };
+      host.remove();
+      return { now, later, tr };
+    });
     ok('[2-b] 같은 틱 상자 = rAF 2회 뒤 상자 (전환이 없다 — 빠른 값이 곧 최종값)',
       Math.abs(box.now.l - box.later.l) < 0.01 && Math.abs(box.now.w - box.later.w) < 0.01,
       box.now.w.toFixed(2) + ' → ' + box.later.w.toFixed(2));
+    ok('[2-c] `.stab.on` 에 전환·애니메이션이 선언돼 있지 않다 (같은 틱이 최종값인 이유)',
+      /^0s/.test(box.tr) && / 0s$/.test(box.tr), box.tr);
 
     /* ── [3] 구조 래칫 — 두 자가 «두 evaluate» 로 못 돌아간다 ──────────── */
     console.log('\n[3] 구조 래칫 — 활성 주입과 읽기가 한 evaluate 안에 있다');
@@ -195,11 +210,14 @@ const dup = arr => arr.length !== new Set(arr).size;
     const sub = (re, to) => { const before = R; R = R.replace(re, to); if (R !== before) subs++; };
     sub(/require\('\.\/pwlaunch'\)/, JSON.stringify(path.join(ROOT, 'tools', 'pwlaunch')).replace(/^/, 'require(').replace(/$/, ')'));
     sub(/path\.resolve\(__dirname,\s*'\.\.'\)/, JSON.stringify(ROOT));
-    /* ① 원자성 제거 — 켜기와 읽기를 두 evaluate 로 가르고 그 사이를 벌린다 */
+    /* ① 원자성 제거 — 켜기와 읽기를 두 evaluate 로 가른다.
+       ⚠ 그 사이를 **벽시계로 벌리지 않는다** — 그러면 이 자가 963 이 된다(관측 13/30 · 재현율이
+       판마다 갈려 [R] 이 3항씩 빨개졌다). 틱 사이에 실제로 일어나는 일 = «제품 렌더 한 번» 을
+       직접 불러 결정적으로 재현한다([1-a] 가 그 등가를 30/30 으로 못박아 둔다). */
     sub(/const r = await page\.evaluate\(SET_READ, \[sel, i\]\);/,
       'await page.evaluate(([s, k]) => { const cs = [...document.querySelectorAll(s + " > .stab")];'
       + ' if (cs[k]) cs.forEach((c, j) => c.classList.toggle("on", j === k)); }, [sel, i]);'
-      + ' await page.waitForTimeout(' + CROSS_MS + ');'
+      + ' await page.evaluate(() => { try { renderTrain(); } catch (_) {} });'
       + ' const r = await page.evaluate(SET_READ, [sel, -2]);');
     /* ② 가드 제거 — 963 이전처럼 «지금 켜져 있는 칸» 으로 조용히 갈아 끼운다 */
     sub(/if \(r\.onIdx !== i\) \{[\s\S]*?\n\s*continue;\n\s*\}/, 'if (r.onIdx < 0) continue;');
