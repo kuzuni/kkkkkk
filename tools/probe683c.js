@@ -156,7 +156,15 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
   info('카드 상자', CARD && JSON.stringify(CARD));
 
   /* 글리프 화소 + 국소 배경 대비 — CL 축 */
-  const CL = async (aPng, zPng, box) => ev(p, async ({ a, z, bx }) => {
+  /* ⚑⚑ **10회차 — `mask` 인자 신설(자 결함 수리).** 이 자는 잉크 마스크를 **프레임마다 새로**
+     떴다(`|프레임 − 라벨 지운 사본| ≥ 24`). 그러면 **씻겨서 배경과 같아진 획은 표본에서 빠진다** —
+     남은(=아직 잘 보이는) 획만 세니 «4.5:1 미만 2%» 같은 **생존자 편향** 값이 나온다.
+     10회차 비평 2인(CN·CO)이 **각자 독립으로** 정착(A8)에서 뜬 **고정 마스크**를 전 프레임에 얹어
+     53.5%·71.1% 를 쟀고, 그 방법이 옳다(마스크가 프레임마다 바뀌면 «무엇이 나빠졌는지» 를 잴 수 없다).
+     ⇒ 마스크는 **정착에서 한 번만** 뜨고(`base` 호출) 그 자리 그대로 다른 프레임에 얹는다.
+     ⚠ 그러면 이 자는 «획이 살아 있는가» 를 처음으로 정직하게 잰다 — 값이 나빠 보이는 것은
+       제품이 나빠진 게 아니라 **자가 그동안 안 보던 것을 이제 본다**는 뜻이다(9회차 교훈 ①). */
+  const CL = async (aPng, zPng, box, mask) => ev(p, async ({ a, z, bx, mk }) => {
     const load = u => new Promise((okp, no) => { const i = new Image(); i.onload = () => okp(i); i.onerror = no; i.src = 'data:image/png;base64,' + u; });
     const px = async u => { const im = await load(u); const cv = document.createElement('canvas');
       cv.width = im.width; cv.height = im.height; const g = cv.getContext('2d'); g.drawImage(im, 0, 0);
@@ -166,13 +174,17 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
     const rl = d => (i) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
     const lum = d => (i) => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
     const la = lum(A), lz = lum(Z);
-    const ink = [];
-    for (let i = 0; i < A.length; i += 4) if (Math.abs(la(i) - lz(i)) >= 24) ink.push(i);
-    if (ink.length < 120) return { ink: ink.length };
-    /* 채움 = 정착에서 밝은 위 25% */
-    const iv = ink.map(la).sort((x, y) => x - y);
-    const hiT = iv[Math.floor(iv.length * 0.75)];
-    const fill = ink.filter(i => la(i) >= hiT);
+    let ink, fill;
+    if (mk && mk.ink && mk.ink.length) { ink = mk.ink; fill = mk.fill; }   /* 정착에서 뜬 고정 마스크 */
+    else {
+      ink = [];
+      for (let i = 0; i < A.length; i += 4) if (Math.abs(la(i) - lz(i)) >= 24) ink.push(i);
+      if (ink.length < 120) return { ink: ink.length };
+      /* 채움 = 정착에서 밝은 위 25% */
+      const iv = ink.map(la).sort((x, y) => x - y);
+      const hiT = iv[Math.floor(iv.length * 0.75)];
+      fill = ink.filter(i => la(i) >= hiT);
+    }
     /* 국소 배경 = 글리프에서 3~4px 떨어진 «잉크가 아닌» 화소 (CL 이 잰 축) */
     const isInk = new Uint8Array(bx.w * bx.h);
     for (const i of ink) isInk[i / 4] = 1;
@@ -194,8 +206,8 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
       return out.length ? { n: out.length, med: out[out.length >> 1], q1: out[out.length >> 2],
                             under45: out.filter(v => v < 4.5).length / out.length } : null;
     };
-    return { ink: ink.length, nf: fill.length, base: bgOf(A) };
-  }, { a: aPng, z: zPng, bx: box });
+    return { ink: ink.length, nf: fill.length, base: bgOf(A), mask: mk ? null : { ink, fill } };
+  }, { a: aPng, z: zPng, bx: box, mk: mask || null });
 
   blk('3] 라벨 ↔ **주변**(CL 축 — 획 대 국소 배경 3~4px 중앙값)');
   const baseCL = settled && blank ? await CL(settled.png, blank.png, BOX) : null;
@@ -224,7 +236,7 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
   const CLu = {};   /* ⚑ 10회차 — «4.5:1 미만» 도 같이 담는다([3-a] 가 이 축으로 옮겼다) */
   for (const [name, o] of cases) {
     const s = await shot(o); if (!s) { info(name, '캡처 실패'); continue; }
-    const r = await CL(s.png, blank.png, BOX);
+    const r = await CL(s.png, blank.png, BOX, baseCL && baseCL.mask);
     CLv[name] = r && r.base ? r.base.med : null;
     CLu[name] = r && r.base ? r.base.under45 : null;
     info(name, r && r.base
@@ -278,19 +290,38 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
        안 나쁘다.** 헛초록이 아님은 같은 표의 **t20·t40 이 62%** 인 것이 보증한다(정착 14%) —
        이 자가 그 축에서 실제로 빨개질 수 있다는 뜻이다. 그 t20·t40 은 아래 ⏸ 로 매 실행 찍는다. */
   const u0 = CLu['t0 현행(알 켬 — 비평가가 본 화면)'], ub = baseCL && baseCL.base ? baseCL.base.under45 : null;
-  ok(u0 != null && ub != null && u0 <= ub,
-     '3-a **봉우리에서 라벨이 정착보다 안 나쁘다** — t0 의 «4.5:1 미만» 획 비율이 정착 이하다(862 이관 — 옛 문턱 «중앙값 ≥ 정착의 절반»)',
-     u0 != null && ub != null
-       ? (Math.round(u0 * 100) + '% ↔ 정착 ' + Math.round(ub * 100) + '% · 중앙값 ' + r2(now) + ':1 ↔ 정착 ' + r2(b0) + ':1')
+  const noKeep = CLv['t0 되돌림 — 795 패치 걷음(알 켬)'];
+  const uNoKeep = CLu['t0 되돌림 — 795 패치 걷음(알 켬)'];
+  /* ⚑⚑ **10회차 최종 — 마스크를 고치자 «되돌림» 이 처음으로 듣는다.**
+     이 회차에 이 항을 두 번 옮겼고, 두 번째가 답이다.
+       ⓐ 첫 시도(되돌림 배수 3) — **기각**. 움직이는 마스크에서는 패치를 걷어도 값이 5.16:1 로
+          똑같아(배수 1.00) «축이 패치에 반응 안 한다» 로 읽혔다.
+       ⓑ 둘째 시도(«정착 이하») — **기각**. 고정 마스크로 재니 t0 31% ↔ 정착 14% 로 **빨갛다**.
+          목표로는 옳지만 지금 참이 아니므로 하드로 걸면 «영원히 빨간 자» 다(680).
+       ⓒ 채택 — **ⓐ 를 고친 마스크 위에서 다시 세운다.** 반응 안 하던 이유가 축이 아니라
+          **생존자 편향**이었기 때문이다(씻긴 획이 표본에서 빠졌다). 고정 마스크에서는 같은
+          되돌림이 median 11.07 → **5.15** · «4.5:1 미만» 31% → **40%** 로 또렷이 갈린다.
+     ⇒ 하드는 «795 의 패치가 듣는가» 하나(배수 1.5)이고, 못 넘은 목표(«정착 이하»)는 아래 ⏸ 로
+       매 실행 찍는다 — `verify683` [H1]/[H4] 가 채움↔테 축에서 쓰는 것과 같은 규약이다. */
+  ok(now != null && noKeep != null && noKeep > 0 && now >= noKeep * 1.5
+     && u0 != null && uNoKeep != null && u0 < uNoKeep,
+     '3-a **795 의 라벨 패치가 듣고 있다** — 걷으면 획↔주변 중앙값이 2/3 아래로 내려가고 «4.5:1 미만» 이 는다(10회차 — 고정 마스크로 재잰 값)',
+     now != null && noKeep != null
+       ? (r2(now) + ':1 → 걷으면 ' + r2(noKeep) + ':1 (배수 ' + r2(now / noKeep) + ') · «4.5:1 미만» '
+          + Math.round(u0 * 100) + '% → ' + Math.round(uNoKeep * 100) + '%')
        : '측정 실패');
-  /* ⏸ **실패로 안 센다 — 이 회차가 넘기는 관측이다.** 862 가 흰 판을 들인 뒤 봉우리(t0)는 좋아졌는데
-     **꼬리(t20~t40)** 에서 «4.5:1 미만» 이 62% 로 오른다(정착 14% · t0 2%). 축이 «획↔국소 배경» 이라
-     `verify683` [H1](채움↔테)이 안 보는 자리다. 10회차 비평 결과와 함께 판단할 것. */
+  /* ⏸ **실패로 안 센다 — 10회차가 넘기는 관측이자 이 행의 남은 ④ 감점이다.**
+     고정 마스크로 재면 봉우리(t0)가 **최악**이고 정착보다 «4.5:1 미만» 이 **+17%p** 다
+     (31% ↔ 14% · 중앙값 11.07 ↔ 17.71). 795 의 패치가 이미 40% → 31% 로 당겨 놓은 뒤의 잔량이라
+     남은 뿌리는 **패치가 못 덮는 부분**이다 — 비평 2인(CN·CO)이 각자 독립으로 같은 자리를 짚었다
+     (CN «중앙값 11.82 → 4.14» · CO «카드 위 획 71% 가 1.23:1»). ⚠ 9회차의 «꼬리(t20~t40) 62%» 는
+     **움직이는 마스크가 만든 허상**이었다 — 고정 마스크에서 t20·t40 은 26·28% 로 t0 보다 낫다. */
   {
     const t20 = CLu['t20 현행(알 켬)'], t40 = CLu['t40 현행(알 켬)'];
-    if (t20 != null && t40 != null) console.log('  ⏸  [관측 · 실패 아님] 꼬리에서 «4.5:1 미만» 이 오른다 — t20 '
-      + Math.round(t20 * 100) + '% · t40 ' + Math.round(t40 * 100) + '% (t0 ' + Math.round(u0 * 100)
-      + '% · 정착 ' + Math.round(ub * 100) + '%)');
+    if (u0 != null && ub != null) console.log('  ⏸  [683 남은 ④ · 실패 아님] 봉우리가 최악이다 — t0 «4.5:1 미만» '
+      + Math.round(u0 * 100) + '% ↔ 정착 ' + Math.round(ub * 100) + '% (+' + Math.round((u0 - ub) * 100)
+      + '%p · 중앙값 ' + r2(now) + ' ↔ ' + r2(b0) + ')'
+      + (t20 != null && t40 != null ? ' · 꼬리 t20 ' + Math.round(t20 * 100) + '% · t40 ' + Math.round(t40 * 100) + '%' : ''));
   }
 
   /* ── [2] 등급 테 ── */
