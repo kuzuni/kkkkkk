@@ -83,6 +83,13 @@ async function measure(browser, url) {
     /* ---- 배선 + 겹침 + 잔상 ---- */
     const wired = [], overlap = [];
     let ghostSh = null, ghostK = null;
+    /* ⚑⚑ 985 — 궤도각을 선언값에 세운다. `verify792.js` 같은 자리의 주석이 본문이다 —
+       요약: `orbitAng` 은 `step()` 이 `+= dt*2.4` 로 누적하는 각이라 부팅 1.1초와 `putFoe()` 의
+       «적이 나올 때까지» 루프가 판마다 다른 자리에 놓고, `spiral` 은 발사각을 `orbitAng*0.7`
+       로 잡아(26291) 같은 발이 판마다 다른 각으로 찍힌다. ⚠ `putFoe()` **뒤**여야 한다.
+       (855 «주사위» · 936 «상자» 와 같은 꼴의 세 번째 축 — 갈래를 가른 표는 `tools/probe985.js`) */
+    putFoe(); orbitAng = 0;
+
     for (const s of SKILLS) {
       putFoe(); clearFx();
       let done = false;
