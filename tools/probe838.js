@@ -60,8 +60,9 @@ const info = (k, v) => console.log('       · ' + k + ': ' + v);
     /* ⚑ 14회차 신설 — 13회차 곁다리 관측(자는 «쉬는 액자» · 사람은 «눌린 액자» 를 잰다) */
     if (s.geo.press)
       info('눌린 액자', Math.round(s.geo.press.bw) + '×' + Math.round(s.geo.press.bh) + ' @('
-           + Math.round(s.geo.press.bx) + ',' + Math.round(s.geo.press.by) + ') · 그 액자 기준 스필 **'
-           + p2(s.spillP) + 'px** (쉬는 액자 ' + p2(s.spill) + 'px)  [DO «밑변을 3px 넘는다» 확인 요청]');
+           + p2(s.geo.press.bx) + ',' + p2(s.geo.press.by) + ') · 누른 노드 '
+           + (s.geo.press.host || 'self') + ' · 그 액자 기준 스필 **'
+           + p2(s.spillP) + 'px** (쉬는 액자 ' + p2(s.spill) + 'px)  [DO «밑변을 3px 넘는다» 확인 요청 · 1002]');
     console.log('\n| 알 | 최대 지름 | 총 이동 | 몸길이 | 경로 길이 | 최대 이웃 IoU |');
     console.log('|---|---|---|---|---|---|');
     s.per.forEach((e, i) => console.log('| #' + (i + 1) + ' | ' + p2(e.maxD) + ' | ' + p2(e.net) + ' | '

@@ -274,15 +274,26 @@ async function runScene(scene, src, opts) {
          621 눌림(`jz-dn` = `scale:.94` + `translate:0 8px`)이 걸린 프레임을 잰다 — 즉 두 자가 **다른 액자**를
          재고 있었다. 갈림을 없애려고 상수를 손으로 적지 않고 **제품의 그 클래스를 그대로 걸어** 잰다
          (402 «사본을 지운다» · 트리거 전이라 난수·표본은 한 자리도 안 바뀐다). */
+      /* ⚑ 1002 정정 — **클래스를 «호스트 자신» 에게 걸면 눈이 보는 액자가 아니다.** 60 의 누름은
+         `jzTarget()` 이 고른 **컨트롤**에 걸리고(훈련 [강화]는 `.cb` 가 아니라 그 부모 `.tr-card` 다),
+         배율이 그 조상의 중심에서 걸리므로 호스트 상자는 옆으로도 움직이고 «아래로 8px» 을 얹어도
+         아래 변이 오히려 **올라온다**. 실측 대조(훈련 [강화] · 쉬는 43,1767 310×106):
+           호스트에 직접 → 52,1778 291×100   (14회차가 쓰던 근사 — 위 변이 11px 내려간다)
+           `jzTarget` 조상에 → **52.3,1766.54 291.4×99.64**  (실제 누름과 소수 둘째 자리까지 같다)
+         ⇒ 제품이 누르는 그 노드에 건다. 아래 `spillP` 가 이 상자를 쓰므로 «자와 눈» 이 여기서 만난다. */
       let pb = null;
       try {
-        const had = el.classList.contains('jz-dn');
-        if (!had) el.classList.add('jz-dn');
+        let pc = el;
+        try { const q = (typeof jzTarget === 'function') ? jzTarget(el) : null;
+              if (q && (q === el || q.contains(el))) pc = q; } catch (e2) {}
+        const had = pc.classList.contains('jz-dn');
+        if (!had) pc.classList.add('jz-dn');
         /* `.jz-dn` 은 `transition:scale .06s` 이라 **거는 즉시 읽으면 쉬는 자세**가 나온다 — 다 앉을 때까지 기다린다 */
         await new Promise(res => setTimeout(res, 120));
         const rp = el.getBoundingClientRect();
-        pb = { bx: rp.x / sc, by: rp.y / sc, bw: rp.width / sc, bh: rp.height / sc };
-        if (!had) el.classList.remove('jz-dn');
+        pb = { bx: rp.x / sc, by: rp.y / sc, bw: rp.width / sc, bh: rp.height / sc,
+               host: pc === el ? 'self' : (pc.tagName + '.' + String(pc.className || '').split(/\s+/)[0]) };
+        if (!had) pc.classList.remove('jz-dn');
         await new Promise(res => setTimeout(res, 120));   /* 트리거 전에 쉬는 자세로 되돌려 놓는다 */
       } catch (e) {}
       return { x: ox / sc, y: oy / sc, fr: fr / sc, fi: fi / sc, holes,

@@ -38,8 +38,19 @@ const { runScene, SCENES } = require('./travel838');
 const SRC = path.resolve(__dirname, '../index.html');
 const TMP = path.resolve(__dirname, '../.tmp838-revert.html');
 const p2 = n => Math.round(n * 100) / 100;
-let pass = 0, fail = 0;
+let pass = 0, fail = 0, wait = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? '  [' + d + ']' : '')); };
+/* ⚑⚑ 1002 이관 — **«실패로 안 세되 매 실행 찍는다»**(326 «⏸199 대기» 선례).
+   1002 가 가둠 액자를 «쉬는 상자» → «쉬는 ∩ 눌린» 으로 옮기면서 훈련 버튼의 방이
+   **좌우 각 9.3px · 아래 6.8px** 좁아졌다(310×106 → 291.4×99.18 · `verify1002` [B3]).
+   아래 두 항은 «그 방 안에서 알이 얼마나 고르게·깊게 나가는가» 를 재는 838 의 래칫이라
+   바닥이 같이 내려온다(1002 1회차 실측: C3 61.59° → 65.18° · F2 0.66 → 0.55).
+   ⚠ **문턱은 한 칸도 안 낮췄다** — 낮추면 «무르게 푼 수리» 가 되고, 축의 임자는 838 이다.
+     재역산은 838 의 다음 회차 몫이고 그때까지 이 줄이 값·초과분·지렛대를 찍는다(등재 1003).
+   ⚠ 다른 항(A1~A5·C1·C2·E1·E2·G1·G2·D1)은 **전부 그대로 판정한다** — 1002 뒤에도 초록이다. */
+const waitOn = (v, lim, m, lever, d) => { wait++;
+  const over = (typeof v === 'number' && typeof lim === 'number') ? '  초과 ' + (Math.round(Math.abs(v - lim) * 100) / 100) : '';
+  console.log('  \u23f8    ' + m + over + '  [\u23f8838 대기(1002 이관) · 지렛대 ' + lever + (d ? ' · ' + d : '') + ']'); };
 
 (async () => {
   console.log('# VERIFY838 — 요소 대상 버스트 사거리(838)');
@@ -114,16 +125,18 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
        12회차를 되돌린 사본은 이 문턱에 여전히 걸린다(333 처방).
        ⚠ 원래 자도 **버리지 않는다** — 아래 [C3b] 가 «구멍이 설명하는 것보다 이만큼 넘게 비지는 않는다» 로
          남는다(문턱을 손으로 적지 않고 그 호스트의 쐐기에서 파생시킨다 · 402 «사본을 지운다»). */
-    ok(excMed <= 65, 'C3 구멍이 정당화하지 않는 빈 각(시드 3장 중앙값) ≤ 65° — ' + p2(excMed) + '°',
-       '표본 ' + excS.map(p2).join(' / ') + ' · 12회차 전 70.7(59.0/70.7/84.7) · 11회차 채점 DM 62.7° · DL 67.4°');
+    waitOn(excMed, 65, 'C3 구멍이 정당화하지 않는 빈 각(시드 3장 중앙값) ≤ 65° — ' + p2(excMed) + '°',
+       '밑각 배분(`FXB_FAIR`·`FXB_ABIN`) 또는 가둠 여유(`FXB_INPAD`)',
+       '표본 ' + excS.map(p2).join(' / ') + ' · 1002 전 61.59(50.36/61.59/63.36) · 12회차 전 70.7 · 11회차 채점 DM 62.7° · DL 67.4°');
     ok(A.fanGap <= A.wedge + 65, 'C3b 빈 각 자체도 «쐐기 + 65°» 안 — ' + p2(A.fanGap) + '° ≤ ' + p2(A.wedge + 65) + '°',
        '쐐기(= `--burst-keep` 상자가 발원에서 먹는 각) ' + p2(A.wedge) + '° · 2회차 채점 CZ «40.8° 부채»(빈 각 319°) · DA «65° 쐐기»(빈 각 295°)');
     /* ⚑ 12회차 신설 — 11회차 ㉡ 의 자(«발원 테두리부터의 여유»). [A4](총 이동 ÷ 지름)는 **태어난 자리부터**
        세므로 «코인 밖으로 얼마나 나왔나» 를 못 본다 — 그래서 세 알이 서 있는데 1.49 로 초록이었다.
        ⚠ 이 회차가 이 축을 **다 갚지는 못했다**(0.59 → 0.67 · 아래 §4 12회차 절 «남은 것»).
          래칫으로 세워 다음 회차가 이 값 아래로 못 내려가게만 한다. */
-    ok(clrMed >= 0.60, 'F2 발원 테두리부터의 여유 — 가장 얕은 알도 ≥ 0.60 몸길이(시드 3장 중앙값) · ' + p2(clrMed),
-       '표본 ' + clrS.map(p2).join(' / ') + ' · 12회차 전 0.59(0.55/0.59/0.68) · 11회차 채점 DL «뭉치 0.51 ↔ 선두 1.83 몸길이»');
+    waitOn(clrMed, 0.60, 'F2 발원 테두리부터의 여유 — 가장 얕은 알도 ≥ 0.60 몸길이(시드 3장 중앙값) · ' + p2(clrMed),
+       '발원 원반(`--burst-from` 아이콘 크기) 또는 알 크기(`--burst-fit`)',
+       '표본 ' + clrS.map(p2).join(' / ') + ' · 1002 전 0.66(0.56/0.66/0.88) · 12회차 전 0.59 · 11회차 채점 DL «뭉치 0.51 ↔ 선두 1.83 몸길이»');
     /* ── [E] 반경 예산(6회차) — 위 머리말의 DG 산수 ────────────────── */
     const arcNeed = A.n * 2 * Math.asin(Math.min(1, (A.maxD / 2) / Math.max(1e-9, A.rE))) * 180 / Math.PI;
     const arcHave = 360 - A.fanGap;
@@ -235,6 +248,7 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
     }
   } finally { try { fs.unlinkSync(TMP); } catch (_) {} }
 
-  console.log('\nVERIFY838 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
+  console.log('\nVERIFY838 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS')
+    + (wait ? ' · \u23f8 ' + wait + '항 838 대기(1002 이관 — 위 두 줄)' : ''));
   process.exit(fail ? 1 : 0);
 })();

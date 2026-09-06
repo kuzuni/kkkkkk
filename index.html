@@ -16186,6 +16186,9 @@
        들어갈 때 종전 애니와 같은 0.06s 로 램프하고, 뗌은 `jz-up` 스프링이 0%(.94/8px)에서 이어받는다.
      ⚠ `jz-sh`(흔들림)·`fx-hit`(팝)처럼 **다른 어휘의 애니메이션**과는 이제 겹쳐도 서로를 안 지운다 —
        저쪽은 `animation`, 이쪽은 정적 속성이라 층이 다르다. */
+  /* ⚑ 1002 — 이 두 값(`.94` · `8px`)은 **여기 한 자리에만 있다.** 619 의 가둠이 «눌린 액자» 를
+     알아야 하지만(`fxbPressVals`), 그 자리에 값을 다시 적지 않고 **이 클래스를 실제로 걸어 잰다**
+     (402 «사본을 지운다» · 838 14회차 자가 쓴 것과 같은 손). 그래서 여기 값을 고치면 가둠이 따라온다. */
   .jz-dn{scale:.94;translate:0 8px;filter:brightness(1.10);transition:scale .06s ease-out,translate .06s ease-out}
   /* 호스트 목록 — 자기 `filter` 를 가진 유일한 누름 호스트. 그림자를 잃지 않게 곱해서 적는다. */
   .prb-ar.jz-dn{filter:drop-shadow(0 0 1px rgba(0,0,0,.5)) brightness(1.10)}
@@ -43334,6 +43337,82 @@ function fxRect(el){
   if(!r.width && !r.height) return null;
   return { x:(r.left-f.x)/f.s, y:(r.top-f.y)/f.s, w:r.width/f.s, h:r.height/f.s };
 }
+/* ⚑ 1002 — 621 눌림의 두 값(`.jz-dn` 의 `scale`·`translate`)을 **그 클래스를 실제로 걸어 잰다.**
+   손으로 다시 적으면 사본이 되고(402), CSS 변수로 올리면 그 문자열을 단언하는 자들(`verify579` [1-b]·
+   `verify621` [A10])이 «어휘가 사라졌다» 로 읽는다 — 838 14회차의 자가 쓴 것과 같은 손이 답이다.
+   ⚠ 클래스를 처음부터 달고 붙이므로 `transition` 이 안 돈다(값 변화가 없다) = 읽는 즉시 앉은 값이다.
+   한 번만 읽어 둔다 — 클래스 선언이라 실행 중에 안 바뀐다. */
+let fxbPressV = null;
+function fxbPressVals(){
+  if(fxbPressV) return fxbPressV;
+  let sc = NaN, dy = NaN;
+  try{
+    const d = document.createElement('s');
+    d.className = 'jz-dn';
+    d.style.cssText = 'position:absolute;left:-9999px;top:0;width:10px;height:10px;visibility:hidden;pointer-events:none';
+    ($('app') || document.body).appendChild(d);
+    const cs = getComputedStyle(d);
+    sc = parseFloat(cs.scale);                              /* «.94»(개별 변환 속성이라 단축과 안 싸운다) */
+    const tr = String(cs.translate || '').trim().split(/\s+/);
+    dy = tr.length > 1 ? parseFloat(tr[1]) : 0;             /* «0px 8px» 의 세로 몫 */
+    d.remove();
+  }catch(_){}
+  if(!(sc > 0 && sc <= 1)) sc = 1;                          /* 못 읽으면 «안 눌린다» = 종전 그대로 */
+  if(!(dy >= 0)) dy = 0;
+  return (fxbPressV = { sc, dy });
+}
+/* ⚑ 1002 — **눌린 액자 · 쉬는 액자를 «그려진 상자 하나»에서 같이 낸다.**
+   ⓐ 누름이 걸리는 노드는 호스트 자신이 아니라 그를 담은 컨트롤이다(60 `jzTarget` — 훈련 [강화]는
+     `.cb` 가 아니라 `.tr-card` 가 `jz-dn` 을 받는다). 배율이 그 조상의 중심에서 걸리므로 호스트
+     상자는 **옆으로도** 움직이고, 아래로 8px 이 얹혀도 아래 변이 오히려 **올라온다**.
+     실측(훈련 [강화]): 쉬는 43,1767 310×106 → 눌린 **52.3,1766.54 291.4×99.64**(예측식과 소수
+     둘째 자리까지 같다). ⚠ 838 14회차의 자가 호스트 «자신» 에게 클래스를 걸어 잰 근사
+     (52,1778 291×100)와는 다른 상자다 — 자리를 조상에서 뽑아야 «눈이 보는» 액자가 된다.
+   ⓑ **버스트는 눌림의 어느 위상에서나 터진다** — 첫 발은 트랜지션(.06s) 전이라 쉬는 자세이고,
+     홀드 둘째 틱부터는 다 앉아 있다(실측 6틱: 310×106 · 291.4×99.64 · 309.71×105.9 …). 그래서
+     «지금 얼마나 눌렸나»(`sNow` = 그려진 폭 ÷ **배치** 폭)를 읽어 **양쪽 끝을 다 복원**한다:
+       k = (1−sNow)/(1−s) · 쉬는 = 지금을 1/sNow 로 되돌린 것 · 눌린 = 남은 몫(s/sNow · dy(1−k))만큼 더 누른 것.
+     위상이 0 이면 종전 식과 같고, 다 앉았으면 눌린 = 지금 그려진 상자다.
+   ⚠⚠ **스타일을 쓰지 않는다(읽기만).** 1회차에 567 의 «쉬는 자리» 손(스타일을 박았다 되돌린다)으로
+     쉬는 상자를 뽑았더니, 버스트마다 `scale` 인라인이 붙었다 떨어지며 **트랜지션이 다시 시작**해
+     홀드 내내 버튼이 «눌렸다 풀렸다» 했다(`verify621` [R1] 무력화 사본 restPct 0.68/0.63/0.60 —
+     jzPressTick 을 껐는데도 왕복이 남았다). `offsetWidth` 는 변환이 안 들어간 **배치** 폭이라
+     같은 답을 공짜로 준다. */
+function fxbPressPair(el, r){
+  if(!el || !r || typeof jzTarget !== 'function') return null;
+  const v = fxbPressVals();
+  if(v.sc >= 1 && !v.dy) return null;
+  let pc = null;
+  try{ pc = jzTarget(el); }catch(_){ return null; }
+  if(!pc || (pc !== el && !(pc.contains && pc.contains(el)))) return null;
+  if(typeof jzDead === 'function' && jzDead(pc)) return null;    /* 죽은 버튼은 안 눌린다(60 `jzInit`) */
+  const pr = (pc === el) ? r : fxRect(pc);
+  if(!pr || !(pr.w > 0)) return null;
+  const lay = el.offsetWidth || 0;
+  let sNow = lay > 0 ? r.w / lay : 1;
+  if(!(sNow > 0.5 && sNow <= 1.5)) sNow = 1;   /* 제 변환을 가진 호스트는 «위상 0» 으로 본다(형상은 아래 교집합이 지킨다) */
+  const k = Math.min(1, Math.max(0, (1 - sNow) / (1 - v.sc)));
+  const cx = pr.x + pr.w/2, cy = pr.y + pr.h/2;              /* **지금 그려진** 중심(눌림이 중심을 dy·k 만큼 내린다) */
+  const f = v.sc / sNow, dyR = v.dy * (1 - k);               /* 남은 눌림 */
+  const g = 1 / sNow, dyK = v.dy * k;                        /* 되돌린 쉬는 자세 */
+  return {
+    press: { x:cx + f*(r.x - cx), y:cy + f*(r.y - cy) + dyR, w:r.w*f, h:r.h*f },
+    rest:  { x:cx + g*(r.x - cx), y:cy + g*(r.y - cy) - dyK, w:r.w*g, h:r.h*g }
+  };
+}
+/* ⚑ 1002 — **가둠 액자 = 쉬는 상자 ∩ 눌린 상자.** «눌린 상자» 하나로 갈면 안 된다 — 눌림은
+   비대칭이라 변에 따라 눌린 쪽이 더 «밖» 이다(훈련 아래 변은 눌린 쪽이 6.8px 안, 위 변은 0.46px 밖).
+   교집합 안에서 끝난 잉크는 **쉬는 액자에서도 눌린 액자에서도** 밖으로 안 나간다 = 자와 눈이
+   같은 답을 낸다. 안 눌리는 호스트(우편 행·09·12·17 등)는 `null` 이라 **한 값도 안 바뀐다**. */
+function fxbHoldBox(el, r){
+  if(!r) return r;
+  const pp = fxbPressPair(el, r);
+  if(!pp) return r;
+  const a = pp.rest, p = pp.press;
+  const x0 = Math.max(a.x, p.x), y0 = Math.max(a.y, p.y);
+  const x1 = Math.min(a.x + a.w, p.x + p.w), y1 = Math.min(a.y + a.h, p.y + p.h);
+  return (x1 - x0 > 2 && y1 - y0 > 2) ? { x:x0, y:y0, w:x1 - x0, h:y1 - y0 } : r;
+}
 function fxPt(t){
   if(!t) return null;
   if(typeof t.x === 'number' && typeof t.y === 'number' && !t.nodeType) return { x:t.x, y:t.y };
@@ -44752,6 +44831,10 @@ function fxBurst(t, col, n, strict, iv, ic){
      결과(같은 버튼): 라벨 겹침 7개 → **0개**, 링 세로 최대 197% → **약 140%**.
      좌표 대상(점)은 종전대로 반경 22 원 + 80~150px 산포다. */
   const r = (t && t.nodeType) ? fxRect(t) : null;
+  /* ⚑ 1002 — **가둠만** 이 상자를 쓴다(= 쉬는 ∩ 눌린). 탄생 타원(반축 = 반폭 + FXB_M)·알 크기
+     (`fitK`)·발원은 종전대로 쉬는 상자에서 파생된다 — 619 13회차의 «탄생 타원은 한 픽셀도 안
+     건드린다» 와 838 의 사거리 축이 그 위에 서 있다. */
+  const rh = (t && t.nodeType) ? fxbHoldBox(t, r) : r;
   /* ⚑ 814 3회차 — 호스트가 **링을 세로로 누르라고 신고**할 수 있다(`--burst-ry`, 0<v≤1).
      `--burst-keep`(816·818)과 같은 꼴이다 — 부품이 화면 목록을 들고 있지 않고 **호스트가 자기
      사정을 신고**한다. 신고가 없으면 1 이라 종전 호출은 **한 값도 안 바뀐다**.
@@ -45000,6 +45083,11 @@ function fxBurst(t, col, n, strict, iv, ic){
     let nsz = Math.round(29 * hsc * szs);
     if(IC) nsz = Math.round(nsz * FX_CIC_SC);
     if(fitK < 1) nsz = Math.max(FXB_SZMIN, Math.round(nsz * fitK));
+    /* ⚠ 1002 — **이 대표 상자는 쉬는 상자 그대로 둔다.** 여기는 «가둠» 이 아니라 838 12회차의
+       **밑각 배분**(방이 깊은 쪽으로 알을 눕히는 가중치)이고, 눌린 액자로 좁히면 그 배분이 통째로
+       달라져 838 의 [C3](빈 각 ≤ 65°)·[F2](발원 여유 ≥ 0.60 몸길이)가 깨진다(1회차 실측 80.32°·0.52).
+       잉크를 실제로 막는 벽은 아래 `bx0..by1` 이고 그쪽만 교집합으로 옮기면 «자와 눈» 은 만난다 —
+       두 축을 같이 만지지 말라는 등재문의 경고(338 규칙)가 정확히 이 자리다. */
     const im = Math.max(0, Math.min(nsz/2 + FXB_INPAD, r.w/2 - 1, r.h/2 - 1));
     const ax0 = Math.max(20, r.x + im), ax1 = Math.min(FRAME_W - 20, r.x + r.w - im);
     const ay0 = r.y + im, ay1 = r.y + r.h - im;
@@ -45163,15 +45251,16 @@ function fxBurst(t, col, n, strict, iv, ic){
        EG ⑬ «최상단 y=151 = 링 안쪽 경계 151» — 2인 공통). 스폰 타원은 그대로 두고 가둠 상자만
        한 칸 더 들인다 = 잉크와 액자 사이에 늘 4px 이 남는다. 얇은 호스트에서 상자가 뒤집히지
        않게 반폭·반높이 물림은 그대로다. */
-    const inM = r ? Math.max(0, Math.min(sz/2 + FXB_INPAD, r.w/2 - 1, r.h/2 - 1)) : 0;
-    /* 위 머리말의 «눌린 버튼» 몫 — 변마다 다르다(눌림이 배율 + 아래로 8px 이라 위/아래가 비대칭이다).
-       ⚠ 세 변 다 `FXB_INPAD` 한 칸을 더 얹는다: 619 14회차의 «잉크와 액자 사이에 늘 4px» 은
-         **눌린 액자** 에 대해서도 참이어야 한다(딱 맞추면 반올림 한 톨에 [C1] 이 흔들린다 — 574·709·825). */
-    const bx0 = r ? Math.max(20, r.x + inM) : 20;
-    const bx1 = r ? Math.min(FRAME_W - 20, r.x + r.w - inM) : FRAME_W - 20;
+    const inM = rh ? Math.max(0, Math.min(sz/2 + FXB_INPAD, rh.w/2 - 1, rh.h/2 - 1)) : 0;
+    /* ⚑ 1002 — 위 머리말의 «눌린 버튼» 몫이 **이제 실제로 걸린다**(그 전에는 주석만 있었다).
+       상자가 `rh`(쉬는 ∩ 눌린)이므로 변마다 다른 눌림 몫이 자동으로 들어오고, 그 위에 세 변 다
+       `FXB_INPAD` 한 칸이 얹힌다: 619 14회차의 «잉크와 액자 사이에 늘 4px» 은 **눌린 액자** 에
+       대해서도 참이어야 한다(딱 맞추면 반올림 한 톨에 [C1] 이 흔들린다 — 574·709·825). */
+    const bx0 = rh ? Math.max(20, rh.x + inM) : 20;
+    const bx1 = rh ? Math.min(FRAME_W - 20, rh.x + rh.w - inM) : FRAME_W - 20;
     /* 32회차 — 점 대상의 세로도 프레임 안으로(위 PB_M 주석의 비대칭 해소). 원점을 이미 들여
        놓았으므로 이 클램프는 통상 binding 이 아니다 — 프레임보다 큰 화면비에서만 걸린다. */
-    const by0 = r ? r.y + inM : 20, by1 = r ? r.y + r.h - inM : frameH - 20;   /* 619 13회차 — 위 inM 머리말 */
+    const by0 = rh ? rh.y + inM : 20, by1 = rh ? rh.y + rh.h - inM : frameH - 20;   /* 619 13회차 — 위 inM 머리말 · 1002 상자 */
     /* ⚑ 41회차 — 40차 **2인 공통ㅈ** «버스트가 quest·upg 에서 반경 확장 0% + 동시 전멸»
        (AB «링 bbox 405–676×1561–1691(2ms) → 407–679×1561–1689(192ms) = **±0%**» ·
         AC «271×132 → 250×130 = **±2%**»). 두 사람이 «퍼지지 않는다» 를 각각 다른 자로 재서 같은
