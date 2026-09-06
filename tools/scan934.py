@@ -26,6 +26,18 @@
 = **별 모양 자체는 충실하다.** 남는 것은 글자 덩어리의 자리뿐이고,
 글자에 안 기대는 원점이 같은 답을 낸다(AABB +1.43 · 덮개 +1.78 · 판 높이의 0.8~1.0%).
 
+⚑⚑ **972 정정(2026-09-06) — 바로 위 문단의 «덮개» 절은 틀렸다. 그 만남은 우연이었다.**
+흘려채우기는 검정 획이 판 실루엣 **안에 갇혀 있을 때만** 글자를 메운다. 새 눈금 `encl`
+(«가둠 정도» = 노랑 잉크 중 메워진 판 안에 드는 비율)이 그 체제를 직접 찍는다:
+    ref **20.7%**  ·  우리 획 8px **68.0%**  ·  우리 획 10px(961 이후) **19.2%**
+⇒ 934 마감 당시(획 8) 우리는 글자를 **가두고** 있었고 ref 는 **새고** 있었다.
+서로 다른 체제의 두 값(4.37 ↔ 4.80)이 0.4px 안에서 만난 것이 «별 모양이 충실하다» 로 읽혔을 뿐이다.
+961 이 획을 10 으로 올리자 우리도 ref 와 **같은 체제**(19.2% ↔ 20.7%)로 들어왔고,
+그러자 덮개 기울음이 +4.80 → **+9.44** 로 벌어져 ref +4.37 과 5.07px 갈렸다.
+⇒ **덮개는 글자 독립 원점이 아니다** — 체제가 글자(획 두께)로 정해지므로 «생 무게중심» 과 같은 부류다.
+판정을 지는 원점은 **AABB 중심 하나뿐**이고, 그 답(+1.43px = 판 높이의 0.79%)은 두 체제에서 **한 자도 안 움직였다**
+(획 8 · 획 10 둘 다 1.43px) — 934 의 결론 «떠 있지 않다» 는 그대로 선다.
+
 ⚑ **932 규약 — 판정을 지는 축은 정수 걸음이 아니다.** AABB 중심은 min/max 라
 ref 에서 ±0.5 ref px = **±1.03 우리 px** 로 양자화되고, 그 눈금이 재려는 양(1.4px)과
 같은 크기다 ⇒ **AABB 는 방증으로만 쓰고**, 판정은 부분 피복 **질량 적분**(`pink_cov`)으로
@@ -152,6 +164,11 @@ def measure(img, win, scale, shift=None):
             'skew_raw': (p['my'] - p['by']) * scale,
             'skew_cov': (acy - pf['by']) * scale,
             'hole': 100.0 * (pf['n'] - p['n']) / pf['n'],
+            # ⚑ 972 — «가둠 정도»: 노랑 글자 잉크 중 **메워진 판 안**에 드는 비율.
+            # 100% 면 글자가 분홍에 완전히 갇혀 덮개가 통째로 메운다는 뜻이고,
+            # 0% 면 검정 획이 판 실루엣을 뚫고 나가 흘려채우기가 바깥에서 닿는다는 뜻이다.
+            # 이 값이 **덮개 원점의 체제(regime)** 이고, 두 형에서 다르면 덮개는 같은 것을 안 잰다.
+            'encl': 100.0 * float((ym & fm).sum()) / max(1, int(ym.sum())),
             'pw': p['w'] * scale, 'ph': p['h'] * scale,
         })
     return rows
@@ -166,8 +183,8 @@ def report(rows, tag):
     if not [r for r in rows if r]:
         print('  %-22s — 잉크 없음' % tag)
         return None
-    print('  %-22s 판 %.1f×%.1f · 구멍 %.1f%% · 기울음(생) %+.2f · 기울음(덮개) %+.2f'
-          % (tag, med(rows, 'pw'), med(rows, 'ph'), med(rows, 'hole'),
+    print('  %-22s 판 %.1f×%.1f · 구멍 %.1f%% · 가둠 %.1f%% · 기울음(생) %+.2f · 기울음(덮개) %+.2f'
+          % (tag, med(rows, 'pw'), med(rows, 'ph'), med(rows, 'hole'), med(rows, 'encl'),
              med(rows, 'skew_raw'), med(rows, 'skew_cov')))
     for nm, key in (('AABB 중심', 'aabb'), ('생 무게중심', 'raw'),
                     ('덮개(이진)', 'cov_bin'), ('덮개 질량적분', 'cov')):
@@ -179,7 +196,8 @@ def report(rows, tag):
     return {k: (med(rows, k, 0), med(rows, k, 1))
             for k in ('aabb', 'raw', 'cov', 'cov_bin')} | {
         'hole': med(rows, 'hole'), 'skew_raw': med(rows, 'skew_raw'),
-        'skew_cov': med(rows, 'skew_cov'), 'ph': med(rows, 'ph'), 'pw': med(rows, 'pw')}
+        'skew_cov': med(rows, 'skew_cov'), 'ph': med(rows, 'ph'), 'pw': med(rows, 'pw'),
+        'encl': med(rows, 'encl')}
 
 
 def main():
@@ -228,6 +246,8 @@ def main():
     print('\n  --- 원점이 무엇에 의존하는가 ---')
     print('  구멍이 판에서 차지하는 넓이   ref %.1f%%  ↔  우리 %.1f%%   (차 %+.1f%%p)'
           % (av(R, 'hole'), av(O, 'hole'), av(O, 'hole') - av(R, 'hole')))
+    print('  가둠 정도(글자가 판 안인가)  ref %.1f%%  ↔  우리 %.1f%%   (차 %+.1f%%p)'
+          % (av(R, 'encl'), av(O, 'encl'), av(O, 'encl') - av(R, 'encl')))
     print('  «무게중심 − AABB 중심» 생    ref %+.2f  ↔  우리 %+.2f   ⇒ 갈림 %+.2f px'
           % (av(R, 'skew_raw'), av(O, 'skew_raw'), av(O, 'skew_raw') - av(R, 'skew_raw')))
     print('  «무게중심 − AABB 중심» 덮개  ref %+.2f  ↔  우리 %+.2f   ⇒ 갈림 %+.2f px'
@@ -246,6 +266,7 @@ def main():
         out[key.strip()] = (dx, dy, 100.0 * dy / ph)
     print(json.dumps({'dx_dy_pct': out,
                       'hole_ref': av(R, 'hole'), 'hole_our': av(O, 'hole'),
+                      'encl_ref': av(R, 'encl'), 'encl_our': av(O, 'encl'),
                       'skew_raw': [av(R, 'skew_raw'), av(O, 'skew_raw')],
                       'skew_cov': [av(R, 'skew_cov'), av(O, 'skew_cov')]},
                      ensure_ascii=False))
