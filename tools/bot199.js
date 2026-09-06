@@ -1087,11 +1087,24 @@ const BOT_SRC = function (cfg) {
   /* ======================================================================
      5. 스냅숏
      ====================================================================== */
-  B.snap = (label, minute) => {
-    const grade = [0, 0, 0, 0, 0, 0];
-    T('등급분포', () => {
-      SKILLS.concat(EQUIPS, PETS, RELICS).forEach(it => { if (has(it.id) && it.g != null) grade[it.g] = (grade[it.g] || 0) + 1; });
-    });
+  B.snap = (label, minute, lean) => {
+    /* ⚑ 199 36회차 — `lean` 은 **벽 주변 분 단위 행**(35-7 1번)이 쓰는 부분집합이다.
+       한 실행이 찍는 벽 주변 행은 수백 개라 누적 장부(`inBy`)·등급 분포까지 실으면 JSON 이
+       세 배가 된다. **표를 두 벌 만들지 않으려고** 같은 함수에서 같은 값을 잘라 낸다 —
+       아래 필드는 전부 위 표의 그 필드다(이름·계산 동일). */
+    const grade = lean ? null : (() => {
+      const g = [0, 0, 0, 0, 0, 0];
+      T('등급분포', () => {
+        SKILLS.concat(EQUIPS, PETS, RELICS).forEach(it => { if (has(it.id) && it.g != null) g[it.g] = (g[it.g] || 0) + 1; });
+      });
+      return g;
+    })();
+    if (lean) return {
+      label, minute, lean: true,
+      stage: S.stage, best: S.best, cp: cp(), dps: Math.round(stat.dps),
+      gold: Math.round(S.gold), dia: S.dia, relic: S.relic, trainStage: S.trainStage,
+      own: Object.keys(S.own).length,
+    };
     return {
       label, minute,
       stage: S.stage, best: S.best, cp: cp(), dps: Math.round(stat.dps),
@@ -1260,7 +1273,7 @@ async function runOne(page, pol, seed, days, onRow) {
        삼켜 유입 표에서 통째로 빠졌다. 그래서 «씽크+잔고−유입» 이 3표 전수 +100만이었다(2회차 2-6).
        시작 잔고를 유입 행으로 싣는다 — 이것이 «신규 지급» 의 장부상 자리다. */
     B.diaIn['시작(신규 지급)'] = S.dia;
-    const out = { rows: [], walls: [], day1: [], sessions: 0 };
+    const out = { rows: [], walls: [], day1: [], wrows: [], sessions: 0 };
     let lastLogout = null;
     /* ⚑ 199 7회차 — 시계가 둘이다(6회차 비평 R · 정정6).
        `minute` 은 **벽시계**라 접속 점프(`minute = target`)를 그대로 먹는다 — 로그아웃 15시간이
@@ -1276,11 +1289,40 @@ async function runOne(page, pol, seed, days, onRow) {
        잘린 것이었다(45일로 늘리자 전 시드가 돌파). 판별식은 «정체가 관측 끝까지 이어졌는가»
        = `w.amin + w.len === out.amin` 이고, 그것을 사후에 재계산하지 말고 **자를 때 표식**한다.
        표에는 남기되 ① 적중·개수·간격에서는 뺀다(§12-1 실패 프로브와 같은 규약). */
-    const pushWall = (trunc) => out.walls.push({
-      stage: lastStage, min: stageSince, amin: stageSinceA,
-      len: amin - stageSinceA, lenCal: minute - stageSince,
-      trunc: !!trunc,
-    });
+    /* ⚑ 199 36회차 — **벽 주변 분 단위 행**(35-7 1번).
+       35-4 가 `m2-1120` 의 장벽 항을 «값» 이 아니라 **범위(−11.9 ~ −3.8%, 폭 8.1%p)** 로 되돌린 이유는
+       하나다: cp₀ 는 **벽이 선 시각**의 화력인데 격자는 **하루**라, 그 시각을 품는 창이 여럿이고
+       어느 것도 부정할 수 없었다. 봇은 D1 에서만 10분 행(`D1+490m`)을 찍었으므로 벽이 D2.81 에
+       서면 읽을 표본이 없다.
+       ⇒ 벽이 선 시각 자체와 그 앞뒤를 찍는다. **모든 스테이지 변화를 싣지는 않는다** —
+       그러면 표가 세 배가 된다(30일 실행 하나에 변화가 수백 번이다). 대신 구간 시작 스냅을
+       **고리 버퍼**에 들고 있다가 그 정체가 «벽» 으로 확정되는 순간에만 주변을 통째로 싣는다.
+         · `WR_PRE` 개  — 벽 앞 구간들의 시작(그 자리의 α 를 읽는 데 쓴다)
+         · 1개          — **벽이 선 바로 그 분**(cp₀ · 이것이 읽기 폭을 닫는다)
+         · ≤`WR_MAX` 개 — 벽 안 `WR_EVERY` 활성분 표본
+         · 1개          — 이탈한 바로 그 분
+       ⚠ **표 두 벌 금지** — 행은 `B.snap` 이 만든 **같은 표**에서 잘라 낸 부분집합이다(`lean`).
+       그래서 `out.rows`(하루 격자)와 섞지 않고 `out.wrows` 로 따로 싣는다 — [B]·[C] 표는 이
+       변경으로 한 칸도 안 움직인다(라벨 필터 `'D'+d` 를 그대로 쓴다). */
+    const WR_PRE = 3, WR_EVERY = 10, WR_MAX = 6;
+    let segSnap = null;          /* 지금 구간이 시작된 분의 스냅 — 벽으로 확정될 때만 싣는다 */
+    let preBuf = [], wallSamp = [];
+    const wseen = new Set();     /* 앞 벽의 run-up 이 다음 벽의 preBuf 이기도 하다 — 라벨로 겹침을 막는다 */
+    const wsnap = (label) => { const s = B.snap(label, minute, true); s.amin = amin; return s; };
+    const wpush = (s) => { if (s && !wseen.has(s.label)) { wseen.add(s.label); out.wrows.push(s); } };
+
+    const pushWall = (trunc) => {
+      const w = {
+        stage: lastStage, min: stageSince, amin: stageSinceA,
+        len: amin - stageSinceA, lenCal: minute - stageSince,
+        trunc: !!trunc,
+      };
+      /* 36회차 — 이 벽의 주변 행. 시각(`minute`)으로 되찾을 수 있게 라벨만 적는다(행은 `out.wrows`). */
+      const near = preBuf.concat(segSnap ? [segSnap] : [], wallSamp, [wsnap('W' + lastStage + 'x' + minute + 'm')]);
+      near.forEach(wpush);
+      w.rows = near.map(s => s.label);
+      out.walls.push(w);
+    };
 
     const mark = (label) => {
       const s = B.snap(label, minute);
@@ -1327,7 +1369,14 @@ async function runOne(page, pol, seed, days, onRow) {
           minute++; amin++; B.advance(60000);
           if (S.stage !== lastStage) {
             if (lastStage >= 0 && amin - stageSinceA >= a.wallMin) pushWall();
+            /* 36회차 — 구간이 바뀐다: 지금 구간의 시작 스냅을 고리 버퍼로 밀고 새 구간을 연다. */
+            if (segSnap) { preBuf.push(segSnap); if (preBuf.length > WR_PRE) preBuf.shift(); }
             lastStage = S.stage; stageSince = minute; stageSinceA = amin;
+            segSnap = wsnap('S' + S.stage + '@' + minute + 'm');
+            wallSamp = [];
+          } else if (wallSamp.length < WR_MAX && amin - stageSinceA >= a.wallMin
+                     && (amin - stageSinceA) % WR_EVERY === 0) {
+            wallSamp.push(wsnap('W' + lastStage + '+' + (amin - stageSinceA) + 'm'));
           }
           if (day === 1 && minute % 10 === 0) mark('D1+' + minute + 'm');
         }
