@@ -231,9 +231,15 @@ const ok = (b, name, detail) => {
     revRows.every((r) => r.hasBox) ? '있다' : '없다 — `PW_SETTLE=0` 으로 돌리지 마라');
   ok(revBad.length > 0, 'R-a §box 를 끄면 창이 도로 열린다(정착 «후» 에도 750 아닌 g 가 있다)',
     revBad.map((r) => 'g' + r.gap + ' ' + r.fixed).join(' · ') || '없음');
-  ok(revRows.every((r) => Math.abs(r.fixed - r.raw) <= 0.01),
-    'R-b 그 팔에서는 정착이 값을 한 번도 못 바꾼다(정착 후 = 정착 전, g 전 구간)',
-    revRows.map((r) => r.raw + '→' + r.fixed).join(' · '));
+  /* ⚠ «정착 후 = 정착 전» 으로 물으면 이 항 자신이 플레이키다 — 창이 이미 닫힌 g 에서는
+     `showItem()` 이 부른 MO 가 마이크로태스크로 `jzOpen` 을 붙여 **여는** 연출 0%(scale .92 = 690)를
+     잡는 판이 있다(실측 g160: 750 → 690). 그것은 «정착이 고쳤다» 가 아니라 **다른 창**이다.
+     ⇒ 되돌림이 물을 것은 하나 — **§box 를 끈 팔은 나쁜 값을 750 으로 되돌리지 «못한다»**. */
+  const healed = revRows.filter((r) => Math.abs(r.raw - 750) > 1 && Math.abs(r.fixed - 750) <= 1);
+  ok(healed.length === 0,
+    'R-b 그 팔에서는 정착이 나쁜 값을 750 으로 되돌리지 못한다(= [3-a] 의 초록은 정착의 몫이다)',
+    healed.length ? '되돌아간 g: ' + healed.map((r) => 'g' + r.gap + ' ' + r.raw + '→' + r.fixed).join(' · ')
+      : revRows.map((r) => r.raw + '→' + r.fixed).join(' · '));
 
   ok(errs.length === 0, '4-a 페이지 에러 0', errs.slice(0, 2).join(' | '));
 
