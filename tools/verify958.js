@@ -481,13 +481,101 @@ console.log('\n[10] 3회차 — `probe449.py` 두 축(코너 광선 0.5px · 알
 
   /* ---- 래칫 ---- */
   const brk3 = P.census().filter((x) => x.verdict === 'B').map((x) => x.file).sort();
-  ok('[10-u] 주홍 셋이 **이름으로** 남았다 (958 이 여섯 중 셋을 닫았다)',
-    brk3.join(' ') === ['scan335.py', 'scanA4.py', 'scanA4b.py'].sort().join(' '), brk3.join(' '));
+  /* ⚛ 958 4회차 이관 — 뜻(«주홍은 줄기만 한다»)은 그대로 두고 **수만** «≤3» 으로 열었다.
+     남은 둘의 **이름**은 아래 [11-v] 가 래칫으로 든다(333 처방 — 자리를 비우지 않는다). */
+  ok('[10-u] 주홍이 **줄기만 한다** (958 이 여섯 중 셋을 닫은 뒤로 늘지 않았다)',
+    brk3.length <= 3 && brk3.every((f) => ['scan335.py', 'scanA4.py', 'scanA4b.py'].includes(f)),
+    brk3.join(' '));
 
   /* ---- 되돌림 ---- */
   ok('[10-R1] 옛 자를 [10-b] 의 자로 재면 떨어진다 (층 개수부터 다르다)', iR && iR.length !== 4, iR && iR.length);
   ok('[10-R2] 옛 자를 [10-h] 의 자로 재면 떨어진다', eb && !(Math.abs(parseFloat(eb[1])) < 0.12));
   ok('[10-R3] 옛 자를 [10-l] 의 자로 재면 떨어진다 (85 는 84±0.2 밖이다)', vI && Math.abs(+vI[3] - 84) > 0.2);
+}
+
+/* ── [11] 4회차 — `tools/scan335.py` ──────────────────────────────────── */
+console.log('\n[11] 4회차 — `scan335.py` 색 밴드 두께가 격자에서 풀렸는가 (걸음 1px · 932 처방 ⓐ)');
+{
+  const S335 = fs.readFileSync(path.join(TOOLS, 'scan335.py'), 'utf8');
+  const run335 = (extra) => String(py(['tools/scan335.py', ...extra],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+  const PH = run335(['--physics']);
+  const COV = run335([]);
+  const INT = run335(['--int']);
+
+  /* ---- 물리(합성 재현) ---- */
+  const prow = (mode) => {
+    const l = PH.split('\n').find((x) => new RegExp(`^\\s+${mode}\\s`).test(x));
+    return l ? l.trim().split(/\s+/).slice(1).map(Number) : null;
+  };
+  const pi = prow('int'), pc = prow('cov');
+  ok('[11-a] 재현이 두 자를 다 낸다 (그림도 브라우저도 안 쓴다)', !!pi && !!pc,
+    pi && pc ? `int ${pi.join(' ')} / cov ${pc.join(' ')}` : 'nul');
+  ok('[11-b] 옛 자는 번진 판에서 **한 방향으로** 1px 넘게 깎인다 (참값 7px 테두리 = −20%)',
+    pi && pi[1] < -1.0, pi && pi[1]);
+  ok('[11-c] 새 자는 그 편향이 **1/10 아래**다', pc && Math.abs(pc[1]) < 0.10
+    && Math.abs(pc[1]) < Math.abs(pi[1]) / 10, pc && pc[1]);
+  ok('[11-d] 판 사이 |Δ| 도 같이 줄었다 (두 판을 갈라 놓던 그 값이다)',
+    pi && pc && pc[2] < pi[2] / 10, pi && pc ? `${pi[2]} → ${pc[2]}` : 'nul');
+  ok('[11-e] ⚑ **칼같은 판은 새 자도 옛 자와 같다** — 경계가 계단이면 부분 화소 정보가 애초에 없다(942 [9-d])',
+    pi && pc && Math.abs(pi[0] - pc[0]) < 1e-9, pi && pc ? `${pi[0]} ↔ ${pc[0]}` : 'nul');
+
+  /* ---- ref 실측 — 437·352 를 독립으로 재확인한다 ---- */
+  const hs = (txt) => (txt.split('── ref 활성 탭')[1] || '').split('\n── ')[0]
+    .split('\n').map((l) => l.match(/^   y\s+(\d+)\s+~\s+(\d+)\s+h\s*([\d.]+)/))
+    .filter(Boolean).map((m) => ({ y0: +m[1], y1: +m[2], h: parseFloat(m[3]) }));
+  const hi = hs(INT), hc = hs(COV);
+  const band = (rows, y0) => (rows.find((r) => r.y0 === y0) || {}).h;
+  /* 437 이 확정한 값 — 셸 검정 테두리 7 · 알약 검정 7 · 352 «네 면 7px 림» */
+  const SEVEN = [2021, 2029, 2099, 2106, 2112];
+  const gotI = SEVEN.map((y) => band(hi, y)), gotC = SEVEN.map((y) => band(hc, y));
+  ok('[11-f] 옛 자는 그 다섯 밴드를 **전부 정수**로 낸다', gotI.every((v) => Number.isInteger(v)),
+    gotI.join(' '));
+  ok('[11-g] ⚑⚑ 그 정수가 **CSS 선언 7 과 다르다** (옛 자는 6·5 로 −14~−29%)',
+    gotI.every((v) => v < 7), gotI.join(' '));
+  ok('[11-h] ⚑⚑ 새 자는 다섯이 전부 **7 에 앉는다** (437 셸 테두리 7 · 352 «네 면 7px 림» 을 독립으로 재확인)',
+    gotC.every((v) => Math.abs(v - 7) <= 0.15), gotC.map((v) => v.toFixed(2)).join(' '));
+  ok('[11-i] 새 자는 **하나도** 정수가 아니다 (격자에서 풀렸다)',
+    gotC.every((v) => Math.abs(v - Math.round(v)) > 1e-6), gotC.map((v) => v.toFixed(2)).join(' '));
+
+  /* ---- 무르게 푼 수리가 아님 ---- */
+  ok('[11-j] ⚑⚑ 두 모드의 «어느 밴드인가» 가 **글자까지 같다** — 표본·창·양자화·h≥2 규칙을 안 건드렸다는 가장 짧은 증거',
+    hi.length === hc.length && hi.every((r, i) => r.y0 === hc[i].y0 && r.y1 === hc[i].y1),
+    `${hi.length} ↔ ${hc.length}`);
+  ok('[11-k] 그래도 두 자가 실제로 다른 값을 낸다 (사본이 아니다)',
+    hi.some((r, i) => Math.abs(r.h - hc[i].h) > 0.05));
+  ok('[11-l] 12계조 양자화가 소스에 그대로다', /\/\/ 12, c\[1\] \/\/ 12, c\[2\] \/\/ 12/.test(S335));
+  ok('[11-m] «h ≥ 2 만 남긴다» 규칙이 그대로다', />= 2\]/.test(S335) || /\+ 1 >= 2/.test(S335));
+  ok('[11-n] 창 넷이 그대로다 (1990~2140 · 2000~2060 · x 60~1020)',
+    /1990, 2140/.test(S335) && /2000, 2060/.test(S335) && /60, 1020/.test(S335));
+  ok('[11-o] ⚑ 좌표 규약 +0.5 가 소스에 있다 (표본은 화소 **중심**에서 온다 · 942 [9-e])',
+    /\+ 0\.5/.test(S335));
+  ok('[11-p] ⚠ 끝점 둘로만 보간하지 않는다 — **문턱을 사이에 두는 이웃 한 쌍**을 찾는다',
+    /for p in range\(a, b\)/.test(S335) && /\(va - t\) \* \(vb - t\) <= 0\.0/.test(S335));
+  ok('[11-q] 옛 자가 `--int` 로 살아 있다', /MODE = 'int' if '--int' in sys\.argv else 'cov'/.test(S335));
+
+  /* ---- 캡처 즉사(여덟째) ---- */
+  ok('[11-r] ⚑ 캡처가 없어도 **안 죽는다** — ref 절만 돈다 (커밋 금지 자산 · 942 2~5회차와 같은 얼굴로 여덟째)',
+    /ref 절만 돈다/.test(COV) && hc.length > 0);
+  ok('[11-s] 그런데도 ref 절은 온전히 다 돈다 (밴드 · ④ 가로 둘 다)',
+    /④ 바 가로/.test(COV) && /ref @y2069/.test(COV));
+
+  /* ---- 장부 ---- */
+  const P932 = fs.readFileSync(path.join(TOOLS, 'probe932.js'), 'utf8');
+  const cen = P.census().find((r) => r.file === 'scan335.py');
+  ok('[11-t] 장부가 `scan335.py` 를 **S** 로 옮겼다 (B 에서 빠졌다)', cen && cen.led && cen.led.v === 'S',
+    cen && cen.led && cen.led.v);
+  ok('[11-u] 그 판정이 **낡지 않았다** (sig 가 지금 소스와 맞는다)', cen && !cen.stale,
+    cen && `${cen.sig} ↔ ${cen.led && cen.led.sig}`);
+  ok('[11-v] 주홍 둘이 **이름으로** 남았다 (958 이 여섯 중 넷을 닫았다)',
+    /const BRK = \['scanA4\.py', 'scanA4b\.py'\]/.test(fs.readFileSync(path.join(TOOLS, 'verify932.js'), 'utf8')));
+  ok('[11-w] 장부가 이 자를 부분 화소로 적었다 (`--physics` 수치까지)', /−1\.417 → −0\.020/.test(P932));
+
+  /* ---- 되돌림 ---- */
+  ok('[11-R1] 옛 자를 [11-c] 의 자로 재면 떨어진다 — 항이 헛초록이 아니다',
+    pi && !(Math.abs(pi[1]) < 0.10), pi && pi[1]);
+  ok('[11-R2] 옛 자를 [11-h] 의 자로 재면 떨어진다 (6·5 는 7±0.15 밖이다)',
+    gotI.every((v) => Math.abs(v - 7) > 0.15), gotI.join(' '));
 }
 
 /* ── [R] 되돌림 ───────────────────────────────────────────────────────── */

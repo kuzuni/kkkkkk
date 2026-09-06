@@ -69,8 +69,13 @@ const FIXED942 = ['probe409g.py', 'probe409c.py', 'probe409i.py', 'probe409f.py'
 /* ⚛ 958 3회차 — `probe449.py` 가 B 에서 빠졌다. **축이 둘이고 걸음이 달라 처방도 둘**이었다:
    코너 광선(0.5px)은 942 의 팔레트 길(`probe409g.runs_from` · 팔레트를 넘겨서),
    알약 윤곽·세로 모서리(1px)는 932 처방 ⓐ(문턱 교차 보간). 자는 `tools/verify958.js` §[10]. */
-const FIXED958 = ['probe384.py', 'probe352.py', 'probe449.py'];
-const BRK = ['scan335.py', 'scanA4.py', 'scanA4b.py'];
+/* ⚛ 958 4회차 — `scan335.py` 가 B 에서 빠졌다(색 밴드 두께를 «화소 개수» 에서 **두 모서리의
+   차**로 · 932 처방 ⓐ · 걸음 1px). 합성 재현이 크기를 못박는다 — 번진 판 부호 편향
+   **−1.417 → −0.020px**(참값 7px 테두리에서 −20% → −0.3%). ⚑ ref 실측이 **437 을 독립으로
+   재확인한다**: 옛 정수 자가 6·6·5·5·5 로 읽던 다섯 밴드가 새 자에서 전부 **CSS 선언 7**
+   (437 셸 테두리 7 · 352 «네 면 7px 림»)에 앉는다. 자는 `tools/verify958.js` §[11]. */
+const FIXED958 = ['probe384.py', 'probe352.py', 'probe449.py', 'scan335.py'];
+const BRK = ['scanA4.py', 'scanA4b.py'];
 
 /* ⚠ 선별기의 `frac` 신호는 **관용구 이름**만 본다. 면역 판정의 근거는 그보다 넓다 —
    커버리지 적분(`r_cov`)·색 사영 교차(`_cross`)처럼 이름이 다른 사본이 있다.
@@ -125,7 +130,7 @@ console.log('\n[2] 전수 — 미판정 0 · 판정 무효 0 · 빨강 래칫');
     FIXED942.length > 0 && FIXED942.every(f => !BRK.includes(f) && S.includes(f)),
     FIXED942.join(' '));
   /* 958 도 같은 자리를 같은 규칙으로 지킨다 — 처방이 달라서 목록만 갈랐다(위 주석). */
-  ok('[2-i] 958 이 갈아 끼운 셋도 이름으로 있고 이제 면역이다 (주홍 6 → 5 → 4 → **3**)',
+  ok('[2-i] 958 이 갈아 끼운 넷도 이름으로 있고 이제 면역이다 (주홍 6 → 5 → 4 → 3 → **2**)',
     FIXED958.length > 0 && FIXED958.every(f => !BRK.includes(f) && S.includes(f)),
     FIXED958.join(' '));
   const bad = S.filter(f => !FRAC_DEEP.test(fs.readFileSync(path.join(TOOLS, f), 'utf8')));
