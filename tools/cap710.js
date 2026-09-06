@@ -31,6 +31,21 @@ const OUT = process.argv[2] || path.resolve(__dirname, '../docs/shots/710-contra
    `CAP710_ORBIT=<rad>` 로만 움직이고, 움직이는 자는 `tools/probe996.js`(위상 스윕) 하나뿐이다. */
 const ORB = process.env.CAP710_ORBIT === undefined ? 0 : Number(process.env.CAP710_ORBIT);
 
+/* ⚑ 999 용사 자리 손잡이 — **기본은 «안 건드린다»(null)** 라 시트의 기본 동작이 한 화소도 안 바뀐다.
+   `CAP710_HERO="<x>,<y>"` 로 규격 시전 «앞» 에 용사를 그 자리에 세운다. 왜 필요한가:
+   부팅 1.2초 동안 rAF 가 몇 프레임 도는지가 판마다 달라 **용사 자리가 판마다 다르고**(실측 x 857/1032/1077/961),
+   그 자리에서 시전한 피해값이 갈린다. 999 는 그 피해 숫자를 **치우는 것**으로 닫았지만
+   (`clearFx` 에 `nums` 편입 — 아래 주석), 자가 그 인과를 **운에 기대지 않고** 보이려면
+   두 자리를 손으로 세워 견줄 수 있어야 한다. `tools/verify999.js` [3]·[R] 이 이 손잡이로 돈다.
+   ⚠ 이 손잡이는 규격(`spec`)이 읽는 열 필드에 안 들어간다 — 시트 그림은 자리와 무관하다(자 [3] 이 그것을 단언한다). */
+const HERO = (() => {
+  const v = process.env.CAP710_HERO;
+  if (v === undefined || v === '') return null;
+  const [x, y] = String(v).split(',').map(Number);
+  if (!isFinite(x) || !isFinite(y)) { console.error('CAP710_HERO 는 "<x>,<y>" 꼴이어야 한다 — 받은 값: ' + v); process.exit(3); }
+  return { x, y };
+})();
+
 /* 수리 전에 «한 그림» 이던 무리 — 그 묶음 그대로 한 줄에 놓는다 */
 const ROWS = [
   ['slash', 'multi', 'whirl', 'gale'],     /* 수리 전: 전부 k='slash' — IoU 1.000 */
@@ -48,7 +63,7 @@ const ROWS = [
   await page.waitForTimeout(1200);
   await page.evaluate(() => { window.requestAnimationFrame = () => 0; });
 
-  const info = await page.evaluate(({ ROWS, ORB }) => {
+  const info = await page.evaluate(({ ROWS, ORB, HERO }) => {
     /* ⚑⚑ 996 — **이 시트는 같은 트리에서 판마다 다른 그림을 찍고 있었다.** 네 번 찍으면 여섯 칸이
        판마다 수천 화소 흔들렸다(실측: `spiral` 12,626 · `gale` 11,440 · `whirl` 6,363 ·
        `arrow` 3,780 · `curve` 3,452 · `rico` 1,552 · 나머지 11칸은 0).
@@ -105,7 +120,25 @@ const ROWS = [
     putFoe(300, 300);
 
     /* 종별로 «그 스킬이 실제로 만든 첫 발» 의 규격을 뽑는다 */
-    const clearFx = () => { for (const a of [shots, ghosts, bolts, zones, booms, drones, parts, rings]) a.length = 0; };
+    /* ⚑⚑ 999 — **이 목록에 `nums` 가 빠져 있던 것이 좌하단 블록이 다섯 판에 한 판꼴로 갈리던 뿌리다.**
+       위 `castAll` 은 규격을 뽑으려고 17종을 **두 번씩 실제로 시전**하는데, 그 타격이 남긴
+       «떠오르는 피해 숫자»(`nums`)는 여덟 배열과 달리 한 번도 안 치워졌다. 그 한 장이 마지막 줄
+       `rico` 칸 상자 안(월드 988.28, 958 = 화면 게임 28.3, 958)에 `fillText` 로 찍힌다 —
+       `probe996` 이 «rico 86 (999 블록 밖 0)» 으로 세던 그 화소가 정확히 이 글자다.
+       ⚑ **글자가 판마다 달라지는 이유는 하네스의 마지막 안 잡힌 자유도 하나다** — 996 이 씨앗·`orbitAng`·
+         시계를 핀으로 박았지만 **용사 자리**는 부팅 1.2초 동안 rAF 가 몇 프레임 돌았는지에 따라 그대로 흔들린다
+         (실측 boot x 857 / 1032 / 1077 / 961 …). 그 자리에서 시전한 피해값이 갈리므로 글자가
+         «44.2A» ↔ «34.7A» 로 갈리고(`raw` 44,234 ↔ 34,691 · `mg` 16 ↔ 15), 자릿수가 바뀌면 잉크가 바뀐다.
+         **판 안에서는 늘 같은 글자**이고(같은 판에서 draw() 를 여섯 번 불러도 해시 동일) 판을 가로질러서만
+         갈리는 것이 그 증거다. 같은 뿌리의 다른 얼굴이 `1000`(«용사 자리» 라고 등재돼 있다)이다.
+       ⇒ **문턱을 넓히지 않고(334·796) 원인을 치운다** — 이 시트의 채점 대상은 «투사체 실루엣 17종» 이고
+         피해 숫자는 하네스가 규격을 뽑다가 흘린 부스러기다. 애초에 `clearFx` 가 치웠어야 할 것이라
+         목록에 넣는 것이 수리고, 값을 얼리는 것(용사 핀)은 **부스러기를 남긴 채 예쁘게 만드는 길**이다.
+       ⚠ `corpses` 도 같은 부류라 같이 넣는다 — 지금 표본에서는 늘 비어 있어(적 hp 1e12 라 안 죽는다)
+         **그림이 한 화소도 안 바뀌지만**, 다음에 표적이 죽는 날 똑같은 얼굴로 재발할 자리다.
+       ⚠ 자는 `tools/verify999.js`(되돌림 시험 포함) · 재현은 `tools/probe999.js`. */
+    const clearFx = () => { for (const a of [shots, ghosts, bolts, zones, booms, drones, parts, rings,
+                                             nums, corpses]) a.length = 0; };
     const castAll = (fx, fy) => {
       const o = {};
       for (const s of SKILLS) {
@@ -133,6 +166,8 @@ const ROWS = [
          손 목록이 아니라 제품에게 물으므로 종이 늘어도 저절로 맞는다.
          실측(2026-09-06): 고정각 4종 — `whirl` 0 · `spiral` 0 · `gale` 0 · **`meteor` 1.57**.
          셋은 이미 0 이라 **그림이 바뀌는 것은 운석 하나뿐**이고 나머지 16종은 화소 동일하다. */
+    /* ⚑ 999 — 손잡이가 켜져 있을 때만 용사를 세운다(기본 null = 손 안 댐 = 옛 동작 그대로) */
+    if (HERO) { player.x = HERO.x; player.y = HERO.y; }
     const specA = castAll(300, 300), specB = castAll(760, 900);
     const spec = {};
     for (const id in specA) {
@@ -210,7 +245,7 @@ const ROWS = [
              clip: { x: Math.round(r.left), y: Math.round(r.top),
                      w: Math.round(r.width), h: Math.round(r.height) },
              maxY: (Y0 + (ROWS.length - 1) * DY + 90) * SC / (cvs.height / r.height) };
-  }, { ROWS, ORB });
+  }, { ROWS, ORB, HERO });
 
   /* ⚠ 3회차 — 아래를 «maxY 로 잘라 주는» 친절이 5번째 줄을 다시 삼켰다(비평가 F).
      캔버스 전체를 찍는다. 빈 아래쪽 여백은 채점을 방해하지 않지만 잘린 줄은 채점을 막는다. */
