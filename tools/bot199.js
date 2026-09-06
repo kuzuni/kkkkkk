@@ -2513,6 +2513,16 @@ function writeReport(rep) {
     /* 칸마다 긴 문장을 반복하면 표가 안 읽힌다 — 문장은 표 머리에 한 번, 칸에는 «못 잰다» 는
        사실과 그 이유의 이름표만. 빈칸·«-» 로 두지 않는 것이 이 항의 전부다. */
     const NORATIO = '— ⚠ **정책 1개 — 못 잰다**(다른 표끼리 나누지 마라 · 19-10 정정5)';
+    /* ⚑⚑ 977 — «못 재는 칸은 못 잰다고 자가 말한다(빈칸도 «-» 도 아니다)» 는 이 표 전체의
+       규약인데(19-10 정정5 · 20회차 정정4), 그 뒤에 생긴 두 자리가 규약 밖에 있었다:
+         ⓐ 33회차가 세운 «창 역량» 줄 — 비 칸을 맨 `—` 로 두었다(`verify494` [9]ⓑ 1건 빨강).
+         ⓑ 정책이 둘인 표의 **분모 0** 자리 — `'-'` 를 찍는다. 규약을 묻는 자가 단일 정책
+            표만 봐서 같은 병이 저쪽에서는 **헛초록**이었다(LESSONS 232-①).
+       ⇒ 두 자리 다 «무엇을 못 재는가» 를 칸이 스스로 적는다. ⚠ 이유가 «정책이 하나라서» 가
+       아닌 자리에 `NORATIO` 를 재사용하면 표가 거짓말을 한다 — 이유마다 다른 문장이다. */
+    const NODIV = (who) => `— ⚠ **분모(${who})가 0 이거나 없다 — 못 잰다**`;
+    const NOWIN = '— ⚠ **창 이름은 나눌 수 없다 — 못 잰다**(비가 아니라 창 역량 표시 · 33회차)';
+    const PNM   = (i) => (pols[i] && POLICIES[pols[i]] ? POLICIES[pols[i]].name : pols[i] || '?');
     {
       /* ⚑ 199 5회차 비평 3인 일치 — «지속 수급» 의 장부가 회차마다 달라지면 ④ 를 못 잰다.
          1~4회차의 «지속» 은 **일회성 3종(시작 신규 지급 100만 · 가이드미션 60만 · 우편 30만)을
@@ -2641,8 +2651,8 @@ function writeReport(rep) {
       for (const [name, f, fmt, inv] of rows) {
         const v = pols.map(f);
         const ratio = !two ? NORATIO
-                      : inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
-                            : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
+                      : inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : NODIV(PNM(0)))
+                            : (v[1] ? (v[0] / v[1]).toFixed(3) : NODIV(PNM(1)));
         L.push(`| ${name} | ${v.map(fmt).join(' | ')} | ${ratio} |`);
       }
       /* ⚑⚑ 20회차(19-10 정정1 — 3인 일치) — **① 판정 줄.** 값은 [D] 헤드라인이 잰 그 순간의
@@ -2652,15 +2662,15 @@ function writeReport(rep) {
         const jrat = (f, inv) => {
           if (!two) return NORATIO;
           const v = pols.map(p => f(JUDGE[p]));
-          return inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
-                     : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
+          return inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : NODIV(PNM(0)))
+                     : (v[1] ? (v[0] / v[1]).toFixed(3) : NODIV(PNM(1)));
         };
         const jcell = (f) => pols.map(p => f(JUDGE[p])).join(' | ');
         /* ⚑⚑ 33회차 — 판정 줄 **맨 위**에 창 역량. [G] 만 읽고 결론을 적는 회차가 있으므로
            ([D] 를 안 여는 회차가 실제로 있었다) 같은 말을 두 표에 다 세운다. 값은 [D] 가 잰
            그 순간의 것(`JUDGE`)이고 여기서 다시 계산하지 않는다 — 20회차 규약. */
         L.push(`| **⚑ 창 역량 — 말미 축(①문턱위 간격·적중 · ③문턱위 진폭 · ②말미 수급) 〔§0-2 판정 창 규약〕** | `
-          + jcell(j => WIN.label(j.win)) + ` | — |`);
+          + jcell(j => WIN.label(j.win)) + ` | ${NOWIN} |`);
         L.push(`| **① 목표 칸 적중 p50 〔달력 중앙 좌표 · ±20% · 1:1 배정 · [D] 헤드라인과 같은 자〕** | `
           + jcell(j => `${j.hit}/${j.tgtN} — 널 ${j.nullE.toFixed(2)} 대비 ${(j.hit - j.nullE) >= 0 ? '+' : ''}${(j.hit - j.nullE).toFixed(2)}칸${j.hit < j.nullE ? ' ⚠ **난수 이하**' : ''}`)
           + ` | ${jrat(j => j.hit - j.nullE)} |`);
@@ -2688,7 +2698,7 @@ function writeReport(rep) {
         const t = pols.map(p => tailRate(p, mode));
         if (t.every(x => !x)) continue;
         const cell = tailCell;    /* 18회차 — 함수 스코프의 공유 서식 */
-        const ratio = !two ? NORATIO : (t[0] && t[1] && t[1].p50 ? (t[0].p50 / t[1].p50).toFixed(3) : '-');
+        const ratio = !two ? NORATIO : (t[0] && t[1] && t[1].p50 ? (t[0].p50 / t[1].p50).toFixed(3) : NODIV(PNM(1)));
         const goalPct = t[0] ? ` — 목표 27만의 ${(100 * t[0].p50 / GOAL_DAY).toFixed(1)}%` : '';
         /* ⚑ 13회차 비평 JJ(R12) — 말미 창에 소환 외 씽크가 0 이면 두 장부가 **같은 수**다.
            정보량 0 인 줄이 판정 표에 두 줄로 서는 것보다 나쁜 것은, 그 동일성이 곧
@@ -2707,7 +2717,7 @@ function writeReport(rep) {
           continue;
         }
         const cell = crossCell;   /* 18회차 — 함수 스코프의 공유 서식 */
-        const ratio = !two ? NORATIO : (c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : '-');
+        const ratio = !two ? NORATIO : (c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : NODIV(PNM(0)));
         L.push(`| ${crossTitle(mode)} | ${c.map(cell).join(' | ')} | ${ratio} |`);
         /* ⚑ 13회차 — 같은 줄의 **말미 창 민감도**. 외삽 시드가 0 이면 W 가 안 쓰이므로 생략한다
            (전 시드 실측이면 W 를 흔들어도 같은 수다 — 그 사실 자체가 판정의 강도다). */
@@ -2730,9 +2740,9 @@ function writeReport(rep) {
           const wSel = pk && pk.pick ? pk.pick.w : null;
           const s = pols.map(p => tailSplit(p, 'summon', wSel || undefined));
           if (s[0]) {
-            const rr = !two ? NORATIO : (s[0] && s[1] && s[0].cross > 0 ? (s[1].cross / s[0].cross).toFixed(3) + ' (대충/부지런)' : '-');
+            const rr = !two ? NORATIO : (s[0] && s[1] && s[0].cross > 0 ? (s[1].cross / s[0].cross).toFixed(3) + ' (대충/부지런)' : NODIV(PNM(0)));
             L.push(`| ④ 교차일 — **관측** 〔**말미 정상 장부**(일회성 + 유한 트랙 \`${FINITE_KEYS.join('·')}\` 제외 기울기 · 누적은 결2 ⓐ 그대로) · 창 W${s[0].W}${wSel ? ' = 규약 채택' : ' (규약 미채택 — 기본 창)'}〕 | ${s.map(x => x ? (Number.isFinite(x.cross) ? x.cross.toFixed(1) + ' (보간 ' + x.crossI.toFixed(1) + ')' : '∞') : '—').join(' | ')} | ${rr} |`);
-            L.push(`| ② 말미 **정상(定常)** 기울기 — **관측** 〔같은 창 · 전체에서 일회성·유한 트랙을 뺀 값 · ⚠ [G] 위쪽 «지속 수급/일» 은 **일회성만** 뺀 30일 자라 다른 수다〕 | ${s.map(x => x ? `${fmtN(x.cont)} (전체 ${fmtN(x.full)} − 유한 ${fmtN(x.fin)} − 일회성 ${fmtN(x.once)})` : '—').join(' | ')} | ${!two ? NORATIO : (s[0] && s[1] && s[1].cont > 0 ? (s[0].cont / s[1].cont).toFixed(3) + ' (부지런/대충)' : '-')} |`);
+            L.push(`| ② 말미 **정상(定常)** 기울기 — **관측** 〔같은 창 · 전체에서 일회성·유한 트랙을 뺀 값 · ⚠ [G] 위쪽 «지속 수급/일» 은 **일회성만** 뺀 30일 자라 다른 수다〕 | ${s.map(x => x ? `${fmtN(x.cont)} (전체 ${fmtN(x.full)} − 유한 ${fmtN(x.fin)} − 일회성 ${fmtN(x.once)})` : '—').join(' | ')} | ${!two ? NORATIO : (s[0] && s[1] && s[1].cont > 0 ? (s[0].cont / s[1].cont).toFixed(3) + ' (부지런/대충)' : NODIV(PNM(1)))} |`);
           }
         }
       }
