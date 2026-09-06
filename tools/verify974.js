@@ -158,21 +158,31 @@ function population() {
         '[2a] ★ 음성 대조 — **제품이 부른 rect 는 안 센다**. 자가 한 건도 안 읽은 900ms 뒤 창 나이 낡은 읽기 '
         + neg.young + '건(=0). HUD 숫자는 그 사이에도 팝(`jz-up-n`)하며 움직인다');
 
-      /* ⓑ 양성 대조 — 찍기 «전» 에 읽고, 그 사이 팝이 걸리는 판을 만든다 */
+      /* ⓑ 양성 대조 — 창을 읽어 두고 **그 호스트에 팝을 건다**(노드는 그대로 살아 있다).
+         ⚠ 여기서 [강화]를 눌러 실제 연출을 태우면 안 된다 — `renderUI()` 가 격자를 갈아 끼워
+         읽은 노드가 **떨어져 나가고**, 그것은 «크기가 갈렸다» 가 아니라 «잰 것이 없어졌다» 라
+         `detached` 축으로 빠진다(§2 세 번째 걷어냄). 이 항이 묻는 것은 «살아 있는 창이
+         어긋나면 세는가» 이므로 변형만 건다 — 실물 시나리오는 [3] 이 따로 잰다. */
       await p.evaluate(() => window.__geo974.start());
-      await p.evaluate(lvInk);                       /* ← 창을 먼저 읽는다 */
-      await p.evaluate((peak) => {
-        document.querySelector('#bCos [data-cosup]').click();
-        for (const a of document.getAnimations()) {
-          try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
-            if (d) { a.currentTime = d * peak; a.pause(); } } catch (_) {}
-      }, PEAK_WASH);
-      await p.waitForTimeout(120);
+      const posRead = await p.evaluate(() => {
+        const el = document.querySelector('#bCos .sk-card.sel .sk-clv');
+        const r = el.getBoundingClientRect();              /* ← 창을 먼저 읽는다 */
+        return { w: r.width, h: r.height };
+      });
+      await p.evaluate(() => {
+        const el = document.querySelector('#bCos .sk-card.sel .sk-clv');
+        el.style.transform = 'scale(1.18)';                /* `fxCvSwapS` 55% 프레임과 같은 배율 */
+        void el.offsetHeight;
+      });
       const pos = await p.evaluate((a) => window.__geo974.audit(a[0], a[1]), [0.75, 1500]);
+      await p.evaluate(() => {
+        document.querySelector('#bCos .sk-card.sel .sk-clv').style.transform = '';
+      });
       ok(pos.young >= 1,
         '[2b] ★ 양성 대조 — **찍기 전에 읽은 창이 어긋나면 센다**. ' + pos.young + '건 ≥ 1'
-        + (pos.worst ? ' · 최악 Δ' + pos.worst.d.toFixed(2) + 'px ' + pos.worst.tag : '')
-        + '. 이 항이 없으면 [2a] 의 «0» 은 «눈이 멀었다» 와 못 가른다');
+        + ' (읽은 값 ' + f1(posRead.w) + '×' + f1(posRead.h)
+        + (pos.worst ? ' · 최악 Δ' + pos.worst.d.toFixed(2) + 'px ' + pos.worst.tag : '') + ')'
+        + '. 이 항이 없으면 [2a] 의 «0» 은 **«눈이 멀었다»** 와 못 가른다(891 §R 감도표 규율)');
     } finally { await b.close(); }
   }
 
@@ -186,6 +196,7 @@ function population() {
       for (const a of document.getAnimations()) {
         try { const d = a.effect && a.effect.getTiming ? a.effect.getTiming().duration : 0;
           if (d) { a.currentTime = d * peak; a.pause(); } } catch (_) {}
+      }
     }, PEAK_WASH);
     await p.waitForTimeout(120);
 

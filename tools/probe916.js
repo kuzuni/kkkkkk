@@ -108,7 +108,16 @@ const f = (v, n = 1) => (Number.isFinite(v) ? v.toFixed(n) : ' – ');
 
     /* 가시성 차분 — 그 노드가 그린 화소만 남긴다(이모지·글로우·이웃 라벨 배제) */
     const inkOf = async (sel, idx, pad) => {
-      const r = idx == null ? geom.cap : geom.us[idx];
+      /* ⚑ **974 — 창은 «찍기 직전» 에 읽는다.** 위 `geom` 은 정착 루프 끝에서 한 번 읽은 값이고
+         첫 `screenshot` 까지 1.3초가 뜬다. 그 사이에 `#relw .rw-c` 는 **139.8 → 151.0** 으로
+         자란다(`sweep974` 실측 · Δ11.19px). 여기서 창을 다시 읽으면 그 갈림이 창에 안 들어온다 —
+         814 13회차가 «찍기 전 55.3 ↔ 찍은 뒤 65.9» 로 회차 하나를 태운 것과 같은 자리다. */
+      const r = await page.evaluate(({ s, i }) => {
+        const els = [...document.querySelectorAll(s)];
+        const e = i == null ? els[0] : els[i];
+        const q = e.getBoundingClientRect();
+        return { l: q.left, t: q.top, w: q.width, h: q.height };
+      }, { s: sel, i: idx });
       const clip = { x: Math.max(0, Math.round(r.l) - pad), y: Math.max(0, Math.round(r.t) - pad),
                      width: Math.round(r.w) + pad * 2, height: Math.round(r.h) + pad * 2 };
       clip.width = Math.min(clip.width, 1080 - clip.x); clip.height = Math.min(clip.height, H - clip.y);
