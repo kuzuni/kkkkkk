@@ -93,8 +93,14 @@ const evguard = require('./evguard731');
    제품 경로(`openDefeat`)는 그대로 불리고 껍데기만 칠해지기 전에 걷는다(판정 0글자).
    되돌림 스위치: `PW_SHELL918=0`(끔) · `report`(세기만). 근거는 `tools/shell918.js` 머리말. */
 const shell918 = require('./shell918');
+/* 작업 974 — 같은 자리에 «낡은 rect 읽기» 감사자도 건다(**기본 꺼짐** — `PW_GEO974` 로 켠다).
+   화소를 재는 자가 창(`getBoundingClientRect`)을 **스크린샷보다 먼저** 읽으면, 그 사이에 DOM 이
+   바뀌는 호스트(팝 `fxCvSwapS` 55% `scale(1.18)` 이 `renderUI()` 재렌더로 풀린다)에서 창이 찍힌
+   화소를 안 가리킨다 — 814 13회차가 같은 프레임을 3.19:1 ↔ 5.08:1 로 읽었다. 이 감사자는
+   찍기 직전에 «건네준 rect 를 다시 재서» 다른 것을 센다. 근거는 `tools/geo974.js` 머리말. */
+const geo974 = require('./geo974');
 
-const arm = b => shell918.armBrowser(evguard.armBrowser(armBrowser(b)));
+const arm = b => geo974.armBrowser(shell918.armBrowser(evguard.armBrowser(armBrowser(b))));
 
 /* 작업 907 — «판 결정성» 깃발을 한곳에서 판다.
    903 이 `verify432` 에서 뿌리를 찍었다: 한 페이지에서 스타일 태그를 갈아 끼우며 여러 판을 찍는 자는
