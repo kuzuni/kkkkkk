@@ -65,7 +65,7 @@ const rows = P979.sweep();
 const bad = rows.filter((r) => r.easedOver > 1e-4 || r.easedUnder > 1e-4).map((r) => r.name).sort();
 ok(!bad.includes(NAME), `[B4] 전수 스윕에서 \`${NAME}\` 이 «못 지키는» 목록에 없다`);
 ok(JSON.stringify(bad) === JSON.stringify([...SIBLINGS].sort()),
-   `[B5] 남은 자리는 등재 980 의 그 넷뿐이다 — 늘면 여기가 먼저 빨개진다 [${bad.join(' · ')}]`);
+   `[B5] 남은 자리는 등재 983 의 그 넷뿐이다 — 늘면 여기가 먼저 빨개진다 [${bad.join(' · ')}]`);
 
 /* ── 실물 ──────────────────────────────────────────────────────────────── */
 const SETUP = () => {

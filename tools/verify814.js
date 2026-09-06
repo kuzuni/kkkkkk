@@ -159,7 +159,14 @@ async function run(file, h) {
       return { s: m ? +parseFloat(m[1]).toFixed(3) : null, c: cs.color,
         own: cs.getPropertyValue('--clv-c').trim() };
     };
-    const f0 = sc(0), fp = sc(100), fe = sc(340);
+    /* ⚑ 979 이관 — 정점을 «시각 100ms» 로 물으면 안 된다. 그 시각이 정점이었던 것은
+       약칭이 오버슛(`cubic-bezier(.34,1.56,.64,1)`)이라 봉우리가 107ms 로 **당겨져 있었기**
+       때문이고, 그때 값 1.213 은 선언한 1.18 이 아니었다. 979 가 약칭을 `linear` 로 되돌리자
+       봉우리가 선언 자리(55% = 187ms)로 돌아왔다. ⇒ 시각을 상수로 박지 말고 **실제 정점을 찾는다**
+       (묻는 것은 처음부터 «진폭» 이었지 «100ms 의 값» 이 아니다 — 333 처방). */
+    const f0 = sc(0), fe = sc(340);
+    let fp = null;
+    for (let t = 0; t <= 340; t += 5) { const v = sc(t); if (!fp || (v.s || 0) > fp.s) { fp = v; fp.t = t; } }
     an.forEach((a) => { try { a.play(); } catch (_) {} });
     return { names: an.map((a) => a.animationName), f0, fp, fe };
   });
@@ -330,10 +337,12 @@ function inter(plus, inks) {
   console.log('\n[B-K] 선언한 키프레임이 실제로 렌더되는가(추론 말고 계산값으로)');
   if (K.none) { ok(false, '[B8] 값 줄 호스트를 못 찾았다'); }
   else {
-    console.log('  · t=0 scale ' + K.f0.s + ' · ' + K.f0.c + ' | t=100 scale ' + K.fp.s + ' | t=340 scale ' + K.fe.s + ' · ' + K.fe.c);
+    console.log('  · t=0 scale ' + K.f0.s + ' · ' + K.f0.c + ' | 정점 t=' + K.fp.t + 'ms scale ' + K.fp.s + ' | t=340 scale ' + K.fe.s + ' · ' + K.fe.c);
     ok(K.f0.s !== null && Math.abs(K.f0.s - 0.84) < 0.01,
       '[B8] ★ 0% 트로프가 **실제로 렌더된다** — t=0 scale ' + K.f0.s + '(선언 .84 · `both` 가 앞을 채운다)');
-    ok(K.fp.s >= 1.17, '[B9] 정점이 호스트 비례 진폭이다 — t=100 scale ' + K.fp.s + ' ≥ 1.17 (58 22회차 1.07 은 48.5px 글리프의 값)');
+    ok(K.fp.s >= 1.17 && K.fp.s <= 1.19,
+      '[B9] 정점이 호스트 비례 진폭이다 — **실제 정점** t=' + K.fp.t + 'ms scale ' + K.fp.s
+      + ' ∈ [1.17, 1.19] (58 22회차 1.07 은 48.5px 글리프의 값 · 979 — 선언 1.18 을 넘지도 않는다)');
     /* ⚠ «제 색» 은 흰색이 아니다 — 착용 중(dim)·미보유(lk) 카드는 #ACACAC 다. 그래서 이 항은
        상수와 비교하지 않고 **호스트가 선언한 `--clv-c`** 와 비교한다(색을 변수 뒤로 옮긴 이유가
        바로 이것이다 — 앰버가 «어디로» 돌아갈지를 카드 상태가 정한다). */
