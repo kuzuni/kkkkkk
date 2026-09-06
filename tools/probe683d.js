@@ -50,7 +50,7 @@ const r2 = v => (v == null ? '—' : Math.round(v * 100) / 100);
 const pc = v => (v == null ? '—' : Math.round(v * 100) + '%');
 
 /* 프레임 한 장 — `probe683c` 의 SHOT 과 **같은 규약**(같은 것을 재려면 같은 자리를 얼려야 한다). */
-const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP }) => {
+const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__p4to) { window.__p4to = window.setTimeout; window.__p4ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
@@ -63,6 +63,9 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP }) => {
   /* NOTOP — 11회차 제품 한 줄을 **되돌린 사본**(`.fx-keep-top` 을 뗀다 = CSS 선언을 지운 것과 같다) */
   if (NOTOP && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep-top'))) nd.classList.remove('fx-keep-top');
   if (NOKEEP && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-keep'))) nd.remove();
+  /* NOFADE — 12회차 제품을 **되돌린 사본**(`fxFlashFade` 가 건 마스크를 뗀다 = 함수 본문을 지운 것과 같다) */
+  if (NOFADE && L) for (const nd of Array.prototype.slice.call(L.querySelectorAll('.fx-flash'))) {
+    nd.style.webkitMaskImage = 'none'; nd.style.maskImage = 'none'; }
   try { document.getAnimations().forEach(a => {
     const tg = a.effect && a.effect.target;
     if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = Math.max(0, T); } catch (_) {} }
@@ -252,8 +255,102 @@ const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP }) => {
      '3-d **대가 0** — 이미 멀쩡하던 카드 «밖» 구역은 이 한 줄로도 안 나빠진다',
      cur && base ? ('현행 밖 ' + pc(cur.outC.under45) + ' ↔ 정착 밖 ' + pc(base.outC.under45)) : '측정 실패');
   if (u0 != null && uS != null && u0 > uS + 0.01)
-    hold('[683 남은 ④ · 실패 아님] 이 손잡이를 다 써도 정착에는 못 닿는다 — 남는 것은 공용 `.fx-flash` 판 몫이다(788·862 계열)',
+    hold('[683 남은 ④ · 실패 아님] 11회차 손잡이(알 몫)를 다 써도 남는 자리 — 12회차가 [5] 에서 닫는다(플래시 판 몫)',
          '현행 ' + pc(u0) + ' ↔ 정착 ' + pc(uS));
+
+  /* ── [4] 12회차 — §11-7 «두 비평가가 정면으로 갈린 자리» 를 **시간 축**으로 가른다 ──
+     11회차 채점에서 CP 는 «알이 아직 14.6% 를 깎는다»(A3 80ms ↔ A4 130ms), CQ 는 «알 몫은 100%
+     회수됐다»(A4·A5 ↔ A8) 로 **정반대**를 냈고, 셋(둘의 자 + 내 자)이 정착 기준선을 0.0% ↔ 42.3%
+     ↔ 23% 로 각자 다르게 잡았다. §11-10 이 «12회차가 `probe683d` [2] 의 구역 분할에 A3/A4/A5 를
+     넣어 답하라» 고 남긴 자리다 — 여기서 **한 마스크·한 기준선**으로 다시 잰다.
+     ⚠ 12회차 제품(글자 띠 α 빼기)이 이 물음을 지워 버리므로 **되돌린 사본(NOFADE)** 으로 잰다:
+       그래야 «11회차 판에서 알이 남긴 몫» 이라는 물음 그대로다. */
+  blk('4] §11-7 갈림 — 시간 축(플래시 창 안 ↔ 밖) · **되돌린 사본**으로 잰다');
+  const TT = [0, 40, 80, 130, 180, 240, 300, 360];
+  const row = [];
+  for (const T of TT) {
+    const a = await grab({ T, NOFADE: true });
+    const b = await grab({ T, NOGAIN: true, NOFADE: true });
+    row.push({ T, cur: a && a.inC ? a.inC.under45 : null, nog: b && b.inC ? b.inC.under45 : null });
+    info('T=' + String(T).padStart(3) + 'ms  카드 «안» <4.5',
+         '현행 ' + pc(row[row.length - 1].cur) + ' · 알 숨김 ' + pc(row[row.length - 1].nog)
+         + ' → **알 몫** ' + pc(row[row.length - 1].cur - row[row.length - 1].nog));
+  }
+  const inS = base && base.inC ? base.inC.under45 : null;
+  const gain = row.filter(r => r.cur != null && r.nog != null).map(r => r.cur - r.nog);
+  ok(gain.length === TT.length && Math.max.apply(null, gain) <= 0.02,
+     '4-a **알 몫은 0 이다 — CQ 가 맞았다**(전 프레임에서 «알 켬 ↔ 알 숨김» 차 ≤2%p). '
+     + 'CP 의 «알이 아직 14.6%p 를 깎는다» 는 한 프레임에서도 재현되지 않는다',
+     '최대 ' + pc(Math.max.apply(null, gain)) + ' · 최소 ' + pc(Math.min.apply(null, gain)));
+  const late = row.filter(r => r.T >= 130 && r.cur != null);
+  ok(inS != null && late.length === 5 && late.every(r => Math.abs(r.cur - inS) <= 0.02),
+     '4-b **플래시 창(0~120ms) 밖은 정착과 같다** — 130·180·240·300·360ms 전부 정착 ±2%p. '
+     + '남은 결손은 시간으로도 «플래시가 켜져 있는 동안» 에 갇혀 있다',
+     '정착 ' + pc(inS) + ' ↔ ' + late.map(r => r.T + 'ms ' + pc(r.cur)).join(' · '));
+  const worst = row.reduce((a, b) => (b.cur > (a ? a.cur : -1) ? b : a), null);
+  ok(inS != null && worst && worst.T <= 120 && worst.cur >= inS + 0.1,
+     '4-c 최악 프레임은 **플래시 창 안**이고 정착보다 10%p 이상 나쁘다 — 12회차가 닫을 자리가 여기다',
+     'T=' + (worst ? worst.T : '—') + 'ms ' + pc(worst && worst.cur) + ' ↔ 정착 ' + pc(inS));
+
+  /* ── [5] 12회차 제품 — «되그려야 하는 글자» 띠에서 플래시가 α 를 뺀다 ── */
+  blk('5] 12회차 제품(`fxFlashFade`) — 회수 · 되돌림 · 대가 · 스코프');
+  const IN = [];
+  for (const T of [0, 40, 80]) {
+    const a = await grab({ T }), b = await grab({ T, NOFADE: true });
+    IN.push({ T, fix: a && a.inC ? a.inC.under45 : null, rev: b && b.inC ? b.inC.under45 : null,
+              out: a && a.outC ? a.outC.under45 : null });
+    info('T=' + String(T).padStart(3) + 'ms  카드 «안» <4.5',
+         '**현행** ' + pc(IN[IN.length - 1].fix) + ' ↔ 되돌림 ' + pc(IN[IN.length - 1].rev)
+         + ' ↔ 정착 ' + pc(inS));
+  }
+  ok(inS != null && IN.every(r => r.fix != null && r.fix <= inS + 0.03),
+     '5-a **회수 — 플래시 창 안이 정착에 닿는다**(세 프레임 전부 정착 +3%p 안). '
+     + '11회차가 «공용 판 몫» 으로 넘겼던 +13~20%p 가 이 행 안에서 닫혔다',
+     IN.map(r => r.T + 'ms ' + pc(r.fix)).join(' · ') + ' ↔ 정착 ' + pc(inS));
+  ok(IN.every(r => r.rev != null && r.fix != null) && Math.max.apply(null, IN.map(r => r.rev - r.fix)) >= 0.08,
+     '5-b **되돌림 시험** — 마스크를 뗀 사본(NOFADE)은 다시 무너진다(최대 8%p 이상). '
+     + '«언제나 초록인 자» 가 아니다',
+     IN.map(r => r.T + 'ms +' + pc(r.rev - r.fix)).join(' · '));
+  const outS = base && base.outC ? base.outC.under45 : null;
+  ok(outS != null && IN.every(r => r.out != null && Math.abs(r.out - outS) <= 0.08),
+     '5-c **대가 0** — 카드 «밖» 구역(하변 아래 20px)은 이 변경으로도 안 나빠진다',
+     IN.map(r => r.T + 'ms ' + pc(r.out)).join(' · ') + ' ↔ 정착 밖 ' + pc(outS));
+  /* 스코프 짝 — «신고 잉크를 가진 호스트만» 이 문을 지난다. 같은 화면의 형제(카드 «아이콘 상자»)는
+     `.rw-c>u` 를 자식으로 안 가지므로 마스크가 서면 안 된다. 이 항이 없으면 09·12·17·코스튬·장비·
+     훈련·단련·룬까지 조용히 같이 바뀌어도 아무 자도 안 짖는다(LESSONS 666-⑨ · `verify619` [K6] 축). */
+  const sc = await ev(p, RID => {
+    const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
+    const card = document.querySelector('[data-rw="' + RID + '"]');
+    const icon = card && card.querySelector('i');
+    if (!card || !icon) return null;
+    fxFlash(card, 340, false, true);
+    const a = L.querySelector('.fx-flash');
+    const am = a ? (getComputedStyle(a).maskImage || getComputedStyle(a).webkitMaskImage || 'none') : null;
+    const kt = (typeof fxKeepTxtTop === 'function') ? fxKeepTxtTop(card) : null;
+    const ab = a ? { top: parseFloat(a.style.top), h: parseFloat(a.style.height) } : null;
+    while (L.firstChild) L.removeChild(L.firstChild);
+    fxFlash(icon, 340, false, true);
+    const b = L.querySelector('.fx-flash');
+    const bm = b ? (getComputedStyle(b).maskImage || getComputedStyle(b).webkitMaskImage || 'none') : null;
+    while (L.firstChild) L.removeChild(L.firstChild);
+    return { am, bm, kt, ab };
+  }, ID);
+  info('신고 호스트(카드)의 마스크', sc ? String(sc.am).slice(0, 90) : '측정 실패');
+  info('형제 호스트(아이콘 상자)의 마스크', sc ? String(sc.bm) : '측정 실패');
+  ok(!!sc && /gradient/.test(String(sc.am)),
+     '5-d1 신고 잉크(`FXKEEP_TXT`)를 **가진** 호스트에서만 마스크가 선다', sc ? '섰다' : '측정 실패');
+  ok(!!sc && !/gradient/.test(String(sc.bm)),
+     '5-d2 **스코프의 짝** — 같은 화면 형제(그 잉크가 없는 호스트)는 마스크 0건. '
+     + '09·12·17·코스튬·장비·훈련·단련·룬이 안 바뀌는 근거가 이 항이다', sc ? String(sc.bm) : '측정 실패');
+  /* α 가 0 이 되는 자리는 «잉크 윗변» 이어야 한다 — 그 아래면 글자를 여전히 밝히고,
+     너무 위면 플래시를 필요 이상으로 깎는다(둘 다 결함이다). 봉우리 배율 보정만큼의 여유를 준다. */
+  const cutY = (() => { if (!sc || !sc.am || !sc.ab) return null;
+    const m = /transparent\s+([\d.]+)px|rgba\(0,\s*0,\s*0,\s*0\)\s+([\d.]+)px/.exec(String(sc.am));
+    return m ? sc.ab.top + parseFloat(m[1] || m[2]) : null; })();
+  info('α=0 지점(프레임 y) ↔ 신고 잉크 윗변', cutY != null ? r2(cutY) + ' ↔ ' + r2(sc.kt) : '측정 실패');
+  ok(cutY != null && sc.kt != null && cutY <= sc.kt + 0.5 && cutY >= sc.kt - 6,
+     '5-e α=0 지점이 **신고 잉크 윗변 바로 위**다(0~6px 위 — 봉우리 `scale(1.06)` 보정분)',
+     cutY != null ? ('Δ ' + r2(sc.kt - cutY) + 'px') : '측정 실패');
 
   ok(errs.length === 0, 'Z1 콘솔 에러 0', errs.length ? errs.slice(0, 3).join(' | ') : '없음');
 

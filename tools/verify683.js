@@ -595,8 +595,8 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   ok(!!hOwn, 'H0 전제 — 대상 칸(' + RW_H_ID + ')을 `summonRelic()` 실경로로 보유시켰다(788 — 칸 고정)',
      hOwn ? ('Lv.' + hOwn.lv) : '보유 실패');
   /* `blank` 를 주면 **라벨 글자만 지운** 사본을 찍는다(배경·플래시는 그대로) — 잉크 마스크의 재료다 */
-  const labelShot = async (t, longFlash, noGain, blank, noKeep) => {
-    const st = await ev(p, async ({ T, LONG, NOGAIN, ID, BLANK, NOKEEP }) => {
+  const labelShot = async (t, longFlash, noGain, blank, noKeep, noFade) => {
+    const st = await ev(p, async ({ T, LONG, NOGAIN, ID, BLANK, NOKEEP, NOFADE }) => {
       const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
       if (!window.__v683to) { window.__v683to = window.setTimeout; window.__v683ri = window.requestAnimationFrame; }
       window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
@@ -615,6 +615,15 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
          (`rwSummonFx` 는 «어느 칸에 그리는가» 만 `it` 에서 읽는다 — 제품 경로 그대로다). */
       const it = RELICS.filter(r => r.id === ID)[0]; if (!it) return null;
       if (T >= 0) rwSummonFx(it, true, null);
+      /* ⚑⚑ 683 12회차 — `NOFADE` 는 **12회차 제품을 되돌린 사본**이다(`fxFlashFade` 가 건 마스크를 뗀다).
+         아래 [H2][H3][H4] 는 «패치·길이 축이 살아 있는가» 를 묻는 되돌림 항인데, 12회차가 플래시를
+         라벨 띠에서 아예 빼 버리자 **세 항의 전제 자체가 사라져** 배수가 1 로 붙었다(헛빨강 — 862 가
+         겪은 것의 재판). 문턱을 내리는 대신(334) **재는 사본**을 12회차 이전으로 되돌린다(333 처방):
+         그러면 두 축은 원래 묻던 것을 그대로 묻고, «12회차가 그 축을 흡수했다» 는 새 사실은
+         아래 [H5][H6] 이 따로 못박는다(둘이 짝이라 어느 쪽이 죽어도 빨개진다). */
+      if (NOFADE) { const L2 = document.getElementById('fxl');
+        if (L2) for (const nd of Array.prototype.slice.call(L2.querySelectorAll('.fx-flash'))) {
+          nd.style.webkitMaskImage = 'none'; nd.style.maskImage = 'none'; } }
       try { document.getAnimations().forEach(a => {
         const tg = a.effect && a.effect.target;
         if (tg && tg.closest && tg.closest('#fxl')) { a.pause(); try { a.currentTime = Math.max(0, T); } catch (_) {} }
@@ -627,7 +636,7 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
       if (BLANK) { window.__v683lab = u.textContent; u.textContent = ''; }
       return { id: it.id, lab: u.textContent,
                box: { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) } };
-    }, { T: t, LONG: !!longFlash, NOGAIN: !!noGain, ID: RW_H_ID, BLANK: !!blank, NOKEEP: !!noKeep });
+    }, { T: t, LONG: !!longFlash, NOGAIN: !!noGain, ID: RW_H_ID, BLANK: !!blank, NOKEEP: !!noKeep, NOFADE: !!noFade });
     if (!st) return null;
     const png = (await p.screenshot()).toString('base64');
     if (blank) await ev(p, ID => { const el = document.querySelector('[data-rw="' + ID + '"]');
@@ -676,13 +685,13 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
              peak: live.sort((x, y) => x.r - y.r)[0] || worst,
              late: late.sort((x, y) => x.r - y.r)[0] || worst };
   };
-  const labelRatio = async (noGain, noKeep) => {
-    const settled = await labelShot(-1, false, noGain, false, noKeep);
+  const labelRatio = async (noGain, noKeep, noFade) => {
+    const settled = await labelShot(-1, false, noGain, false, noKeep, noFade);
     if (!settled) return null;
-    const blank = await labelShot(-1, false, noGain, true, noKeep);
+    const blank = await labelShot(-1, false, noGain, true, noKeep, noFade);
     if (!blank) return null;
     const shots = [];
-    for (const t of LT) { const sh = await labelShot(t, false, noGain, false, noKeep); if (sh) shots.push({ t, png: sh.png }); }
+    for (const t of LT) { const sh = await labelShot(t, false, noGain, false, noKeep, noFade); if (sh) shots.push({ t, png: sh.png }); }
     if (!shots.length) return null;
     return await ev(p, INK, { a: settled.png, blank: blank.png, shots, box: settled.box });
   };
@@ -690,7 +699,11 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   const LRg = await labelRatio(false);    /* 알갱이까지 — ⏸ 대기 항(아래) */
   /* ⚑ 795 — **라벨 패치를 걷은 사본**(길이·상자·세기는 그대로). [H4] 되돌림과 [H3] 의 «같은 조건»
      기준선을 둘 다 이 한 벌로 잰다 — 패치가 없으면 옛 씻김(2.2~2.5:1)이 그대로 돌아온다. */
-  const LR0 = await labelRatio(true, true);
+  /* ⚑ 683 12회차 이관 — 이 사본은 이제 **패치 걷음 + 12회차 페이드 되돌림**이다(위 `NOFADE` 머리말).
+     ⚠ 페이드를 안 되돌리면 «패치를 걷어도 21:1» 이라 [H2][H3][H4] 가 세 항 다 헛빨강이 된다. */
+  const LR0 = await labelRatio(true, true, true);
+  /* 12회차 — «페이드가 그 축을 흡수했는가» 를 묻는 짝(패치만 걷고 **페이드는 그대로**). [H5] 가 본다. */
+  const LR0f = await labelRatio(true, true, false);
   const r2 = v => Math.round(v * 100) / 100;
   info('«Lv.n» 채움↔테 WCAG 대비비', LR ? ('정착 ' + r2(LR.base) + ':1 · '
        + LR.per.map(o => 't' + o.t + ' ' + r2(o.r)).join(' · ')
@@ -709,10 +722,17 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      («덮는 대신 라벨을 플래시 위에 되그린다» — index.html `FXKEEP_TXT`) 판정을 **봉투 전체**
      (`worst`)로 되돌린다. 이제 «영원히 빨간 게이트» 가 아니다: 실측 t0~t260 전 구간 21:1.
      ⚠ **문턱을 내려서 닫은 게 아니다** — 올렸다(래칫 2.0 → 하드 3.0 · 334 규약). */
-  ok(!!LR && LR.base > 4 && LR.worst && LR.worst.r >= 3,
-     'H1 ★ **봉투 전체** — 연출이 도는 내내(t 0~260ms) «Lv.n» 이 한 번도 3:1 아래로 안 내려간다 (795 로 [H4] 합침)',
-     LR ? ('최악 t' + LR.worst.t + ' ' + r2(LR.worst.r) + ':1 · t≥' + LT_LIVE + ' 최악 '
-           + r2(LR.late.r) + ':1 (정착 ' + r2(LR.base) + ':1)') : '측정 실패');
+  /* ⚑⚑ **683 12회차 마감 — `noGain` 을 뗐다(788 이 «그때가 마감» 이라고 적어 둔 그 조건이다).**
+     788 이 축을 셋으로 가르면서 ⓑ(알갱이)를 ⏸ 로 남긴 이유는 값이 **4.12:1 = 정착의 36%** 였기
+     때문이고, 그 꼬리표는 «이 값이 3:1 을 넘으면 [H1] 의 `noGain` 을 떼고 한 항으로 합쳐라» 라고
+     마감 조건을 적어 두었다. 11회차(z 한 칸 = 알 몫)와 12회차(글자 띠 α = 판 몫)가 그 둘을 차례로
+     닫아 **알갱이까지 켠 실측이 21:1 = 정착의 100%** 다 ⇒ 합친다.
+     ⚠ **문턱은 한 칸도 안 내렸다 — 조였다**(334): 재는 사본이 «알갱이 숨김» → **«전부 켬»** 이다. */
+  ok(!!LRg && LRg.base > 4 && LRg.worst && LRg.worst.r >= 3,
+     'H1 ★ **봉투 전체 · 알갱이까지 켠 사본** — 연출이 도는 내내(t 0~260ms) «Lv.n» 이 한 번도 3:1 아래로 안 내려간다 (795 로 [H4] 합침 · 12회차로 ⏸ 알갱이 축 합침)',
+     LRg ? ('최악 t' + LRg.worst.t + ' ' + r2(LRg.worst.r) + ':1 · t≥' + LT_LIVE + ' 최악 '
+           + r2(LRg.late.r) + ':1 (정착 ' + r2(LRg.base) + ':1 = '
+           + Math.round(LRg.worst.r / LRg.base * 100) + '%)') : '측정 실패');
   /* ⚑⚑ 795 이관 — **«길이» 축은 패치를 걷은 사본(`LR0`)에서 잰다.** 패치가 라벨을 되그리는 순간
      라벨 대비는 플래시가 얼마나 오래 살든 21:1 이라, 이 항을 `LR` 로 두면 **플래시가 340ms 로
      되돌아가도 초록**인 헛초록이 된다(328~330 이 배운 «누른 항을 묻는 항이 없으면 안 된다»).
@@ -743,22 +763,24 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      (LR0 && LR0.worst ? ('패치 걷음 t' + LR0.worst.t + ' ' + r2(LR0.worst.r) + ':1') : '측정 실패')
      + ' ↔ 지금 ' + r2(LR && LR.worst ? LR.worst.r : 0) + ':1'
      + ' · 갈래(probe788 [6]): 흰 테만 끄면 5.88 · 바깥 글로우만 끄면 3.58 · 채움 워시만 끄면 3.14');
-  /* ⏸ **683 보류 사유 — 실패로 안 센다.** 알갱이까지 켠 실측을 매 실행 찍는다(값·최악 시각·비율).
-     이 값이 3:1 을 넘으면 그때 [H1] 의 `noGain` 을 떼고 한 항으로 합치는 것이 마감이다. */
-  if (LRg && LRg.worst) {
-    console.log('  ⏸  [683 보류 사유 · 실패 아님] 알갱이까지 켠 «Lv.n» — 최악 t=' + LRg.worst.t + 'ms '
-      + r2(LRg.worst.r) + ':1 (정착 ' + r2(LRg.base) + ':1 = ' + Math.round(LRg.worst.r / LRg.base * 100) + '%)'
-      + ' · 봉투 ' + LRg.per.map(o => 't' + o.t + ' ' + r2(o.r)).join(' · '));
-    console.log('  ⏸  처방(5회차 2인 일치): 방출 각도에서 아래쪽 섹터 배제 또는 라벨 띠 클램프 + «Lv.n» 을 연출 위 레이어로');
-  }
+  /* ⚑ 12회차 — 옛 ⏸ 꼬리표(«알갱이 축은 실패로 안 센다»)는 위 [H1] 에 **합쳐서 없앴다**.
+     값은 계속 찍는다 — 마감했다고 안 보이게 하면 다음 회차가 추이를 못 읽는다(680 «영원히 빨간
+     게이트» 의 반대편 사고: 닫힌 축은 조용해져서 되돌아가도 아무도 모른다). */
+  if (LRg && LRg.worst)
+    info('알갱이까지 켠 «Lv.n» 봉투(5회차 4.12:1 → 11·12회차로 닫힘)',
+      LRg.per.map(o => 't' + o.t + ' ' + r2(o.r)).join(' · ')
+      + ' (정착 ' + r2(LRg.base) + ':1 = ' + Math.round(LRg.worst.r / LRg.base * 100) + '%)');
   /* ⚑ 되돌림 — 5회차의 손잡이(`RW_FLASH_MS`)를 걷어 옛 340ms 플래시로 되돌리면 이 자가 빨개져야 한다.
      안 그러면 [H1] 은 «원래부터 참인 것» 을 굳힌 항이다(338 이 등재문 처방에서 배운 바로 그 함정).
      788 — 재는 자리도 «길이» 축으로 옮겼다: 옛 플래시는 `LT_LIVE`(130ms) 에도 **아직 살아 있어서**
      [H1] 이 지키는 «창 밖은 깨끗하다» 를 정면으로 깬다(옛 자는 t=40 한 점만 봐서 세기와 섞였다). */
-  const longSettled = await labelShot(-1, true, true);
-  const longBlank = await labelShot(-1, true, true, true);
+  /* 12회차 — 이 대조군도 **페이드를 되돌린 사본**이다(위 `NOFADE` 머리말 · [H3] 의 짝이 [H6] 이다). */
+  const longSettled = await labelShot(-1, true, true, false, false, true);
+  const longBlank = await labelShot(-1, true, true, true, false, true);
   const longShots = [];
-  for (const t of LT.filter(t => t >= LT_LIVE)) { const sh = await labelShot(t, true, true); if (sh) longShots.push({ t, png: sh.png }); }
+  for (const t of LT.filter(t => t >= LT_LIVE)) { const sh = await labelShot(t, true, true, false, false, true); if (sh) longShots.push({ t, png: sh.png }); }
+  const longShotsF = [];
+  for (const t of LT.filter(t => t >= LT_LIVE)) { const sh = await labelShot(t, true, true, false, false, false); if (sh) longShotsF.push({ t, png: sh.png }); }
   const LRlong = (longSettled && longBlank && longShots.length)
     ? await ev(p, INK, { a: longSettled.png, blank: longBlank.png, shots: longShots, box: longSettled.box }) : null;
   /* ⚑ 795 — 대조군을 `LR` 에서 **`LR0`(패치 걷은 사본)** 로 바꿨다. `LONG` 스텁은 인자를 전부
@@ -766,10 +788,28 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
      **길이와 패치 두 축을 섞어 재는** 비교가 된다. 둘 다 패치를 걷어야 길이만 남는다. */
   /* ⚑ 862 이관 — [H4] 와 같은 이유로 «절대 3:1» 을 «지금의 1/3» 로 옮겼다(실측 3.46 ↔ 21 = 6.1배).
      축은 그대로다: **옛 길이로 되돌리면 창 밖이 더는 깨끗하지 않다.** */
+  /* ⚑⚑ 683 12회차 — **[H4] 의 짝.** 위 [H4] 는 «페이드가 없었다면 패치가 하던 일» 을 지킨다.
+     이 항은 **지금 제품에서 그 축이 닫혔다**는 새 사실을 못박는다 — 페이드가 살아 있으면
+     패치를 걷어도 라벨은 안 씻긴다(배수 ≈ 1). 둘이 짝이라 어느 쪽이 죽어도 빨개진다:
+     페이드를 지우면 [H5] 가, 패치를 지우면 [H4] 가 빨강이다(328~330 «누른 항을 묻는 항»). */
+  ok(!!LR && !!LR0f && LR0f.worst && LR.worst && LR0f.worst.r >= LR.worst.r / 1.5,
+     'H5 ★ **12회차가 «패치 ↔ 플래시» 축을 흡수했다** — 페이드가 살아 있으면 패치를 걷어도 봉우리가 안 무너진다(배수 ≥ 1/1.5)',
+     (LR0f && LR0f.worst ? ('페이드 살림·패치 걷음 t' + LR0f.worst.t + ' ' + r2(LR0f.worst.r) + ':1') : '측정 실패')
+     + ' ↔ 지금 ' + r2(LR && LR.worst ? LR.worst.r : 0) + ':1');
   ok(!!LR0 && !!LRlong && LRlong.late && LR0.late && LRlong.late.r < LR0.late.r / 3,
      'H3 ★ 되돌림(**«길이» 축** · 양쪽 다 패치 걷음) — `RW_FLASH_MS` 를 걷어 옛 340ms 플래시로 되돌리면 «창 밖» 이 더는 깨끗하지 않다(862 이관 — 옛 문턱 «3:1 아래»)',
      (LRlong && LRlong.late ? ('옛 플래시 t≥' + LT_LIVE + ' ' + r2(LRlong.late.r) + ':1') : '측정 실패')
      + ' ↔ 지금(패치 걷음) ' + r2(LR0 && LR0.late ? LR0.late.r : 0) + ':1');
+  /* ⚑⚑ 683 12회차 — **[H3] 의 짝.** 길이 축도 페이드가 흡수했다: 옛 340ms 플래시로 되돌려도
+     («창 밖» 인 t≥130 에서도 플래시가 아직 살아 있어도) 라벨 띠에는 α 가 0 이라 안 씻긴다.
+     ⚠ 이것이 «길이를 되돌려도 된다» 는 말은 아니다 — 길이는 ①타이밍 축의 값이고(5회차 지시),
+       여기서 닫힌 것은 «길이가 **라벨 가독성** 을 통해 ④ 를 깎던 경로» 하나다. */
+  const LRlongF = (longSettled && longBlank && longShotsF.length)
+    ? await ev(p, INK, { a: longSettled.png, blank: longBlank.png, shots: longShotsF, box: longSettled.box }) : null;
+  ok(!!LR0f && !!LRlongF && LRlongF.late && LR0f.late && LRlongF.late.r >= LR0f.late.r / 1.5,
+     'H6 ★ **12회차가 «길이 ↔ 라벨» 경로도 흡수했다** — 페이드가 살아 있으면 옛 340ms 플래시로 되돌려도 창 밖이 안 더러워진다',
+     (LRlongF && LRlongF.late ? ('옛 플래시(페이드 살림) t≥' + LT_LIVE + ' ' + r2(LRlongF.late.r) + ':1') : '측정 실패')
+     + ' ↔ 페이드 살림·패치 걷음 ' + r2(LR0f && LR0f.late ? LR0f.late.r : 0) + ':1');
   await ev(p, () => {
     if (window.__v683ff) { window.fxFlash = window.__v683ff; window.__v683ff = null; }
     { const o = document.getElementById('__v683nogain'); if (o) o.remove(); }
@@ -779,6 +819,53 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   });
 
   /* ── [F] 불변 — 등재문 요구 ③ · 지불 이미터 ──────────────────────── */
+  /* ── [J] 12회차 — 플래시가 «되그려야 하는 글자» 띠에서 α 를 뺀다 ────────────────
+     11회차까지 남아 있던 ④ 의 마지막 자리(«플래시 판이 라벨 밑판을 밝힌다» — 채점 2인 1순위가
+     두 회차 연속 일치)를 닫은 자리다. 회수·되돌림·대가의 **값**은 `probe683d` [4][5] 가 재고
+     (그 자가 마스크·기준선을 들고 있다), 이 절은 그 처방이 **어떤 모양으로 서 있어야 하는가**를
+     묶는다 — 손 상수로 굳지 않았는가 · 스코프가 이 화면 밖으로 안 새는가 · 자리가 잉크 윗변인가. */
+  blk('J] 글자 띠 α — 손잡이의 모양 · 스코프 · 자리 (12회차)');
+  ok(/function fxKeepTxtTop\(el\)\{/.test(src) && /function fxFlashFade\(d, el, top, h\)\{/.test(src),
+     'J1 손잡이가 이름 있는 함수 둘이다(`fxKeepTxtTop`·`fxFlashFade`) — 호출부에 산수를 안 적는다');
+  ok(/function fxKeepTxtTop[\s\S]{0,600}querySelectorAll\(FXKEEP_TXT\)/.test(src),
+     'J2 ★ 신고 목록을 **795 의 `FXKEEP_TXT` 에서 되읽는다** — «되그릴 잉크» 목록이 둘로 갈리지 않는다 '
+     + '(갈리면 한쪽만 늘어나는 날 조용히 어긋난다)');
+  ok(/function fxFlashFade[\s\S]{0,700}borderTopWidth/.test(src),
+     'J3 ★ 페이드 길이가 **`.fx-flash` 자신의 `border-width`** 에서 나온다 — 손 상수를 새로 안 적었다(795·862 처방)');
+  ok(/function fxFlashFade[\s\S]{0,700}FXFLASH_PEAK/.test(src),
+     'J4 봉우리 보정에 이미 있는 `FXFLASH_PEAK` 를 쓴다 — 마스크는 요소 좌표라 `scale(1.06)` 을 같이 탄다');
+  const fade = await ev(p, () => {
+    const L = document.getElementById('fxl'); if (!L) return null;
+    while (L.firstChild) L.removeChild(L.firstChild);
+    const card = document.querySelector('.rw-c[data-rw]'); const icon = card && card.querySelector('i');
+    if (!card || !icon) return null;
+    const rd = q => { const f = L.querySelector('.fx-flash');
+      const m = f ? (getComputedStyle(f).maskImage || getComputedStyle(f).webkitMaskImage || 'none') : 'none';
+      const g = /([\d.]+)px\s*,\s*(?:transparent|rgba\(0,\s*0,\s*0,\s*0\))\s+([\d.]+)px/.exec(String(m));
+      const o = { m: String(m).slice(0, 120), top: f ? parseFloat(f.style.top) : null,
+                  a: g ? parseFloat(g[1]) : null, z: g ? parseFloat(g[2]) : null };
+      while (L.firstChild) L.removeChild(L.firstChild);
+      return o; };
+    fxFlash(card, 340, false, true); const A = rd();
+    fxFlash(icon, 340, false, true); const B = rd();
+    return { A, B, kt: (typeof fxKeepTxtTop === 'function') ? fxKeepTxtTop(card) : null };
+  });
+  info('신고 호스트(유물 카드) 마스크', fade ? fade.A.m : '측정 실패');
+  info('형제 호스트(아이콘 상자) 마스크', fade ? fade.B.m : '측정 실패');
+  ok(!!fade && /gradient/.test(fade.A.m) && fade.A.z != null,
+     'J5 신고 잉크를 **가진** 호스트에서 마스크가 선다', fade ? String(fade.A.z) + 'px 에서 α=0' : '측정 실패');
+  ok(!!fade && !/gradient/.test(fade.B.m),
+     'J6 ★ **스코프의 짝** — 그 잉크가 없는 호스트는 마스크 0건. 09·12·17·코스튬·장비·훈련·단련·룬이 '
+     + '한 픽셀도 안 바뀌는 근거가 이 항이다(`verify619` [K6] 와 같은 축)', fade ? fade.B.m : '측정 실패');
+  const cy = fade && fade.A.top != null && fade.A.z != null ? fade.A.top + fade.A.z : null;
+  ok(cy != null && fade.kt != null && cy <= fade.kt + 0.5 && cy >= fade.kt - 6,
+     'J7 ★ α=0 지점이 **신고 잉크 윗변 바로 위**다(0~6px 위 = 봉우리 보정분) — 아래면 글자를 계속 밝히고, '
+     + '너무 위면 플래시를 필요 이상으로 깎는다',
+     cy != null && fade.kt != null ? ('α=0 ' + Math.round(cy * 100) / 100 + ' ↔ 잉크 윗변 ' + Math.round(fade.kt * 100) / 100) : '측정 실패');
+  ok(!!fade && fade.A.a != null && fade.A.z != null && fade.A.z - fade.A.a > 4,
+     'J8 하드 컷이 아니라 **페이드**다(α 1→0 구간이 4px 초과) — 컷은 흰 링을 한 줄에서 끊어 «잘린 액자» 로 읽힌다',
+     fade ? (Math.round((fade.A.z - fade.A.a) * 100) / 100 + 'px') : '측정 실패');
+
   blk('F] 불변 — 텍스트 0건(666) · 지불 이미터는 그대로 산다');
   const txt = await ev(p, () => {
     const L = document.getElementById('fxl'); if (!L) return -1;
