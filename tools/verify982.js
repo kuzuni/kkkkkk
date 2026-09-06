@@ -167,9 +167,17 @@ const med = xs => { const s = xs.slice().sort((a, b) => a - b); return s[Math.fl
         const nAll = Object.values(nd);
         const nMed = med(nAll), nLo = nMed * (1 - DENS_TOL);
         const nBad = Object.keys(nd).filter(i => nd[i] < nLo);
-        ok(nBad.length >= 4,
+        /* ⚑ 이관(2026-09-06, 981 2회차) — 기대를 **4 → 3** 으로 내렸다. 되돌림 사본의 하한은
+           «그 사본의 중앙값 × 0.75» 라 **남의 회차가 밀도를 내리면 같이 내려간다**: 981 2회차가
+           `rico`(마름모 → 뿔 결정) 0.532 → 0.465 · `meteor` 0.641 → 0.501 · `flask` 0.645 → 0.593
+           으로 셋을 내리자 중앙값이 0.532 → 0.489, 되돌림 하한이 0.399 → 0.360 이 됐고
+           표의 넷 중 `whirl`(0.36 대)이 그 아래로 **안 떨어지게** 됐다(4 → 3).
+           ⚠ 이것은 982 의 수리가 풀린 것이 아니다 — [B1]·[B3] 은 초록이고 스프레드는 오히려
+             2.81 → 1.77 로 더 좁다(981 이 꽉 찬 쪽을 깎았다). 숫자를 못박으면 이런 «옆 회차»
+             마다 자가 거짓말을 한다(348). 「셋 이상이면 표가 일하고 있다」로 충분하다. */
+        ok(nBad.length >= 3,
            '[R1] 표를 비우면 [B1] 이 빨개진다 — 하한(' + nLo.toFixed(3) + ') 미달 ' + nBad.length +
-           '종 ≥ 4 (' + nBad.map(i => i + ':' + nd[i].toFixed(3)).join(' · ') + ')');
+           '종 ≥ 3 (' + nBad.map(i => i + ':' + nd[i].toFixed(3)).join(' · ') + ')');
         /* ⚑ [C3] 이 «범위» 를 못박는다 — 표에 없는 종은 **한 화소도** 안 바뀌어야 한다.
            표를 비운 사본과 제품에서 그 13종의 밀도가 갈리면 pad 가 남의 자리로 샌 것이다. */
         const touched = new Set((src.match(/const SHOT_FILL = \{([^}]*)\}/) || [, ''])[1]

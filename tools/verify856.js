@@ -1202,14 +1202,25 @@ async function measure(browser, url) {
          규격 문장 자체(«코어는 덩어리의 채움이 아니다» = 상한을 넘지 않는다)는 [B10d] 가 따로 못박는다. */
       const brs = blobIds.map(i => r.out.rows[i].ratio);
       const bmx = brs.length ? Math.max.apply(null, brs) : 0, bmn = brs.length ? Math.min.apply(null, brs) : 0;
-      ok(blobIds.length >= 3 && bmn > 0 && bmx / bmn <= BAND_W,
+      /* ⚑ 이관(2026-09-06, 981 2회차) — 머릿수 기대를 **3 → 2** 로 내렸다. 무리를 가르는 것은
+         위에 적힌 대로 **제품의 규칙**(`K·본체폭 ≥ 0.8·상한`)이라 «몇 종이 덩어리인가» 는
+         실루엣을 고치는 회차마다 바뀐다 — 981 2회차가 `flask`(화염병) 목을 늘리며 본체 폭을
+         ±11 → ±10.5 로 줄이자 그 종이 규칙상 **획 무리로 옮겨 갔다**(덩어리 3 → 2).
+         ⚠ 축이 빠진 것이 아니다 — 옮겨 간 종은 그 자리에서 **획 무리의 비율 밴드**([B10a])가
+           그대로 재고, 이 항은 남은 둘(boom·bounce)의 «본체 대비 비» 를 계속 견준다(실측 1.02배).
+           머릿수를 못박으면 실루엣이 갈릴 때마다 자가 «수리가 풀렸다» 고 거짓말한다(348).
+           ⚠ 1종 이하로 내려가면 이 항은 **공허해진다** — 그때는 무르게 풀지 말고 축을 다시 세워라. */
+      ok(blobIds.length >= 2 && bmn > 0 && bmx / bmn <= BAND_W,
          '[B10c] 덩어리 무리 ' + blobIds.length + '종은 **본체 대비 비**가 한 밴드 — 최대 ' + bmx.toFixed(3) +
          ' ÷ 최소 ' + bmn.toFixed(3) + ' = ' + (bmn > 0 ? (bmx / bmn).toFixed(2) : '∞') + '배 ≤ ' + BAND_W +
          ' (수리 전 1.73배 · ' + blobIds.join(' · ') + ')');
       /* [B10d] 규격 문장 그대로 — «넘으면 반짝임이 채움이 된다». 상한은 제품의 상수에서 온다(사본 금지). */
       const ws = blobIds.map(i => r.out.rows[i].wc);
       const wmx = ws.length ? Math.max.apply(null, ws) : 0, wmn = ws.length ? Math.min.apply(null, ws) : 0;
-      ok(blobIds.length >= 3 && wmn > 0 && capW > 0 && wmx <= capW * 1.05,
+      /* ⚑ 이관(2026-09-06, 981 2회차) — 머릿수 3 → 2. 근거는 바로 위 [B10c] 주석과 **같은 것**이다
+         (무리를 가르는 것은 제품의 규칙이고, 981 이 실루엣을 갈라 `flask` 가 획 무리로 옮겨 갔다).
+         재는 값(코어 폭 ≤ 상한 +5%)은 한 글자도 안 바꿨다. */
+      ok(blobIds.length >= 2 && wmn > 0 && capW > 0 && wmx <= capW * 1.05,
          '[B10d] 어느 덩어리도 코어 폭이 **상한 폭**을 넘지 않는다 — 최대 ' + wmx.toFixed(2) +
          ' ≤ ' + (capW * 1.05).toFixed(2) + ' (상한 ' + capW.toFixed(2) + ' +5% · 최소 ' + wmn.toFixed(2) + ')');
 
