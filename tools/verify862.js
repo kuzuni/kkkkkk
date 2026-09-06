@@ -177,13 +177,17 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE, NOFADE }) => {
      유물 카드는 «Lv.n» 글자를 카드 하변 밖으로 걸치고 795 가 그것을 «워시 위로 되그릴 잉크» 로
      신고한다. 그 신고가 있으면 플래시 **아래변만** 그 잉크 앞에서 멈춘다(`fxFlashClampH`) —
      그래야 판이 글자를 안 밝히고, 12회차가 마스크로 하려다 만든 «ㄷ 자 액자» 도 안 생긴다.
-     ⇒ [B1] 은 **좌·우·상 세 변**을 종전 문턱 그대로 묻고(한 칸도 안 넓혔다),
-       아래변은 **[B1b]** 가 «신고가 없으면 띠 · 있으면 잉크 앞» 두 갈래로 묻는다. */
-  ok(!!B && !!B.box && Math.abs((B.box.x - B.card.x) - band) < 0.6 && Math.abs((B.box.y - B.card.y) - band) < 0.6
+     ⇒ [B1] 은 **좌·우 두 변**을 종전 문턱 그대로 묻고(한 칸도 안 넓혔다),
+       아래변은 **[B1b]**, 윗변은 **[B1c]** 가 각각 «신고가 없으면 띠 · 있으면 …» 두 갈래로 묻는다.
+     ⚑⚑ **683 16회차 이관 — 윗변이 [B1] 에서 빠져 [B1c] 로 갔다(333 처방: 지우지 않고 갈랐다).**
+       13~15회차는 아래변만 올려 상자를 짧게 했고, 그 결과 위 여백 6 ↔ 아래 여백 27 이 됐다.
+       비평가 넷이 세 회차 연속 그 비대칭을 짚어(§13-5-2 · §15-5 2번) 16회차가 **액자를 호스트
+       중심에 세웠다** — 신고 잉크가 있는 호스트의 윗변은 이제 «띠» 가 아니라 **«아래 여백과 같은 값»**
+       이다. 신고가 없는 호스트는 종전 그대로 띠이고 그 짝을 [B1c] 가 사본으로 확인한다. */
+  ok(!!B && !!B.box && Math.abs((B.box.x - B.card.x) - band) < 0.6
      && Math.abs((B.card.w - B.box.w) - 2 * band) < 1.2,
-     'B1 ★ **단발 호출에서도** 상자가 좌·우·상 세 변 모두 띠(' + band + 'px)만큼 들어간다 — 들이기는 `inset` 인자가 아니라 «액자가 있는가» 가 정한다 (683 12·13회차: 아래변은 [B1b])',
-     B && B.box ? ('좌 Δ' + r2(B.box.x - B.card.x) + ' · 상 Δ' + r2(B.box.y - B.card.y)
-                   + ' · 폭 −' + r2(B.card.w - B.box.w)) : '측정 실패');
+     'B1 ★ **단발 호출에서도** 상자가 좌·우 두 변 모두 띠(' + band + 'px)만큼 들어간다 — 들이기는 `inset` 인자가 아니라 «액자가 있는가» 가 정한다 (683 12·13회차: 아래변은 [B1b] · 16회차: 윗변은 [B1c])',
+     B && B.box ? ('좌 Δ' + r2(B.box.x - B.card.x) + ' · 폭 −' + r2(B.card.w - B.box.w)) : '측정 실패');
   const BF = await ev(p, () => {
     const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
     const card = document.querySelector('.rw-c[data-rw]'); if (!card) return null;
@@ -208,6 +212,17 @@ const SHOT = async ({ T, RID, RINGFN, NOCAP, BLANK, PHASE, NOFADE }) => {
      + '**있으면** 봉우리에서 그 잉크 윗변에 정확히 선다 (683 12·13회차 · 손 상수 0개)',
      BF && BF.off && BF.card ? ('신고 없음 높이 −' + r2(BF.card.h - BF.off.h)
        + ' · 신고 있음 봉우리 Δ ' + r2(BF.kt - botOn) + 'px') : '측정 실패');
+  /* ⚑⚑ 683 16회차 — **윗변의 두 갈래**(위 [B1] 머리말). 아래변이 글자 앞에서 멈추는 만큼
+     위도 같이 들여 액자를 호스트 중심에 세운다 — 대칭이 곧 판정이다(4인·3회차 지적). */
+  const gTopOn = BF && BF.on && BF.card ? BF.on.top - BF.card.y : null;
+  const gBotOn = BF && BF.on && BF.card ? (BF.card.y + BF.card.h) - (BF.on.top + BF.on.h) : null;
+  const gTopOff = BF && BF.off && BF.card ? BF.off.top - BF.card.y : null;
+  info('윗변 — 신고 있음 ↔ 없음', gTopOn == null ? '측정 실패'
+    : ('위/아래 여백 ' + r2(gTopOn) + ' / ' + r2(gBotOn) + '  ↔  신고 없음 위 여백 ' + r2(gTopOff) + ' (띠 ' + band + ')'));
+  ok(gTopOn != null && gTopOff != null && Math.abs(gTopOff - band) < 0.6 && Math.abs(gTopOn - gBotOn) <= 1.0,
+     'B1c ★ **윗변의 두 갈래** — 신고 잉크가 **없으면** 종전대로 띠(' + band + 'px)만큼이고(그 사본으로 확인), '
+     + '**있으면** 위 여백이 아래 여백과 같다 = 액자가 호스트 중심에 선다 (683 16회차 · 손 상수 0개)',
+     gTopOn != null ? ('신고 있음 Δ(위−아래) ' + r2(gTopOn - gBotOn) + 'px · 신고 없음 위 여백 ' + r2(gTopOff)) : '측정 실패');
   ok(!!B && B.rim != null && B.rim === Math.min(cssRim, band) && B.rim < cssRim,
      'B2 ★ 흰 테가 «CSS 값 ↔ 띠» 중 작은 쪽이다 — 액자선 자리를 넘지 않는다',
      B ? (B.rim + 'px = min(' + cssRim + ', ' + band + ')') : '측정 실패');

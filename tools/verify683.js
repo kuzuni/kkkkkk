@@ -915,6 +915,23 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
   ok(!!fade && !!fade.A && !/gradient/.test(String(fade.A.mask)),
      'J8 ★ **액자가 닫혀 있다** — 마스크 0건이라 네 변이 다 그려진다(12회차 «ㄷ 자» 결손의 회귀 게이트)',
      fade && fade.A ? String(fade.A.mask) : '측정 실패');
+  /* ⚑⚑ **16회차 — 액자는 호스트 중심에 선다(대칭).** 13~15회차는 아래변만 올려 상자를 짧게 했고,
+     그러자 위 여백 6 ↔ 아래 여백 27(Δ21px) · 중심 10.5px 위가 됐다. 비평가 **넷이 세 회차 연속**
+     그것을 짚었다(§13-5-2 21px · §15-5 2번 20px — 두 진단이 1px 안에서 같다).
+     ⚠ §15-5 2번의 가설(«노드 상자 ↔ 잉크 bbox»)은 `probe683f` [2] 가 **기각**했다(3.73px 뿐) —
+       임자는 «라벨 잉크가 카드 하변 20px 위에서 시작한다» 이고, 아래는 더 못 내려가므로
+       **위를 그만큼 들이는 것**이 유일한 길이다. [J7] 은 그 위에서도 그대로 성립한다
+       (분모가 `1+PEAK` → `PEAK` 로 바뀐 것은 «윗변 고정» 이 «중심 고정» 이 됐기 때문이다). */
+  const gT = fade && fade.A && fade.A.hostY != null ? fade.A.top - fade.A.hostY : null;
+  const gB = fade && fade.A && fade.A.hostY != null
+    ? (fade.A.hostY + fade.A.hostH) - (fade.A.top + fade.A.h) : null;
+  info('신고 호스트 여백 — 위 ↔ 아래', gT == null ? '측정 실패' : (r2b(gT) + ' ↔ ' + r2b(gB)));
+  ok(gT != null && Math.abs(gT - gB) <= 1.0,
+     'J9 ★ **액자가 호스트 중심에 선다** — 위·아래 여백이 1px 안에서 같다(CT·CU·CV·CW 4인이 3회차 연속 짚은 비대칭이 닫힌다)',
+     gT != null ? ('Δ(위−아래) ' + r2b(gT - gB) + 'px') : '측정 실패');
+  ok(gT != null && fade.A0 && Math.abs((fade.A0.top - fade.A.hostY) - (fade.A0.h ? ((fade.A.hostY + fade.A.hostH) - (fade.A0.top + fade.A0.h)) : NaN)) <= 1.0,
+     'J10 ★ **스코프의 짝** — 신고 잉크가 없는 사본도 위·아래가 같다(그쪽은 애초에 안 짧아지므로 «띠 = 띠» 다) = 이 손이 그 호스트를 한 픽셀도 안 건드렸다',
+     fade && fade.A0 ? ('위 ' + r2b(fade.A0.top - fade.A.hostY) + ' ↔ 아래 ' + r2b((fade.A.hostY + fade.A.hostH) - (fade.A0.top + fade.A0.h))) : '측정 실패');
 
   blk('F] 불변 — 텍스트 0건(666) · 지불 이미터는 그대로 산다');
   const txt = await ev(p, () => {
