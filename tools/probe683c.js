@@ -32,6 +32,7 @@
 'use strict';
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const KF14 = require('./kf994').kfPre994();   /* 994 — «태생 α 램프» 되돌림 사본(제품에서 파생) */
 const { chromium } = pw();
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
@@ -54,7 +55,7 @@ const r2 = v => Math.round(v * 100) / 100;
      들이면서 라벨 주변의 흰 바탕이 줄어 그 절대값이 통째로 이동했다(15.26 → 5.16). 문턱을 낮추면
      «패치가 죽어도 초록» 이 되고, 그대로 두면 «영영 빨간 자» 가 된다 ⇒ 둘 다 피하는 길은
      **되돌림 대비**뿐이다(패치를 걷은 사본과 견준다 — 기하가 또 바뀌어도 같이 움직인다). */
-const SHOT = async ({ T, NOGAIN, RAISE, INSET, RID, BLANK, NOKEEP }) => {
+const SHOT = async ({ T, NOGAIN, RAISE, INSET, RID, BLANK, NOKEEP, KF }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__p3to) { window.__p3to = window.setTimeout; window.__p3ri = window.requestAnimationFrame; }
   window.setTimeout = () => 0; window.requestAnimationFrame = () => 0;
@@ -64,6 +65,10 @@ const SHOT = async ({ T, NOGAIN, RAISE, INSET, RID, BLANK, NOKEEP }) => {
   if (window.__p3ff) { window.fxFlash = window.__p3ff; window.__p3ff = null; }
   if (INSET) { window.__p3ff = window.fxFlash;
     window.fxFlash = function (el, iv, inset, keep) { return window.__p3ff.call(this, el, iv, true, keep); }; }
+  /* ⚑ 994 이관 — «태생 α 램프» 를 되돌린 사본용 키프레임(공용 부품 `tools/kf994.js` 가 제품에서
+     파생한다). **스폰 전에** 걸어야 한다 — 키프레임은 애니가 붙는 시점에 굳는다. */
+  const k9 = document.getElementById('__p3kf'); if (k9) k9.remove();
+  if (KF) { const t = document.createElement('style'); t.id = '__p3kf'; t.textContent = KF; document.head.appendChild(t); }
   const it = RELICS.filter(r => r.id === RID)[0]; if (!it) return null;
   if (T >= 0) rwSummonFx(it, true, null);
   /* RAISE — 패치를 레이어 맨 끝으로 옮긴다(그리는 순서가 곧 위아래다 · `fxFlashKeep` 머리말) */
@@ -231,6 +236,12 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
     /* ⚑ 10회차 — 꼬리에서도 패치가 일을 하는가(패치 수명 ↔ 플래시 수명이 어긋나는지) */
     ['t20 되돌림 — 795 패치 걷음(알 켬)',    { T: 20, NOKEEP: true }],
     ['t40 되돌림 — 795 패치 걷음(알 켬)',    { T: 40, NOKEEP: true }],
+    /* ⚑⚑ 994 이관 — [3-a] 의 **짝 둘**. 994 가 태생 α 를 겹침 창에 맞춘 뒤로 t0 에서는 알이 라벨을
+       거의 안 씻어, «패치를 걷으면 씻김이 돌아온다» 는 물음이 이 트리에서 1%p 로 내려앉았다
+       (15% → 16%). 항의 뜻·문턱(+8%p)은 그대로 두고 **그 물음이 사는 나무**(994 되돌림 사본)에서
+       묻는다 — `probe683d` [2]·[3] 과 같은 처방이고, 아래 ⏸ 관측줄은 **현행 트리**를 계속 찍는다. */
+    ['t0(994 되돌림) 현행(알 켬)',           { T: 0, KF: KF14 }],
+    ['t0(994 되돌림) 795 패치 걷음(알 켬)',  { T: 0, NOKEEP: true, KF: KF14 }],
   ];
   const CLv = {};
   const CLu = {};   /* ⚑ 10회차 — «4.5:1 미만» 도 같이 담는다([3-a] 가 이 축으로 옮겼다) */
@@ -295,8 +306,10 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
        안 나쁘다.** 헛초록이 아님은 같은 표의 **t20·t40 이 62%** 인 것이 보증한다(정착 14%) —
        이 자가 그 축에서 실제로 빨개질 수 있다는 뜻이다. 그 t20·t40 은 아래 ⏸ 로 매 실행 찍는다. */
   const u0 = CLu['t0 현행(알 켬 — 비평가가 본 화면)'], ub = baseCL && baseCL.base ? baseCL.base.under45 : null;
-  const noKeep = CLv['t0 되돌림 — 795 패치 걷음(알 켬)'];
-  const uNoKeep = CLu['t0 되돌림 — 795 패치 걷음(알 켬)'];
+  /* 994 이관 — [3-a] 만 «994 되돌림» 짝으로 잰다(위 cases 머리말). 나머지 줄·⏸ 관측은 현행 트리다. */
+  const now9 = CLv['t0(994 되돌림) 현행(알 켬)'], u09 = CLu['t0(994 되돌림) 현행(알 켬)'];
+  const noKeep = CLv['t0(994 되돌림) 795 패치 걷음(알 켬)'];
+  const uNoKeep = CLu['t0(994 되돌림) 795 패치 걷음(알 켬)'];
   /* ⚑⚑ **10회차 최종 — 마스크를 고치자 «되돌림» 이 처음으로 듣는다.**
      이 회차에 이 항을 두 번 옮겼고, 두 번째가 답이다.
        ⓐ 첫 시도(되돌림 배수 3) — **기각**. 움직이는 마스크에서는 패치를 걷어도 값이 5.16:1 로
@@ -315,12 +328,14 @@ const RESTORE = () => { const el = document.querySelector('[data-rw="' + '@' + '
      하드는 그 1차 축에서 **+8%p 이상**으로 다시 적고(실측 +10%p · 조이는 쪽으로만 다시 적어라),
      중앙값은 아래 꼬리표로 계속 찍는다. 문턱을 무르게 잡은 것이 아니라 **섞여 있던 두 축 중
      이 자의 축을 골랐다**(333 처방 · 옛 배수는 기록으로 남긴다). */
-  ok(u0 != null && uNoKeep != null && uNoKeep - u0 >= 0.08
-     && now != null && noKeep != null && noKeep > 0 && now > noKeep,
-     '3-a **795 의 라벨 패치가 듣고 있다** — 걷으면 «4.5:1 미만» 이 8%p 이상 늘고 중앙값도 내려간다(683 12회차 이관 · 옛 «중앙값 배수 1.5»)',
-     now != null && noKeep != null
-       ? (r2(now) + ':1 → 걷으면 ' + r2(noKeep) + ':1 (배수 ' + r2(now / noKeep) + ') · «4.5:1 미만» '
-          + Math.round(u0 * 100) + '% → ' + Math.round(uNoKeep * 100) + '%')
+  ok(u09 != null && uNoKeep != null && uNoKeep - u09 >= 0.08
+     && now9 != null && noKeep != null && noKeep > 0 && now9 > noKeep,
+     '3-a **795 의 라벨 패치가 듣고 있다** — 걷으면 «4.5:1 미만» 이 8%p 이상 늘고 중앙값도 내려간다'
+     + '(683 12회차 이관 · 옛 «중앙값 배수 1.5» · **994 이관**: 994 를 되돌린 사본에서 묻는다)',
+     now9 != null && noKeep != null
+       ? (r2(now9) + ':1 → 걷으면 ' + r2(noKeep) + ':1 (배수 ' + r2(now9 / noKeep) + ') · «4.5:1 미만» '
+          + Math.round(u09 * 100) + '% → ' + Math.round(uNoKeep * 100) + '%'
+          + '  [현행 트리 t0 ' + (u0 != null ? Math.round(u0 * 100) + '%' : '—') + ']')
        : '측정 실패');
   /* ⏸ **실패로 안 센다 — 10회차가 넘기는 관측이자 이 행의 남은 ④ 감점이다.**
      고정 마스크로 재면 봉우리(t0)가 **최악**이고 정착보다 «4.5:1 미만» 이 **+17%p** 다

@@ -204,9 +204,16 @@ async function burstAndGrid(page) {
   ok(lin >= KF.length - 1,
      'A8 ★ **마디마다 `linear`** — 감속은 계수가 지고 마디 경계에서 속도가 안 튄다(3회차 본체)',
      lin + '/' + (KF.length - 1) + ' 마디');
-  ok(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:\.55\}/.test(code)
+  /* ⚑ 994 이관(333 — 지우지 않고 **누가 무엇을 소유하는가**로 다시 적었다) — 이 항은 «681 이 공용
+     곡선을 고쳐도 유물 알은 안 따라온다» 는 **격리 보증**이다. 그런데 태생 α 를 상수로 박아 두어
+     683/994 가 그 값을 만질 때마다 **남의 자에서** 빨개진다(994 가 0% `.55` → `.10` + 10% `.55` 램프로
+     겹침 창을 닫았다). ⇒ 여기서는 **격리에 필요한 것**(전용 곡선의 0% transform 이 공용과 다른 값이고
+     알이 그 이름을 탄다)만 묻고, **α 의 래칫은 그 임자에게 맡긴다**(`verify683` [C8b] 봉우리 .55 ·
+     `probe994` [3] 겹침 창). 문턱을 무르게 한 것이 아니라 **소유를 옮겼다**. */
+  ok(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:[.\d]+\}/.test(code)
      && /\.fx-spark\.fx-rlic\{[\s\S]{0,400}?animation-name:fxRlic/.test(code),
-     'A7 전용 봉투 `fxRlic`(753 유물 획득 알)은 **한 값도 안 바뀌었다** — 이 곡선을 안 탄다');
+     'A7 전용 봉투 `fxRlic`(753 유물 획득 알)은 **이 곡선을 안 탄다** — 0% 는 transform 째로 따로 적혀 있다'
+     + '(태생 α 의 값 래칫은 `verify683` [C8b] · 994)');
 
   const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });

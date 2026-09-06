@@ -68,10 +68,10 @@ const GLOW0 = '.fx-spark.fx-rlic{filter:brightness(0) invert(1)'
   + ' drop-shadow(1.4px 1.4px 0 #140D04) drop-shadow(-1.4px -1.4px 0 #140D04)'
   + ' drop-shadow(1.4px -1.4px 0 #140D04) drop-shadow(-1.4px 1.4px 0 #140D04) !important}';
 const CLEAR = '.fx-spark.fx-rlic{opacity:0 !important}';
-/* ↩ 14회차 상태(태생 α .55 · 램프 없음) — [4] 되돌림 시험이 쓰는 사본 */
-const R14 = '@keyframes fxRlic{0%{transform:translate(0,0) scale(1);opacity:.55}'
-  + '35%{transform:translate(calc(var(--dx)*.55),calc(var(--dy)*.55)) scale(.72);opacity:.45}'
-  + '100%{transform:translate(var(--dx),var(--dy)) scale(.45);opacity:0}}';
+/* ↩ 14회차 상태(태생 α .55 · 램프 없음) — [2]·[4] 가 쓰는 «수리 전» 사본.
+   ⚠ 곡선은 손으로 안 적는다 — 공용 부품 `tools/kf994.js` 가 **제품에서 파생**한다(402 «사본을 지운다»).
+     그래서 봉우리 값을 누가 옮기면 이 사본도 같이 옮겨 가고, 자가 «옛 상수» 를 굳히지 않는다. */
+const R14 = require('./kf994').kfPre994();
 
 const SHOT = async ({ T, NOGAIN, RID, BLANK, SEED, CSS }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);

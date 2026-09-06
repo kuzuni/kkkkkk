@@ -91,10 +91,10 @@ const SEEDER = () => {
    [4] 가 12·13회차 제품을 `NOFADE` 로 되돌리고 «11회차 판에서 알이 남긴 몫» 을 묻는 것과 **같은 꼴**이라
    ([4] 머리말), [2]·[3] 도 994 를 되돌린 사본 위에서 묻는다 — 항의 뜻·문턱은 한 칸도 안 바뀌고
    («패치를 걷으면 무너진다» ≥1.3 · «되돌린 사본보다 5%p 낮다»), 재는 나무만 그 물음이 사는 나무다.
-   ⚠ 이 스텁을 빼면 [2-c]·[3-a] 는 **문턱 폭 안**(1%p)으로 내려앉아 아무것도 안 묻는 항이 된다. */
-const KF14 = '@keyframes fxRlic{0%{transform:translate(0,0) scale(1);opacity:.55}'
-  + '35%{transform:translate(calc(var(--dx)*.55),calc(var(--dy)*.55)) scale(.72);opacity:.45}'
-  + '100%{transform:translate(var(--dx),var(--dy)) scale(.45);opacity:0}}';
+   ⚠ 이 스텁을 빼면 [2-c]·[3-a] 는 **문턱 폭 안**(1%p)으로 내려앉아 아무것도 안 묻는 항이 된다.
+   ⚠ 곡선은 **손으로 안 적는다** — 공용 부품 `tools/kf994.js` 가 제품의 `@keyframes fxRlic` 에서
+     램프만 걷어 파생한다(402 «사본을 지운다» · 봉우리 값을 누가 옮겨도 사본이 따라온다). */
+const KF14 = require('./kf994').kfPre994();
 const SHOT = async ({ T, NOGAIN, RAISE, RID, BLANK, NOKEEP, NOTOP, NOFADE, NOR994, SEED, KF }) => {
   const L = document.getElementById('fxl'); while (L && L.firstChild) L.removeChild(L.firstChild);
   if (!window.__p4to) { window.__p4to = window.setTimeout; window.__p4ri = window.requestAnimationFrame; }

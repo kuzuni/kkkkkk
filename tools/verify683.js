@@ -365,12 +365,33 @@ const sameSeq = (a, b, tol) => a.length === b.length && a.length > 0 && a.every(
        ② 공용 `fxSpark` 가 여전히 **존재**하며(없으면 `animation-name` 갈아 끼우기가 헛일이다)
        ③ 그 둘의 선언이 **같지 않다**(공용이 바뀌어도 이 알은 안 따라간다).
      ⇒ 681 이 공용 곡선을 어떻게 고치든 이 항은 «이 알만 다른 봉투» 를 계속 지킨다. */
-  const mRlic = code.match(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:\.55\}\s*35%\{transform:translate\(calc\(var\(--dx\)\*\.55\),calc\(var\(--dy\)\*\.55\)\) scale\(\.72\);opacity:\.45\}\s*100%\{transform:translate\(var\(--dx\), ?var\(--dy\)\) scale\(\.45\);opacity:0\}\}/);
+  /* ⚑⚑ 994 이관(333 — 지우지 않고 **α 를 «자리» 가 아니라 «봉우리» 로 묻는다**) — 994 가 태생 α 를
+     겹침 창(0% `.10` → 10% `.55`)에 맞추면서 이 정규식의 `opacity:\.55` 가 **0% 자리에서 사라졌다**.
+     이 항이 지키려는 것은 ① 전용 봉투의 **transform 계수 셋**([C6] 산수와 같은 값) ② 공용 곡선과
+     **다른 봉투**라는 것 둘이고, 태생 α 의 «자리» 는 그 어느 쪽도 아니다. ⇒ 램프 키프레임을
+     선택항으로 받고, **봉우리 α(.55 · 753 9회차 2인 독립 일치)를 래칫으로** 따로 묻는다([C8b]).
+     ⚠ transform 계수(translate .55 / 1 · scale 1 → .72 → .45)는 한 글자도 안 무르게 하지 않았다. */
+  const mRlic = code.match(/@keyframes fxRlic\{0%\{transform:translate\(0,0\) scale\(1\);opacity:([.\d]+)\}\s*(?:(\d+)%\{opacity:([.\d]+)\}\s*)?35%\{transform:translate\(calc\(var\(--dx\)\*\.55\),calc\(var\(--dy\)\*\.55\)\) scale\(\.72\);opacity:\.45\}\s*100%\{transform:translate\(var\(--dx\), ?var\(--dy\)\) scale\(\.45\);opacity:0\}\}/);
   const mSpk = code.match(/@keyframes fxSpark\{([\s\S]*?\})\}/);   /* 블록의 끝은 `}}` 다(681) */
   const sameEnv = !!(mRlic && mSpk) && mSpk[1].replace(/\s+/g, '') === mRlic[0].replace(/^@keyframes fxRlic\{/, '').replace(/\}$/, '').replace(/\s+/g, '');
   ok(!!mRlic && /\.fx-spark\.fx-rlic\{[\s\S]{0,400}?animation-name:fxRlic/.test(code) && !!mSpk && !sameEnv,
      'C8 ★ 획득 알이 **전용 봉투(`fxRlic`)** 를 탄다 — 불투명 구간 안에서 이미 줄어들고, 공용 `fxSpark` 와 **서로 다른 봉투**다',
-     mRlic ? '0%s1/α.55 · 35%t.55/s.72/α.45 · 100%t1/s.45/α0 · 공용과 별개 ' + (!sameEnv) : '전용 곡선을 못 찾았다');
+     mRlic ? ('0%s1/α' + mRlic[1] + (mRlic[2] ? ' · ' + mRlic[2] + '%α' + mRlic[3] : '')
+              + ' · 35%t.55/s.72/α.45 · 100%t1/s.45/α0 · 공용과 별개 ' + (!sameEnv)) : '전용 곡선을 못 찾았다');
+  /* ⚑ 994 신설 [C8b] — **봉우리 α 래칫.** 753 9회차에 비평가 둘이 **독립으로 같은 수(0.55)** 를 적어
+     준 값이고(«알이 아이콘과 같은 모양·크기·자리라 태어나는 순간 칸이 통째로 단색 실루엣이 된다»),
+     994 는 그 값을 **옮기지 않고** 도달 시각만 겹침 창(≤12% = 45.6ms) 안으로 미뤘다. 이 항이
+     ① 봉우리가 여전히 .55 이고 ② 램프가 있으면 그 창 안에서 끝난다는 것을 매 실행 지킨다
+     (램프가 없으면 태생 α 자체가 봉우리다 — 994 이전 트리에서도 그대로 초록이다). */
+  const a0 = mRlic ? parseFloat(mRlic[1]) : null;
+  const aR = mRlic && mRlic[3] ? parseFloat(mRlic[3]) : null;
+  const aPk = mRlic ? Math.max(a0, aR == null ? 0 : aR) : null;
+  const rampAt = mRlic && mRlic[2] ? parseInt(mRlic[2], 10) : null;
+  ok(aPk === 0.55 && (rampAt === null || (rampAt > 0 && rampAt <= 12)),
+     'C8b ★ **봉우리 α 는 .55 그대로다**(753 9회차 2인 독립 일치) — 994 는 값을 안 옮기고 도달 시각만 '
+     + '«아이콘과 겹쳐 있는 창»(≤12% = 45.6ms) 안으로 미뤘다',
+     mRlic ? ('태생 α ' + a0 + (rampAt === null ? ' (램프 없음)' : ' → ' + rampAt + '% 에 ' + aR)
+              + ' · 봉우리 ' + aPk) : '전용 곡선을 못 찾았다');
   /* ⚑ 753 7회차 — 취소선. `fxBurst` 가 알을 `<s>` 로 낳으므로 기본값 `line-through` 가 살아 있으면
      아이콘 크기에서 **폭 156 · 두께 12px 검정 막대**가 글리프를 가로지른다(비평가 2인 독립 관측). */
   ok(/\.fx-spark\.fx-rlic\{[\s\S]{0,400}?text-decoration:none/.test(code),

@@ -26,6 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const KF14 = require('./kf994').kfPre994();   /* 994 — «태생 α 램프» 되돌림 사본(제품에서 파생) */
 const { chromium } = pw();
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
@@ -318,6 +319,17 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
      [B3] **되돌림 시험**(3px 밀면 [B1] 이 실제로 빨개진다). 판정에서 뺀 합본 값은 [B4] 가 **매 실행
      숫자로 찍는다**(326 `ck199` 꼴) — 글로우가 진짜로 한쪽으로 쏠리면 그 수가 먼저 말한다. */
   blk('B] 자리 — **찍힌 잉크**로 «알 중심 = 아이콘 중심»(350 규칙 · 820 이 마스크를 갈랐다)');
+  /* ⚑⚑ **994 이관 — 이 절만 «태생 α» 를 옛 봉우리로 고정하고 잰다(333 — 재는 나무만 옮겼다).**
+     994 가 태생 세기를 겹침 창에 맞춘 뒤(0% `.10` → 10% `.55`) 이 절의 잉크 추출이 얇아졌다 —
+     여기는 `currentTime = 0` 한 프레임을 재는데 그 프레임이 이제 가장 여린 프레임이라, 반픽셀
+     격자 위에서 중심이 ±2px 튄다([B2d] 가 그래서 빨갰다: 전경 몫 0.50 → 2.00px).
+     ⚠ **이 절이 묻는 것은 «기하»(753 ②③ — 중심·크기·전경 몫)이지 «세기» 가 아니다.** 그래서 곡선을
+       고치는 대신 **세기만** 옛 봉우리로 고정한다 — 자리·크기·개수는 α 와 무관하므로 묻는 값이
+       한 칸도 안 바뀌고(실측이 994 이전 수치로 그대로 돌아온다), 신호가 두꺼워 눈금 잡음이 죽는다.
+     ⚠ 봉우리 α 자체의 래칫은 `verify683` [C8b] 가, 겹침 창의 회수는 `probe994` [3] 이 소유한다.
+     ⚠ [C](봉투 계수·수명)·[R] 절에는 안 건다 — 거기는 **곡선 자체**를 묻는 자리다. */
+  if (KF14) await ev(p, kf => { const t = document.createElement('style'); t.id = '__v753kf';
+    t.textContent = kf; document.head.appendChild(t); }, KF14);
   const inkOf = async (clip, hide) => {
     const A = await READ(p, await p.screenshot({ clip }));
     await ev(p, hide, true); await p.waitForTimeout(120);
@@ -519,6 +531,9 @@ const READ = async (page, buf) => page.evaluate(u => new Promise(res => {
          f.dx.toFixed(2) + ', ' + f.dy.toFixed(2) + ' = ' + f.d.toFixed(2) + 'px'
          + ' · 잉크비 ' + (pInk.w / icInk.w).toFixed(3) + ' × ' + (pInk.h / icInk.h).toFixed(3));
   }
+
+  /* 994 이관 — [B] 절이 쓰던 «태생 α 고정» 을 여기서 걷는다(위 [B] 머리말) */
+  await ev(p, () => { const t = document.getElementById('__v753kf'); if (t) t.remove(); });
 
   /* ── [R] 되돌림 ───────────────────────────────────────────────────── */
   blk('R] 되돌림 — 옛 683 값으로 되돌리면 위 항이 실제로 빨개진다');
