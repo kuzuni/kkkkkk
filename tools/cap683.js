@@ -463,6 +463,10 @@ const LEGACY_B = process.argv.includes('--b-legacy');
 /* ⚠ 976 — `--b-nophase` 는 **얼리는 순간만** 975 방식(폴링이 떨어진 자리)으로 되돌린다.
    되돌림 시험 전용(`tools/verify976.js` §R)이고 채점용 캡처에 쓰면 안 된다. */
 const NOPHASE = process.argv.includes('--b-nophase');
+/* ⚠ 984 — `--b-nowait` 는 **닻을 찾자마자** 얼린다(겨눈 나이를 안 기다린다). «눈금 준수» 축의
+   되돌림 시험 전용(`tools/verify976.js` §R)이다 — 이것을 켜면 40·100·200ms 장이 «실측 < 겨눔» 이
+   되어 그 축이 빨개져야 한다. 채점용 캡처에 쓰면 안 된다. */
+const NOWAIT = process.argv.includes('--b-nowait');
 
 /* 한 홀드 안에서 «페이지 시각 T» 까지 실시간으로 누르고 있는다.
    ⚠ 시각의 기준은 **페이지 시계**여야 한다(Node 쪽 `Date.now()` 로 세면 CDP 왕복·스크린샷이
@@ -531,7 +535,7 @@ const FREEZE_TALLY = ({ tally }) => {
    **소환 뒤 절대 ms** 로 바꿨다: 「이 프레임은 그 알이 태어난 지 X ms 인 순간」이다.
    눈금 넷은 알 수명(`RW_GAIN` 380ms · 666 봉투)을 네 토막으로 덮는다. */
 const PHASE_MS = [10, 40, 100, 200];
-const PHASE_FREEZE_TALLY = ({ tally, off, wait }) => new Promise(res => {
+const PHASE_FREEZE_TALLY = ({ tally, off, wait, nowait }) => new Promise(res => {
   const T = window.__tick976 || { at: [] };
   const n0 = T.at.length, t0 = performance.now();
   const grab = ph => {
@@ -549,7 +553,8 @@ const PHASE_FREEZE_TALLY = ({ tally, off, wait }) => new Promise(res => {
     if (anchor < 0 && T.at.length > n0) anchor = T.at.length - 1;
     if (anchor >= 0) {
       const d = performance.now() - T.at[anchor];
-      if (d >= off) return grab({ ms: Math.round(d), off, k: anchor, late: false,
+      /* 984 되돌림 시험 — `nowait` 면 겨눈 나이를 안 기다리고 그 자리에서 얼린다(«눈금 준수» 빨강). */
+      if (nowait || d >= off) return grab({ ms: Math.round(d), off, k: anchor, late: false,
                                  newTicks: T.at.length - 1 - anchor });
       if (performance.now() - t0 > wait) return grab({ ms: Math.round(d), off, k: anchor, late: true,
                                  newTicks: T.at.length - 1 - anchor });
@@ -588,7 +593,7 @@ async function sceneB() {
     const info = NOPHASE
       ? await p.evaluate(FREEZE_TALLY, { tally: TALLY.toString() })
       : await p.evaluate(PHASE_FREEZE_TALLY,
-          { tally: TALLY.toString(), off: PHASE_MS[i % PHASE_MS.length], wait: 900 });
+          { tally: TALLY.toString(), off: PHASE_MS[i % PHASE_MS.length], wait: 900, nowait: NOWAIT });
     if (process.env.CAP683_DEBUG) console.error('[dbg] B' + (i + 1) + ' target=' + target + ' lastPoll=' + last + ' at=' + info.at);
     const { file, px, px0, warm } = await frame(p, info, 'B', i + 1);
     await p.evaluate(() => window.__capResume());
@@ -757,18 +762,38 @@ async function main() {
     const band = [0, 40, 100, 200], bn = a => { let i = 0; while (i < 3 && a >= band[i + 1]) i++; return i; };
     const minAge = B.map(r => (r.info.agesAll && r.info.agesAll.length) ? r.info.agesAll[0] : -1);
     const cov = new Set(minAge.filter(a => a >= 0).map(bn)).size;
-    console.log('씬 B 표본 위상(겨눈 나이 → 실측 · 네 장이 알 수명을 고르게 덮어야 한다): '
+    /* ⚑⚑ 984 — **판정이 붙는 자리는 여기 하나다: «눈금 준수»(실측 ≥ 겨눔).**
+       이 자가 고르는 것은 「언제 얼릴지」뿐이고, **초과분은 러너의 것**이다(스핀의 `setTimeout` 이
+       그 프레임의 렌더 뒤로 밀린다 — 실측 겨눔 10ms 가 18~587ms 에 떨어지고, 낮은 눈금이 높은
+       눈금을 **추월**하기도 한다: 실행 4 에서 10→70ms · 40→58ms). 그래서 「네 장이 서로 몇 ms
+       갈렸는가」에는 **문턱을 안 건다** — 어느 축으로 읽어도 이 러너가 못 지키는 약속이고,
+       976 자신도 §4 에 「한 실행의 4/4 는 초록이 러너 기분에 달리게 만든다」고 적어 뒀다.
+       대신 «겨눈 눈금을 지켰는가»(= 그 알이 적어도 그만큼 나이를 먹은 뒤에 얼렸는가)는
+       **구조상 결정적**이고 실측 11/11 로 4/4 였다. 흔들리는 값은 밝히고, 판정은 안 흔들리는
+       축에만 건다. 초과분은 아래 «초과» 로 값째 밝힌다(58 38회차 — 흐리게 잴 바에는 흐림을 밝혀라). */
+    const kept = ph.filter(p => p && !p.late && p.ms >= p.off).length;
+    const over = ph.filter(p => p && !p.late && p.ms >= p.off).map(p => p.ms - p.off);
+    console.log('씬 B 표본 위상(겨눈 나이 → 실측 · 초과분은 러너 몫이라 값으로만 밝힌다): '
       + B.map((r, i) => 'B' + (i + 1) + ' ' + (ph[i] ? ph[i].off + '→' + ph[i].ms + 'ms'
           + (ph[i].late ? '(놓침)' : '') + (ph[i].ms > 380 ? '(수명 넘김)' : '')
           + (ph[i].newTicks ? '+틱' + ph[i].newTicks : '') : '겨눔 없음')
           + '/직전 틱 ' + (tk[i] ? tk[i].since + 'ms' : '–')).join(' · ')
-      + ' — 겨눈 눈금 ' + (NOPHASE ? '없음(--b-nophase · 975 방식)' : PHASE_MS.join('·') + 'ms'));
-    /* ⚠ 한 실행의 4/4 는 러너 기분에 달렸다(스핀이 렌더 뒤로 밀린다) — 여기서는 «한 토막에
-       뭉쳤는가» 까지만 판정하고, «고르게 덮는가» 는 표본 12~16개를 쓰는 `probe976` [3c] 가 센다. */
-    console.log('씬 B 알 나이 최솟값(위 위상의 결과 — 사양 아님, 683 채점의 재료): '
+      + ' — 겨눈 눈금 ' + (NOPHASE ? '없음(--b-nophase · 975 방식)' : PHASE_MS.join('·') + 'ms')
+      + (NOPHASE ? '' : ' · 눈금 준수(실측 ≥ 겨눔) ' + kept + '/' + B.length
+          + (kept === B.length ? ' ✅' : ' **놓친 장 ' + (B.length - kept) + ' ❌**')
+          + ' · 초과 ' + (over.length ? over.join('·') + 'ms' : '–')));
+    /* ⚑⚑ 984 — **이 줄은 판정을 달지 않는다.** 이 값은 「그 프레임의 **가장 어린 알**」의 나이지
+       이 자가 겨눈 「닻이 낳은 알」의 나이가 아니다. 기다리는 사이 새 틱이 오면(`+틱n`) 그 프레임의
+       가장 어린 알은 **당연히** 갓 태어난 알이라 ≈0 이 되고, 그것은 결함이 아니라 683 이 보려는
+       **겹침의 증거**다(976 머리말이 「나이 ≤5ms 를 0 으로 만드는 것은 목표가 아니다」로 못박아
+       둔 그 값이다). 그런데 종전엔 그 ≈0 에 «한 토막에 뭉침 ❌» 를 달아서, **976 이 제대로 도는
+       실행일수록 빨개졌다** — 100·200ms 눈금은 이 러너의 틱 간격(중앙값 90~130ms)에서 거의 언제나
+       새 틱을 먹는다. 실측 11회에서 `verify976` [3-c] 가 **5회** 빨갰다(등재 984).
+       ⇒ 값과 토막 수는 그대로 적되 **관찰**로만 적는다. 판정은 아래 «눈금 준수» 축이 진다. */
+    console.log('씬 B 알 나이 최솟값(위 위상의 **결과** — 사양 아님 · **판정 아님** · 683 채점의 재료): '
       + minAge.map(a => a < 0 ? '–' : a + 'ms').join(' · ')
-      + ' — 수명 네 토막(0~40·40~100·100~200·200~) ' + cov + '/4 '
-      + (cov >= 2 ? '✅' : '**한 토막에 뭉침 ❌**'));
+      + ' — 수명 네 토막(0~40·40~100·100~200·200~) ' + cov + '/4 **관찰**'
+      + '(≈0 인 장은 «+틱n» 을 먹은 프레임 = 겹침의 증거 · 984)');
     console.log('씬 B 봉투: 브라우저 ' + (LEGACY_B ? HOLDS.length + '회(--b-legacy · 옛 방식)' : '1회(한 홀드)')
       + ' · 얼림은 되돌림식(타이머 미루기 + 시계 정지 + 애니 pause/play)');
   }

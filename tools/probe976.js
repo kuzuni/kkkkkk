@@ -16,6 +16,14 @@
  *   ⓑ «위상 지정» — 다음 틱을 기다렸다 그 틱의 `iv` 의 `frac` 만큼 지난 뒤 **페이지 안에서** 얼린다
  * 두 사법 다 프레임마다 스크린샷을 찍는다(얼림 1~2초가 위상에 섞이는지까지 같이 보려는 것 —
  * `--no-shot` 으로 뺄 수 있다).
+ *
+ * ⚑⚑ **984 — 러너가 정하는 값에는 문턱을 안 건다.** 이 자는 `verify976` [P-a] 로 불리는데,
+ *   [3a2]«겨눈 알이 대개 살아 있다(≥70%)» · [3b]«|실측 − 겨눔| 중앙값 ≤ 80ms» 둘이 **재는 것이
+ *   러너의 몫**(스핀이 렌더 뒤로 밀린 양)이라 초록이 러너 기분에 달렸다 — 실측이 문턱에 붙어
+ *   다녔다(중앙값 35·61.5·64·**77** ↔ 문턱 80 · 생존 10/12·10/12·10/12·11/12 ↔ 바닥 9/12).
+ *   ⇒ 둘 다 **관찰**로 내리고, 판정은 이 자가 **고르는** 축으로 옮겼다: «실측 ≥ 겨눔»(스핀이
+ *   `d >= off` 에서만 얼리므로 구조상 결정적 · `verify976` [3-c] 와 같은 축)과 «눈금표를
+ *   차례대로 받았다». 넓히지도 좁히지도 않았다 — 과녁을 옮겼다.
  */
 const os = require('os');
 const fs = require('fs');
@@ -181,28 +189,56 @@ function table(name, r) {
   /* ⚠ **«나이 ≤5ms 를 0 으로 만든다» 는 목표가 아니다**(1회차에 그렇게 적었다가 값에 반증당했다).
      겨눈 알을 기다리는 사이 새 틱이 오면 그 프레임의 «가장 어린 알» 은 당연히 갓 태어난 알이고,
      그것이 바로 683 이 보려는 겹침이다. 고쳐야 할 것은 «우연히 그 자리에 붙는 것» 이다. */
-  const freshRows = tb.out.map((s, i) => ({ i, a: eggAge(s, B.eggs), ph: s.ph }))
+  /* ⚑⚑ 984 — **설명하는 단위를 «틱» 에서 «알» 로 바꿨다.** 종전 [3a] 는 「그 프레임의 가장 어린
+     **알**이 갓 태어났다」를 「기다리는 사이 새 **틱**이 왔다(`newTicks`)」로 설명하려 했는데,
+     이 자의 [1b] 가 바로 위에서 **«알은 틱보다 자주 태어난다»** 를 값으로 증명한다(훅 48회 ↔ 알
+     89개). 그래서 **틱 없이 알만 태어난 순간**에 표본이 서면 «설명 안 되는 1건» 이 되어 [P-a] 가
+     빨개졌다 — 실측으로 재현했다(8판 중 1판: 3건 중 2건만 설명 → `PROBE976 FAIL 10/11`).
+     제품이 잘못한 것도 표본이 잘못 선 것도 아니다. **자가 틀린 단위로 물은 것**이다.
+     ⇒ 「닻 이후에 **알**이 새로 태어났는가」로 묻는다(같은 사실을 옳은 단위로). */
+  const anchorT = s => (s.ph && s.ph.k >= 0 && B.ticks[s.ph.k] != null) ? B.ticks[s.ph.k] : null;
+  const bornAfter = s => { const a = anchorT(s); return a == null ? 0
+    : B.eggs.filter(t => t > a && t <= s.pn).length; };
+  const freshRows = tb.out.map((s, i) => ({ i, a: eggAge(s, B.eggs), ph: s.ph, born: bornAfter(s) }))
                           .filter(x => x.a != null && x.a <= 5);
-  const explained = freshRows.filter(x => x.ph && (x.ph.off <= 10 || x.ph.newTicks >= 1));
+  const explained = freshRows.filter(x => x.ph && (x.ph.off <= 10 || x.born >= 1));
   ok(freshRows.length === explained.length,
     '[3a] ★ 위상 지정에서 «갓 태어난 알» 프레임은 **전부 설명된다** — ' + freshRows.length + '건 중 '
-    + explained.length + '건이 「10ms 눈금」이거나 「기다리는 사이 새 틱이 온」 프레임이다'
-    + '(지금 방식은 ' + fresh(ta.ages) + '건이 우연히 붙었다)');
-  /* ⚠ **«늘 살아 있다» 는 못 건다** — 러너가 스핀을 렌더 뒤로 밀면 겨눈 알이 수명(380ms)을 넘겨
-     죽은 뒤에 얼리는 판이 생긴다(실측 12판 중 2판). 그 판은 «수명 넘김» 으로 밝히면 되고,
-     문턱은 «대부분 살아 있다» 로 건다 — 여기서 100% 를 요구하면 초록이 러너 기분에 달린다. */
+    + explained.length + '건이 「10ms 눈금」이거나 「기다리는 사이 **알이 새로 태어난**」 프레임이다'
+    + '(닻 이후 태어난 알 ' + (freshRows.map(x => x.born).join('·') || '–')
+    + ' · 지금 방식은 ' + fresh(ta.ages) + '건이 우연히 붙었다)');
+  /* 우리가 **겨눈** 알은 그 자리에 우연히 안 붙는다 — 스핀이 `d >= off` 에서만 얼리므로
+     10ms 눈금 밖에서는 겨눈 나이가 ≤5ms 일 수 없다. 위 [3a] 가 세는 «가장 어린 알» 과 달리
+     이 축은 이 자가 **고르는** 것이라 흔들리지 않는다(984 · `verify976` [3-c] 와 같은 축). */
+  const aimFresh = tb.out.filter(s => s.ph && !s.ph.late && s.ph.off > 10 && s.ph.ms <= 5).length;
+  ok(aimFresh === 0,
+    '[3a3] ★ **겨눈** 알은 «갓 태어난» 자리에 우연히 안 붙는다 — 10ms 눈금 밖에서 겨눈 나이 ≤5ms 가 '
+    + aimFresh + '건 (겨눈 나이 ' + tb.out.map(s => s.ph ? s.ph.ms : '–').join('·') + 'ms)');
+  /* ⚑⚑ 984 — **[3a2]·[3b] 의 문턱을 걷어냈다(«관찰» 로 강등).** 둘 다 재는 것이 **러너의 몫**이라
+     초록이 러너 기분에 달렸다 — 이 자가 [P-a] 로 플레이키했던 자리다.
+       · 겨눈 알이 아직 살아 있는가(수명 380ms) = 스핀이 얼마나 밀렸나 = 러너
+       · |실측 − 겨눔| 중앙값 = 밀린 양 그 자체 = 러너
+     문턱 80ms 는 실측이 **35 · 61.5 · 64 · 77ms** 로 붙어 다녔고(부하가 걸린 판이 77), 70% 문턱은
+     실측 **10/12 · 10/12 · 10/12 · 11/12**(바닥 9/12)로 한 표본 차였다. 문턱을 넓히는 것은
+     헛초록이고(LESSONS 334) 좁히는 것은 상시 빨강이다 ⇒ **값으로 밝히고 판정은 안 건다.**
+     판정은 아래 [3b] 가 «이 자가 고르는 축» 한 곳에서 진다(= `verify976` [3-c] 와 같은 축). */
   const alive = tb.out.filter(s => s.ph && s.ph.ms >= 0 && s.ph.ms <= 380).length;
-  ok(alive >= Math.ceil(tb.out.length * 0.7),
-    '[3a2] 겨눈 알이 대개 프레임에 살아 있다 — ' + alive + '/' + tb.out.length + ' (수명 380ms 안 · 겨눈 나이 '
-    + tb.out.map(s => s.ph ? s.ph.ms : '–').join('·') + 'ms)');
+  console.log('  · **관찰(판정 아님)** 겨눈 알이 프레임에 살아 있던 표본 ' + alive + '/' + tb.out.length
+    + ' (수명 380ms 안 · 겨눈 나이 ' + tb.out.map(s => s.ph ? s.ph.ms : '–').join('·') + 'ms)');
   const errs = tb.out.map((s, i) => (s.ph && s.ph.ms >= 0) ? Math.abs(s.ph.ms - PHASE_MS[i % PHASE_MS.length]) : null)
                      .filter(x => x != null);
-  /* 겨눈 값보다 늦게 서는 몫은 **러너의 것**이다 — 스핀의 `setTimeout` 이 그 프레임의 렌더 뒤로
-     밀린다(실측 중앙 40ms 안팎). 눈금이 «정확히 X ms» 가 아니라 «X ms 언저리» 인 이유이고,
-     그래도 네 눈금이 서로 안 섞이면 목적(수명 네 토막)은 달성된다. */
-  ok(med(errs) <= 80,
-    '[3b] 겨눈 나이 언저리에 선다 — |실측 − 겨눔| 중앙값 ' + med(errs) + 'ms ≤ 80 (' + errs.length
-    + '개 · 겨눔 ' + PHASE_MS.join('·') + 'ms)');
+  /* **이 자가 고르는 것은 «언제 얼릴지» 뿐이다** — 스핀이 `d >= off` 에서만 얼리므로 «실측 ≥ 겨눔»
+     은 구조상 참이고 흔들리지 않는다. 못 맞춘 장은 조용히 옛 자리로 돌아가지 않고 `late` 로
+     밝혀지므로 그 수도 같이 센다(밝힌 것은 결함이 아니지만 **밝히지 않은 것은 결함**이다). */
+  const keptN = tb.out.filter(s => s.ph && !s.ph.late && s.ph.ms >= s.ph.off).length;
+  const lateN = tb.out.filter(s => s.ph && s.ph.late).length;
+  ok(keptN + lateN === tb.out.length,
+    '[3b] ★ 표본이 **겨눈 눈금을 지켰다**(실측 ≥ 겨눔) — ' + keptN + '/' + tb.out.length
+    + ' (놓쳐서 «(놓침)» 으로 밝힌 장 ' + lateN + '). 초과분 |실측 − 겨눔| 중앙값 ' + med(errs)
+    + 'ms 는 **러너의 몫이라 문턱을 안 건다**(984)');
+  ok(tb.out.every((s, i) => s.ph && s.ph.off === PHASE_MS[i % PHASE_MS.length]),
+    '[3a2] 표본이 눈금표(' + PHASE_MS.join('·') + 'ms)를 **차례대로** 받았다 — 겨눔 '
+    + tb.out.map(s => s.ph ? s.ph.off : '–').join('·') + 'ms');
   const covB = new Set(tb.ages.map(bn)).size, covA = new Set(ta.ages.map(bn)).size;
   ok(covB >= 3,
     '[3c] ★ 위상 지정이 알 수명을 고르게 덮는다 — 네 토막(0~40·40~100·100~200·200~) ' + covB
