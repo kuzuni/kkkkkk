@@ -61,6 +61,11 @@ const TAG_FADE = `const HALO_FADE = 1;`;
 /* ⚑ 11회차 — 덩치 배율표를 **비운 사본**. [E1] 이 «지금 그대로» 를 초록으로 지나가는 자가
    아니라 **처방이 닿은 자리**를 재는 자임을 [R5] 가 못박는다(없으면 밴드를 무르게 풀 수 있다). */
 const NEG_SC   = path.join(ROOT, '.v792-neg-sc-' + process.pid + '.html');
+/* ⚑ 13회차 — 참격 고리의 **나선을 끈 사본**([R6]). 값 두 개만 되돌린다.
+   ⚠ 앵커는 **정규식**이다 — 상수는 회차마다 다시 계산되는 값이라(형상이 밀리면 같이 민다)
+     숫자를 손으로 박으면 다음 회차에 «사본이 낡았다» 로 조용히 빨개진다. */
+const NEG_SPIN = path.join(ROOT, '.v792-neg-spin-' + process.pid + '.html');
+const SPIRAL_RE = /C_RMP = [\d.]+, C_TIP = [\d.]+/;
 const TAG_SC   = `const SHOT_SC = { arc:`;
 
 /* 710 [C1] 과 **같은 문턱**을 쓴다.
@@ -98,6 +103,11 @@ const FAR_MAX = 0.03;
 /* [E1] 덩치 밴드 — **10회차 비평가 CV 가 준 목표 문장 그대로**다: «대각 중앙값 ±25% 밖 7종».
    [B8]·[B9] 와 같은 자리(관측값이 아니라 목표를 박는다). [E2] 는 이 값에서 파생한다. */
 const DIAG_TOL = 0.25;
+/* [F1] ④ 뜻 — 문턱 둘. **관측값이 아니라 «빈 구간 한가운데»** 다(825 · [P1]·FAR_MAX 와 같은 규칙):
+   반경 변동은 원반·고리 무리(화구 3.3 · 참격 고리(수리 전) 3.3~4.9 · 검기 14.8%) 와
+   날·창 무리(갈퀴 69.8 ~ 천벌의 창 530%) 사이가 비어 있고, 테이퍼도 균일 폭 띠(0.79~0.98) 와
+   날(0.13~0.57) 사이가 비어 있다. 실측표는 `docs/review/792-*.md` §13회차. */
+const RVAR_MIN = 25, TAPER_MAX = 0.65;
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
@@ -512,10 +522,37 @@ async function measure(browser, url) {
         if (y < oy0) oy0 = y; if (y > oy1) oy1 = y;
       }
       const bbw = bx1 < 0 ? 0 : bx1 - bx0 + 1, bbh = by1 < 0 ? 0 : by1 - by0 + 1;
+      /* ⚑ 13회차 [F] — **④ 뜻**의 자. 12회차 2인 공통 ⓑ(«참격 고리가 십자가 아니라 도넛 링»)를
+         상자 중심(= 발의 중심)에서 720방향으로 훑어 잰다:
+           · `rvar`  = (바깥 반경 max − min) ÷ 중앙값 — 도는 그림은 반지름이 도는 동안 **밀린다**
+           · `taper` = 방향별 두께 p10 ÷ p90 — 날은 꼬리로 갈수록 **가늘어진다**
+         ⚠ 이 둘은 **고리 형상인 종에만** 뜻이 있다(다른 종은 기록으로만 찍는다 — [F1] 은
+           `cross` 한 종을 묻는다). 값이 «형상» 이라 [E1] 의 크기 배율과 서로 안 물린다. */
+      let rvar = 0, taper = 1;
+      {
+        const cx = (bw - 1) / 2, cy = (bh - 1) / 2, rmx = Math.min(cx, cy), N = 720;
+        const ro = [], tt = [];
+        for (let k = 0; k < N; k++) {
+          const a = k * 2 * Math.PI / N, ca = Math.cos(a), sa2 = Math.sin(a);
+          let lo = -1, hi = -1;
+          for (let r = 0; r <= rmx; r += 0.5) {
+            const x = Math.round(cx + ca * r), y = Math.round(cy + sa2 * r);
+            if (x < 0 || y < 0 || x >= bw || y >= bh) break;
+            if (hd[y * bw + x]) { if (lo < 0) lo = r; hi = r; }
+          }
+          if (hi < 0) continue;
+          ro.push(hi); tt.push(hi - lo);
+        }
+        if (ro.length) {
+          const md = pct(ro, 0.5), t9 = pct(tt, 0.9), t1 = pct(tt, 0.1);
+          rvar = md ? +(((Math.max.apply(null, ro) - Math.min.apply(null, ro)) / md) * 100).toFixed(1) : 0;
+          taper = t9 ? +(t1 / t9).toFixed(2) : 1;
+        }
+      }
       const obw = ox1 < 0 ? 0 : ox1 - ox0 + 1, obh = oy1 < 0 ? 0 : oy1 - oy0 + 1;
       const vbw = vx1 < 0 ? 0 : vx1 - vx0 + 1, vbh = vy1 < 0 ? 0 : vy1 - vy0 + 1;
       masks[id] = m;
-      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off, dBase,
+      rows[id] = { sh: sp.sh, ink, soft, hard, spec: sp2, off, dBase, rvar, taper,
                    bbw, bbh, diag: +Math.hypot(bbw, bbh).toFixed(1),
                    own: +Math.hypot(obw, obh).toFixed(1),
                    vis: +Math.hypot(vbw, vbh).toFixed(1),
@@ -704,7 +741,7 @@ if (require.main === module) (async () => {
   console.log('=== VERIFY 792 — 스킬 이펙트 연출 규격(세 층) 통일 ===\n');
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const src = fs.readFileSync(SRC, 'utf8');
-  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE, NEG_AURA, NEG_SC]) { try { fs.unlinkSync(f); } catch (_) {} } };
+  const clean = () => { for (const f of [NEG_SPEC, NEG_HALO, NEG_FADE, NEG_AURA, NEG_SC, NEG_SPIN]) { try { fs.unlinkSync(f); } catch (_) {} } };
 
   try {
     /* ---- [C] 선언 ---- */
@@ -899,6 +936,29 @@ if (require.main === module) (async () => {
           (vBad.length ? ' (' + vBad.map(i => i + ':' + out.rows[i].vis).join(' · ') + ')' : '') +
           ' · 최소 ' + vs[0] + ' ~ 최대 ' + vs[vs.length - 1]);
       }
+      /* ⚑⚑ 13회차 [F1] — **④ 뜻**: «주변 참격» 이 도는가. 12회차 2인 공통 ⓑ 를 자로 옮긴 자리다
+         (CX «반경 변동 8.8%(720방향)» · CY «십자 단서는 링 위 노치 3~4px 뿐» = 둘 다 «도넛»).
+         ⚑ **문턱은 관측값이 아니라 «형상 무리» 에서 온다**(825) — 이 판의 17종을 같은 자로 재면
+           반경 변동이 **두 무리로 갈리고 사이가 비어 있다**: 원반·고리 무리 3.3~14.8% ↔ 날·창
+           무리 69.8% 이상. 빈 구간 한가운데(25%)를 문턱으로 삼는다. 테이퍼도 같은 꼴이다
+           (균일 폭 띠 0.79~0.98 ↔ 날 0.13~0.57 ⇒ 0.65).
+         ⚠ **«틈을 벌려 도넛을 깨는» 처방은 못 쓴다** — 구멍이 981 [C5] 의 축이라(갇힌 배경
+           ≥ 300화소 · 구멍을 가진 다른 종 0개) 틈이 열리면 그 축이 죽는다. 그래서 이 자는
+           «구멍이 없어야 한다» 가 아니라 **«반지름이 돌아야 한다»** 를 묻는다 — 두 게이트가
+           같은 형상을 서로 반대로 밀지 않게 하는 것이 이 문장의 몫이다.
+         자는 `probe792r13`(나선을 끈 사본과 대조) · 되돌림은 아래 [R6]. */
+      {
+        const cr = ids.find(i => out.rows[i].sh === 'cross');
+        const r = cr ? out.rows[cr] : null;
+        const flat = ids.filter(i => out.rows[i].rvar < RVAR_MIN);
+        ok(!!r && r.rvar >= RVAR_MIN && r.taper <= TAPER_MAX,
+           '[F1] ④ 뜻 — `cross`(주변 참격)가 **돈다**: 바깥 반경 변동 ' + (r ? r.rvar : '?') +
+           '% ≥ ' + RVAR_MIN + ' · 두께 테이퍼 ' + (r ? r.taper : '?') + ' ≤ ' + TAPER_MAX +
+           ' (12회차 그림은 3.3%/0.95 = 불덩이만큼 둥근 균일 폭 띠) · 이 문턱 아래인 종 ' +
+           flat.length + '개' + (flat.length ? ' (' + flat.map(i => i + ':' + out.rows[i].rvar + '%').join(' · ') + ')' : ''));
+        console.log('  (기록) [F2] 방향별 반경 변동 % / 두께 테이퍼 — ' +
+          ids.map(i => i + ':' + out.rows[i].rvar + '/' + out.rows[i].taper).join(' · '));
+      }
       /* ⚑⚑ [E2] 는 **판정이 아니라 기록이다** — 처음엔 «[E1] 대각 밴드에서 파생한 면적 상한
          (1.25/0.75)² = 2.78» 로 세웠고, 그 자가 **묻는 질문 자체가 틀렸다**:
          면적 = 대각² × **채움 밀도**인데 밀도는 «얼마나 크게» 가 아니라 **«무슨 모양인가»** 다.
@@ -1015,6 +1075,25 @@ if (require.main === module) (async () => {
                                    rSc.out.rows[i].diag > md3 * (1 + DIAG_TOL));
       ok(bad3.length >= 4, '[R5] 덩치 배율표를 비우면 [E1] 이 빨개진다 — 밴드 밖 ' + bad3.length +
          '종 ≥ 4 (중앙값 ' + md3 + 'px · ' + bad3.join(' · ') + ')');
+    }
+    /* ⚑ [R6] — 13회차. **나선을 끄면** [F1] 이 빨개진다(값 두 개만 되돌린다 — 획·반지름·토막 수는
+       그대로다). 이것이 «[F1] 의 초록이 처방이 닿은 자리에서 온다» 는 증거다.
+       ⚠ 되돌린 그림은 12회차가 채점한 그 도넛이고, **구멍(981 [C5])은 양쪽 다 살아 있다** —
+         이 회차가 «틈» 이 아니라 «반지름» 으로 풀었다는 것을 이 항이 같이 못박는다. */
+    if (!SPIRAL_RE.test(src)) {
+      ok(false, '[R6-0] 되돌림 앵커(참격 고리의 나선 상수 두 개)를 못 찾았다 — 자를 고쳐라(사본이 낡았다)');
+    } else {
+      fs.writeFileSync(NEG_SPIN, src.replace(SPIRAL_RE, 'C_RMP = 0, C_TIP = 1'), 'utf8');
+      const rSp = await measure(browser, 'file://' + NEG_SPIN);
+      if (rSp.out && rSp.out.__err) ok(false, '[R6] 사본 측정 예외 — ' + rSp.out.__err);
+      else {
+        const cr2 = Object.keys(rSp.out.rows).find(i => rSp.out.rows[i].sh === 'cross');
+        const r2 = cr2 ? rSp.out.rows[cr2] : null;
+        ok(!!r2 && r2.rvar < RVAR_MIN && r2.taper > TAPER_MAX,
+           '[R6] 나선을 끄면 [F1] 이 빨개진다 — 되돌린 판의 `cross` 반경 변동 ' + (r2 ? r2.rvar : '?') +
+           '% < ' + RVAR_MIN + ' · 테이퍼 ' + (r2 ? r2.taper : '?') + ' > ' + TAPER_MAX +
+           ' (= 12회차가 채점한 도넛)');
+      }
     }
   } finally {
     clean();
