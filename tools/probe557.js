@@ -34,11 +34,26 @@ const REL = 'docs/PROGRESS.md';
  * 7칸은 268 행뿐). 그래서 위치가 아니라 모양으로 앵커한다. */
 const ROW = /^\|\s*([0-9]+|[A-Z][0-9]+)\s*\|/;
 const DONE_DATED = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
-const NOT_YET = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
-const HEAD_NOT_YET = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
+const NOT_YET = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전|등재문(?!\s*\())/;
+const HEAD_NOT_YET = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전|등재문(?!\s*\())/;
 
+/* GFM 표 칸 나누기 — `\|` 는 구분자가 아니다(작업 566 규약 · 960 이 tail 축까지 넓혔다).
+   ⚠ **앞뒤 빈 칸을 안 떼는 판이다** — 아래 합성이 `c.join('|')` 로 행을 **되짓는다**.
+   떼면 행이 `|` 로 열고 닫는 모양을 잃는다. */
+function cellsRaw(line) {
+  const out = [];
+  let cur = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '\\' && line[i + 1] === '|') { cur += '\\|'; i++; continue; }
+    if (ch === '|') { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
 function tailHead(line) {
-  const c = line.split('|');
+  const c = cellsRaw(line);          /* escape 를 지켜 나눈다 — 960 */
   let i = c.length - 1;
   while (i > 0 && !c[i].trim()) i--;
   return i > 0 ? HEAD_NOT_YET.exec(c[i]) : null;
@@ -81,7 +96,7 @@ function synth(text, id, opt = {}) {
     const g = ROW.exec(line);
     if (!g || g[1] !== id || hit) return line;
     hit = true;
-    const c = line.split('|');
+    const c = cellsRaw(line);        /* escape 를 지켜 나눈다 — 960 */
     let t = c.length - 1;
     while (t > 0 && !c[t].trim()) t--;
     /* keepBody — 비고 본문(완료문 포함)을 남기고 머리말만 «미착수» 로 바꾼다.

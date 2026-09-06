@@ -46,14 +46,28 @@ const idxOf = id => lines.findIndex(l => { const g = ROW.exec(l); return g && g[
 /* 자와 같은 두 모양 — §N 의 «진짜 미착수» 표본을 표에게 물어서 고르는 데 쓴다(리터럴 금지)
    ⚠ **자와 같아야 한다** — 이 모양이 `verifyProgress.js` 의 `NOT_YET` 과 어긋나면 §N 은
    «자가 못 보는 자리» 를 표본으로 골라 놓고 조용하다(작업 422 가 그렇게 빨개졌다). */
-const NOT_YET_SHAPE = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
+const NOT_YET_SHAPE = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전|등재문(?!\s*\())/;
 const DONE_DATED_MARK = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
 /* 자의 두 번째 축(작업 445) — «비고 칸의 머리말» 만 읽는다. 위 ⚠ 가 여기에도 그대로 적용된다:
    `verifyProgress.js` 의 `HEAD_NOT_YET`/`tailHead` 와 **같은 모양이어야** §N3 이 «자가 못 보는
    자리» 를 표본으로 골라 놓고 조용해지지 않는다. */
-const HEAD_NOT_YET_SHAPE = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
+const HEAD_NOT_YET_SHAPE = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전|등재문(?!\s*\())/;
+/* GFM 표 칸 나누기 — `\|` 는 구분자가 아니다(566 규약 · 960 이 tail 축까지 넓혔다).
+   ⚠ 앞뒤 빈 칸을 **안 뗀다** — 아래 되짚기가 `cells.join('|')` 로 행을 되짓는다. */
+function cellsRaw(line) {
+  const out = [];
+  let cur = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '\\' && line[i + 1] === '|') { cur += '\\|'; i++; continue; }
+    if (ch === '|') { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
 const tailCell = line => {
-  const c = line.split('|');
+  const c = cellsRaw(line);          /* escape 를 지켜 나눈다 — 960 */
   let i = c.length - 1;
   while (i > 0 && !c[i].trim()) i--;
   return i > 0 ? { i, cells: c } : null;

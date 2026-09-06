@@ -90,8 +90,8 @@ const BEFORE = pickBefore();
 /* ── 자(verifyProgress §2 축 ⓒ)와 **같은 규칙**을 쓴다 — 자와 재현기가 갈리면 둘 다 못 믿는다 ── */
 const ROW = /^\|\s*([0-9]+|[A-Z][0-9]+)\s*\|/;
 const DONE_DATED = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
-const NOT_YET = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
-const HEAD_NOT_YET = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
+const NOT_YET = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전|등재문(?!\s*\())/;
+const HEAD_NOT_YET = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전|등재문(?!\s*\())/;
 const STATE_MARK = /✅|⏸|🔧|⏹|✖|🏆|완료|해결|통과|폐기|보류|종료|진행/;
 const BARE_IMPL = /^\s*(?:\*\*)?\s*(?:–|—|-|미착수\.?)?\s*(?:\*\*)?\s*$/;
 const COLS = 7;
@@ -130,7 +130,7 @@ function headIds(text) {
   return out;
 }
 function tailHead(line) {
-  const c = line.split('|');
+  const c = cellsOf(line);            /* escape 를 지켜 나눈다 — 960 */
   let i = c.length - 1;
   while (i > 0 && !c[i].trim()) i--;
   return i > 0 ? HEAD_NOT_YET.exec(c[i]) : null;
