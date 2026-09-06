@@ -330,3 +330,8 @@ tools/__pycache__/
 # 위 `docs/review/*.png` 는 **한 단계만** 막으므로 하위 폴더는 뚫려 있었다 — 885 가 `/scratch/`
 # 에서 겪은 자리와 같은 구멍이다. ROUTINE 서두 «캡처는 커밋하지 마라(`git add -f` 금지)» 그대로.
 docs/review/shots923/
+
+# 258 probe258e 가 돌 때마다 새로 뽑는 프레임 캡처 160장(약 17MB · `docs/review/258-frames/`).
+# 자가 끝나도 안 지우므로 그 자를 돌린 세션마다 트리가 더러워진다 — 974 전수 조사(sweep974)가
+# 모집단 30자를 굴리다 그대로 밟았다. ROUTINE 머리말 «캡처는 커밋하지 마라» 대로 무시로 막는다.
+docs/review/258-frames/
